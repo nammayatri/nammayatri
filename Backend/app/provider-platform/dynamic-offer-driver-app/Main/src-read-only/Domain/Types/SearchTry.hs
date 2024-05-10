@@ -18,9 +18,10 @@ import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data SearchTry = SearchTry
-  { baseFare :: Kernel.Types.Common.Money,
+  { baseFare :: Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
-    customerExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.Money,
+    currency :: Kernel.Types.Common.Currency,
+    customerExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     estimateId :: Kernel.Prelude.Text,
     estimateIds :: [Kernel.Prelude.Text],
     id :: Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry,

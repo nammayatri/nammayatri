@@ -57,3 +57,25 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_d
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_default_step_fee double precision ;
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN currency character varying(255) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN base_fare_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN driver_step_fee TYPE double precision;
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN driver_default_step_fee TYPE integer;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN driver_step_fee TYPE integer;
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_step_fee_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN currency DROP NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN customer_cancellation_dues DROP NOT NULL;

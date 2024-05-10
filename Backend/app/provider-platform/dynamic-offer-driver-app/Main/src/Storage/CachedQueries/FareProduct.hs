@@ -15,6 +15,7 @@
 
 module Storage.CachedQueries.FareProduct where
 
+import qualified Domain.Action.UI.FareProduct as Domain
 import qualified Domain.Types.Common as DTC
 import Domain.Types.FareProduct
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
@@ -34,7 +35,7 @@ findAllUnboundedFareProductForVariants :: (CacheFlow m r, Esq.EsqDBFlow m r) => 
 findAllUnboundedFareProductForVariants merchantOpCityId tripCategory area =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOpCityId tripCategory area) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea merchantOpCityId tripCategory area /=<< Queries.findAllUnboundedFareProductForVariants merchantOpCityId tripCategory area
+    Nothing -> cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea merchantOpCityId tripCategory area /=<< Queries.findAllUnboundedFareProductForVariants merchantOpCityId area tripCategory Domain.Unbounded True
 
 cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea :: (CacheFlow m r) => Id MerchantOperatingCity -> DTC.TripCategory -> SL.Area -> [FareProduct] -> m ()
 cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea merchantOpCityId tripCategory area fareProducts = do
@@ -50,7 +51,7 @@ findAllBoundedFareProductForVariants :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id
 findAllBoundedFareProductForVariants merchantOpCityId tripCategory area =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeBoundedFareProductForVariantsByMerchantIdAndAreaKey merchantOpCityId tripCategory area) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllBoundedFareProductForVariantsByMerchantIdAndArea merchantOpCityId tripCategory area /=<< Queries.findAllBoundedFareProductForVariants merchantOpCityId tripCategory area
+    Nothing -> cacheAllBoundedFareProductForVariantsByMerchantIdAndArea merchantOpCityId tripCategory area /=<< Queries.findAllBoundedFareProductForVariants merchantOpCityId area tripCategory Domain.Unbounded True
 
 cacheAllBoundedFareProductForVariantsByMerchantIdAndArea :: (CacheFlow m r) => Id MerchantOperatingCity -> DTC.TripCategory -> SL.Area -> [FareProduct] -> m ()
 cacheAllBoundedFareProductForVariantsByMerchantIdAndArea merchantOpCityId tripCategory area fareProducts = do
@@ -66,7 +67,7 @@ findAllFareProductByMerchantOpCityId :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id
 findAllFareProductByMerchantOpCityId merchantOpCityId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeFareProductByMerchantOpCityIdKey merchantOpCityId) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllFareProductByMerchantOpCityId merchantOpCityId /=<< Queries.findAllFareProductByMerchantOpCityId merchantOpCityId
+    Nothing -> cacheAllFareProductByMerchantOpCityId merchantOpCityId /=<< Queries.findAllFareProductByMerchantOpCityId merchantOpCityId True
 
 cacheAllFareProductByMerchantOpCityId :: (CacheFlow m r) => Id MerchantOperatingCity -> [FareProduct] -> m ()
 cacheAllFareProductByMerchantOpCityId merchantOpCityId fareProducts = do
@@ -98,7 +99,7 @@ findAllBoundedByMerchantVariantArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id 
 findAllBoundedByMerchantVariantArea merchantOpCityId tripCategory serviceTier area =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId tripCategory serviceTier area) >>= \case
     Just a -> pure a
-    Nothing -> cacheBoundedFareProductByMerchantVariantArea merchantOpCityId tripCategory serviceTier area /=<< Queries.findAllBoundedByMerchantOpCityIdVariantArea merchantOpCityId tripCategory serviceTier area
+    Nothing -> cacheBoundedFareProductByMerchantVariantArea merchantOpCityId tripCategory serviceTier area /=<< Queries.findAllBoundedByMerchantOpCityIdVariantArea merchantOpCityId area serviceTier tripCategory Domain.Unbounded True
 
 cacheBoundedFareProductByMerchantVariantArea :: (CacheFlow m r) => Id MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> [FareProduct] -> m ()
 cacheBoundedFareProductByMerchantVariantArea merchantOpCityId tripCategory serviceTier area fareProducts = do

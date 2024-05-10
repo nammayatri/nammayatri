@@ -21,6 +21,7 @@ import Kernel.Prelude
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.Booking as BeamB
+import Storage.Queries.Booking ()
 import Storage.Queries.OrphanInstances.Person ()
 
 getBookingInfo ::

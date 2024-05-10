@@ -184,6 +184,7 @@ library
       Domain.Action.UI.DriverReferral
       Domain.Action.UI.EditBooking
       Domain.Action.UI.ExotelEndRide
+      Domain.Action.UI.FareProduct
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
       Domain.Action.UI.LmsModule
@@ -229,7 +230,6 @@ library
       Domain.Types.Driver.GoHomeFeature.DriverHomeLocation
       Domain.Types.DriverLocation
       Domain.Types.DriverPlan
-      Domain.Types.DriverQuote
       Domain.Types.DriverStats
       Domain.Types.Extra.DriverFee
       Domain.Types.Extra.Person
@@ -243,7 +243,6 @@ library
       Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffer
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
-      Domain.Types.FareProduct
       Domain.Types.Feedback.Feedback
       Domain.Types.Feedback.FeedbackForm
       Domain.Types.FleetDriverAssociation
@@ -352,7 +351,6 @@ library
       Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation
       Storage.Beam.DriverPlan
-      Storage.Beam.DriverQuote
       Storage.Beam.DriverStats
       Storage.Beam.FareParameters
       Storage.Beam.FareParameters.FareParametersProgressiveDetails
@@ -365,7 +363,6 @@ library
       Storage.Beam.FarePolicy.FarePolicyRentalDetails
       Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
       Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab
-      Storage.Beam.FareProduct
       Storage.Beam.Feedback.Feedback
       Storage.Beam.Feedback.FeedbackBadge
       Storage.Beam.Feedback.FeedbackForm
@@ -479,7 +476,6 @@ library
       Storage.Queries.DriverLocation.Internal
       Storage.Queries.DriverPanCardExtra
       Storage.Queries.DriverPlan
-      Storage.Queries.DriverQuote
       Storage.Queries.DriverQuote.Internal
       Storage.Queries.DriverQuoteExtra
       Storage.Queries.DriverRCAssociationExtra
@@ -498,7 +494,7 @@ library
       Storage.Queries.FarePolicy.FarePolicyRentalDetails
       Storage.Queries.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
-      Storage.Queries.FareProduct
+      Storage.Queries.FareProductExtra
       Storage.Queries.Feedback.Feedback
       Storage.Queries.Feedback.FeedbackBadge
       Storage.Queries.Feedback.FeedbackForm
@@ -631,6 +627,7 @@ library
       Domain.Types.FleetOwnerDocumentVerificationConfig
       Domain.Types.FleetOwnerInformation
       Domain.Types.FleetRCAssociation
+      Domain.Types.FareProduct
       Domain.Types.IdfyVerification
       Domain.Types.Image
       Domain.Types.InterCityTravelCities
@@ -700,6 +697,7 @@ library
       Storage.Beam.FleetOwnerDocumentVerificationConfig
       Storage.Beam.FleetOwnerInformation
       Storage.Beam.FleetRCAssociation
+      Storage.Beam.FareProduct
       Storage.Beam.IdfyVerification
       Storage.Beam.Image
       Storage.Beam.InterCityTravelCities
@@ -769,6 +767,7 @@ library
       Storage.Queries.FleetOwnerDocumentVerificationConfig
       Storage.Queries.FleetOwnerInformation
       Storage.Queries.FleetRCAssociation
+      Storage.Queries.FareProduct
       Storage.Queries.IdfyVerification
       Storage.Queries.Image
       Storage.Queries.InterCityTravelCities
@@ -797,6 +796,7 @@ library
       Storage.Queries.OrphanInstances.DriverSSN
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.FleetRCAssociation
+      Storage.Queries.OrphanInstances.FareProduct
       Storage.Queries.OrphanInstances.Image
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.Plan

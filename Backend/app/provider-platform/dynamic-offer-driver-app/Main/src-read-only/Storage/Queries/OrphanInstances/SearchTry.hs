@@ -8,6 +8,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -21,9 +22,10 @@ instance FromTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
     pure $
       Just
         Domain.Types.SearchTry.SearchTry
-          { baseFare = baseFare,
+          { baseFare = Kernel.Types.Common.mkAmountWithDefault baseFareAmount baseFare,
             createdAt = createdAt,
-            customerExtraFee = customerExtraFee,
+            currency = fromMaybe Kernel.Types.Common.INR currency,
+            customerExtraFee = Kernel.Types.Common.mkAmountWithDefault customerExtraFeeAmount <$> customerExtraFee,
             estimateId = estimateId,
             estimateIds = fromMaybe [estimateId] estimateIds,
             id = Kernel.Types.Id.Id id,
@@ -46,9 +48,12 @@ instance FromTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
 instance ToTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
   toTType' (Domain.Types.SearchTry.SearchTry {..}) = do
     Beam.SearchTryT
-      { Beam.baseFare = baseFare,
+      { Beam.baseFare = Kernel.Prelude.roundToIntegral baseFare,
+        Beam.baseFareAmount = Kernel.Prelude.Just baseFare,
         Beam.createdAt = createdAt,
-        Beam.customerExtraFee = customerExtraFee,
+        Beam.currency = Kernel.Prelude.Just currency,
+        Beam.customerExtraFee = Kernel.Prelude.roundToIntegral <$> customerExtraFee,
+        Beam.customerExtraFeeAmount = customerExtraFee,
         Beam.estimateId = estimateId,
         Beam.estimateIds = Kernel.Prelude.Just estimateIds,
         Beam.id = Kernel.Types.Id.getId id,

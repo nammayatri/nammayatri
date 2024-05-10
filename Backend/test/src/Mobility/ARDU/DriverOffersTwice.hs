@@ -17,7 +17,6 @@ module Mobility.ARDU.DriverOffersTwice where
 import Common
 -- import qualified Kernel.Storage.Esqueleto as Esq
 
-import qualified "dynamic-offer-driver-app" Domain.Types.DriverQuote as DomainDQ
 import EulerHS.Prelude
 import HSpec
 import qualified Mobility.ARDU.APICalls as API

@@ -85,11 +85,6 @@ DriverQuote:
     fareParams:
       fareParametersId: Text
 
-    estimateFare:
-      estimateFare: Money
-      estimatedFareAmount: Maybe HighPrecMoney
-
-
   fromTType:
     fareParams: getFareParams|M
     tripCategory: fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer) tripCategory|E
@@ -102,7 +97,6 @@ DriverQuote:
     createdAt: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
     updatedAt: Data.Time.localTimeToUTC Data.Time.utc updatedAt|E
     validTill: Data.Time.localTimeToUTC Data.Time.utc validTill|E
-    estimatedFare:  Kernel.Types.Common.mkAmountWithDefault estimatedFareAmount estimatedFare|E
     currency: fromMaybe Kernel.Types.Common.INR currency|E
 
   toTType:
@@ -118,6 +112,7 @@ DriverQuote:
     createdAt: Data.Time.utcToLocalTime Data.Time.utc createdAt|E
     updatedAt: Data.Time.utcToLocalTime Data.Time.utc updatedAt|E
     validTill: Data.Time.utcToLocalTime Data.Time.utc validTill|E
+    currency: Kernel.Prelude.Just|I
 
   queries:
     findById:
@@ -147,5 +142,3 @@ DriverQuote:
     - create
     - createMany
     - updateByPrimaryKey
-
-

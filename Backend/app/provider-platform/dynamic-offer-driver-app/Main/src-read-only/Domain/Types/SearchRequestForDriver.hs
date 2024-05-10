@@ -26,7 +26,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
-    baseFare :: Kernel.Prelude.Maybe Kernel.Types.Common.Money,
+    baseFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     batchNumber :: Kernel.Prelude.Int,
     cancellationRatio :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
@@ -39,8 +39,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     driverAvailableTime :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     driverDefaultStepFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    driverMaxExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.Money,
-    driverMinExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.Money,
+    driverMaxExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    driverMinExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     driverSpeed :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     driverStepFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     durationToPickup :: Kernel.Types.Common.Seconds,
@@ -69,7 +69,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.Vehicle.Variant
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, (Show))
 
 data DriverSearchRequestStatus = Active | Inactive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

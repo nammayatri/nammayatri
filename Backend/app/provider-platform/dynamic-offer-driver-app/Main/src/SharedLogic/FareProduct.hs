@@ -12,6 +12,7 @@ module SharedLogic.FareProduct where
 import Control.Applicative ((<|>))
 import Data.Time hiding (getCurrentTime)
 import Data.Time.Calendar.WeekDate
+import qualified Domain.Action.UI.FareProduct as UFP
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FareProduct as DFareProduct
 import Domain.Types.Merchant
@@ -123,15 +124,15 @@ getBoundedFareProduct merchantOpCityId tripCategory serviceTier area = do
         foldl
           ( \acc@(fpBoundedByWeekday, fpBoundedByDay) fp ->
               case fp.timeBounds of
-                DFareProduct.BoundedByWeekday timeBounds ->
+                UFP.BoundedByWeekday timeBounds ->
                   if isWithin currTimeOfDay (getPeaksForCurrentDay currentDayOfWeek timeBounds)
                     then (Just fp, fpBoundedByDay)
                     else acc
-                DFareProduct.BoundedByDay days ->
+                UFP.BoundedByDay days ->
                   if maybe False (isWithin currTimeOfDay) (snd <$> find (\(day, _) -> day == currentDay) days)
                     then (fpBoundedByWeekday, Just fp)
                     else acc
-                DFareProduct.Unbounded -> acc
+                UFP.Unbounded -> acc
           )
           (Nothing, Nothing)
           fareProducts

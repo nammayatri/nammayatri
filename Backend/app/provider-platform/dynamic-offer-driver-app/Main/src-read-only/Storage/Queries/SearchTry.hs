@@ -36,9 +36,12 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.SearchTry.SearchTry {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.baseFare baseFare,
+    [ Se.Set Beam.baseFare (Kernel.Prelude.roundToIntegral baseFare),
+      Se.Set Beam.baseFareAmount (Kernel.Prelude.Just baseFare),
       Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.customerExtraFee customerExtraFee,
+      Se.Set Beam.currency (Kernel.Prelude.Just currency),
+      Se.Set Beam.customerExtraFee (Kernel.Prelude.roundToIntegral <$> customerExtraFee),
+      Se.Set Beam.customerExtraFeeAmount (customerExtraFee),
       Se.Set Beam.estimateId estimateId,
       Se.Set Beam.estimateIds (Kernel.Prelude.Just estimateIds),
       Se.Set Beam.isScheduled (Kernel.Prelude.Just isScheduled),

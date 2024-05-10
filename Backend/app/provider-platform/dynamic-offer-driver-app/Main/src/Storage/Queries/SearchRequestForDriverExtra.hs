@@ -4,6 +4,7 @@
 module Storage.Queries.SearchRequestForDriverExtra where
 
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Time as T
 import Domain.Types.Person
 import Domain.Types.SearchRequest (SearchRequest)
@@ -12,6 +13,8 @@ import Domain.Types.SearchTry
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Storage.Hedis
+import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id

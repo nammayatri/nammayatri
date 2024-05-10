@@ -20,6 +20,7 @@ import Kernel.Prelude
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.DriverQuote as BeamDQ
+import Storage.Queries.OrphanInstances.DriverQuote ()
 import Storage.Queries.OrphanInstances.Person ()
 
 getDriverQuote ::

@@ -30,7 +30,6 @@ import qualified Data.Map as M
 import Data.Ord
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Maps as DMaps
-import Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
@@ -427,8 +426,6 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled m
       estimatedFinishTime = (\duration -> fromIntegral duration `addUTCTime` now) <$> mbDuration
   -- Keeping quote expiry as search request expiry. Slack discussion: https://juspay.slack.com/archives/C0139KHBFU1/p1683349807003679
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
-  let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance dist <$> fullFarePolicy.driverExtraFeeBounds
-  let driverPickUpCharge = USRD.extractDriverPickupCharges fullFarePolicy.farePolicyDetails
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId fullFarePolicy.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show fullFarePolicy.vehicleServiceTier))
   let validTill = searchRequestExpirationSeconds `addUTCTime` now
       isTollApplicableForServiceTier = DTC.isTollApplicable fullFarePolicy.vehicleServiceTier
@@ -493,7 +490,6 @@ buildEstimate merchantOpCityId currency searchReqId startTime isScheduled mbDist
   now <- getCurrentTime
   void $ cacheFarePolicyByEstimateId estimateId.getId fullFarePolicy
   let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance dist <$> fullFarePolicy.driverExtraFeeBounds
-  let driverPickUpCharge = USRD.extractDriverPickupCharges fullFarePolicy.farePolicyDetails
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId fullFarePolicy.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show fullFarePolicy.vehicleServiceTier))
   let isTollApplicableForServiceTier = DTC.isTollApplicable fullFarePolicy.vehicleServiceTier
   pure

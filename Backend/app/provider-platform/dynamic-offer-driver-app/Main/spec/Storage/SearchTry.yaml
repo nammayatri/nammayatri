@@ -51,7 +51,7 @@ SearchTry:
     tripCategory: Maybe TripCategory
     isScheduled: Maybe Bool
     vehicleServiceTierName: Maybe Text
-    currency: Maybe Currencyz
+    currency: Maybe Currency
 
 
   beamFields:
@@ -62,9 +62,9 @@ SearchTry:
       baseFare: Money
       baseFareAmount: Maybe HighPrecMoney
 
-    customerExtraFee: 
-      customerExtraFee: Money
-      customerExtraFeeAmount: Maybe HighPrecMoney  
+    customerExtraFee:
+      customerExtraFee: Maybe Money
+      customerExtraFeeAmount: Maybe HighPrecMoney
 
 
   domainInstance:
@@ -90,7 +90,7 @@ SearchTry:
     vehicleServiceTierName: Kernel.Prelude.Just|I
     tripCategory: Kernel.Prelude.Just|I
     isScheduled: Kernel.Prelude.Just|I
-    baseFare: Kernel.Prelude.Just|I
+    baseFare: Kernel.Prelude.roundToIntegral baseFare|E
     baseFareAmount: Kernel.Prelude.Just baseFare|E
     currency: Kernel.Prelude.Just|I
     customerExtraFee: Kernel.Prelude.roundToIntegral <$> customerExtraFee|E
@@ -121,7 +121,3 @@ SearchTry:
 
   extraOperations:
     - EXTRA_QUERY_FILE
-
-
-
-

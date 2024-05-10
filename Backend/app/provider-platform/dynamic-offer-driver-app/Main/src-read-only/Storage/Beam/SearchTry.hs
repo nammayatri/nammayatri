@@ -17,8 +17,11 @@ import Tools.Beam.UtilsTH
 
 data SearchTryT f = SearchTryT
   { baseFare :: (B.C f Kernel.Types.Common.Money),
+    baseFareAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
     customerExtraFee :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money)),
+    customerExtraFeeAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     estimateId :: (B.C f Kernel.Prelude.Text),
     estimateIds :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
     id :: (B.C f Kernel.Prelude.Text),

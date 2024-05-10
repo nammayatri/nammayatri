@@ -23,11 +23,13 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSSL
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.Vehicle as Variant
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import SharedLogic.DriverPool.Types
 
 data IOSSearchRequestForDriverAPIEntity = IOSSearchRequestForDriverAPIEntity
   { searchRequestId :: Id DST.SearchTry, -- TODO: Deprecated, to be removed

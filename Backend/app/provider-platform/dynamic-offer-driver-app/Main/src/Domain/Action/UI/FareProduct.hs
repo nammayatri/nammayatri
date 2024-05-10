@@ -13,18 +13,15 @@
 -}
 {-# LANGUAGE DerivingVia #-}
 
-module Domain.Types.FareProduct where
+module Domain.Action.UI.FareProduct
+  ( BoundedPeaks (..),
+    TimeBound (..),
+  )
+where
 
 import Data.Time
-import qualified Domain.Types.Common as DTC
-import qualified Domain.Types.FarePolicy as FarePolicyD
-import Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
-import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
-import Lib.Types.SpecialLocation (Area (..))
 import qualified Text.Show
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
@@ -66,16 +63,3 @@ instance Read TimeBound where
             Nothing -> [(Unbounded, "")]
 
 $(mkBeamInstancesForEnum ''TimeBound)
-
-data FareProduct = FareProduct
-  { id :: Id FareProduct,
-    merchantId :: Id Merchant,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    farePolicyId :: Id FarePolicyD.FarePolicy,
-    vehicleServiceTier :: DVST.ServiceTierType,
-    area :: Area,
-    tripCategory :: DTC.TripCategory,
-    timeBounds :: TimeBound,
-    enabled :: Bool
-  }
-  deriving (Generic, Show, Eq, ToSchema, FromJSON, ToJSON)

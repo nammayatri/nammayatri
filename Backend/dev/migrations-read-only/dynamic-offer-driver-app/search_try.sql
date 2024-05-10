@@ -69,3 +69,16 @@ ALTER TABLE atlas_driver_offer_bpp.search_try ALTER COLUMN search_repeat_type TY
 ALTER TABLE atlas_driver_offer_bpp.search_try ALTER COLUMN message_id TYPE character (36);
 ALTER TABLE atlas_driver_offer_bpp.search_try ALTER COLUMN estimate_ids TYPE ARRAY [];
 ALTER TABLE atlas_driver_offer_bpp.search_try ALTER COLUMN estimate_id TYPE character (36);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_try ALTER COLUMN customer_extra_fee SET NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN customer_extra_fee_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN currency character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN base_fare_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_try ALTER COLUMN customer_extra_fee DROP NOT NULL;

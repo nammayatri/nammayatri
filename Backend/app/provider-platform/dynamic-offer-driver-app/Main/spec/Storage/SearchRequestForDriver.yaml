@@ -19,6 +19,7 @@ imports:
 SearchRequestForDriver:
   tableName: search_request_for_driver
   beamInstance: MakeTableInstancesWithTModifier [("requestId", "search_request_id")]
+  derives: "Generic, Show"
 
   types:
     DriverSearchRequestStatus:
@@ -34,7 +35,7 @@ SearchRequestForDriver:
     estimateId : Maybe Text
     merchantId : Maybe (Id Merchant)
     merchantOperatingCityId : Id MerchantOperatingCity
-    baseFare : Maybe Money
+    baseFare : Maybe HighPrecMoney
     startTime : UTCTime
     searchRequestValidTill : UTCTime
     driverId : Id Person
@@ -51,10 +52,10 @@ SearchRequestForDriver:
     lon : Maybe Double
     createdAt : UTCTime
     response : Maybe SearchRequestForDriverResponse
-    driverMinExtraFee : Maybe Money
-    driverMaxExtraFee : Maybe Money
+    driverMinExtraFee : Maybe HighPrecMoney
+    driverMaxExtraFee : Maybe HighPrecMoney
     driverStepFee: Maybe HighPrecMoney
-    driverDefaultStepFee: Maybe HighPrecMoney 
+    driverDefaultStepFee: Maybe HighPrecMoney
     rideRequestPopupDelayDuration : Seconds
     isPartOfIntelligentPool : Bool
     pickupZone : Bool
@@ -86,6 +87,8 @@ SearchRequestForDriver:
     createdAt: LocalTime
     searchRequestValidTill: LocalTime
     vehicleServiceTier: Maybe ServiceTierType
+    currency: Maybe Currency
+    customerCancellationDues: Maybe HighPrecMoney
 
 
   beamFields:
@@ -95,7 +98,7 @@ SearchRequestForDriver:
 
     baseFare:
       baseFare: Maybe Money
-      baseFareAmount: Maybe HighPrecMoney  
+      baseFareAmount: Maybe HighPrecMoney
 
     driverMinExtraFee:
       driverMinExtraFee: Maybe Money
@@ -107,12 +110,12 @@ SearchRequestForDriver:
 
     driverStepFee:
       driverStepFee: Maybe Money
-      driverDefaultStepFee: Maybe HighPrecMoney
+      driverStepFeeAmount: Maybe HighPrecMoney
 
     driverDefaultStepFee:
       driverDefaultStepFee: Maybe Money
-      driverDefaultStepFeeAmount: Maybe HighPrecMoney  
-      
+      driverDefaultStepFeeAmount: Maybe HighPrecMoney
+
 
   fromTType:
     merchantOperatingCityId: Storage.Queries.Transformers.SearchRequestForDriver.getMerchantOpCId merchantOperatingCityId merchantId requestId|EM
@@ -121,16 +124,16 @@ SearchRequestForDriver:
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
     clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion)|E
-    vehicleServiceTier: fromMaybe (SharedLogic.DriverPool.Types.castVariantToServiceTier vehicleVariant) vehicleServiceTier|E
+    vehicleServiceTier: Kernel.Prelude.fromMaybe (SharedLogic.DriverPool.Types.castVariantToServiceTier vehicleVariant) vehicleServiceTier|E
     createdAt: Data.Time.localTimeToUTC Data.Time.utc searchRequestValidTill|E
     searchRequestValidTill: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
     baseFare: Kernel.Types.Common.mkAmountWithDefault baseFareAmount <$> baseFare|E
     driverMinExtraFee: Kernel.Types.Common.mkAmountWithDefault driverMinExtraFeeAmount <$> driverMinExtraFee|E
     driverMaxExtraFee: Kernel.Types.Common.mkAmountWithDefault driverMaxExtraFeeAmount <$> driverMaxExtraFee|E
-    customerCancellationDues: getCustomerCancellationDues
     driverStepFee: Kernel.Types.Common.mkAmountWithDefault driverStepFeeAmount <$> driverStepFee|E
     driverDefaultStepFee: Kernel.Types.Common.mkAmountWithDefault driverDefaultStepFeeAmount <$> driverDefaultStepFee|E
-    currency: fromMaybe Kernel.Types.Common.INR currency|E
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency|E
+    customerCancellationDues: getCustomerCancellationDues
 
 
   toTType:
@@ -155,9 +158,10 @@ SearchRequestForDriver:
     driverStepFeeAmount: driverStepFee|E
     driverDefaultStepFeeAmount: driverDefaultStepFee|E
     estimatedFare: Kernel.Prelude.roundToIntegral estimatedFare|E
-    estimatedFareAmount: Just estimatedFare|E
+    estimatedFareAmount: Kernel.Prelude.Just estimatedFare|E
     currency: Kernel.Prelude.Just|I
-    
+    customerCancellationDues: Kernel.Prelude.Just|I
+
   constriants:
     id: PrimaryKey
     searchTryId: SecondaryKey
@@ -186,5 +190,6 @@ SearchRequestForDriver:
 
   excludedDefaultQueries:
     - create
-    - createMany  
+    - createMany
+
 
