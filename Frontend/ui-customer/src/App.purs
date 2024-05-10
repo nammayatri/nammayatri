@@ -254,6 +254,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GOTO_CONFIRMING_LOCATION_STAGE HomeScreenState
                         | UPDATE_REFERRAL_CODE String
                         | GO_TO_SAFETY_SETTING_SCREEN
+                        | GO_TO_RIDE_RELATED_ISSUES HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

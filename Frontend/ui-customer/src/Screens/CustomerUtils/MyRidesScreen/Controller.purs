@@ -51,6 +51,7 @@ import PrestoDOM.List as PrestoList
 import JBridge (toast, differenceBetweenTwoUTCInMinutes)
 import Data.Function.Uncurried (runFn2)
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
+import Engineering.Helpers.Utils (getFixedTwoDecimals)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -292,17 +293,14 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
   , providerType : maybe CTP.ONUS (\valueAdd -> if valueAdd then CTP.ONUS else CTP.OFFUS) ride.isValueAddNP -- get from API
 }) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
 
-dummyFareBreakUp :: FareBreakupAPIEntity
-dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}
-
 matchRidebyId :: IndividualRideCardState -> IndividualRideCardState -> Boolean
 matchRidebyId rideOne rideTwo = rideOne.bookingId == rideTwo.bookingId
 
 getFares ∷ Array FareBreakupAPIEntity → Fares
 getFares fares = {
-  baseFare :(getCurrency appConfig) <>  " " <> show (((getFareFromArray fares "BASE_FARE") + (getFareFromArray fares "EXTRA_DISTANCE_FARE")) - 10)
+  baseFare :(getCurrency appConfig) <>  " " <> getFixedTwoDecimals (((getFareFromArray fares "BASE_FARE") + (getFareFromArray fares "EXTRA_DISTANCE_FARE")) - 10.0)
 , pickupCharges : (getCurrency appConfig) <> " 10.0"
-, waitingCharges : (getCurrency appConfig) <> " " <> show (getFareFromArray fares "WAITING_CHARGES")
-, nominalFare : (getCurrency appConfig) <> " " <> show (getFareFromArray fares "DRIVER_SELECTED_FARE")
+, waitingCharges : (getCurrency appConfig) <> " " <> getFixedTwoDecimals (getFareFromArray fares "WAITING_CHARGES")
+, nominalFare : (getCurrency appConfig) <> " " <> getFixedTwoDecimals (getFareFromArray fares "DRIVER_SELECTED_FARE")
 }
 

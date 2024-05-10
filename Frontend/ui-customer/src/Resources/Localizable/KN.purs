@@ -1118,7 +1118,7 @@ getKN stringKey =
         HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "ನಿಮ್ಮ ಚಾಲಕ ನಿಮ್ಮ ಆದ್ಯತೆಯನ್ನು ಪ್ರಕಾರಕ್ಕೆ ಹೊಂದಿಸಿದ್ದಾರೆಯಾ?"
         NO_REPORT_AN_ISSUE -> "ಇಲ್ಲ, ಒಂದು ಸಮಸ್ಯೆಯನ್ನು ವರದಿಸಿ"
         GREAT_ENJOY_THE_TRIP -> "ಸವಾರಿಯನ್ನು ಆನಂದಿಸಿ!"
-        ENJOY_YOUR_BUDGET_FRIENDLY_NON_AC_RIDE -> "ನಿಮ್ಮ ಬಜೆಟ್ ಸ್ನೇಹಿತ ನಿಲುವಂಗಿ ಸವಾರಿಯನ್ನು ಆನಂದಿಸಿ"
+        ENJOY_YOUR_BUDGET_FRIENDLY_NON_AC_RIDE -> "ನಿಮ್ಮ ಬಜೆಟ್ ಸ್ನೇಹಿತ ನಿಲುವಂಗಿ\nಸವಾರಿಯನ್ನು ಆನಂದಿಸಿ"
         AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "ಈ ಸವಾರಿಯಲ್ಲಿ ಎಸಿ ಲಭ್ಯವಿಲ್ಲ"
         AC_NOT_WORKING_DESC -> "ಎಸಿ ಕೆಲಸ ಮಾಡುತ್ತಿಲ್ಲ / ಚಾಲಕ ಆನ್ ಮಾಡಲು ನಿರಾಕರಿಸಿದ"
         SHOWING_FARE_FROM_MULTI_PROVIDER -> "ಬಹು ಪೂರೈಕೆದಾರರಿಂದ ದರಗಳನ್ನು ತೋರಿಸಲಾಗುತ್ತಿದೆ"

@@ -598,8 +598,8 @@ newtype RidesInfo = RidesInfo
       actualDuration :: Maybe Int,
       startOdometerReading :: Maybe OdometerReading,
       endOdometerReading :: Maybe OdometerReading,
-      tollCharges :: Maybe Int,
-      estimatedTollCharges :: Maybe Int,
+      tollCharges :: Maybe Number,
+      estimatedTollCharges :: Maybe Number,
       vehicleServiceTierName :: String,
       vehicleServiceTier :: String,
       isVehicleAirConditioned :: Maybe Boolean,
@@ -1827,7 +1827,9 @@ newtype IssueReportDriverListItem = IssueReportDriverListItem
     status :: String,
     category :: String,
     createdAt :: String,
-    issueReportShortId :: Maybe String
+    issueReportShortId :: Maybe String,
+    optionLabel :: Maybe String,
+    rideId :: Maybe String
   }
 
 instance makeFetchIssueListReq :: RestEndpoint FetchIssueListReq FetchIssueListResp where

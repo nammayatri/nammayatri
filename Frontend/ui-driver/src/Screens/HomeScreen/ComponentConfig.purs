@@ -1401,11 +1401,11 @@ getRideCompletedConfig state = let
     }
   , toll {
       actualAmount =  state.data.endRideData.actualTollCharge
-    , text =if state.data.endRideData.actualTollCharge > 0  then getString RIDE_TOLL_FARE_INCLUDES  else getString TOLL_ROAD_CHANGED
-    , visibility = boolToVisibility $ state.data.endRideData.estimatedTollCharge > 0
+    , text =if state.data.endRideData.actualTollCharge > 0.0  then getString RIDE_TOLL_FARE_INCLUDES  else getString TOLL_ROAD_CHANGED
+    , visibility = boolToVisibility $ state.data.endRideData.estimatedTollCharge > 0.0
     , image = fetchImage FF_COMMON_ASSET "ny_ic_blue_toll"
-    , textColor = if state.data.endRideData.actualTollCharge > 0 then Color.blue800 else Color.black600
-    , imageVisibility = boolToVisibility $ state.data.endRideData.estimatedTollCharge > 0 && state.data.endRideData.actualTollCharge > 0
+    , textColor = if state.data.endRideData.actualTollCharge > 0.0 then Color.blue800 else Color.black600
+    , imageVisibility = boolToVisibility $ state.data.endRideData.estimatedTollCharge > 0.0 && state.data.endRideData.actualTollCharge > 0.0
     }
   }
   in config'

@@ -1133,7 +1133,7 @@ getTA stringKey =
     HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "உங்கள் டிரைவர் உங்கள் விருப்பம் போல ஏசியை அமைத்துவிட்டாரா?"
     NO_REPORT_AN_ISSUE -> "இல்லை, ஒரு சிக்கலை அறிக்கவும்"
     GREAT_ENJOY_THE_TRIP -> "மிகவும் நன்றி! பயணம் மகிழ்ச்சியுடன் கடைசியாக முடியும்."
-    ENJOY_YOUR_BUDGET_FRIENDLY_NON_AC_RIDE -> "உங்கள் பட்ஜெட் உள்ளமையான அசியில் சவாரியை மகிழ்ச்சியுடன் அனுபவிக்கவும்"
+    ENJOY_YOUR_BUDGET_FRIENDLY_NON_AC_RIDE -> "உங்கள் பட்ஜெட் உள்ளமையான அசியில்\nசவாரியை மகிழ்ச்சியுடன் அனுபவிக்கவும்"
     AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "இந்த சவாரியில் ஏசியுடன் சவாரியில் கிடைக்கவில்லை"
     AC_NOT_WORKING_DESC -> "ஏசிக் வேலை செய்யவில்லை / டிரைவர் ஆன் செய்ய மனமாக சொல்லினார்"
     SHOWING_FARE_FROM_MULTI_PROVIDER -> "பல வழங்குநர்களிடமிருந்து கட்டணங்களைக் காட்டுகிறது"

@@ -507,7 +507,7 @@ rideHistoryItemTransformer (RidesInfo ride) =
     specialZoneImage : specialLocationConfig.imageUrl,
     specialZoneText : specialLocationConfig.text,
     specialZonePickup : checkSpecialPickupZone ride.specialLocationTag,
-    tollCharge : fromMaybe 0 ride.tollCharges,
+    tollCharge : fromMaybe 0.0 ride.tollCharges,
     rideType : ride.vehicleServiceTierName,
     tripStartTime : ride.tripStartTime,
     tripEndTime : ride.tripEndTime,
