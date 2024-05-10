@@ -362,8 +362,9 @@ getEstimateList estimates estimateAndQuoteConfig activeIndex =
   let estimatesWithOrWithoutBookAny = (createEstimateForBookAny estimates) <> estimates
       filteredWithVariantAndFare = filterWithFareAndVariant estimatesWithOrWithoutBookAny estimateAndQuoteConfig
       estimatesConfig = mapWithIndex (\index item -> getEstimates item filteredWithVariantAndFare index activeIndex) filteredWithVariantAndFare
+      updatedBookAnyEstimate = updateBookAnyEstimate estimatesConfig 
   in
-    estimatesConfig
+    updatedBookAnyEstimate
 
 filterWithFareAndVariant :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Array EstimateAPIEntity
 filterWithFareAndVariant estimates estimateAndQuoteConfig =
@@ -461,7 +462,6 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
 getEstimates :: EstimateAPIEntity -> Array EstimateAPIEntity -> Int -> Int -> ChooseVehicle.Config
 getEstimates (EstimateAPIEntity estimate) estimates index activeIndex =
   let currency = getCurrency appConfig
-      allSelectedServices = getSelectedServices FunctionCall
       estimateAndQuoteConfig = (getAppConfig appConfig).estimateAndQuoteConfig
       config = getCityConfig (getAppConfig appConfig).cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
       tipConfig = getTipConfig estimate.vehicleVariant
@@ -472,18 +472,6 @@ getEstimates (EstimateAPIEntity estimate) estimates index activeIndex =
                         Just (FareRange fareRange) -> Just (f fareRange)
                         _ -> Nothing
       calculateFareRangeDifference fareRange = fareRange ^. _maxFare - fareRange ^. _minFare
-      availableServices =
-        if estimate.vehicleVariant == "BOOK_ANY" then
-          foldl
-            ( \acc (EstimateAPIEntity item) -> case item.serviceTierName of
-                Just service -> acc <> [ service ]
-                Nothing -> acc
-            )
-            []
-            estimates
-        else
-          []
-      selectedServices = if estimate.vehicleVariant == "BOOK_ANY" then intersection allSelectedServices availableServices else []
   in
     ChooseVehicle.config
       { vehicleImage = getVehicleVariantImage estimate.vehicleVariant
@@ -514,18 +502,44 @@ getEstimates (EstimateAPIEntity estimate) estimates index activeIndex =
       , nightChargeFrom = breakupConfig.nightChargeStart
       , nightChargeTill = breakupConfig.nightChargeEnd
       , driverAdditions = breakupConfig.driverAdditions
-      , availableServices = availableServices
-      , selectedServices = selectedServices
+      , availableServices = []
+      , selectedServices = []
       , validTill = estimate.validTill
       , specialLocationTag = estimate.specialLocationTag
       }
 
 getEstimateIdFromSelectedServices :: Array ChooseVehicle.Config -> ChooseVehicle.Config -> Array String
-getEstimateIdFromSelectedServices esimates config =
+getEstimateIdFromSelectedServices estimates config =
   foldl (\acc item -> if DA.elem (fromMaybe "" item.serviceTierName) config.selectedServices 
                         then acc <> [item.id] 
                         else acc
-        ) [] esimates
+        ) [] estimates
+
+updateBookAnyEstimate :: Array ChooseVehicle.Config -> Array ChooseVehicle.Config
+updateBookAnyEstimate estimates =
+    map
+      ( \estimate -> 
+          if estimate.vehicleVariant == "BOOK_ANY" then
+            let availableServices = foldl
+                                      ( \acc item -> case item.serviceTierName of
+                                          Just service -> acc <> [ service ]
+                                          Nothing -> acc
+                                      )
+                                      []
+                                      estimates
+                allSelectedServices = getSelectedServices FunctionCall
+                selectedServices = intersection allSelectedServices availableServices
+                headEstimateId = (fromMaybe ChooseVehicle.config (DA.find (\item -> DA.any (_ == fromMaybe "" item.serviceTierName) selectedServices) estimates)).id
+                validTill = (fromMaybe ChooseVehicle.config (DA.find (\item -> item.id == headEstimateId) estimates)).validTill
+            in estimate { availableServices = availableServices
+                        , selectedServices = selectedServices
+                        , validTill = validTill
+                        , id = headEstimateId
+                        }
+          else
+            estimate
+      )
+      estimates
 
 mapServiceTierName :: String -> Maybe Boolean -> Maybe String -> Maybe String
 mapServiceTierName vehicleVariant isValueAddNP serviceTierName = 

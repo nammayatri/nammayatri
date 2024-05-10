@@ -674,7 +674,6 @@ data ScreenOutput = LogoutUser
                   | GoToMyProfile HomeScreenState Boolean
                   | ChangeLanguage HomeScreenState
                   | Retry HomeScreenState
-                  | GetQuotes HomeScreenState
                   | UpdatedState HomeScreenState Boolean
                   | CancelRide HomeScreenState
                   | NotificationHandler String HomeScreenState
@@ -684,7 +683,6 @@ data ScreenOutput = LogoutUser
                   | LocationSelected LocationListItemState Boolean HomeScreenState
                   | SearchPlace String HomeScreenState
                   | UpdateLocationName HomeScreenState Number Number
-                  | UpdatePickupName HomeScreenState Number Number
                   | GoToHome HomeScreenState
                   | GoToFavourites HomeScreenState
                   | SubmitRating HomeScreenState
@@ -1134,10 +1132,11 @@ eval (RepeatRideCountDown seconds status timerID) state = do
   else if status == "EXPIRED" then do
     void $ pure $ clearTimerWithId timerID
     void $ pure $ performHapticFeedback unit
-    void $ pure $ setValueToLocalStore SELECTED_VARIANT state.data.selectedEstimatesObject.vehicleVariant
+    -- void $ pure $ updateLocalStage FindingQuotes
+    -- void $ pure $ setValueToLocalStore SELECTED_VARIANT state.data.selectedEstimatesObject.vehicleVariant
     void $ pure $ cacheRateCard state
-    let updatedState = state{data{rideHistoryTrip = Nothing}, props{repeatRideTimerId = "",repeateRideTimerStoped = true, searchExpire = (getSearchExpiryTime "LazyCheck")}}
-    updateAndExit (updatedState) (GetQuotes updatedState)
+    let updatedState = state{data{ rideHistoryTrip = Nothing }, props{repeatRideTimerId = "", repeateRideTimerStoped = true}}
+    exit $ (SelectEstimateAndQuotes updatedState)
   else continue state{props{repeatRideTimer = (show seconds), repeatRideTimerId = timerID, repeateRideTimerStoped = false}}
 
 eval StopRepeatRideTimer state =  do
@@ -1677,14 +1676,14 @@ eval (UpdatePickupLocation key lat lon) state = do
     case key of
       "LatLon" -> do
         let selectedSpot = head (filter (\spots -> (getDistanceBwCordinates (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon)) spots.lat spots.lng) * 1000.0 < (toNumber JB.locateOnMapConfig.thresholdDistToSpot) ) updatedState.data.nearByPickUpPoints)
-        exit $ UpdatePickupName updatedState{props{defaultPickUpPoint = "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, hotSpot{ selectedSpot = selectedSpot }, locateOnMapProps{ isSpecialPickUpGate = false }}} latitude longitude
+        exit $ UpdateLocationName updatedState{props{defaultPickUpPoint = "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, hotSpot{ selectedSpot = selectedSpot }, locateOnMapProps{ isSpecialPickUpGate = false }}} latitude longitude
       _ -> do
         let focusedIndex = findIndex (\item -> item.place == key) updatedState.data.nearByPickUpPoints
             spot = (filter(\item -> item.place == key) updatedState.data.nearByPickUpPoints) !! 0
         case focusedIndex, spot of
           Just index, Just spot' -> do
             _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
-            exit $ UpdatePickupName updatedState{props{defaultPickUpPoint = key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot'.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot'.lat spot'.lng
+            exit $ UpdateLocationName updatedState{props{defaultPickUpPoint = key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot'.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot'.lat spot'.lng
           _, _ -> continue updatedState
 
 eval (CheckBoxClick autoAssign) state = do
@@ -1804,8 +1803,8 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
                         void $ pure $ performHapticFeedback unit
                         void $ pure $ setValueToLocalStore SELECTED_VARIANT state.data.selectedEstimatesObject.vehicleVariant
                         void $ pure $ cacheRateCard state
-                        let updatedState = state{data{rideHistoryTrip = Nothing}, props{ searchExpire = (getSearchExpiryTime "LazyCheck")}}
-                        updateAndExit (updatedState) (GetQuotes updatedState)
+                        let updatedState = state{data{rideHistoryTrip = Nothing}}
+                        exit $ (SelectEstimateAndQuotes updatedState)
       _            -> continue state
 
 eval WhereToClick state = do
@@ -2370,8 +2369,8 @@ eval (EstimateChangedPopUpController (PopUpModal.OnButton1Click)) state = exit $
 
 eval (EstimateChangedPopUpController (PopUpModal.OnButton2Click)) state = do
   let
-    updatedState = state { props { isEstimateChanged = false, searchExpire = (getSearchExpiryTime "LazyCheck") } }
-  updateAndExit updatedState $ GetQuotes updatedState
+    updatedState = state { props { isEstimateChanged = false } }
+  exit $ (SelectEstimateAndQuotes updatedState)
 
 eval CloseLocationTracking state = continue state { props { isLocationTracking = false } }
 
@@ -2506,8 +2505,8 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes) count ) state = do
             continue state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, isEstimateChanged = true } }
           else do
             let
-              updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, searchExpire = (getSearchExpiryTime "LazyCheck") } }
-            updateAndExit updatedState $ GetQuotes updatedState
+              updatedState = state { data { suggestedAmount = estimatedPrice } }
+            exit $ (SelectEstimateAndQuotes updatedState)
 
 
 eval (GetQuotesList (SelectListRes resp)) state = do
@@ -2816,11 +2815,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
       tipViewProps =  if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.tipViewProps 
                       else if state.props.tipViewProps.stage == TIP_AMOUNT_SELECTED then state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH}
                       else state.props.tipViewProps
-      allSelectedEstimateIds = getEstimateIdFromSelectedServices state.data.specialZoneQuoteList state.data.selectedEstimatesObject
-      selectedEstimateOrQuote = if state.data.selectedEstimatesObject.vehicleVariant == "BOOK_ANY"
-                                  then state.data.selectedEstimatesObject{ id = fromMaybe "" (head allSelectedEstimateIds) }
-                                  else state.data.selectedEstimatesObject
-      updatedState = state{data{ otherSelectedEstimates = allSelectedEstimateIds, selectedEstimatesObject = selectedEstimateOrQuote }, props{customerTip = customerTip, tipViewProps = tipViewProps}}
+      updatedState = state{props{customerTip = customerTip, tipViewProps = tipViewProps}}
   void $ pure $ cacheRateCard state
   void $ pure $ setTipViewData (TipViewData { stage : tipViewProps.stage , activeIndex : tipViewProps.activeIndex , isVisible : tipViewProps.isVisible })
   exit $ (SelectEstimateAndQuotes updatedState)
@@ -2836,9 +2831,9 @@ eval (QuoteListModelActionController (QuoteListModelController.ProviderModelAC (
   void $ pure $ clearTimerWithId state.data.iopState.timerId
   void $ pure $ spy "ButtonClick state" state
   
-  let updatedState = state{props{searchExpire = (getSearchExpiryTime "LazyCheck")}, data { iopState { providerSelectionStage = false}}}
+  let updatedState = state{data { iopState { providerSelectionStage = false}}}
   void $ pure $ spy "ButtonClick updatedState" updatedState
-  updateAndExit (updatedState) (GetQuotes updatedState)
+  exit $ (SelectEstimateAndQuotes updatedState)
 
 eval (QuoteListModelActionController (QuoteListModelController.ProviderModelAC (PM.FavClick item))) state = do
   let selectedItem = find (\quote -> quote.id == item.id) state.data.specialZoneQuoteList 
@@ -3384,8 +3379,8 @@ estimatesListTryAgainFlow (GetQuotesRes quotesRes) state = do
       if (estimatedPrice >  state.data.selectedEstimatesObject.basePrice) then
             continue state { data { suggestedAmount = estimatedPrice }, props { estimateId = defaultQuote.id, isEstimateChanged = true } }
       else do
-        let updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = defaultQuote.id, searchExpire = (getSearchExpiryTime "LazyCheck") } }
-        updateAndExit updatedState $ GetQuotes updatedState
+        let updatedState = state { data { suggestedAmount = estimatedPrice } }
+        exit $ (SelectEstimateAndQuotes updatedState)
 
 getRateCardArray :: Boolean -> String -> Int -> Int -> Int -> Array {title :: String , description :: String}
 getRateCardArray nightCharges lang baseFare extraFare additionalFare = ([ { title :(getString $ MIN_FARE_UPTO "2 km") <> if nightCharges then " 🌙" else "" , description : "₹" <> toStringJSON (baseFare) }
