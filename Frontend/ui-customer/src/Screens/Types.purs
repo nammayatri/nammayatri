@@ -627,6 +627,7 @@ type HomeScreenStateData =
   , iopState :: InteroperabilityState
   , currentCityConfig :: MRC.CityConfig
   , otherSelectedEstimates :: Array String
+  , rateCardCache :: Maybe RateCard
   }
 
 type InteroperabilityState = {

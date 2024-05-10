@@ -646,7 +646,7 @@ getBN stringKey =
         WAITING_AT_PICKUP -> "পিকআপে অপেক্ষা করছে"
         PICKUP -> "পিকআপ"
         PAY_BY_CASH_OR_UPI -> "নগদ / UPI দ্বারা পেমেন্ট করুন"
-        YOU_WILL_PAY_FOR_EVERY_MINUTE -> "প্রথম 3 মিনিটের জন্য ওয়েটিং চার্জ শূন্য।. এর পরে প্রতি মিনিটে ₹1.5 এর ওয়েটিং চার্জ প্রযোজ্য হবে।"
+        YOU_WILL_PAY_FOR_EVERY_MINUTE freeMinutes chargePerMin -> "প্রথম " <> freeMinutes <> " মিনিটের জন্য অপেক্ষা চার্জ শূন্য। পরবর্তীতে "<> chargePerMin <>" চার্জ প্রযোজ্য হবে।"
         HOW_LONG_DRIVER_WAITED_FOR_PICKUP -> "আপনাকে দেখায় ড্রাইভার পিকআপে কতক্ষণ অপেক্ষা করেছে।"
         CHAT_WITH -> "সাথে চ্যাট করুন"
         QUICK -> "দ্রুত"

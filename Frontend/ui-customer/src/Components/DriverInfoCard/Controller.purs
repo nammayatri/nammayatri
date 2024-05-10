@@ -46,6 +46,7 @@ data Action = NoAction
             | BannerStateChanged String
             | BannerCarousel BannerCarousel.Action
             | SpecialZoneInfoTag
+            | RateCardInfo
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -64,7 +65,8 @@ type DriverInfoCardProps =
     zoneType :: ZoneType,
     merchantCity :: City,
     showBanner :: Boolean,
-    isChatWithEMEnabled :: Boolean
+    isChatWithEMEnabled :: Boolean,
+    isRateCardAvailable :: Boolean
   }
 
 type DriverInfoCardData =

@@ -411,3 +411,9 @@ getFixedTwoDecimals :: Number -> String
 getFixedTwoDecimals amount = case (DI.fromNumber amount) of
                                 Just value -> show value
                                 Nothing ->  toStringWith (fixed 2) amount
+
+formatNumber :: Number -> Maybe Int -> String
+formatNumber amount decimalPlaces = case (DI.fromNumber amount),decimalPlaces  of
+                                      (Just value), _ -> show value
+                                      Nothing, Just decimalPlace -> toStringWith (fixed decimalPlace) amount
+                                      _,_ -> show amount
