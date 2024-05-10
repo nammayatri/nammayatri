@@ -36,10 +36,14 @@ library
       Lib.Payment.Storage.Beam.PaymentTransaction
       Lib.Payment.Storage.Queries.PaymentOrder
       Lib.Payment.Storage.Queries.PaymentTransaction
+      Lib.Payment.Domain.Types.Refunds
+      Lib.Payment.Storage.Beam.Refunds
+      Lib.Payment.Storage.Queries.Refunds
   other-modules:
       Paths_payment
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds
