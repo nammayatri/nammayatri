@@ -356,9 +356,11 @@ DocumentVerificationConfig:
     maxRetryCount: Int
     isDefaultEnabledOnManualVerification: Bool
     isImageValidationRequired: Bool
+    doStrictVerifcation: Bool
     order: Int
   default:
     order: "0"
+    doStrictVerifcation: "true"
     isDefaultEnabledOnManualVerification: "true"
     isImageValidationRequired: "true"
   constraints:
