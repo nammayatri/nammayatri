@@ -33,7 +33,7 @@ buildOnIssueReq ::
   DIssue.IssueRes ->
   m Spec.OnIssueReq
 buildOnIssueReq txnId msgId bapId bapUri issueRes = do
-  context <- Utils.buildContext Spec.ON_ISSUE Spec.ON_DEMAND bapId issueRes.merchant' txnId msgId issueRes.merchantOperatingCity.city (Just $ Utils.BapData bapId bapUri) (Utils.buildTTL 30 (convertRFC3339ToUTC issueRes.updatedAt))
+  context <- Utils.buildContext Spec.ON_ISSUE Spec.ON_DEMAND issueRes.bppId issueRes.merchant' txnId msgId issueRes.merchantOperatingCity.city (Just $ Utils.BapData bapId bapUri) (Utils.buildTTL 30 (convertRFC3339ToUTC issueRes.updatedAt))
   let message = tfOnIssueMessage issueRes
   pure $
     Spec.OnIssueReq
@@ -111,7 +111,7 @@ tfOrganzationOrg :: DIssue.IssueRes -> Maybe Spec.OrganizationOrg
 tfOrganzationOrg issueRes =
   Just $
     Spec.OrganizationOrg
-      { organizationOrgName = Just $ issueRes.merchant'.name <> "::TRV10"
+      { organizationOrgName = Just $ issueRes.bapId <> "::ONDC:TRV10"
       }
 
 tfOrganizationPerson :: DIssue.IssueRes -> Maybe Spec.ComplainantPerson

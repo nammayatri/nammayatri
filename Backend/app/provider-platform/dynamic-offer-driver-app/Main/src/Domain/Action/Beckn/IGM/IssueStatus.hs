@@ -31,8 +31,9 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.IGMConfig as QIGMConfig
 import qualified Storage.Queries.IGMIssue as QIGM
 
-newtype DIssueStatus = DIssueStatus
-  { issueId :: Text
+data DIssueStatus = DIssueStatus
+  { issueId :: Text,
+    bapId :: Text
   }
   deriving (Show, Generic, Eq)
 
@@ -40,7 +41,8 @@ data ValidatedDIssueStatus = ValidatedDIssueStatus
   { issue :: DIGM.IGMIssue,
     merchant :: DM.Merchant,
     igmConfig :: IGMConfig,
-    merchantOperatingCity :: MerchantOperatingCity
+    merchantOperatingCity :: MerchantOperatingCity,
+    bapId :: Text
   }
   deriving (Show, Generic)
 
@@ -55,7 +57,8 @@ data IssueStatusRes = IssueStatusRes
     merchant :: DM.Merchant,
     merchantOperatingCity :: MerchantOperatingCity,
     createdAt :: UTCTimeRFC3339,
-    updatedAt :: UTCTimeRFC3339
+    updatedAt :: UTCTimeRFC3339,
+    bapId :: Text
   }
   deriving (Show, Generic)
 
