@@ -183,7 +183,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
     withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking updatedRide (Just point)
 
-  Notify.notifyOnRideStarted ride
+  fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride
   pure APISuccess.Success
   where
     isValidRideStatus status = status == DRide.NEW
