@@ -1668,7 +1668,8 @@ bookingOptionsFlow = do
           serviceTierType : item.serviceTierType,
           shortDescription : item.shortDescription,
           vehicleRating : item.vehicleRating,
-          isUsageRestricted : fromMaybe false item.isUsageRestricted
+          isUsageRestricted : fromMaybe false item.isUsageRestricted,
+          priority : fromMaybe 0 item.priority
         }
       )
 

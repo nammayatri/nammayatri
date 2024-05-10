@@ -40,4 +40,5 @@ defaultRidePreferenceOption =
   , shortDescription: Nothing
   , vehicleRating: Nothing
   , isUsageRestricted: false
+  , priority: 0
   }

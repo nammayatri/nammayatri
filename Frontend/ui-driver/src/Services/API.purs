@@ -4500,7 +4500,8 @@ newtype DriverVehicleServiceTier = DriverVehicleServiceTier {
   serviceTierType :: ServiceTierType,
   shortDescription :: Maybe String,
   vehicleRating :: Maybe Number,
-  isUsageRestricted :: Maybe Boolean
+  isUsageRestricted :: Maybe Boolean,
+  priority :: Maybe Int
 }
 
 derive instance genericServiceTierType :: Generic ServiceTierType _
