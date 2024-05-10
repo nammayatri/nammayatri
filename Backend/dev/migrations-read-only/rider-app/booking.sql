@@ -60,3 +60,9 @@ ALTER TABLE atlas_app.booking ADD COLUMN backend_app_version text ;
 
 ALTER TABLE atlas_app.booking ADD COLUMN round_trip boolean ;
 ALTER TABLE atlas_app.booking ADD COLUMN return_time timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN vehicle_service_tier_seating_capacity integer ;
+ALTER TABLE atlas_app.booking ADD COLUMN vehicle_service_tier_air_conditioned double precision ;

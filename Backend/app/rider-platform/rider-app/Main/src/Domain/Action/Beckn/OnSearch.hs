@@ -117,7 +117,9 @@ data EstimateInfo = EstimateInfo
     serviceTierType :: Maybe DVST.VehicleServiceTierType,
     serviceTierShortDesc :: Maybe Text,
     isCustomerPrefferedSearchRoute :: Maybe Bool,
-    isBlockedRoute :: Maybe Bool
+    isBlockedRoute :: Maybe Bool,
+    vehicleServiceTierAirConditioned :: Maybe Double,
+    vehicleServiceTierSeatingCapacity :: Maybe Int
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -161,7 +163,9 @@ data QuoteInfo = QuoteInfo
     serviceTierShortDesc :: Maybe Text,
     isCustomerPrefferedSearchRoute :: Maybe Bool,
     isBlockedRoute :: Maybe Bool,
-    tollChargesInfo :: Maybe TollChargesInfo
+    tollChargesInfo :: Maybe TollChargesInfo,
+    vehicleServiceTierAirConditioned :: Maybe Double,
+    vehicleServiceTierSeatingCapacity :: Maybe Int
   }
 
 data QuoteDetails

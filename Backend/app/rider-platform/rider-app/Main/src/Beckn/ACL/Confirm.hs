@@ -216,7 +216,8 @@ tfVehicle res = do
         vehicleColor = Nothing,
         vehicleMake = Nothing,
         vehicleModel = Nothing,
-        vehicleRegistration = Nothing
+        vehicleRegistration = Nothing,
+        vehicleCapacity = Nothing
       }
 
 tfProvider :: DOnInit.OnInitRes -> Maybe Spec.Provider

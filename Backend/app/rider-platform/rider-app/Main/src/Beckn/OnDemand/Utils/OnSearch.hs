@@ -14,6 +14,7 @@
 
 module Beckn.OnDemand.Utils.OnSearch where
 
+import Beckn.ACL.Common (getTagV2')
 import Beckn.OnDemand.Utils.Common as Common
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
@@ -49,21 +50,19 @@ getQuoteFulfillmentId item =
     >>= listToMaybe
     & fromMaybeM (InvalidRequest "Missing Fulfillment Ids")
 
-getVehicleVariant :: MonadFlow m => Spec.Provider -> Spec.Item -> m VehicleVariant.VehicleVariant
+getVehicleVariant :: MonadFlow m => Spec.Provider -> Spec.Item -> m (VehicleVariant.VehicleVariant, Maybe Int)
 getVehicleVariant provider item = do
-  let variant' =
+  let vehicle =
         item.itemFulfillmentIds >>= listToMaybe
           >>= (\fulfillmentId -> provider.providerFulfillments >>= find (\fulf -> fulf.fulfillmentId == Just fulfillmentId))
           >>= (.fulfillmentVehicle)
-          >>= (.vehicleVariant)
-      category =
-        item.itemFulfillmentIds >>= listToMaybe
-          >>= (\fulfillmentId -> provider.providerFulfillments >>= find (\fulf -> fulf.fulfillmentId == Just fulfillmentId))
-          >>= (.fulfillmentVehicle)
-          >>= (.vehicleCategory)
+      variant' = vehicle >>= (.vehicleVariant)
+      category = vehicle >>= (.vehicleCategory)
+      capacity = vehicle >>= (.vehicleCapacity)
   let variant = map T.toUpper variant'
       mbDVehVariant = Common.parseVehicleVariant category variant
-  mbDVehVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicle category:-" <> show category <> ",vehicle variant:-" <> show variant)
+  vehicleVariant <- mbDVehVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicle category:-" <> show category <> ",vehicle variant:-" <> show variant)
+  pure (vehicleVariant, capacity)
 
 isValidVehVariant :: MonadFlow m => Spec.Fulfillment -> m Bool
 isValidVehVariant fulfillment = do
@@ -88,6 +87,19 @@ getServiceTierName item = item.itemDescriptor >>= (.descriptorName)
 
 getServiceTierShortDesc :: Spec.Item -> Maybe Text
 getServiceTierShortDesc item = item.itemDescriptor >>= (.descriptorShortDesc)
+
+getVehicleServiceTierAirConditioned :: MonadFlow m => Spec.Provider -> Spec.Item -> m (Maybe Double)
+getVehicleServiceTierAirConditioned provider item = do
+  let vehicleServiceTierAirConditioned = do
+        fulfillmentId <- item.itemFulfillmentIds >>= listToMaybe
+        fulfillment <- provider.providerFulfillments >>= find (\fulf -> fulf.fulfillmentId == Just fulfillmentId)
+        getTagV2' Tag.VEHICLE_INFO Tag.IS_AIR_CONDITIONED (fulfillment.fulfillmentTags)
+  return $ castToDouble vehicleServiceTierAirConditioned
+  where
+    castToDouble :: Maybe Text -> Maybe Double
+    castToDouble mbVar = case mbVar of
+      Just val -> readMaybe (T.unpack val)
+      _ -> Nothing
 
 getEstimatedFare :: MonadFlow m => Spec.Item -> Currency -> m Price
 getEstimatedFare item currency = do

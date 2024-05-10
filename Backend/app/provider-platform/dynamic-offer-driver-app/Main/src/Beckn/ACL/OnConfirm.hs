@@ -101,7 +101,8 @@ tfVehicle res = do
         vehicleColor = Nothing,
         vehicleMake = Nothing,
         vehicleModel = Nothing,
-        vehicleRegistration = Nothing
+        vehicleRegistration = Nothing,
+        vehicleCapacity = Nothing
       }
 
 tfCustomer :: DConfirm.DConfirmResp -> Maybe Spec.Customer

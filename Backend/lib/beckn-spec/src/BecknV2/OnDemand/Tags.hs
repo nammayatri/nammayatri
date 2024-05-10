@@ -47,6 +47,7 @@ data TagGroup
   | PREVIOUS_CANCELLATION_REASONS
   | UPDATE_DETAILS
   | FORWARD_BATCHING_REQUEST_INFO
+  | VEHICLE_INFO
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data EXTRA_PER_KM_STEP_FARE = EXTRA_PER_KM_STEP_FARE
@@ -208,4 +209,6 @@ data Tag
   | PREVIOUS_RIDE_DROP_LOCATION_LON
   | -- Toll related info tags
     TOLL_CONFIDENCE
+  | -- Vehicle Air Conditioned info tag
+    IS_AIR_CONDITIONED
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
