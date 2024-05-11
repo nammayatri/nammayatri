@@ -144,6 +144,7 @@ foreign import translateStringWithTimeout :: forall action. (action -> Effect Un
 
 foreign import isMockLocation :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import animateCamera :: Number -> Number -> Number -> String -> Effect Unit
+foreign import moveCameraWithoutAnimation :: Number -> Number -> Number -> String -> Effect Unit
 -- foreign import moveCamera :: Number -> Number -> Number -> Number -> Effect Unit
 foreign import minimizeApp    :: String -> Unit
 foreign import toast          :: String -> Unit
