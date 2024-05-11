@@ -1490,10 +1490,8 @@ eval BackPressed state = do
                 }
               , props { 
                   isBanner = state.props.isBanner
-                , sourceLat = state.props.sourceLat
                 , showShimmer = false
                 , city = state.props.city
-                , sourceLong = state.props.sourceLong
                 , currentLocation = state.props.currentLocation
                 , sosBannerType = state.props.sosBannerType 
                 , followsRide = state.props.followsRide
