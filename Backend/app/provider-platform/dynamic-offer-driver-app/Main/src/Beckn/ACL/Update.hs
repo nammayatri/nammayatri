@@ -49,7 +49,6 @@ parseEvent :: (MonadFlow m) => Spec.UpdateReqMessage -> Spec.Context -> m DUpdat
 parseEvent reqMsg context = do
   bookingId <- fmap Id reqMsg.updateReqMessageOrder.orderId & fromMaybeM (InvalidRequest "orderId not found")
   fulfillment <- reqMsg.updateReqMessageOrder.orderFulfillments >>= listToMaybe & fromMaybeM (InvalidRequest "Fulfillment not found")
-  rideId <- fmap Id fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "Fulfillment id not found")
   eventType <-
     fulfillment.fulfillmentState
       >>= (.fulfillmentStateDescriptor)
@@ -57,6 +56,7 @@ parseEvent reqMsg context = do
       & fromMaybeM (InvalidRequest "Event type is not present in UpdateReq.")
   case eventType of
     "PAYMENT_COMPLETED" -> do
+      rideId <- fmap Id fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "Fulfillment id not found")
       payment <- reqMsg.updateReqMessageOrder.orderPayments >>= listToMaybe & fromMaybeM (InvalidRequest "Payment not present")
       paymentMethodInfo <- mkPaymentMethodInfo payment
       pure $
@@ -68,6 +68,7 @@ parseEvent reqMsg context = do
               paymentMethodInfo
             }
     "EDIT_LOCATION" -> do
+      rideId <- fmap Id fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "Fulfillment id not found")
       parseEditLocationEvent bookingId fulfillment rideId
     "ADD_STOP" -> parseAddStopEvent bookingId fulfillment
     "EDIT_STOP" -> parseEditStopEvent bookingId fulfillment
