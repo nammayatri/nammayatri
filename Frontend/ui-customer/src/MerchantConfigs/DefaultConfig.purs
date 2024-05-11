@@ -432,7 +432,8 @@ config =
   }
   , enableBookAny : true
   , acPopupConfig : {
-      enable : false,
+      enableAcPopup : false,
+      enableNonAcPopup : false,
       showAfterTime : 3
     }
 }

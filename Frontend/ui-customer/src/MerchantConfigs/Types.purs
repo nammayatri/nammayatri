@@ -439,6 +439,7 @@ type InteroperabilityConfig = {
 }
 
 type AcPopupConfig = {
-  enable :: Boolean,
+  enableAcPopup :: Boolean,
+  enableNonAcPopup :: Boolean,
   showAfterTime :: Int
 }
