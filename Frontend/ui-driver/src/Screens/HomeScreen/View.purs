@@ -325,7 +325,7 @@ view push state =
       , if (state.props.showChatBlockerPopUp || state.data.paymentState.showBlockingPopup) then blockerPopUpView push state else dummyTextView
       , if state.props.currentStage == RideCompleted then RideCompletedCard.view (getRideCompletedConfig state) (push <<< RideCompletedAC) else dummyTextView -- 
       , if state.props.showRideRating then RatingCard.view (push <<< RatingCardAC) (getRatingCardConfig state) else dummyTextView
-      , if state.props.showAcWorkingPopup then isAcWorkingPopupView push state else dummyTextView
+      , if state.props.showAcWorkingPopup == Just true then isAcWorkingPopupView push state else dummyTextView
   ]
   where 
     showPopups = (DA.any (_ == true )

@@ -1221,7 +1221,7 @@ type HomeScreenProps =  {
   odometerFileId :: Maybe String,
   odometerUploadAttempts :: Int,
   odometerImageUploading :: Boolean,
-  showAcWorkingPopup :: Boolean,
+  showAcWorkingPopup :: Maybe Boolean,
   acExplanationPopup :: Boolean
  }
 
