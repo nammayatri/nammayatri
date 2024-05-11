@@ -2678,7 +2678,11 @@ homeScreenFlow = do
       resp <- lift $ lift $ HelpersAPI.callApi $ API.UpdateAirConditionUpdateRequest { isAirConditioned : isAcWorking }
       case resp of
         Right _ -> do
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { showAcWorkingPopup = false }})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { showAcWorkingPopup = Just false }})
+          globalState <- getState
+          (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalState false
+          let updatedResponse = getDriverInfoResp{checkIfACWorking = Just false}
+          modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp updatedResponse)}
         Left _ -> do
           pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
       homeScreenFlow
@@ -3445,7 +3449,9 @@ updateBannerAndPopupFlags = do
                 , subscriptionPopupType = subscriptionPopupType
                 , waitTimeStatus = RC.waitTimeConstructor $ getValueToLocalStore WAITING_TIME_STATUS
                 , showCoinsPopup = showCoinPopup
-                , showAcWorkingPopup = fromMaybe false getDriverInfoResp.checkIfACWorking
+                , showAcWorkingPopup = if isNothing allState.homeScreen.props.showAcWorkingPopup
+                                          then getDriverInfoResp.checkIfACWorking
+                                       else allState.homeScreen.props.showAcWorkingPopup
                 }
               }
         )
