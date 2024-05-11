@@ -61,7 +61,7 @@ view push config =
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , cornerRadius 6.0
-          , id $ EHC.getNewIDWithTag config.id
+          , id $ EHC.getNewIDWithTag $ config.id <> show config.index
           , margin $ config.layoutMargin
           , padding padding'
           , orientation VERTICAL

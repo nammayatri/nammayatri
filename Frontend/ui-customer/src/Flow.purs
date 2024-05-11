@@ -1192,7 +1192,7 @@ homeScreenFlow = do
         pure unit
         else pure unit
       homeScreenFlow
-    CANCEL -> homeScreenFlow
+    RELOAD_SCREEN -> homeScreenFlow
     RELOAD saveToCurrLocs -> do
       (GlobalState state) <- getState
       void $ liftFlowBT $ setMapPadding 0 0 0 0
@@ -1256,7 +1256,6 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{ isSrcServiceable = true, showlocUnserviceablePopUp = false}})
 
       homeScreenFlow
-    RETRY  -> homeScreenFlow
     REALLOCATE_RIDE state -> do
       if DS.null state.props.estimateId then
         currentFlowStatus

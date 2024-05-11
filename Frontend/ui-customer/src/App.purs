@@ -185,8 +185,7 @@ data TICKET_INFO_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_TICKET_INFO
 
 data HOME_SCREEN_OUTPUT = LOGOUT
                         | RELOAD Boolean
-                        | CANCEL
-                        | RETRY
+                        | RELOAD_SCREEN
                         | NO_OUTPUT
                         | GO_TO_HELP
                         | GO_TO_NAMMASAFETY HomeScreenState Boolean Boolean

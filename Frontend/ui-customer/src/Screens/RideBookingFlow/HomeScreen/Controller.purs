@@ -266,7 +266,7 @@ instance loggableAction :: Loggable Action where
   --     DriverInfoCardController.OnNavigateToZone -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "on_navigate_to_zone"
   --     DriverInfoCardController.ToggleBottomSheet -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "toggle_bottom_sheet"
   --     DriverInfoCardController.CollapseBottomSheet -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "collapse_bottom_sheet"
-  --   UpdateLocation key lat lon ->  trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_location"
+  --   LocateOnMapCallBack key lat lon ->  trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_location"
   --   CancelRidePopUpAction act -> case act of
   --     CancelRidePopUp.Button1 act -> case act of
   --       PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "cancel_ride_declined"
@@ -418,7 +418,7 @@ instance loggableAction :: Loggable Action where
   --   SourceToDestinationActionController act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "source_to_destination"
   --   TrackDriver resp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "track_driver"
   --   HandleCallback -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "handle_call_back"
-  --   UpdatePickupLocation  key lat lon -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_pickup_location"
+  --   LocateOnMapCallBack  key lat lon -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_pickup_location"
   --   ContinueCmd -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "continue_cmd"
   --   Restart err -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "restart"
   --   UpdateSourceName lat lon name -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_source_name"
@@ -665,7 +665,6 @@ instance loggableAction :: Loggable Action where
   --         ChooseVehicleController.OnSelect arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "OnSelect"
 
 data ScreenOutput = LogoutUser
-                  | Cancel HomeScreenState
                   | GoToHelp HomeScreenState
                   | ConfirmRide HomeScreenState
                   | GoToAbout HomeScreenState
@@ -673,7 +672,7 @@ data ScreenOutput = LogoutUser
                   | PastRides HomeScreenState
                   | GoToMyProfile HomeScreenState Boolean
                   | ChangeLanguage HomeScreenState
-                  | Retry HomeScreenState
+                  | ReloadScreen HomeScreenState
                   | UpdatedState HomeScreenState Boolean
                   | CancelRide HomeScreenState
                   | NotificationHandler String HomeScreenState
@@ -758,12 +757,11 @@ data Action = NoAction
             | QuoteListModelActionController QuoteListModelController.Action
             | DriverInfoCardActionController DriverInfoCardController.Action
             | RatingCardAC RatingCard.Action
-            | UpdateLocation String String String
+            | LocateOnMapCallBack String String String
             | CancelRidePopUpAction CancelRidePopUp.Action
             | PopUpModalAction PopUpModal.Action
             | TrackDriver GetDriverLocationResp
             | HandleCallback
-            | UpdatePickupLocation String String String
             | CloseLocationTracking
             | ShowCallDialer CallType
             | CloseShowCallDialer
@@ -1196,7 +1194,7 @@ eval OnResumeCallback state =
       let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime "LazyCheck"))
       void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
       continue state
-    "RideAccepted" | state.data.currentSearchResultType == QUOTES -> exit $ Retry state
+    "RideAccepted" | state.data.currentSearchResultType == QUOTES -> exit $ ReloadScreen state
     _ -> continue state
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
@@ -1641,7 +1639,7 @@ eval OpenSearchLocation state = do
 
 eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = continueWithCmd state [ do pure $ OpenSearchLocation ]
 
-eval (UpdateLocation key lat lon) state = do
+eval (LocateOnMapCallBack key lat lon) state = do
   let latitude = fromMaybe 0.0 (NUM.fromString lat)
       longitude = fromMaybe 0.0 (NUM.fromString lon)
   if os == "IOS" && not state.props.locateOnMapProps.cameraAnimatedToSource && (getDistanceBwCordinates latitude longitude state.props.sourceLat state.props.sourceLong) > 5.0 then do
@@ -1657,34 +1655,17 @@ eval (UpdateLocation key lat lon) state = do
       "LatLon" -> do
         let selectedSpot = head (filter (\spots -> (getDistanceBwCordinates latitude longitude spots.lat spots.lng) * 1000.0 < (toNumber JB.locateOnMapConfig.thresholdDistToSpot)  ) updatedState.data.nearByPickUpPoints)
         exit $ UpdateLocationName updatedState{props{defaultPickUpPoint = "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved }, hotSpot{ selectedSpot = selectedSpot }, locateOnMapProps{ isSpecialPickUpGate = false }}} latitude longitude
-      _ ->  case (filter(\item -> item.place == key) updatedState.data.nearByPickUpPoints) !! 0 of
-              Just spot -> exit $ UpdateLocationName updatedState{props{defaultPickUpPoint = key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot.lat spot.lng
-              Nothing -> continue updatedState
-    
-
-eval (UpdatePickupLocation key lat lon) state = do
-  let latitude = fromMaybe 0.0 (NUM.fromString lat)
-      longitude = fromMaybe 0.0 (NUM.fromString lon)
-  if os == "IOS" && not state.props.locateOnMapProps.cameraAnimatedToSource && (getDistanceBwCordinates latitude longitude state.props.sourceLat state.props.sourceLong) > 5.0 then do
-    continueWithCmd state{ props{ locateOnMapProps{ cameraAnimatedToSource = true } } } [do
-      void $ animateCamera state.props.sourceLat state.props.sourceLong 25.0 "NO_ZOOM"
-      pure NoAction
-    ]
-  else do
-    let updatedState = state{ props{ locateOnMapProps{ cameraAnimatedToSource = true } } }
-        sourceManuallyMoved = true
-    case key of
-      "LatLon" -> do
-        let selectedSpot = head (filter (\spots -> (getDistanceBwCordinates (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon)) spots.lat spots.lng) * 1000.0 < (toNumber JB.locateOnMapConfig.thresholdDistToSpot) ) updatedState.data.nearByPickUpPoints)
-        exit $ UpdateLocationName updatedState{props{defaultPickUpPoint = "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, hotSpot{ selectedSpot = selectedSpot }, locateOnMapProps{ isSpecialPickUpGate = false }}} latitude longitude
       _ -> do
-        let focusedIndex = findIndex (\item -> item.place == key) updatedState.data.nearByPickUpPoints
-            spot = (filter(\item -> item.place == key) updatedState.data.nearByPickUpPoints) !! 0
-        case focusedIndex, spot of
-          Just index, Just spot' -> do
-            _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
-            exit $ UpdateLocationName updatedState{props{defaultPickUpPoint = key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot'.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot'.lat spot'.lng
-          _, _ -> continue updatedState
+        if state.props.currentStage == ConfirmingLocation then do
+          let focusedIndex = findIndex (\item -> item.place == key) updatedState.data.nearByPickUpPoints
+          case focusedIndex of
+            Just index -> void $ pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
+            Nothing -> pure unit
+        else pure unit
+
+        case (filter(\item -> item.place == key) updatedState.data.nearByPickUpPoints) !! 0 of
+          Just spot -> exit $ UpdateLocationName updatedState{props{defaultPickUpPoint = key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot.lat spot.lng
+          Nothing -> continue updatedState
 
 eval (CheckBoxClick autoAssign) state = do
   void $ pure $ performHapticFeedback unit
@@ -1903,7 +1884,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC P
 eval (DriverArrivedAction driverArrivalTime) state =
   if any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] then do
       _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_WAITING_ACTION"
-      exit $ Cancel state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
+      exit $ ReloadScreen state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
     else continue state
 
 eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
@@ -2264,12 +2245,6 @@ eval (QuoteListModelActionController (QuoteListModelController.GoBack)) state = 
   void $ pure $ performHapticFeedback unit
   continueWithCmd state [ do pure $ BackPressed ]
 
-eval (QuoteListModelActionController (QuoteListModelController.TryAgainButtonActionController  PrimaryButtonController.OnClick)) state = updateAndExit state $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }}}
-
-eval (QuoteListModelActionController (QuoteListModelController.HomeButtonActionController PrimaryButtonController.OnClick)) state = do
-  void $ pure $ performHapticFeedback unit
-  updateAndExit state CheckCurrentStatus
-
 eval (QuoteListModelActionController (QuoteListModelController.ChangeTip)) state = do
   continue state {props { tipViewProps {stage = DEFAULT}}}
 
@@ -2281,7 +2256,7 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
     let _ = unsafePerformEffect $ logEvent state.data.logField if state.props.customerTip.isTipSelected then ("ny_added_tip_for_" <> (show state.props.currentStage)) else "ny_no_tip_added"
     _ <- pure $ clearTimerWithId state.props.timerId
     let tipViewData = state.props.tipViewProps{stage = RETRY_SEARCH_WITH_TIP , isVisible = not (state.props.customerTip.tipActiveIndex == 0) , activeIndex = state.props.customerTip.tipActiveIndex, onlyPrimaryText = true}
-    let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = RetryFindingQuote, isPopUp = NoPopUp ,tipViewProps = tipViewData, rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH } }}
+    let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), isPopUp = NoPopUp ,tipViewProps = tipViewData, rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH } }}
     _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
     logInfo "retry_finding_quotes" ( "TipConfirmed : Current Stage: " <> (show newState.props.currentStage) <> " LOCAL_STAGE : " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id:" <> state.props.estimateId)
     exit $ RetryFindingQuotes true newState
@@ -2300,7 +2275,7 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
       continue state{data{rideHistoryTrip = Nothing, iopState{ providerSelectionStage = false}},props{ isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation, isRepeatRide = false}}
       else do
       _ <- pure $ clearTimerWithId state.props.timerId
-      let newState = state{props{findingRidesAgain = true , searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = RetryFindingQuote, isPopUp = NoPopUp, rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }}}
+      let newState = state{props{findingRidesAgain = true , searchExpire = (getSearchExpiryTime "LazyCheck"), isPopUp = NoPopUp, rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }}}
       updateAndExit newState $ RetryFindingQuotes true newState
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isPopUp of
@@ -2510,37 +2485,41 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes) count ) state = do
 
 
 eval (GetQuotesList (SelectListRes resp)) state = do
-  case spy "flowWithoutOffers" $ flowWithoutOffers WithoutOffers of
-    true  -> do
-      continueWithCmd state [pure $ ContinueWithoutOffers (SelectListRes resp)]
-    false -> do
-              let selectedQuotes = getQuoteList ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes) state.props.city
-              _ <- pure $ printLog "vehicle Varient " selectedQuotes
-              let filteredQuoteList = filter (\a -> length (filter (\b -> a.id == b.id )state.data.quoteListModelState) == 0 ) selectedQuotes
-              let removeExpired = filter (\a -> a.seconds > 0) filteredQuoteList
-              _ <- pure $ spy "quotes" filteredQuoteList
-              let quoteListModelState = state.data.quoteListModelState <> removeExpired
-              if (getValueToLocalStore GOT_ONE_QUOTE == "FALSE") && (length quoteListModelState > 0) then do
-                _ <- pure $ firebaseLogEvent "ny_user_received_quotes"
-                _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "TRUE"
-                pure unit
-              else pure unit
-              let newState = state{data{quoteListModelState = quoteListModelState },props{isSearchLocation = NoView, isSource = Nothing,currentStage = QuoteList}}
-              if isLocalStageOn QuoteList then do
-                let updatedState = if isTipEnabled state then tipEnabledState newState{props{isPopUp = TipsPopUp, findingQuotesProgress = 0.0}} else newState{props{isPopUp = ConfirmBack, findingQuotesProgress = 0.0}}
-                logInfo "retry_finding_quotes" ( "QuoteList : Current Stage: " <> (show newState.props.currentStage) <> " LOCAL_STAGE : " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id:" <> state.props.estimateId)
-                exit $ GetSelectList updatedState
-              else if(state.props.selectedQuote == Nothing && (getValueToLocalStore AUTO_SELECTING) /= "CANCELLED_AUTO_ASSIGN") then do
-                let id = (fromMaybe dummyQuoteList (newState.data.quoteListModelState!!0)).id
-                    nextState = newState{data{quoteListModelState = map (\x -> x{selectedQuote = (Just id)}) newState.data.quoteListModelState}, props{selectedQuote = if (id /= "") then Just id else Nothing}}
-                _ <- pure $ setValueToLocalStore AUTO_SELECTING id
-                logInfo "retry_finding_quotes" ( "SelectedQuote: Current Stage: " <> (show newState.props.currentStage) <> " LOCAL_STAGE : " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id:" <> state.props.estimateId)
-                continue nextState
-              else do
-                let quoteListEmpty = null newState.data.quoteListModelState
-                logInfo "retry_finding_quotes" ( "Default :Current Stage: " <> (show newState.props.currentStage) <> " LOCAL_STAGE : " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id:" <> state.props.estimateId)
-                _ <- pure $ setValueToLocalStore AUTO_SELECTING (if quoteListEmpty then "false" else getValueToLocalStore AUTO_SELECTING)
-                continue newState{props{selectedQuote = if quoteListEmpty then Nothing else newState.props.selectedQuote}}
+  if flowWithoutOffers WithoutOffers then
+    continueWithCmd state [pure $ ContinueWithoutOffers (SelectListRes resp)]
+  else do
+    let allQuotes = getQuoteList ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes) state.props.city
+        existingQuotes = state.data.quoteListModelState
+        newQuotes = filter (\quote -> quote.seconds > 0) (filter (\a -> length (filter (\b -> a.id == b.id ) existingQuotes) == 0 ) allQuotes) --filter (\quote -> quote.seconds > 0) (union allQuotes existingQuotes)
+        updatedQuotes = existingQuotes <> newQuotes
+        newState = state{data{quoteListModelState = updatedQuotes },props{isSearchLocation = NoView, isSource = Nothing, currentStage = FindingQuotes}}
+        
+    if getValueToLocalStore GOT_ONE_QUOTE == "FALSE" && length updatedQuotes > 0 then do
+      void $ pure $ firebaseLogEvent "ny_user_received_quotes"
+      void $ pure $ setValueToLocalStore GOT_ONE_QUOTE "TRUE"
+    else pure unit
+    
+    if isLocalStageOn QuoteList then do
+      logInfo "retry_finding_quotes" ( "QuoteList : Current Stage: " <> (show newState.props.currentStage) <> " LOCAL_STAGE : " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id:" <> state.props.estimateId)
+      let updatedState = if isTipEnabled state 
+                          then tipEnabledState newState{props{isPopUp = TipsPopUp, findingQuotesProgress = 0.0}} 
+                          else newState{props{isPopUp = ConfirmBack, findingQuotesProgress = 0.0}}
+      exit $ GetSelectList updatedState
+    else if state.props.selectedQuote == Nothing && (getValueToLocalStore AUTO_SELECTING) /= "CANCELLED_AUTO_ASSIGN" then do
+      logInfo "retry_finding_quotes" ( "SelectedQuote: Current Stage: " <> (show newState.props.currentStage) <> " LOCAL_STAGE : " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id:" <> state.props.estimateId)
+      case head updatedQuotes of
+        Just quote -> do
+          let selectedQuote = Just quote.id
+          void $ pure $ setValueToLocalStore AUTO_SELECTING quote.id
+          continue newState{ data{ quoteListModelState = map (\quote' -> quote'{ selectedQuote = selectedQuote }) updatedQuotes }, props{ selectedQuote = selectedQuote }}
+        Nothing -> continue newState
+    else if null updatedQuotes then do
+      logInfo "retry_finding_quotes" ( "Default :Current Stage: " <> (show newState.props.currentStage) <> " LOCAL_STAGE : " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id:" <> state.props.estimateId)
+      void $ pure $ setValueToLocalStore AUTO_SELECTING "false"
+      continue newState{props{ selectedQuote = Nothing }}
+    else do
+      logInfo "retry_finding_quotes" ( "Current Stage: " <> (show newState.props.currentStage) <> " LOCAL_STAGE : " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id:" <> state.props.estimateId)
+      continue newState
 
 eval (ContinueWithoutOffers (SelectListRes resp)) state = do
   case resp.bookingId of
@@ -2756,7 +2735,7 @@ eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = 
       pure NoAction
     ]
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.NoAction config))) state = do
-  let height = (runFn1 getLayoutBounds $ getNewIDWithTag config.id).height
+  let height = (runFn1 getLayoutBounds $ getNewIDWithTag (config.id <> show config.index)).height
       updatedState = state{props{defaultPickUpPoint = "", currentEstimateHeight = height, selectedEstimateHeight = if config.vehicleVariant == "BOOK_ANY" then state.props.selectedEstimateHeight else height}}
   continue updatedState
 

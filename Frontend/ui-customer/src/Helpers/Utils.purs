@@ -563,7 +563,6 @@ getScreenFromStage stage = case stage of
   FavouriteLocationModel -> "search_location_screen"
   ChatWithDriver -> "trip_accepted_screen"
   FindEstimateAndSearch -> "finding_rides_screen"
-  RetryFindingQuote -> "finding_rides_screen"
   DistanceOutsideLimits -> "finding_driver_loader"
   ShortDistance -> "finding_driver_loader"
   TryAgain -> "finding_rides_screen"

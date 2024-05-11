@@ -532,7 +532,6 @@ data Stage = HomeScreen
            | FavouriteLocationModel
            | ChatWithDriver
            | FindEstimateAndSearch
-           | RetryFindingQuote
            | PickUpFarFromCurrentLocation
            | LoadMap
            | ProviderSelection
