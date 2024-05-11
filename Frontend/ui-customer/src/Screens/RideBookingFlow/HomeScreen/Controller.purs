@@ -2374,8 +2374,8 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
     alreadyGotEstimates = not $ null $ state.data.specialZoneQuoteList 
     estimates = getEstimateList quotesRes.estimates state.data.config.estimateAndQuoteConfig state.data.selectedEstimatesObject.activeIndex
     quotes = getSpecialZoneQuotes quotesRes.quotes state.data.config.estimateAndQuoteConfig
-    allQuoteList = spy "debug quotes allQuoteList" (estimates <> quotes)
-    quoteList = filter (\item -> item.providerType == ONUS || (item.providerType == OFFUS && state.data.currentCityConfig.iopConfig.enable)) allQuoteList
+    allQuoteListWithUpdatedIndex = spy "debug quotes allQuoteListWithUpdatedIndex" (mapWithIndex (\index item -> item{ index = index }) (estimates <> quotes))
+    quoteList = filter (\item -> item.providerType == ONUS || (item.providerType == OFFUS && state.data.currentCityConfig.iopConfig.enable)) allQuoteListWithUpdatedIndex
     repeatRideFailCheck =  not $ checkRecentRideVariantInEstimates quoteList state.props.repeatRideServiceTierName -- check if the repeat ride variant is available in the estimates
     isRepeatRide = if state.props.isRepeatRide && repeatRideFailCheck then false else state.props.isRepeatRide -- if repeat ride is enabled and the variant is not available in the estimates then disable repeat ride
     nYQuotes = filter (\item -> item.providerType == ONUS) quoteList
@@ -2401,7 +2401,7 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
 
     zoneType = getSpecialTag defaultSelected.specialLocationTag
 
-    -- hasToll = any (\item -> maybe false (\fareBreakupList -> isEstimateFareBreakupHastitle fareBreakupList "TOLL_CHARGES") (item ^. _estimateFareBreakup)) estimates
+    hasToll = any (\item -> maybe false (\fareBreakupList -> isEstimateFareBreakupHastitle fareBreakupList "TOLL_CHARGES") (item ^. _estimateFareBreakup)) quotesRes.estimates
 
     -- topProviderEstimates = filter (\element -> element.providerType == ONUS) quoteList -- filter the ny provider estimates
     -- shouldShowEstimates = not $ null quoteList-- if iop is not enabled then show ny provider else show multi provider
@@ -2409,8 +2409,8 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
   if not $ null quoteList then do -- if choosing multiple provider is not enabled then only show ny
     let 
       _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
-      -- nearByDrivers = getNearByDrivers estimates
-      -- nearByDriversLength = length nearByDrivers
+      nearByDrivers = getNearByDrivers quotesRes.estimates
+      nearByDriversLength = length nearByDrivers
       -- selectedEstimateIdForBookAny = if defaultSelected.vehicleVariant == "BOOK_ANY"
       --                                   then getEstimateIdFromSelectedServices state.data.specialZoneQuoteList defaultSelected
       --                                   else [] 
@@ -2418,29 +2418,26 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
       quoteList' = map (\quote -> quote{activeIndex = defaultSelected.index}) quoteList
 
     void $ pure $ updateLocalStage SettingPrice
-    -- logStatus "drivers_available" nearByDriversLength
+    logStatus "drivers_available" nearByDriversLength
 
-    -- void $ pure $ setValueToLocalStore HAS_TOLL_CHARGES $ show hasToll -- need to remove
+    void $ pure $ setValueToLocalStore HAS_TOLL_CHARGES $ show hasToll -- need to remove
     exit $ SelectEstimate state 
       { data
         { specialZoneQuoteList = quoteList'
-        -- , currentSearchResultType = ESTIMATES
         , selectedEstimatesObject = defaultSelected
-        -- , nearByDrivers = if nearByDriversLength > 0 then Just nearByDriversLength else Nothing
+        , nearByDrivers = if nearByDriversLength > 0 then Just nearByDriversLength else Nothing
         , iopState { 
             showPrefButton = state.data.currentCityConfig.iopConfig.enable && (not (null nYQuotes)) && (not isRepeatRide)
           , providerPrefInfo = state.data.iopState.providerPrefInfo
           , hasTopProviderEstimate = not $ null nYQuotes
           , showMultiProvider = showMultiProvider'
           }
-        -- , otherSelectedEstimates = selectedEstimateIdForBookAny
         }
       , props
         { currentStage = SettingPrice
-        -- , estimateId = defaultSelected.id
         , zoneType = zoneType
         , isRepeatRide = isRepeatRide
-        -- , hasToll = hasToll
+        , hasToll = hasToll
         }
       }
   else do
@@ -2449,7 +2446,7 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
     continue state { props {currentStage = SearchLocationModel}, data{currentSearchResultType = ESTIMATES}}
 
   where 
-    -- isEstimateFareBreakupHastitle fareBreakUpList title = any (\item -> item ^. _title == title) fareBreakU
+    isEstimateFareBreakupHastitle fareBreakUpList title = any (\item -> item ^. _title == title) fareBreakUpList
     getSelectedEstimates :: ChooseVehicleController.Config -> Array ChooseVehicleController.Config -> Tuple String (Array String) 
     getSelectedEstimates quote quotes = 
       let filteredEstimates = foldl(\acc item -> if elem (fromMaybe "" item.serviceTierName) quote.selectedServices then acc <> [item.id] else acc) [] quotes

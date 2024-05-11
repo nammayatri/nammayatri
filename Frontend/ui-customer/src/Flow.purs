@@ -864,8 +864,7 @@ homeScreenFlow = do
 
           if state.data.iopState.showMultiProvider then do 
             updateLocalStage ProviderSelection
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { iopState { providerSelectionStage = true }
-                                                                                      , estimateId = selectedEstimateOrQuote.id }
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { estimateId = selectedEstimateOrQuote.id }
                                                                                 , data { iopState { providerSelectionStage = true }
                                                                                 } })
           else do
@@ -1320,56 +1319,57 @@ homeScreenFlow = do
           gateAddress = if DS.null state.props.defaultPickUpPoint
                           then HomeScreenData.dummyLocation
                           else fromMaybe HomeScreenData.dummyLocation (Arr.find (\pickupPoint -> pickupPoint.place == state.props.defaultPickUpPoint) pickUpPoints)
+          isSource = state.props.isSource == Just true
+                          
       setValueToLocalStore CUSTOMER_LOCATION $ show cityName
       checkForSpecialZoneAndHotSpots state (ServiceabilityRes sourceServiceabilityResp) lat lon
-      let cachedLat = (if state.props.isSource == Just true then state.props.locateOnMapLocation.sourceLat else state.props.locateOnMapLocation.destinationLat)
-          cachedLon = (if state.props.isSource == Just true then state.props.locateOnMapLocation.sourceLng else state.props.locateOnMapLocation.destinationLng)
-          cachedLocation = (if state.props.isSource == Just true then state.props.locateOnMapLocation.source else state.props.locateOnMapLocation.destination)
+      let cachedLat = (if isSource then state.props.locateOnMapLocation.sourceLat else state.props.locateOnMapLocation.destinationLat)
+          cachedLon = (if isSource then state.props.locateOnMapLocation.sourceLng else state.props.locateOnMapLocation.destinationLng)
+          cachedLocation = (if isSource then state.props.locateOnMapLocation.source else state.props.locateOnMapLocation.destination)
           distanceBetweenLatLong = getDistanceBwCordinates lat lon cachedLat cachedLon
           isMoreThan20Meters = distanceBetweenLatLong > (state.data.config.mapConfig.locateOnMapConfig.apiTriggerRadius/1000.0) 
       modifyScreenState $ HomeScreenStateType (\homeScreen ->
           homeScreen { 
             props {
-              city = if state.props.isSource == Just true then cityName else AnyCity, 
-              sourcePlaceId = if state.props.isSource == Just true then Nothing else homeScreen.props.sourcePlaceId,
-              destinationPlaceId = if state.props.isSource == Just false then Nothing else homeScreen.props.destinationPlaceId,
-              destinationLat = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then lat else state.props.destinationLat,
-              destinationLong = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then lon else state.props.destinationLong,
-              sourceLat = if state.props.isSource == Just true then lat else state.props.sourceLat,
-              sourceLong = if state.props.isSource == Just true then lon else state.props.sourceLong,
+              city = if isSource then cityName else AnyCity, 
+              sourcePlaceId = if isSource then Nothing else homeScreen.props.sourcePlaceId,
+              destinationPlaceId = if not isSource then Nothing else homeScreen.props.destinationPlaceId,
+              destinationLat = if not isSource && state.props.currentStage /= ConfirmingLocation then lat else state.props.destinationLat,
+              destinationLong = if not isSource && state.props.currentStage /= ConfirmingLocation then lon else state.props.destinationLong,
+              sourceLat = if isSource then lat else state.props.sourceLat,
+              sourceLong = if isSource then lon else state.props.sourceLong,
               confirmLocationCategory = getZoneType srcSpecialLocation.category
               }
             })
       (GlobalState globalState) <- getState
       let state = globalState.homeScreen
-      if isMoreThan20Meters || cachedLocation == "" || (state.props.isSource == Just true && isJust gateAddress.address) then do
+      if isMoreThan20Meters || cachedLocation == "" || (isSource && isJust gateAddress.address) then do
         fullAddress <- getPlaceName lat lon gateAddress true
         case fullAddress of 
           Just (PlaceName placeDetails) -> do
             let currentLocationItem = getCurrentLocationItem placeDetails state lat lon
             void $ liftFlowBT $ logEvent logField_ "ny_user_placename_api_lom_onDrag"
             modifyScreenState $ HomeScreenStateType (\homeScreen ->
-            homeScreen {
-              data {
-                destination = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then placeDetails.formattedAddress else homeScreen.data.destination,
-                selectedLocationListItem = currentLocationItem, 
-                source = if state.props.isSource == Just true then placeDetails.formattedAddress else homeScreen.data.source,
-                sourceAddress = case state.props.isSource , (state.props.currentStage /= ConfirmingLocation) of
-                  Just true, true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing lat lon
-                  _ , _-> encodeAddress homeScreen.data.source [] state.props.sourcePlaceId lat lon,
-                destinationAddress = case state.props.isSource,(state.props.currentStage /= ConfirmingLocation) of
-                  Just false , true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing lat lon
-                  _ , _ -> encodeAddress homeScreen.data.destination [] state.props.destinationPlaceId lat lon
-              }
-              })
+              homeScreen {
+                data {
+                    destination = if not isSource && state.props.currentStage /= ConfirmingLocation then placeDetails.formattedAddress else homeScreen.data.destination
+                  , selectedLocationListItem = currentLocationItem
+                  , source = if isSource then placeDetails.formattedAddress else homeScreen.data.source
+                  , sourceAddress = if isSource 
+                                    then encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing lat lon
+                                    else homeScreen.data.sourceAddress
+                  , destinationAddress = if isSource
+                                          then homeScreen.data.destinationAddress
+                                          else encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing lat lon }
+                })
           Nothing -> void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN  
       else do
         void $ liftFlowBT $ logEvent logField_ "ny_user_placename_cache_lom_onDrag"
         modifyScreenState $ HomeScreenStateType (\homeScreen ->
           homeScreen {
             data {
-              destination = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then state.props.locateOnMapLocation.destination else homeScreen.data.destination,
-              source = if state.props.isSource == Just true then state.props.locateOnMapLocation.source else homeScreen.data.source,
+              destination = if not isSource && state.props.currentStage /= ConfirmingLocation then state.props.locateOnMapLocation.destination else homeScreen.data.destination,
+              source = if isSource then state.props.locateOnMapLocation.source else homeScreen.data.source,
               sourceAddress = case state.props.isSource , (state.props.currentStage /= ConfirmingLocation) of
                 Just true, true -> state.props.locateOnMapLocation.sourceAddress 
                 _ , _-> state.data.sourceAddress, 
@@ -1906,7 +1906,10 @@ rideSearchFlow flowType = do
               let sourceSpecialTagIcon = zoneLabelIcon finalState.props.zoneType.sourceTag
                   destSpecialTagIcon = zoneLabelIcon finalState.props.zoneType.destinationTag
                   markers = Remote.normalRoute ""
-                  srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker, primaryText = finalState.data.source }
+                  sourceAddress = if finalState.props.isSpecialZone && not (DS.null finalState.props.defaultPickUpPoint)
+                                    then finalState.props.defaultPickUpPoint
+                                    else finalState.data.source
+                  srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker, primaryText = sourceAddress, secondaryText = fromMaybe "" finalState.props.locateOnMapProps.sourceLocationName }
                   destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = finalState.data.destination }
               routeResponse <- Remote.drawMapRoute finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong srcMarkerConfig destMarkerConfig "NORMAL" rideSearchRes.routeInfo "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig) 
               case rideSearchRes.routeInfo of
