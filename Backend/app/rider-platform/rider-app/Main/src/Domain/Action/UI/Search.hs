@@ -326,7 +326,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
             shortestRouteDistance = (.distance) =<< shortestRouteInfo
             shortestRouteDuration = (.duration) =<< shortestRouteInfo
         return (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo, Just $ Search.updateEfficientRoutePosition routeResponse shortestRouteIndex)
-      RentalSearch rentalReq -> return (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Nothing, Nothing)
+      RentalSearch rentalReq -> return (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Just (RouteInfo (Just rentalReq.estimatedRentalDuration) (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] []), Nothing)
 
   fromLocation <- buildSearchReqLoc origin
   stopLocations <- buildSearchReqLoc `mapM` stops
