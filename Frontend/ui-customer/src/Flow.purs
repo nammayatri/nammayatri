@@ -893,7 +893,10 @@ homeScreenFlow = do
             destMarker = (Remote.normalRoute "").destMarker
         case state.props.routeEndPoints of
           Just points -> do
-            let sourceMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = srcMarker, primaryText = points.source.place, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = sourceSpecialTagIcon, position{ lat = points.source.lat, lng = points.source.lng } }
+            let sourceAddress = if state.props.isSpecialZone && not (DS.null state.props.defaultPickUpPoint)
+                                  then state.props.defaultPickUpPoint
+                                  else state.data.source
+                sourceMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = srcMarker, primaryText = sourceAddress, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = sourceSpecialTagIcon, position{ lat = points.source.lat, lng = points.source.lng } }
                 destMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = destMarker, primaryText = points.destination.place, labelImage = destSpecialTagIcon, position{ lat = points.destination.lat, lng = points.destination.lng } }
             lift $ lift $ liftFlow $ updateMarker sourceMarkerConfig
             lift $ lift $ liftFlow $ updateMarker destMarkerConfig
@@ -1308,7 +1311,9 @@ homeScreenFlow = do
           (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
           cityName = getCityNameFromCode sourceServiceabilityResp.city
           pickUpPoints = mapSpecialZoneGates srcSpecialLocation.gatesInfo
-          gateAddress = fromMaybe HomeScreenData.dummyLocation (head pickUpPoints)
+          gateAddress = if DS.null state.props.defaultPickUpPoint
+                          then HomeScreenData.dummyLocation
+                          else fromMaybe HomeScreenData.dummyLocation (Arr.find (\pickupPoint -> pickupPoint.place == state.props.defaultPickUpPoint) pickUpPoints)
       setValueToLocalStore CUSTOMER_LOCATION $ show cityName
       checkForSpecialZoneAndHotSpots state (ServiceabilityRes sourceServiceabilityResp) lat lon
       let cachedLat = (if state.props.isSource == Just true then state.props.locateOnMapLocation.sourceLat else state.props.locateOnMapLocation.destinationLat)
@@ -1331,7 +1336,7 @@ homeScreenFlow = do
             })
       (GlobalState globalState) <- getState
       let state = globalState.homeScreen
-      if isMoreThan20Meters || cachedLocation == "" then do
+      if isMoreThan20Meters || cachedLocation == "" || (state.props.isSource == Just true && isJust gateAddress.address) then do
         fullAddress <- getPlaceName lat lon gateAddress true
         case fullAddress of 
           Just (PlaceName placeDetails) -> do
@@ -1375,7 +1380,9 @@ homeScreenFlow = do
           (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
           pickUpPoints = mapSpecialZoneGates srcSpecialLocation.gatesInfo
           cityName = getCityNameFromCode sourceServiceabilityResp.city
-          geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
+          gateAddress = if DS.null state.props.defaultPickUpPoint
+                          then HomeScreenData.dummyLocation
+                          else fromMaybe HomeScreenData.dummyLocation (Arr.find (\pickupPoint -> pickupPoint.place == state.props.defaultPickUpPoint) pickUpPoints)
       setValueToLocalStore CUSTOMER_LOCATION $ show cityName
       checkForSpecialZoneAndHotSpots state (ServiceabilityRes sourceServiceabilityResp) lat lon
       let distanceBetweenLatLong = getDistanceBwCordinates lat lon state.props.locateOnMapLocation.sourceLat state.props.locateOnMapLocation.sourceLng
@@ -1389,8 +1396,7 @@ homeScreenFlow = do
             city = cityName
             }
           })
-      if isMoreThan20Meters then do
-        let gateAddress = fromMaybe HomeScreenData.dummyLocation (head pickUpPoints)
+      if isMoreThan20Meters || isJust gateAddress.address then do
         fullAddress <- getPlaceName lat lon gateAddress true
         case fullAddress of
           Just (PlaceName address) -> do
@@ -1778,7 +1784,10 @@ findEstimates updatedState = do
   let currentTime = (convertUTCtoISC (getCurrentUTC "") "h:mm:ss A")
       currentDate =  getCurrentDate ""
       markers = Remote.normalRoute ""
-      srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker, primaryText = state.data.source, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = zoneLabelIcon state.props.zoneType.sourceTag}
+      sourceAddress = if state.props.isSpecialZone && not (DS.null state.props.defaultPickUpPoint)
+                        then state.props.defaultPickUpPoint
+                        else state.data.source
+      srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker, primaryText = sourceAddress, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = zoneLabelIcon state.props.zoneType.sourceTag}
       destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = state.data.destination, labelImage = zoneLabelIcon state.props.zoneType.destinationTag }
   void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show updatedState.props.sourceLat) <> " long: " <> (show updatedState.props.sourceLong))},
                                       {key : "Latest Search", value : (unsafeToForeign $ currentDate <> " " <> currentTime)}]
@@ -2500,7 +2509,9 @@ addNewAddressScreenFlow input = do
           (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
           pickUpPoints =  mapSpecialZoneGates srcSpecialLocation.gatesInfo
           geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
-          gateAddress = (fromMaybe HomeScreenData.dummyLocation ((filter( \ (item) -> (item.place == state.props.defaultPickUpPoint)) pickUpPoints) !! 0))
+          gateAddress = if DS.null state.props.defaultPickUpPoint
+                          then HomeScreenData.dummyLocation
+                          else fromMaybe HomeScreenData.dummyLocation (Arr.find (\pickupPoint -> pickupPoint.place == state.props.defaultPickUpPoint) pickUpPoints)
       if not (DS.null geoJson) && not (null pickUpPoints) && (geoJson /= state.data.polygonCoordinates || pickUpPoints /= state.data.nearByPickUpPoints) then do
         modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> addNewAddressScreen{  data { polygonCoordinates = geoJson
                                                                                                              , nearByPickUpPoints = pickUpPoints
@@ -4059,7 +4070,8 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
                                                                         , props { city = getCityNameFromCode serviceabilityResp.city
                                                                                 , isSpecialZone =  not (DS.null geoJson) 
                                                                                 , confirmLocationCategory = zoneType
-                                                                                , hotSpot{ centroidPoint = Nothing } }})
+                                                                                , hotSpot{ centroidPoint = Nothing }
+                                                                                , locateOnMapProps{ sourceLocationName = Just locationName } }})
       void $ pure $ removeAllPolylines ""
       liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat
                                                               , lon = lon
