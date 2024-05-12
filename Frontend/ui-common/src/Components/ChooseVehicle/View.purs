@@ -185,7 +185,7 @@ variantsView push state =
                         in
                           linearLayout
                             [ height $ V 32
-                            , width $ V ((EHC.screenWidth unit / 3) - 30)
+                            , width $ V ((EHC.screenWidth unit / 3) - 31)
                             , margin $ itemMargin itemIndex listIndex listItem
                             , cornerRadius 4.0
                             , stroke $ (if isInActive then "0," else "1,") <> (if isActiveIndex then Color.blue800 else Color.blue600)
