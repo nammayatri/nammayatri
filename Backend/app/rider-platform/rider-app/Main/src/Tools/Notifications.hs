@@ -195,6 +195,7 @@ notifyOnRideStarted booking ride = do
   let personId = booking.riderId
       rideId = ride.id
       driverName = ride.driverName
+      serviceTierName = fromMaybe (show booking.vehicleServiceTierType) booking.serviceTierName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.TRIP_STARTED merchantOperatingCityId
@@ -214,11 +215,19 @@ notifyOnRideStarted booking ride = do
             ttl = Nothing,
             sound = notificationSound
           }
-      title = T.pack "Trip started!"
+      title =
+        unwords
+          [ "Your",
+            serviceTierName,
+            "ride has started!"
+          ]
       body =
         unwords
-          [ driverName,
-            "has started your trip. Please enjoy the ride!"
+          [ "Your",
+            serviceTierName,
+            "ride with",
+            driverName,
+            "has started. Enjoy the ride!"
           ]
   notifyPerson person.merchantId merchantOperatingCityId notificationData
 
