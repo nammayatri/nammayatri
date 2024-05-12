@@ -118,47 +118,49 @@ tipInfoView push state =
 
 androidTipsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 androidTipsView push state =
-  flexBoxLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , margin $ MarginTop 16
-    , justifyContent JUSTIFY_CENTER
-    , flexDirection ROW
-    , flexWrap WRAP
-    , alignItems ALIGN_BASELINE
-    , visibility $ boolToVisibility $ state.enableTips && state.isVisible
-    ]
-    ( mapWithIndex
-        ( \index item ->
-            linearLayout
-              [ height WRAP_CONTENT
-              , width $ V ((screenWidth unit / 3) - 30)
-              , margin $ Margin 0 (if index > 2 then 8 else 0) (if (index + 1) `mod` 3 == 0 then 0 else 8) 0
-              , cornerRadius 8.0
-              , stroke $ "1," <> (if (state.activeIndex == index) then Color.blue800 else Color.grey900)
-              , accessibility ENABLE
-              , padding $ if index == 0 then Padding 5 10 5 10 else Padding 20 10 20 10
-              , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.customerTipArrayWithValues !! index)) <> " Tip" <> (if (state.activeIndex == index) then " Selected" else " : Button")
-              , onClick push $ const $ TipBtnClick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))
-              , clickable true
-              , background $ if state.activeIndex == index then Color.blue600 else Color.white900
-              , gravity CENTER
-              ]
-              [ textView
-                  $ [ text $ item
-                    , color $ Color.black800
-                    , gravity CENTER
-                    ]
-                  <> FontStyle.body6 LanguageStyle
-              ]
-        )
-        state.customerTipArray
-    )
+  let tipArraySize = length state.customerTipArray
+  in
+    flexBoxLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , margin $ MarginTop 16
+      , justifyContent JUSTIFY_CENTER
+      , flexDirection ROW
+      , flexWrap WRAP
+      , alignItems ALIGN_BASELINE
+      , visibility $ boolToVisibility $ state.enableTips && state.isVisible
+      ]
+      ( mapWithIndex
+          ( \index item ->
+              linearLayout
+                ([ height WRAP_CONTENT
+                , width $ V ((screenWidth unit / 4) - 30)
+                
+                , cornerRadius 8.0
+                , stroke $ "1," <> (if (state.activeIndex == index) then Color.blue800 else Color.grey900)
+                , accessibility ENABLE
+                , padding $ if index == 0 then Padding 5 10 5 10 else Padding 8 10 8 10
+                , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.customerTipArrayWithValues !! index)) <> " Tip" <> (if (state.activeIndex == index) then " Selected" else " : Button")
+                , onClick push $ const $ TipBtnClick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))
+                , clickable true
+                , background $ if state.activeIndex == index then Color.blue600 else Color.white900
+                , gravity CENTER
+                ] <> if index == tipArraySize - 1 then [] else [margin $ MarginRight 8])
+                [ textView
+                    $ [ text $ item
+                      , color $ Color.black800
+                      , gravity CENTER
+                      ]
+                    <> FontStyle.body6 LanguageStyle
+                ]
+          )
+          state.customerTipArray
+      )
 
 iOSTipsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 iOSTipsView push state =
   let
-    tipValuesArr = splitIntoEqualParts 3 state.customerTipArray
+    tipValuesArr = splitIntoEqualParts 4 state.customerTipArray
   in
     linearLayout
       [ height WRAP_CONTENT
@@ -184,12 +186,12 @@ iOSTipsView push state =
                         in
                           linearLayout
                             [ height WRAP_CONTENT
-                            , width $ V ((screenWidth unit / 3) - 30)
+                            , width $ V ((screenWidth unit / 4) - 30)
                             , margin $ tipsMargin itemIndex listIndex listItem
                             , cornerRadius 8.0
                             , stroke $ "1," <> (if (state.activeIndex == index) then Color.blue800 else Color.grey900)
                             , accessibility ENABLE
-                            , padding $ if index == 0 then Padding 5 10 5 10 else Padding 20 10 20 10
+                            , padding $ if index == 0 then Padding 5 10 5 10 else Padding 8 10 8 10
                             , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.customerTipArrayWithValues !! index)) <> " : Button"
                             , onClick push $ const $ TipBtnClick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))
                             , clickable $ true
