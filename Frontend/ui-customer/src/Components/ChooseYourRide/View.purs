@@ -709,7 +709,7 @@ getScrollViewHeight config len =
        height = if quoteHeight == 0 then 84 else quoteHeight
        rideHeaderLayout = HU.getDefaultPixelSize (runFn1 getLayoutBounds $ EHC.getNewIDWithTag "rideEstimateHeaderLayout").height
        rideHeaderHeight = if rideHeaderLayout == 0 then 81 else rideHeaderLayout
-       iosPercent = if len == 4 then 60 else 65
+       iosPercent = if len == 4 then 60 else 73
   in (if len >= 4 then ((getHeightFromPercent (if EHC.os == "IOS" then iosPercent else 90)) - rideHeaderHeight) else len * height)
 
 primaryButtonRequestRideConfig :: Config -> String -> PrimaryButton.Config
