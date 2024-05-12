@@ -255,7 +255,7 @@ findingRidesView state push =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , gravity CENTER_HORIZONTAL
-  , visibility if (null state.quoteListModel && isLocalStageOn FindingQuotes) || state.findingRidesAgain then VISIBLE else GONE
+  , visibility $ boolToVisibility ( (null state.quoteListModel && isLocalStageOn FindingQuotes) || state.findingRidesAgain ) 
   , clickable true
   , accessibility DISABLE
   , margin $ if state.tipViewProps.onlyPrimaryText then MarginBottom 80 else if state.tipViewProps.isprimaryButtonVisible then MarginBottom 82 else  MarginBottom 85
@@ -426,7 +426,7 @@ paymentMethodView push state =
   , width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER_VERTICAL
-  , visibility if state.selectedQuote == Nothing && (null state.quoteListModel) && (not isLocalStageOn FindingQuotes) then VISIBLE else GONE
+  , visibility $ boolToVisibility (state.selectedQuote == Nothing && (null state.quoteListModel) && (not (isLocalStageOn FindingQuotes))) 
   ][linearLayout
   [ orientation VERTICAL
   , height WRAP_CONTENT
@@ -525,7 +525,7 @@ noQuotesErrorModel state =
     , gravity CENTER
     , background Color.white900
     , accessibility DISABLE
-    , visibility if ( null state.quoteListModel) && isLocalStageOn QuoteList then VISIBLE else GONE
+    , visibility if state.findingRidesAgain then GONE else if ( null state.quoteListModel) && ( isLocalStageOn QuoteList) then VISIBLE else GONE
     , margin (MarginBottom 100)
     ][ linearLayout
       [ width MATCH_PARENT
@@ -595,7 +595,7 @@ homeOrTryAgain state push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation HORIZONTAL
-    , visibility if state.selectedQuote == Nothing && (null state.quoteListModel) && isLocalStageOn QuoteList then VISIBLE else GONE
+    , visibility $ boolToVisibility $ state.selectedQuote == Nothing && (null state.quoteListModel) && isLocalStageOn QuoteList
     ][ PrimaryButton.view (push <<< HomeButtonActionController) (homeButtonConfig state)
      , PrimaryButton.view (push <<< TryAgainButtonActionController) (tryAgainButtonConfig state)
     ]
