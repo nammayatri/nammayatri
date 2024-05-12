@@ -111,7 +111,7 @@ view push config =
                                   , height WRAP_CONTENT
                                   , orientation VERTICAL
                                   , afterRender push (const $ NoAction config)
-                                  , visibility $ boolToVisibility $ config.searchResultType == ESTIMATES
+                                  -- , visibility $ boolToVisibility $ config.searchResultType == ESTIMATES
                                   ][ priceDetailsView push config ]
                               ]
                           , linearLayout

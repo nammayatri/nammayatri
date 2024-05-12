@@ -1194,7 +1194,7 @@ eval OnResumeCallback state =
       let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime "LazyCheck"))
       void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
       continue state
-    "RideAccepted" | state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails -> exit $ Retry state
+    "RideAccepted" | state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails -> exit $ ReloadScreen state
     _ -> continue state
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
