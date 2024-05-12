@@ -193,6 +193,7 @@ screen initialState =
               FindingQuotes -> do
                 when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do
                   void $ pure $ setValueToLocalStore FINDING_QUOTES_POLLING "true"
+                  void $ pure $ setValueToLocalStore LOCAL_STAGE (show FindingQuotes)
                   void $ pure $ setValueToLocalStore AUTO_SELECTING "false"
                   void $ startTimer initialState.props.searchExpire "findingQuotes" "1" push SearchExpireCountDown 
                   void $ pure $ setValueToLocalStore GOT_ONE_QUOTE "FALSE"

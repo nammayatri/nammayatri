@@ -685,7 +685,7 @@ homeScreenFlow = do
         response <- lift $ lift $ Remote.selectEstimate (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates) (state.props.estimateId)
         case response of
           Right res -> do
-            updateLocalStage FindingQuotes
+            void $ pure $ setValueToLocalStore LOCAL_STAGE (show FindingQuotes)
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } })
             let tipViewData = if state.props.customerTip.isTipSelected then state.props.tipViewProps{ stage = TIP_ADDED_TO_SEARCH } else HomeScreenData.initData.props.tipViewProps
             logInfo "retry_finding_quotes" ( "selectedEstimate Current Stage: " <> (show state.props.currentStage) <> " LOCAL_STAGE: " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id :" <> state.props.estimateId )
