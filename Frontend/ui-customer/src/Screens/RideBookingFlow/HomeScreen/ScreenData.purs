@@ -20,7 +20,7 @@ import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig)
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig , TicketType(..), TripTypeData)
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -214,6 +214,7 @@ initData = {
     , invalidBookingId : Nothing
     , maxEstimatedDuration : 0
     , invalidBookingPopUpConfig : Nothing
+    , tripTypeDataConfig : tripTypeDataConfig
     },
     props: {
       rideRequestFlow : false
@@ -404,11 +405,29 @@ initData = {
   }
 }
 
+
+tripTypeDataConfig =  {
+      tripPickupData : Just dummyTripTypeData,
+      tripReturnData : Just dummyTripTypeData
+    }
+dummyTripTypeData :: TripTypeData
+dummyTripTypeData = {
+  tripDateTimeConfig : {
+    year : 0
+  , month : 0
+  , day : 0
+  , hour : 0
+  , minute : 0
+  },
+  tripDateUTC : "",
+  tripDateReadableString : "Enter Date"
+}
 dummySearchLocationModelProps = {
     isAutoComplete : false
   , showLoader : false
   , crossBtnSrcVisibility : false
   , crossBtnDestVisibility : false
+  , tripType : ONE_WAY_TRIP
 }
 
 dummySearchLocationModelData = {

@@ -38,6 +38,8 @@ import Components.MenuButton.Controller (Action(..)) as MenuButtonController
 import Components.PopUpModal.Controller as PopUpModal
 import Components.PricingTutorialModel.Controller as PricingTutorialModelController
 import Components.PrimaryButton.Controller as PrimaryButtonController
+import Components.DateTimeSelector.Controller as DateSelectorController
+import Components.Selector.Controller as SelectorController
 import Components.TipsView as TipsView
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.QuoteListItem.Controller as QuoteListItemController
@@ -66,6 +68,7 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.Number (fromString, round) as NUM
 import Data.String as STR
 import Debug (spy)
+import Data.Boolean(otherwise)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Unsafe (unsafePerformEffect)
@@ -142,6 +145,8 @@ import Common.Types.App as CTP
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.Types (FareProductType(..)) as FPT
 import Helpers.TipConfig
+import Data.Date.Component
+import Data.Enum 
 
 instance showAction :: Show Action where
   show _ = ""
@@ -888,6 +893,7 @@ data Action = NoAction
             | RemoveShimmer 
             | ReportIssueClick
             | DateTimePickerAction String Int Int Int String Int Int
+            | DateSelectAction String String Int Int Int String Int Int
             | ChooseSingleVehicleAction ChooseVehicleController.Action
             | LocationTagBarAC LocationTagBarV2Controller.Action
             | UpdateSheetState BottomSheetState
@@ -1874,6 +1880,8 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Primary
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DateTimePickerButtonClicked)) state = openDateTimePicker state 
 
+eval(SearchLocationModelActionController (SearchLocationModelController.DateSelectButtonClicked (DateSelectorController.OnClick str))) state = openDateTimeSelector str state
+
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState = do
     _ <- pure $ spy "state homeScreen" newState
     let state = newState {data {rentalsInfo = Nothing}}
@@ -2634,6 +2642,10 @@ eval (SearchLocationModelActionController (SearchLocationModelController.UpdateC
   else
     continue state
 
+
+eval (SearchLocationModelActionController (SearchLocationModelController.SelectorControllerAction (SelectorController.OnClick tripType))) state = do
+  continue state {props { searchLocationModelProps {tripType = tripType}}}
+
 eval (UpdateCurrentLocation lat lng) state = updateCurrentLocation state lat lng
 
 eval (CurrentLocation lat lng) state = do
@@ -3016,6 +3028,35 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
         else do
           void $ pure $ toast $ getString SCHEDULE_RIDE_AVAILABLE
           continue state 
+
+eval (DateSelectAction title dateResp year month day timeResp hour minute ) state = do 
+    if any (_ /= "SELECTED") [dateResp, timeResp] then continue state 
+    else
+      let selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if day < 10 then "0"  else "") <> (show day)
+          selectedDateTest = (show day) <> " " <> (formatMonth (month+1)) <> " , " <> (if(hour > 12) then show (hour - 12) else show hour) <> ":" <>  (if minute < 10 then "0"  else "") <> (show minute) <> (if (hour > 12) then " PM" else " AM")  
+          selectedUTC = unsafePerformEffect $ convertDateTimeConfigToUTC year (month + 1) day hour minute 0
+          isAfterThirtyMinutes = (compareUTCDate selectedUTC (getCurrentUTC "")) > (30 * 60)
+          validDate = (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (state.props.maxDateBooking)) selectedDateString)
+                          && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
+          updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
+          updatedTripTypeDataConfig = state.data.tripTypeDataConfig
+          newState = if validDate && isAfterThirtyMinutes && title == "Pickup" then 
+          state { data { tripTypeDataConfig {tripPickupData =  Just HomeScreenData.dummyTripTypeData { tripDateTimeConfig =  updatedDateTime, tripDateUTC = selectedUTC , tripDateReadableString = selectedDateTest}} }}
+                     else if validDate && isAfterThirtyMinutes && title == "Return" then state { data { tripTypeDataConfig {tripReturnData = Just HomeScreenData.dummyTripTypeData{ tripDateTimeConfig = updatedDateTime, tripDateUTC = selectedUTC , tripDateReadableString = selectedDateTest}}}}
+                     else state
+      in 
+        if validDate && isAfterThirtyMinutes then do
+          let maybeInvalidBookingDetails = invalidBookingTime selectedUTC Nothing
+          if (isJust maybeInvalidBookingDetails) then do
+            continue state {data{invalidBookingId = maybe Nothing (\invalidBookingTime -> Just invalidBookingTime.bookingId) maybeInvalidBookingDetails}, props{showScheduledRideExistsPopUp = true}}
+          else continue newState
+        else 
+          if isAfterThirtyMinutes then do 
+            void $ pure $ toast $ getVarString DATE_INVALID_MESSAGE $ singleton $ show state.props.maxDateBooking
+            continue state
+          else do
+            void $ pure $ toast $ getString SCHEDULE_RIDE_AVAILABLE
+            continue state 
 
 eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do 
   case tag of 
@@ -3736,3 +3777,31 @@ openDateTimePicker state =
       _ <- launchAff $ showDateTimePicker push DateTimePickerAction
       pure NoAction
     ]
+
+
+openDateTimeSelector :: String -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+openDateTimeSelector str state = 
+  continueWithCmd state 
+    [
+      do 
+      push <- getPushFn Nothing "HomeScreen"
+      _ <- launchAff $ showDateTimePicker push $ DateSelectAction str
+      pure NoAction 
+    ]
+
+
+formatMonth :: Int -> String
+formatMonth x
+  | x == 1 = (getString JANUARY)
+  | x == 2 = (getString FEBRUARY)
+  | x == 3 = (getString MARCH)
+  | x == 4 = (getString APRIL)
+  | x == 5 = (getString MAY)
+  | x == 6 = (getString JUNE)
+  | x == 7 = (getString JULY)
+  | x == 8 = (getString AUGUST)
+  | x == 9 = (getString SEPTEMBER)
+  | x == 10 = (getString OCTOBER)
+  | x == 11 = (getString NOVEMBER)
+  | x == 12 = (getString DECEMBER)
+  | otherwise = "Invalid"

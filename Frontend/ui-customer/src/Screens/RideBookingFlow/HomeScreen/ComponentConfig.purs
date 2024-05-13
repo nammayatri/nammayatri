@@ -87,7 +87,11 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getKmMeter, emergencyContactInitialChatSuggestionId)
 import Resources.Localizable.EN (getEN)
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
+<<<<<<< HEAD
 import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..), VehicleViewType(..))
+=======
+import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..), SearchLocationModelType(..) )
+>>>>>>> 804b0be9d3 (added date-time and trip type selection view)
 import Screens.Types (FareProductType(..)) as FPT
 import Screens.Types as ST
 import Services.API as API
@@ -117,7 +121,12 @@ import Resources.Constants (dummyPrice)
 import Data.String.CodeUnits (stripPrefix, stripSuffix)
 import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig)
 import Helpers.TipConfig
+<<<<<<< HEAD
 import Debug
+=======
+import Screens.Types (TicketType (..))
+import Components.DateTimeSelector.Controller as DateSelectorController
+>>>>>>> 804b0be9d3 (added date-time and trip type selection view)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -1238,6 +1247,9 @@ searchLocationModelViewState state = let
       }
       , headerText : getString TRIP_DETAILS_
       , currentLocationText : state.props.currentLocation.place 
+      , tripType : state.props.searchLocationModelProps.tripType
+      , pickupConfig : pickupConfig state
+      , returnConfig : returnConfig state
                                     }
   where 
     formatDate :: String -> String
@@ -2251,3 +2263,63 @@ scheduledRideExistsPopUpConfig state = let
 
     formatDateInHHMM :: String -> String
     formatDateInHHMM timeUTC = EHC.convertUTCtoISC timeUTC "HH" <> ":" <> EHC.convertUTCtoISC timeUTC "mm"
+
+
+pickupConfig :: ST.HomeScreenState -> DateSelectorController.DateSelectorConfig
+pickupConfig state = 
+  let pickupConfig' =  {
+  baseWidth: MATCH_PARENT,
+  baseHeight: WRAP_CONTENT,
+  baseOrientation: VERTICAL,
+  baseMargin: MarginBottom 20,
+  titleConfig: "Pickup", --  string needed here 
+  textColor: Color.black900,
+  textMargin: MarginBottom 9,
+  pickerHeight: WRAP_CONTENT,
+  pickerWidth: MATCH_PARENT,
+  pickerCornerRadius: 8.0,
+  pickerBackground: Color.white900,
+  pickerPadding: Padding 20 15 20 15,
+  selectDateText: case state.data.tripTypeDataConfig.tripPickupData of 
+                   Just obj ->  obj.tripDateReadableString
+                   Nothing -> "Enter Pickup" -- date Entry here 
+ -- date Entry here 
+  , dateHeight: WRAP_CONTENT,
+  dateWidth: WRAP_CONTENT,
+  dateColor: Color.black800,
+  iconHeight: V 22,
+  iconWidth: V 22,
+  iconMargin: MarginLeft 8,
+  iconGravity: BOTTOM
+}
+  in pickupConfig'
+
+returnConfig :: ST.HomeScreenState -> DateSelectorController.DateSelectorConfig
+returnConfig state = 
+  let returnConfig' =  {
+  baseWidth: MATCH_PARENT,
+  baseHeight: WRAP_CONTENT,
+  baseOrientation: VERTICAL,
+  baseMargin: MarginBottom 20,
+  titleConfig: "Return", -- strings needed here 
+  textColor: Color.black900,
+  textMargin: MarginBottom 9,
+  pickerHeight: WRAP_CONTENT,
+  pickerWidth: MATCH_PARENT,
+  pickerCornerRadius: 8.0,
+  pickerBackground: Color.white900,
+  pickerPadding: Padding 20 15 20 15,
+  selectDateText: case state.data.tripTypeDataConfig.tripReturnData of 
+                  Just obj -> obj.tripDateReadableString
+                  Nothing -> "Enter Return Location"
+                   -- date Entry here 
+  , dateHeight: WRAP_CONTENT,
+  dateWidth: WRAP_CONTENT,
+  dateColor: Color.black800,
+  iconHeight: V 22,
+  iconWidth: V 22,
+  iconMargin: MarginLeft 8,
+  iconGravity: BOTTOM
+}
+  in returnConfig'
+
