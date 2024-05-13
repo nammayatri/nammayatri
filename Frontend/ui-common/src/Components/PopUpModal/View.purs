@@ -548,6 +548,7 @@ tipsViewConfig state = let
   , tipSelectedText = state.tipSelectedText
   , showTipInfo = true
   , enableTips = state.isTipEnabled
+  , searchExpired = true
   }
   in tipsViewConfig'
 
