@@ -53,24 +53,24 @@ driverDetailsView :: forall w. DriverDetailsType -> String -> String -> PrestoDO
 driverDetailsView config uid nid =
  linearLayout
   [ orientation HORIZONTAL
-  , height $ V 150
-  , padding $ PaddingHorizontal 16 16
+  , height WRAP_CONTENT 
+  , padding $ Padding 16 16 16 0
   , width MATCH_PARENT
   , id $ getNewIDWithTag uid
   , margin $ Margin 16 (if config.searchType == QUOTES then 12 else 0) 16 (if config.enablePaddingBottom then safeMarginBottom else 0)
   , background Color.white900
   , cornerRadius 8.0
   , visibility $  boolToVisibility $ if config.searchType == QUOTES then config.rideStarted else true
-  , gravity BOTTOM
   ][  linearLayout
       [ orientation VERTICAL
-      , height MATCH_PARENT
-      , width $ V ((screenWidth unit) /2 - 64)
+      , height WRAP_CONTENT
+      , weight 1.0
       , gravity CENTER_VERTICAL
       , alignParentLeft "true,-1"
+      , background Color.white900
       ][linearLayout
         [ height WRAP_CONTENT
-        , width MATCH_PARENT
+        , width WRAP_CONTENT
         , gravity LEFT
         ][ frameLayout
           [ orientation VERTICAL
@@ -94,7 +94,7 @@ driverDetailsView config uid nid =
           , ellipsize true
           , accessibility DISABLE
           , color Color.black800
-          , width $ V ((screenWidth unit) /2 - 64)
+          , width WRAP_CONTENT
           , height WRAP_CONTENT
           , gravity LEFT
           ] <> FontStyle.body27 TypoGraphy
@@ -103,7 +103,7 @@ driverDetailsView config uid nid =
           , color Color.black700
           , accessibilityHint $ "Driver : " <> config.driverName <> " : Vehicle : " <>  config.vehicleModel
           , accessibility ENABLE
-          , width $ V ((screenWidth unit) /2 - 64)
+          , width WRAP_CONTENT
           , maxLines 2
           , ellipsize true
           , height WRAP_CONTENT
@@ -116,47 +116,43 @@ driverDetailsView config uid nid =
       ]
     , linearLayout
       [ height WRAP_CONTENT
-      , width $ V ((screenWidth unit) / 2)
+      , width WRAP_CONTENT
       , orientation VERTICAL
       , accessibility DISABLE
-      , gravity RIGHT
       ][  frameLayout
-          [ height MATCH_PARENT
+          [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , id $ getNewIDWithTag nid
           , margin $ MarginBottom 16
           , accessibility DISABLE 
           ][linearLayout
             [ height WRAP_CONTENT
-            , width MATCH_PARENT
+            , width WRAP_CONTENT
             , gravity CENTER_HORIZONTAL
             , alpha if config.providerType == ONUS then 1.0 else 0.5
             ][ imageView
                [ imageWithFallback $ getVehicleImage config.vehicleVariant config.vehicleDetails config.merchantCity
                , height $ V 125
                , width $ V 125
-               , margin if os == "IOS" then Margin vehicleMargin 0 0 15 else MarginBottom 15
                , accessibility DISABLE_DESCENDANT
                ]
             ]
             , linearLayout
-              [ height $ V 130
-              , width MATCH_PARENT
-              , gravity BOTTOM
+              [ height WRAP_CONTENT
+              , width WRAP_CONTENT
               , accessibility ENABLE
               , accessibilityHint $ "Vehicle Number " <> (STR.replaceAll (STR.Pattern "") (STR.Replacement " ") config.registrationNumber)
               , accessibility DISABLE_DESCENDANT
               ][linearLayout
                 [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , gravity RIGHT
+                , width WRAP_CONTENT
+                , margin $ MarginTop 90
                 ][ linearLayout
                   [ height $ V 38
                   , width WRAP_CONTENT
                   , background config.config.driverInfoConfig.numberPlateBackground
                   , cornerRadius 4.0
                   , orientation HORIZONTAL
-                  , gravity BOTTOM
                   , margin $ MarginRight 2
                   , padding $ Padding 2 2 2 2
                   , alignParentBottom "true,-1"
