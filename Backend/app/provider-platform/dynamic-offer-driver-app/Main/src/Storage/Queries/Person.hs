@@ -446,11 +446,13 @@ updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updateMobileNumberAndCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Person -> m ()
-updateMobileNumberAndCode person = do
+updatePersonDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Person -> m ()
+updatePersonDetails person = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
+    [ Se.Set BeamP.firstName $ person.firstName,
+      Se.Set BeamP.lastName $ person.lastName,
+      Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
       Se.Set BeamP.mobileNumberEncrypted $ person.mobileNumber <&> unEncrypted . (.encrypted),
       Se.Set BeamP.mobileNumberHash $ person.mobileNumber <&> (.hash),
       Se.Set BeamP.unencryptedMobileNumber $ person.unencryptedMobileNumber,

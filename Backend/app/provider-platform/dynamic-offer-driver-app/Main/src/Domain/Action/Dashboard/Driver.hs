@@ -854,7 +854,7 @@ updatePhoneNumber merchantShortId opCity reqDriverId req = do
           }
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession personId
-  QPerson.updateMobileNumberAndCode updDriver
+  QPerson.updatePersonDetails updDriver
   QR.deleteByPersonId personId
   logTagInfo "dashboard -> updatePhoneNumber : " (show personId)
   pure Success
