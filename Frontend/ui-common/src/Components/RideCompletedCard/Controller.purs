@@ -120,12 +120,13 @@ config = {
       stroke : "1," <> Color.black700,
       cornerRadius : 8.0, 
       padding :  Padding 16 12 16 12,
-      margin : MarginVertical 10 20,
+      margin : Margin 15 10 15 20,
       alpha : 1.0,
       fontStyle : Tags,
       visible : VISIBLE
     },
-    bottomText : ""
+    bottomText : "",
+    horizontalLineColor : Color.white900
   },
   customerIssueCard : {
     issueFaced : false, 
@@ -245,7 +246,8 @@ type TopCard = {
   gradient :: Array String,
   topPill :: TopPill,
   infoPill :: InfoPill, 
-  bottomText :: String
+  bottomText :: String,
+  horizontalLineColor :: String
 }
 
 type InfoPill = {

@@ -196,6 +196,7 @@ window.getMerchantConfig = function () {
           "background" : "#22101010"
           , "textColor" : "#FFFFFF"
         }
+        , "horizontalLineColor" : "#60FFFFFF"
       }
     }
     , "feature" : {

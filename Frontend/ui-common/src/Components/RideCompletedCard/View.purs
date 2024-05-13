@@ -9,7 +9,7 @@ import Data.Functor (map)
 import PrestoDOM.Animation as PrestoAnim
 import Animation (fadeIn,fadeInWithDelay) as Anim
 import Effect (Effect)
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when)
+import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, max)
 import Common.Styles.Colors as Color
 import Components.SelectListModal as CancelRidePopUp
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -65,7 +65,7 @@ topGradientView config push =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , padding $ Padding 16 16 16 6
+    , padding $ if config.isDriver then Padding 16 16 16 6 else PaddingVertical 40 6
     , gradient $ Linear (if os == "IOS" then 90.0 else 0.0) config.topCard.gradient
     , id $ getNewIDWithTag "topViewId"
     ]
@@ -81,7 +81,7 @@ tollTextVew config =
     width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER
-  , margin $ MarginBottom 16
+  , margin $ Margin 16 0 16 16
   , visibility config.visibility
   ][
     imageView[
@@ -154,32 +154,7 @@ topPillAndSupportView config push =
             width MATCH_PARENT
           , height WRAP_CONTENT
           , gravity RIGHT
-          ][    linearLayout
-                  [ height WRAP_CONTENT
-                  , width WRAP_CONTENT
-                  , gravity CENTER
-                  , cornerRadius 18.0
-                  , background Color.black150
-                  , padding $ Padding 12 8 12 8
-                  , visibility $ boolToVisibility $ (not config.topCard.topPill.visible) && config.showSafetyCenter
-                  , onClick push $ const GoToSOS
-                  ]
-                  [ imageView
-                      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sos_white_bg"
-                      , height $ V 24
-                      , width $ V 24
-                      , margin $ MarginRight 8
-                      , accessibilityHint $ "S O S Button, Select to view S O S options"
-                      , accessibility ENABLE
-                      ]
-                  , textView
-                      $ [ text config.safetyTitle
-                        , color Color.white900
-                        , margin $ MarginBottom 1
-                        ]
-                      <> FontStyle.body6 TypoGraphy
-                  ]
-          , imageView
+          ][   imageView
               [ height $ V 40
               , width $ V 40
               , margin $ MarginLeft 10
@@ -223,16 +198,26 @@ priceAndDistanceUpdateView config push =
       , orientation VERTICAL
       , gravity CENTER
       , layoutGravity "center_vertical"
-      ][  textView $
-          [ width WRAP_CONTENT
+      ][  linearLayout
+          [ width MATCH_PARENT
           , height WRAP_CONTENT
-          , text config.topCard.title
-          , color $ if config.theme == LIGHT then Color.black800 else config.topCard.titleColor
-          ] <> if config.theme == LIGHT then FontStyle.h3 TypoGraphy else FontStyle.h1 TypoGraphy
+          , gravity CENTER
+          , margin $ MarginHorizontal 16 16
+          , padding $ PaddingLeft if config.isDriver then 0 else 40
+          ][ textView $
+             [ height WRAP_CONTENT
+             , text config.topCard.title
+             , gravity CENTER
+             , weight 1.0
+             , color $ if config.theme == LIGHT then Color.black800 else config.topCard.titleColor
+             ] <> if config.theme == LIGHT then FontStyle.h3 TypoGraphy else FontStyle.h1 TypoGraphy
+           , sosButtonView config push
+          ]
         , linearLayout
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , gravity CENTER
+          , margin $ MarginHorizontal 16 16
           ][ textView $ 
               [ text if config.isFreeRide then "₹0" else "₹" <> (show config.topCard.finalAmount)
               , accessibilityHint $ "Ride Complete: Final Fare ₹"  <> (show config.topCard.finalAmount)
@@ -240,7 +225,7 @@ priceAndDistanceUpdateView config push =
               , color $ if config.theme == LIGHT then Color.black800 else Color.white900
               , width WRAP_CONTENT
               , height WRAP_CONTENT
-              ] <> (FontStyle.title0 TypoGraphy)
+              ] <> (FontStyle.body28 TypoGraphy)
           , textView $
               [ textFromHtml $ "<strike> ₹" <> (show config.topCard.initalAmount) <> "</strike>"
               , accessibilityHint $ "Your Fare Has Been Updated From ₹"  <> (show config.topCard.initalAmount) <> " To ₹" <> (show config.topCard.finalAmount)
@@ -248,7 +233,7 @@ priceAndDistanceUpdateView config push =
               , margin $ Margin 8 5 0 0
               , width WRAP_CONTENT
               , height WRAP_CONTENT
-              , color config.topCard.titleColor
+              , color Color.black600
               , visibility if config.topCard.fareUpdatedVisiblity then VISIBLE else GONE
               ] <> (FontStyle.title1 TypoGraphy)
           ]
@@ -259,7 +244,7 @@ priceAndDistanceUpdateView config push =
 pillView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 pillView config push =
   linearLayout
-    [ width if os == "IOS" then (V 300) else WRAP_CONTENT
+    [ width MATCH_PARENT 
     , height WRAP_CONTENT
     , padding config.topCard.infoPill.padding
     , margin config.topCard.infoPill.margin
@@ -279,10 +264,10 @@ pillView config push =
         ]
     , textView $
         [ height WRAP_CONTENT
-        , width WRAP_CONTENT
         , gravity CENTER_VERTICAL
         , text config.topCard.infoPill.text 
         , color config.topCard.infoPill.color
+        , weight 1.0
         ] <> (FontStyle.getFontStyle config.topCard.infoPill.fontStyle LanguageStyle)
     ]
 
@@ -292,17 +277,17 @@ rideDetailsButtonView config push =
     width MATCH_PARENT
   , height WRAP_CONTENT 
   , layoutGravity "bottom"
+  , margin $ MarginHorizontal 16 16
   ][
     linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
-          , margin $ MarginTop 4
           , gravity CENTER_VERTICAL
           , onClick push $ const RideDetails
           , accessibility config.accessibility
           , accessibilityHint "Ride Details : Button"
           , cornerRadius 4.0
-          , padding $ Padding 4 5 4 5
+          , padding $ Padding 4 16 4 16
           , rippleColor Color.rippleShade
           ][  textView $
               [ height WRAP_CONTENT
@@ -342,7 +327,7 @@ customerSideBottomCardsView config push =
       height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , padding $ Padding 16 16 16 16
+    , padding $ PaddingVertical 6 16
     , background Color.white900
     , gravity CENTER
     ]$[
@@ -458,7 +443,7 @@ customerRatingDriverView config push =
   , visibility ratingVisibility
   , cornerRadius 8.0
   , stroke $ "1,"<>Color.grey800
-  , padding $ Padding 10 10 10 10
+  , padding $ Padding 10 10 10 20
   , gravity CENTER
   ][ imageView [
       imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_driver_avatar"
@@ -755,7 +740,7 @@ stickyButtonView config push =
   , background Color.white900
   , layoutGravity "bottom"
   , alignParentBottom "true,-1"
-  , padding $ Padding 16 16 16 16
+  , padding $ Padding 16 16 16 if os == "IOS" then max safeMarginBottom 16 else 16
   ][PrimaryButton.view (push <<< SkipButtonActionController) (config.primaryButtonConfig)]
 
 reportIssueView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -807,7 +792,7 @@ whiteHorizontalLine config =
   linearLayout
     [ width MATCH_PARENT
     , height $ V 1
-    , background if config.isDriver then Color.white900 else config.topCard.titleColor
+    , background config.topCard.horizontalLineColor
     ][]
 
 getBottomCardHeight :: String -> Length 
@@ -978,3 +963,31 @@ infoCardView config orientation' infoCardConfig =
         ] <> infoCardConfig.subHeading2.fontStyle
         ]
     ]
+
+sosButtonView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+sosButtonView config push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , gravity RIGHT
+  , cornerRadius if os == "IOS" then 18.0 else 25.0
+  , background Color.black150
+  , padding $ Padding 8 8 8 8
+  , visibility $ boolToVisibility $ (not config.topCard.topPill.visible) && config.showSafetyCenter
+  , onClick push $ const GoToSOS
+  ]
+  [ imageView
+      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_shield_blue"
+      , height $ V 24
+      , width $ V 24
+      , accessibilityHint $ "S O S Button, Select to view S O S options"
+      , accessibility ENABLE
+      ]
+  , textView
+      $ [ text config.safetyTitle
+        , color Color.white900
+        , margin $ MarginBottom 1
+        , visibility GONE
+        ]
+      <> FontStyle.body6 TypoGraphy
+  ]

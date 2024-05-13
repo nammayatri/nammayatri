@@ -303,6 +303,11 @@ window.getMerchantConfig = function () {
       , "textColor": "#6D7280"
       , "showInfoIcon" : true 
       }
+    , "rideCompletedCardConfig" : {
+        "topCard" : {
+          "horizontalLineColor" : "#454545"
+        }
+      }
     , "feature" : {
         "enableSupport" : false
       , "enableSuggestions" : true
