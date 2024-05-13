@@ -161,8 +161,9 @@ changeAutoPayFeesAndInvoicesForDriverFeesToManual alldriverFeeIdsInBatch validDr
   QDF.updateToManualFeeByDriverFeeIds driverFeeIdsToBeShiftedToManual
   QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE driverFeeIdsToBeShiftedToManual Nothing
 
-roundToHalf :: HighPrecMoney -> HighPrecMoney
-roundToHalf x = fromInteger (round (x * 2)) / 2
+roundToHalf :: Currency -> HighPrecMoney -> HighPrecMoney
+roundToHalf INR x = fromInteger (round (x * 2)) / 2
+roundToHalf _ x = x
 
 calcNumRides :: DDF.DriverFee -> TC.TransporterConfig -> Int
 calcNumRides driverFee transporterConfig =

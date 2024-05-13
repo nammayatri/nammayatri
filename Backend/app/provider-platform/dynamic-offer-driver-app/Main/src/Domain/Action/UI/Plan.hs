@@ -625,7 +625,7 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
             serviceName,
             currency
           }
-    calculateDues driverFees = sum $ map (\dueInvoice -> roundToHalf (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverFees
+    calculateDues driverFees = sum $ map (\dueInvoice -> roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverFees
     checkIfInvoiceIsReusable invoice newDriverFees = do
       allDriverFeeClubedToInvoice <- QINV.findById invoice.id
       let oldLinkedDriverFeeIds = allDriverFeeClubedToInvoice <&> (.driverFeeId)
@@ -661,7 +661,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
 
   let currentDues = sum $ map (.driverFeeAmount) dues
   let autopayDues = sum $ map (.driverFeeAmount) $ filter (\due -> due.feeType == DF.RECURRING_EXECUTION_INVOICE) dues
-  let dueBoothCharges = roundToHalf $ sum $ map (.totalSpecialZoneCharges) dues
+  let dueBoothCharges = roundToHalf currency $ sum $ map (.totalSpecialZoneCharges) dues
 
   return
     PlanEntity
@@ -803,7 +803,7 @@ mkDueDriverFeeInfoEntity serviceName driverFees transporterConfig = do
               | invoiceType == Just INV.AUTOPAY_INVOICE = DF.RECURRING_EXECUTION_INVOICE
               | otherwise = DF.RECURRING_INVOICE
         -- FIXME should we round to half?
-        let driverFeeAmount = roundToHalf (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst)
+        let driverFeeAmount = roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst)
         return
           DriverDuesEntity
             { autoPayStage = driverFee.autopayPaymentStage,

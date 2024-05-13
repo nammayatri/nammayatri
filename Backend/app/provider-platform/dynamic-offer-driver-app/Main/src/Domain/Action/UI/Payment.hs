@@ -288,7 +288,7 @@ updatePaymentStatus driverId merchantOpCityId serviceName = do
     calcDueAmount =
       map
         ( \dueInvoice ->
-            SLDriverFee.roundToHalf $
+            SLDriverFee.roundToHalf dueInvoice.currency $
               dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst
         )
 

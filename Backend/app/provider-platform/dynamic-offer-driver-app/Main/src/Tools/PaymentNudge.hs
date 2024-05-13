@@ -37,6 +37,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.DriverFee (roundToHalf)
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.Plan as CQP
@@ -66,9 +67,6 @@ mandateCancelledKey = "MANDATE_CANCELLED"
 
 planActivatedKey :: Text
 planActivatedKey = "PLAN_ACTIVATED_FOR_DAY"
-
-roundToHalf :: HighPrecMoney -> HighPrecMoney
-roundToHalf x = fromInteger (round (x * 2)) / 2
 
 data PlanAmountEntity = PlanAmountEntity
   { finalAmount :: HighPrecMoney,
@@ -167,7 +165,7 @@ notifyPaymentFailure ::
 notifyPaymentFailure driverId paymentMode mbBankErrorCode serviceName = do
   driver <- B.runInReplica $ QDP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   dueDriverFees <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverId) serviceName
-  let totalDues = sum $ map (\dueInvoice -> roundToHalf (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dueDriverFees
+  let totalDues = sum $ map (\dueInvoice -> roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dueDriverFees
 
   let pnKey = if paymentMode == AUTOPAY then autopayPaymentFailedNudgeKey else maunalPaymentFailedNudgeKey
   mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH driver.language) mbBankErrorCode
