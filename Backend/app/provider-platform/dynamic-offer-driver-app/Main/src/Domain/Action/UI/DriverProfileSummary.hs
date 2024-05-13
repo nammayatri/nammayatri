@@ -36,6 +36,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import Storage.Queries.DriverStats
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as FPQ
+import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as FPPDQ
 import qualified Storage.Queries.Feedback.FeedbackBadge as QFB
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Rating as QRating
@@ -82,7 +83,8 @@ getDriverProfileSummary (driverId, _, _) = do
         missedEarnings <- B.runInReplica $ BQ.findFareForCancelledBookings cancelledBookingIdsByDriver
         driverSelectedFare <- B.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
         customerExtraFee <- B.runInReplica $ FPQ.findCustomerExtraFees farePramIds
-        let bonusEarnings = driverSelectedFare + customerExtraFee + toHighPrecMoney (length farePramIds * 10) -- FIXME hardcoded 10
+        deadKmFare <- B.runInReplica $ FPPDQ.findDeadKmFareEarnings farePramIds
+        let bonusEarnings = driverSelectedFare + customerExtraFee + deadKmFare
             totalEarnings = sum $ map (fromMaybe 0 . (.fare)) completedRides
         incrementTotalEarningsAndBonusEarnedAndLateNightTrip (cast person.id) totalEarnings bonusEarnings lateNightTripsCount
         setMissedEarnings (cast person.id) missedEarnings

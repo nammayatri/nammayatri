@@ -28,7 +28,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id (Id, cast)
-import Kernel.Utils.Common (CacheFlow, Currency, Forkable (fork), HighPrecMoney, MonadGuid (generateGUIDText), fromMaybeM, getCurrentTime, getLocalCurrentTime, highPrecMetersToMeters, logDebug, toHighPrecMoney)
+import Kernel.Utils.Common (CacheFlow, Currency, Forkable (fork), HighPrecMoney, MonadGuid (generateGUIDText), fromMaybeM, getCurrentTime, getLocalCurrentTime, highPrecMetersToMeters, logDebug)
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -38,6 +38,7 @@ import qualified Storage.Queries.DailyStats as SQDS
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as DSQ
 import qualified Storage.Queries.FareParameters as FPQ
+import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as FPPDQ
 import qualified Storage.Queries.Ride as RQ
 import Tools.Error
 import Utils.Common.Cac.KeyNameConstants
@@ -107,7 +108,8 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
           let incrementBonusEarningsBy = driverSelectedFareEarnings + customerExtraFeeEarnings
           incrementLateNightTripsCountBy <- B.runInReplica $ FPQ.findAllLateNightRides farePramIds
           -- incrementLateNightTripsCountBy <- FPQ.findAllLateNightRides farePramIds
-          pure (totalEarnings, incrementBonusEarningsBy, incrementLateNightTripsCountBy, toHighPrecMoney (length farePramIds * 10)) -- FIXME hardcoded 10, not correct for other currencies
+          deadKmFare <- B.runInReplica $ FPPDQ.findDeadKmFareEarnings farePramIds
+          pure (totalEarnings, incrementBonusEarningsBy, incrementLateNightTripsCountBy, deadKmFare)
         else do
           mbBooking <- B.runInReplica $ BQ.findById ride.bookingId
           -- mbBooking <- BQ.findById ride.bookingId
@@ -170,6 +172,7 @@ createDriverStat currency driverId = do
   cancelledBookingIdsByDriver <- B.runInReplica $ BCRQ.findAllBookingIdsCancelledByDriverId driverId
   missedEarnings <- B.runInReplica $ BQ.findFareForCancelledBookings cancelledBookingIdsByDriver
   driverSelectedFare <- B.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
+  deadKmFare <- B.runInReplica $ FPPDQ.findDeadKmFareEarnings farePramIds
   customerExtraFee <- B.runInReplica $ FPQ.findCustomerExtraFees farePramIds
   let driverStat =
         DS.DriverStats
@@ -177,7 +180,7 @@ createDriverStat currency driverId = do
             idleSince = now,
             totalRides = length completedRides,
             totalEarnings = sum $ map (fromMaybe 0.0 . (.fare)) completedRides,
-            bonusEarned = driverSelectedFare + customerExtraFee + toHighPrecMoney (length farePramIds * 10), -- FIXME hardcoded 10, will not work for other currencies
+            bonusEarned = driverSelectedFare + customerExtraFee + deadKmFare,
             lateNightTrips = lateNightTripsCount,
             earningsMissed = missedEarnings,
             totalDistance = highPrecMetersToMeters . sum $ map (.traveledDistance) allRides,
