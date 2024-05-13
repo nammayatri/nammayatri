@@ -49,7 +49,7 @@ primaryButtonConfig state =
     primaryButtonConfig' = PrimaryButton.config
       { textConfig
         { text = case state.data.currentStage of
-            RENTAL_SELECT_PACKAGE -> getString PROCEED
+            RENTAL_SELECT_PACKAGE -> getString VIEW_FARES
             RENTAL_SELECT_VARIANT -> getString BOOK_RENTAL
             RENTAL_CONFIRMATION -> getString CONFIRM_RENTAL
             _ -> ""
@@ -279,7 +279,7 @@ rentalPolicyInfoConfig state = let
       textStyle = FontStyle.Heading1
     }
   , primaryText {
-      text = getString RENTAL_INFO_POLICY_DESC,
+      text = getString $ RENTAL_INFO_POLICY_DESC (show 10) ,
       padding = Padding 16 16 0 16,
       textStyle = FontStyle.ParagraphText,
       color = Color.black700,

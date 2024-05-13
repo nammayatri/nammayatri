@@ -15,40 +15,41 @@
 
 module Screens.SearchLocationScreen.ComponentConfig where
 
-import PrestoDOM(Margin(..), Padding(..), Length(..), Orientation(..), Gravity(..), Visibility(..))
-import Components.PrimaryButton as PrimaryButton
-import Components.SeparatorView.View as SeparatorView
-import Components.LocationTagBarV2 as LTB
-import Components.InputView as InputView
-import Components.RateCard as RateCard
-import Components.MenuButton as MenuButton
-import Components.ChooseYourRide as ChooseYourRide
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types as ST
-import MerchantConfig.Types as MT
-import Prelude ((==), (<>), ($), (/=), (>), (||), map, not, identity)
-import Styles.Colors as Color
-import Font.Style as FontStyle
-import Font.Size as FontSize
-import Data.Maybe(isJust, maybe, Maybe(..)) as MB
-import Helpers.Utils as HU
-import Data.String as DS
-import Prelude (show, (&&), identity)
-import Language.Strings (getString)
-import Components.PopUpModal as PopUpModal
-import Language.Types (STR(..))
-import Language.Strings (getVarString)
-import Common.Types.App (LazyCheck(..), RateCardType(..))
-import PrestoDOM.Types.DomAttributes as PTD
-import Mobility.Prelude (boolToVisibility)
-import Screens 
-import JBridge as JB
-import ConfigProvider 
-import Data.Array as DA
-import Engineering.Helpers.Commons as EHC
-import Screens.SearchLocationScreen.ScreenData (dummyQuote)
+import ConfigProvider
 import Helpers.TipConfig
-import Storage(getValueToLocalStore, KeyStore(..))
+import Screens
+
+import Common.Types.App (LazyCheck(..), RateCardType(..))
+import Components.ChooseYourRide as ChooseYourRide
+import Components.InputView as InputView
+import Components.LocationTagBarV2 as LTB
+import Components.MenuButton as MenuButton
+import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButton
+import Components.RateCard as RateCard
+import Components.SeparatorView.View as SeparatorView
+import Data.Array as DA
+import Data.Maybe (isJust, maybe, Maybe(..)) as MB
+import Data.String as DS
+import Engineering.Helpers.Commons as EHC
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Helpers.Utils as HU
+import JBridge as JB
+import Language.Strings (getString)
+import Language.Strings (getVarString)
+import Language.Types (STR(..))
+import MerchantConfig.Types as MT
+import Mobility.Prelude (boolToVisibility)
+import Prelude ((==), (<>), ($), (/=), (>), (||), map, not, identity)
+import Prelude (show, (&&), identity)
+import PrestoDOM (Margin(..), Padding(..), Length(..), Orientation(..), Gravity(..), Visibility(..))
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import PrestoDOM.Types.DomAttributes as PTD
+import Screens.SearchLocationScreen.ScreenData (dummyQuote)
+import Screens.Types as ST
+import Storage (getValueToLocalStore, KeyStore(..))
+import Styles.Colors as Color
 
 locationTagBarConfig :: ST.SearchLocationScreenState -> ST.GlobalProps -> LTB.LocationTagBarConfig
 locationTagBarConfig state globalProps = 
@@ -438,19 +439,21 @@ rentalRateCardConfig state =
           }
         , additionalStrings = [
             {key : "TOTAL_FARE_CHANGE", val : (getString TOTAL_FARE_MAY_CHANGE_DUE_TO_CHANGE_IN_ROUTE)}
-          , {key : "EXCESS_DISTANCE_CHARGE_DESCRIPTION", val : (getString EXCESS_DISTANCE_CHARGE_DESCRIPTION)}
+          , {key : "EXCESS_DISTANCE_CHARGE_DESCRIPTION", val : (getString (EXCESS_DISTANCE_CHARGE_DESCRIPTION (currency <> (show selectedQuote.fareDetails.perExtraKmRate))))}
           , {key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getVarString NIGHT_TIME_FEE_DESCRIPTION $ DA.singleton $ currency <> (show selectedQuote.fareDetails.nightShiftCharge))}
           , {key : "PARKING_FEES_AND_TOLLS_NOT_INCLUDED", val : (getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED)}
           , {key : "FARE_ACCORDING_TO_GOVERNMENT", val : (getString FARE_DETERMINED_AS_PER_KARNATAKA_GUIDELINES)}
           ]
         , fareList = [
-            {key : ("Base Fare (incl. " <> show state.data.rideDetails.rideDistance <> " km & " <> show state.data.rideDetails.rideDuration <> " hrs)"), val : (currency <> show selectedQuote.fareDetails.perExtraKmRate)}
+            {key : ("Base Fare (incl. " <> show state.data.rideDetails.rideDistance <> " km & " <> show state.data.rideDetails.rideDuration <> " hrs)"), val : (currency <> show selectedQuote.fareDetails.baseFare)}
           , {key : getString EXTRA_PER_KM_FARE, val : (currency <> show selectedQuote.fareDetails.perExtraKmRate <> "/km")}
           , {key : getString EXTRA_PER_MINUTE_FARE, val : (currency <> show selectedQuote.fareDetails.perExtraMinRate <> "/min")}
-          , {key : getString PICKUP_CHARGES, val :(currency <> "25")} -- TODO-codex :: Pickup Charges not coming with API
+          -- , {key : getString PICKUP_CHARGES, val :(currency <> "25")} -- TODO-codex :: Pickup Charges not coming with API
           , {key : getString WAITING_CHARGES_AFTER_5_MINS, val : (currency <> "1.5" <> "/min")} -- TODO-codex :: Waiting Charges not coming with API
-          , {key : getString TOLL_CHARGES_ESTIMATED, val : (currency <> "100")} -- TODO-codex :: Toll Charges not coming with API
-          ]
+          ] <> case selectedQuote.fareDetails.tollCharges of
+                  MB.Just tollCharges -> [{key : getString TOLL_CHARGES_ESTIMATED, val : (currency <> show tollCharges)}]
+                  MB.Nothing -> []
+                  
         }
   in rentalRateCardConfig'
 
@@ -472,6 +475,7 @@ chooseYourRideConfig state =
     rideTime = formatDate "D" <> " " <> formatDate "MMM" <> ", " <> formatDate "hh" <> ":" <> formatDate "mm" <> " " <> formatDate "A",
     tipViewProps = getTipViewProps state.props.tipViewProps quoteSelected.quoteDetails.vehicleVariant ,
     tipForDriver = state.props.customerTip.tipForDriver,
+    fareProductType = state.props.fareProductType,
     activeIndex = quoteSelected.activeIndex 
   }
 

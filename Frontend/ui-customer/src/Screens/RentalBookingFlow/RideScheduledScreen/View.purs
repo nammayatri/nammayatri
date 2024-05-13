@@ -101,10 +101,11 @@ view push state =
       , margin $ MarginTop 60 
       , width MATCH_PARENT
       ][  scrollView
-          [ height $ V $ (EHC.screenHeight unit) - 60
+          [ height MATCH_PARENT
+          , margin $ MarginBottom 70
           , width MATCH_PARENT
           ][  linearLayout
-              [ height MATCH_PARENT
+              [ height WRAP_CONTENT
               , width MATCH_PARENT
               , orientation VERTICAL
               , gravity CENTER_HORIZONTAL

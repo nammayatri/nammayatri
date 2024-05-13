@@ -31,7 +31,7 @@ getBannerConfigs state action =
   then [metroBannerConfig state action]
   else [])
   <> (if state.data.config.banners.homeScreenCabLaunch && state.props.city == ST.Bangalore then [cabLaunchBannerConfig state action] else [])
-  <> (if state.data.config.feature.enableAdditionalServices || (cityConfig state).enableRentals || (cityConfig state).enableIntercity 
+  <> (if state.data.config.feature.enableAdditionalServices || (cityConfig state).enableRentals
   then [checkoutRentalBannerConfig state action] 
   else [])
   <> 
