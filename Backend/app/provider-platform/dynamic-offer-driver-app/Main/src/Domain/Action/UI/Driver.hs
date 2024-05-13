@@ -1488,11 +1488,13 @@ data HistoryEntityV2 = HistoryEntityV2
 data AutoPayInvoiceHistory = AutoPayInvoiceHistory
   { invoiceId :: Text,
     amount :: HighPrecMoney,
+    amountWithCurrency :: PriceAPIEntity,
     executionAt :: UTCTime,
     autoPayStage :: Maybe DDF.AutopayPaymentStage,
     rideTakenOn :: UTCTime,
     isCoinCleared :: Bool,
-    coinDiscountAmount :: Maybe HighPrecMoney
+    coinDiscountAmount :: Maybe HighPrecMoney,
+    coinDiscountAmountWithCurrency :: Maybe PriceAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -1502,9 +1504,11 @@ data ManualInvoiceHistory = ManualInvoiceHistory
     rideDays :: Int,
     rideTakenOn :: Maybe UTCTime,
     amount :: HighPrecMoney,
+    amountWithCurrency :: PriceAPIEntity,
     feeType :: DDF.FeeType,
     isCoinCleared :: Bool,
     coinDiscountAmount :: Maybe HighPrecMoney,
+    coinDiscountAmountWithCurrency :: Maybe PriceAPIEntity,
     paymentStatus :: INV.InvoiceStatus
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
@@ -1553,11 +1557,13 @@ mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' transporterConfig
               rideDays = length allDriverFeeForInvoice,
               rideTakenOn = if length allDriverFeeForInvoice == 1 then addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) . (.createdAt) <$> listToMaybe allDriverFeeForInvoice else Nothing,
               amount,
+              amountWithCurrency = PriceAPIEntity amount dfee.currency,
               createdAt = manualInvoice.createdAt,
               feeType = if any (\dfee' -> dfee'.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice then DDF.MANDATE_REGISTRATION else DDF.RECURRING_INVOICE,
               paymentStatus = manualInvoice.invoiceStatus,
               isCoinCleared = dfee.status == DDF.CLEARED_BY_YATRI_COINS,
-              coinDiscountAmount = dfee.amountPaidByCoin
+              coinDiscountAmount = dfee.amountPaidByCoin,
+              coinDiscountAmountWithCurrency = flip PriceAPIEntity dfee.currency <$> dfee.amountPaidByCoin
             }
     Nothing -> return Nothing
   where
@@ -1577,11 +1583,13 @@ mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice 
               AutoPayInvoiceHistory
                 { invoiceId = autoInvoice.invoiceShortId,
                   amount = sum $ mapToAmount [dfee],
+                  amountWithCurrency = PriceAPIEntity (sum $ mapToAmount [dfee]) dfee.currency,
                   executionAt = executionTime,
                   autoPayStage = dfee.autopayPaymentStage,
                   rideTakenOn = addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) dfee.createdAt,
                   isCoinCleared = dfee.status == DDF.CLEARED_BY_YATRI_COINS,
-                  coinDiscountAmount = dfee.amountPaidByCoin
+                  coinDiscountAmount = dfee.amountPaidByCoin,
+                  coinDiscountAmountWithCurrency = flip PriceAPIEntity dfee.currency <$> (dfee.amountPaidByCoin)
                 }
     Nothing -> return Nothing
   where
@@ -1590,6 +1598,7 @@ mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice 
 data HistoryEntryDetailsEntityV2 = HistoryEntryDetailsEntityV2
   { invoiceId :: Text,
     amount :: HighPrecMoney,
+    amountWithCurrency :: PriceAPIEntity,
     createdAt :: Maybe UTCTime,
     executionAt :: Maybe UTCTime,
     feeType :: DDF.FeeType,
@@ -1601,17 +1610,22 @@ data DriverFeeInfoEntity = DriverFeeInfoEntity
   { autoPayStage :: Maybe DDF.AutopayPaymentStage,
     paymentStatus :: Maybe INV.InvoiceStatus,
     totalEarnings :: HighPrecMoney,
+    totalEarningsWithCurrency :: PriceAPIEntity,
     totalRides :: Int,
     planAmount :: HighPrecMoney,
+    planAmountWithCurrency :: PriceAPIEntity,
     rideTakenOn :: UTCTime,
     driverFeeAmount :: HighPrecMoney,
+    driverFeeAmountWithCurrency :: PriceAPIEntity,
     maxRidesEligibleForCharge :: Maybe Int,
     isSplit :: Bool,
     offerAndPlanDetails :: Maybe Text,
     isCoinCleared :: Bool,
     coinDiscountAmount :: Maybe HighPrecMoney,
+    coinDiscountAmountWithCurrency :: Maybe PriceAPIEntity,
     specialZoneRideCount :: Int,
     totalSpecialZoneCharges :: HighPrecMoney,
+    totalSpecialZoneChargesWithCurrency :: PriceAPIEntity,
     vehicleNumber :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
@@ -1643,8 +1657,12 @@ getHistoryEntryDetailsEntityV2 (driverId, _, merchantOpCityId) invoiceShortId se
         | any (\dfee -> dfee.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice = DDF.MANDATE_REGISTRATION
         | invoiceType == Just INV.AUTOPAY_INVOICE = DDF.RECURRING_EXECUTION_INVOICE
         | otherwise = DDF.RECURRING_INVOICE
+  currency <- case allDriverFeeForInvoice of
+    [] -> SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
+    (fee : _) -> pure fee.currency
+
   driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (listToMaybe allEntiresByInvoiceId <&> (.invoiceStatus)) transporterConfig serviceName
-  return $ HistoryEntryDetailsEntityV2 {invoiceId = invoiceShortId, amount, createdAt, executionAt, feeType, driverFeeInfo = driverFeeInfo'}
+  return $ HistoryEntryDetailsEntityV2 {invoiceId = invoiceShortId, amount, amountWithCurrency = PriceAPIEntity amount currency, createdAt, executionAt, feeType, driverFeeInfo = driverFeeInfo'}
   where
     mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf dueDfee.currency (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
 
@@ -1666,16 +1684,21 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = d
             { autoPayStage = driverFee.autopayPaymentStage,
               paymentStatus = invoiceStatus,
               totalEarnings = driverFee.totalEarnings,
+              totalEarningsWithCurrency = PriceAPIEntity driverFee.totalEarnings driverFee.currency,
               driverFeeAmount = (\dueDfee -> SLDriverFee.roundToHalf dueDfee.currency (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)) driverFee,
+              driverFeeAmountWithCurrency = PriceAPIEntity (SLDriverFee.roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst)) driverFee.currency,
               totalRides = SLDriverFee.calcNumRides driverFee transporterConfig,
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
+              planAmountWithCurrency = PriceAPIEntity (fromMaybe 0 driverFee.feeWithoutDiscount) driverFee.currency,
               isSplit = length driverFeesInWindow > 1,
               rideTakenOn = addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) driverFee.createdAt, --- when we fix ist issue we will remove this,
               offerAndPlanDetails = driverFee.planOfferTitle,
               isCoinCleared = driverFee.status == DDF.CLEARED_BY_YATRI_COINS,
               coinDiscountAmount = driverFee.amountPaidByCoin,
+              coinDiscountAmountWithCurrency = flip PriceAPIEntity driverFee.currency <$> driverFee.amountPaidByCoin,
               specialZoneRideCount = driverFee.specialZoneRideCount,
               totalSpecialZoneCharges = driverFee.specialZoneAmount,
+              totalSpecialZoneChargesWithCurrency = flip PriceAPIEntity driverFee.currency driverFee.specialZoneAmount,
               vehicleNumber = driverFee.vehicleNumber,
               maxRidesEligibleForCharge
             }
@@ -1705,6 +1728,8 @@ data DriverFeeResp = DriverFeeResp
     debitedOn :: Maybe UTCTime,
     amountPaidByCoin :: Maybe HighPrecMoney,
     feeWithoutDiscount :: Maybe HighPrecMoney,
+    amountPaidByCoinWithCurrency :: Maybe PriceAPIEntity,
+    feeWithoutDiscountWithCurrency :: Maybe PriceAPIEntity,
     invoiceStatus :: Maybe INV.InvoiceStatus
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
@@ -1729,6 +1754,8 @@ getDownloadInvoiceData (personId, _merchantId, merchantOpCityId) from mbTo = do
             driverFeeId = id,
             debitedOn = mbInvoice <&> (.updatedAt),
             invoiceStatus = mbInvoice <&> (.invoiceStatus),
+            amountPaidByCoinWithCurrency = flip PriceAPIEntity currency <$> amountPaidByCoin,
+            feeWithoutDiscountWithCurrency = flip PriceAPIEntity currency <$> feeWithoutDiscount,
             ..
           }
 
