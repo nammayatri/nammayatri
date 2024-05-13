@@ -30,6 +30,6 @@ data CounterData = CounterData
 getCounters :: String -> Array CounterData
 getCounters dummy = 
     [
-       CounterData {icon : "ny_ic_heart_grey,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_heart_grey.png", value : "likeCount"}, 
-       CounterData {icon : "ny_ic_eye,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_eye.png", value : "viewCount"}
+       CounterData {icon : "ny_ic_heart_grey,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_heart_grey.png", value : "likeCount"}, 
+       CounterData {icon : "ny_ic_eye,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_eye.png", value : "viewCount"}
     ]

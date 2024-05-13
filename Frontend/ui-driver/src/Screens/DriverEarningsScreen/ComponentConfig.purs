@@ -274,7 +274,7 @@ errorModalConfig state =
               else
                 "ny_ic_no_coins_history"
           else
-            "ny_ic_no_rides_history_cab,https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_no_rides_history_cab.png"
+            "ny_ic_no_rides_history_cab,https://assets.moving.tech/beckn/jatrisaathi/driver/images/ny_ic_no_rides_history_cab.png"
       , height = V if state.props.subView == ST.EARNINGS_VIEW then 110 else 115
       , width = V if state.props.subView == ST.EARNINGS_VIEW then 124 else 200
       , margin = MarginBottom 61

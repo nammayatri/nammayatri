@@ -500,7 +500,7 @@ specialPickupZone push state =
               [ height $ V 30
               , width $ V 30
               , padding $ PaddingHorizontal 10 5
-              , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_questionmark_white"
+              , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_questionmark_white"
               ]
             , textView
               $ [ height MATCH_PARENT
@@ -513,7 +513,7 @@ specialPickupZone push state =
             ] 
       ]
     , imageView
-      [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_location_unserviceable_green"
+      [ imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_location_unserviceable_green"
       , height $ V 64
       , width $ V 92
       ]  
@@ -2059,7 +2059,7 @@ playAudioAndLaunchMap push action audioCompleted acRide requestedVehicleVariant 
     let 
       language = "kn"
       audioFolder = if acRide  then "ac_background" else "non_ac_background" 
-      audioUrl = "https://assets.juspay.in/beckn/audios/" <> audioFolder <> "/" <> language <> ".mp3"
+      audioUrl = "https://assets.moving.tech/beckn/audios/" <> audioFolder <> "/" <> language <> ".mp3"
     void $ pure $ runFn3 JB.startAudioPlayer audioUrl push audioCompleted
   else do  
     void $ delay $ Milliseconds 2000.0
