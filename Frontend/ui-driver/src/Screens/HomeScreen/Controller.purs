@@ -1386,11 +1386,12 @@ eval (IsAcWorkingPopUpAction PopUpModal.DismissPopup) state = continue state{pro
 
 eval (ACExpController action) state = do
   let acVideoLink = "https://www.youtube.com/watch?v=MbgxZkqxPLQ"
+      newState = state { props { acExplanationPopup = false } }
   case action of
-    PopUpModal.DismissPopup -> continue state { props { acExplanationPopup = false } }
-    PopUpModal.OnButton2Click -> continue state { props { acExplanationPopup = false } }
-    PopUpModal.OnCoverImageClick -> continueWithCmd state [pure $ OpenLink acVideoLink]
-    PopUpModal.OnButton1Click -> continueWithCmd state [pure $ OpenLink acVideoLink]
+    PopUpModal.DismissPopup -> continue newState
+    PopUpModal.OnButton2Click -> continue newState
+    PopUpModal.OnCoverImageClick -> continueWithCmd newState [pure $ OpenLink acVideoLink]
+    PopUpModal.OnButton1Click -> continueWithCmd newState [pure $ OpenLink acVideoLink]
     _ -> continue state
 
 eval (OpenLink link) state = continueWithCmd state [ do 
