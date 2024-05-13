@@ -141,6 +141,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   now <- getCurrentTime
+  deploymentVersion <- asks (.version)
   transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   trackingUrl <- buildTrackingUrl guid
   return
@@ -198,7 +199,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId = do
         clientDevice = driver.clientDevice,
         clientConfigVersion = driver.clientConfigVersion,
         backendConfigVersion = driver.backendConfigVersion,
-        backendAppVersion = driver.backendAppVersion
+        backendAppVersion = Just deploymentVersion.getDeploymentVersion
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl
