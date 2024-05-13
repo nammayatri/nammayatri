@@ -83,7 +83,7 @@ data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | COMPLET
   deriving stock (Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data TripCategory = OneWay | RoundTrip | Rental | RideShare | InterCity
+data TripCategory = OneWay | RoundTrip | Rental | RideShare | InterCity | CrossCity
   deriving stock (Eq, Ord, Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 

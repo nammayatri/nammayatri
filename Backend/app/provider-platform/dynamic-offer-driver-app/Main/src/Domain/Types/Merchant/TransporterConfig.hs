@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.Merchant.TransporterConfig where
 
@@ -26,6 +27,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (Language)
 import Kernel.Prelude as KP
+import Kernel.Types.Beckn.City (City)
 import Kernel.Types.Common
 import Kernel.Types.Id
 
@@ -189,7 +191,8 @@ data TransporterConfigD u = TransporterConfig
     dlNumberVerification :: Maybe Bool,
     pastDaysRideCounter :: Int,
     placeNameCacheExpiryDays :: Maybe Int,
-    emailOtpConfig :: Maybe Email.Types.EmailOTPConfig
+    emailOtpConfig :: Maybe Email.Types.EmailOTPConfig,
+    crossTravelCities :: [City]
   }
   deriving (Generic, Show)
 
@@ -202,3 +205,10 @@ instance FromJSON (TransporterConfigD 'Safe)
 instance ToJSON (TransporterConfigD 'Safe)
 
 instance ToJSON (TransporterConfigD 'Unsafe)
+
+-- type CityList = (City,City)
+
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be CityList where
+--   sqlValueSyntax = autoSqlValueSyntax
+
+-- $(mkBeamInstancesForList ''CityList)

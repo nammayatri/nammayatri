@@ -519,29 +519,32 @@ validateRequest merchantId sReq = do
   unless merchant.enabled $ throwError AgencyDisabled
   -- This checks for origin serviceability too
   NearestOperatingAndSourceCity {nearestOperatingCity, sourceCity} <- getNearestOperatingAndSourceCity merchant sReq.pickupLocation
-  isInterCity <-
+  let bapCity = nearestOperatingCity.city
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just bapCity)
+  transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id sReq.transactionId))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  (isInterCity, isCrossCity) <-
     case sReq.dropLocation of
       Just dropLoc -> do
         destinationCityState <- getDestinationCity merchant dropLoc -- This checks for destination serviceability too
         if destinationCityState.city == sourceCity.city && destinationCityState.city /= Context.AnyCity
-          then return False
+          then return (False, False)
           else do
             mbMerchantState <- CQMS.findByMerchantIdAndState merchant.id sourceCity.state
             let allowedStates = maybe [sourceCity.state] (.allowedDestinationStates) mbMerchantState
             -- Destination states should be in the allowed states of the origin state
             if destinationCityState.state `elem` allowedStates
-              then return True
+              then case destinationCityState.city `elem` transporterConfig.crossTravelCities of
+                True -> return (True, True)
+                False -> return (True, False)
               else throwError (RideNotServiceableInState $ show destinationCityState.state)
-      Nothing -> pure False
-  let bapCity = nearestOperatingCity.city
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just bapCity)
-  transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id sReq.transactionId))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+      Nothing -> pure (False, False)
+
   now <- getCurrentTime
-  let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity
+  let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity
   return ValidatedDSearchReq {..}
 
-getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> DTC.TripOption
-getPossibleTripOption now tConf dsReq isInterCity = do
+getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> DTC.TripOption
+getPossibleTripOption now tConf dsReq isInterCity isCrossCity = do
   let (schedule, isScheduled) =
         if tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
           then (dsReq.pickupTime, True)
@@ -551,8 +554,13 @@ getPossibleTripOption now tConf dsReq isInterCity = do
           Just _ -> do
             if isInterCity
               then do
-                [DTC.InterCity DTC.OneWayOnDemandStaticOffer, DTC.RoundTrip DTC.OnDemandStaticOffer, DTC.Rental DTC.OnDemandStaticOffer]
-                  <> (if not isScheduled then [DTC.InterCity DTC.OneWayRideOtp, DTC.InterCity DTC.OneWayOnDemandDynamicOffer, DTC.RoundTrip DTC.RideOtp, DTC.Rental DTC.RideOtp] else [])
+                if isCrossCity
+                  then do
+                    [DTC.CrossCity DTC.OneWayOnDemandStaticOffer, DTC.RoundTrip DTC.OnDemandStaticOffer, DTC.Rental DTC.OnDemandStaticOffer]
+                      <> (if not isScheduled then [DTC.CrossCity DTC.OneWayRideOtp, DTC.CrossCity DTC.OneWayOnDemandDynamicOffer, DTC.RoundTrip DTC.RideOtp, DTC.Rental DTC.RideOtp] else [])
+                  else do
+                    [DTC.InterCity DTC.OneWayOnDemandStaticOffer, DTC.RoundTrip DTC.OnDemandStaticOffer, DTC.Rental DTC.OnDemandStaticOffer]
+                      <> (if not isScheduled then [DTC.InterCity DTC.OneWayRideOtp, DTC.InterCity DTC.OneWayOnDemandDynamicOffer, DTC.RoundTrip DTC.RideOtp, DTC.Rental DTC.RideOtp] else [])
               else do
                 [DTC.OneWay DTC.OneWayOnDemandStaticOffer, DTC.RoundTrip DTC.OnDemandStaticOffer, DTC.Rental DTC.OnDemandStaticOffer]
                   <> (if not isScheduled then [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer, DTC.RoundTrip DTC.RideOtp, DTC.Rental DTC.RideOtp] else [])
