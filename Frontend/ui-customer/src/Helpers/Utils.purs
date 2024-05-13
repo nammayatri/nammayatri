@@ -94,6 +94,7 @@ import Data.Function.Uncurried (runFn1)
 import Constants (defaultDensity)
 import Mobility.Prelude
 import MerchantConfig.Types 
+import Common.Resources.Constants (assetDomain)
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -472,30 +473,30 @@ updateLocListWithDistance arr currLat currLon useThreshold threshold =
 
 getAssetLink :: LazyCheck -> String
 getAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/user/images/"
-  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/images/"
-  YATRI -> "https://assets.juspay.in/beckn/yatri/user/images/"
-  MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
-  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/user/images/"
-  MOBILITY_RS -> "https://assets.juspay.in/beckn/mobilityredbus/user/images/"
+  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/user/images/"
+  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/user/images/"
+  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/user/images/"
+  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/user/"
+  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/user/images/"
+  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/mobilityredbus/user/images/"
 
 getCommonAssetLink :: LazyCheck -> String
 getCommonAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
-  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
-  YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
-  MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
-  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
-  MOBILITY_RS -> "https://assets.juspay.in/beckn/mobilityredbus/mobilityredbuscommon/"
+  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/nammayatricommon/images/"
+  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/jatrisaathicommon/images/"
+  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/yatricommon/images/"
+  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/mobilitypaytmcommon/"
+  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
+  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/mobilityredbus/mobilityredbuscommon/"
 
 getAssetsBaseUrl :: LazyCheck -> String
 getAssetsBaseUrl lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/user/"
-  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/"
-  YATRI -> "https://assets.juspay.in/beckn/yatri/user/"
-  MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
-  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/user/"
-  MOBILITY_RS -> "https://assets.juspay.in/beckn/mobilityredbus/user/"
+  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/user/"
+  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/user/"
+  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/user/"
+  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/user/"
+  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/user/"
+  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/mobilityredbus/user/"
 
 fetchImage :: FetchImageFrom -> String -> String
 fetchImage fetchImageFrom imageName = do
@@ -503,8 +504,10 @@ fetchImage fetchImageFrom imageName = do
   else case fetchImageFrom of
     FF_ASSET -> imageName <> "," <> (getAssetLink FunctionCall) <> imageName <> ".png"
     FF_COMMON_ASSET -> imageName <> "," <> (getCommonAssetLink FunctionCall) <> imageName <> ".png"
+    COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/user/images/" <> imageName <> ".png"
+    GLOBAL_COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/common/images/" <> imageName <> ".png"
 
-data FetchImageFrom = FF_ASSET | FF_COMMON_ASSET
+data FetchImageFrom = FF_ASSET | FF_COMMON_ASSET | COMMON_ASSET | GLOBAL_COMMON_ASSET
 
 derive instance genericFetchImageFrom :: Generic FetchImageFrom _
 instance eqFetchImageFrom :: Eq FetchImageFrom where eq = genericEq

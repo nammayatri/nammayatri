@@ -634,13 +634,13 @@ bottomBtnsView state push =
 
 srcBtnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String }
 srcBtnData state =
-  [ { text: (getString SELECT_ON_MAP), imageUrl: "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap" }
-  , { text: (getString CURRENT_LOCATION), imageUrl: "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png", action: SetCurrentLocation, buttonType: "CurrentLocation" }
+  [ { text: (getString SELECT_ON_MAP), imageUrl: HU.fetchImage HU.COMMON_ASSET "ny_ic_locate_on_map", action: SetLocationOnMap, buttonType: "LocateOnMap" }
+  , { text: (getString CURRENT_LOCATION), imageUrl: HU.fetchImage HU.COMMON_ASSET "ny_ic_current_location", action: SetCurrentLocation, buttonType: "CurrentLocation" }
   ]
 
 destBtnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String }
 destBtnData state =
-  [ { text: (getString SELECT_LOCATION_ON_MAP), imageUrl: "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap" }]
+  [ { text: (getString SELECT_LOCATION_ON_MAP), imageUrl: HU.fetchImage HU.COMMON_ASSET "ny_ic_locate_on_map", action: SetLocationOnMap, buttonType: "LocateOnMap" }]
 
 
 separatorConfig :: SeparatorView.Config
