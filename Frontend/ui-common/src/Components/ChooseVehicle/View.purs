@@ -28,7 +28,7 @@ import Engineering.Helpers.Commons(os)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
-  let
+  let 
     isActiveIndex = config.index == config.activeIndex
     stroke' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then "2," <> Color.blue800 else "1," <> Color.white900
     background' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then Color.blue600 else Color.white900
@@ -111,7 +111,6 @@ view push config =
                                   , height WRAP_CONTENT
                                   , orientation VERTICAL
                                   , afterRender push (const $ NoAction config)
-                                  -- , visibility $ boolToVisibility $ config.searchResultType == ESTIMATES
                                   ][ priceDetailsView push config ]
                               ]
                           , linearLayout
@@ -140,7 +139,7 @@ view push config =
           , clickable true
           , onClick push $ const $ case config.showInfo && isActiveIndex of
                                     false -> OnSelect config
-                                    true  -> if config.showInfo then ShowRateCard config else NoAction config
+                                    true  -> if config.showInfo && config.searchResultType == ESTIMATES then ShowRateCard config else NoAction config
           ][]
        ]
     ]
@@ -283,7 +282,7 @@ priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Ef
 priceDetailsView push config =
   let isActiveIndex = config.index == config.activeIndex
       infoIcon ="ny_ic_info_blue_lg"
-      enableRateCard = config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY"
+      enableRateCard = config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY" && config.searchResultType == ESTIMATES
   in
   linearLayout
     [ height MATCH_PARENT

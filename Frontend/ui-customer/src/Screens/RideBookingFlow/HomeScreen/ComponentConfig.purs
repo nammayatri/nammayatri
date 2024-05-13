@@ -1572,7 +1572,7 @@ chooseVehicleConfig state = let
     , id = selectedEstimates.id
     , maxPrice = selectedEstimates.maxPrice
     , basePrice = selectedEstimates.basePrice
-    , showInfo = selectedEstimates.showInfo
+    , showInfo = selectedEstimates.searchResultType == ESTIMATES && selectedEstimates.showInfo
     , searchResultType = selectedEstimates.searchResultType
     , isBookingOption = false
     , pickUpCharges = selectedEstimates.pickUpCharges 
