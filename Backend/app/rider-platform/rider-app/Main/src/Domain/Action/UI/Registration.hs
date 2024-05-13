@@ -516,7 +516,7 @@ verify tokenId req = do
   let merchantOperatingCityId = person.merchantOperatingCityId
   let deviceToken = Just req.deviceToken
   riderConfig <- CQRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
-  personWithSameDeviceToken <- if riderConfig.shouldBlockedBySameDeviceToken then listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken req.deviceToken) else return Nothing
+  personWithSameDeviceToken <- if riderConfig.shouldBlockedBySameDeviceToken then listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken deviceToken) else return Nothing
   let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   cleanCachedTokens person.id
   when isBlockedBySameDeviceToken $ do
