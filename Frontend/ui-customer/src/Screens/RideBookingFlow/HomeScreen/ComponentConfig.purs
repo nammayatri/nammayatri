@@ -87,11 +87,8 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getKmMeter, emergencyContactInitialChatSuggestionId)
 import Resources.Localizable.EN (getEN)
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
-<<<<<<< HEAD
 import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..), VehicleViewType(..))
-=======
 import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..), SearchLocationModelType(..) )
->>>>>>> 804b0be9d3 (added date-time and trip type selection view)
 import Screens.Types (FareProductType(..)) as FPT
 import Screens.Types as ST
 import Services.API as API
@@ -121,12 +118,9 @@ import Resources.Constants (dummyPrice)
 import Data.String.CodeUnits (stripPrefix, stripSuffix)
 import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig)
 import Helpers.TipConfig
-<<<<<<< HEAD
 import Debug
-=======
 import Screens.Types (TicketType (..))
 import Components.DateTimeSelector.Controller as DateSelectorController
->>>>>>> 804b0be9d3 (added date-time and trip type selection view)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
