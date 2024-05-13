@@ -217,6 +217,12 @@ checkRideStatus rideAssigned = do
                                 , finalDistance = (fromMaybe 0 ride.chargeableRideDistance)/1000
                                 , baseDuration = (fromMaybe 0 resp.estimatedDuration) / (60*60)
                                 , baseDistance = (fromMaybe 0 resp.estimatedDistance) / 1000
+                                , rideStartedAt = case currRideListItem.rideStartTime of
+                                                    Just startTime -> (convertUTCtoISC startTime "h:mm A")
+                                                    Nothing        -> ""
+                                , rideEndedAt = case currRideListItem.rideEndTime of
+                                              Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
+                                              Nothing        -> ""
                                 }
                           }
                           , ratingViewState { rideBookingRes = (RideBookingRes resp), issueFacedView = nightSafetyFlow}

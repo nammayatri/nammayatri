@@ -214,7 +214,8 @@ driverDetailsView config uid nid =
           name : name,
           capacity : fromString $ getVehicleCapacity config.vehicleVariant,
           isAc : Nothing,
-          showACPill : config.showAcView
+          showACPill : config.showAcView,
+          fareProductType : config.fareProductType
         }
 
 

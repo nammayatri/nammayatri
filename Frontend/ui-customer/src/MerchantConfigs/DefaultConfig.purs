@@ -423,7 +423,7 @@ config =
                 }
             , enableCabs = true
             , enableRentals = true 
-            , enableIntercity = true
+            , enableIntercity = false
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }

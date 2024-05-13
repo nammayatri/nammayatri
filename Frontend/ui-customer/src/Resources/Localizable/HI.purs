@@ -1,7 +1,7 @@
 module Resources.Localizable.HI where
 
-import Prelude ((<>))
 import Language.Types (STR(..))
+import Prelude ((<>))
 import Prelude ((<>))
 
 getHI :: STR -> String
@@ -1160,8 +1160,8 @@ getHI stringKey =
         BASE_FARE -> "बेस किराया:"
         TOLLS_AND_PARKING_FEES -> "टोल और पार्किंग फीस"
         FINAL_FARE_DESCRIPTION -> "अंतिम किराया वास्तविक यात्रा की अवधि पर आधारित होगा, जो आगे की घंटे के लिए बदल दी जाएगी या ट्रिप की चयनित अवधि के लिए (जो कि ज्यादा है)।"
-        EXCESS_DISTANCE_CHARGE_DESCRIPTION -> "शामिल किए गए किलोमीटर्स की अधिशेष दूरी जो किसी भी दिशा में यात्रा की जाएगी, उसके लिए शुल्क लिया जाएगा"
-        ADDITIONAL_CHARGES_DESCRIPTION -> "आपकी यात्रा पूर्ण होने के बाद किसी भी अतिरिक्त शुल्क का बिल किया जाएगा।"
+        EXCESS_DISTANCE_CHARGE_DESCRIPTION charges -> "अतिरिक्त दूरी के लिए " <> charges <> " शुल्क लिया जाएगा"
+        ADDITIONAL_CHARGES_DESCRIPTION -> "अंतिम किराया वास्तविक यात्रा की अवधि और दूरी पर आधारित होगा"
         PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "पार्किंग शुल्क और टोल शामिल नहीं हैं। कृपया इन्हें ड्राइवर को अलग से भुगतान करें।"
         NIGHT_TIME_FEE_DESCRIPTION -> "यदि आपकी यात्रा का कोई भी हिस्सा रात 10:00 बजे से सुबह 5:00 बजे के बीच होता है, तो आपकी सवारी पर एक समान नाइट टाइम शुल्क {} लागू किया जाएगा।"
         CHOOSE_YOUR_RENTAL_RIDE -> "अपनी रेंटल राइड चुनें"
@@ -1209,7 +1209,7 @@ getHI stringKey =
         RENTAL_POLICY -> "किराये की नीति"
         SELECT_PACKAGE -> "पैकेज चुनें"
         RENTAL_POLICY_DESC -> "हर घंटे आपको पैकेज में 10 किलोमीटर मिलते हैं। आप एक सीमा तक अतिरिक्त किलोमीटर की योजना बना सकते हैं और यदि आप आधार दूरी से अधिक हो जाते हैं तो अतिरिक्त लागत बचा सकते हैं।"
-        RENTAL_POLICY_DESC_1 -> "आप बुकिंग की पुष्टि करने से पहले अगली स्क्रीन पर अभी भी अपने किराए की समीक्षा कर सकते हैं।"
+        RENTAL_POLICY_DESC_1 -> "बुकिंग की पुष्टि करने से पहले अगली स्क्रीन पर किराया की समीक्षा करें"
         RENTALS_INTERCITY_AVAILABLE appName -> "रेंटल और इंटरसिटी ट्रिप, अब " <> appName <> " पर उपलब्ध"
         CHECK_IT_OUT -> "इसे चेक करें"
         FAILED_TO_CANCEL -> "यात्रा रद्द करने में विफल रहा"
@@ -1218,7 +1218,7 @@ getHI stringKey =
         NO_RIDES_SCHEDULED_YET -> "अभी तक कोई सवारियाँ शेड्यूल नहीं की गई हैं!"
         RIDE_BOOKING -> "राइड बुकिंग।"
         SPECIAL_ZONE_RENTAL_INELIGIBLE -> "विशेष क्षेत्र के भीतर के स्थान किराये की सवारियों के लिए अयोग्य हैं।"
-        YATRI_SERVICES -> "यात्री सेवाएं"
+        SERVICES -> "सेवाएं"
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "आपके पास " <> bookingTime <> " को आगामी किराये की बुकिंग हैं।"
         YOU_HAVE_UPCOMING_INTERCITY_BOOKING bookingTime -> "आपके पास " <> bookingTime <> " को आगामी इंटरसिटी बुकिंग हैं।"
         SCHEDULED -> "शेड्यूल किया गया"
@@ -1233,10 +1233,22 @@ getHI stringKey =
         WAITING_CHARGES_AFTER_5_MINS -> "5 मिनट के बाद प्रतीक्षा शुल्क"
         FARE_DETERMINED_AS_PER_KARNATAKA_GUIDELINES -> "कर्नाटक राज्य सरकार के निर्देशानुसार निर्धारित किराया"
         RENTAL_CHARGES -> "किराये की लागत"
-        RENTAL_INFO_POLICY_DESC -> "&#8226; हर रेंटल बुकिंग की हर घंटे आपको 10 किलोमीटर की बेस मिलती है। <br><br>&#8226; आप दूरी बढ़ाने के माध्यम से एक ही निर्वाचित रेंटल अवधि के लिए निम्नलिखित मूल्य पर अधिक किलोमीटर जोड़ सकते हैं।"
-        RENTAL_SCREEN_EXPLAINER includedKm -> includedKm <> " is included per hour of booking.Extra km and minutes will be charged as per fare policy of respective vehicle."
+        RENTAL_INFO_POLICY_DESC inclusiveKms ->"&#8226; किराये की बुकिंग के प्रत्येक घंटे के लिए " <> inclusiveKms <> " किमी आपके पैकेज में शामिल है।<br><br>&#8226; यदि आधार दूरी पर्याप्त नहीं है, तो आप अतिरिक्त किलोमीटर जोड़ने और अतिरिक्त लागत बचाने का विकल्प चुन सकते हैं।"
+        RENTAL_SCREEN_EXPLAINER -> "आप बुकिंग की पुष्टि करने से पहले अगली स्क्रीन पर अपने अंतिम किराया अनुमान की समीक्षा कर सकते हैं"
         INSTANT -> "तुरंत"
-        COMING_SOON -> "जल्द आ रहा है!"
+        COMING_SOON -> "जल्द ही!"
         CANCEL_SCHEDULED_RIDE -> "निर्धारित सवारी रद्द करें"
         CANCEL_SCHEDULED_RIDE_DESC -> "क्या आप वाकई इस सवारी को रद्द करना चाहते हैं?<br><br>(एक से अधिक बार रद्दीकरण के कारण आपको अधिक किराये की सवारी का अनुरोध करने से रोका जा सकता है)"
         CONFIRM_CANCELLATION -> "रद्दीकरण की पुष्टि करें"
+        INTERCITY_RIDES_COMING_SOON -> "इंटरसिटी सवारी जल्द ही आ रही है!"
+        VIEW_FARES -> "किराया देखें"
+        EXCESS_TIME_DESCRIPTION charges -> "अतिरिक्त समय के लिए " <> charges <> "लिया जाएगा"
+        ESTIMATED_CHARGES -> "अनुमानित शुल्क"
+        NIGHT_TIME_FEES -> "रात के समय का शुल्क"
+        PARKING_AND_OTHER_CHARGES -> "पार्किंग और अन्य शुल्क"
+        ADDITIONAL_CHARGES -> "अतिरिक्त शुल्क"
+        ESTIMATED_BASE_FARE -> "अनुमानित मूलधन भाड़ा"
+        INCLUDED_DISTANCE -> "शामिल दूरी"
+        INCLUDED_TIME -> "शामिल किया गया समय"
+        TOLL_CHARGES_DESCRIPTION -> "लागू टोल शुल्क अंतिम किराये में जोड़ा जाएगा"
+        WILL_BE_ADDED_TO_FINAL_FARE -> "अंतिम किराये में जोड़ा जाएगा"

@@ -31,7 +31,7 @@ import PrestoDOM.Properties (sheetState)
 import Data.Int (toNumber,ceil, fromString)
 import MerchantConfig.Types(AppConfig(..))
 import Mobility.Prelude
-import Screens.Types (ZoneType(..), TipViewStage(..))
+import Screens.Types (ZoneType(..), TipViewStage(..), FareProductType(..))
 import Data.Ord(min, max)
 import Resources.Constants (intMin, intMax)
 import Helpers.SpecialZoneAndHotSpots as HS
@@ -757,7 +757,8 @@ primaryButtonRequestRideConfig config id' = PrimaryButton.config
               Nothing -> ChooseVehicle.config
     disableButton = (selectedItem.selectedServices == []) && selectedItem.vehicleVariant == "BOOK_ANY"
     name = fromMaybe "" selectedItem.serviceTierName
-    title = if selectedItem.vehicleVariant == "BOOK_ANY" then getString $ BOOK_ANY else getString $ BOOK name 
+    additionalString = if config.fareProductType == RENTAL then "Rental" else ""
+    title = if selectedItem.vehicleVariant == "BOOK_ANY" then getString $ BOOK_ANY else getString $ BOOK ( additionalString <> " " <> name )
 
 filterVariantAndEstimate :: Array ChooseVehicle.Config -> Array ChooseVehicle.Config -- showing unique quotes based on variant and arrange price range (In case of multiple provider)
 filterVariantAndEstimate configArray = fromMaybe [] $ do
