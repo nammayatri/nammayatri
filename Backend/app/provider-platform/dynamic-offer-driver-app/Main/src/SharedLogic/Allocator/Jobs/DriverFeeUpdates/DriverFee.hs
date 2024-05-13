@@ -173,8 +173,8 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           -- blocking
           dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverFee.driverId) serviceName -- Problem with lazy evaluation?
           let driverFeeIds = map (.id) dueDriverFees
-              due = sum $ map (\fee -> roundToHalf $ fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
-          if roundToHalf (due + totalFee - min coinCashLeft totalFee) >= plan.maxCreditLimit
+              due = sum $ map (\fee -> roundToHalf fee.currency $ fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
+          if roundToHalf driverFee.currency (due + totalFee - min coinCashLeft totalFee) >= plan.maxCreditLimit
             then do
               mapM_ updateDriverFeeToManual driverFeeIds
               updateDriverFeeToManual driverFee.id
@@ -344,9 +344,9 @@ driverFeeSplitter ::
   m ()
 driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandateId mbCoinAmountUsed subscriptionConfigs now = do
   mandate <- maybe (pure Nothing) QMD.findById mandateId
-  let amountForSpiltting = if isNothing mbCoinAmountUsed then Just $ roundToHalf totalFee else roundToHalf <$> (mandate <&> (.maxAmount))
+  let amountForSpiltting = if isNothing mbCoinAmountUsed then Just $ roundToHalf driverFee.currency totalFee else roundToHalf driverFee.currency <$> (mandate <&> (.maxAmount))
       coinAmountUsed = fromMaybe 0 mbCoinAmountUsed
-      totalFeeWithCoinDeduction = roundToHalf $ totalFee - coinAmountUsed
+      totalFeeWithCoinDeduction = roundToHalf driverFee.currency $ totalFee - coinAmountUsed
       splittedFees = splitPlatformFee feeWithoutDiscount totalFeeWithCoinDeduction plan driverFee amountForSpiltting mbCoinAmountUsed
   case splittedFees of
     [] -> throwError (InternalError "No driver fee entity with non zero total fee")
