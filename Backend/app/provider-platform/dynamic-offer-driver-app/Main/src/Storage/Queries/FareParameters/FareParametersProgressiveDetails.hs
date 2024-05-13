@@ -30,6 +30,11 @@ create = createWithKV
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FareParameters -> m (Maybe Domain.FullFareParametersProgressiveDetails)
 findById' (KTI.Id fareParametersId') = findOneWithKV [Se.Is fareParametersId $ Se.Eq fareParametersId']
 
+findDeadKmFareEarnings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [KTI.Id Domain.FareParameters] -> m HighPrecMoney
+findDeadKmFareEarnings fareParamIds = do
+  deadKmFareEarnings <- findAllWithKV [Se.Is BeamFPPD.fareParametersId $ Se.In $ KTI.getId <$> fareParamIds] <&> (Domain.deadKmFare . snd <$>)
+  pure $ sum deadKmFareEarnings
+
 instance FromTType' BeamFPPD.FareParametersProgressiveDetails Domain.FullFareParametersProgressiveDetails where
   fromTType' FareParametersProgressiveDetailsT {..} = do
     pure $
