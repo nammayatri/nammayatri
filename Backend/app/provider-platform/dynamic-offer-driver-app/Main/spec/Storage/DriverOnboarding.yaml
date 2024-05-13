@@ -332,7 +332,7 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix"
   fields:
@@ -354,10 +354,14 @@ DocumentVerificationConfig:
     rcNumberPrefixList: '[Text]'
     maxRetryCount: Int
     isDefaultEnabledOnManualVerification: Bool
+    isImageValidationRequired: Bool
+    doStrictVerifcation: Bool
     order: Int
   default:
     order: "0"
+    doStrictVerifcation: "true"
     isDefaultEnabledOnManualVerification: "true"
+    isImageValidationRequired: "true"
   constraints:
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey

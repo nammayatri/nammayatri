@@ -41,3 +41,13 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN is_de
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ALTER COLUMN is_default_enabled_on_manual_verification SET DEFAULT true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN is_image_validation_required boolean NOT NULL default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN do_strict_verifcation boolean NOT NULL default true;
