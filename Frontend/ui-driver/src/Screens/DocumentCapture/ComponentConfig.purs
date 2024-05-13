@@ -33,6 +33,7 @@ import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Resource.Constants as Constant
 import Data.String as DS
+import Data.Array as DA
 import Data.Maybe (isJust, fromMaybe)
 import Components.OptionsMenu as OptionsMenuConfig
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -139,7 +140,7 @@ optionsMenuConfig state = OptionsMenuConfig.config {
   menuItems = [
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : true},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : true},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : (DA.length state.data.variantList > 1)},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_logout_grey", textdata : getString LOGOUT, action : "logout", isVisible :  true}
   ],
   backgroundColor = Color.blackLessTrans,

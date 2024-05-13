@@ -98,7 +98,8 @@ dummyCityConfig = {
                     registration : { 
                       callSupport : false,
                       supportWAN : "", 
-                      whatsappSupport : false
+                      whatsappSupport : false,
+                      defVariantList : []
                     },
                     variantSubscriptionConfig : {
                       enableVariantBasedSubscription : true,

@@ -5,6 +5,7 @@ import PrestoDOM
 
 import Api.Types (SearchRequest(..))
 import Data.Maybe (Maybe(..))
+import Data.String.Regex (search)
 import Screens.RideRequestPopUp.ScreenData (RideRequestPopUpScreenData)
 import Screens.RideRequestPopUp.TransFormer (toPopupProp)
 import Screens.TopPriceView.Controller as TopPriceView
@@ -23,6 +24,7 @@ data Action
   | Decline Int
   | UpdateRideRequest (Array SearchRequest)
   | NoAction
+  | NotificationLister String
 
 instance showAction :: Show Action where
   show _ = "BackClick"
@@ -33,8 +35,7 @@ instance loggableAction :: Loggable Action where
 eval :: Action -> RideRequestPopUpScreenData -> Eval Action ScreenOutput RideRequestPopUpScreenData
 
 eval (UpdateRideRequest searchData) state = continueWithCmd state{holderData = toPopupProp searchData, rideRequests = searchData} [do 
-  push <- getPushFn (Just "TopPriceView") "TopPriceView"
-  void $ push $ TopPriceView.UpdateRideRequest searchData
+  notifyTopView searchData
   pure NoAction]
 
 eval NextClick state = exit $ NextScreen state
@@ -44,3 +45,11 @@ eval BackClick state = exit $ Back state
 eval NoAction state = continue state
 
 eval (Decline idx) state = exit $ Back state
+
+eval _ state = update state
+
+
+
+notifyTopView searchData = do
+  push <- getPushFn (Just "TopPriceView") "TopPriceView"
+  void $ push $ TopPriceView.UpdateRideRequest searchData

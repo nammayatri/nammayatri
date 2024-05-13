@@ -33,6 +33,7 @@ initData =
       , lastName : Nothing
       , mobileNumber : Nothing
       , email: Nothing
+      , variantList: []
       }
   , props:
       { validateDocModal : false,

@@ -92,6 +92,7 @@ foreign import getRandomID :: Int -> String
 foreign import emitEvent :: EffectFn3 String String Foreign Unit
 
 foreign import hideLoader :: EffectFn1 String Unit
+foreign import storeNotifitionListener :: EffectFn1 (String -> Effect Unit) Unit
 
 foreign import getExpiryTime :: String -> Int
 

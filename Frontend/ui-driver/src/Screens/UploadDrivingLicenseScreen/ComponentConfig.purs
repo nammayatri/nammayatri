@@ -29,6 +29,7 @@ import Components.GenericHeader as GenericHeader
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
+import Data.Array as DA
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -67,7 +68,7 @@ primaryButtonConfig state = let
       , cornerRadius = 6.0
       , height = V 50
       , isClickable = isDriverInfoValid
-      , alpha = if isDriverInfoValid then 1.0 else 0.8
+      , alpha = if isDriverInfoValid then 1.0 else 0.4
       }
   in primaryButtonConfig'
 

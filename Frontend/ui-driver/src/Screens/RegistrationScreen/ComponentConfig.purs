@@ -24,6 +24,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.GenericHeader as GenericHeader
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Data.Maybe (Maybe(..), isJust)
+import Data.Array as DA
 import Font.Style as FontStyle
 import Language.Types (STR(..))
 import Resource.Constants as Constant
@@ -32,7 +33,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Storage ( getValueToLocalStore , KeyStore(..))
 import Components.InAppKeyboardModal as InAppKeyboardModal
-import Prelude ((<), not, ($), (&&))
+import Prelude ((<), not, ($), (&&), (>))
 import Data.String as DS
 import Mobility.Prelude
 import Prelude ((==))
@@ -264,7 +265,7 @@ optionsMenuConfig state = OptionsMenuConfig.config {
   menuItems = [
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : not state.props.manageVehicle},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : (isJust state.data.vehicleCategory) && not state.props.manageVehicle},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : (DA.length state.data.variantList > 1) && (isJust state.data.vehicleCategory) && not state.props.manageVehicle},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_logout_grey", textdata : getString LOGOUT, action : "logout", isVisible :  not state.props.manageVehicle}
   ],
   backgroundColor = Color.blackLessTrans,

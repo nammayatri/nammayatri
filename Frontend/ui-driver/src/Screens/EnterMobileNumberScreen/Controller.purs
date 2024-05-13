@@ -14,7 +14,7 @@
 -}
 
 module Screens.EnterMobileNumberScreen.Controller where
-import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), discard, bind, show, void, ($), (>))
+import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), discard, bind, show, void, ($), (>), (/=))
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import Screens.Types (EnterMobileNumberScreenState)
 import Components.PrimaryEditText.Controller as PrimaryEditText
@@ -42,6 +42,7 @@ import Language.Types (STR(..))
 import Services.API (OAuthProvider(..))
 import Mobility.Prelude (strToMaybe)
 import Debug
+import Data.Array as DA
 
 instance showAction :: Show Action where
   show _ = ""
@@ -110,13 +111,19 @@ eval (PrimaryEditTextAction (MobileNumberEditor.TextChanged valId newVal)) state
   continue  state { props = state.props { btnActive = if (length newVal == 10 && (isValidMobileNumber validatorResp)) then true else false
                                         , isValid = not (isValidMobileNumber validatorResp) }
                                         , data = state.data { mobileNumber = if validatorResp == MVR.MaxLengthExceeded then state.data.mobileNumber else newVal}}
-
+{-
+    status - SUCCESS | FAILED
+    token -  idTokenString | ErrorCode
+    name -  name | empty
+    email - email | empty
+-}
 eval (OAuthResponse status token name email) state = 
   if status == "SUCCESS" 
     then exit $ OAuthReq $ state{ data{ token = Just token, name = Just name, email = Just email}}
     else do
-    void $ pure $ toast $ getString SOMETHING_WENT_WRONG
-    continue state
+      if DA.elem token ["1001", "-5", "12501"] then pure unit
+        else void $ pure $ toast $ getString SOMETHING_WENT_WRONG
+      update state
 
 eval (KeyboardCallback event) state = case event of
   "onKeyboardOpen" ->
@@ -131,7 +138,7 @@ eval (KeyboardCallback event) state = case event of
   _ -> update state
 
 eval (EmailPBAC (PrimaryEditText.TextChanged id val)) state = do
-  continue state{data{email = strToMaybe (trim val)}, props{isValid = true}}
+  continue state{data{email = strToMaybe (trim val)}, props{isValid = true, btnActive =  true}}
 
 
 

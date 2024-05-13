@@ -13,7 +13,10 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.Types where
+module Screens.Types (
+  module Common,
+  module Screens.Types
+) where
 
 import Common.Types.Config
 
@@ -140,8 +143,6 @@ instance showValidationStatus :: Show ValidationStatus where show = genericShow
 instance eqValidationStatus :: Eq ValidationStatus where eq = genericEq
 
 
-data VehicalTypes = Sedan | Hatchback | SUV | Auto
-
  -- ############################################################# UploadingDrivingLicenseScreen ################################################################################
 type UploadDrivingLicenseState = {
   data :: UploadDrivingLicenseStateData,
@@ -167,7 +168,8 @@ type UploadDrivingLicenseStateData = {
   , imageFrontUrl :: String
   , logField :: Object Foreign
   , mobileNumber :: String
-  , vehicleCategory :: Maybe VehicleCategory
+  , vehicleCategory :: Maybe Common.VehicleCategory
+  , variantList :: Array Common.VehicleCategory
   , cityConfig :: CityConfig
   , config :: AppConfig
 }
@@ -208,7 +210,7 @@ type RegistrationScreenData = {
   vehicleDetailsStatus :: StageStatus,
   permissionsStatus :: StageStatus,
   documentStatusList :: Array DocumentStatus,
-  variantList :: Array VehicleCategory,
+  variantList :: Array Common.VehicleCategory,
   lastUpdateTime :: String,
   cityConfig :: CityConfig,
   config :: AppConfig,
@@ -217,14 +219,14 @@ type RegistrationScreenData = {
   logField :: Object Foreign,
   enteredDL :: String,
   enteredRC :: String,
-  vehicleCategory :: Maybe VehicleCategory,
+  vehicleCategory :: Maybe Common.VehicleCategory,
   vehicleTypeMismatch :: Boolean,
   linkedRc :: Maybe String
 }
 
 type DocumentStatus = {
-  vehicleType :: Maybe VehicleCategory,
-  verifiedVehicleCategory :: Maybe VehicleCategory,
+  vehicleType :: Maybe Common.VehicleCategory,
+  verifiedVehicleCategory :: Maybe Common.VehicleCategory,
   status :: StageStatus,
   docType :: RegisterationStep,
   verificationMessage :: Maybe String,
@@ -232,7 +234,7 @@ type DocumentStatus = {
 }
 
 type VehicleInfo = {
-  vehicleType :: VehicleCategory,
+  vehicleType :: Common.VehicleCategory,
   vehicleImage :: String,
   vehicleName :: String
 }
@@ -265,7 +267,7 @@ type RegistrationScreenProps = {
   driverEnabled :: Boolean,
   menuOptions :: Boolean,
   manageVehicle :: Boolean,
-  manageVehicleCategory :: Maybe VehicleCategory,
+  manageVehicleCategory :: Maybe Common.VehicleCategory,
   isApplicationInVerification :: Boolean,
   isProfileDetailsCompleted :: Boolean
 }
@@ -299,11 +301,6 @@ data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED
 derive instance genericStageStatus :: Generic StageStatus _
 instance eqStageStatus :: Eq StageStatus where eq = genericEq
 
-data VehicleCategory = AutoCategory | CarCategory | UnKnown
-
-derive instance genericVehicleCategory :: Generic VehicleCategory _
-instance eqVehicleCategory :: Eq VehicleCategory where eq = genericEq
-instance showVehicleCategory :: Show VehicleCategory where show = genericShow
 
  -- ############################################################# UploadAdhaarScreen ################################################################################
 
@@ -397,8 +394,8 @@ type RcDetails = {
 
 type DriverVehicleDetails = {
     registrationNo :: String,
-    userSelectedVehicleCategory :: VehicleCategory,
-    verifiedVehicleCategory :: Maybe VehicleCategory,
+    userSelectedVehicleCategory :: Common.VehicleCategory,
+    verifiedVehicleCategory :: Maybe Common.VehicleCategory,
     isVerified :: Boolean,
     vehicleModel :: Maybe String,
     isActive :: Boolean
@@ -834,7 +831,7 @@ type VehicleDetailsScreenState = {
 
 type VehicleDetailsScreenData =  {
   imageName :: String,
-  vehicleTypes :: Array VehicalTypes,
+  vehicleTypes :: Array Common.VehicalTypes,
   base64Image :: String,
   vehicleRegNumber :: String,
   vehicleType :: String,
@@ -1675,15 +1672,6 @@ instance showHomeScreenStage :: Show HomeScreenStage where show = genericShow
 instance eqHomeScreenStage :: Eq HomeScreenStage where eq = genericEq
 instance decodeHomeScreenStage :: Decode HomeScreenStage where decode = defaultEnumDecode
 instance encodeHomeScreenStage :: Encode HomeScreenStage where encode = defaultEnumEncode
-
-data NotificationType =  DRIVER_REACHED
-                      | CANCELLED_PRODUCT
-                      | DRIVER_ASSIGNMENT
-                      | RIDE_REQUESTED
-
-derive instance genericNotificationType :: Generic NotificationType _
-instance showNotificationType :: Show NotificationType where show = genericShow
-instance eqNotificationType :: Eq NotificationType where eq = genericEq
 
 
 ------------------------------------- NotificationScreen ------------------------------
@@ -2639,7 +2627,7 @@ type DocumentCaptureScreenData = {
   imageBase64 :: String,
   docType :: RegisterationStep,
   errorMessage :: Maybe String,
-  vehicleCategory :: Maybe VehicleCategory,
+  vehicleCategory :: Maybe Common.VehicleCategory,
   docId :: String,
   linkedRc :: Maybe String,
   cityConfig :: CityConfig,
@@ -2647,7 +2635,8 @@ type DocumentCaptureScreenData = {
   firstName :: Maybe String,
   lastName :: Maybe String,
   mobileNumber :: Maybe String,
-  email :: Maybe String
+  email :: Maybe String,
+  variantList :: Array Common.VehicleCategory
 } 
 
 type DocumentCaptureScreenProps = {

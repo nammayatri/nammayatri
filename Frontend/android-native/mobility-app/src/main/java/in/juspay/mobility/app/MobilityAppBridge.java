@@ -1152,7 +1152,7 @@ public class MobilityAppBridge extends HyperBridge {
                 String jsCallback = String.format("window.callUICallback(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\");", storeOauthProviderCallBack, "SUCCESS", account.getIdToken(), name, account.getEmail());
                 bridgeComponents.getJsCallback().addJsToWebView(jsCallback);
             } catch (ApiException e) {
-                String jsCallback = String.format("window.callUICallback(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\");", storeOauthProviderCallBack, "FAILED", "", "", "");
+                String jsCallback = String.format("window.callUICallback(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\");", storeOauthProviderCallBack, "FAILED", e.getStatusCode(), "", "");
                 bridgeComponents.getJsCallback().addJsToWebView(jsCallback);
             }
         }

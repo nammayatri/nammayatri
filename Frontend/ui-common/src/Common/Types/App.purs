@@ -68,10 +68,21 @@ instance showVehicalTypes :: Show VehicalTypes where
 
 
 
-data NotificationType = REGISTRATION_APPROVED | SEARCH_CALLBACK | CONFIRM_CALLBACK
-  | TRACKING_CALLBACK | SEARCH_REQUEST | CONFIRM_REQUEST | UPCOMING_CASE
+data NotificationType
+  = REGISTRATION_APPROVED
+  | SEARCH_CALLBACK
+  | CONFIRM_CALLBACK
+  | TRACKING_CALLBACK
+  | SEARCH_REQUEST
+  | CONFIRM_REQUEST
+  | UPCOMING_CASE
+  | DRIVER_REACHED
+  | CANCELLED_PRODUCT
+  | DRIVER_ASSIGNMENT
+  | RIDE_REQUESTED
 
 derive instance genericNotificationType :: Generic NotificationType _
+instance showNotificationType :: Show NotificationType where show = genericShow
 instance decodeNotificationType :: Decode NotificationType where decode = defaultEnumDecode
 instance encodeNotificationType :: Encode NotificationType where encode = defaultEnumEncode
 
@@ -558,3 +569,10 @@ type WaitingTimeInfo = {
   freeMinutes :: String,
   charge :: String
 }
+data VehicleCategory = AutoCategory | CarCategory | UnKnown
+
+derive instance genericVehicleCategory :: Generic VehicleCategory _
+instance eqVehicleCategory :: Eq VehicleCategory where eq = genericEq
+instance showVehicleCategory :: Show VehicleCategory where show = genericShow
+instance decodeVehicleCategory :: Decode VehicleCategory where decode = defaultEnumDecode
+instance encodeVehicleCategory :: Encode VehicleCategory where encode = defaultEnumEncode

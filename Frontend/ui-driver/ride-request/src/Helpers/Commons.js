@@ -327,3 +327,7 @@ export const getExpiryTime = function (str1) {
     return 0;
   }
 };
+
+export const storeNotifitionListener = function (callBack) {
+  window.notificationCallBack = callBack;
+}

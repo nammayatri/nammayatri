@@ -26,6 +26,7 @@ import Screens.EnterMobileNumberScreen.View as EnterMobileNumberScreen
 import Types.App (FlowBT, GlobalState(..),ScreenType(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Data.Maybe (fromMaybe)
+import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 
 enterMobileNumber :: FlowBT String ENTER_MOBILE_NUMBER_SCREEN_OUTPUT
 enterMobileNumber = do
@@ -34,7 +35,7 @@ enterMobileNumber = do
   act <- lift $ lift $ runScreen $ EnterMobileNumberScreen.screen state.mobileNumberScreen
   case act of
     GoBack -> do 
-      modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber → enterMobileNumber { data { mobileNumber = ""}, props{btnActive = false}})
+      modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber → EnterMobileNumberScreenData.initData)
       App.BackT $ pure App.GoBack
     GoToNextScreen updatedState -> do
       _ <- setValueToLocalStore MOBILE_NUMBER_KEY (if updatedState.data.config.enterMobileNumberScreen.emailAuth then fromMaybe "" updatedState.data.email else updatedState.data.mobileNumber)

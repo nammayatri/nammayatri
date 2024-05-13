@@ -287,7 +287,7 @@ cardsListView :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState
 cardsListView push state =
   scrollView
     [ width MATCH_PARENT
-    , height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - 300 - EHC.safeMarginBottom else WRAP_CONTENT
+    , height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - (if state.data.cityConfig.showDriverReferral then 300 else 200) - EHC.safeMarginBottom else WRAP_CONTENT
     , scrollBarY false
     , fillViewport true
     ][ linearLayout
@@ -710,6 +710,7 @@ applicationInVerification push state =
       [ text "Thank you for completing the registration. We will update you once the verification is done."
       , color Color.black800
       , width MATCH_PARENT
+      , margin $ MarginTop 10
       , gravity CENTER
       ] <> FontStyle.body1 TypoGraphy
   ]

@@ -12,14 +12,15 @@ import Api.Types (NearBySearchRequestRes(..), SearchRequest(..))
 import Components.SeparatorView.View as SeparatorView
 import Data.Array (elem, index, mapWithIndex)
 import Data.Either (Either(..))
+import Data.Function.Uncurried (mkFn1)
 import Data.Time (Millisecond)
 import Data.Time.Duration (Milliseconds(..))
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
 import Effect.Aff.Class (liftAff)
-import Effect.Uncurried (runEffectFn1)
+import Effect.Uncurried (mkEffectFn1, runEffectFn1)
 import Font.Style as FontStyle
 import Helpers.Colors as Color
-import Helpers.Commons (flowRunner, getHeightFromPercent, safeMarginBottom, screenHeight, hideLoader)
+import Helpers.Commons (flowRunner, getHeightFromPercent, hideLoader, safeMarginBottom, screenHeight, storeNotifitionListener)
 import Helpers.Commons (liftFlow, screenWidth)
 import Helpers.Commons (safeMarginBottom, safeMarginTop, screenWidth)
 import Helpers.Commons (screenWidth)
@@ -45,8 +46,9 @@ screen (OverlayData oState) =
             fiber <- launchAff $ flowRunner (OverlayData oState) $ getRideRequest push
             pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber
         ),
-        (\_ ->  do 
+        (\push ->  do 
                 void $ runEffectFn1 hideLoader ""
+                void $ runEffectFn1 storeNotifitionListener (mkFn1 \entityId -> push $ NotificationLister entityId)
                 pure (pure unit)),
         (\_->
           do 

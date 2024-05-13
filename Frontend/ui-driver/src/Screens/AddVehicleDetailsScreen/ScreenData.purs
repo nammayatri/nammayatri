@@ -25,6 +25,7 @@ import Screens.Types as ST
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Common.Types.Config (CityConfig)
+import Common.Types.App as CTA
 import MerchantConfig.Types (AppConfig)
 import Prelude (class Eq)
 
@@ -52,7 +53,8 @@ initData = {
       dropDownList : [],
       registrationDate: Nothing,
       registrationDateActual: "",
-      selectedVehicleDetails : Nothing
+      selectedVehicleDetails : Nothing,
+      variantList : []
     },
     props: {
       rcAvailable : false,
@@ -118,7 +120,8 @@ type AddVehicleDetailsScreenData =  {
   dropDownList :: Array DropDownList,
   registrationDate :: Maybe String,
   registrationDateActual :: String,
-  selectedVehicleDetails :: Maybe VehicleDetailsEntity
+  selectedVehicleDetails :: Maybe VehicleDetailsEntity,
+  variantList :: Array CTA.VehicleCategory
  }
 
 type AddVehicleDetailsScreenProps =  {

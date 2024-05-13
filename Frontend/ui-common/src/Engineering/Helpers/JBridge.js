@@ -478,7 +478,7 @@ export const timePicker = function (cb) {
       const callback = callbackMapper.map(function (resp, _year, _mon, _day, hour, min) {
         cb(action(resp)(hour)(min))();
       });
-      return window.__OS == "IOS" ? window.JBridge.datePicker(callback, "") : window.JBridge.timePicker(callback);
+      return window.__OS == "IOS" ? window.JBridge.datePicker(callback, "", "TimePicker") : window.JBridge.timePicker(callback);
     };
   };
 };
@@ -490,7 +490,7 @@ export const datePicker = function (label) {
         const callback = callbackMapper.map(function (resp, year, month, date) {
           cb(action(resp)(year)(month)(date))();
         });
-        return window.JBridge.datePicker(callback, label);
+        return window.JBridge.datePicker(callback, label, "DatePicker");
       };
     };
   };
@@ -1770,6 +1770,7 @@ export const restartApp = function () {
   return function() {
     console.log("HERE IN RESET ===--->>")
     if (window.__OS == "IOS") {
+      emitJOSEvent("java","onEvent",{event: "show_splash"})
       emitJOSEvent("java","onEvent",{event: "reboot"})
     } else if (JBridge.restartApp){
       JBridge.restartApp();
@@ -1783,6 +1784,7 @@ export const restartApp = function () {
 export const factoryResetApp = function (str) {
   console.log("HERE IN RESET ===--->>")
   if (window.__OS == "IOS") {
+    emitJOSEvent("java","onEvent",{event: "show_splash"})
     emitJOSEvent("java","onEvent",{event: "reboot"})
   } else {
     JBridge.factoryResetApp()

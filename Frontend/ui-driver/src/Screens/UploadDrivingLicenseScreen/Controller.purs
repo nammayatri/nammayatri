@@ -279,17 +279,18 @@ eval (CallBackImageUpload image imageName imagePath) state =
     continue state                    
 
 eval (DatePicker (label) resp year month date) state = do
-  let fullDate = spy "label" $ (dateFormat year) <> "-" <> (dateFormat (month+1)) <> "-" <> (dateFormat date) <> " 00:00:00.233691+00" 
-  let dateView = spy "label" $ (show date) <> "/" <> (show (month+1)) <> "/" <> (show year)
   case resp of 
-    "SELECTED" -> case label of
-                    "DATE_OF_BIRTH" -> do
-                      let _ = unsafePerformEffect $ logEvent state.data.logField "NY Driver - DOB"
-                      continue state {data = state.data { dob = fullDate, dobView = dateView }
-                                                        , props {isDateClickable = true }}
-                    "DATE_OF_ISSUE" -> continue state {data = state.data { dateOfIssue = Just fullDate , dateOfIssueView = dateView, imageFront = "null"}
-                                                        , props {isDateClickable = true }} 
-                    _ -> continue state { props {isDateClickable = true}}
+    "SELECTED" -> do
+      let fullDate = spy "label" $ (dateFormat year) <> "-" <> (dateFormat (month+1)) <> "-" <> (dateFormat date) <> " 00:00:00.233691+00" 
+      let dateView = spy "label" $ (show date) <> "/" <> (show (month+1)) <> "/" <> (show year)
+      case label of
+        "DATE_OF_BIRTH" -> do
+          let _ = unsafePerformEffect $ logEvent state.data.logField "NY Driver - DOB"
+          continue state {data = state.data { dob = fullDate, dobView = dateView }
+                                            , props {isDateClickable = true }}
+        "DATE_OF_ISSUE" -> continue state {data = state.data { dateOfIssue = Just fullDate , dateOfIssueView = dateView, imageFront = "null"}
+                                            , props {isDateClickable = true }} 
+        _ -> continue state { props {isDateClickable = true}}
     _ -> continue state { props {isDateClickable = true}}
 
 eval SelectDateOfBirthAction state = continue state { props {isDateClickable = false}}

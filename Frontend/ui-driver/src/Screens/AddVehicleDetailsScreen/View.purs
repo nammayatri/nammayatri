@@ -1058,12 +1058,16 @@ collectVehicleDetails push state =
 
 dropDownFields :: forall w. (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> Int -> DropDownList -> PrestoDOM (Effect Unit) w
 dropDownFields push state idx item =
+  let isNotNull =  not $ DA.null item.options
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , margin $ Margin 16 32 16 0
     , background Color.white900
     , orientation VERTICAL
+    , clickable isNotNull
+    , alpha if isNotNull then 1.0 else 0.4
     ] $
     [ textView $
       [ height WRAP_CONTENT
@@ -1130,7 +1134,7 @@ dropDownList dropDownItem push idx =
     , stroke $ "1,"<> Color.grey900
     , visibility VISIBLE
     , cornerRadius 8.0
-    ] <> if (len <= 6  || dropDownItem.type == SEATBELTS) then [onAnimationEnd (\_ -> void $ runEffectFn2 JB.focusChild (EHC.getNewIDWithTag "DropDownListMenu") idx) (pure unit)] else [])
+    ] <> if ((len <= 6 && len>0) || dropDownItem.type == SEATBELTS) then [onAnimationEnd (\_ -> void $ runEffectFn2 JB.focusChild (EHC.getNewIDWithTag "DropDownListMenu") idx) (pure unit)] else [])
     (DA.mapWithIndex(\index item ->
        linearLayout
         [ height WRAP_CONTENT
@@ -1152,14 +1156,6 @@ dropDownList dropDownItem push idx =
         ]
        )(dropDownItem.options)
     )
-
-genderOptionsArray :: AddVehicleDetailsScreenState -> Array {text :: String, value :: ST.Gender}
-genderOptionsArray state =
-  [ {text : (getString FEMALE), value : ST.FEMALE}
-  , {text : (getString MALE), value : ST.MALE}
-  , {text : (getString OTHER) , value : ST.OTHER}
-  , {text : (getString PREFER_NOT_TO_SAY) , value : ST.PREFER_NOT_TO_SAY}
-  ]
 
 
 getDropDownList :: AddVehicleDetailsScreenState -> AddVehicleDetailsScreenState

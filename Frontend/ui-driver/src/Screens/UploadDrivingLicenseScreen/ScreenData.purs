@@ -47,6 +47,7 @@ initData = {
       , vehicleCategory : Nothing
       , cityConfig : dummyCityConfig
       , config : getAppConfig appConfig
+      , variantList : []
       },
       props: {
         openRegistrationModal : false

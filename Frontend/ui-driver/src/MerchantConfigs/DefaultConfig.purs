@@ -3,6 +3,7 @@ module MerchantConfig.DefaultConfig where
 import MerchantConfig.Types
 import Common.DefaultConfig
 import Common.Types.Config as CTC
+import Common.Types.App as CTA
 import JBridge as JB
 import Foreign.Object (fromHomogeneous)
 import Prelude (($),negate)
@@ -447,7 +448,8 @@ config =
               registration : {
                   supportWAN : "",
                   callSupport : false,
-                  whatsappSupport : false
+                  whatsappSupport : false,
+                  defVariantList : []
               },
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
@@ -466,22 +468,18 @@ config =
             }, { 
               cityName: "Minneapolis"
             , mapImage: "ny_ic_minneapolis_map"
-            , cityCode: "td:01189"
+            , cityCode: "std:0820"
             , showSubscriptions: false
             , cityLat: 44.977753
             , cityLong: - 93.2650108
             , supportNumber: "+918069724848"
             , languageKey: "EN_US"
-            , showDriverReferral: true
-            , showCustomerReferral: true
+            , showDriverReferral: false
+            , showCustomerReferral: false
             , uploadRCandDL: true
             , enableYatriCoins: false
             , vehicleNSImg : ""
-            , registration:
-                { supportWAN: "919625724848"
-                , callSupport: true
-                , whatsappSupport: true
-                }
+            , registration: registrationConfig{defVariantList = [CTA.CarCategory]}
             , variantSubscriptionConfig:
                 { enableVariantBasedSubscription: false
                 , variantList: []
@@ -647,7 +645,8 @@ registrationConfig :: CTC.RegistrationConfig
 registrationConfig = {
   supportWAN : "919625724848",
   callSupport : true,
-  whatsappSupport : false
+  whatsappSupport : false,
+  defVariantList : []
 }
 
 getStaticViewPlans :: Array CTC.StaticViewPlans

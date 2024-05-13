@@ -5,7 +5,7 @@ import Components.PrimaryButton as PrimaryButton
 import Debug (spy)
 import Effect (Effect)
 import Prelude (Unit, bind, const, discard, pure, unit, ($), (<<<))
-import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, accessibility, afterRender, background, gravity, height, id, imageView, imageWithFallback, linearLayout, margin, onBackPressed, orientation, padding, weight, width)
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, accessibility, afterRender, background, gravity, height, id, imageView, imageWithFallback, linearLayout, margin, onBackPressed, orientation, padding, weight, width, onAnimationEnd)
 import Screens.WelcomeScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (WelcomeScreenState)
 import JBridge (addCarousel)
@@ -15,6 +15,7 @@ import Screens.WelcomeScreen.ComponentConfig
 import Helpers.Utils as HU
 import ConfigProvider
 import MerchantConfig.Types (AppConfig)
+import PrestoDOM.Animation as PrestoAnim
 
 screen :: WelcomeScreenState -> Screen Action WelcomeScreenState ScreenOutput
 screen initialState =
@@ -58,7 +59,8 @@ view push state =
 
 carouselView:: AppConfig -> WelcomeScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
 carouselView config state push = 
-  linearLayout
+  PrestoAnim.animationSet [Anim.fadeIn true] $
+    linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -68,7 +70,7 @@ carouselView config state push =
     , weight 1.0
     , margin $ MarginBottom 20
     , background config.welcomeScreen.background
-    , afterRender (\action -> do
+    , onAnimationEnd (\action -> do
         addCarousel (carouselData state) (getNewIDWithTag "CarouselView")
         push action
         ) (const AfterRender)
