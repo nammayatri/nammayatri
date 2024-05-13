@@ -15,7 +15,7 @@
 
 module Screens.SearchLocationScreen.ScreenData where
 
-import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, ZoneType(..), City(..), FareDetails(..), QuotesList(..), TipViewStage(..))
+import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, ZoneType(..), City(..), FareDetails(..), QuotesList(..), TipViewStage(..), FareProductType(..))
 import ConfigProvider
 import Screens (ScreenName(..), getScreen)
 import Data.Maybe (Maybe(..))
@@ -75,6 +75,7 @@ initData = {
     isAutoComplete : false,
     pickUpSelectedOnMap : false,
     showRateCard : false,
+    fareProductType : RENTAL,
     tipViewProps : {
         stage : DEFAULT
       , isVisible : false
@@ -138,5 +139,6 @@ dummyFareQuoteDetails = {
   perExtraMinRate : 0 ,
   perHourCharge : 0 ,
   plannedPerKmRate : 0,
-  nightShiftCharge : 0
+  nightShiftCharge : 0,
+  tollCharges : Nothing
 }

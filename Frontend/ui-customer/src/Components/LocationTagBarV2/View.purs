@@ -17,7 +17,7 @@ module Components.LocationTagBarV2.View where
 
 import Components.LocationTagBarV2.Controller(Action(..), LocationTagBarConfig, TagConfig )
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import PrestoDOM (PrestoDOM, Length(..), Padding(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Margin(..), Gravity(..), Visibility(..),  alignItems, linearLayout, height, width, background, stroke, cornerRadius, padding, imageView, imageWithFallback, textView, text, textSize, color, flexBoxLayout, flexDirection, justifyContent, flexWrap, margin, flexWrap, onClick, weight, gravity, rippleColor, orientation, visibility)
+import PrestoDOM (PrestoDOM, Length(..), Padding(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Margin(..), Gravity(..), Visibility(..),  alignItems, linearLayout, height, width, background, stroke, cornerRadius, padding, imageView, imageWithFallback, textView, text, textSize, color, flexBoxLayout, flexDirection, justifyContent, flexWrap, margin, flexWrap, onClick, weight, gravity, rippleColor, orientation, visibility, singleLine, maxLines)
 import PrestoDOM.Properties (cornerRadii)
 import Engineering.Helpers.Commons (screenWidth)
 import Prelude(Unit, map, unit, ($), (<>), (-), (==), const)
@@ -66,17 +66,23 @@ tagView item isLast push =
         , gravity CENTER
         , orientation item.orientation
         ][
-          linearLayout[height WRAP_CONTENT, width WRAP_CONTENT
-        , background item.bannerConfig.background
-        , cornerRadii item.bannerConfig.cornerRadii
-        , visibility $ item.showBanner
-        ][  textView $
-            [ text item.bannerConfig.text
-            , textSize item.bannerConfig.textSize 
-            , color item.bannerConfig.color
-            , padding $ PaddingHorizontal 8 8
-            ] <> (FontStyle.getFontStyle item.bannerConfig.fontStyle LanguageStyle)
-        ]
+          linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , background item.bannerConfig.background
+            , cornerRadii item.bannerConfig.cornerRadii
+            , visibility $ item.showBanner
+            , margin $ MarginHorizontal 8 8
+            , gravity CENTER
+            ][  textView $
+                [ text item.bannerConfig.text
+                , textSize item.bannerConfig.textSize 
+                , color item.bannerConfig.color
+                , padding $ Padding 4 0 4 2
+                , singleLine true
+                , maxLines 1
+                ] <> (FontStyle.getFontStyle item.bannerConfig.fontStyle LanguageStyle)
+              ]
         , imageView 
             [ height imageConfig.height
             , width imageConfig.width

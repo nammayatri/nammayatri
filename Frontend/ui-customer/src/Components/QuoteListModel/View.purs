@@ -299,6 +299,7 @@ findingRidesView state push =
         , visibility if state.appConfig.showQuoteFindingText || state.isRentalSearch then VISIBLE else GONE
         , textSize FontSize.a_17
         , accessibility DISABLE
+        , gravity CENTER
         , lineHeight "25"
         , fontStyle $ FontStyle.regular LanguageStyle
         ]

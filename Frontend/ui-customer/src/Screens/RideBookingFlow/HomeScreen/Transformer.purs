@@ -813,6 +813,9 @@ extractFareProductType quote =
     Quotes body ->
       let (QuoteAPIEntity quoteEntity) = body.onDemandCab
       in quoteEntity.quoteDetails^._fareProductType
+    RentalQuotes body ->
+      let (QuoteAPIEntity quoteEntity) = body.onRentalCab
+      in quoteEntity.quoteDetails^._fareProductType
     _ -> ""
 
 ------------------------- fareProductType API transformer -------------------------

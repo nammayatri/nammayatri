@@ -213,6 +213,7 @@ driverDetailsView config uid nid =
         serviceTierConfig name = {
           name : name,
           capacity : fromString $ getVehicleCapacity config.vehicleVariant,
+          fareProductType : config.fareProductType,
           isAc : Nothing
         }
 

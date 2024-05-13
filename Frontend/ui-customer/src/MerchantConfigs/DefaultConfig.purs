@@ -393,7 +393,7 @@ config =
                 enableCabBanner = true,
                 enableChangeRideVariant = true
               }
-            , enableIntercity = true
+            , enableIntercity = false
             , enableCabs = false
             , estimateAndQuoteConfig {
               showInfoIcon = true
@@ -408,7 +408,7 @@ config =
                 }
             , enableCabs = true
             , enableRentals = true 
-            , enableIntercity = true
+            , enableIntercity = false
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
