@@ -209,6 +209,8 @@ postDriverUpdateAirCondition (mbPersonId, _, merchanOperatingCityId) API.Types.U
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchanOperatingCityId
   checkAndUpdateAirConditioned False isAirConditioned personId cityVehicleServiceTiers
+  now <- getCurrentTime
+  QDI.updateLastACStatusCheckedAt (Just now) personId
   return Success
 
 getDriverVehicleServiceTiers ::

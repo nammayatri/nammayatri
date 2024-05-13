@@ -173,3 +173,7 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params: [totalReferred]
       where: driverId
+    updateLastACStatusCheckedAt:
+      kvFunction: updateOneWithKV
+      params: [lastACStatusCheckedAt]
+      where: driverId
