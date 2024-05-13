@@ -393,6 +393,12 @@ body27 typography = [
   textSize FontSize.a_12
 ]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
 
+body28 ::  LazyCheck -> forall properties. (Array (Prop properties))
+body28 typography = [
+  textSize FontSize.a_48
+  , lineHeight "40"
+]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
+
 h0 :: LazyCheck -> forall properties. (Array (Prop properties))
 h0 typography = [
   textSize FontSize.a_24
@@ -490,7 +496,6 @@ getFontStyle style styleType = case style of
   PriceFontBig -> priceFont_big styleType
   Title0 -> title0 styleType
   Title1 -> title1 styleType
-
 
 getDefaultFont :: LazyCheck -> String
 getDefaultFont _ = 

@@ -243,9 +243,10 @@ config =
       , background : "#2C2F3A"
       , titleColor : "#E5E7EB"
       , rideDescription : { 
-          background : "#00FFFFFF"
+          background : "#08FFFFFF"
         , textColor : "#A7A7A7"
-        }                     
+        }        
+      , horizontalLineColor : "#E5E7EB"
       }
      , showCallSupport : false
     }
