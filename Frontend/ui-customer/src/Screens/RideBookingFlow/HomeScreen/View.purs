@@ -457,8 +457,8 @@ view push state =
                         ]
                     ]
                 ]
-            , if (not state.props.rideRequestFlow) || any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, HomeScreen] then emptyTextView state else topLeftIconView state push
-            , if (any (_ == state.props.currentStage) [FindingEstimate, SettingPrice]) then preferenceView push state else emptyTextView state
+            , topLeftIconView state push
+            , preferenceView push state
             , rideRequestFlowView push state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
             , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && onUsRide) then messageWidgetView push state else emptyTextView state
@@ -1451,12 +1451,13 @@ topLeftIconView state push =
       onClickAction = if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
       isBackPress = (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) 
       followerBar = (showFollowerBar (fromMaybe [] state.data.followers) state) && (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver])
+      isVisible = state.data.config.showHamMenu && not ((not state.props.rideRequestFlow) || any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, HomeScreen])
   in 
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , visibility $ boolToVisibility  state.data.config.showHamMenu
+    , visibility $ boolToVisibility isVisible
     , margin $ MarginTop if followerBar then 0 else safeMarginTop
     ]
     $ []
@@ -4083,10 +4084,12 @@ preferenceView push state =
       bookingPrefVisibility = (not state.data.currentCityConfig.iopConfig.enable) && state.data.config.estimateAndQuoteConfig.enableBookingPreference
       isProviderPrefView = state.data.currentCityConfig.iopConfig.enable
       followerBar = (showFollowerBar (fromMaybe [] state.data.followers) state) && (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver])
+      isVisible = (any (_ == state.props.currentStage) [SettingPrice])
   in
     relativeLayout [
       width MATCH_PARENT
     , height MATCH_PARENT
+    , visibility $ boolToVisibility isVisible
     ] [
       linearLayout[
           width MATCH_PARENT
