@@ -486,8 +486,8 @@ getInformation (personId, merchantId, merchantOpCityId) mbToss = do
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
   driverEntity <- buildDriverEntityRes (person, driverInfo)
   dues <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName driverId YATRI_SUBSCRIPTION
-  let currentDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dues
-  let manualDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) $ filter (\due -> due.status == DDF.PAYMENT_OVERDUE) dues
+  let currentDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dues
+  let manualDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) $ filter (\due -> due.status == DDF.PAYMENT_OVERDUE) dues
   logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
@@ -1561,7 +1561,7 @@ mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' transporterConfig
             }
     Nothing -> return Nothing
   where
-    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
+    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf dueDfee.currency (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
 
 mkAutoPayPaymentEntity :: MonadFlow m => Map (Id DDF.DriverFee) DDF.DriverFee -> TransporterConfig -> INV.Invoice -> m (Maybe AutoPayInvoiceHistory)
 mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice = do
@@ -1585,7 +1585,7 @@ mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice 
                 }
     Nothing -> return Nothing
   where
-    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
+    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf dueDfee.currency (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
 
 data HistoryEntryDetailsEntityV2 = HistoryEntryDetailsEntityV2
   { invoiceId :: Text,
@@ -1646,7 +1646,7 @@ getHistoryEntryDetailsEntityV2 (driverId, _, merchantOpCityId) invoiceShortId se
   driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (listToMaybe allEntiresByInvoiceId <&> (.invoiceStatus)) transporterConfig serviceName
   return $ HistoryEntryDetailsEntityV2 {invoiceId = invoiceShortId, amount, createdAt, executionAt, feeType, driverFeeInfo = driverFeeInfo'}
   where
-    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
+    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf dueDfee.currency (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
 
 mkDriverFeeInfoEntity ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -1666,7 +1666,7 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = d
             { autoPayStage = driverFee.autopayPaymentStage,
               paymentStatus = invoiceStatus,
               totalEarnings = driverFee.totalEarnings,
-              driverFeeAmount = (\dueDfee -> SLDriverFee.roundToHalf (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)) driverFee,
+              driverFeeAmount = (\dueDfee -> SLDriverFee.roundToHalf dueDfee.currency (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)) driverFee,
               totalRides = SLDriverFee.calcNumRides driverFee transporterConfig,
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
               isSplit = length driverFeesInWindow > 1,
