@@ -1446,6 +1446,9 @@ rideNotStarted state =
   in Array.any (_ == state.props.currentStage) [RideAccepted, ChatWithDriver] && (lastStage == RideAccepted || state.props.stageBeforeChatScreen == RideAccepted)
 rentalDetailsView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 rentalDetailsView push state =
+  let rentalData = state.data.rentalData
+      isRideStarted = state.props.currentStage == RideStarted
+  in
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -1455,22 +1458,10 @@ rentalDetailsView push state =
   , margin $ Margin 16 12 16 12
   , background Color.white900
   , visibility $ boolToVisibility $ state.data.fareProductType == FPT.RENTAL
-  ]
-  [ rentalTimeView push state TIME false
-  , separatorView true
-  , rentalTimeView push state DISTANCE false
-  -- , separatorView true
-  -- , rentalTimeView push state STARTING_ODO true
-  -- (Array.mapWithIndex (\index item -> TODO-codex : Refactor
-  --   linearLayout
-  --   [ height WRAP_CONTENT
-  --   , width WRAP_CONTENT
-  --   ]
-  --   [ rentalTimeView push state item.text
-  --   , separatorView $ index /= 2
-  --   ]
-  -- ) [{text : TIME}, {text : DISTANCE}, {text : STARTING_ODO}])
-  ]
+  ][  rideInfoPill state {title : getString TIME , value :(if isRideStarted then state.props.rideDurationTimer else "0") <> " hr", perUnit : " / " <> show rentalData.baseDuration <> " hr"}
+    , separatorView true
+    , rideInfoPill state {title : getString DISTANCE, value : show rentalData.baseDistance <> " km", perUnit : "" }
+    ]
 
 rentalTimeView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> STR -> Boolean -> PrestoDOM (Effect Unit) w
 rentalTimeView push state showText showInfo =
@@ -1594,11 +1585,37 @@ separatorView visibility' =
   linearLayout
     [ height MATCH_PARENT
     , gravity CENTER
-    , weight 1.0
+    , width WRAP_CONTENT
+    , margin $ MarginHorizontal 32 32
     , visibility $ boolToVisibility $ visibility'
     ][ linearLayout
       [ width $ V 1
       , background Color.lightGrey
       , height MATCH_PARENT
       ][]
+    ]
+
+rideInfoPill state rideData = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT 
+    , orientation VERTICAL 
+    ][  textView $
+        [ text $ rideData.title
+        , color Color.black700 
+        ] <> FontStyle.body24 TypoGraphy
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT 
+        ][  
+          textView $ 
+          [ text $ rideData.value
+          , color Color.black800 
+          ] <> FontStyle.body24 TypoGraphy
+        , textView  $ 
+          [ text $ rideData.perUnit
+          , color Color.black600 
+          ] <> FontStyle.body24 TypoGraphy
+        ]
+      
     ]

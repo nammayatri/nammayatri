@@ -146,6 +146,7 @@ import Common.Types.App as CT
 import Effect.Unsafe (unsafePerformEffect)
 import Screens.Types (FareProductType(..)) as FPT
 import Helpers.Utils (decodeBookingTimeList)
+import Resources.Localizable.EN (getEN)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -3093,7 +3094,7 @@ homeScreenViewV2 push state = let
                             <> (if isHomeScreenView state then contentView state else [])
                             -- <> if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else []
                             <> [ shimmerView state
-                              , if state.data.config.feature.enableAdditionalServices || cityConfig.enableRentals || cityConfig.enableIntercity then additionalServicesView push state else linearLayout[visibility GONE][]
+                              , if state.data.config.feature.enableAdditionalServices || cityConfig.enableRentals then additionalServicesView push state else linearLayout[visibility GONE][]
                               , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][]
                               , suggestionsView push state
                               , emptySuggestionsBanner state push
@@ -4029,7 +4030,9 @@ additionalServicesView :: forall w. (Action -> Effect Unit) -> HomeScreenState -
 additionalServicesView push state = let 
   showNewTag = true 
   cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
-  showAdditionalServices = (state.data.config.feature.enableAdditionalServices || cityConfig.enableRentals || cityConfig.enableIntercity) && state.props.currentStage == HomeScreen
+  appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+  firstName = fromMaybe "Yatri " (head (DS.split (DS.Pattern " ") appName))
+  showAdditionalServices = (state.data.config.feature.enableAdditionalServices || cityConfig.enableRentals) && state.props.currentStage == HomeScreen
   in
   linearLayout
     [ height WRAP_CONTENT
@@ -4043,7 +4046,7 @@ additionalServicesView push state = let
         , width MATCH_PARENT 
         , gravity CENTER_VERTICAL
         ][  textView $
-              [ text $ getString YATRI_SERVICES
+              [ text $ firstName <> " " <> getEN SERVICES
               , color Color.black900
               , height MATCH_PARENT
               ] <> FontStyle.subHeading1 TypoGraphy

@@ -15,52 +15,52 @@
 
 module Screens.RentalBookingFlow.RentalScreen.View where
 
+import Accessor
+import ConfigProvider
+import Mobility.Prelude
 import Prelude
 
+import Animation (translateYAnimFromTop, fadeInWithDelay)
 import Animation as Anim
+import Animation.Config (translateFullYAnimWithDurationConfig)
 import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader.View as GenericHeader
 import Components.IncrementDecrementModel.View as IncrementDecrement
 import Components.InputView.View as InputView
+import Components.PopUpModal.View as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.RateCard as RateCard
 import Components.RequestInfoCard as RequestInfoCard
-import Data.Array (singleton, null, mapWithIndex, filter, head)
+import Data.Array (singleton, null, mapWithIndex, filter, head, length)
+import Data.Either (Either(..))
+import Data.Lens ((^.))
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.String as DS
+import Data.Time.Duration (Milliseconds(..))
 import Debug (spy)
 import Effect (Effect)
+import Effect.Aff (launchAff)
+import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
-import ConfigProvider
 import Font.Style as FontStyle
 import Helpers.CommonView (emptyTextView)
+import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..), getVariantDescription, getVehicleName)
+import Helpers.Utils (fetchAndUpdateCurrentLocation)
 import JBridge (renderSlider, sliderConfig, toast)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..))
-import Effect.Aff (launchAff)
-import Effect.Class (liftEffect)
-import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback, alignParentBottom, singleLine, ellipsize, clickable, textFromHtml)
-import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, locUnserviceablePopUpConfig, rentalPolicyInfoConfig)
-import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreakupRowType(..), ScreenOutput, eval, dummyRentalQuote)
-import Screens.Types (RentalScreenState, RentalScreenStage(..))
-import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import Types.App (GlobalState, defaultGlobalState)
-import Styles.Colors as Color
-import Services.Backend (getQuotes, rideBooking)
-import Data.Either (Either(..))
-import Data.Time.Duration (Milliseconds(..))
-import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..), getVariantDescription, getVehicleName)
 import Log (printLog)
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
-import Data.Lens ((^.))
-import Accessor
-import Mobility.Prelude
-import Helpers.Utils(fetchAndUpdateCurrentLocation)
-import PrestoDOM.Animation as PrestoAnim
-import Animation.Config (translateFullYAnimWithDurationConfig)
-import Animation (translateYAnimFromTop, fadeInWithDelay)
-import Components.PopUpModal.View as PopUpModal
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Data.String as DS
+import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback, alignParentBottom, singleLine, ellipsize, clickable, textFromHtml)
+import PrestoDOM.Animation as PrestoAnim
+import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, locUnserviceablePopUpConfig, rentalPolicyInfoConfig)
+import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreakupRowType(..), ScreenOutput, eval, dummyRentalQuote, DescriptionType(..))
+import Screens.Types (RentalScreenState, RentalScreenStage(..))
+import Services.API (GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..))
+import Services.Backend (getQuotes, rideBooking)
+import Styles.Colors as Color
+import Types.App (GlobalState, defaultGlobalState)
 
 rentalScreen :: RentalScreenState -> Screen Action RentalScreenState ScreenOutput
 rentalScreen initialState =
@@ -161,7 +161,7 @@ rentalPackageSelectionView push state =
       , IncrementDecrement.view (push <<< DistanceIncrementDecrementAC) $ incrementDecrementConfig state
       ]
     , textView $ 
-      [ text $ getString (RENTAL_SCREEN_EXPLAINER "10 Km")
+      [ text $ getString (RENTAL_SCREEN_EXPLAINER )
       , color Color.black700 
       , margin $ Margin 16 0 16 16
       ] <> FontStyle.paragraphText TypoGraphy
@@ -254,7 +254,7 @@ fareBreakupView push state = let
         , background Color.white900
         , margin $ MarginBottom 80
         ][ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-          , separatorView push state
+          , separatorView state
           , scrollView
             [ height WRAP_CONTENT
             , background Color.white900
@@ -269,7 +269,7 @@ fareBreakupView push state = let
                     , width MATCH_PARENT
                     , background Color.blue600
                     , cornerRadius 12.0
-                    , margin $ Margin 12 16 16 32 
+                    , margin $ Margin 12 16 16 0 
                     , padding $ Padding 8 12 8 12
                     ][  imageView
                         [ imageWithFallback selectedQuote.quoteDetails.vehicleImage
@@ -307,9 +307,9 @@ fareBreakupView push state = let
                     , orientation VERTICAL
                     , margin $ Margin 16 0 16 16
                     ]
-                    (map (\item -> 
-                      descriptionView push state (item)
-                    ) [BookingFrom, BookingTime, BookingDistance, BaseFare, TollFee, ParkingCharges, NightTimeFee])
+                    (mapWithIndex (\index item ->
+                      fareBreakUpItemView push state (getDataFromDescType item state) (index /= (length rentalDescriptionList - 1))
+                    ) rentalDescriptionList)
                   ]
               
               ]
@@ -378,55 +378,83 @@ fareBreakupView push state = let
                 <> FontStyle.tags TypoGraphy]     
         ]
 
-descriptionView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> FareBreakupRowType -> PrestoDOM (Effect Unit) w
-descriptionView push state description = 
+rentalDescriptionList = [BookingTimeAndDist, EstimatedCharges, AdditionalCharges]
+
+fareBreakUpItemView push state item showSeparator = 
   linearLayout
     [ height WRAP_CONTENT
-    , width MATCH_PARENT
+    , width MATCH_PARENT 
     , orientation VERTICAL
+    , margin $ MarginTop 24
+    ][  textView
+        $ [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , textFromHtml item.title
+          , color Color.black800
+          ]
+        <> FontStyle.subHeading1 TypoGraphy
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , margin $ MarginBottom 16
+        ]( map (\subHeading -> 
+              linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT 
+              , orientation VERTICAL
+              , margin $ MarginTop 16
+              ][  textView $
+                  [ width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , textFromHtml $ subHeading.title
+                  , color Color.black800
+                  ] <> FontStyle.body20 TypoGraphy
+                , textView $ 
+                  [ width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , text $ subHeading.description
+                  , color Color.black700
+                  ] <> FontStyle.paragraphText TypoGraphy
+                ]) item.subHeadings
+          )
+      , if showSeparator then separatorView state else emptyTextView
     ]
-    [ textView $
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , textFromHtml $ getTitleFromDescription description true
-      , color Color.black800
-      ] <> if description == BookingFrom then FontStyle.subHeading1 TypoGraphy else FontStyle.body1 TypoGraphy
-    , textView $
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , textFromHtml $ getTitleFromDescription description false
-      , color Color.black700
-      , margin $ MarginTop 4
-      , visibility $ boolToVisibility $ description /= BookingFrom
-      ] <> FontStyle.paragraphText TypoGraphy
-    , linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , margin $ MarginVertical 11 11
-      , visibility $ boolToVisibility $ description /= NightTimeFee
-      ]
-      [ separatorView push state ]
-    ]
-  where 
-    getTitleFromDescription :: FareBreakupRowType -> Boolean -> String
-    getTitleFromDescription description toShowTitle = 
-      let baseDuration = show state.data.rentalBookingData.baseDuration
-          startTimeUTC = if state.data.startTimeUTC == "" then EHC.getCurrentUTC "" else state.data.startTimeUTC
-          activeQuote = head $ filter (\item -> (item.index == item.activeIndex)) state.data.rentalsQuoteList
-          selectedQuote = maybe dummyRentalQuote identity (state.data.selectedQuote)
-          currency = getCurrency appConfig
-          rideEndTime = formatDateInHHMM $ EHC.getUTCAfterNSeconds startTimeUTC $ (state.data.rentalBookingData.baseDuration) * 60 * 60
-      in case description of
-          BookingFrom -> "<b>Booking from " <> formatDateInHHMM startTimeUTC <> " - " <> rideEndTime <> "</b>"
-          BookingTime -> if toShowTitle then "Included Time: <b>" <> show state.data.rentalBookingData.baseDuration <> " hrs</b>" else getString FINAL_FARE_DESCRIPTION
-          BookingDistance -> if toShowTitle then "Included Distance: <b>" <> show state.data.rentalBookingData.baseDistance <> " km</b>" else getString EXCESS_DISTANCE_CHARGE_DESCRIPTION <> " " <> currency <> (show selectedQuote.fareDetails.perExtraKmRate) <> "/km."
-          BaseFare -> if toShowTitle then "Rental Base Fare: <b>" <> currency <> show selectedQuote.fareDetails.baseFare <> "</b>" else getString ADDITIONAL_CHARGES_DESCRIPTION
-          TollFee -> if toShowTitle then "Toll Charges: <b>" <> currency <> "69" <> "</b>" else "Toll Charges are included in the fare."
-          ParkingCharges -> if toShowTitle then "Parking and other charges" else getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED
-          NightTimeFee -> if toShowTitle then "Night Time Fees" else getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> state.data.rentalBookingData.nightCharge
-    
-    formatDateInHHMM :: String -> String
-    formatDateInHHMM timeUTC = EHC.convertUTCtoISC timeUTC "hh" <> ":" <> EHC.convertUTCtoISC timeUTC "mm" <> " " <> EHC.convertUTCtoISC timeUTC "a"
+
+
+getDataFromDescType :: DescriptionType -> RentalScreenState -> { title :: String, subHeadings :: Array { title :: String, description :: String } }
+getDataFromDescType descriptionType state =
+  let baseDuration = show state.data.rentalBookingData.baseDuration
+      startTimeUTC = if state.data.startTimeUTC == "" then EHC.getCurrentUTC "" else state.data.startTimeUTC
+      activeQuote = head $ filter (\item -> (item.index == item.activeIndex)) state.data.rentalsQuoteList
+      selectedQuote = maybe dummyRentalQuote identity (state.data.selectedQuote)
+      currency = getCurrency appConfig
+      rideEndTime = formatDateInHHMM $ EHC.getUTCAfterNSeconds startTimeUTC $ (state.data.rentalBookingData.baseDuration) * 60 * 60
+  in case descriptionType of 
+        BookingTimeAndDist -> {
+          title : "<b>Booking from " <> formatDateInHHMM startTimeUTC <> " - " <> rideEndTime <> "</b>",
+          subHeadings : [
+            { title : (getString INCLUDED_TIME) <> ": <b>" <> show state.data.rentalBookingData.baseDuration <> " hrs</b>", description : getString (EXCESS_TIME_DESCRIPTION (currency <> show selectedQuote.fareDetails.perExtraMinRate <> "/min"))},
+            { title : getString INCLUDED_DISTANCE <> ": <b>" <> show state.data.rentalBookingData.baseDistance <> " km</b>", description : getString (EXCESS_DISTANCE_CHARGE_DESCRIPTION (currency <> (show selectedQuote.fareDetails.perExtraKmRate) <> "/km.")) }
+          ]
+          }
+        EstimatedCharges -> {
+          title : getString ESTIMATED_CHARGES,
+          subHeadings : [
+            { title : getString ESTIMATED_BASE_FARE <> ": <b>" <> currency <> show selectedQuote.fareDetails.baseFare <> "</b>" , description : getString ADDITIONAL_CHARGES_DESCRIPTION},
+            { title : getString TOLL_CHARGES <> ": <b> " <> getString WILL_BE_ADDED_TO_FINAL_FARE <> " </b>", description : getString TOLL_CHARGES_DESCRIPTION}
+          ]
+        }
+        AdditionalCharges -> {
+          title : getString ADDITIONAL_CHARGES,
+          subHeadings : [
+            { title : getString PARKING_AND_OTHER_CHARGES , description : getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED},
+            { title : getString NIGHT_TIME_FEES , description : getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> state.data.rentalBookingData.nightCharge}
+          ]
+      }
+
+formatDateInHHMM :: String -> String
+formatDateInHHMM timeUTC = EHC.convertUTCtoISC timeUTC "hh" <> ":" <> EHC.convertUTCtoISC timeUTC "mm" <> " " <> EHC.convertUTCtoISC timeUTC "a"
 
 noteAndPrimaryButtonView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
 noteAndPrimaryButtonView push state = 
@@ -441,8 +469,8 @@ noteAndPrimaryButtonView push state =
     , onClick push $ const NoAction
     ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
 
-separatorView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
-separatorView push state =
+separatorView :: forall w. RentalScreenState -> PrestoDOM (Effect Unit) w
+separatorView state =
   linearLayout
     [ width MATCH_PARENT
     , height $ V 1

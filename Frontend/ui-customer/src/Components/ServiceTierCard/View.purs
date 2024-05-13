@@ -1,25 +1,27 @@
 module Components.ServiceTierCard.View where
 
-import Data.Array (mapWithIndex)
-import Effect (Effect)
-import Font.Style as FontStyle
-import Prelude (Unit, const, (<>), bind, ($), pure, unit, show, (==), (||), (&&), (/=), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), Visibility(..), Accessiblity(..), PrestoDOM, alignParentBottom, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback, id, afterRender, visibility, background, padding, accessibilityHint, accessibility, rippleColor, cornerRadius)
-import Screens.Types (StepsHeaderModelState)
-import Styles.Colors as Color
-import Components.StepsHeaderModel.Controller (Action(..))
-import Data.Array as Array
-import Data.String as DS
-import Data.Maybe (Maybe(..), isNothing)
 import Common.Types.App (LazyCheck(..))
+import Components.StepsHeaderModel.Controller (Action(..))
+import Data.Array (mapWithIndex)
+import Data.Array as Array
+import Data.Maybe (Maybe(..), isNothing)
+import Data.String as DS
+import Effect (Effect)
+import Engineering.Helpers.Commons as EHC
+import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude as MP
-import Engineering.Helpers.Commons as EHC
+import Prelude (Unit, const, (<>), bind, ($), pure, unit, show, (==), (||), (&&), (/=), not)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), Visibility(..), Accessiblity(..), PrestoDOM, alignParentBottom, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback, id, afterRender, visibility, background, padding, accessibilityHint, accessibility, rippleColor, cornerRadius)
+import Screens.Types (StepsHeaderModelState, FareProductType(..))
+import Styles.Colors as Color
 
 view :: forall w. Config -> PrestoDOM (Effect Unit) w
-view config =
+view config = let 
+    showFPT = false --config.fareProductType == RENTAL
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
@@ -76,6 +78,22 @@ view config =
                 , color Color.black700
                 , padding $ PaddingBottom 3
                 ] <> FontStyle.paragraphText TypoGraphy
+            , textView $ 
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text $ parseFpt config.fareProductType
+                , color Color.black700
+                , margin $ MarginLeft 4
+                , visibility $ MP.boolToVisibility showFPT
+                ] <> FontStyle.tags TypoGraphy
+            , textView $
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text "•"
+                , color Color.black700
+                , visibility $ MP.boolToVisibility showFPT
+                , padding $ PaddingBottom 2
+                ] <> FontStyle.paragraphText TypoGraphy
             , imageView
                 [ height $ V 12
                 , width $ V 12
@@ -107,6 +125,7 @@ type Config
   = { name :: String
     , capacity :: Maybe Int
     , isAc :: Maybe Boolean
+    , fareProductType :: FareProductType 
     }
 
 parseName :: String -> String
@@ -116,3 +135,11 @@ parseName name =
   else
     name
 
+parseFpt :: FareProductType -> String
+parseFpt fpt = 
+  case fpt of 
+    RENTAL -> "Rental"
+    INTER_CITY -> "InterCity" 
+    ONE_WAY -> "Normal"
+    ONE_WAY_SPECIAL_ZONE -> "Special Zone"
+    DRIVER_OFFER -> "Normal"

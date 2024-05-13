@@ -1546,6 +1546,7 @@ eval BackPressed state = do
                 , tripSuggestions = trips
                 , recentSearchs {predictionArray = recentlySearchedLocations}
                 , destinationSuggestions = suggestedDestinations
+                , source = state.props.currentLocation.place
                 , settingSideBar
                   { gender = state.data.settingSideBar.gender
                   , email = state.data.settingSideBar.email
@@ -1560,6 +1561,8 @@ eval BackPressed state = do
                 , currentLocation = state.props.currentLocation
                 , sosBannerType = state.props.sosBannerType 
                 , followsRide = state.props.followsRide
+                , sourceLat = state.props.currentLocation.lat 
+                , sourceLong = state.props.currentLocation.lng
                 , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
                 , rideSearchProps { 
                     cachedPredictions = state.props.rideSearchProps.cachedPredictions
@@ -2881,7 +2884,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".BookNow") "true"
-      (Tuple estimateId otherSelectedEstimates) = spy "Praveen" $ getEstimateId state.data.specialZoneQuoteList state.data.selectedEstimatesObject 
+      (Tuple estimateId otherSelectedEstimates) = getEstimateId state.data.specialZoneQuoteList state.data.selectedEstimatesObject 
   _ <- pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
   void $ pure $ setValueToLocalStore SELECTED_VARIANT (state.data.selectedEstimatesObject.vehicleVariant)
   void $ pure $ cacheRateCard state
@@ -3015,9 +3018,13 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
 eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do 
   case tag of 
     "RENTALS" -> exit $ GoToRentalsFlow state { data {rentalsInfo = Nothing } }
-    "INTER_CITY" -> do
-      void $ pure $ updateLocalStage SearchLocationModel 
-      continue state { data { source=(getString CURRENT_LOCATION), rentalsInfo = Nothing}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}}
+    "INTER_CITY" ->
+      if state.data.currentCityConfig.enableIntercity then do 
+        void $ pure $ updateLocalStage SearchLocationModel 
+        continue state { data { source=(getString CURRENT_LOCATION), rentalsInfo = Nothing}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}}
+        else do
+          void $ pure $ toast $ getString INTERCITY_RIDES_COMING_SOON
+          continue state
     "INSTANT" -> continueWithCmd state [ pure $ WhereToClick]
     _ -> continue state
   

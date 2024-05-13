@@ -57,7 +57,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Prim.TypeError (Quote)
 import Resources.Constants (encodeAddress)
 import Screens (getScreen, ScreenName(..))
-import Screens.HomeScreen.Transformer (getQuotesTransformer, getFilteredQuotes, transformQuote)
+import Screens.HomeScreen.Transformer (getQuotesTransformer, getFilteredQuotes, transformQuote, getFareProductType, extractFareProductType)
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationConfig)
 import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo, initData) as SearchLocationScreenData
 import Services.API (QuoteAPIEntity(..), GetQuotesRes(..), OfferRes(..), RentalQuoteAPIDetails(..), QuoteAPIContents(..), Snapped(..), LatLong(..), Route(..))
@@ -105,6 +105,7 @@ data Action = NoAction
             | CheckFlowStatusAction
             | CurrentLocation 
             | ChooseYourRideAC ChooseYourRideController.Action
+            | NotificationListener String
             
 
 data ScreenOutput = NoOutput SearchLocationScreenState
@@ -124,6 +125,7 @@ data ScreenOutput = NoOutput SearchLocationScreenState
                   | RideScheduledScreen SearchLocationScreenState
                   | SelectedQuote SearchLocationScreenState
                   | CurrentFlowStatus
+                  | NotificationListenerSO String
 
 eval :: Action -> SearchLocationScreenState -> Eval Action ScreenOutput SearchLocationScreenState
 
@@ -456,6 +458,8 @@ eval (ChooseYourRideAC (ChooseYourRideController.TipBtnClick index value)) state
 
 eval (ChooseYourRideAC (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = exit $ SelectedQuote state
 
+eval (NotificationListener notificationType) state = exit $ NotificationListenerSO notificationType
+
 eval _ state = update state
 
 
@@ -529,7 +533,8 @@ dummyFareQuoteDetails = {
   perExtraMinRate : 0 ,
   perHourCharge : 0 ,
   plannedPerKmRate : 0,
-  nightShiftCharge : 0
+  nightShiftCharge : 0,
+  tollCharges : MB.Nothing
 }
 
 fetchSelectedQuote quotesList = DA.head $ DA.filter (\item -> item.activeIndex == item.index) quotesList
@@ -546,8 +551,8 @@ drawRouteOnMap state =
   continueWithCmd state [do 
     let startLat = MB.maybe 0.0 (\item -> MB.fromMaybe 0.0 item.lat) state.data.srcLoc
         startLon = MB.maybe 0.0 (\item -> MB.fromMaybe 0.0 item.lon) state.data.srcLoc 
-        endLat = MB.maybe 0.0 (\item -> MB.fromMaybe 0.0 item.lat) state.data.destLoc
-        endLon = MB.maybe 0.0 (\item -> MB.fromMaybe 0.0 item.lon) state.data.destLoc
+        endLat = MB.maybe startLat (\item -> MB.fromMaybe startLat item.lat) state.data.destLoc
+        endLon = MB.maybe startLon (\item -> MB.fromMaybe startLon item.lon) state.data.destLoc
         address = MB.maybe "" (\item -> item.address) state.data.srcLoc
         destAddress = MB.maybe "" (\item -> item.address) state.data.destLoc
         markers = normalRoute ""
@@ -566,9 +571,7 @@ drawRouteOnMap state =
                               newRoute = route {points = Snapped (map (\item -> LatLong { lat : item.lat, lon : item.lng}) newPts.points)}
                           in (newRoute)
                         MB.Nothing -> 
-                          let endLatitude = if endLat == 0.0 then startLat else endLat 
-                              endLongitude = if endLon == 0.0 then startLon else endLon
-                              newPts =walkCoordinate startLat startLon endLatitude endLongitude
+                          let newPts = walkCoordinate startLat startLon endLat endLon
                               newRoute = {boundingBox: MB.Nothing, distance: 0, duration: 0, pointsForRentals: MB.Nothing, points : Snapped (map (\item -> LatLong { lat : item.lat, lon : item.lng}) newPts.points), snappedWaypoints : Snapped []}
                           in newRoute
       liftFlow $ drawRoute [ (walkCoordinates newRoute.points)] "LineString" true sourceMarkerConfig destMarkerConfig 8 "NORMAL" (specialLocationConfig "" "" false getPolylineAnimationConfig) (getNewIDWithTag "SearchLocationScreenMap")
@@ -577,6 +580,7 @@ drawRouteOnMap state =
 
 quotesFlow res state = do
   let quoteList = getQuotesTransformer res.quotes state.appConfig.estimateAndQuoteConfig
+      fareProductType = getFareProductType $ MB.maybe "" extractFareProductType (DA.head res.quotes)
       filteredQuoteList = (getFilteredQuotes res.quotes state.appConfig.estimateAndQuoteConfig)
       sortedByFare = DA.sortBy compareByFare filteredQuoteList
       rentalsQuoteList =  (DA.mapWithIndex (\index quote -> 
@@ -596,7 +600,7 @@ quotesFlow res state = do
     void $ pure $ toast $ getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN
     exit $ RentalsScreen state {props {showLoader = false}}
     else 
-    continueWithCmd state { data{quotesList = rentalsQuoteList, selectedQuote = if MB.isNothing state.data.selectedQuote then DA.head $ rentalsQuoteList else state.data.selectedQuote}}[
+    continueWithCmd state { props{fareProductType = fareProductType},data{quotesList = rentalsQuoteList, selectedQuote = if MB.isNothing state.data.selectedQuote then DA.head $ rentalsQuoteList else state.data.selectedQuote}}[
       pure NoAction
       ]
   where 
@@ -608,6 +612,7 @@ quotesFlow res state = do
         , perHourCharge : MB.fromMaybe 0 quoteDetails.perHourCharge 
         , plannedPerKmRate : MB.fromMaybe 0 quoteDetails.plannedPerKmRate 
         , baseFare : quoteDetails.baseFare
+        , tollCharges : quoteDetails.tollCharges
         }
 
     compareByFare :: OfferRes -> OfferRes -> Ordering
