@@ -1,7 +1,7 @@
 module Resources.Localizable.BN where
 
-import Prelude ((<>))
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getBN :: STR -> String
 getBN stringKey =
@@ -1160,8 +1160,8 @@ getBN stringKey =
         BASE_FARE -> "বেস ভাড়া:"
         TOLLS_AND_PARKING_FEES -> "টোল এবং পার্কিং ফি"
         FINAL_FARE_DESCRIPTION -> "চেয়ার করা হবে আসল ট্রিপের সময়কালের উপর, সর্বাধিক হলে পরবর্তী ঘণ্টা বা নির্বাচিত ট্রিপ সময়ে ভিত্তি করে।"
-        EXCESS_DISTANCE_CHARGE_DESCRIPTION -> "অন্তর্ভুক্ত কিলোমিটারের অতিরিক্ত দূরত্ব যে কোনও দিকে চার্জ করা হবে"
-        ADDITIONAL_CHARGES_DESCRIPTION -> "আপনার ট্রিপ শেষ হওয়ার পরে যে কোনও অতিরিক্ত চার্জ বিল করা হবে।"
+        EXCESS_DISTANCE_CHARGE_DESCRIPTION charges -> "অতিরিক্ত দূরত্ব " <> charges <> " এ চার্জ করা হবে"
+        ADDITIONAL_CHARGES_DESCRIPTION -> "চেক শেষ ভাড়া আসল ভ্রমণের অবধি এবং দূরত্বে ভিত্তি করা হবে"
         PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "পার্কিং ফি এবং টোল অন্তর্ভুক্ত হয়নি। দয়া করে ওইগুলি ড্রাইভারকে আলাদা করে পরিশোধ করুন।"
         NIGHT_TIME_FEE_DESCRIPTION -> "আপনার ভ্রমণের কোনো অংশ যদি রাত 10:00 PM এবং 5:00 AM এর মধ্যে ঘটে থাকে তাহলে আপনার রাইডের জন্য একটি ফ্ল্যাট নাইট টাইম ফি {} প্রযোজ্য হবে"
         CHOOSE_YOUR_RENTAL_RIDE -> "আপনার ভাড়া রাইড চয়ন করুন"
@@ -1209,7 +1209,7 @@ getBN stringKey =
         RENTAL_POLICY -> "ভাড়া নীতি"
         SELECT_PACKAGE -> "প্যাকেজ নির্বাচন করুন"
         RENTAL_POLICY_DESC -> "প্রতি ঘন্টায় আপনি প্যাকেজে 10 কি.মি. আপনি একটি সীমা পর্যন্ত অতিরিক্ত কিমি পরিকল্পনা করতে পারেন এবং যদি আপনি বেস দূরত্ব অতিক্রম করেন তবে অতিরিক্ত খরচ বাঁচাতে পারেন।"
-        RENTAL_POLICY_DESC_1 -> "বুকিং নিশ্চিত করার আগে আপনি এখনও পরবর্তী স্ক্রিনে আপনার ভাড়া পর্যালোচনা করতে পারেন।"
+        RENTAL_POLICY_DESC_1 -> "বুকিং নিশ্চিত করার আগে পরবর্তী স্ক্রিনে ভাড়া পর্যালোচনা করুন"
         RENTALS_INTERCITY_AVAILABLE appName -> "রেন্টাল এবং অন্তহণ্ড ট্রিপ, এখন " <> appName <> "-তে উপলব্ধ"
         CHECK_IT_OUT -> "এটি চেক করুন"
         FAILED_TO_CANCEL -> "যাত্রা বাতিল করতে ব্যর্থ হয়েছে"
@@ -1218,7 +1218,7 @@ getBN stringKey =
         NO_RIDES_SCHEDULED_YET -> "এখনো কোনো চালনা শিডিউল করা হয়নি!"
         RIDE_BOOKING -> "রাইড বুকিং।"
         SPECIAL_ZONE_RENTAL_INELIGIBLE -> "বিশেষ অঞ্চলের মধ্যে অবস্থিত স্থানগুলো ভাড়া চালনার জন্য অযোগ্য।"
-        YATRI_SERVICES -> "যাত্রী সেবা"
+        SERVICES -> "সেবা"
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "আপনার আসন্ন ভাড়া বুকিং " <> bookingTime <> "-এ আছে"
         YOU_HAVE_UPCOMING_INTERCITY_BOOKING bookingTime -> "আপনার আসন্ন আন্তঃনগর বুকিং " <> bookingTime <> "-এ আছে"
         UPCOMING_BOOKINGS -> "আপনার আসন্ন বুকিং রয়েছে"
@@ -1233,10 +1233,22 @@ getBN stringKey =
         WAITING_CHARGES_AFTER_5_MINS -> "৫ মিনিটের পর অপেক্ষা চার্জ"
         FARE_DETERMINED_AS_PER_KARNATAKA_GUIDELINES -> "কর্ণাটক রাজ্যের নির্দেশিকা অনুযায়ী নির্ধারিত ভাড়া"
         RENTAL_CHARGES -> "ভাড়া চার্জ"
-        RENTAL_INFO_POLICY_DESC -> "&#8226; রেন্টাল বুকিং প্রতি ঘন্টা আপনাকে 10 কিলোমিটারের বেস দেয়।  <br><br>&#8226; আপনি দূরত্ব বাড়ানোর মাধ্যমে একই নির্বাচিত রেন্টাল সময়কালের জন্য নিম্নলিখিত মূল্যে আরও কিলোমিটার যোগ করতে পারেন।"
-        RENTAL_SCREEN_EXPLAINER includedKm -> includedKm <> " is included per hour of booking.Extra km and minutes will be charged as per fare policy of respective vehicle."
+        RENTAL_INFO_POLICY_DESC inclusiveKms -> "&#8226; ভাড়া বুকিং এর প্রতিটি ঘন্টার জন্য " <> inclusiveKms <> " কিমি আপনার প্যাকেজ অন্তর্ভুক্ত করা হয়েছে৷<br><br>&#8226; যদি বেস দূরত্ব যথেষ্ট না হয়, আপনি অতিরিক্ত কিলোমিটার যোগ করতে এবং অতিরিক্ত খরচ বাঁচাতে বেছে নিতে পারেন।"
+        RENTAL_SCREEN_EXPLAINER -> "বুকিং নিশ্চিত করার আগে আপনি পরবর্তী স্ক্রিনে আপনার চূড়ান্ত ভাড়া অনুমান পর্যালোচনা করতে পারেন"
         INSTANT -> "তাৎক্ষণিক"
         COMING_SOON -> "শীঘ্রই আসছে!"
         CANCEL_SCHEDULED_RIDE -> "নির্ধারিত রাইড বাতিল করুন"
         CANCEL_SCHEDULED_RIDE_DESC -> "আপনি কি এই রাইডটি বাতিল করার বিষয়ে নিশ্চিত?<br><br>(একাধিক বাতিলের ফলে আপনাকে আরও ভাড়ার রাইডের অনুরোধ করা থেকে ব্লক করা হতে পারে)"
         CONFIRM_CANCELLATION -> "বাতিলকরণ নিশ্চিত করুন"
+        INTERCITY_RIDES_COMING_SOON -> "ইন্টারসিটি রাইড শীঘ্রই আসছে!"
+        VIEW_FARES -> "ভাড়া দেখুন"
+        EXCESS_TIME_DESCRIPTION charges -> "অতিরিক্ত সময় " <> charges <> " চার্জ করা হবে"
+        ESTIMATED_CHARGES -> "আনুমানিক চার্জ"
+        NIGHT_TIME_FEES -> "রাতের সময় ফি"
+        PARKING_AND_OTHER_CHARGES -> "পার্কিং এবং অন্যান্য খরচ"
+        ADDITIONAL_CHARGES -> "অতিরিক্ত খরচ"
+        ESTIMATED_BASE_FARE -> "আনুমানিক মৌলিক ভাড়া"
+        INCLUDED_DISTANCE -> "অন্তর্ভুক্ত দূরত্ব"
+        INCLUDED_TIME -> "অন্তর্ভুক্ত সময়"
+        TOLL_CHARGES_DESCRIPTION -> "প্রযোজ্য টোল চার্জ চেক শেষ ভাড়ায় যোগ করা হবে"
+        WILL_BE_ADDED_TO_FINAL_FARE -> "চেক শেষ ভাড়ায় যোগ করা হবে"

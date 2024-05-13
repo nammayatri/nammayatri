@@ -5,7 +5,7 @@ import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import ConfigProvider
 import MerchantConfig.Types
-import Screens.Types(TipViewProps, TipViewStage(..), ZoneType(..))
+import Screens.Types(TipViewProps, TipViewStage(..), ZoneType(..), FareProductType(..))
 import Prelude (negate)
 import Resources.Constants (intMin, intMax)
 
@@ -43,6 +43,7 @@ type Config
     , showMultiProvider :: Boolean
     , currentEstimateHeight :: Int
     , intercity :: Boolean
+    , fareProductType :: FareProductType 
     }
 
 type BookAnyProps 
@@ -85,6 +86,7 @@ config =
   , enableTips : true
   , showMultiProvider : false
   , intercity : false
+  , fareProductType : ONE_WAY
   }
 
 bookAnyProps :: BookAnyProps

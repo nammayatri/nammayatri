@@ -16,6 +16,7 @@
 module Screens.RentalBookingFlow.RentalScreen.Controller
   ( Action(..)
   , FareBreakupRowType(..)
+  , DescriptionType(..)
   , ScreenOutput(..)
   , eval
   , dummyRentalQuote
@@ -107,6 +108,12 @@ data FareBreakupRowType = BookingFrom | BookingTime | BookingDistance | BaseFare
 derive instance genericFareBreakupRowType :: Generic FareBreakupRowType _
 instance showFareBreakupRowType :: Show FareBreakupRowType where show = genericShow
 instance eqFareBreakupRowType :: Eq FareBreakupRowType where eq = genericEq
+
+data DescriptionType = BookingTimeAndDist | EstimatedCharges | AdditionalCharges 
+
+derive instance genericDescriptionType :: Generic DescriptionType _
+instance showDescriptionType :: Show DescriptionType where show = genericShow
+instance eqDescriptionType :: Eq DescriptionType where eq = genericEq
 
 eval :: Action -> RentalScreenState -> Eval Action ScreenOutput RentalScreenState
 
@@ -264,7 +271,8 @@ dummyFareQuoteDetails = {
   perExtraMinRate : 0 ,
   perHourCharge : 0 ,
   plannedPerKmRate : 0,
-  nightShiftCharge : 0
+  nightShiftCharge : 0,
+  tollCharges : Nothing
 }
 
 dummyRentalQuote = {

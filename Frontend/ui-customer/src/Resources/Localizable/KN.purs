@@ -1,7 +1,7 @@
 module Resources.Localizable.KN where
 
-import Prelude ((<>))
 import Language.Types (STR(..))
+import Prelude ((<>))
 import Prelude ((<>))
 
 getKN :: STR -> String
@@ -1161,8 +1161,8 @@ getKN stringKey =
         BASE_FARE -> "ಬೇಸ್ ಫೇರ್:"
         TOLLS_AND_PARKING_FEES -> "ಟೋಲ್ಸ್ ಮತ್ತು ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳು"
         FINAL_FARE_DESCRIPTION -> "ಅಂತಿಮ ಫೇರ್ ವಾಸ್ತವಿಕ ಸಫರ ವಿಸ್ತೃತವಾಗಿ ಹೊಂದಿಕೊಳ್ಳಲಿದೆ, ಮುಂದಿನ ಗಂಟೆಗೆ ಸುತ್ತಲಿನ ಸಮಯ ಅಥವಾ ಆಯ್ಕಿಸಿದ ಸಫರ ಅವಧಿಗೆ ಏರುವಾತ ನಕಲಿಸಲಾಗುವುದು (ಯಾವುದೇ ಹೆಚ್ಚುವರಿಯದಿರುವಾಗ)."
-        EXCESS_DISTANCE_CHARGE_DESCRIPTION -> "ಸೇರಿದ ಕಿಲೋಮೀಟರ್ಗಿಂತ ಹೆಚ್ಚಿನ ದೂರವನ್ನು ಹಾರೈಸಲಾಗಿದೆ"
-        ADDITIONAL_CHARGES_DESCRIPTION -> "ನಿಮ್ಮ ಸಫರ ಪೂರ್ಣವಾದ ನಂತರ ಯಾವುದೇ ಅತಿರಿಕ್ತ ಶುಲ್ಕಗಳನ್ನು ಬಿಲ್ ಮಾಡಲಾಗುತ್ತದೆ."
+        EXCESS_DISTANCE_CHARGE_DESCRIPTION charges -> "ಹೆಚ್ಚುವರಿ ದೂರವನ್ನು " <> charges <> " ನಲ್ಲಿ ವಿಧಿಸಲಾಗುತ್ತದೆ"
+        ADDITIONAL_CHARGES_DESCRIPTION -> "ಕೊನೆಯ ವಾಯಿತು ನಿಜವಾದ ಪ್ರಯಾಣ ಅವಧಿ ಮತ್ತು ದೂರದ ಆಧಾರಿತವಾಗುತ್ತದೆ"
         PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳು ಮತ್ತು ಟೋಲ್ ಅವನ್ನು ಸೇರಿಸಲಾಗಿಲ್ಲ. ದಯವಿಟ್ಟು ಅವುಗಳನ್ನು ವ್ಯಕ್ತಿಗೆ ಹೊರಗೊತ್ತು ಪಾಲಿಸಿ."
         NIGHT_TIME_FEE_DESCRIPTION -> "ನಿಮ್ಮ ಪ್ರಯಾಣದ ಯಾವುದೇ ಭಾಗವು 10:00 PM ಮತ್ತು 5:00 AM ಗಂಟೆಯ ನಡುವೆ ಸಂಭವಿಸಿದಲ್ಲಿ ನಿಮ್ಮ ಸವಾರಿಗೆ ಸಮತಟ್ಟಾದ ರಾತ್ರಿ ಸಮಯದ ಶುಲ್ಕವನ್ನು {} ಅನ್ವಯಿಸಲಾಗುತ್ತದೆ" 
         CHOOSE_YOUR_RENTAL_RIDE -> "ನಿಮ್ಮ ರೆಂಟಲ್ ರೈಡ್ ಆಯ್ಕೆಮಾಡಿ"
@@ -1210,7 +1210,7 @@ getKN stringKey =
         RENTAL_POLICY -> "ಬಾಡಿಗೆ ನೀತಿ"
         SELECT_PACKAGE -> "ಆಯ್ಕೆ ಪ್ಯಾಕೇಜ್"
         RENTAL_POLICY_DESC -> "ಪ್ರತಿ ಗಂಟೆಗೆ ಪ್ಯಾಕೇಜ್‌ನಲ್ಲಿ ನಿಮಗೆ 10 ಕಿ.ಮೀ. ನೀವು ಮಿತಿಯವರೆಗೆ ಹೆಚ್ಚುವರಿ ಕಿಮೀಗಳನ್ನು ಯೋಜಿಸಬಹುದು ಮತ್ತು ನೀವು ಮೂಲ ದೂರವನ್ನು ಮೀರಿದರೆ ಹೆಚ್ಚುವರಿ ವೆಚ್ಚವನ್ನು ಉಳಿಸಬಹುದು."
-        RENTAL_POLICY_DESC_1 -> "ಬುಕಿಂಗ್ ಅನ್ನು ದೃಢೀಕರಿಸುವ ಮೊದಲು ನೀವು ಇನ್ನೂ ಮುಂದಿನ ಪರದೆಯಲ್ಲಿ ನಿಮ್ಮ ದರವನ್ನು ಪರಿಶೀಲಿಸಬಹುದು."
+        RENTAL_POLICY_DESC_1 -> "ಬುಕಿಂಗ್ ಅನ್ನು ದೃಢೀಕರಿಸುವ ಮೊದಲು ಮುಂದಿನ ಪರದೆಯಲ್ಲಿ ದರವನ್ನು ಪರಿಶೀಲಿಸಿ"
         RENTALS_INTERCITY_AVAILABLE appName -> "ರೆಂಟಲ್ಸ್ ಮತ್ತು ಇಂಟರ್‌ಸಿಟಿ ಟ್ರಿಪ್‌ಗಳು, ಈಗ " <> appName <> " ಗೆ ಲಭ್ಯವಿದೆ"
         CHECK_IT_OUT -> "ಇದನ್ನು ಪರಿಶೀಲಿಸಿ"
         FAILED_TO_CANCEL -> "ಸರಿಯಾಗಿ ಸಂಪಾದಿಸಲು ವಿಫಲವಾಯಿತು"
@@ -1219,7 +1219,7 @@ getKN stringKey =
         NO_RIDES_SCHEDULED_YET -> "ಈವರೆಗೆ ಯಾವುದೇ ಸವಾರಿಗಳು ಶೆಡ್ಯೂಲ್ ಮಾಡಲಾಗಿಲ್ಲ!"
         RIDE_BOOKING -> "ರೈಡ್ ಬುಕಿಂಗ್."
         SPECIAL_ZONE_RENTAL_INELIGIBLE -> "ವಿಶೇಷ ಝೋನ್‌ನಲ್ಲಿರುವ ಸ್ಥಳಗಳು ಬಾಡಿಗೆ ಸವಾರಿಗಳಿಗೆ ಅನರ್ಹವಾಗಿವೆ."
-        YATRI_SERVICES -> "ಯಾತ್ರಿ ಸೇವೆಗಳು"
+        SERVICES -> "ಸೇವೆಗಳು"
         YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "ನೀವು ಮುಂಬರುವ ಬಾಡಿಗೆ ಬುಕಿಂಗ್ ಅನ್ನು " <> bookingTime <> " ರಂದು ಹೊಂದಿದ್ದೀರಿ"
         YOU_HAVE_UPCOMING_INTERCITY_BOOKING bookingTime -> "ನೀವು ಮುಂಬರುವ ಅಂತರನಗರಿ ಬುಕಿಂಗ್ ಅನ್ನು " <> bookingTime <> " ರಂದು ಹೊಂದಿದ್ದೀರಿ"
         SCHEDULED -> "ಷೆಡ್ಯೂಲ್ ಮಾಡಲಾಗಿದೆ"
@@ -1234,10 +1234,23 @@ getKN stringKey =
         WAITING_CHARGES_AFTER_5_MINS -> "5 ನಿಮಿಷಗಳ ನಂತರದ ಕಾಯುವ ಶುಲ್ಕ"
         FARE_DETERMINED_AS_PER_KARNATAKA_GUIDELINES -> "ಕರ್ನಾಟಕ ರಾಜ್ಯ ಸರ್ಕಾರದ ಮಾರ್ಗದರ್ಶನದಂತೆ ನಿಗದಿತ ದರ"
         RENTAL_CHARGES -> "ಬಾಡಿಗೆ ಶುಲ್ಕ"
-        RENTAL_INFO_POLICY_DESC -> "&#8226; ನಿಕಟವಿದ್ಯಮಾನ ಬುಕಿಂಗ್ ಪ್ರತಿ ಗಂಟೆಗೆ 10 ಕಿಲೋಮೀಟರ್ ಯಾವುದೇ ಅಂಕಗಳನ್ನು ನೀಡುತ್ತದೆ.<br><br>&#8226; ನೀವು ದೂರವನ್ನು ಹೆಚ್ಚಿಸಿ ಸಮಾನವಾದ ಬೆಲೆಯಲ್ಲಿ ಹೆಚ್ಚಿನ ಕಿಲೋಮೀಟರ್‌ಗಳನ್ನು ಆರಿಸಬಹುದು."
-        RENTAL_SCREEN_EXPLAINER includedKm -> includedKm <> " is included per hour of booking.Extra km and minutes will be charged as per fare policy of respective vehicle."
+        RENTAL_INFO_POLICY_DESC inclusiveKms -> "&#8226; ನಿಮ್ಮ ಪ್ಯಾಕೇಜ್‌ನಲ್ಲಿ ಪ್ರತಿ ಗಂಟೆಗೆ ಬಾಡಿಗೆ ಬುಕಿಂಗ್‌ಗೆ " <> inclusiveKms <> " ಕಿಮೀಗಳನ್ನು ಸೇರಿಸಲಾಗಿದೆ.<br><br>&#8226; ಬೇಸ್ ದೂರವು ಸಾಕಷ್ಟಿಲ್ಲದಿದ್ದರೆ, ನೀವು ಹೆಚ್ಚುವರಿ ಕಿಲೋಮೀಟರ್‌ಗಳನ್ನು ಸೇರಿಸಲು ಮತ್ತು ಹೆಚ್ಚುವರಿ ವೆಚ್ಚದಲ್ಲಿ ಉಳಿಸಲು ಆಯ್ಕೆ ಮಾಡಬಹುದು."
+        RENTAL_SCREEN_EXPLAINER -> "ಬುಕಿಂಗ್ ಅನ್ನು ದೃಢೀಕರಿಸುವ ಮೊದಲು ಮುಂದಿನ ಪರದೆಯಲ್ಲಿ ನಿಮ್ಮ ಅಂತಿಮ ದರದ ಅಂದಾಜನ್ನು ನೀವು ಪರಿಶೀಲಿಸಬಹುದು"
         INSTANT -> "ತ್ವರಿತ"
-        COMING_SOON -> "ಶೀಘ್ರದಲ್ಲೇ ಬರಲಿದೆ!"
+        COMING_SOON -> "ಶೀಘ್ರದಲ್ಲೇ!"
         CANCEL_SCHEDULED_RIDE -> "ನಿಗದಿತ ರೈಡ್ ರದ್ದುಮಾಡಿ"
         CANCEL_SCHEDULED_RIDE_DESC -> "ಈ ರೈಡ್ ಅನ್ನು ರದ್ದುಗೊಳಿಸಲು ನೀವು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ?<br><br>(ಹಲವು ರದ್ದತಿಗಳು ಹೆಚ್ಚಿನ ಬಾಡಿಗೆ ಸವಾರಿಗಳನ್ನು ವಿನಂತಿಸದಂತೆ ನಿಮ್ಮನ್ನು ನಿರ್ಬಂಧಿಸಲು ಕಾರಣವಾಗಬಹುದು)"
         CONFIRM_CANCELLATION -> "ರದ್ದತಿಯನ್ನು ದೃಢೀಕರಿಸಿ"
+        INTERCITY_RIDES_COMING_SOON -> "ಇಂಟರ್‌ಸಿಟಿ ರೈಡ್‌ಗಳು ಶೀಘ್ರದಲ್ಲೇ ಬರಲಿವೆ!"
+        VIEW_FARES -> "ದರಗಳನ್ನು ವೀಕ್ಷಿಸಿ"
+        EXCESS_TIME_DESCRIPTION charges -> "ಹೆಚ್ಚುವರಿ ಸಮಯವನ್ನು " <> charges <> " ವಿಧಿಸಲಾಗುತ್ತದೆ"
+        ESTIMATED_CHARGES -> "ಅಂದಾಜು ಶುಲ್ಕಗಳು"
+        NIGHT_TIME_FEES -> "ರಾತ್ರಿ ಸಮಯ ಶುಲ್ಕಗಳು"
+        PARKING_AND_OTHER_CHARGES -> "ಪಾರ್ಕಿಂಗ್ ಮತ್ತು ಇತರ ವೆಚ್ಚಗಳು"
+        ADDITIONAL_CHARGES -> "ಅತಿಯಾದ ವೆಚ್ಚಗಳು"
+        ESTIMATED_BASE_FARE -> "ಅಂಚೆಯಾದ ಮೂಲ ಶುಲ್ಕ"
+        INCLUDED_DISTANCE -> "ಸೇರ್ಪಡೆಯಾದ ದೂರವು"
+        INCLUDED_TIME -> "ಸೇರ್ಪಡೆಯಾದ ಸಮಯ"
+        TOLL_CHARGES_DESCRIPTION -> "ಅನ್ವಯಗೊಳ್ಳುವ ಟೋಲ್ ಶುಲ್ಕಗಳು ಕೊನೆಯ ವಾಯಿತುಗೆ ಸೇರಿಸಲಾಗುತ್ತವೆ"
+        WILL_BE_ADDED_TO_FINAL_FARE -> "ಕೊನೆಯ ವಾಯಿತುಗಿನಲ್ಲಿ ಸೇರಿಸಲಾಗುತ್ತದೆ"
+        

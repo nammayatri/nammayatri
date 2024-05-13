@@ -1445,6 +1445,7 @@ chooseYourRideConfig state =
     customerTipArrayWithValues = tipConfig.customerTipArrayWithValues,
     enableTips = state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities) && (DA.length tipConfig.customerTipArray) > 0 && not state.data.iopState.showMultiProvider,
     currentEstimateHeight = state.props.currentEstimateHeight,
+    fareProductType = state.data.fareProductType,
     showMultiProvider = state.data.iopState.showMultiProvider
   }
 
@@ -1479,7 +1480,8 @@ requestInfoCardConfig _ = let
   , imageConfig {
       imageUrl = fetchImage FF_ASSET "ny_ic_select_offer",
       height = V 122,
-      width = V 116
+      width = V 116,
+      visibility = VISIBLE
     }
   , buttonConfig {
       text = getString GOT_IT
@@ -1717,8 +1719,8 @@ rideCompletedCardConfig state =
         , baseDistance = state.data.driverInfoCardState.rentalData.baseDistance
         , finalDuration = state.data.driverInfoCardState.rentalData.finalDuration
         , finalDistance = state.data.driverInfoCardState.rentalData.finalDistance
-        , rideStartedAt = state.data.driverInfoCardState.startedAt
-        , rideEndedAt = ""
+        , rideStartedAt = state.data.rideRatingState.rideStartTime
+        , rideEndedAt = state.data.rideRatingState.rideEndTime
         },
         rentalRowDetails {
           rideTime = getString RIDE_TIME
@@ -1920,9 +1922,9 @@ locationTagBarConfig state  = let
             bannerConfig : {
               text : getString COMING_SOON,
               color : Color.white900,
-              fontStyle : FontStyle.Body1,
+              fontStyle : FontStyle.Body12,
               textSize : FontSize.a_12,
-              cornerRadii : Corners 16.0 false false true true,
+              cornerRadii : Corners 6.0 false false true true,
               background : Color.blue800
             },
             showBanner : item.showBanner,

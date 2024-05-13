@@ -50,6 +50,9 @@ export const toastWithLog = function (str) {
 };
 
 export const unsafeSetForeign = function (key,obj,value) {
+  if (typeof obj === "string") {
+    obj = {}
+  }
   obj[key] = value;
   return obj;
 };
