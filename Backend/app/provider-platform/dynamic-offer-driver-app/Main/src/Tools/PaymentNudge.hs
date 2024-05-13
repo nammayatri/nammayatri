@@ -25,6 +25,7 @@ import Data.Ord
 import qualified Data.Text as T
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPlan as DPlan
+import qualified Domain.Types.Merchant.Overlay as DOverlay
 import qualified Domain.Types.Merchant.TransporterConfig as TC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
@@ -153,7 +154,8 @@ switchPlanNudge driver numOfRides saveUpto planId = do
             . T.replace (templateText "saveUpto") (show saveUpto)
             <$> overlay.description
     let endPoint = T.replace (templateText "planId") planId <$> overlay.endPoint
-    sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay description overlay.okButtonText overlay.cancelButtonText endPoint
+    let overlay' = overlay {DOverlay.description = description, DOverlay.endPoint = endPoint}
+    sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay'
 
 notifyPaymentFailure ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -172,14 +174,15 @@ notifyPaymentFailure driverId paymentMode mbBankErrorCode serviceName = do
   whenJust mOverlay $ \overlay -> do
     let description = T.replace (templateText "dueAmount") (show totalDues) <$> overlay.description
     let okButtonText = T.replace (templateText "dueAmount") (show totalDues) <$> overlay.okButtonText
-    sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay description okButtonText overlay.cancelButtonText overlay.endPoint
+    let overlay' = overlay {DOverlay.description = description, DOverlay.okButtonText = okButtonText}
+    sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay'
 
 notifyMandatePaused :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> m ()
 notifyMandatePaused driver = do
   let pnKey = mandatePausedKey
   mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH driver.language) Nothing
   whenJust mOverlay $ \overlay -> do
-    sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay overlay.description overlay.okButtonText overlay.cancelButtonText overlay.endPoint
+    sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay
 
 notifyMandateCancelled :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> m ()
 notifyMandateCancelled driver = do
@@ -189,11 +192,11 @@ notifyMandateCancelled driver = do
     when (autoPayStatus /= DI.PAUSED_PSP) $ do
       mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH driver.language) Nothing
       whenJust mOverlay $ \overlay -> do
-        sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay overlay.description overlay.okButtonText overlay.cancelButtonText overlay.endPoint
+        sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay
 
 notifyPlanActivatedForDay :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> m ()
 notifyPlanActivatedForDay driver = do
   let pnKey = planActivatedKey
   mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH driver.language) Nothing
   whenJust mOverlay $ \overlay -> do
-    sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay overlay.description overlay.okButtonText overlay.cancelButtonText overlay.endPoint
+    sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay

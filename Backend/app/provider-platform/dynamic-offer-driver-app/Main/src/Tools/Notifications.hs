@@ -74,6 +74,9 @@ data UpdateLocationNotificationReq = UpdateLocationNotificationReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
+templateText :: Text -> Text
+templateText txt = "{#" <> txt <> "#}"
+
 notifyOnNewSearchRequestAvailable ::
   ( CacheFlow m r,
     EsqDBFlow m r
@@ -704,29 +707,6 @@ sendUpdateLocOverlay merchantOpCityId person req@FCM.FCMOverlayReq {..} entityDa
     notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title -- if nothing then anyways fcmShowNotification is false
     body = FCMNotificationBody $ fromMaybe "Description" description
 
-buildFCMOverlayReq :: Text -> FCM.FCMOverlayReq
-buildFCMOverlayReq bookingUpdateReqId =
-  FCM.FCMOverlayReq
-    { title = Just "Trip Update !",
-      description = Nothing,
-      imageUrl = Just "https://firebasestorage.googleapis.com/v0/b/jp-beckn-dev.appspot.com/o/add_first_stop.png?alt=media&token=e2cb516b-d6e3-4980-8c1e-999bcf43b9ab",
-      okButtonText = Just "Accept & Navigate",
-      cancelButtonText = Just "Decline",
-      actions = [],
-      actions2 = [FCM.CALL_API FCM.CallAPIDetails {endPoint = "https://api.beckn.juspay.in/dobpp/ui/edit/result/" <> bookingUpdateReqId, method = "POST", reqBody = object ["action" .= String "ACCEPT"]}],
-      secondaryActions2 = Just [FCM.CALL_API FCM.CallAPIDetails {endPoint = "https://api.beckn.juspay.in/dobpp/ui/edit/result/" <> bookingUpdateReqId, method = "POST", reqBody = object ["action" .= String "REJECT"]}],
-      link = Nothing,
-      endPoint = Nothing,
-      method = Nothing,
-      reqBody = Null,
-      delay = Nothing,
-      contactSupportNumber = Nothing,
-      toastMessage = Nothing,
-      secondaryActions = Nothing,
-      socialMediaLinks = Nothing,
-      showPushNotification = Just True
-    }
-
 notifyPickupOrDropLocationChange ::
   ( CacheFlow m r,
     EsqDBFlow m r
@@ -758,14 +738,10 @@ notifyPickupOrDropLocationChange person entityData = do
           [ "Customer has changed pickup or drop location. Please check the app for more details"
           ]
 
-mkOverlayReq :: DTMO.Overlay -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FCM.FCMOverlayReq
-mkOverlayReq _overlay@DTMO.Overlay {..} modDescription modOkButtonText modCancelButtonText modEndpoint =
+mkOverlayReq :: DTMO.Overlay -> FCM.FCMOverlayReq
+mkOverlayReq _overlay@DTMO.Overlay {..} =
   FCM.FCMOverlayReq
-    { description = modDescription,
-      okButtonText = modOkButtonText,
-      cancelButtonText = modCancelButtonText,
-      endPoint = modEndpoint,
-      ..
+    { ..
     }
 
 -- new function
