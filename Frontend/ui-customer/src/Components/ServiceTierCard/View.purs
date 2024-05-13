@@ -83,7 +83,7 @@ view config =
             , textView $
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
-                , padding $ PaddingBottom 2
+                , padding $ PaddingBottom 1
                 , color Color.black700
                 , text $ show capacity
                 ] <> FontStyle.tags TypoGraphy
