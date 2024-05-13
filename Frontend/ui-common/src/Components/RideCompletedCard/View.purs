@@ -81,7 +81,7 @@ tollTextVew config =
     width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER
-  , margin $ Margin 16 0 16 16
+  , margin $ MarginHorizontal 16 16
   , visibility config.visibility
   ][
     imageView[
@@ -203,7 +203,7 @@ priceAndDistanceUpdateView config push =
           , height WRAP_CONTENT
           , gravity CENTER
           , margin $ MarginHorizontal 16 16
-          , padding $ PaddingLeft if config.isDriver then 0 else 40
+          , padding $ PaddingLeft if config.isDriver ||  config.topCard.topPill.visible || not config.showSafetyCenter then 0 else 40
           ][ textView $
              [ height WRAP_CONTENT
              , text config.topCard.title
@@ -792,6 +792,7 @@ whiteHorizontalLine config =
   linearLayout
     [ width MATCH_PARENT
     , height $ V 1
+    , margin $ MarginTop 20
     , background config.topCard.horizontalLineColor
     ][]
 
