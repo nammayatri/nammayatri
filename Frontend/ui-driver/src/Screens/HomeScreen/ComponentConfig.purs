@@ -817,7 +817,7 @@ specialZonePopupConfig state = let
       visibility = GONE
     }
   , imageConfig {
-      imageUrl = fetchImage FF_ASSET "ny_ic_sp_pickup_zone_map",
+      imageUrl = fetchImage COMMON_ASSET "ny_ic_sp_pickup_zone_map",
       height = V 122,
       width = V 116
     }
@@ -1159,7 +1159,7 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
       city = state.data.cityConfig
       driverLocation = DS.toLower $ getValueToLocalStore DRIVER_LOCATION
       language = getLanguage $ getLanguageLocale languageKey
-      videoUrl' = "https://assets.juspay.in/beckn/audios/ny_audio_safety" <> language <> ".mp3"
+      videoUrl' = "https://assets.moving.tech/beckn/audios/ny_audio_safety" <> language <> ".mp3"
   in case pwdtype, isDriverArrived of 
       Just ST.BLIND_AND_LOW_VISION, true ->  accessibilityConfig' 
                                               { secondaryText = getString CUSTOMER_HAS_POOR_VISION_SOUND_HORN_AT_PICKUP ,
@@ -1217,7 +1217,7 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
                                       { title = getString SPECIAL_PICKUP_ZONE,
                                         primaryText = "",
                                         secondaryText = getString SPECIAL_PICKUP_ZONE_POPUP_INFO,
-                                        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_location_unserviceable_green",
+                                        imageUrl = fetchImage COMMON_ASSET "ny_ic_location_unserviceable_green",
                                         videoUrl = "",
                                         mediaType = "",
                                         videoId = ""
@@ -1264,7 +1264,7 @@ getAccessibilityHeaderText state =
                           Just ST.LOCOMOTOR_DISABILITY, true -> config {primaryText = getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText = getString HELP_WITH_THEIR_MOBILITY_AID, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
                           Just ST.OTHER_DISABILITY, true -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
                           Just ST.SAFETY, _ -> config {primaryText = getString CUSTOMER_SAFETY_FIRST, secondaryText = getString LETS_ENSURE_SAFE_RIDE, imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_sheild", background = Color.green100, textColor = Color.green900}
-                          Just ST.SPECIAL_ZONE_PICKUP, _ -> config {primaryText = getString SPECIAL_PICKUP_ZONE, secondaryText = getString PRIORITY_RIDE_EXPIERENCE, imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_sp_zone_green",background = Color.green100, textColor = Color.green900}
+                          Just ST.SPECIAL_ZONE_PICKUP, _ -> config {primaryText = getString SPECIAL_PICKUP_ZONE, secondaryText = getString PRIORITY_RIDE_EXPIERENCE, imageUrl = fetchImage COMMON_ASSET "ny_ic_sp_zone_green",background = Color.green100, textColor = Color.green900}
                           Nothing, true -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
                       else 
                         case state.data.activeRide.disabilityTag of   
@@ -1273,7 +1273,7 @@ getAccessibilityHeaderText state =
                           Just ST.LOCOMOTOR_DISABILITY -> config {primaryText = getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
                           Just ST.OTHER_DISABILITY -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
                           Just ST.SAFETY -> config {primaryText =  getString CUSTOMER_SAFETY_FIRST, secondaryText = getString LETS_ENSURE_SAFE_RIDE, imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_sheild", background = Color.green100, textColor = Color.green900}
-                          Just ST.SPECIAL_ZONE_PICKUP -> config {primaryText = getString SPECIAL_PICKUP_ZONE, secondaryText = getString PRIORITY_RIDE_EXPIERENCE, imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_sp_zone_green", background = Color.green100, textColor = Color.green900}
+                          Just ST.SPECIAL_ZONE_PICKUP -> config {primaryText = getString SPECIAL_PICKUP_ZONE, secondaryText = getString PRIORITY_RIDE_EXPIERENCE, imageUrl = fetchImage COMMON_ASSET "ny_ic_sp_zone_green", background = Color.green100, textColor = Color.green900}
                           Nothing -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
 
 getRideCompletedConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
@@ -1596,17 +1596,17 @@ gotoCounterStrings popupType =
   case popupType of 
     MORE_GOTO_RIDES -> PopupReturn { primaryText : getString MORE_GOTO_RIDE_COMING
                               , secondaryText : getString MORE_GOTO_RIDE_COMING_DESC
-                              , imageURL : getImage "ny_ic_goto_more_rides" ",https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_goto_more_rides.png"
+                              , imageURL : getImage "ny_ic_goto_more_rides" ",https://assets.moving.tech/beckn/jatrisaathi/driver/images/ny_ic_goto_more_rides.png"
                               , buttonText : getString OKAY
                               }
     REDUCED 0 -> PopupReturn { primaryText : getString GOTO_REDUCED_TO_ZERO
                               , secondaryText : getString DUE_TO_MULTIPLE_CANCELLATIONS <> " 0."
-                              , imageURL : getImage "ny_ic_gotodriver_zero" "ny_ic_gotodriver_zero,https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_gotodriver_zero.png"
+                              , imageURL : getImage "ny_ic_gotodriver_zero" "ny_ic_gotodriver_zero,https://assets.moving.tech/beckn/jatrisaathi/driver/images/ny_ic_gotodriver_zero.png"
                               , buttonText : getString OK_GOT_IT
                               }
     REDUCED n -> PopupReturn { primaryText : getString GOTO_REDUCED_TO <> " " <> show n
                               , secondaryText : getString DUE_TO_MULTIPLE_CANCELLATIONS <> " " <> show  n <> "."
-                              , imageURL : getImage "ny_ic_gotodriver_one" "ny_ic_gotodriver_one,https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_gotodriver_one.png"
+                              , imageURL : getImage "ny_ic_gotodriver_one" "ny_ic_gotodriver_one,https://assets.moving.tech/beckn/jatrisaathi/driver/images/ny_ic_gotodriver_one.png"
                               , buttonText : getString OK_GOT_IT
                               }
     VALIDITY_EXPIRED -> PopupReturn { primaryText : getString VALIDITY_EXPIRED_STR
@@ -1616,7 +1616,7 @@ gotoCounterStrings popupType =
                               }
     REACHED_HOME -> PopupReturn { primaryText : getString GOTO_LOC_REACHED
                               , secondaryText : getString YOU_ARE_ALMOST_AT_LOCATION
-                              , imageURL : getImage "ny_ic_goto_arrived" ",https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_goto_arrived.png"
+                              , imageURL : getImage "ny_ic_goto_arrived" ",https://assets.moving.tech/beckn/jatrisaathi/driver/images/ny_ic_goto_arrived.png"
                               , buttonText : getString OK_GOT_IT
                               }
     NO_POPUP_VIEW -> PopupReturn { primaryText : "" , secondaryText : "" , imageURL : "" , buttonText : "" }

@@ -15,7 +15,7 @@ import JBridge (addCarousel)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import Components.PrimaryButton as PrimaryButton
 import Data.Function.Uncurried (runFn2)
-
+import Helpers.Utils as HU
 
 screen :: WelcomeScreenState -> Screen Action WelcomeScreenState ScreenOutput
 screen initialState =
@@ -50,7 +50,7 @@ view push state =
             , width $ V 147
             , accessibilityHint "Namma Yatri"
             , margin $ MarginTop if os == "IOS" then 80 else 50
-            , imageWithFallback "ic_namma_yatri_logo,https://assets.juspay.in/nammayatri/images/user/ic_namma_yatri_logo.png"   -- "ic_namma_yatri_logo"
+            , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ic_namma_yatri_logo"
             ]
             , carouselView state push
             , PrimaryButton.view (push <<< PrimaryButtonAC ) (primaryButtonConfig state)

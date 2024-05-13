@@ -1544,7 +1544,7 @@ estimatedFareView push state =
           [ width (V 15)
           , height (V 15)
           , margin (MarginRight 6)
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET tagConfig.icon
+          , imageWithFallback $ fetchImage COMMON_ASSET tagConfig.icon
           ]
         , textView
           [ width WRAP_CONTENT
@@ -1558,7 +1558,7 @@ estimatedFareView push state =
           , height (V 18)
           , visibility if isJust tagConfig.infoPopUpConfig then VISIBLE else GONE
           , margin (MarginLeft 6)
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_white_info"
+          , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_white_info"
           ]
         ]
     , linearLayout
@@ -2063,7 +2063,7 @@ confirmPickUpLocationView push state =
                 [ width (V 15)
                 , height (V 15)
                 , margin (MarginRight 6)
-                , imageWithFallback $ fetchImage FF_COMMON_ASSET tagConfig.icon
+                , imageWithFallback $ fetchImage COMMON_ASSET tagConfig.icon
                 ]
               , textView
                 [ width if os == "IOS" && confirmLocationCategory == AUTO_BLOCKED then (V 230) else WRAP_CONTENT
@@ -2078,7 +2078,7 @@ confirmPickUpLocationView push state =
                 , height (V 18)
                 , visibility if isJust tagConfig.infoPopUpConfig then VISIBLE else GONE
                 , margin (MarginLeft 6)
-                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_white_info"
+                , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_white_info"
                 ]
               ]
         , linearLayout
@@ -3027,7 +3027,7 @@ homeScreenViewV2 push state =
         ][tagShimmerView state]] 
       else if state.data.config.banners.homeScreenCabLaunch && state.props.city == ST.Bangalore then ([
         imageView
-          [ imageWithFallback "ny_ic_cab_banner,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_cab_banner.png"
+          [ imageWithFallback "ny_ic_cab_banner,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_cab_banner.png"
           , height $ V 135
           , width MATCH_PARENT
           , gravity CENTER_VERTICAL
