@@ -1147,3 +1147,5 @@ getHI stringKey =
         AC_TURNED_OFF -> "एसी बंद था"
         ESTIMATES_EXPIRY_ERROR -> "अनुमान समाप्त हो गया है। कृपया पुनः प्रयास करें।"
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "अनुमान समाप्त हो गया है। फिर से ले रहे हैं, कृपया कुछ क्षण"
+        PAY_YOUR_DRIVER_BY_CASH_OR_UPI -> "कैश या UPI से अपने ड्राइवर को भुगतान करें"
+        TRIP_DELAYED -> "सफर में देरी हो गई"

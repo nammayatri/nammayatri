@@ -273,6 +273,7 @@ type TopCardConfig = {
 , background :: String
 , titleColor :: String
 , rideDescription :: RideDescriptionConfig
+, horizontalLineColor :: String
 }
 
 type RideDescriptionConfig = {

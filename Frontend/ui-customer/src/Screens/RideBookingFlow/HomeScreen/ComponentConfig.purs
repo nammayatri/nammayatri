@@ -1592,7 +1592,7 @@ chooseVehicleConfig state = let
 rideCompletedCardConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
 rideCompletedCardConfig state = 
   let topCardConfig = state.data.config.rideCompletedCardConfig.topCard
-      topCardGradient = if topCardConfig.enableGradient then [state.data.config.primaryBackground, state.data.config.primaryBackground, topCardConfig.gradient, state.data.config.primaryBackground] else [topCardConfig.background,topCardConfig.background]
+      topCardGradient = if topCardConfig.enableGradient then [state.data.config.primaryBackground, topCardConfig.gradient] else [topCardConfig.background, topCardConfig.background]
       waitingChargesApplied = isJust $ DA.find (\entity  -> entity ^._description == "WAITING_OR_PICKUP_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
       headerConfig = mkHeaderConfig state.props.nightSafetyFlow state.props.showOfferedAssistancePopUp
       appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
@@ -1631,7 +1631,8 @@ rideCompletedCardConfig state =
             imageVis = VISIBLE,
             visible = if state.data.finalAmount == state.data.driverInfoCardState.price || state.props.estimatedDistance == Nothing then GONE else VISIBLE
           },
-          bottomText =  getString RIDE_DETAILS
+          bottomText =  getString RIDE_DETAILS,
+          horizontalLineColor = topCardConfig.horizontalLineColor
         },
         customerBottomCard {
           title = getRateYourRideString (getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName,
@@ -1678,12 +1679,10 @@ customerFeedbackPillData state = [feedbackPillDataWithRating1 state, feedbackPil
 feedbackPillDataWithRating1 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
 feedbackPillDataWithRating1 state = [
   [{id : "6", text : getString RUDE_DRIVER},
-   {id : "1", text : getString FELT_UNSAFE}]
-   <> acNotWorkingPill state,
+   {id : "1", text : getString FELT_UNSAFE}],
   [{id : "6", text : getString RECKLESS_DRIVING},
   {id : "6", text : getString DRIVER_CHARGED_MORE}],
-  ([{id : "1", text : getString LATE_DROP_OFF},
-    {id : "1", text : getString LATE_PICK_UP}]
+  ([{id : "15", text : getString TRIP_DELAYED}] <> acNotWorkingPill state
   )
 ]
 
@@ -1693,19 +1692,11 @@ acNotWorkingPill state =
       Just serviceTierName -> 
         if ServiceTierCard.showACDetails serviceTierName Nothing
           then [{id : "14", text : getString AC_TURNED_OFF}] 
-          else [{id : "1", text : getString TOO_MANY_CALLS}]
-      Nothing -> [{id : "1", text : getString TOO_MANY_CALLS}])
+          else []
+      Nothing -> [])
 
 feedbackPillDataWithRating2 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
-feedbackPillDataWithRating2 state = [
-  ([{id : "7", text : getString RUDE_DRIVER},
-  {id : "2", text : getString FELT_UNSAFE}]
-  <> acNotWorkingPill state),
-  [{id : "7", text : getString RECKLESS_DRIVING},
-  {id : "7", text : getString DRIVER_CHARGED_MORE}],
-  [{id : "2", text : getString LATE_PICK_UP},
-   {id : "2", text : getString LATE_DROP_OFF}]
-]
+feedbackPillDataWithRating2 state = feedbackPillDataWithRating1 state
 
 feedbackPillDataWithRating3 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
 feedbackPillDataWithRating3 state = [
