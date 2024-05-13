@@ -33,3 +33,15 @@ findAllByMerchantIdAndCategory merchantId category = do
           &&. specialLocationPriority ^. SpecialLocationPriorityCategory ==. val category
       return specialLocationPriority
   return $ listToMaybe specialLocationPriorityRes
+
+findByMerchantOpCityIdAndCategory ::
+  Transactionable m =>
+  Text ->
+  Text ->
+  m (Maybe SpecialLocationPriorityD.SpecialLocationPriority)
+findByMerchantOpCityIdAndCategory merchantOpCityId category = do
+  Esq.findOne $ do
+    specialLocationPriority <- from $ table @SpecialLocationPriorityT
+    where_ $ specialLocationPriority ^. SpecialLocationPriorityMerchantOperatingCityId ==. val merchantOpCityId
+    where_ $ specialLocationPriority ^. SpecialLocationPriorityCategory ==. val category
+    return specialLocationPriority
