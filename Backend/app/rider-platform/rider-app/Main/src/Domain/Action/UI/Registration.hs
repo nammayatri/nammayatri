@@ -513,9 +513,9 @@ verify tokenId req = do
   person <- checkPersonExists entityId
   let merchantOperatingCityId = person.merchantOperatingCityId
   let deviceToken = Just req.deviceToken
-  personWithSameDeviceToken <- listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken deviceToken)
   riderConfig <- CQRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
-  let isBlockedBySameDeviceToken = (riderConfig.shouldBlockedBySameDeviceToken) && maybe False (.blocked) personWithSameDeviceToken
+  personWithSameDeviceToken <- if riderConfig.shouldBlockedBySameDeviceToken then listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken req.deviceToken) else return Nothing
+  let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   cleanCachedTokens person.id
   when isBlockedBySameDeviceToken $ do
     merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
