@@ -30,6 +30,7 @@ mkPersist
     SpecialLocationPriorityT sql=special_location_priority
       id Text
       merchantId Text
+      merchantOperatingCityId Text
       category Text
       pickupPriority Int
       dropPriority Int

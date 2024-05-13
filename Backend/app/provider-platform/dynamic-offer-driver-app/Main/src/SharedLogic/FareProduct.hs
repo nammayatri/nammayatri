@@ -38,26 +38,26 @@ data FareProducts = FareProducts
 
 getPickupSpecialLocation ::
   (EsqDBFlow m r, EsqDBReplicaFlow m r) =>
-  Id Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   DSpecialLocation.SpecialLocation ->
   m (DSpecialLocation.SpecialLocation, Int)
-getPickupSpecialLocation merchantId pickupSpecialLocation = do
-  pickupSpecialLocationPriority <- B.runInReplica $ QSpecialLocationPriority.findAllByMerchantIdAndCategory merchantId.getId pickupSpecialLocation.category
+getPickupSpecialLocation merchantOpCityId pickupSpecialLocation = do
+  pickupSpecialLocationPriority <- B.runInReplica $ QSpecialLocationPriority.findAllByMerchantIdAndCategory merchantOpCityId.getId pickupSpecialLocation.category
   return (pickupSpecialLocation, maybe 999 (.pickupPriority) pickupSpecialLocationPriority)
 
 getDropSpecialLocation ::
   (EsqDBFlow m r, EsqDBReplicaFlow m r) =>
-  Id Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   DSpecialLocation.SpecialLocation ->
   m (DSpecialLocation.SpecialLocation, Int)
-getDropSpecialLocation merchantId dropSpecialLocation = do
-  dropSpecialLocationPriority <- B.runInReplica $ QSpecialLocationPriority.findAllByMerchantIdAndCategory merchantId.getId dropSpecialLocation.category
+getDropSpecialLocation merchantOpCityId dropSpecialLocation = do
+  dropSpecialLocationPriority <- B.runInReplica $ QSpecialLocationPriority.findAllByMerchantIdAndCategory merchantOpCityId.getId dropSpecialLocation.category
   return (dropSpecialLocation, maybe 999 (.dropPriority) dropSpecialLocationPriority)
 
 getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> Maybe LatLong -> DTC.TripCategory -> m FareProducts
-getAllFareProducts merchantId merchantOpCityId fromLocationLatLong mToLocationLatLong tripCategory = do
-  mbPickupSpecialLocation <- mapM (getPickupSpecialLocation merchantId) =<< QSpecialLocation.findPickupSpecialLocationByLatLong fromLocationLatLong
-  mbDropSpecialLocation <- maybe (pure Nothing) (\toLoc -> mapM (getDropSpecialLocation merchantId) =<< QSpecialLocation.findSpecialLocationByLatLong' toLoc) mToLocationLatLong
+getAllFareProducts _merchantId merchantOpCityId fromLocationLatLong mToLocationLatLong tripCategory = do
+  mbPickupSpecialLocation <- mapM (getPickupSpecialLocation merchantOpCityId) =<< QSpecialLocation.findPickupSpecialLocationByLatLong fromLocationLatLong
+  mbDropSpecialLocation <- maybe (pure Nothing) (\toLoc -> mapM (getDropSpecialLocation merchantOpCityId) =<< QSpecialLocation.findSpecialLocationByLatLong' toLoc) mToLocationLatLong
   case (mbPickupSpecialLocation, mbDropSpecialLocation) of
     (Just (pickupSpecialLocation, pickupPriority), Just (dropSpecialLocation, dropPriority)) ->
       if pickupPriority > dropPriority
