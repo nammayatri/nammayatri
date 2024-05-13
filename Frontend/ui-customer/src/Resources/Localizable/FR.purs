@@ -1151,4 +1151,5 @@ getFR stringKey =
         AC_TURNED_OFF -> "Climatisation éteinte"
         ESTIMATES_EXPIRY_ERROR -> "Estimates has been expired. Please try again."
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "Estimates has been expired. Fetching again, Please wait a moment and check again."
-
+        PAY_YOUR_DRIVER_BY_CASH_OR_UPI -> "Payez votre chauffeur en espèces ou par UPI"
+        TRIP_DELAYED -> "Trajet retardé"

@@ -1149,3 +1149,5 @@ getBN stringKey =
         AC_TURNED_OFF -> "এসি বন্ধ করা হয়েছে"
         ESTIMATES_EXPIRY_ERROR -> "অনুমান মেয়াদ শেষ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "অনুমান মেয়াদ শেষ হয়েছে। আবার তথ্য নিতে, দয়া করে"
+        PAY_YOUR_DRIVER_BY_CASH_OR_UPI -> "আপনার ড্রাইভারকে নগদ / UPI দ্বারা প্রদান করুন"
+        TRIP_DELAYED -> "রাইড বিলম্বিত হয়েছে"

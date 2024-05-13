@@ -1148,3 +1148,5 @@ getKN stringKey =
         AC_TURNED_OFF -> "ಎಸಿ ಆಫ್ ಆಗಿದೆ"
         ESTIMATES_EXPIRY_ERROR -> "ಅಂಚೆಗಳು ಅವಧಿ ಮುಗಿದಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "ಅಂಚೆಗಳು ಅವಧಿ ಮುಗಿದಿದೆ. ಮತ್ತೆ ಹೊಂದಿಕೊಳ್ಳುತ್ತಿದೆ, ದಯವಿಟ್ಟು ಕೆಲವು ಕ್ಷಣಗಳ ಪ್ರತೀಕ್ಷೆ ಮಾಡಿ ಮತ್ತೆ ಪರಿಶೀಲಿಸಿ."
+        PAY_YOUR_DRIVER_BY_CASH_OR_UPI -> "ನಿಮ್ಮ ಚಾಲಕರಿಗೆ ನಗದು ಅಥವಾ UPI ಮೂಲಕ ಪಾವತಿ ಮಾಡಿ"
+        TRIP_DELAYED -> "ಪ್ರಯಾಣ ವಿ"
