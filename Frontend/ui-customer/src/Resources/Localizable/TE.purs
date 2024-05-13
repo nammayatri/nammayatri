@@ -15,8 +15,8 @@
 
 module Resources.Localizable.TE where
 
-import Prelude ((<>))
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getTE :: STR -> String
 getTE stringKey =
@@ -1175,8 +1175,8 @@ getTE stringKey =
     BASE_FARE -> "బేస్ ఫేర్:"
     TOLLS_AND_PARKING_FEES -> "టోల్‌లు మరియు పార్కింగ్ రుసుములు"
     FINAL_FARE_DESCRIPTION -> "చివరి ఛార్జీ తదుపరి గంట వరకు పూర్తి చేయబడిన వాస్తవ పర్యటన వ్యవధి లేదా ఎంచుకున్న పర్యటన వ్యవధి (ఏది ఎక్కువైతే అది) ఆధారంగా ఉంటుంది."
-    EXCESS_DISTANCE_CHARGE_DESCRIPTION -> "చేర్చబడిన కిమీల కంటే ఎక్కువ దూరం ఉంటే, ఇక్కడ ఛార్జీ విధించబడుతుంది"
-    ADDITIONAL_CHARGES_DESCRIPTION -> "మీ పర్యటన పూర్తయిన తర్వాత ఏవైనా అదనపు ఛార్జీలు బిల్ చేయబడతాయి."
+    EXCESS_DISTANCE_CHARGE_DESCRIPTION charges -> "అదనపు దూరానికి " <> charges <> " ఛార్జీ విధించబడుతుంది"
+    ADDITIONAL_CHARGES_DESCRIPTION -> "చివరి భాడా నిజమైన ప్రయాణ అవధి మరియు దూరం పై ఆధారితం అవుతుంది"
     PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "పార్కింగ్ రుసుములు మరియు టోల్‌లు చేర్చబడలేదు. దయచేసి వాటిని డ్రైవర్‌కు విడిగా చెల్లించండి."
     NIGHT_TIME_FEE_DESCRIPTION -> "మీ ట్రిప్‌లో ఏదైనా భాగం రాత్రి 10:00 మరియు ఉదయం 5:00 గంటల మధ్య జరిగితే మీ రైడ్‌కి {} ఫ్లాట్ నైట్ టైమ్ రుసుము వర్తించబడుతుంది"
     CHOOSE_YOUR_RENTAL_RIDE -> "మీ అద్దె రైడ్‌ని ఎంచుకోండి"
@@ -1224,7 +1224,7 @@ getTE stringKey =
     RENTAL_POLICY -> "అద్దె విధానం"
     SELECT_PACKAGE -> "ప్యాకేజీని ఎంచుకోండి"
     RENTAL_POLICY_DESC -> "ప్యాకేజీలో ప్రతి గంటకు మీకు 10 కి.మీలు లభిస్తాయి. మీరు పరిమితి వరకు అదనపు కి.మీలను ప్లాన్ చేసుకోవచ్చు మరియు మీరు ప్రాథమిక దూరాన్ని మించిపోతే అదనపు ఖర్చులను ఆదా చేసుకోవచ్చు."
-    RENTAL_POLICY_DESC_1 -> "మీరు బుకింగ్‌ని నిర్ధారించే ముందు తదుపరి స్క్రీన్‌లో ఇప్పటికీ మీ ఛార్జీని సమీక్షించవచ్చు."
+    RENTAL_POLICY_DESC_1 -> "బుకింగ్‌ని నిర్ధారించే ముందు తదుపరి స్క్రీన్‌లో ఛార్జీని సమీక్షించండి"
     RENTALS_INTERCITY_AVAILABLE appName-> "అద్దెలు మరియు నగరాల మధ్య ప్రయాణాలు, ఇప్పుడు " <> appName <> "లో"
     CHECK_IT_OUT -> "చెక్ అవుట్"
     FAILED_TO_CANCEL -> "రైడ్‌ని రద్దు చేయడంలో విఫలమైంది"
@@ -1233,7 +1233,7 @@ getTE stringKey =
     NO_RIDES_SCHEDULED_YET -> "ఇంకా ఎటువంటి సవారులు షెడ్యూల్ చేయబడలేదు!"
     RIDE_BOOKING -> "రైడ్ బుకింగ్."
     SPECIAL_ZONE_RENTAL_INELIGIBLE -> "ప్రత్యేక వార్తలో ఉన్న స్థలాలు రెంటల్ రైడ్‌లకు అనుమతించబడవు."
-    YATRI_SERVICES -> "యాత్రి సేవలు"
+    SERVICES -> "సేవలు"
     YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "మీకు " <> bookingTime <>  "కి రాబోయే అద్దె బుకింగ్ ఉంది"
     YOU_HAVE_UPCOMING_INTERCITY_BOOKING bookingTime -> "మీకు " <> bookingTime <>  "కి రాబోయే అంతరనగర బుకింగ్ ఉంది"
     SCHEDULED -> "షెడ్యూల్ చేయబడింది"
@@ -1248,10 +1248,22 @@ getTE stringKey =
     WAITING_CHARGES_AFTER_5_MINS -> "5 నిమిషాల తర్వాత వేచి ఉన్న చార్జీలు"
     FARE_DETERMINED_AS_PER_KARNATAKA_GUIDELINES -> "కర్ణాటక రాష్ట్ర ప్రభుత్వ మార్గదర్శకాల ప్రకారం చార్జీ నిర్ణయించబడింది"
     RENTAL_CHARGES -> "అద్దె ఛార్జీలు"
-    RENTAL_INFO_POLICY_DESC -> "&#8226; అద్దె బుకింగ్‌కి ప్రతి గంటకు 10 కిలోమీటర్ల బేస్ లభిస్తుంది.<br><br>&#8226; మీరు ఎంచుకున్న వాటికి తక్కువ ధరకు మరిన్ని కిలోమీటర్లు జోడించడాన్ని ఎంచుకోవచ్చు దూరాన్ని పెంచడం ద్వారా అద్దె వ్యవధి."
-    RENTAL_SCREEN_EXPLAINER includedKm -> includedKm <> " is included per hour of booking.Extra km and minutes will be charged as per fare policy of respective vehicle."
+    RENTAL_INFO_POLICY_DESC inclusiveKms -> "&#8226; ప్రతి గంట అద్దె బుకింగ్‌కు " <> inclusiveKms <> " కిమీలు మీ ప్యాకేజీలో చేర్చబడ్డాయి.<br><br>&#8226; బేస్ దూరం సరిపోకపోతే, మీరు అదనపు కిలోమీటర్లను జోడించడాన్ని ఎంచుకోవచ్చు మరియు అదనపు ఖర్చులను ఆదా చేసుకోవచ్చు."
+    RENTAL_SCREEN_EXPLAINER -> "మీరు బుకింగ్‌ను నిర్ధారించే ముందు తదుపరి స్క్రీన్‌లో మీ తుది ధర అంచనాను సమీక్షించవచ్చు"
     INSTANT -> "తక్షణ"
     COMING_SOON -> "త్వరలో!"
     CANCEL_SCHEDULED_RIDE -> "షెడ్యూల్డ్ రైడ్‌ని రద్దు చేయి"
     CANCEL_SCHEDULED_RIDE_DESC -> "మీరు ఖచ్చితంగా ఈ రైడ్‌ని రద్దు చేయాలనుకుంటున్నారా?<br><br> (బహుళ రద్దుల వలన మీరు మరిన్ని అద్దె రైడ్‌లను అంగీకరించకుండా నిరోధించబడవచ్చు)"
     CONFIRM_CANCELLATION -> "రద్దును నిర్ధారించండి"
+    INTERCITY_RIDES_COMING_SOON -> "ఇంటర్‌సిటీ రైడ్‌లు త్వరలో రానున్నాయి!"
+    VIEW_FARES -> "ఛార్జీలను వీక్షించండి"
+    EXCESS_TIME_DESCRIPTION charges -> "అదనపు సమయం " <> charges <> " ఛార్జ్ చేయబడుతుంది"
+    ESTIMATED_CHARGES -> "అంచనా వేసిన ఛార్జీలు"
+    NIGHT_TIME_FEES -> "రాత్రి సమయ ధరలు"
+    PARKING_AND_OTHER_CHARGES -> "పార్కింగ్ మరియు ఇతర ధరలు"
+    ADDITIONAL_CHARGES -> "అదనపు ధరలు"
+    ESTIMATED_BASE_FARE -> "అంచనా ఆధార ధర"
+    INCLUDED_DISTANCE -> "ప్రముఖ దూరం"
+    INCLUDED_TIME -> "ప్రముఖ సమయం"
+    TOLL_CHARGES_DESCRIPTION -> "ప్రయోజనాలు ఉన్న టోల్ చార్జులు చివరి భాడాకు జోడించబడుతుంది"
+    WILL_BE_ADDED_TO_FINAL_FARE -> "చివరి భాడానికి చేరింది"

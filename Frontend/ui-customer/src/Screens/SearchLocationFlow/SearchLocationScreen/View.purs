@@ -63,7 +63,7 @@ import Resources.Constants (getDelayForAutoComplete)
 import Engineering.Helpers.Commons as EHC
 import Data.String (length, null, take) as DS
 import Helpers.CommonView (emptyTextView)
-import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getLocationName, fetchAndUpdateCurrentLocation, getDefaultPixelSize, getCurrentLocationMarker)
+import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getLocationName, fetchAndUpdateCurrentLocation, getDefaultPixelSize, getCurrentLocationMarker, storeCallBackCustomer)
 import JBridge (showMap, debounceFunction, startLottieProcess, toast, lottieAnimationConfig, storeCallBackLocateOnMap, getLayoutBounds, setMapPadding, removeMarker)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -104,6 +104,7 @@ searchLocationScreen initialState globalProps =
   }
   where 
     globalEventsFunc push = do
+      void $ storeCallBackCustomer push NotificationListener "SearchLocationScreen"
       case initialState.props.searchLocStage of 
         LocateOnMapStage -> storeCallBackLocateOnMap push LocFromMap 
         ConfirmLocationStage -> do 

@@ -2076,7 +2076,8 @@ type SearchLocationScreenProps =
   , pickUpSelectedOnMap :: Boolean
   , showRateCard :: Boolean 
   , tipViewProps :: TipViewProps 
-  , customerTip :: CustomerTipProps}
+  , customerTip :: CustomerTipProps
+  , fareProductType :: FareProductType}
 
 data SearchLocationActionType = AddingStopAction 
                               | SearchLocationAction
@@ -2483,7 +2484,8 @@ type FareDetails = {
   perExtraKmRate :: Int,
   perExtraMinRate :: Int,
   perHourCharge :: Int,
-  nightShiftCharge :: Int
+  nightShiftCharge :: Int,
+  tollCharges :: Maybe Number
 }
 
 data RentalScreenStage = RENTAL_SELECT_PACKAGE | RENTAL_SELECT_VARIANT | RENTAL_CONFIRMATION
