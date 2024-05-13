@@ -3340,14 +3340,14 @@ mapView push state idTag =
             )
             (const MapReadyAction)
     ]$[  linearLayout
-          [ height mapDimensions.height
+          ([ height mapDimensions.height
           , width $ mapDimensions.width 
           , accessibility DISABLE_DESCENDANT
           , id (getNewIDWithTag idTag)
           , visibility if state.props.isSrcServiceable then VISIBLE else GONE
-          , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
+          , cornerRadius if state.props.currentStage == HomeScreen && os == "IOS" then 16.0 else 0.0
           , clickable $ not isHomeScreenView state 
-          ][]
+          ] <> if state.props.currentStage == HomeScreen then [stroke $ "1,"<> Color.grey900 ] else [])[]
     --  , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][] -- TODO :: Mercy Once rentals is enabled.
      , linearLayout 
         [ height WRAP_CONTENT

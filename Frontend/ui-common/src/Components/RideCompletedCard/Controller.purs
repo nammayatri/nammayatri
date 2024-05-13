@@ -120,7 +120,7 @@ config = {
       stroke : "1," <> Color.black700,
       cornerRadius : 8.0, 
       padding :  Padding 16 12 16 12,
-      margin : Margin 15 10 15 20,
+      margin : Margin 15 16 15 0,
       alpha : 1.0,
       fontStyle : Tags,
       visible : VISIBLE
