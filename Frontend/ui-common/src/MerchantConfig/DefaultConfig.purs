@@ -38,7 +38,7 @@ defaultLoaderConfig = {
 }
 defaultGenericHeader :: GenericHeaderConfig
 defaultGenericHeader = {
-    backArrow : "ny_ic_chevron_left,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_left.png"
+    backArrow : "ny_ic_chevron_left,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_left.png"
   }
 
 defaultNavigationAppConfig :: NavigationConfig
