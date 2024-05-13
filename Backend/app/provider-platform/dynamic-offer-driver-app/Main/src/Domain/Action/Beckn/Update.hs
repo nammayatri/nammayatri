@@ -37,6 +37,8 @@ import qualified Domain.Types.RideRoute as RR
 import Environment
 import EulerHS.Prelude hiding (drop, id, state)
 import Kernel.Beam.Functions as B
+import Kernel.External.Notification.FCM.Types as FCM
+import Kernel.External.Types
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -51,6 +53,7 @@ import SharedLogic.TollsDetector
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
+import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.FareParameters as QFP
@@ -245,10 +248,34 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                       oldEstimatedFare = bookingUpdateReq.oldEstimatedFare,
                       validTill = bookingUpdateReq.validTill
                     }
-            let fcmOverlayReq = Notify.buildFCMOverlayReq bookingUpdateReq.id.getId
-            Notify.sendUpdateLocOverlay merchantOperatingCity.id person fcmOverlayReq entityData
+            overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf booking.merchantOperatingCityId "UPDATE_LOC_FCM" ENGLISH Nothing >>= fromMaybeM (InternalError "Overlay not found for UPDATE_LOC_FCM")
+            let actions2 = map (mkActions2 bookingUpdateReq.id.getId dropLocation.lat dropLocation.lon) overlay.actions2
+            let secondaryActions2 = fmap (map (mkSecondaryActions2 bookingUpdateReq.id.getId)) overlay.secondaryActions2
+            let overlay' = overlay{actions2, secondaryActions2}
+            Notify.sendUpdateLocOverlay merchantOperatingCity.id person (Notify.mkOverlayReq overlay') entityData
           else void $ EditBooking.postEditResult (Just person.id, merchantOperatingCity.merchantId, merchantOperatingCity.id) bookingUpdateReq.id (EditBooking.EditBookingRespondAPIReq {action = EditBooking.ACCEPT})
       _ -> throwError (InvalidRequest "Invalid status for edit location request")
+
+mkActions2 :: Text -> Double -> Double -> FCM.FCMOverlayAction -> FCM.FCMOverlayAction
+mkActions2 bookingUpdateReqId lat long action = do
+  case action of
+    FCM.CALL_API details -> do
+      let ep = T.replace (Notify.templateText "bookingUpdateRequestId") bookingUpdateReqId details.endPoint
+      let details' = details{endPoint = ep}
+      CALL_API details'
+    FCM.NAVIGATE details -> do
+      let details' = details{lat, long}
+      NAVIGATE details'
+    _ -> action
+
+mkSecondaryActions2 :: Text -> FCM.FCMOverlayAction -> FCM.FCMOverlayAction
+mkSecondaryActions2 bookingUpdateReqId action = do
+  case action of
+    FCM.CALL_API details -> do
+      let ep = T.replace (Notify.templateText "bookingUpdateRequestId") bookingUpdateReqId details.endPoint
+      let details' = details{endPoint = ep}
+      CALL_API details'
+    _ -> action
 
 buildLocation :: MonadFlow m => Common.Location -> m DL.Location
 buildLocation location = do

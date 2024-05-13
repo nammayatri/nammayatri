@@ -47,7 +47,7 @@ sendACOverlay :: (CacheFlow m r, EsqDBFlow m r) => Text -> DP.Person -> m ()
 sendACOverlay overlayKey person = do
   mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf person.merchantOperatingCityId overlayKey (fromMaybe ENGLISH person.language) Nothing
   whenJust mOverlay $ \overlay -> do
-    TN.sendOverlay person.merchantOperatingCityId person $ TN.mkOverlayReq overlay overlay.description overlay.okButtonText overlay.cancelButtonText overlay.endPoint
+    TN.sendOverlay person.merchantOperatingCityId person $ TN.mkOverlayReq overlay
 
 sendOverlayToDriver ::
   ( CacheFlow m r,
@@ -139,8 +139,9 @@ sendOverlay driver overlayKey udf1 amount = do
   whenJust mOverlay $ \overlay -> do
     let okButtonText = T.replace (templateText "dueAmount") (show amount) <$> overlay.okButtonText
     let description = T.replace (templateText "dueAmount") (show amount) <$> overlay.description
+    let overlay' :: DOverlay.Overlay = overlay {DOverlay.okButtonText = okButtonText, DOverlay.description = description}
     fork ("sending overlay to driver with driverId " <> (show driver.id)) $ do
-      TN.sendOverlay driver.merchantOperatingCityId driver $ TN.mkOverlayReq overlay description okButtonText overlay.cancelButtonText overlay.endPoint
+      TN.sendOverlay driver.merchantOperatingCityId driver $ TN.mkOverlayReq overlay'
 
 getSendOverlaySchedulerDriverIdsLength :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id AnyJob -> m Integer
 getSendOverlaySchedulerDriverIdsLength merchantOpCityId jobId = Hedis.lLen $ makeSendOverlaySchedulerDriverIdsKey merchantOpCityId jobId
