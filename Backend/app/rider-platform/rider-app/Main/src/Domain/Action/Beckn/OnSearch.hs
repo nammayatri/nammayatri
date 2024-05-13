@@ -245,13 +245,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     filterEstimtesByPrefference _estimateInfo =
       case searchRequest.riderPreferredOption of
         Rental -> []
-        OneWay ->
-          case quotesInfo of
-            (qInfo : _) ->
-              case qInfo.quoteDetails of
-                OneWaySpecialZoneDetails _ -> []
-                _ -> _estimateInfo
-            _ -> _estimateInfo
+        OneWay -> _estimateInfo
 
     mkBppDetails :: Flow BppDetails
     mkBppDetails = do
