@@ -1401,11 +1401,11 @@ getRideCompletedConfig state = let
     }
   , toll {
       actualAmount =  state.data.endRideData.actualTollCharge
-    , text =if state.data.endRideData.actualTollCharge > 0  then getString RIDE_TOLL_FARE_INCLUDES  else getString TOLL_ROAD_CHANGED
-    , visibility = boolToVisibility $ state.data.endRideData.estimatedTollCharge > 0
+    , text =if state.data.endRideData.actualTollCharge > 0.0  then getString RIDE_TOLL_FARE_INCLUDES  else getString TOLL_ROAD_CHANGED
+    , visibility = boolToVisibility $ state.data.endRideData.estimatedTollCharge > 0.0
     , image = fetchImage FF_COMMON_ASSET "ny_ic_blue_toll"
-    , textColor = if state.data.endRideData.actualTollCharge > 0 then Color.blue800 else Color.black600
-    , imageVisibility = boolToVisibility $ state.data.endRideData.estimatedTollCharge > 0 && state.data.endRideData.actualTollCharge > 0
+    , textColor = if state.data.endRideData.actualTollCharge > 0.0 then Color.blue800 else Color.black600
+    , imageVisibility = boolToVisibility $ state.data.endRideData.estimatedTollCharge > 0.0 && state.data.endRideData.actualTollCharge > 0.0
     }
   }
   in config'
@@ -2049,7 +2049,7 @@ topAcDriverPopUpConfig state = let
       optionButtonOrientation = "VERTICAL",
       primaryText {
         text = getString TOP_AC_DRIVER,
-        margin = Margin 18 8 18 16 
+        margin = Margin 18 24 18 24
     },
       secondaryText { visibility = GONE },
       option1 {
@@ -2062,7 +2062,7 @@ topAcDriverPopUpConfig state = let
       },
         option2 {
         text = getString MAYBE_LATER,
-        margin = MarginHorizontal 16 16,
+        margin = Margin 16 7 16 0,
         color = Color.black650,
         background = Color.white900,
         strokeColor = Color.white900,
@@ -2075,7 +2075,7 @@ topAcDriverPopUpConfig state = let
         visibility = VISIBLE,
         height = V 215,
         width = V 320,
-        margin = MarginTop 16,
+        margin = Margin 17 20 17 0,
         imageUrl = HU.fetchImage HU.FF_ASSET "ny_ac_explanation"
       }
     }

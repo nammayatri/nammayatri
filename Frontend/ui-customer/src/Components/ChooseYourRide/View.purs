@@ -47,7 +47,7 @@ import Data.Tuple (Tuple(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
-  linearLayout
+  relativeLayout
     [ width MATCH_PARENT
     , height $ V $ EHC.screenHeight unit
     , clipChildren false
@@ -79,8 +79,9 @@ view push config =
             ]
           ]
         ]
+      , if EHC.os == "IOS" then bottomLayoutView push config VISIBLE "BottomLayoutView" else linearLayout[][]
       ]
-    , bottomLayoutView push config VISIBLE "BottomLayoutView"
+    , if EHC.os /= "IOS" then bottomLayoutView push config VISIBLE "BottomLayoutView" else linearLayout[][]
     ]
   where
     getPeekHeight :: Config -> Int
@@ -125,7 +126,7 @@ bottomLayoutView push config visibility' id' =
   , padding $ Padding 16 (if config.showPreferences then 16 else 0) 16 16
   , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
   ][ addTipView push config
-   , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config) 
+   , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config "PrimaryButtomConfirm") 
    ]
   
 defaultTipView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -209,7 +210,7 @@ tipsHorizontalView push state =
             , margin $ MarginLeft if index == 0 then 0 else 8
             , cornerRadius 7.0
             , gravity CENTER
-            , padding $ if index == 0 then PaddingHorizontal 10 10 else Padding 0 0 0 0
+            , padding $ if index == 0 then PaddingHorizontal 8 8 else Padding 0 0 0 0
             , stroke $ "1," <> (if (state.tipViewProps.activeIndex == index) then Color.blue800 else Color.grey900)
             , onClick push $ const $ TipBtnClick index (fromMaybe 0 (state.customerTipArrayWithValues !! index))
             , accessibility ENABLE
@@ -242,7 +243,7 @@ bottomDummyView push config =
         , height $ V if EHC.os == "IOS" then 70 else 24
         , visibility $ boolToVisibility $ config.bookingPreferenceEnabled
         ][]
-    , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config)
+    , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config "DummyPrimaryConfirm")
     ]
 
 bookingPreferencesView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -574,16 +575,18 @@ quoteListView push config =
     , margin $ MarginBottom if EHC.os == "IOS" then 44 else 0
     ]
     [scrollView
-      [ height $ V viewHeight
-      , nestedScrollView $ length config.quoteList > 3
+      [ nestedScrollView $ length config.quoteList > 3
       , width MATCH_PARENT
-      ][  Keyed.linearLayout
+      , height $ V viewHeight
+      ]
+      [  Keyed.linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , padding $ PaddingVertical 16 10
           , margin $ MarginHorizontal 16 16
           , orientation VERTICAL
-          ][  if config.showMultiProvider  then 
+          ][  
+            (if config.showMultiProvider  then 
                 Tuple "MultiProvider" $ linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
@@ -610,7 +613,8 @@ quoteListView push config =
                             price = getMinMaxPrice bookAnyConfig item estimates
                             capacity = getMinMaxCapacity bookAnyConfig item estimates
                         ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
-                    ) topProviderList
+                    ) topProviderList)
+           , if EHC.os /= "IOS" then bottomLayoutViewKeyed push config "BottomLayoutView" else Tuple "EmptyLL" $ linearLayout[][]-- TODO:: Temporary fix, should make scrollable list better
           ]
       ]
     -- , linearLayout -- TODO:: Temporary removing gradient for estimates
@@ -640,6 +644,23 @@ quoteListView push config =
     --     ][]  
     --   ]
     ]
+  where
+    bottomLayoutViewKeyed push config id' = 
+      Tuple "EXTRA" $ linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , visibility INVISIBLE
+      , orientation VERTICAL
+      , background Color.white900
+      , id $ EHC.getNewIDWithTag id'
+      , alignParentBottom "true,-1"
+      , clickable true
+      , afterRender push $ const $ NoAction
+      , padding $ Padding 16 (if config.showPreferences then 16 else 0) 16 16
+      , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
+      ][ addTipView push config
+      , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config "KeyedButtonPrimary") 
+      ]
 
 getBookAnyProps :: ChooseVehicle.Config -> Array ChooseVehicle.Config -> BookAnyProps
 getBookAnyProps quote estimates = foldl (\acc item -> getMinMax acc item) bookAnyProps estimates
@@ -680,7 +701,7 @@ getQuoteListViewHeight config len =
       height = if quoteHeight == 0 then 84 else quoteHeight
       rideHeaderLayout = HU.getDefaultPixelSize (runFn1 getLayoutBounds $ EHC.getNewIDWithTag "rideEstimateHeaderLayout").height
       rideHeaderHeight = if rideHeaderLayout == 0 then 81 else rideHeaderLayout
-  in (if len >= 4 then 3 * height else len * height) + rideHeaderHeight + 24
+  in (if len >= 4 then (if EHC.os == "IOS" then 3 else 5) * height else len * height) + rideHeaderHeight + 24
 
 getScrollViewHeight :: Config -> Int -> Int
 getScrollViewHeight config len = 
@@ -688,16 +709,17 @@ getScrollViewHeight config len =
        height = if quoteHeight == 0 then 84 else quoteHeight
        rideHeaderLayout = HU.getDefaultPixelSize (runFn1 getLayoutBounds $ EHC.getNewIDWithTag "rideEstimateHeaderLayout").height
        rideHeaderHeight = if rideHeaderLayout == 0 then 81 else rideHeaderLayout
-  in (if len >= 4 then ((getHeightFromPercent 60) - rideHeaderHeight) else len * height)
+       iosPercent = if len == 4 then 60 else 73
+  in (if len >= 4 then ((getHeightFromPercent (if EHC.os == "IOS" then iosPercent else 90)) - rideHeaderHeight) else len * height)
 
-primaryButtonRequestRideConfig :: Config -> PrimaryButton.Config
-primaryButtonRequestRideConfig config = PrimaryButton.config
+primaryButtonRequestRideConfig :: Config -> String -> PrimaryButton.Config
+primaryButtonRequestRideConfig config id' = PrimaryButton.config
   { textConfig
     { text = title
     , color = Color.yellow900
     , accessibilityHint = "Confirm And Book Button"
     }
-  , id = "ConfirmAndBookButton"
+  , id = id'
   , background = Color.black900
   , margin = Margin 0 16 0 15
   , enableRipple = not disableButton

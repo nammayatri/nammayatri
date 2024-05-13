@@ -185,11 +185,10 @@ variantsView push state =
                         in
                           linearLayout
                             [ height $ V 32
-                            , width $ V ((EHC.screenWidth unit / 3) - 30)
+                            , width $ V ((EHC.screenWidth unit / 3) - 31)
                             , margin $ itemMargin itemIndex listIndex listItem
                             , cornerRadius 4.0
-                            , stroke $ (if isActiveIndex || isInActive then "0," else "1,") <> Color.blue600
-                            , padding $ Padding 5 8 5 8
+                            , stroke $ (if isInActive then "0," else "1,") <> (if isActiveIndex then Color.blue800 else Color.blue600)
                             , clickable $ true
                             , alpha if isInActive then 0.5 else 1.0
                             , background $ if isInActive then Color.grey900 else if isActiveIndex then Color.blue600 else Color.white900
@@ -201,6 +200,8 @@ variantsView push state =
                             ]
                             [ textView
                                 $ [ text $ item
+                                  , height MATCH_PARENT
+                                  , width MATCH_PARENT
                                   , color $ if isActiveIndex && (not isInActive) then Color.blue800 else Color.black800
                                   , gravity CENTER
                                   ]

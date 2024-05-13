@@ -193,6 +193,7 @@ screen initialState =
               FindingQuotes -> do
                 when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do
                   void $ pure $ setValueToLocalStore FINDING_QUOTES_POLLING "true"
+                  void $ pure $ setValueToLocalStore LOCAL_STAGE (show FindingQuotes)
                   void $ pure $ setValueToLocalStore AUTO_SELECTING "false"
                   void $ startTimer initialState.props.searchExpire "findingQuotes" "1" push SearchExpireCountDown 
                   void $ pure $ setValueToLocalStore GOT_ONE_QUOTE "FALSE"
@@ -300,7 +301,10 @@ screen initialState =
                 _, _ -> pure (pure unit)
             else
               pure (pure unit)
-        )
+        ),
+        (\push -> do
+            when (Arr.elem initialState.props.currentStage [RideStarted, RideAccepted]) $ push UpdateRateCardCache
+            pure (pure unit))
       ]
   , eval:
       \action state -> do
@@ -454,9 +458,9 @@ view push state =
                         ]
                     ]
                 ]
-            , if (not state.props.rideRequestFlow) || any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, HomeScreen] then emptyTextView state else topLeftIconView state push
+            , topLeftIconView state push
+            , preferenceView push state
             , rideRequestFlowView push state
-            , if (any (_ == state.props.currentStage) [FindingEstimate, SettingPrice]) then preferenceView push state else emptyTextView state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
             , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && onUsRide) then messageWidgetView push state else emptyTextView state
             , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then rideDetailsBottomView push state else emptyTextView state
@@ -511,15 +515,18 @@ view push state =
   ]
   where
     showAcView :: HomeScreenState -> Boolean
-    showAcView state = (getValueFromCache (show AC_POPUP_SHOWN_FOR_RIDE) getKeyInSharedPrefKeys) /= state.data.driverInfoCardState.rideId 
+    showAcView state = ((getValueFromCache (show AC_POPUP_SHOWN_FOR_RIDE) getKeyInSharedPrefKeys) /= state.data.driverInfoCardState.rideId )
                         && state.props.currentStage == RideStarted
-                        && runFn2 differenceBetweenTwoUTCInMinutes (getCurrentUTC "") state.data.startedAtUTC > 4
+                        && (((not isAcRide) 
+                         || (runFn2 differenceBetweenTwoUTCInMinutes (getCurrentUTC "") state.data.startedAtUTC > acPopupConfig.showAfterTime)))
                         && state.props.showAcWorkingPopup
-                        && state.data.config.feature.enableAcPopup
+                        && ((isAcRide && acPopupConfig.enableAcPopup) || (not isAcRide && acPopupConfig.enableNonAcPopup))
                         && state.data.driverInfoCardState.serviceTierName /= Just "Auto"
 
     showSafetyAlertPopup = Arr.notElem (getValueToLocalNativeStore SAFETY_ALERT_TYPE) ["__failed", "false", "(null)"]
     onUsRide = state.data.driverInfoCardState.providerType == CTP.ONUS
+    isAcRide = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing
+    acPopupConfig = state.data.config.acPopupConfig
 
 rideDetailsBottomView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideDetailsBottomView push state = 
@@ -1445,12 +1452,13 @@ topLeftIconView state push =
       onClickAction = if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
       isBackPress = (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) 
       followerBar = (showFollowerBar (fromMaybe [] state.data.followers) state) && (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver])
+      isVisible = state.data.config.showHamMenu && not ((not state.props.rideRequestFlow) || any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, HomeScreen])
   in 
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , visibility $ boolToVisibility  state.data.config.showHamMenu
+    , visibility $ boolToVisibility isVisible
     , margin $ MarginTop if followerBar then 0 else safeMarginTop
     ]
     $ []
@@ -4077,10 +4085,12 @@ preferenceView push state =
       bookingPrefVisibility = (not state.data.currentCityConfig.iopConfig.enable) && state.data.config.estimateAndQuoteConfig.enableBookingPreference
       isProviderPrefView = state.data.currentCityConfig.iopConfig.enable
       followerBar = (showFollowerBar (fromMaybe [] state.data.followers) state) && (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver])
+      isVisible = (any (_ == state.props.currentStage) [SettingPrice])
   in
     relativeLayout [
       width MATCH_PARENT
     , height MATCH_PARENT
+    , visibility $ boolToVisibility isVisible
     ] [
       linearLayout[
           width MATCH_PARENT

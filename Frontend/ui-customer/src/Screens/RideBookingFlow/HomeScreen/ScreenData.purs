@@ -197,6 +197,7 @@ initData = {
         hasTopProviderEstimate : true
     }
     , otherSelectedEstimates : []
+    , rateCardCache : Nothing
     },
     props: {
       rideRequestFlow : false
@@ -608,11 +609,6 @@ dummyRideBookingDetails = RideBookingDetails {
   otpCode : Nothing
 }
 
-dummyFareBreakUp :: FareBreakupAPIEntity
-dummyFareBreakUp = FareBreakupAPIEntity{
-  amount : 0,
-  description : "fare"
-}
 
 dummyTrip :: Trip
 dummyTrip = {

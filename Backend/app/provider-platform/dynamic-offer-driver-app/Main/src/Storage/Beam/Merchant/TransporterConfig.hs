@@ -154,6 +154,7 @@ data TransporterConfigT f = TransporterConfigT
     dummyToLocation :: B.C f (Maybe A.Value),
     scheduleRideBufferTime :: B.C f Seconds,
     fakeOtpMobileNumbers :: B.C f [Text],
+    fakeOtpEmails :: B.C f [Text],
     variantsToEnableForSubscription :: B.C f [Vehicle.Variant],
     bookAnyVehicleDowngradeLevel :: B.C f Int,
     considerDriversForSearch :: B.C f Bool,

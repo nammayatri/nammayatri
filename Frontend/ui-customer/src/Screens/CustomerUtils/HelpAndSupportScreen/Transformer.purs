@@ -105,10 +105,6 @@ myRideListTransform state listRes = filter (\item -> (item.data.status == "COMPL
       }
       }) listRes)
 
-
-dummyFareBreakUp :: FareBreakupAPIEntity
-dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}
-
 isEmailPresent :: LazyCheck -> Boolean
 isEmailPresent _ = not ( getValueToLocalStore USER_EMAIL == "__failed" || getValueToLocalStore USER_EMAIL == "(null)" )
 
@@ -131,6 +127,8 @@ getApiIssueList issueList = map (\(IssueReportCustomerListItem issue) -> issueIn
       , category : category'
       , createdAt : createdAt' 
       , issueReportShortId : issueReportShortId'
+      , optionLabel : issue.optionLabel
+      , rideId : issue.rideId
       }
     
     categoriesT :: String -> String

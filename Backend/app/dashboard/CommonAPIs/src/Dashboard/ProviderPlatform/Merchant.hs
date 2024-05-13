@@ -599,7 +599,9 @@ data DocumentVerificationConfigCreateReq = DocumentVerificationConfigCreateReq
     rcNumberPrefixList :: Maybe [Text],
     maxRetryCount :: Int,
     vehicleClassCheckType :: VehicleClassCheckType,
-    isDefaultEnabledOnManualVerification :: Maybe Bool
+    isDefaultEnabledOnManualVerification :: Maybe Bool,
+    isImageValidationRequired :: Maybe Bool,
+    doStrictVerifcation :: Maybe Bool
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

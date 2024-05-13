@@ -92,6 +92,8 @@ import ConfigProvider
 import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
 import Data.Lens ((^.), view)
 import Components.ServiceTierCard.View as ServiceTierCard
+import Resources.Constants (dummyPrice)
+import Data.String.CodeUnits (stripPrefix, stripSuffix)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -614,6 +616,7 @@ logOutPopUpModelConfig state =
             , visibility = boolToVisibility $ isTipEnabled
             }
           , tipLayoutMargin = (Margin 22 2 22 22)
+          , searchExpired = true
           , buttonLayoutMargin = (MarginHorizontal 16 16)
           , activeIndex = state.props.customerTip.tipActiveIndex
           , isVisible = state.props.tipViewProps.isVisible
@@ -853,9 +856,23 @@ waitTimeInfoCardConfig state = let
     }
   }
   in requestInfoCardConfig'
-  where textConfig :: Boolean -> {title :: STR, primaryText :: STR, secondaryText :: STR}
-        textConfig isQuotes = if isQuotes then {title : OTP_EXPIRE_TIMER, primaryText : SHOWS_FOR_HOW_LONG_YOUR_OTP_, secondaryText : IF_YOUR_OTP_EXPIRES_}
-                              else {title : WAIT_TIMER, primaryText : HOW_LONG_DRIVER_WAITED_FOR_PICKUP, secondaryText : YOU_WILL_PAY_FOR_EVERY_MINUTE}
+  where 
+    textConfig :: Boolean -> {title :: STR, primaryText :: STR, secondaryText :: STR}
+    textConfig isQuotes = if isQuotes then {title : OTP_EXPIRE_TIMER, primaryText : SHOWS_FOR_HOW_LONG_YOUR_OTP_, secondaryText : IF_YOUR_OTP_EXPIRES_}
+                          else {title : WAIT_TIMER, primaryText : HOW_LONG_DRIVER_WAITED_FOR_PICKUP, secondaryText : YOU_WILL_PAY_FOR_EVERY_MINUTE waitingChargeInfo.freeMinutes waitingChargeInfo.chargePerMinute}
+
+    waitingChargeInfo = case state.data.rateCardCache of
+                          Just rateCard -> do
+                            let info = DA.find (\item -> DS.contains (DS.Pattern "Waiting Charges") item.key) rateCard.extraFare
+                            case info of
+                              Just item -> case extractNumber item.key of
+                                Just number -> {freeMinutes : number, chargePerMinute : item.val}
+                                Nothing -> {freeMinutes : "0", chargePerMinute : "0"}
+                              Nothing -> {freeMinutes : "0", chargePerMinute : "0"}
+                          Nothing -> {freeMinutes : "0", chargePerMinute : "0"}
+
+    extractNumber :: String -> Maybe String
+    extractNumber str = stripSuffix (DS.Pattern " mins)") $ fromMaybe "" $ stripPrefix (DS.Pattern "Waiting Charges (after ") str
 
 rateCardConfig :: ST.HomeScreenState -> RateCard.Config
 rateCardConfig state =
@@ -960,9 +977,12 @@ driverInfoCardViewState state = { props:
                                   , merchantCity : state.props.city
                                   , showBanner : state.props.currentStage == RideStarted
                                   , isChatWithEMEnabled : state.props.isChatWithEMEnabled
+                                  , isRateCardAvailable : isJust state.data.rateCardCache
                                   }
                               , data: driverInfoTransformer state
                             }
+  where 
+    rateCardInfo = getValueToLocalStore RATE_CARD_INFO
 
 messagingViewConfig :: ST.HomeScreenState -> MessagingView.Config
 messagingViewConfig state = let
@@ -1577,7 +1597,7 @@ rideCompletedCardConfig state =
       headerConfig = mkHeaderConfig state.props.nightSafetyFlow state.props.showOfferedAssistancePopUp
       appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
       isRecentRide = EHC.getExpiryTime (fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _rideEndTime)) true / 60 < state.data.config.safety.pastRideInterval
-      actualTollCharge =  maybe 0 (\obj ->  obj^._amount) $ DA.find (\entity  -> entity ^._description == "TOLL_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
+      actualTollCharge =  maybe dummyPrice (\(API.FareBreakupAPIEntity obj) ->  obj.amountWithCurrency) $ DA.find (\entity  -> entity ^._description == "TOLL_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
       serviceTier = fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _serviceTierName)
   in RideCompletedCard.config {
         isDriver = false,
@@ -1626,11 +1646,11 @@ rideCompletedCardConfig state =
         needHelpText = getString NEED_HELP,
         serviceTierAndAC = serviceTier
       , toll {
-          actualAmount = actualTollCharge
-        , text =if actualTollCharge > 0 then getString TOLL_CHARGES_INCLUDED  else getString TOLL_ROAD_CHANGED -- Handle after design finalized 
-        , visibility = boolToVisibility $ actualTollCharge > 0 || (getValueToLocalStore HAS_TOLL_CHARGES == "true") 
+          actualAmount = actualTollCharge.amount
+        , text =if actualTollCharge.amount > 0.0 then getString TOLL_CHARGES_INCLUDED  else getString TOLL_ROAD_CHANGED -- Handle after design finalized 
+        , visibility = boolToVisibility $ actualTollCharge.amount > 0.0 || (getValueToLocalStore HAS_TOLL_CHARGES == "true") 
         , image = fetchImage FF_COMMON_ASSET "ny_ic_grey_toll"
-        , imageVisibility = boolToVisibility $ actualTollCharge > 0 
+        , imageVisibility = boolToVisibility $ actualTollCharge.amount > 0.0
         }
       }
   where 
@@ -1658,13 +1678,13 @@ customerFeedbackPillData state = [feedbackPillDataWithRating1 state, feedbackPil
 feedbackPillDataWithRating1 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
 feedbackPillDataWithRating1 state = [
   [{id : "6", text : getString RUDE_DRIVER},
-  {id : "1", text : getString FELT_UNSAFE},
-  {id : "1", text : getString TOO_MANY_CALLS}],
+   {id : "1", text : getString FELT_UNSAFE}]
+   <> acNotWorkingPill state,
   [{id : "6", text : getString RECKLESS_DRIVING},
   {id : "6", text : getString DRIVER_CHARGED_MORE}],
   ([{id : "1", text : getString LATE_DROP_OFF},
     {id : "1", text : getString LATE_PICK_UP}]
-  <> acNotWorkingPill state)
+  )
 ]
 
 acNotWorkingPill :: ST.HomeScreenState -> Array RatingCard.FeedbackItem
@@ -1673,19 +1693,18 @@ acNotWorkingPill state =
       Just serviceTierName -> 
         if ServiceTierCard.showACDetails serviceTierName Nothing
           then [{id : "14", text : getString AC_TURNED_OFF}] 
-          else []
-      Nothing -> [])
+          else [{id : "1", text : getString TOO_MANY_CALLS}]
+      Nothing -> [{id : "1", text : getString TOO_MANY_CALLS}])
 
 feedbackPillDataWithRating2 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
 feedbackPillDataWithRating2 state = [
-  [{id : "7", text : getString RUDE_DRIVER},
-  {id : "2", text : getString FELT_UNSAFE},
-  {id : "2", text : getString TOO_MANY_CALLS}],
+  ([{id : "7", text : getString RUDE_DRIVER},
+  {id : "2", text : getString FELT_UNSAFE}]
+  <> acNotWorkingPill state),
   [{id : "7", text : getString RECKLESS_DRIVING},
   {id : "7", text : getString DRIVER_CHARGED_MORE}],
-  ([{id : "2", text : getString LATE_PICK_UP},
-    {id : "2", text : getString LATE_DROP_OFF}]
-  <> acNotWorkingPill state)
+  [{id : "2", text : getString LATE_PICK_UP},
+   {id : "2", text : getString LATE_DROP_OFF}]
 ]
 
 feedbackPillDataWithRating3 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)

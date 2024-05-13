@@ -562,5 +562,6 @@ export const parseSecondsOfDayToUTC = function (seconds) {
 
 export const getMidnightUTC = function () {
   const midnight = new Date().setHours(0, 0, 0, 0);
-  return midnight.toISOString();
+  const utcTime = new Date(midnight);
+  return utcTime.toISOString();
 }

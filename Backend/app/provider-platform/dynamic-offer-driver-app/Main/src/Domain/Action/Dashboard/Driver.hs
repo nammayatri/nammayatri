@@ -19,7 +19,7 @@ module Domain.Action.Dashboard.Driver
     driverActivity,
     enableDriver,
     disableDriver,
-    removeACUsageRestriction,
+    updateACUsageRestriction,
     blockDriverWithReason,
     blockDriver,
     blockReasonList,
@@ -116,6 +116,7 @@ import Domain.Types.Plan
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.Vehicle as DVeh
 import Domain.Types.VehicleRegistrationCertificate
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
@@ -134,7 +135,6 @@ import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Kernel.Utils.Validation (runRequestValidation)
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator
-import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as ACOverlay
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
@@ -431,8 +431,8 @@ disableDriver merchantShortId opCity reqDriverId = do
   pure Success
 
 ---------------------------------------------------------------------
-removeACUsageRestriction :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
-removeACUsageRestriction merchantShortId opCity reqDriverId = do
+updateACUsageRestriction :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateACUsageRestrictionReq -> Flow APISuccess
+updateACUsageRestriction merchantShortId opCity reqDriverId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
@@ -444,10 +444,8 @@ removeACUsageRestriction merchantShortId opCity reqDriverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
-  checkAndUpdateAirConditioned True True personId cityVehicleServiceTiers
-  fork "Send AC Restriction Lifted Overlay" $ ACOverlay.sendACUsageRestrictionLiftedOverlay driver
-
-  logTagInfo "dashboard -> removeACUsageRestriction : " (show personId)
+  checkAndUpdateAirConditioned True req.isWorking personId cityVehicleServiceTiers
+  logTagInfo "dashboard -> updateACUsageRestriction : " (show personId)
   pure Success
 
 ---------------------------------------------------------------------
@@ -708,15 +706,22 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
       pure $ map getShortId availableMerchantsShortId
     Nothing -> pure []
   merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
   selectedServiceTiers <-
     maybe
       (pure [])
       ( \v ->
           v.selectedServiceTiers `forM` \serviceTierType -> do
-            mbServiceTier <- CQVST.findByServiceTierTypeAndCityId serviceTierType person.merchantOperatingCityId
+            let mbServiceTier = find (\vst -> vst.serviceTierType == serviceTierType) cityVehicleServiceTiers
             return $ maybe (show serviceTierType) (.name) mbServiceTier
       )
       vehicle
+  let serviceTierACThresholds =
+        map
+          (\DVST.VehicleServiceTier {..} -> airConditioned)
+          (filter (\v -> maybe False (\veh -> veh.variant `elem` v.allowedVehicleVariant) vehicle) cityVehicleServiceTiers)
+  let isACAllowedForDriver = checkIfACAllowedForDriver info (catMaybes serviceTierACThresholds)
+  let isVehicleACWorking = maybe False (\v -> v.airConditioned /= Just False) vehicle
   pure
     Common.DriverInfoRes
       { driverId = cast @DP.Person @Common.Driver person.id,
@@ -751,6 +756,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         currentAcOffReportCount = maybe 0 round info.airConditionScore,
         totalAcRestrictionUnblockCount = info.acRestrictionLiftCount,
         lastACStatusCheckedAt = info.lastACStatusCheckedAt,
+        currentACStatus = isACAllowedForDriver && isVehicleACWorking,
+        blockedDueToRiderComplains = not isACAllowedForDriver,
         driverTag = person.driverTag
       }
 
@@ -847,7 +854,7 @@ updatePhoneNumber merchantShortId opCity reqDriverId req = do
           }
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession personId
-  QPerson.updateMobileNumberAndCode updDriver
+  QPerson.updatePersonDetails updDriver
   QR.deleteByPersonId personId
   logTagInfo "dashboard -> updatePhoneNumber : " (show personId)
   pure Success
@@ -1832,7 +1839,8 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
         overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf merchantOpCityId oKey (fromMaybe ENGLISH driver.language) Nothing >>= fromMaybeM (OverlayKeyNotFound oKey)
         let okButtonText = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.okButtonText
         let description = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.description
-        TN.sendOverlay merchantOpCityId driver $ TN.mkOverlayReq overlay description okButtonText overlay.cancelButtonText overlay.endPoint
+        let overlay' = overlay{okButtonText, description}
+        TN.sendOverlay merchantOpCityId driver $ TN.mkOverlayReq overlay'
       ALERT -> do
         _mId <- fromMaybeM (InvalidRequest "Message Id field is required for channel : ALERT") messageId -- whenJust messageId $ \_mId -> do
         topicName <- asks (.broadcastMessageTopic)
@@ -2029,7 +2037,7 @@ updateVehicleVariantAndServiceTier variant vehicle = do
   driver <- B.runInReplica $ QPerson.findById vehicle.driverId >>= fromMaybeM (PersonDoesNotExist vehicle.driverId.getId)
   driverInfo' <- QDriverInfo.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
   vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId
-  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction driver driverInfo' vehicle vehicleServiceTiers
+  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction True driver driverInfo' vehicle vehicleServiceTiers
   QVehicle.updateVariantAndServiceTiers variant availableServiceTiersForDriver vehicle.driverId
 
 updateDriverTag :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateDriverTagReq -> Flow APISuccess

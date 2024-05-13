@@ -61,10 +61,10 @@ import Tools.Whatsapp as Whatsapp
 import Utils.Common.Cac.KeyNameConstants
 
 driverDocumentTypes :: [DVC.DocumentType]
-driverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto]
+driverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber]
 
 vehicleDocumentTypes :: [DVC.DocumentType]
-vehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.SubscriptionPlan]
+vehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.VehicleInspectionForm, DVC.SubscriptionPlan]
 
 notifyErrorToSupport ::
   Person ->
@@ -145,14 +145,15 @@ checkAndUpdateAirConditioned isDashboard isAirConditioned personId cityVehicleSe
   let serviceTierACThresholds = map (\DVST.VehicleServiceTier {..} -> airConditioned) (filter (\v -> vehicle.variant `elem` v.allowedVehicleVariant) cityVehicleServiceTiers)
 
   when (isAirConditioned && not (checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds))) $ do
-    if isDashboard
-      then do
-        DIQuery.removeAcUsageRestriction (Just 0.0) DI.NoRestriction (driverInfo.acRestrictionLiftCount + 1) personId
-      else do
-        when (driverInfo.acUsageRestrictionType == DI.ToggleNotAllowed) $
-          throwError $ InvalidRequest "AC usage is restricted for the driver, please contact support"
-        when (driverInfo.acUsageRestrictionType == DI.ToggleAllowed) $
-          DIQuery.updateAcUsageRestrictionAndScore DI.ToggleNotAllowed (Just 0.0) personId
+    when (driverInfo.acUsageRestrictionType == DI.ToggleNotAllowed) $
+      if isDashboard
+        then do
+          DIQuery.removeAcUsageRestriction (Just 0.0) DI.ToggleNotAllowed (driverInfo.acRestrictionLiftCount + 1) personId
+          driver <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+          fork "Send AC Restriction Lifted Overlay" $ ACOverlay.sendACUsageRestrictionLiftedOverlay driver
+        else throwError $ InvalidRequest "AC usage is restricted for the driver, please contact support"
+    when (driverInfo.acUsageRestrictionType == DI.ToggleAllowed) $
+      DIQuery.updateAcUsageRestrictionAndScore DI.ToggleNotAllowed (Just 0.0) personId
   mbRc <- runInReplica $ QRC.findLastVehicleRCWrapper vehicle.registrationNo
   QVehicle.updateAirConditioned (Just isAirConditioned) personId
   whenJust mbRc $ \rc -> QRC.updateAirConditioned (Just isAirConditioned) rc.id
@@ -233,7 +234,7 @@ makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
 makeFullVehicleFromRC :: [DVST.VehicleServiceTier] -> DI.DriverInformation -> Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Vehicle
 makeFullVehicleFromRC vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now = do
   let vehicle = makeVehicleFromRC driver.id merchantId_ certificateNumber rc merchantOpCityId now
-  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction driver driverInfo vehicle vehicleServiceTiers
+  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction True driver driverInfo vehicle vehicleServiceTiers
   addSelectedServiceTiers availableServiceTiersForDriver vehicle
   where
     addSelectedServiceTiers :: [DVST.ServiceTierType] -> Vehicle -> Vehicle

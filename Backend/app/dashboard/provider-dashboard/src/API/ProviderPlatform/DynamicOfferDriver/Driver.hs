@@ -58,7 +58,7 @@ type API =
            :<|> DriverActivityAPI
            :<|> EnableDriverAPI
            :<|> DisableDriverAPI
-           :<|> RemoveACUsageRestrictionAPI
+           :<|> UpdateACUsageRestrictionAPI
            :<|> BlockDriverWithReasonAPI
            :<|> BlockDriverAPI
            :<|> BlockReasonListAPI
@@ -162,9 +162,9 @@ type DisableDriverAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DISABLE
     :> Common.DisableDriverAPI
 
-type RemoveACUsageRestrictionAPI =
+type UpdateACUsageRestrictionAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'REMOVE_AC_USAGE_RESTRICTION
-    :> Common.RemoveACUsageRestrictionAPI
+    :> Common.UpdateACUsageRestrictionAPI
 
 type BlockDriverWithReasonAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'BLOCK_WITH_REASON
@@ -372,7 +372,7 @@ handler merchantId city =
     :<|> driverActivity merchantId city
     :<|> enableDriver merchantId city
     :<|> disableDriver merchantId city
-    :<|> removeACUsageRestriction merchantId city
+    :<|> updateACUsageRestriction merchantId city
     :<|> blockDriverWithReason merchantId city
     :<|> blockDriver merchantId city
     :<|> blockReasonList merchantId city
@@ -523,12 +523,12 @@ disableDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI'
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.disableDriver) driverId
 
-removeACUsageRestriction :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
-removeACUsageRestriction merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
+updateACUsageRestriction :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateACUsageRestrictionReq -> FlowHandler APISuccess
+updateACUsageRestriction merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildManagementServerTransaction Common.RemoveACUsageRestrictionEndpoint apiTokenInfo driverId T.emptyRequest
+  transaction <- buildManagementServerTransaction Common.RemoveACUsageRestrictionEndpoint apiTokenInfo driverId (Just req)
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.removeACUsageRestriction) driverId
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.updateACUsageRestriction) driverId req
 
 blockDriverWithReason :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.BlockDriverWithReasonReq -> FlowHandler APISuccess
 blockDriverWithReason merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do

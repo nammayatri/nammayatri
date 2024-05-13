@@ -35,9 +35,9 @@ data VehicleInsuranceE e = VehicleInsurance
   }
   deriving (Generic)
 
-type VehicleInsurance = VehicleInsuranceE 'AsEncrypted
+type VehicleInsurance = VehicleInsuranceE ('AsEncrypted)
 
-type DecryptedVehicleInsurance = VehicleInsuranceE 'AsUnencrypted
+type DecryptedVehicleInsurance = VehicleInsuranceE ('AsUnencrypted)
 
 instance EncryptedItem VehicleInsurance where
   type Unencrypted VehicleInsurance = (DecryptedVehicleInsurance, HashSalt)

@@ -17,6 +17,7 @@ import qualified Tools.Beam.UtilsTH
 data VehicleServiceTier = VehicleServiceTier
   { airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     allowedVehicleVariant :: [Domain.Types.Vehicle.Variant],
+    autoSelectedVehicleVariant :: [Domain.Types.Vehicle.Variant],
     defaultForVehicleVariant :: [Domain.Types.Vehicle.Variant],
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleServiceTier.VehicleServiceTier,

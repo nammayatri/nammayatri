@@ -50,6 +50,7 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
   updateWithKV
     [ Se.Set Beam.airConditioned airConditioned,
       Se.Set Beam.allowedVehicleVariant allowedVehicleVariant,
+      Se.Set Beam.autoSelectedVehicleVariant autoSelectedVehicleVariant,
       Se.Set Beam.defaultForVehicleVariant defaultForVehicleVariant,
       Se.Set Beam.driverRating driverRating,
       Se.Set Beam.longDescription longDescription,
@@ -74,6 +75,7 @@ instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehi
         Domain.Types.VehicleServiceTier.VehicleServiceTier
           { airConditioned = airConditioned,
             allowedVehicleVariant = allowedVehicleVariant,
+            autoSelectedVehicleVariant = autoSelectedVehicleVariant,
             defaultForVehicleVariant = defaultForVehicleVariant,
             driverRating = driverRating,
             id = Kernel.Types.Id.Id id,
@@ -96,6 +98,7 @@ instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehicl
     Beam.VehicleServiceTierT
       { Beam.airConditioned = airConditioned,
         Beam.allowedVehicleVariant = allowedVehicleVariant,
+        Beam.autoSelectedVehicleVariant = autoSelectedVehicleVariant,
         Beam.defaultForVehicleVariant = defaultForVehicleVariant,
         Beam.driverRating = driverRating,
         Beam.id = Kernel.Types.Id.getId id,

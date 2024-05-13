@@ -16,6 +16,7 @@ module SharedLogic.FareCalculator
   ( mkFareParamsBreakups,
     fareSum,
     pureFareSum,
+    perRideKmFareParamsSum,
     CalculateFareParametersParams (..),
     calculateFareParameters,
     isNightShift,
@@ -158,6 +159,15 @@ pureFareSum fareParams = do
     + notPartOfNightShiftCharge
     + platformFee
     + (fromMaybe 0.0 fareParams.customerCancellationDues + fromMaybe 0.0 fareParams.tollCharges + fromMaybe 0.0 fareParams.parkingCharge)
+
+perRideKmFareParamsSum :: FareParameters -> HighPrecMoney
+perRideKmFareParamsSum fareParams = do
+  let (partOfNightShiftCharge, notPartOfNightShiftCharge, _) = countFullFareOfParamsDetails fareParams.fareParametersDetails
+  fareParams.baseFare
+    + partOfNightShiftCharge
+    + notPartOfNightShiftCharge
+    + fromMaybe 0.0 fareParams.nightShiftCharge
+    + fromMaybe 0.0 fareParams.congestionCharge
 
 data CalculateFareParametersParams = CalculateFareParametersParams
   { farePolicy :: FullFarePolicy,

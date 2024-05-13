@@ -78,6 +78,7 @@ type AppConfigCustomer a =
   , referral :: ReferalConfig
   , safety :: Safety
   , enableBookAny :: Boolean
+  , acPopupConfig :: AcPopupConfig
   | a
   }
 
@@ -258,9 +259,8 @@ type Features = {
   enableAutoReferral :: Boolean,
   enableRepeatTripBackfilling :: Boolean,
   enableCustomerSupportForSafety :: Boolean,
-  enableSpecialPickup :: Boolean,
-  enableAcPopup :: Boolean
-  }
+  enableSpecialPickup :: Boolean
+}
 
 type RideCompletedCardConfig = {
   topCard :: TopCardConfig
@@ -436,4 +436,10 @@ type Safety = {
 type InteroperabilityConfig = {
   enable :: Boolean,
   autoSelectTime :: Int
+}
+
+type AcPopupConfig = {
+  enableAcPopup :: Boolean,
+  enableNonAcPopup :: Boolean,
+  showAfterTime :: Int
 }

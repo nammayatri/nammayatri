@@ -1071,6 +1071,25 @@ export const animateCamera = function (lat) {
   };
 };
 
+export const moveCameraWithoutAnimation = function (lat) {
+  return function (lng) {
+    return function (zoom) {
+      return function (zoomType) {
+        return function () {
+          try {
+            if (window.JBridge.moveCameraWithoutAnimation){
+              window.JBridge.moveCameraWithoutAnimation(lat, lng, zoom, zoomType);
+            }
+          } catch (err) {
+            window.JBridge.moveCameraWithoutAnimation(lat, lng, zoom);
+          }
+        };
+      };
+    };
+  };
+};
+
+
 export const showMapImpl = function (id) {
   return function (isEnableCurrentLocation) {
     return function (type) {

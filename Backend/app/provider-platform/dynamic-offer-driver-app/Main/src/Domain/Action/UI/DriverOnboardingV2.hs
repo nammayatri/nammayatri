@@ -120,16 +120,17 @@ getDriverRateCard ::
 getDriverRateCard (mbPersonId, _, merchantOperatingCityId) mbDistance mbServiceTierType = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast personId)))
+  person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
+  vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
+  let driverVehicleServiceTierTypes = (\(vehicleServiceTier, _) -> vehicleServiceTier.serviceTierType) <$> selectVehicleTierForDriverWithUsageRestriction False person driverInfo vehicle cityVehicleServiceTiers
   case mbServiceTierType of
     Just serviceTierType -> do
+      when (serviceTierType `notElem` driverVehicleServiceTierTypes) $ throwError $ InvalidRequest ("Service tier " <> show serviceTierType <> " not available for driver")
       rateCard <- getRateCardForServiceTier transporterConfig (OneWay OneWayOnDemandDynamicOffer) serviceTierType
       return [rateCard]
     Nothing -> do
-      person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
-      vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
-      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
-      let driverVehicleServiceTierTypes = (\(vehicleServiceTier, _) -> vehicleServiceTier.serviceTierType) <$> selectVehicleTierForDriverWithUsageRestriction person driverInfo vehicle cityVehicleServiceTiers
       rateCard <- mapM (getRateCardForServiceTier transporterConfig (OneWay OneWayOnDemandDynamicOffer)) driverVehicleServiceTierTypes
       return rateCard
   where
@@ -173,8 +174,8 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) mbDistance mbServiceT
               currency = INR, -- fix it later
               tollCharges = Nothing
             }
-      let totalFareAmount = fareSum fareParams
-      let perKmAmount :: Rational = totalFareAmount.getHighPrecMoney / fromIntegral (maybe 1 getMeters mbDistance)
+      let totalFareAmount = perRideKmFareParamsSum fareParams
+      let perKmAmount :: Rational = totalFareAmount.getHighPrecMoney / fromIntegral (maybe 1 (getKilometers . metersToKilometers) mbDistance)
       let perKmRate =
             PriceAPIEntity
               { amount = HighPrecMoney perKmAmount,
@@ -208,6 +209,8 @@ postDriverUpdateAirCondition (mbPersonId, _, merchanOperatingCityId) API.Types.U
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchanOperatingCityId
   checkAndUpdateAirConditioned False isAirConditioned personId cityVehicleServiceTiers
+  now <- getCurrentTime
+  QDI.updateLastACStatusCheckedAt (Just now) personId
   return Success
 
 getDriverVehicleServiceTiers ::
@@ -225,33 +228,37 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchanOperatingCityId) = do
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchanOperatingCityId
   let personLangauge = fromMaybe ENGLISH person.language
 
-  let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction person driverInfo vehicle cityVehicleServiceTiers
+  let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction False person driverInfo vehicle cityVehicleServiceTiers
+  let serviceTierACThresholds = map (\(VehicleServiceTier {..}, _) -> airConditioned) driverVehicleServiceTierTypes
+  let isACCheckEnabledForCity = any isJust serviceTierACThresholds
+  let isACAllowedForDriver = checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
+  let isACWorkingForVehicle = vehicle.airConditioned /= Just False
+  let isACWorking = isACAllowedForDriver && isACWorkingForVehicle
   let tierOptions =
         driverVehicleServiceTierTypes <&> \(VehicleServiceTier {..}, usageRestricted) -> do
+          let isNonACDefault = isACCheckEnabledForCity && not isACWorking && isNothing airConditioned
           API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier
-            { isSelected = serviceTierType `elem` vehicle.selectedServiceTiers,
-              isDefault = vehicle.variant `elem` defaultForVehicleVariant,
+            { isSelected = (serviceTierType `elem` vehicle.selectedServiceTiers) || isNonACDefault,
+              isDefault = (vehicle.variant `elem` defaultForVehicleVariant) || isNonACDefault,
               isUsageRestricted = Just usageRestricted,
+              priority = Just priority,
               ..
             }
 
-  mbAirConditioned <- do
-    let serviceTierACThresholds = map (\(VehicleServiceTier {..}, _) -> airConditioned) driverVehicleServiceTierTypes
-    if any isJust serviceTierACThresholds
+  mbAirConditioned <-
+    if isACCheckEnabledForCity
       then do
-        let isACAllowedForDriver = checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
-        let isACWorking = vehicle.airConditioned /= Just False
         restrictionMessageItem <-
           if not isACAllowedForDriver
             then MTQuery.findByErrorAndLanguage "AC_RESTRICTION_MESSAGE" personLangauge
             else
-              if isACWorking
+              if isACWorkingForVehicle
                 then MTQuery.findByErrorAndLanguage "AC_WORKING_MESSAGE" personLangauge
                 else return Nothing
         return $
           Just $
             API.Types.UI.DriverOnboardingV2.AirConditionedTier
-              { isWorking = isACAllowedForDriver && isACWorking,
+              { isWorking = isACWorking,
                 restrictionMessage = restrictionMessageItem <&> (.message),
                 usageRestrictionType = driverInfo.acUsageRestrictionType
               }
@@ -282,7 +289,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchanOperatingCityId) API.Types.U
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
 
-  let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction person driverInfo vehicle cityVehicleServiceTiers
+  let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction False person driverInfo vehicle cityVehicleServiceTiers
   mbSelectedServiceTiers <-
     driverVehicleServiceTierTypes `forM` \(driverServiceTier, _) -> do
       let isAlreadySelected = driverServiceTier.serviceTierType `elem` vehicle.selectedServiceTiers

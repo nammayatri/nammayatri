@@ -77,7 +77,7 @@ import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, vo
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField)
 import Helpers.Pooling(delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
-import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId)
+import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, dummyPrice)
 import Screens (getScreen)
 import Screens.AccountSetUpScreen.ScreenData as AccountSetUpScreenData
 import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
@@ -198,6 +198,7 @@ import Helpers.API as HelpersAPI
 import Helpers.Referral (applyReferralCode)
 import Helpers.SpecialZoneAndHotSpots
 import Components.ChooseVehicle.Controller as ChooseVehicle
+import Screens.HelpAndSupportScreen.Transformer (getUpdatedIssueList, getApiIssueList)
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -684,7 +685,7 @@ homeScreenFlow = do
         response <- lift $ lift $ Remote.selectEstimate (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates) (state.props.estimateId)
         case response of
           Right res -> do
-            updateLocalStage FindingQuotes
+            void $ pure $ setValueToLocalStore LOCAL_STAGE (show FindingQuotes)
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } })
             let tipViewData = if state.props.customerTip.isTipSelected then state.props.tipViewProps{ stage = TIP_ADDED_TO_SEARCH } else HomeScreenData.initData.props.tipViewProps
             logInfo "retry_finding_quotes" ( "selectedEstimate Current Stage: " <> (show state.props.currentStage) <> " LOCAL_STAGE: " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id :" <> state.props.estimateId )
@@ -856,7 +857,6 @@ homeScreenFlow = do
       homeScreenFlow
     GET_QUOTES state -> do
           setValueToLocalStore AUTO_SELECTING "false"
-          setValueToLocalStore LOCAL_STAGE (show FindingQuotes)
           setValueToLocalStore FINDING_QUOTES_POLLING "false"
           setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
           liftFlowBT $ logEvent logField_ "ny_user_request_quotes"
@@ -870,16 +870,18 @@ homeScreenFlow = do
           else do
             pure unit
           void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
-          let topProvider = filter (\quotes -> quotes.providerType == ONUS ) state.data.specialZoneQuoteList
+          let topProvider = filter (\quotes -> quotes.providerType == ONUS && quotes.serviceTierName /= Just "Book Any") state.data.specialZoneQuoteList
               mbSpecialZoneQuoteList = fromMaybe ChooseVehicle.config (head topProvider)
               valid = timeValidity (getCurrentUTC "") mbSpecialZoneQuoteList.validTill
           if valid then do
+            setValueToLocalStore LOCAL_STAGE $ show FindingQuotes
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = FindingQuotes}})
             void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates) (state.props.estimateId)
             logStatus "finding_quotes" ("estimateId : " <> state.props.estimateId)
             homeScreenFlow
-            else do
-              void $ pure $ toast (getString STR.ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN)
-              findEstimates state
+          else do
+            void $ pure $ toast $ getString STR.ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN
+            findEstimates state
 
     SELECT_ESTIMATE state -> do
         logStatus "setting_price" ""
@@ -891,7 +893,10 @@ homeScreenFlow = do
             destMarker = (Remote.normalRoute "").destMarker
         case state.props.routeEndPoints of
           Just points -> do
-            let sourceMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = srcMarker, primaryText = points.source.place, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = sourceSpecialTagIcon, position{ lat = points.source.lat, lng = points.source.lng } }
+            let sourceAddress = if state.props.isSpecialZone && not (DS.null state.props.defaultPickUpPoint)
+                                  then state.props.defaultPickUpPoint
+                                  else state.data.source
+                sourceMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = srcMarker, primaryText = sourceAddress, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = sourceSpecialTagIcon, position{ lat = points.source.lat, lng = points.source.lng } }
                 destMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = destMarker, primaryText = points.destination.place, labelImage = destSpecialTagIcon, position{ lat = points.destination.lat, lng = points.destination.lng } }
             lift $ lift $ liftFlow $ updateMarker sourceMarkerConfig
             lift $ lift $ liftFlow $ updateMarker destMarkerConfig
@@ -1306,7 +1311,9 @@ homeScreenFlow = do
           (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
           cityName = getCityNameFromCode sourceServiceabilityResp.city
           pickUpPoints = mapSpecialZoneGates srcSpecialLocation.gatesInfo
-          gateAddress = fromMaybe HomeScreenData.dummyLocation (head pickUpPoints)
+          gateAddress = if DS.null state.props.defaultPickUpPoint
+                          then HomeScreenData.dummyLocation
+                          else fromMaybe HomeScreenData.dummyLocation (Arr.find (\pickupPoint -> pickupPoint.place == state.props.defaultPickUpPoint) pickUpPoints)
       setValueToLocalStore CUSTOMER_LOCATION $ show cityName
       checkForSpecialZoneAndHotSpots state (ServiceabilityRes sourceServiceabilityResp) lat lon
       let cachedLat = (if state.props.isSource == Just true then state.props.locateOnMapLocation.sourceLat else state.props.locateOnMapLocation.destinationLat)
@@ -1329,7 +1336,7 @@ homeScreenFlow = do
             })
       (GlobalState globalState) <- getState
       let state = globalState.homeScreen
-      if isMoreThan20Meters || cachedLocation == "" then do
+      if isMoreThan20Meters || cachedLocation == "" || (state.props.isSource == Just true && isJust gateAddress.address) then do
         fullAddress <- getPlaceName lat lon gateAddress true
         case fullAddress of 
           Just (PlaceName placeDetails) -> do
@@ -1373,7 +1380,9 @@ homeScreenFlow = do
           (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
           pickUpPoints = mapSpecialZoneGates srcSpecialLocation.gatesInfo
           cityName = getCityNameFromCode sourceServiceabilityResp.city
-          geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
+          gateAddress = if DS.null state.props.defaultPickUpPoint
+                          then HomeScreenData.dummyLocation
+                          else fromMaybe HomeScreenData.dummyLocation (Arr.find (\pickupPoint -> pickupPoint.place == state.props.defaultPickUpPoint) pickUpPoints)
       setValueToLocalStore CUSTOMER_LOCATION $ show cityName
       checkForSpecialZoneAndHotSpots state (ServiceabilityRes sourceServiceabilityResp) lat lon
       let distanceBetweenLatLong = getDistanceBwCordinates lat lon state.props.locateOnMapLocation.sourceLat state.props.locateOnMapLocation.sourceLng
@@ -1387,8 +1396,7 @@ homeScreenFlow = do
             city = cityName
             }
           })
-      if isMoreThan20Meters then do
-        let gateAddress = fromMaybe HomeScreenData.dummyLocation (head pickUpPoints)
+      if isMoreThan20Meters || isJust gateAddress.address then do
         fullAddress <- getPlaceName lat lon gateAddress true
         case fullAddress of
           Just (PlaceName address) -> do
@@ -1698,9 +1706,10 @@ homeScreenFlow = do
       safetyEducationFlow
     REPEAT_SEARCH state -> do
       cancelEstimate state.props.estimateId
-      let topProvider = filter (\quotes -> quotes.providerType == ONUS ) state.data.specialZoneQuoteList
+      let topProvider = filter (\quotes -> quotes.providerType == ONUS && quotes.serviceTierName /= Just "Book Any") state.data.specialZoneQuoteList
           mbSpecialZoneQuoteList = fromMaybe ChooseVehicle.config (head topProvider)
           valid = timeValidity (getCurrentUTC "") mbSpecialZoneQuoteList.validTill
+
       if (valid) then do
         updateLocalStage SettingPrice
         modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{currentStage = SettingPrice}})
@@ -1709,13 +1718,10 @@ homeScreenFlow = do
           findEstimates state
       
     GOTO_CONFIRMING_LOCATION_STAGE finalState -> do
-      if os == "IOS" && finalState.props.currentStage == HomeScreen then 
-        pure unit 
-      else do
-        liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = finalState.props.sourceLat, lon = finalState.props.sourceLong, geoJson = finalState.data.polygonCoordinates, points = finalState.data.nearByPickUpPoints, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" finalState.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon finalState.props.confirmLocationCategory }}
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true, locateOnMapLocation{sourceLat = finalState.props.sourceLat, sourceLng = finalState.props.sourceLong, source = finalState.data.source, sourceAddress = finalState.data.sourceAddress }, locateOnMapProps{ cameraAnimatedToSource = false } }})
-        void $ pure $ updateLocalStage ConfirmingLocation
-        void $ lift $ lift $ toggleLoader false
+      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = finalState.props.sourceLat, lon = finalState.props.sourceLong, geoJson = finalState.data.polygonCoordinates, points = finalState.data.nearByPickUpPoints, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" finalState.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon finalState.props.confirmLocationCategory }}
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true, locateOnMapLocation{sourceLat = finalState.props.sourceLat, sourceLng = finalState.props.sourceLong, source = finalState.data.source, sourceAddress = finalState.data.sourceAddress }, locateOnMapProps{ cameraAnimatedToSource = false } }})
+      void $ pure $ updateLocalStage ConfirmingLocation
+      void $ lift $ lift $ toggleLoader false
       homeScreenFlow
     UPDATE_REFERRAL_CODE referralCode -> do
       referralAppliedStatus <- applyReferralCode referralCode
@@ -1728,6 +1734,26 @@ homeScreenFlow = do
         REFERRAL_INVALID -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props{ referralComponentProps{ isInvalidCode = true } } })
         _ -> pure unit
       homeScreenFlow
+    GO_TO_RIDE_RELATED_ISSUES state -> do
+      let rideId = state.data.driverInfoCardState.rideId
+          language = fetchLanguage $ getLanguageLocale languageKey 
+      void $ lift $ lift $ toggleLoader true
+      categoryId <- fetchParticularIssueCategory "RIDE_RELATED"
+      case categoryId of
+        Just categoryId -> do
+          (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language categoryId "" ""
+          let getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj { option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) getOptionsRes.options
+              messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500*(index + 1))) getOptionsRes.messages
+              chats' = map (\(Message currMessage) -> Chat {chatId : currMessage.id, 
+                                                            chatType : "IssueMessage", 
+                                                            timestamp : (getCurrentUTC "")} )getOptionsRes.messages
+          void $ lift $ lift $ toggleLoader false
+          modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data {entryPoint = ReportIssueChatScreenData.HomeScreenEntry, chats = chats', tripId = Just rideId, categoryName = "Ride Related Issue", categoryId = categoryId, options = getOptionsRes', chatConfig { messages = messages' },  selectedRide = Nothing } } )
+          flowRouter IssueReportChatScreenFlow
+        Nothing -> do
+          void $ lift $ lift $ toggleLoader false
+          void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+          homeScreenFlow
     _ -> homeScreenFlow
 
 findEstimates :: HomeScreenState -> FlowBT String Unit
@@ -1755,7 +1781,10 @@ findEstimates updatedState = do
   let currentTime = (convertUTCtoISC (getCurrentUTC "") "h:mm:ss A")
       currentDate =  getCurrentDate ""
       markers = Remote.normalRoute ""
-      srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker, primaryText = state.data.source, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = zoneLabelIcon state.props.zoneType.sourceTag}
+      sourceAddress = if state.props.isSpecialZone && not (DS.null state.props.defaultPickUpPoint)
+                        then state.props.defaultPickUpPoint
+                        else state.data.source
+      srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker, primaryText = sourceAddress, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = zoneLabelIcon state.props.zoneType.sourceTag}
       destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = state.data.destination, labelImage = zoneLabelIcon state.props.zoneType.destinationTag }
   void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show updatedState.props.sourceLat) <> " long: " <> (show updatedState.props.sourceLong))},
                                       {key : "Latest Search", value : (unsafeToForeign $ currentDate <> " " <> currentTime)}]
@@ -2073,8 +2102,15 @@ tripDetailsScreenFlow = do
       tripDetailsScreenFlow 
     GO_TO_ISSUE_CHAT_SCREEN updatedState selectedCategory -> do
       let language = fetchLanguage $ getLanguageLocale languageKey
+      currentIssueList <- if selectedCategory.categoryAction == "RIDE_RELATED" 
+                              then do
+                                (FetchIssueListResp issueListResponse) <- Remote.fetchIssueListBT language
+                                let issues = getApiIssueList issueListResponse.issues
+                                pure $ getUpdatedIssueList ["OPEN", "PENDING", "RESOLVED", "REOPENED"] issues 
+                              else pure []
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" ""
-      let options' = mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) getOptionsRes.options
+      let filteredOptions = UI.transformIssueOptions getOptionsRes.options (Just updatedState.data.selectedItem) currentIssueList
+          options' = mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) filteredOptions
           messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))getOptionsRes.messages
           chats' = map (\(Message currMessage) -> Chat {
                       chatId : currMessage.id,
@@ -2083,7 +2119,7 @@ tripDetailsScreenFlow = do
                     }) getOptionsRes.messages
           categoryName = getTitle selectedCategory.categoryAction
           merchantExoPhone' = if updatedState.data.selectedItem.merchantExoPhone == "" then Nothing else Just updatedState.data.selectedItem.merchantExoPhone
-      modifyScreenState $ ReportIssueChatScreenStateType (\ reportIssueChatState -> reportIssueChatState { data { merchantExoPhone = merchantExoPhone',  selectedRide = Just updatedState.data.selectedItem, entryPoint = ReportIssueChatScreenData.TripDetailsScreenEntry, chats = chats', categoryName = categoryName, categoryId = selectedCategory.categoryId, options = options', chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{messages = messages'} }})
+      modifyScreenState $ ReportIssueChatScreenStateType (\ reportIssueChatState -> reportIssueChatState { data { merchantExoPhone = merchantExoPhone',  selectedRide = Just updatedState.data.selectedItem, entryPoint = ReportIssueChatScreenData.TripDetailsScreenEntry, chats = chats', categoryName = categoryName, categoryId = selectedCategory.categoryId, options = options', chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{messages = messages'}, tripId = Just updatedState.data.selectedItem.rideId }})
       flowRouter IssueReportChatScreenFlow
 
 
@@ -2470,7 +2506,9 @@ addNewAddressScreenFlow input = do
           (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
           pickUpPoints =  mapSpecialZoneGates srcSpecialLocation.gatesInfo
           geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
-          gateAddress = (fromMaybe HomeScreenData.dummyLocation ((filter( \ (item) -> (item.place == state.props.defaultPickUpPoint)) pickUpPoints) !! 0))
+          gateAddress = if DS.null state.props.defaultPickUpPoint
+                          then HomeScreenData.dummyLocation
+                          else fromMaybe HomeScreenData.dummyLocation (Arr.find (\pickupPoint -> pickupPoint.place == state.props.defaultPickUpPoint) pickUpPoints)
       if not (DS.null geoJson) && not (null pickUpPoints) && (geoJson /= state.data.polygonCoordinates || pickUpPoints /= state.data.nearByPickUpPoints) then do
         modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> addNewAddressScreen{  data { polygonCoordinates = geoJson
                                                                                                              , nearByPickUpPoints = pickUpPoints
@@ -2907,7 +2945,7 @@ rideCompletedDetails (RideBookingRes resp) = do
       finalAmount =  getFinalAmount (RideBookingRes resp)
       timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
       nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
-      actualTollCharge = maybe 0 (\obj ->  obj^._amount) $ Arr.find (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.fareBreakup)
+      actualTollCharge = maybe dummyPrice (\obj ->  obj^._amountWithCurrency) $ Arr.find (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.fareBreakup)
 
   [ {key : "Estimate ride distance (km)", value : unsafeToForeign (fromMaybe 0 contents.estimatedDistance/1000)},
           {key : "Actual ride distance (km)", value : unsafeToForeign ((fromMaybe 0 ride.chargeableRideDistance)/1000)},
@@ -2917,8 +2955,8 @@ rideCompletedDetails (RideBookingRes resp) = do
           {key : "Difference between estimated and actual fares (₹)", value : unsafeToForeign (resp.estimatedFare - finalAmount)},
           {key : "Driver pickup charges (₹)", value : unsafeToForeign "10"},
           {key : "Night ride", value : unsafeToForeign nightChargesVal},
-          {key : "Actual Toll Charges", value : unsafeToForeign actualTollCharge},
-          {key : "Has Toll", value : unsafeToForeign (maybe false (\charge -> charge /= 0) (Just actualTollCharge))}]
+          {key : "Actual Toll Charges", value : unsafeToForeign actualTollCharge.amount},
+          {key : "Has Toll", value : unsafeToForeign (maybe false (\charge -> charge.amount /= 0.0) (Just actualTollCharge))}]
 
 personStatsData :: PersonStatsRes -> GetProfileRes -> Array ClevertapEventParams
 personStatsData (PersonStatsRes resp) (GetProfileRes response) = [{key : "First ride taken" , value : unsafeToForeign if response.hasTakenRide then "true" else "false"},
@@ -4029,7 +4067,8 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
                                                                         , props { city = getCityNameFromCode serviceabilityResp.city
                                                                                 , isSpecialZone =  not (DS.null geoJson) 
                                                                                 , confirmLocationCategory = zoneType
-                                                                                , hotSpot{ centroidPoint = Nothing } }})
+                                                                                , hotSpot{ centroidPoint = Nothing }
+                                                                                , locateOnMapProps{ sourceLocationName = Just locationName } }})
       void $ pure $ removeAllPolylines ""
       liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat
                                                               , lon = lon
@@ -4079,3 +4118,12 @@ firstRideCompletedEvent str = do
         else setValueToLocalStore CUSTOMER_FIRST_RIDE "false"
       Left (err) -> pure unit
   else pure unit
+
+fetchParticularIssueCategory :: String -> FlowBT String (Maybe String)
+fetchParticularIssueCategory categoryLabel = do
+  let language = fetchLanguage $ getLanguageLocale languageKey
+  (GetCategoriesRes response) <- Remote.getCategoriesBT language
+  let category = Arr.find (\(Category item) -> item.label == categoryLabel) response.categories
+  case category of
+    Just (Category item) -> pure $ Just item.issueCategoryId
+    Nothing -> pure Nothing

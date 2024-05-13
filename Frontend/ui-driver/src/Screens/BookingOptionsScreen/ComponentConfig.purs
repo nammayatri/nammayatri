@@ -38,7 +38,7 @@ topAcDriverPopUpConfig state = let
       optionButtonOrientation = "VERTICAL",
       primaryText {
         text = getString TOP_AC_DRIVER,
-        margin = Margin 18 8 18 16 
+        margin = Margin 18 24 18 24
     },
       secondaryText { visibility = GONE },
       option1 {
@@ -51,7 +51,7 @@ topAcDriverPopUpConfig state = let
       },
         option2 {
         text = getString MAYBE_LATER,
-        margin = MarginHorizontal 16 16,
+        margin = Margin 16 7 16 0,
         color = Color.black650,
         background = Color.white900,
         strokeColor = Color.white900,
@@ -64,7 +64,7 @@ topAcDriverPopUpConfig state = let
         visibility = VISIBLE,
         height = V 215,
         width = V 320,
-        margin = MarginTop 16,
+        margin = Margin 17 20 17 0,
         imageUrl = HU.fetchImage HU.FF_ASSET "ny_ac_explanation"
       }
     }

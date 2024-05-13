@@ -57,7 +57,9 @@ type IssueInfo = {
     status :: String,
     category :: String,
     createdAt :: String,
-    issueReportShortId :: Maybe String
+    issueReportShortId :: Maybe String,
+    optionLabel :: Maybe String,
+    rideId :: Maybe String
 }
 
 config :: IssueState
@@ -143,6 +145,6 @@ config = {
     , alpha : 0.9
     },
     headingText : "Updated",
-    issue :  { issueReportId: "", status: "",  category: "", createdAt: "", issueReportShortId: Nothing }
+    issue :  { issueReportId: "", status: "",  category: "", createdAt: "", issueReportShortId: Nothing, optionLabel : Nothing, rideId : Nothing }
 }
 

@@ -3,6 +3,7 @@ module Screens.BookingOptionsScreen.View where
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Ord (compare)
 import Debug (spy)
 import Effect (Effect)
 import Font.Size as FontSize
@@ -91,24 +92,29 @@ acCheckForDriversView push state =
     align = if airConditionedData.isWorking then RIGHT else LEFT
 
     messageColor = if airConditionedData.isWorking then Color.black600 else Color.red900
+
+    callSupportVisibility = not airConditionedData.isWorking && airConditionedData.usageRestrictionType == API.ToggleNotAllowed
   in
     linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , margin (Margin 16 0 16 16)
-      , padding $ Padding 16 16 16 16
+      , padding $ Padding 16 0 16 0
       , visibility acCheckVisibility
       , stroke $ "1," <> Color.grey900
       , cornerRadius 8.0
+      , gravity CENTER_VERTICAL
       , orientation VERTICAL
       ]
       [ linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
+          , gravity CENTER_VERTICAL
           ]
           [ linearLayout
             [ weight 1.0
             , height WRAP_CONTENT
+            , onClick push $ const $ ShowACVideoPopup
             , gravity CENTER_VERTICAL
             ][  textView
                 [ width WRAP_CONTENT
@@ -116,25 +122,29 @@ acCheckForDriversView push state =
                 , color Color.black800
                 , text $ getString AC_CHECK_TITILE
                 , margin $ MarginRight 7
-                , onClick push $ const $ ShowACVideoPopup
                 ]
               , imageView
-                [ width $ V 25
-                , height $ V 25
+                [ width $ V 32
+                , height $ V 32
                 , imageWithFallback $ fetchImage FF_ASSET "ny_ic_youtube"
                 , rippleColor Color.rippleShade
-                , onClick push $ const $ ShowACVideoPopup
-                , padding $ PaddingRight 5
+                , padding $ Padding 0 5 5 5
                 ]
             ]
-          , linearLayout
+          , linearLayout 
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , padding $ PaddingVertical 16 16
+            , onClick push $ const $ UpdateACAvailability airConditionedData.isWorking
+           ][
+            linearLayout
               [ width $ V 40
               , height $ V 22
               , cornerRadius 100.0
               , background backgroundColor
               , stroke $ "1," <> backgroundColor
-              , gravity CENTER_VERTICAL
               , onClick push $ const $ UpdateACAvailability airConditionedData.isWorking
+              , gravity CENTER_VERTICAL
               ]
               [ linearLayout
                   [ width MATCH_PARENT
@@ -152,13 +162,14 @@ acCheckForDriversView push state =
                       []
                   ]
               ]
+            ]
           ]
       , textView
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , visibility $ MP.boolToVisibility $ MB.isJust airConditionedData.restrictionMessage
           , color messageColor
-          , margin $ MarginTop 8
+          , padding $ if callSupportVisibility then Padding 0 0 0 0 else PaddingBottom 12
           , text $ fromMaybe "" airConditionedData.restrictionMessage
           ]
       , linearLayout
@@ -166,10 +177,10 @@ acCheckForDriversView push state =
           , height WRAP_CONTENT
           , orientation HORIZONTAL
           , cornerRadius 4.0
-          , padding $ PaddingTop 6
+          , padding $ PaddingHorizontal 6 12
           , gravity CENTER_VERTICAL
           , onClick push $ const $ CallSupport
-          , visibility $ MP.boolToVisibility $ not airConditionedData.isWorking && airConditionedData.usageRestrictionType == API.ToggleNotAllowed
+          , visibility $ MP.boolToVisibility callSupportVisibility
           ]
           [ imageView
               [ width $ V 18
@@ -196,6 +207,10 @@ acCheckForDriversView push state =
 
 downgradeVehicleView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 downgradeVehicleView push state =
+  let
+    compareRidePreferences a b = compare a.priority b.priority
+    defaultRidePreferences = DA.sortBy compareRidePreferences state.data.ridePreferences
+  in
     linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -238,21 +253,21 @@ downgradeVehicleView push state =
               , height WRAP_CONTENT
               , orientation VERTICAL
               ]
-              ( [ serviceTierItem push state.data.defaultRidePreference state.props.downgraded false
-                ]
-                  <> ( map
-                        ( \item ->
-                            linearLayout
-                              [ height WRAP_CONTENT
-                              , width MATCH_PARENT
-                              ]
-                              [ serviceTierItem push item state.props.downgraded false ]
-                        )
-                        (DA.filter (\pref -> not pref.isDefault) state.data.ridePreferences)
-                    )
-              )
+              ( ridePreferencesView push state defaultRidePreferences)
           ]
       ]
+
+ridePreferencesView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> Array ST.RidePreference -> Array ( PrestoDOM (Effect Unit) w )
+ridePreferencesView push state ridePreferences =
+  map
+    ( \item ->
+        linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          ]
+          [ serviceTierItem push item state.props.downgraded false ]
+    ) ridePreferences
+  
 
 serviceTierItem :: forall w. (Action -> Effect Unit) -> ST.RidePreference -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
 serviceTierItem push service enabled opacity =
@@ -264,7 +279,7 @@ serviceTierItem push service enabled opacity =
     [ linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , padding (Padding 12 12 12 12)
+        , padding (Padding 12 4 12 4)
         , margin $ MarginVertical 5 5
         , orientation HORIZONTAL
         , stroke $ "1," <> Color.grey900
@@ -287,6 +302,8 @@ serviceTierItem push service enabled opacity =
         , linearLayout
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
+            , padding $ PaddingVertical 12 12
+            , onClick push $ const $ ToggleRidePreference service
             , gravity RIGHT
             ]
             [ toggleView push service.isSelected service.isDefault service ]
@@ -321,8 +338,8 @@ toggleView push enabled default service =
       , alpha if default then 0.5 else 1.0
       , background backgroundColor
       , stroke $ "1," <> backgroundColor
-      , gravity CENTER_VERTICAL
       , onClick push $ const $ ToggleRidePreference service
+      , gravity CENTER_VERTICAL
       , clickable $ not $ default
       ]
       [ linearLayout

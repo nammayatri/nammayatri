@@ -80,12 +80,13 @@ view config =
                 , margin $ MarginLeft 3
                 , imageWithFallback $ fetchImage FF_ASSET "ny_ic_user_filled_dark"
                 ]
-            , textView
+            , textView $
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
+                , padding $ PaddingBottom 1
                 , color Color.black700
                 , text $ show capacity
-                ]
+                ] <> FontStyle.tags TypoGraphy
             ]
         Nothing -> linearLayout [] []
     ]

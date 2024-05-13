@@ -647,7 +647,7 @@ getFR stringKey =
         WAITING_AT_PICKUP -> " en attente au ramassage "
         PICKUP -> "ramasser"
         PAY_BY_CASH_OR_UPI -> "Payer en espèces / UPI "
-        YOU_WILL_PAY_FOR_EVERY_MINUTE -> "Les frais d'attente sont nuls pendant les 3 premières minutes. Vous serez payé pour 1.5 ₹ par minute de temps d'attente après cela."
+        YOU_WILL_PAY_FOR_EVERY_MINUTE freeMinutes chargePerMin -> "Les frais d'attente sont nuls pendant les 3 premières minutes. Vous serez payé pour 1.5 ₹ par minute de temps d'attente après cela."
         HOW_LONG_DRIVER_WAITED_FOR_PICKUP ->"Vous indique combien de temps le chauffeur a attendu lors de la prise en charge."
         CHAT_WITH -> "Parler avec"
         QUICK -> "rapide"
@@ -1120,7 +1120,7 @@ getFR stringKey =
         HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "Votre chauffeur a-t-il réglé la climatisation selon vos préférences?"
         NO_REPORT_AN_ISSUE -> "Non, signaler un problème"
         GREAT_ENJOY_THE_TRIP -> "Super, profitez du trajet !"
-        ENJOY_YOUR_BUDGET_FRIENDLY_NON_AC_RIDE -> "Profitez de votre trajet économique sans climatisation"
+        ENJOY_YOUR_BUDGET_FRIENDLY_NON_AC_RIDE -> "Profitez de votre trajet\néconomique sans climatisation"
         AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "La climatisation n'est pas disponible pour ce trajet"
         AC_NOT_WORKING_DESC -> "Annulation car je veux un trajet avec climatisation"
         WAITING_CHARGE_LIMIT timeLimit -> "Frais d'attente après " <> timeLimit        

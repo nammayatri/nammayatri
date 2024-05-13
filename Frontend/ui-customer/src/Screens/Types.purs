@@ -368,7 +368,9 @@ type IssueInfo = {
     status :: String,
     category :: String,
     createdAt :: String,
-    issueReportShortId :: Maybe String
+    issueReportShortId :: Maybe String,
+    optionLabel :: Maybe String,
+    rideId :: Maybe String
 }
 
 -- ################################################ MyRidesScreenState ##################################################
@@ -625,6 +627,7 @@ type HomeScreenStateData =
   , iopState :: InteroperabilityState
   , currentCityConfig :: MRC.CityConfig
   , otherSelectedEstimates :: Array String
+  , rateCardCache :: Maybe RateCard
   }
 
 type InteroperabilityState = {

@@ -19,14 +19,17 @@ import Kernel.Storage.Esqueleto as Esq
 import Lib.Tabular.SpecialLocationPriority
 import qualified Lib.Types.SpecialLocationPriority as SpecialLocationPriorityD
 
-findByMerchantIdAndCategory ::
+findAllByMerchantIdAndCategory ::
   Transactionable m =>
   Text ->
   Text ->
   m (Maybe SpecialLocationPriorityD.SpecialLocationPriority)
-findByMerchantIdAndCategory merchantId category =
-  Esq.findOne $ do
-    specialLocationPriority <- from $ table @SpecialLocationPriorityT
-    where_ $ specialLocationPriority ^. SpecialLocationPriorityMerchantId ==. val merchantId
-    where_ $ specialLocationPriority ^. SpecialLocationPriorityCategory ==. val category
-    return specialLocationPriority
+findAllByMerchantIdAndCategory merchantId category = do
+  specialLocationPriorityRes <-
+    Esq.findAll $ do
+      specialLocationPriority <- from $ table @SpecialLocationPriorityT
+      where_ $
+        specialLocationPriority ^. SpecialLocationPriorityMerchantId ==. val merchantId
+          &&. specialLocationPriority ^. SpecialLocationPriorityCategory ==. val category
+      return specialLocationPriority
+  return $ listToMaybe specialLocationPriorityRes

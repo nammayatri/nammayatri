@@ -267,14 +267,16 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
     case identifierType of
       SP.MOBILENUMBER -> do
         case (req.mobileNumber, req.mobileCountryCode) of
-          (Just mn, Just _) -> do
-            let useFakeOtp = if mn `elem` transporterConfig.fakeOtpMobileNumbers then Just "7891" else Nothing
-            encMobNum <- encrypt mn
+          (Just mobileNumber, Just _) -> do
+            let useFakeOtp = if mobileNumber `elem` transporterConfig.fakeOtpMobileNumbers then Just "7891" else Nothing
+            encMobNum <- encrypt mobileNumber
             return (Nothing, Just encMobNum, useFakeOtp)
           (_, _) -> throwError $ InvalidRequest "phone number and country code required"
       SP.EMAIL -> do
         case req.email of
-          Just email -> pure (Just email, Nothing, Nothing)
+          Just email -> do
+            let useFakeOtp = if email `elem` transporterConfig.fakeOtpEmails then Just "7891" else Nothing
+            pure (Just email, Nothing, useFakeOtp)
           Nothing -> throwError $ InvalidRequest "Email is required"
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
   return $

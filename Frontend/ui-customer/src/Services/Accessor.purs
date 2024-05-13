@@ -56,8 +56,11 @@ _contents = lens (unwrap >>> _.contents) (\oldRec newVal -> wrap ((unwrap oldRec
 _toLocation :: forall a b c. Newtype a {toLocation :: c | b} => Lens' a c
 _toLocation = lens (unwrap >>> _.toLocation) (\oldRec newVal -> wrap ((unwrap oldRec) {toLocation = newVal}))
 
-_amount :: forall a b c. Newtype a {amount :: c | b} => Lens' a c
+_amount :: forall a b c. Newtype a {amount :: c | b} => Lens' a c -- Deprecated
 _amount = lens (unwrap >>> _.amount) (\oldRec newVal -> wrap ((unwrap oldRec) {amount = newVal}))
+
+_amountWithCurrency :: forall a b c. Newtype a {amountWithCurrency :: c | b} => Lens' a c
+_amountWithCurrency = lens (unwrap >>> _.amountWithCurrency) (\oldRec newVal -> wrap ((unwrap oldRec) {amountWithCurrency = newVal}))
 
 _driverRatings :: forall a b c. Newtype a {driverRatings :: c | b} => Lens' a c
 _driverRatings = lens (unwrap >>> _.driverRatings) (\oldRec newVal -> wrap ((unwrap oldRec) {driverRatings = newVal}))

@@ -44,6 +44,7 @@ type Config
     , fareEstimateText :: String
     , tipSelectedText :: String
     , showTipInfo :: Boolean
+    , searchExpired :: Boolean
     }
 
 config :: Config
@@ -54,6 +55,7 @@ config =
   , isVisible : true
   , enableTips : true
   , tipLayoutMargin : (Margin 0 0 0 0)
+  , searchExpired : false
   , fareEstimate : ""
   , tipSelected : ""
   , fareEstimateText : ""

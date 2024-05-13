@@ -61,6 +61,7 @@ Merchant:
     publicMediaFileUrlPattern: Text
     scheduleRideBufferTime: NominalDiffTime
     fakeOtpMobileNumbers: "[Text]"
+    fakeOtpEmails: "[Text]"
     kaptureDisposition: Text
     arrivedPickupThreshold: Distance
     driverOnTheWayNotifyExpiry: Seconds
@@ -148,6 +149,7 @@ Merchant:
     mediaFileUrlPattern: text
     mediaFileSizeUpperLimit: int
     fakeOtpMobileNumbers: text[]
+    fakeOtpEmails: text[]
     driverOfferBaseUrl: text
     driverOfferApiKey: varchar(128)
     driverOfferMerchantId: varchar(255)
@@ -181,6 +183,7 @@ Merchant:
     country: "'India'"
     cipherText: "'TXlTZWNyZXRLZXkxMjM0NQo='"
     geoHashPrecisionValue: "9"
+    fakeOtpEmails: "'{}'"
     city: "'Kochi'"
 
 

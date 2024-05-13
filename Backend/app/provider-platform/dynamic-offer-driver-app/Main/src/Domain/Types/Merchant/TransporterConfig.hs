@@ -183,6 +183,7 @@ data TransporterConfigD u = TransporterConfig
     dummyToLocation :: DummyLocationInfo,
     scheduleRideBufferTime :: NominalDiffTime,
     fakeOtpMobileNumbers :: [Text],
+    fakeOtpEmails :: [Text],
     variantsToEnableForSubscription :: [Vehicle.Variant],
     considerDriversForSearch :: Bool,
     dlNumberVerification :: Maybe Bool,

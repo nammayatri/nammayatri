@@ -800,7 +800,7 @@ type IndividualRideCardState =
     spLocTagVisibility :: Boolean,
     specialZonePickup :: Boolean,
     tripType :: TripType,
-    tollCharge :: Int,
+    tollCharge :: Number,
     rideType :: String,
     tripStartTime :: Maybe String,
     tripEndTime :: Maybe String,
@@ -1030,8 +1030,8 @@ type EndRideData = {
     disability :: Maybe String,
     payerVpa :: String,
     specialZonePickup :: Maybe Boolean,
-    actualTollCharge :: Int,
-    estimatedTollCharge :: Int,
+    actualTollCharge :: Number,
+    estimatedTollCharge :: Number,
     capacity :: Maybe Int,
     serviceTier :: String
   }
@@ -1148,7 +1148,7 @@ type ActiveRide = {
   serviceTier :: String,
   capacity :: Maybe Int,
   hasToll :: Boolean,
-  estimatedTollCharge :: Maybe Int,
+  estimatedTollCharge :: Maybe Number,
   acRide :: Maybe Boolean
 }
 
@@ -1221,7 +1221,7 @@ type HomeScreenProps =  {
   odometerFileId :: Maybe String,
   odometerUploadAttempts :: Int,
   odometerImageUploading :: Boolean,
-  showAcWorkingPopup :: Boolean,
+  showAcWorkingPopup :: Maybe Boolean,
   acExplanationPopup :: Boolean
  }
 
@@ -1350,7 +1350,7 @@ type TripDetailsScreenData =
     config :: AppConfig,
     goBackTo :: GoBackToScreen,
     specialZonePickup :: Boolean,
-    tollCharge :: Int,
+    tollCharge :: Number,
     rideType :: String,
     tripStartTime :: Maybe String,
     tripEndTime :: Maybe String,
@@ -1455,12 +1455,13 @@ type ReportIssueChatScreenProps = {
 }
 
 type IssueInfo = {
-
     issueReportId :: String,
     status :: String,
     category :: String,
     createdAt :: String,
-    issueReportShortId :: Maybe String
+    issueReportShortId :: Maybe String,
+    optionLabel :: Maybe String,
+    rideId :: Maybe String
 }
 
 data IssueModalType = HELP_AND_SUPPORT_SCREEN_MODAL | ONGOING_ISSUES_MODAL | RESOLVED_ISSUES_MODAL | BACKPRESSED_MODAL
@@ -1879,7 +1880,8 @@ type RidePreference = {
   serviceTierType :: API.ServiceTierType,
   shortDescription :: Maybe String,
   vehicleRating :: Maybe Number,
-  isUsageRestricted :: Boolean
+  isUsageRestricted :: Boolean,
+  priority :: Int
 }
 
 type BookingOptionsScreenProps = {

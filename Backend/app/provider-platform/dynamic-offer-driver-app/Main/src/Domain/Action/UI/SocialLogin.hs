@@ -71,7 +71,7 @@ postSocialLogin req = do
   result <- L.runIO $ fetchTokenInfo iosValidateEnpoint req.oauthProvider req.tokenId
   case result of
     Right info -> do
-      oldPerson <- PQ.findByEmail (Just info.email)
+      oldPerson <- PQ.findByEmailAndMerchant req.merchantId info.email
       moc <- CQMOC.findByMerchantIdAndCity req.merchantId req.merchantOperatingCity >>= fromMaybeM (MerchantOperatingCityNotFound $ show req.merchantOperatingCity)
       person <-
         case oldPerson of
@@ -154,5 +154,5 @@ postSocialUpdateProfile (mbPersonId, _, _) req = do
                 SP.firstName = fromMaybe person.firstName req.firstName,
                 SP.lastName = req.lastName <|> person.lastName
               }
-      PQ.updateMobileNumberAndCode updPerson
+      PQ.updatePersonDetails updPerson
       pure Kernel.Types.APISuccess.Success
