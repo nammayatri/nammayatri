@@ -616,6 +616,7 @@ logOutPopUpModelConfig state =
             , visibility = boolToVisibility $ isTipEnabled
             }
           , tipLayoutMargin = (Margin 22 2 22 22)
+          , searchExpired = true
           , buttonLayoutMargin = (MarginHorizontal 16 16)
           , activeIndex = state.props.customerTip.tipActiveIndex
           , isVisible = state.props.tipViewProps.isVisible

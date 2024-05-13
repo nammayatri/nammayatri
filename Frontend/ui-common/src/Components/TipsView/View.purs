@@ -124,7 +124,7 @@ androidTipsView push state =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , margin $ MarginTop 16
-      , justifyContent JUSTIFY_CENTER
+      , justifyContent JUSTIFY_EVENLY
       , flexDirection ROW
       , flexWrap WRAP
       , alignItems ALIGN_BASELINE
@@ -134,8 +134,8 @@ androidTipsView push state =
           ( \index item ->
               linearLayout
                 ([ height WRAP_CONTENT
-                , width $ V ((screenWidth unit / 4) - 30)
-                
+                , width WRAP_CONTENT
+                , visibility $ boolToVisibility $ (index == 0 && state.searchExpired) || index /= 0
                 , cornerRadius 8.0
                 , stroke $ "1," <> (if (state.activeIndex == index) then Color.blue800 else Color.grey900)
                 , accessibility ENABLE
@@ -149,6 +149,7 @@ androidTipsView push state =
                 [ textView
                     $ [ text $ item
                       , color $ Color.black800
+                      , singleLine true
                       , gravity CENTER
                       ]
                     <> FontStyle.body6 LanguageStyle
@@ -167,6 +168,7 @@ iOSTipsView push state =
       , width MATCH_PARENT
       , margin $ MarginTop 16
       , orientation VERTICAL
+      , background Color.grey800
       , visibility $ boolToVisibility $ state.enableTips && state.isVisible
       ]
       ( mapWithIndex
@@ -186,8 +188,9 @@ iOSTipsView push state =
                         in
                           linearLayout
                             [ height WRAP_CONTENT
-                            , width $ V ((screenWidth unit / 4) - 30)
+                            , width WRAP_CONTENT
                             , margin $ tipsMargin itemIndex listIndex listItem
+                            , visibility $ boolToVisibility $ (index == 0 && state.searchExpired) || index /= 0
                             , cornerRadius 8.0
                             , stroke $ "1," <> (if (state.activeIndex == index) then Color.blue800 else Color.grey900)
                             , accessibility ENABLE
@@ -201,6 +204,7 @@ iOSTipsView push state =
                             [ textView
                                 $ [ text $ item
                                   , color $ Color.black800
+                                  , singleLine true
                                   , gravity CENTER
                                   ]
                                 <> FontStyle.body6 LanguageStyle
@@ -213,4 +217,4 @@ iOSTipsView push state =
       )
   where
   tipsMargin :: Int -> Int -> Array String -> Margin
-  tipsMargin index listIndex listItem = Margin 0 (if listIndex > 0 then 8 else 0) (if (index + 1) == (length listItem) then 0 else 8) 0
+  tipsMargin index listIndex listItem = Margin 0 (if listIndex > 0 then 12 else 0) (if (index + 1) == (length listItem) then 0 else 12) 0
