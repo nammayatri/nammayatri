@@ -283,7 +283,8 @@ type RegistrationScreenData = {
   enteredRC :: String,
   vehicleCategory :: Maybe VehicleCategory,
   vehicleTypeMismatch :: Boolean,
-  linkedRc :: Maybe String
+  linkedRc :: Maybe String,
+  accessToken :: String
 }
 
 type DocumentStatus = {

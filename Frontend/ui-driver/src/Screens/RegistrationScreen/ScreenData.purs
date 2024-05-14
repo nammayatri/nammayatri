@@ -56,7 +56,8 @@ initData = {
         enteredDL : "",
         enteredRC : "",
         vehicleCategory : Nothing,
-        linkedRc : Nothing
+        linkedRc : Nothing,
+        accessToken : ""
       },
       props: {
         limitReachedFor : Nothing,

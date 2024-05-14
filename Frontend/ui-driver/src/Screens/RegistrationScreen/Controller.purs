@@ -47,6 +47,7 @@ import Data.Array as DA
 import Screens.RegistrationScreen.ScreenData as SD
 import Components.OptionsMenu as OptionsMenu
 import Components.BottomDrawerList as BottomDrawerList
+import Effect.Uncurried (runEffectFn6)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -122,6 +123,7 @@ data Action = BackPressed
             | ExpandOptionalDocs
             | OptionsMenuAction OptionsMenu.Action
             | BottomDrawerListAC BottomDrawerList.Action
+            | CallHV String String
             
 derive instance genericAction :: Generic Action _
 instance eqAction :: Eq Action where
@@ -149,14 +151,20 @@ eval (RegistrationAction step ) state = do
           VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state step.rcNumberPrefixList
           GRANT_PERMISSION -> exit $ GoToPermissionScreen state
           SUBSCRIPTION_PLAN -> exit GoToOnboardSubscription
-          PROFILE_PHOTO -> exit $ DocCapture state item -- Launch hyperverge
-          AADHAAR_CARD -> exit $ DocCapture state item -- Launch hyperverge
-          PAN_CARD  -> exit $ DocCapture state item -- Launch hyperverge
+          PROFILE_PHOTO -> continueWithCmd state [ pure $ CallHV "ny-selfie-flow" ""]
+          AADHAAR_CARD -> continueWithCmd state [ pure $ CallHV "ny-aadhaar-flow" ""]
+          PAN_CARD  -> continueWithCmd state [ pure $ CallHV "ny-pan-flow" ""]
           VEHICLE_PERMIT  -> exit $ DocCapture state item
           FITNESS_CERTIFICATE  -> exit $ DocCapture state item
           VEHICLE_INSURANCE -> exit $ DocCapture state item
           VEHICLE_PUC -> exit $ DocCapture state item
           _ -> continue state
+
+eval (CallHV workFLowId inputJson) state = 
+  continueWithCmd state [do
+    void $ runEffectFn6 JB.initHVSdk state.data.accessToken workFLowId "857694385765439" true "en" "{\"key1\":\"value1\",\"key2\":\"value2\",\"key3\":\"value3\"}"
+    pure NoAction
+  ]
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
 
