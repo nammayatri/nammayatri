@@ -154,7 +154,7 @@ eval (Scroll value) state = do
   _ <- if canScrollUp then (pure $ setEnabled "2000031" false) else  (pure $ setEnabled "2000031" true)
   continue state { props{loaderButtonVisibility = loadMoreButton}}
 
-eval (IndividualRideCardActionController (IndividualRideCardController.OnClick index)) state = do
+eval (IndividualRideCardActionController (IndividualRideCardController.OnClick index)) state = do 
   let selectedCard = state.itemsRides !! index
   case selectedCard of
     Just selectedRide -> do
