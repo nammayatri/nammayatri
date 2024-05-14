@@ -106,7 +106,7 @@ config =
     , chatMargin : Margin 0 0 0 0
   }
 
-makeChatComponent' :: String -> String -> String -> String -> Int -> ChatComponentConfig
+makeChatComponent' :: String -> String -> String -> String -> Int -> ChatComponentConfig 
 makeChatComponent' message sender timeStamp type' delay =  {
   "message" : message 
 , "sentBy" : sender

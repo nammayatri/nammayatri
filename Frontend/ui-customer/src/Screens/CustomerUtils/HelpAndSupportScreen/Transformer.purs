@@ -25,17 +25,17 @@ import Data.Array ((!!), null, filter, elem)
 import Language.Types (STR(..))
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Helpers.Utils (toStringJSON, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (toStringJSON, fetchImage, FetchImageFrom(..), withinTimeRange)
 import JBridge (showDialer, hideKeyboardOnNavigation,toast, differenceBetweenTwoUTC)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
-import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getKmMeter, fetchVehicleVariant)
+import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getKmMeter, fetchVehicleVariant, getFareFromArray)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Screens.Types ( DeleteStatus(..), IssueInfo, IssueModalType(..))
-import Services.API (IssueReportCustomerListItem(..), RideBookingRes(..), FareBreakupAPIEntity(..), RideAPIEntity(..), BookingLocationAPIEntity(..), RideBookingAPIDetails(..), RideBookingListRes(..))
+import Services.API (IssueReportCustomerListItem(..), RideBookingRes(..), FareBreakupAPIEntity(..), RideAPIEntity(..), BookingLocationAPIEntity(..), RideBookingAPIDetails(..), RideBookingListRes(..), RideBookingDetails(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Data.String 
 import Storage (getValueToLocalStore, KeyStore(..))
@@ -47,16 +47,60 @@ import Components.IssueList as IssueList
 import Data.Function.Uncurried (runFn2)
 import Locale.Utils
 import Screens.HelpAndSupportScreen.ScreenData (HelpAndSupportScreenState)
+import Engineering.Helpers.BackTrack (getState)
+import Types.App (GlobalState(..))
+import Services.Backend as Remote
+import Data.Int as INT
+import Data.Number (fromString)
+import Foreign (unsafeToForeign)
 
-reportIssueMessageTransformer :: String -> String 
-reportIssueMessageTransformer message = 
+reportIssueMessageTransformer :: String -> String
+reportIssueMessageTransformer message =  
   let config = getAppConfig appConfig
       keyValuePairs = [ { key: Pattern "{#SUPPORT_EMAIL#}", value: Replacement config.appData.supportMail }
                       , { key: Pattern "{#MERCHANT#}", value: Replacement config.appData.name }
                       , { key: Pattern "\\n", value : Replacement "<br>"} ]
   in foldl (\acc { key, value } -> replaceAll key value acc) message keyValuePairs
 
-
+rideInfoTransformer :: RideBookingRes -> String -> String
+rideInfoTransformer (RideBookingRes resp) message =
+  let config = getAppConfig appConfig
+      
+      (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+      (RideBookingDetails contents) = bookingDetails.contents
+      (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
+      differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 ride.chargeableRideDistance)
+      timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
+      nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
+      estimatedDistance = fromMaybe 0 contents.estimatedDistance/1000
+      finalDistance = fromMaybe 0 ride.chargeableRideDistance/1000
+      distanceDifference = differenceOfDistance/1000
+      estimatedFare = resp.estimatedFare
+      finalFare = INT.round $ fromMaybe 0.0 $ fromString (show (fromMaybe 0 ride.computedPrice))
+      fareDifference = resp.estimatedFare - finalFare
+      fareBreakup = resp.fareBreakup
+      tollCharges = getFareFromArray fareBreakup "TOLL_CHARGES"
+      driverPickupCharges = getFareFromArray fareBreakup "DEAD_KILOMETER_FARE"
+      tipAdded = getFareFromArray fareBreakup "CUSTOMER_SELECTED_FARE"
+      driverAdditions = getFareFromArray fareBreakup "DRIVER_SELECTED_FARE"
+      currency = getCurrency appConfig
+    
+      keyValuePairs = [ { key: Pattern "{#ESTIMATED_DISTANCE#}", value: Replacement (show estimatedDistance)}
+                      , { key: Pattern "{#FINAL_DISTANCE#}", value: Replacement (show finalDistance)}
+                      , { key: Pattern "{#DISTANCE_DIFFERENCE#}", value: Replacement (show distanceDifference)}
+                      , { key: Pattern "{#ESTIMATED_FARE#}", value: Replacement (currency <> (show estimatedFare))}
+                      , { key: Pattern "{#FINAL_FARE#}", value: Replacement (currency <> (show finalFare))}
+                      , { key: Pattern "{#FARE_DIFFERENCE#}", value: Replacement (currency <> (show fareDifference))}
+                      , { key: Pattern "{#FARE_CORRELATION#}", value: Replacement (if finalFare == estimatedFare then "remained same" else if finalFare > estimatedFare then ("was increased by ₹" <> show fareDifference) else ("was decreased by ₹" <> show fareDifference))}
+                      , { key: Pattern "{#DISTANCE_CORRELATION#}", value: Replacement (if finalDistance == estimatedDistance then "no change" else if finalDistance > estimatedDistance then ("a " <> show distanceDifference <> " km increase") else ("a " <> show distanceDifference <> " km decrease"))}
+                      , { key: Pattern "{#FARE_ARROW#}", value: Replacement (if finalFare == estimatedFare then "" else if finalFare > estimatedFare then " ↑" else " ↓")}
+                      , { key: Pattern "{#DISTANCE_ARROW#}", value: Replacement (if finalDistance == estimatedDistance then "" else if finalDistance > estimatedDistance then " ↑" else " ↓")} 
+                      , { key: Pattern "{#DRIVER_PICKUP_CHARGES#}", value: Replacement (currency <> (show driverPickupCharges))}
+                      , { key: Pattern "{#TOLL_CHARGES#}", value: Replacement (currency <> (show tollCharges))}
+                      , { key: Pattern "{#TIP_ADDED#}", value: Replacement (currency <> (show tipAdded))}
+                      , { key: Pattern "{#DRIVER_ADDITIONS#}", value: Replacement (currency <> (show driverAdditions))}
+                      ]
+  in foldl (\acc { key, value } -> replaceAll key value acc) message keyValuePairs
 
 myRideListTransform :: HelpAndSupportScreenState -> Array RideBookingRes -> Array HelpAndSupportScreenState
 myRideListTransform state listRes = filter (\item -> (item.data.status == "COMPLETED")) (map(\(RideBookingRes ride) ->

@@ -84,7 +84,6 @@ loaderOutputHandler state = do
 selectRideHandler :: RideSelectionScreenState -> FlowBT String FlowState
 selectRideHandler state = do
   modifyScreenState $ RideSelectionScreenStateType (\_ -> state )
-
   let language = fetchLanguage $ getLanguageLocale languageKey
   (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language state.selectedCategory.categoryId "" ""
   (GlobalState globalState) <- getState
