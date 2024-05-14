@@ -1310,6 +1310,14 @@ metroBookingHardCancelStatus bookingId = do
     where
     unwrapResponse x = x
 
+getMetroBookingConfigBT :: String -> FlowBT String MetroBookingConfigRes
+getMetroBookingConfigBT city = do
+    headers <- getHeaders' "" true
+    withAPIResultBT (EP.getMetroBookingConfig city) identity errorHandler (lift $ lift $ callAPI headers (MetroBookingConfigReq city))
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack
+
 ------------------------------------------------------------------------- Push SDK Events -----------------------------------------------------------------------------
 pushSDKEvents :: Flow GlobalState (Either ErrorResponse SDKEventsResp)
 pushSDKEvents = do

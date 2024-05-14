@@ -43,7 +43,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import RemoteConfig as RC
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..))
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes)
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
@@ -2347,6 +2347,7 @@ type MetroTicketBookingScreenData = {
   , bookingId :: String
   , quoteId :: String
   , quoteResp :: Array MetroQuote
+  , metroBookingConfigResp :: MetroBookingConfigRes
 }
 
 type MetroTicketBookingScreenProps = {
@@ -2355,6 +2356,7 @@ type MetroTicketBookingScreenProps = {
 , currentStage :: MetroTicketBookingStage
 , isButtonActive :: Boolean
 , showMetroBookingTimeError :: Boolean
+, showShimmer :: Boolean
 }
 
 data MetroTicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote | PaymentSDKPooling

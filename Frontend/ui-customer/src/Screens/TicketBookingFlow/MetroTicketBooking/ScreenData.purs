@@ -17,6 +17,7 @@ module Screens.TicketBookingFlow.MetroTicketBooking.ScreenData where
 import Prelude
 import Screens.Types as ST
 import ConfigProvider
+import Services.API (MetroBookingConfigRes(..))
 
 initData :: ST.MetroTicketBookingScreenState
 initData = {
@@ -32,6 +33,7 @@ initData = {
   , bookingId : ""
   , quoteId : ""
   , quoteResp : []
+  , metroBookingConfigResp : MetroBookingConfigRes {bookingEndTime: "", bookingStartTime: "", oneWayTicketLimit: 0, roundTripTicketLimit: 0, metroStationTtl: 10080, discount: 0, customEndTime : "", customDates : [] }
   },
   props: {
     isLimitExceeded : false
@@ -39,6 +41,7 @@ initData = {
     , currentStage : ST.MetroTicketSelection
     , isButtonActive : false
     , showMetroBookingTimeError : false
+    , showShimmer : true
   },
   config :  getAppConfig appConfig
 }

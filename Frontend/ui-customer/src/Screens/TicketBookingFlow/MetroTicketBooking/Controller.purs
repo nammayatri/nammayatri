@@ -55,6 +55,8 @@ data Action = BackPressed
             | ShowMetroBookingTimeError Boolean
             | InfoCardAC InfoCard.Action 
             | GetSDKPollingAC CreateOrderRes
+            | MetroBookingConfigAction MetroBookingConfigRes
+            | DisableShimmer
 
 data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | UpdateAction ST.MetroTicketBookingScreenState
@@ -66,6 +68,12 @@ data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | GotoPaymentPage CreateOrderRes String
 
 eval :: Action -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
+
+eval (MetroBookingConfigAction resp) state = do
+  let updatedState = state { data {metroBookingConfigResp = resp}}
+  continue updatedState
+
+eval DisableShimmer state = continue state { props { showShimmer = false } }
 
 eval BackPressed state =  exit $ GoToHome
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
@@ -86,6 +94,7 @@ eval DecrementTicket state = do
 eval MetroRouteMapAction state = exit $ GoToMetroRouteMap
 
 eval (ChangeTicketTab ticketType cityMetroConfig) state = do 
+  let (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
   if state.props.currentStage == ST.ConfirmMetroQuote then do
     let ticketTypeUpdatedState = state {data {ticketType = ticketType}}
         quoteData = getquoteData ticketTypeUpdatedState state.data.quoteResp 
@@ -93,8 +102,8 @@ eval (ChangeTicketTab ticketType cityMetroConfig) state = do
     updateAndExit updatedState $ Refresh updatedState
   else do
     let updatedTicketCount = case ticketType of
-          ST.ONE_WAY_TRIP -> if state.data.ticketCount > cityMetroConfig.ticketLimit.oneWay then cityMetroConfig.ticketLimit.oneWay else state.data.ticketCount
-          ST.ROUND_TRIP -> if state.data.ticketCount > cityMetroConfig.ticketLimit.roundTrip then cityMetroConfig.ticketLimit.roundTrip else state.data.ticketCount
+          ST.ONE_WAY_TRIP -> if state.data.ticketCount > metroBookingConfigResp.oneWayTicketLimit then metroBookingConfigResp.oneWayTicketLimit else state.data.ticketCount
+          ST.ROUND_TRIP -> if state.data.ticketCount > metroBookingConfigResp.roundTripTicketLimit then metroBookingConfigResp.roundTripTicketLimit else state.data.ticketCount
     continue state { data {ticketType = ticketType, ticketCount = updatedTicketCount}, props {currentStage  = ST.MetroTicketSelection}}
 
 eval (SelectLocation loc ) state = updateAndExit state{props{currentStage  = ST.MetroTicketSelection}} $ SelectSrcDest loc state{props{currentStage  = ST.MetroTicketSelection}}

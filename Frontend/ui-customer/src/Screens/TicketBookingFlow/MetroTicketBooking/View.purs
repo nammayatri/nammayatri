@@ -24,7 +24,7 @@ import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText.View as PrimaryEditText
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getMetroConfigFromAppConfig, getCityFromString, CityMetroConfig(..), getMetroConfigFromCity)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getMetroConfigFromAppConfig, getCityFromString, CityMetroConfig(..), getMetroConfigFromCity, getDefaultPixelSize)
 import Prelude
 import Screens.TicketBookingFlow.MetroTicketBooking.Controller
 import Screens.TicketBookingFlow.MetroTicketBooking.ComponentConfig
@@ -55,6 +55,7 @@ import Data.Maybe(Maybe(..))
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Engineering.Helpers.BackTrack (liftFlowBT)
+import Engineering.Helpers.Commons (liftFlow)
 import Control.Monad.Trans.Class (lift)
 import Storage 
 import Mobility.Prelude (boolToVisibility)
@@ -62,6 +63,8 @@ import Components.Banner as Banner
 import ConfigProvider (getAppConfig)
 import Constants
 import MerchantConfig.Types (MetroConfig)
+import Helpers.API (callApi)
+import Data.Array as DA
 
 screen :: ST.MetroTicketBookingScreenState -> Screen Action ST.MetroTicketBookingScreenState ScreenOutput
 screen initialState =
@@ -74,18 +77,26 @@ screen initialState =
         let _ = spy "MetroTicketBookingScreenState state " state 
         case action of
           ShowMetroBookingTimeError _ -> pure unit
+          MetroBookingConfigAction _ -> pure unit
+          DisableShimmer -> pure unit
           _ -> void $ pure $ setValueToLocalStore METRO_PAYMENT_SDK_POLLING "false"
         eval action state
   }
   where
     getQuotes push = do
       let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-          config = getAppConfig appConfig
-          cityMetroConfig = getMetroConfigFromAppConfig config (show city)
-          bookingEndTime  = if elem (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "DD/MM/YYYY") cityMetroConfig.customDates then cityMetroConfig.customEndTime else cityMetroConfig.bookingEndTime
-          withinTimeRange = JB.withinTimeRange cityMetroConfig.bookingStartTime bookingEndTime $ 
-            EHC.convertUTCtoISC (EHC.getCurrentUTC "") "HH:mm:ss"
-      push $ ShowMetroBookingTimeError withinTimeRange
+      void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+        (MetroBookingConfigRes fcResponse) <- Remote.getMetroBookingConfigBT (show city)
+        liftFlowBT $ push $ MetroBookingConfigAction (MetroBookingConfigRes fcResponse)
+        liftFlowBT $ push $ DisableShimmer
+          
+
+        let config = getAppConfig appConfig
+            bookingEndTime  = if elem (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "DD/MM/YYYY") fcResponse.customDates then fcResponse.customEndTime else (EHC.convertUTCtoISC fcResponse.bookingEndTime "HH:mm:ss")
+            withinTimeRange = JB.withinTimeRange (EHC.convertUTCtoISC fcResponse.bookingStartTime "HH:mm:ss") bookingEndTime (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "HH:mm:ss")
+        liftFlowBT $ push $ ShowMetroBookingTimeError withinTimeRange
+        pure unit
+
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ getQuotesPolling initialState.data.searchId 5 3000.0 initialState push GetMetroQuotesAction
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getSDKPolling initialState.data.bookingId 3000.0 initialState push GetSDKPollingAC
       pure $ pure unit
@@ -135,7 +146,7 @@ view push state =
     PrestoAnim.animationSet [Anim.fadeIn true]  $ frameLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , background Color.black6000
+    , background Color.white900
     , onBackPressed push $ const BackPressed
     ] $ 
     [ linearLayout 
@@ -143,17 +154,22 @@ view push state =
         , width MATCH_PARENT
         , background Color.grey700
         , orientation VERTICAL
+        , visibility $ boolToVisibility (not state.props.showShimmer)
         ]
         [ headerView state push
         , linearLayout
           [ height $ V 1
           , width MATCH_PARENT
           , background Color.greySmoke
+          , visibility $ boolToVisibility (not state.props.showShimmer)
           ][]
         , infoSelectioView state push city cityMetroConfig metroConfig
         ]
         , updateButtonView state push
-    ] <> if state.props.showMetroBookingTimeError then [InfoCard.view (push <<< InfoCardAC) (metroTimeErrorPopupConfig state cityMetroConfig)] else [linearLayout [visibility GONE] []]
+    ] <> if state.props.showMetroBookingTimeError && not state.props.showShimmer then [InfoCard.view (push <<< InfoCardAC) (metroTimeErrorPopupConfig state cityMetroConfig)] else [linearLayout [visibility GONE] []]
+      <> if state.props.showShimmer
+            then [shimmerView state]
+            else [linearLayout [visibility GONE] []]
 
 infoSelectioView :: forall w . ST.MetroTicketBookingScreenState -> (Action -> Effect Unit) -> City -> CityMetroConfig -> MetroConfig -> PrestoDOM (Effect Unit) w
 infoSelectioView state push city cityMetroConfig metroConfig =
@@ -162,6 +178,7 @@ infoSelectioView state push city cityMetroConfig metroConfig =
       , width MATCH_PARENT    
       , padding $ PaddingBottom 75
       , scrollBarY false
+      , visibility $ boolToVisibility (not state.props.showShimmer)
       ] [ linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -352,7 +369,8 @@ headerView state push =
 
 incrementDecrementView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> MetroConfig -> PrestoDOM (Effect Unit) w
 incrementDecrementView push state metroConfig =
-  let ticketLimit = if state.data.ticketType == ST.ROUND_TRIP then metroConfig.ticketLimit.roundTrip else metroConfig.ticketLimit.oneWay
+  let (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
+      ticketLimit = if state.data.ticketType == ST.ROUND_TRIP then metroBookingConfigResp.roundTripTicketLimit else metroBookingConfigResp.oneWayTicketLimit
       limitReached = (state.data.ticketType == ST.ROUND_TRIP && state.data.ticketCount >= ticketLimit) || (state.data.ticketType == ST.ONE_WAY_TRIP && state.data.ticketCount >= ticketLimit)
   in 
     linearLayout
@@ -441,6 +459,7 @@ updateButtonView state push =
   , gravity BOTTOM
   , alignParentBottom "true,-1"
   , background Color.transparent
+  , visibility $ boolToVisibility (not state.props.showShimmer)
   ][ linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT
@@ -506,4 +525,50 @@ textViewForLocation label actionId push state =
         , margin $ MarginHorizontal 20 10
         , alpha fieldConfig.alphaValue
         ] <> (FontStyle.getFontStyle FontStyle.SubHeading1 LanguageStyle)
+    ]
+    
+shimmerView :: forall w. ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
+shimmerView state =
+  linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ Margin 16 16 16 16
+    , visibility if state.props.showShimmer then VISIBLE else GONE
+    ]
+    [ sfl (V (getHeight 15)) (getHeight 8)  1 true
+    , sfl (V (getHeight 40)) (getHeight 8)  1 true
+    , linearLayout [weight 1.0][]
+    , sfl (V (getHeight 15)) 0  1 true
+    ]
+  where 
+    getHeight percent = getDefaultPixelSize $ JB.getHeightFromPercent percent
+
+
+sfl :: forall w. Length -> Int -> Int -> Boolean -> PrestoDOM (Effect Unit) w
+sfl height' marginTop numberOfBoxes visibility' =
+  shimmerFrameLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , margin $ MarginTop marginTop
+    , visibility $ boolToVisibility visibility'
+    ]
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        ]
+        ( map
+            ( \_ ->
+                linearLayout
+                  [ height height'
+                  , background Color.greyDark
+                  , cornerRadius 12.0
+                  , weight 1.0
+                  , stroke $ "1," <> Color.grey900
+                  , margin $ Margin 4 4 4 4
+                  ]
+                  []
+            )
+            (1 DA... numberOfBoxes)
+        )
     ]

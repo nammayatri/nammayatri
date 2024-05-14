@@ -3928,16 +3928,13 @@ metroTicketBookingFlow = do
     stationsForCurrentCity = (findMetroStationsForCity currentCity metroStationsList)
   parsedMetroStation <- case stationsForCurrentCity of
     Just stations -> do
-      let
-        diffSec = runFn2 differenceBetweenTwoUTCInMinutes (getCurrentUTC "") stations.lastUpdatedAt
-
-        cityMetroConfig = getMetroConfigFromAppConfig config currentCity
-
-        metroStationValidTill = cityMetroConfig.metroStationTtl
-      if diffSec > metroStationValidTill then
-        fetchMetroStations currentCity metroStationsList
-      else
-        pure $ parseMetroStations stations.stations
+      let diffSec = runFn2 differenceBetweenTwoUTCInMinutes (getCurrentUTC "") stations.lastUpdatedAt
+          metroTicketBookingScreen = currentState.metroTicketBookingScreen
+          (MetroBookingConfigRes metroBookingConfigResp) = metroTicketBookingScreen.data.metroBookingConfigResp
+          metroStationValidTill = metroBookingConfigResp.metroStationTtl
+      if diffSec > metroStationValidTill
+        then fetchMetroStations currentCity metroStationsList
+        else pure $ parseMetroStations stations.stations
     Nothing -> fetchMetroStations currentCity metroStationsList
   flow <- UI.metroTicketBookingScreen
   case flow of

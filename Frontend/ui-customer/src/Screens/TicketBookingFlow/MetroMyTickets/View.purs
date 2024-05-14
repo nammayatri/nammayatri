@@ -402,7 +402,7 @@ pastTicketsListView push state =
     , orientation VERTICAL
     , margin $ MarginTop 13
     , orientation VERTICAL
-    ] $ map (\ticket ->  pastTicketView push ticket) state.data.pastTickets
+    ] $ map (\ticket ->  pastTicketView push ticket) (reverse state.data.pastTickets)
   ]
 
 pastTicketView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketCardData -> PrestoDOM (Effect Unit) w
