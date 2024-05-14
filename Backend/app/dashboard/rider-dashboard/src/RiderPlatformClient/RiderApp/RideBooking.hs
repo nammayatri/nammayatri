@@ -89,7 +89,7 @@ newtype QuoteAPIs = QuoteAPIs
   }
 
 data SelectAPIs = SelectAPIs
-  { rSelect :: Id DP.Person -> Id DEstimate.Estimate -> Euler.EulerClient APISuccess,
+  { rSelect :: Id DP.Person -> Id DEstimate.Estimate -> DSelect.DSelectReq -> Euler.EulerClient APISuccess,
     selectList :: Id DP.Person -> Id DEstimate.Estimate -> Euler.EulerClient DSelect.SelectListRes,
     selectResult :: Id DP.Person -> Id DEstimate.Estimate -> Euler.EulerClient DSelect.QuotesResultResponse,
     cancelSearch :: Id DP.Person -> Id DEstimate.Estimate -> Euler.EulerClient DSelect.CancelAPIResponse
