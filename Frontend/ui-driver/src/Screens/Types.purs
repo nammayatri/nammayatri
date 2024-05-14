@@ -530,7 +530,8 @@ type DriverProfileScreenProps = {
   paymentInfoView :: Boolean,
   enableGoto :: Boolean,
   isRideActive :: Boolean,
-  canSwitchToRental :: Boolean
+  canSwitchToRental :: Boolean,
+  canSwitchToIntercity :: Maybe Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -1227,12 +1228,13 @@ type HomeScreenProps =  {
   startRideOdometerImage :: Maybe String,
   endRideOdometerImage :: Maybe String,
   arrivedAtStop :: Boolean,
-  rideStartTimer :: Int,
+  rideStartRemainingTime :: Int,
   odometerFileId :: Maybe String,
   odometerUploadAttempts :: Int,
   odometerImageUploading :: Boolean,
   showAcWorkingPopup :: Maybe Boolean,
   acExplanationPopup :: Boolean,
+  isOdometerReadingsRequired :: Boolean,
   toll :: TollState,
   bookingStage :: BookingTypes,
   showAdvancedRidePopUp :: Boolean,
@@ -1278,7 +1280,7 @@ instance decodePwdType :: Decode DisabilityType where decode = defaultEnumDecode
 
 data DriverStatus = Online | Offline | Silent
 
-data TimerStatus = Triggered | PostTriggered | NoStatus
+data TimerStatus = Scheduled | Triggered | PostTriggered | NoStatus
 
 derive instance genericTimerStatus :: Generic TimerStatus _
 instance eqTimerStatus :: Eq TimerStatus where eq = genericEq
@@ -1910,7 +1912,8 @@ type BookingOptionsScreenProps = {
   downgraded :: Boolean,
   canSwitchToRental :: Boolean,
   acExplanationPopup :: Boolean,
-  fromDeepLink :: Boolean
+  fromDeepLink :: Boolean,
+  canSwitchToIntercity :: Maybe Boolean
 }
 
 data LeaderBoardType = Daily | Weekly

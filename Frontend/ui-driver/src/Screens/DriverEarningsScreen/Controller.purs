@@ -746,6 +746,7 @@ dummyRideHistoryItem = RidesInfo {
       endOdometerReading : Nothing,
       tollCharges : Nothing,
       estimatedTollCharges : Nothing,
+      isOdometerReadingsRequired : Nothing,
       vehicleServiceTierName : "",
       vehicleServiceTier : "",
       isVehicleAirConditioned : Nothing,

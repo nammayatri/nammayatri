@@ -142,7 +142,7 @@ getBN stringKey =
         GO_OFFLINE -> "অফলাইন যেতে"
         IS_WAITING_FOR_YOU -> "তোমার জন্য অপেক্ষা করছে"
         YOU_ARE_ON_A_RIDE -> "আপনি একটি যাত্রায় আছেন ..."
-        YOU_ARE_ON_A_RENTAL_RIDE -> "আপনি একটি ভাড়া যাত্রায় আছেন ..."
+        YOU_ARE_ON_A_RENTAL_RIDE -> "আপনি রেন্টাল রাইডে আছেন।"
         PLEASE_ASK_RIDER_FOR_THE_OTP -> "ওটিপির জন্য রাইডারকে জিজ্ঞাসা করুন"
         COMPLETED_ -> "সম্পূর্ণ"
         CANCELLED_ -> "বাতিল"
@@ -1429,3 +1429,5 @@ getBN stringKey =
         WHY -> "কেন?"
         SOME_FEATURES_ARE_NOT_AVAILABLE_FOR_THIRD_PARTY_RIDES -> "কিছু বৈশিষ্ট্য তৃতীয় পক্ষের যাত্রার জন্য উপলব্ধ নয়।"
         BOOKING_FROM bapName -> bapName <> " থেকে বুকিং"
+
+        YOU_ARE_ON_A_INTERCITY_RIDE -> "আপনি ইন্টারসিটি রাইডে আছেন |"

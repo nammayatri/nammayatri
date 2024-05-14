@@ -281,15 +281,6 @@ rideActionView layoutMargin push config =
   , gravity CENTER
   , margin layoutMargin
     , stroke $ "1," <> Color.grey800
-  , afterRender (\action -> do -- try to move it to the view of heomescreeen
-        when (showRideStartRemainingTime config) $ do 
-          let id = (HU.generateUniqueId unit)
-          void $ pure $ setValueToLocalStore RIDE_START_TIMER_ID id
-          void $ ET.startTimer ((runFn2 JB.differenceBetweenTwoUTC (Maybe.fromMaybe (getCurrentUTC "") config.rideScheduledTime) (getCurrentUTC ""))) id "1" push action
-          pure unit
-        pure unit
-      )
-      (const RideStartTimer)
   ][ Tuple "rideActionView_Child_1" $ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -455,7 +446,7 @@ durationText time =
   let seconds = Maybe.maybe 0 (\time -> abs $ runFn2 JB.differenceBetweenTwoUTC time (getCurrentUTC "")) time
       hours = seconds / 3600
       minutes = (seconds `mod` 3600) / 60
-  in (if hours > 0 then (show hours) <> ":" else "00:") <> (if minutes > 9 then show minutes else "0" <> show minutes) <> " hrs"
+  in (if hours > 0 then (show hours) <> ":" else "00:") <> (if minutes > 9 then show minutes else "0" <> show minutes) <> " Hr"
 
 
 rentalRideDescView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -499,6 +490,7 @@ rentalRideDescView config push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , margin (Margin 25 8 0 20)
+        , visibility $ boolToInvisibility $ config.isOdometerReadingsRequired
         ][  textView $ 
             [ text $ (getString START_ODO_READING) <> ": "
             , height WRAP_CONTENT
@@ -1088,18 +1080,28 @@ stopAddressTextView config push=
 
 getTitle :: Config -> String
 getTitle config = do
-  if showRideStartRemainingTime config then 
-    getRideStartRemainingTimeTitle config
-  else
-    case config.startRideActive,  config.notifiedCustomer of
-      false, _ -> case config.rideType of 
-          ST.Rental -> (getString YOU_ARE_ON_A_RENTAL_RIDE)
-          _ -> (getString YOU_ARE_ON_A_RIDE)
-      true, false  ->  (config.customerName <> " " <> (getString IS_WAITING_FOR_YOU) <> "...")
-      true, true -> case (getLanguageLocale languageKey) of
-          "TA_IN" -> config.customerName <> (getString WAITING_FOR_CUSTOMER)
-          "HI_IN" -> "आप" <> config.customerName <> "की प्रतीक्षा कर रहे हैं"
-          _       -> (getString WAITING_FOR_CUSTOMER) <> config.customerName
+  let isScheduledRide = getValueToLocalStore WAITING_TIME_STATUS == (show ST.Scheduled)
+  case config.startRideActive,  config.notifiedCustomer, isScheduledRide of
+    _, _, true -> getRideStartRemainingTimeTitle config
+    false, _, _ -> case config.rideType of 
+        ST.Rental -> (getString YOU_ARE_ON_A_RENTAL_RIDE)
+        ST.Intercity -> (getString YOU_ARE_ON_A_INTERCITY_RIDE)
+        _ -> (getString YOU_ARE_ON_A_RIDE)
+    true, false, _  ->  (config.customerName <> " " <> (getString IS_WAITING_FOR_YOU) <> "...")
+    true, true, _ -> case (getLanguageLocale languageKey) of
+        "TA_IN" -> config.customerName <> (getString WAITING_FOR_CUSTOMER)
+        "HI_IN" -> "आप" <> config.customerName <> "की प्रतीक्षा कर रहे हैं"
+        _       -> (getString WAITING_FOR_CUSTOMER) <> config.customerName
+  where
+    getRideStartRemainingTimeTitle :: Config -> String
+    getRideStartRemainingTimeTitle config = 
+      let time = HU.formatSecIntoMinSecs config.rideStartRemainingTime
+      in case config.rideType of
+          ST.Rental -> getVarString YOUR_RENTAL_RIDE_STARTS_IN [time]
+          ST.Intercity -> getVarString YOUR_INTERCITY_RIDE_STARTS_IN [time]
+          _ -> ""
+    showRideStartRemainingTime :: Config -> Boolean
+    showRideStartRemainingTime config = getValueToLocalStore WAITING_TIME_STATUS == (show ST.Scheduled)
 
 separatorConfig :: SeparatorView.Config
 separatorConfig =
@@ -1181,21 +1183,7 @@ sourceAddressTextView config push =
         ] <> FontStyle.body1 TypoGraphy
       ]
 
-getRideStartRemainingTimeTitle :: Config -> String
-getRideStartRemainingTimeTitle config = 
-  let hour = config.rideStartTimer `div` 3600
-      min = (config.rideStartTimer `mod` 3600) `div` 60
-      sec = config.rideStartTimer `mod` 60
-      time = ([(if hour > 0 then (show hour <> " : ") else "") <> (if min < 10 then "0" else "") <> show min <> " : " <> (if sec < 10 then "0" else "") <> show sec  ])
-  in case config.rideType of
-      ST.Rental -> getVarString YOUR_RENTAL_RIDE_STARTS_IN time
-      ST.Intercity -> getVarString YOUR_INTERCITY_RIDE_STARTS_IN time
-      _ -> ""
-
-showRideStartRemainingTime :: Config -> Boolean
-showRideStartRemainingTime config = ((config.rideType == ST.Rental || config.rideType == ST.Intercity) && (getCurrentUTC "") < (Maybe.fromMaybe (getCurrentUTC "") config.rideScheduledTime)) && config.startRideActive
-
-
+  
 sourceImageView :: forall w . Config -> PrestoDOM (Effect Unit) w
 sourceImageView config = 
   linearLayout

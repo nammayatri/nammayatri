@@ -216,7 +216,7 @@ initData =
       , bgLocationPopup: false
       , specialZoneProps: { specialZonePopup: false, nearBySpecialZone: false, currentGeoHash: "" }
       , coinPopupType : NO_COIN_POPUP
-      , rideStartTimer: 0
+      , rideStartRemainingTime: -1
       , bookingStage : CURRENT
       , advancedRideStage : NotAssigned
       , showAdvancedRidePopUp : false
@@ -225,6 +225,7 @@ initData =
       , odometerImageUploading: false
       , showAcWorkingPopup: Nothing
       , acExplanationPopup : false
+      , isOdometerReadingsRequired: false
       , toll : initialTollState
       , showInterOperablePopUp : false
       }

@@ -73,7 +73,7 @@ homeScreen = do
     StartRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       LatLon lat lon ts <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.src_lat updatedState.data.activeRide.src_lon 700 false false
-      let odometerValue = if updatedState.data.activeRide.tripType == Rental then Just updatedState.props.odometerValue else Nothing 
+      let odometerValue = if updatedState.props.isOdometerReadingsRequired then Just updatedState.props.odometerValue else Nothing 
       App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: updatedState.data.activeRide.id, otp : updatedState.props.rideOtp , startOdometerReading : odometerValue, startOdometerImage : updatedState.props.startRideOdometerImage, lat : lat , lon : lon , ts :ts} updatedState) 
     StartZoneRide  updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
@@ -83,7 +83,7 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       let destLat = if updatedState.data.activeRide.tripType == Rental then fromMaybe updatedState.data.activeRide.src_lat updatedState.data.activeRide.lastStopLat else updatedState.data.activeRide.dest_lat
           destLon = if updatedState.data.activeRide.tripType == Rental then fromMaybe updatedState.data.activeRide.src_lon updatedState.data.activeRide.lastStopLon else updatedState.data.activeRide.dest_lon
-          odometerValue = if updatedState.data.activeRide.tripType == Rental then Just updatedState.props.odometerValue else Nothing 
+          odometerValue = if updatedState.props.isOdometerReadingsRequired then Just updatedState.props.odometerValue else Nothing 
       LatLon lat lon ts <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon destLat destLon 700 false false
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_END_RIDE {id : updatedState.data.activeRide.id, endOtp : updatedState.props.rideOtp, endOdometerReading : odometerValue, endOdometerImage: updatedState.props.endRideOdometerImage , lat : lat, lon : lon, ts :ts} updatedState)
     ArrivedAtStop updatedState -> do

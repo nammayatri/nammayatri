@@ -1428,3 +1428,4 @@ getML stringKey =
         WHY -> "എന്ത്?"
         SOME_FEATURES_ARE_NOT_AVAILABLE_FOR_THIRD_PARTY_RIDES -> "ചില സവിശേഷതകൾ മൂന്നാം കക്ഷിയുടെ യാത്രകൾക്ക് ലഭ്യമല്ല."
         BOOKING_FROM bapName -> bapName <> " നിന്ന് ബുക്കിംഗ്"
+        YOU_ARE_ON_A_INTERCITY_RIDE -> "നിങ്ങൾ ഇൻറർസിറ്റി റൈഡിൽ ഉണ്ട്"

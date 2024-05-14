@@ -25,6 +25,7 @@ initData =
       , downgraded: false
       , canSwitchToRental: false
       , acExplanationPopup: false
+      , canSwitchToIntercity : Nothing
       , fromDeepLink : false
       }
   }

@@ -199,6 +199,7 @@ config = {
   bannerConfig : Banner.config,
   viewsByOrder : [],
   rentalRideConfig : {
+    showRideOdometerReading : false,
     rideStartODOReading : "",
     rideEndODOReading : "",
     baseRideDuration : "",
@@ -366,6 +367,7 @@ type InfocardTextConfig = {
 }
 
 type RentalRideConfig = {
+  showRideOdometerReading :: Boolean,
   rideStartODOReading :: String,
   rideEndODOReading :: String,
   baseRideDuration :: String,

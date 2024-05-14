@@ -46,7 +46,6 @@ to generate this file without the comments in this block.
   , "otp-reader"
   , "prelude"
   , "presto"
-  , "presto-dom"
   , "profunctor-lenses"
   , "st"
   , "strings"

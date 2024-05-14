@@ -1,4 +1,12 @@
-module Screens.BookingOptionsScreen.Controller where
+module Screens.BookingOptionsScreen.Controller
+  ( Action(..)
+  , ScreenOutput(..)
+  , downgradeOptionsConfig
+  , dummyVehicleP
+  , eval
+  , getVehicleCapacity
+  )
+  where
 
 import Components.ChooseVehicle as ChooseVehicle
 import Components.PrimaryButton as PrimaryButton
@@ -6,8 +14,8 @@ import Components.PopUpModal as PopUpModal
 import Data.Array (filter, length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Log (trackAppScreenRender)
-import Prelude (class Show, map, pure, show, unit, discard, void, (<>), (==), not, ($), (>))
-import PrestoDOM (Eval, update, continue, exit, continueWithCmd)
+import Prelude (class Show, map, pure, show, unit, discard, void, (<>), (==), not, ($), (>), (<$>))
+import PrestoDOM (Eval, update, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (BookingOptionsScreenState, VehicleP, RidePreference)
 import Common.Types.App (LazyCheck(..))
@@ -37,22 +45,28 @@ data Action
   | ShowACVideoPopup
   | TopAcDriverAction PopUpModal.Action
   | OpenLink String
+  | ToggleRentalRide 
+  | ToggleIntercityRide
 
 data ScreenOutput
   = GoBack BookingOptionsScreenState
   | ChangeRidePreference BookingOptionsScreenState RidePreference
   | ToggleACAvailability BookingOptionsScreenState Boolean
+  | ToggleRentalIntercityRide BookingOptionsScreenState
 
 eval :: Action -> BookingOptionsScreenState -> Eval Action ScreenOutput BookingOptionsScreenState
 eval BackPressed state = 
   if state.props.acExplanationPopup then continue state { props { acExplanationPopup = false } }
   else exit $ GoBack state
-
 eval (ToggleRidePreference service) state = 
   if service.isUsageRestricted then do
     void $ pure $ JB.toast $ getString $ SET_THE_AC_ON_TO_ENABLE service.name
     update state
   else exit $ ChangeRidePreference state service
+
+eval ToggleRentalRide state = updateAndExit state { props {canSwitchToRental = not state.props.canSwitchToRental} } $ ToggleRentalIntercityRide state { props {canSwitchToRental = not state.props.canSwitchToRental} }
+
+eval ToggleIntercityRide state = updateAndExit state {props {canSwitchToIntercity = not <$> state.props.canSwitchToIntercity}} $ ToggleRentalIntercityRide state {props {canSwitchToIntercity = not <$> state.props.canSwitchToIntercity}}
 
 eval (UpdateACAvailability acServiceToggle) state = exit $ ToggleACAvailability state $ not acServiceToggle
 

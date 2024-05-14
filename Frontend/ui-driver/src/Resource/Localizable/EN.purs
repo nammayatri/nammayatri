@@ -1428,3 +1428,4 @@ getEN stringKey =
         WHY -> "Why?"
         SOME_FEATURES_ARE_NOT_AVAILABLE_FOR_THIRD_PARTY_RIDES -> "Some features are not available for third party rides."
         BOOKING_FROM bapName -> "Booking from: " <> bapName
+        YOU_ARE_ON_A_INTERCITY_RIDE -> "You are on a intercity ride"
