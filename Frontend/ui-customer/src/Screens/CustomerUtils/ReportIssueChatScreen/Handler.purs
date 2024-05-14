@@ -34,12 +34,15 @@ import Locale.Utils
 import Services.Backend as Remote
 import Services.API 
 import Components.ChatView.Controller 
-import Screens.HelpAndSupportScreen.Transformer (reportIssueMessageTransformer)
+import Screens.HelpAndSupportScreen.Transformer (reportIssueMessageTransformer, rideInfoTransformer)
 import Engineering.Helpers.Commons 
 import JBridge
 import Language.Strings
 import Language.Types
 import Services.Config
+import Debug (spy)
+import Screens.HomeScreen.ScreenData (dummyRideBooking) as HSD
+import Helpers.API (callApiBT) 
 
 reportIssueChatScreen :: FlowBT String FlowState
 reportIssueChatScreen = do
@@ -67,11 +70,17 @@ reportIssueChatScreen = do
 
     GoToHomeScreen updatedState -> goToHomeScreenHandler updatedState
 
-
-
 selectIssueOptionHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
 selectIssueOptionHandler updatedState = do 
+
   modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> updatedState )
+  (GlobalState globalState) <- getState 
+  resp <- case globalState.rideSelectionScreen.selectedItem of
+                    Just item -> 
+                      callApiBT (RideBookingReq item.bookingId)
+                    Nothing -> 
+                      pure $ HSD.dummyRideBooking 
+
   let 
     selectedOptionId = fromMaybe "" $ map (\option -> option.issueOptionId) updatedState.data.selectedOption
     selectedOptionLabel = fromMaybe "" $ map (\option -> option.label) updatedState.data.selectedOption
@@ -91,9 +100,11 @@ selectIssueOptionHandler updatedState = do
         option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)
       }
     ) getOptionsRes.options
-
+   
     messages' = DA.mapWithIndex (
-      \index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))
+      \index (Message currMessage) -> if currMessage.label == Just "FARE_BREAKUP_MESSAGE" 
+                                        then makeChatComponent' (reportIssueMessageTransformer (rideInfoTransformer resp currMessage.message)) "Bot" (getCurrentUTC "") "FARE_BREAKUP_MESSAGE"  (500 * (index + 1))
+                                        else makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))
     ) getOptionsRes.messages
 
     chats' = [
@@ -155,11 +166,9 @@ selectIssueOptionHandler updatedState = do
   App.BackT $ App.NoBack <$> (pure $ IssueReportChatScreenFlow)
 
 
-
 uploadIssueHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
 uploadIssueHandler updatedState = do
   modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> updatedState )
-
   let 
     selectedOptionId = map (\option -> option.issueOptionId) updatedState.data.selectedOption
     language = fetchLanguage $ getLanguageLocale languageKey

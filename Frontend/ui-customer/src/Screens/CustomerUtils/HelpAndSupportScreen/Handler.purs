@@ -201,7 +201,7 @@ goToRideSelectionScreenHandler selectedCategory updatedState = do
   App.BackT $ App.BackPoint <$> (pure RideSelectionScreenFlow )
 
 
-goToChatScreenHandler :: CategoryListType -> HelpAndSupportScreenState -> FlowBT String FlowState
+goToChatScreenHandler :: CategoryListType -> HelpAndSupportScreenState -> FlowBT String FlowState 
 goToChatScreenHandler selectedCategory updatedState =  do
   modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState) 
   let language = fetchLanguage $ getLanguageLocale languageKey

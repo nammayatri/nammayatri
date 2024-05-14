@@ -111,7 +111,7 @@ data Action = NoAction
 
 eval :: Action -> RideSelectionScreenState -> Eval Action ScreenOutput RideSelectionScreenState
 
-eval (IndividualRideCardActionController (IndividualRideCardController.OnClick index)) state = do
+eval (IndividualRideCardActionController (IndividualRideCardController.OnClick index)) state = do 
   let selectedCard = state.itemsRides !! index
   case selectedCard of
     Just selectedRide -> do
