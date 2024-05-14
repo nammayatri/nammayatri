@@ -55,7 +55,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Mobility.Prelude (boolToVisibility, capitalize)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, negate, (>), (<), (-), (*), bind, pure, discard, not, (&&), (||), (/=), (+), (+))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (BottomSheetState(..), Accessiblity(..), Gradient(..), Shadow(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, alignParentLeft, alignParentRight, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, shimmerFrameLayout, rippleColor, clipChildren, shadow, clipToPadding, rotation, horizontalScrollView, disableKeyboardAvoidance, scrollBarX)
+import PrestoDOM (BottomSheetState(..), Accessiblity(..), Gradient(..), Shadow(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, alignParentLeft, alignParentRight, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, shimmerFrameLayout, rippleColor, clipChildren, shadow, clipToPadding, rotation, horizontalScrollView, disableKeyboardAvoidance, scrollBarX, nestedScrollView)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
@@ -75,13 +75,14 @@ view push state =
   let enableShareRide = state.data.config.feature.enableShareRide && (not $ rideNotStarted state)
       enableSupport = state.data.config.feature.enableSupport && (Array.any (_ == state.props.currentStage) ) [RideAccepted, RideStarted, ChatWithDriver] 
   in
-  linearLayout
+  PrestoAnim.animationSet
+          [ scaleYAnimWithDelay 10] $ linearLayout
   [ height WRAP_CONTENT
   , width $ V (screenWidth unit)
   , background Color.transparent
   , orientation VERTICAL
   , id $ getNewIDWithTag "BottomSheetLayout"
-  , afterRender push $ const $ NoAction
+  , onAnimationEnd push $ const $ NoAction
   ][ linearLayout
      [ height $ WRAP_CONTENT
      , width MATCH_PARENT

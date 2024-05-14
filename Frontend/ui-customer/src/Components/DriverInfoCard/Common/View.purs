@@ -54,7 +54,7 @@ driverDetailsView config uid nid =
  linearLayout
   [ orientation HORIZONTAL
   , height WRAP_CONTENT 
-  , padding $ Padding 16 16 16 0
+  , padding $ Padding 16 16 16 8
   , width MATCH_PARENT
   , id $ getNewIDWithTag uid
   , margin $ Margin 16 (if config.searchType == QUOTES then 12 else 0) 16 (if config.enablePaddingBottom then safeMarginBottom else 0)
@@ -66,8 +66,8 @@ driverDetailsView config uid nid =
       , height WRAP_CONTENT
       , weight 1.0
       , gravity CENTER_VERTICAL
-      , alignParentLeft "true,-1"
       , background Color.white900
+      , padding $ PaddingRight 16
       ][linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
