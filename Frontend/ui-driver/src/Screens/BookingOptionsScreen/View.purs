@@ -2,7 +2,7 @@ module Screens.BookingOptionsScreen.View where
 
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Ord (compare)
 import Debug (spy)
 import Effect (Effect)
@@ -12,9 +12,10 @@ import Helpers.Utils (getVehicleType, fetchImage, FetchImageFrom(..), getVariant
 import Language.Strings (getString)
 import Engineering.Helpers.Utils as EHU
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (<>), (&&), (||))
+import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (<>), (&&), (||), (&&))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine, imageUrl, rippleColor, scrollView, scrollBarY, fillViewport)
 import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval, getVehicleCapacity)
+import Screens.BookingOptionsScreen.ScreenData (defaultRidePreferenceOption)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
@@ -26,6 +27,9 @@ import Services.API as API
 import Data.Maybe as MB
 import Components.PopUpModal as PopUpModal
 import Screens.BookingOptionsScreen.ComponentConfig (topAcDriverPopUpConfig)
+import Resource.Constants as RC
+import Mobility.Prelude (boolToVisibility)
+import Storage (KeyStore(..), getValueToLocalStore)
 
 screen :: ST.BookingOptionsScreenState -> Screen Action ST.BookingOptionsScreenState ScreenOutput
 screen initialState =
@@ -246,7 +250,11 @@ downgradeVehicleView push state =
               , height WRAP_CONTENT
               , orientation VERTICAL
               ]
-              ( ridePreferencesView push state defaultRidePreferences)
+              (( ridePreferencesView push state defaultRidePreferences) <> 
+              [ 
+                  rentalPreferenceView push state,
+                  intercityPreferenceView push state
+              ])
           ]
       ]
 
@@ -329,6 +337,27 @@ serviceTierItem push service enabled opacity =
     API.RENTALS -> "RENTALS"
     API.INTERCITY -> "INTERCITY"
 
+rentalPreferenceView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
+rentalPreferenceView push state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    ][serviceTierItem push item state.props.canSwitchToRental false]
+  where 
+    item :: ST.RidePreference
+    item = defaultRidePreferenceOption {name = "Rentals", isSelected = state.props.canSwitchToRental,  serviceTierType = API.RENTALS}
+
+intercityPreferenceView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
+intercityPreferenceView push state = do
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , visibility $ boolToVisibility $ (RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.CarCategory && isJust state.props.canSwitchToIntercity
+    ][serviceTierItem push item (fromMaybe false state.props.canSwitchToIntercity) false]
+  where 
+    item :: ST.RidePreference
+    item = defaultRidePreferenceOption {name = "Intercity", isSelected = fromMaybe false state.props.canSwitchToIntercity, serviceTierType = API.INTERCITY}
+
 toggleView :: forall w. (Action -> Effect Unit) -> Boolean -> Boolean -> ST.RidePreference -> PrestoDOM (Effect Unit) w
 toggleView push enabled default service =
   let
@@ -343,9 +372,9 @@ toggleView push enabled default service =
       , alpha if default then 0.5 else 1.0
       , background backgroundColor
       , stroke $ "1," <> backgroundColor
-      , onClick push $ const $ ToggleRidePreference service
       , gravity CENTER_VERTICAL
-      , clickable $ not $ default
+      , onClick push $ const $ getAction
+      , clickable $ not default
       ]
       [ linearLayout
           [ width MATCH_PARENT
@@ -363,6 +392,12 @@ toggleView push enabled default service =
               []
           ]
       ]
+  where
+    getAction :: Action
+    getAction = case service.serviceTierType of
+      API.RENTALS -> ToggleRentalRide
+      API.INTERCITY -> ToggleIntercityRide
+      _ -> ToggleRidePreference service
 
 defaultVehicleView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 defaultVehicleView push state =

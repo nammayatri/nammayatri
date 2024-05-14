@@ -426,6 +426,7 @@ data Action = NoAction
             | OnAudioCompleted String
             | ACExpController PopUpModal.Action
             | OpenLink String
+            | RideStartRemainingTime Int String String
             | TollChargesPopUpAC PopUpModal.Action
             | TollChargesAmbigousPopUpAC PopUpModal.Action
             | SwitchBookingStage BookingTypes
@@ -789,7 +790,7 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = do
   void $ pure $ hideKeyboardOnNavigation true
   continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false, endRideOtpModal= false} }
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone otp)) state = do
-    if state.data.activeRide.tripType == ST.Rental then do
+    if state.props.isOdometerReadingsRequired then do
       void $ pure $ hideKeyboardOnNavigation true
       continue state {
         props = state.props { 
@@ -913,13 +914,6 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
     ] $ CallCustomer state exophoneNumber
 
 eval (RideActionModalAction (RideActionModal.SecondaryTextClick)) state = continue state{props{showAccessbilityPopup = true, safetyAudioAutoPlay = false}}
-eval (RideActionModalAction (RideActionModal.RideStartTimer seconds status id)) state = do
-  if (getValueToLocalStore RIDE_START_TIMER_ID) == id then do
-    if status == "EXPIRED" then do
-      continue state { props {rideStartTimer = 0}}
-    else continue state { props {rideStartTimer = seconds}}
-  else 
-    continue state
 
 
 eval (MakePaymentModalAC (MakePaymentModal.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = updateAndExit state $ OpenPaymentPage state
@@ -1043,6 +1037,17 @@ eval (UpdateWaitTime status) state = do
 eval (WaitTimerCallback timerID _ seconds) state = 
   continue state { data {activeRide {waitTimerId = timerID, waitTimeSeconds = seconds}}}
 
+eval (RideStartRemainingTime seconds status id) state = do
+  if status == "EXPIRED" then do
+    if getValueToLocalStore WAITING_TIME_STATUS == (show ST.Scheduled) then do
+      void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.Triggered)
+      void $ pure $ setValueToLocalStore WAITING_TIME_VAL $ state.data.activeRide.id <> "<$>" <> getCurrentUTC ""
+      pure unit
+    else 
+      pure unit
+    updateAndExit state { props {rideStartRemainingTime = 0}} $ UpdatedState state { props {rideStartRemainingTime = 0}} 
+  else continue state { props {rideStartRemainingTime = seconds}}
+  
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {endRidePopUp = false}})
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ removeAllPolylines ""
@@ -1185,8 +1190,11 @@ eval NotifyAPI state = updateAndExit state $ NotifyDriverArrived state
 eval (RideActiveAction activeRide mbAdvancedRide) state = do
   let currActiveRideDetails = activeRideDetail state activeRide
       advancedRideDetails = activeRideDetail state <$> mbAdvancedRide
-      updatedState = state { data {activeRide = currActiveRideDetails, advancedRideData = advancedRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag), safetyAudioAutoPlay = false}}
+      isOdoReadingsReq = checkIfOdometerReadingsRequired currActiveRideDetails.tripType activeRide
+      updatedState = state { data {activeRide = currActiveRideDetails, advancedRideData = advancedRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag), safetyAudioAutoPlay = false, isOdometerReadingsRequired = isOdoReadingsReq}}
   updateAndExit updatedState $ UpdateStage ST.RideAccepted updatedState
+  where
+    checkIfOdometerReadingsRequired tripType (RidesInfo ride) = (tripType == ST.Rental) && (maybe true (\val -> val) ride.isOdometerReadingsRequired)
 
 eval RecenterButtonAction state = continue state
 
@@ -1544,7 +1552,7 @@ activeRideDetail state (RidesInfo ride) =
   actualRideDuration : ride.actualDuration,
   riderName : fromMaybe "" ride.riderName,
   estimatedFare : ride.driverSelectedFare + ride.estimatedBaseFare,
-  notifiedCustomer : getValueToLocalStore WAITING_TIME_STATUS == (show ST.PostTriggered),
+  notifiedCustomer : Array.any (_ == getValueToLocalStore WAITING_TIME_STATUS) [(show ST.PostTriggered), (show ST.Triggered), (show ST.Scheduled)],
   exoPhone : ride.exoPhone,
   waitTimeSeconds :if ride.status == "INPROGRESS" && isTimerValid then waitTime else -1,
   rideCreatedAt : ride.createdAt,

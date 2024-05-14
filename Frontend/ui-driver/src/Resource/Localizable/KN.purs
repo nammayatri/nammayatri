@@ -1356,7 +1356,7 @@ getKN stringKey =
         UPCOMING_STOP -> "ಮುಂದಿನ ನಿಲ್ದಾಣ"
         LAST_STOP -> "ಕೊನೆಯ ನಿಲ್ದಾಣ"
         PREVIOUS_STOP -> "ಹಿಂದಿನ ನಿಲ್ದಾಣ"
-        YOU_ARE_ON_A_RENTAL_RIDE -> "ನೀವು ರೆಂಟಲ್ ಸವಾರಿಯಲ್ಲಿದ್ದೀರಿ"
+        YOU_ARE_ON_A_RENTAL_RIDE -> "ನೀವು ರೆಂಟಲ್ ರೈಡ್‌ನಲ್ಲಿ ಇದ್ದೀರಿ"
         ENTER_END_RIDE_OTP -> "ಸವಾರಿ ಮುಗಿಸಲು ಒಟಿಪಿ ನಮೂದಿಸಿ"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "ನೀವು ನಿಲ್ದಾಣ ಸ್ಥಳದಲ್ಲಿ ಇಲ್ಲ"
         ARRIVED_AT_STOP -> "ನಿಲ್ದಾಣದಲ್ಲಿ ಬಂದಿದ್ದೇನೆ"
@@ -1427,3 +1427,4 @@ getKN stringKey =
         WHY -> "ಯಾಕೆ?"
         SOME_FEATURES_ARE_NOT_AVAILABLE_FOR_THIRD_PARTY_RIDES -> "ಕೆಲವು ವೈಶಿಷ್ಟ್ಯಗಳು ಮೂರನೇ ಪಕ್ಷದ ಪ್ರಯಾಣಗಳಿಗೆ ಲಭ್ಯವಿಲ್ಲ."
         BOOKING_FROM bapName -> bapName <> " ನಿಂದ ಬುಕಿಂಗ್"
+        YOU_ARE_ON_A_INTERCITY_RIDE -> "ನೀವು ಇಂಟರ್‌ಸಿಟಿ ರೈಡ್‌ನಲ್ಲಿ ಇದ್ದೀರಿ"

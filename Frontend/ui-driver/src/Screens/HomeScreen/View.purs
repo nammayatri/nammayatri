@@ -186,7 +186,9 @@ screen initialState (GlobalState globalState) =
                                     void $ waitingCountdownTimerV2 startingTime "1" "countUpTimerId" push WaitTimerCallback
                                   else push $ UpdateWaitTime ST.NoStatus
                                   pure unit
-                                else pure unit
+                                else if (getValueToLocalStore WAITING_TIME_STATUS == (show ST.Scheduled) && initialState.props.rideStartRemainingTime == -1) then do
+                                  void $ startTimer (runFn2 JB.differenceBetweenTwoUTC (fromMaybe (getCurrentUTC "") initialState.data.activeRide.tripScheduledAt) (getCurrentUTC "")) "rideStartRemainingTimeId" "1" push RideStartRemainingTime     
+                                  else pure unit
                                 if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "2000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "5.0"
@@ -360,7 +362,7 @@ view push state =
         state.props.acExplanationPopup && not onRide && (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.CarCategory
       ])
     onRide = DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted]
-    showEnterOdometerReadingModalView = state.data.activeRide.tripType == ST.Rental && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
+    showEnterOdometerReadingModalView = state.props.isOdometerReadingsRequired && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
 
 
 interOperableInfoPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

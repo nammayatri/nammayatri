@@ -21,6 +21,9 @@ bookingOptions = do
     ToggleACAvailability updatedState toogleVal -> do
       modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ UPDATE_AC_AVAILABILITY updatedState toogleVal)
+    ToggleRentalIntercityRide updatedState -> do
+      modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ ENABLE_RENTAL_INTERCITY_RIDE updatedState)
     GoBack state -> do
       modifyScreenState $ BookingOptionsScreenType (\_ -> state{props{ fromDeepLink = false }})
       if state.props.fromDeepLink

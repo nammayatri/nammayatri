@@ -79,6 +79,7 @@ import Engineering.Helpers.Utils (getFixedTwoDecimals)
 import Common.Resources.Constants
 import Data.Function.Uncurried (runFn3)
 import DecodeUtil (getAnyFromWindow)
+import Resource.Constants as RC
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -124,13 +125,14 @@ rideActionModalConfig state =
     waitTimeSeconds = state.data.activeRide.waitTimeSeconds,
     rideScheduledTime = state.data.activeRide.tripScheduledAt,
     rideType = state.data.activeRide.tripType,
-    rideStartTimer = state.props.rideStartTimer,
-    tripDuration = (\tripDuration -> (if ( tripDuration / 3600) < 10 then "0" else "") <> (show ( tripDuration / 3600) <> ":") <> (if (tripDuration `mod` 3600) / 60 < 10 then "0" else "") <> show ( (tripDuration `mod` 3600) / 60)  <> " Hr") <$> state.data.activeRide.tripDuration,
+    rideStartRemainingTime = state.props.rideStartRemainingTime,
+    tripDuration = (\tripDuration -> (if (tripDuration / 3600) < 10 then "0" else "") <> (show ( tripDuration / 3600) <> ":") <> (if (tripDuration `mod` 3600) / 60 < 10 then "0" else "") <> show ( (tripDuration `mod` 3600) / 60)  <> " Hr") <$> state.data.activeRide.tripDuration,
     rideStartTime = state.data.activeRide.tripStartTime,
     startODOReading = fromMaybe "--" $ show <$> state.data.activeRide.startOdometerReading,
     hasToll = state.data.activeRide.hasToll,
     driverVehicle = state.data.activeRide.driverVehicle,
     cityConfig = state.data.cityConfig,
+    isOdometerReadingsRequired = state.props.isOdometerReadingsRequired,
     serviceTierAndAC = state.data.activeRide.serviceTier,
     capacity = state.data.activeRide.capacity,
     acRide = state.data.activeRide.acRide,
@@ -608,7 +610,7 @@ cancelConfirmationConfig state = let
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
       imageUrl = fetchImage FF_ASSET  if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag state.data.activeRide.specialLocationTag) == Nothing) 
-                    then "ic_cancel_prevention"
+                    then if (RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.CarCategory then "ic_cancel_prevention_cab" else "ic_cancel_prevention"
                   else (HU.getRideLabelData state.data.activeRide.specialLocationTag).cancelConfirmImage
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
@@ -1504,6 +1506,7 @@ getRideCompletedConfig state = let
       background = Color.mangolia
     },
     rentalRideConfig {
+    showRideOdometerReading = state.props.isOdometerReadingsRequired,
     rideStartODOReading = (fromMaybe "--" $ show <$> state.data.activeRide.startOdometerReading) <> " Km",
     rideEndODOReading = (fromMaybe "--" $ show <$> state.data.activeRide.endOdometerReading) <> " Km",
     baseRideDuration =  HU.formatSecIntoHourMins (fromMaybe 0 state.data.activeRide.tripDuration),

@@ -370,6 +370,7 @@
       "intercity": true,
       "ic_rental_variant_tag": true,
       "tip_banner_rectangle": true,
-      "intercity_banner_rectangle": true
+      "intercity_banner_rectangle": true,
+      "ic_cancel_prevention_cab": true
    }
 }

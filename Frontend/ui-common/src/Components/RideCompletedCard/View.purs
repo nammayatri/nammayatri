@@ -999,30 +999,34 @@ rentalRideInfoView push config =
   , margin $ MarginVertical 14 24
   , background Color.white900
   , stroke $ "2," <> Color.grey800
-  ][  linearLayout
+  ]([  linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation if config.isDriver then HORIZONTAL else VERTICAL
       ][  infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardView config "RideCompletedCardImage1" config.rentalRideTextConfig.rideTime config.rentalRideConfig.actualRideDuration config.rentalRideConfig.baseRideDuration
         , infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardView config "RideCompletedCardImage2" config.rentalRideTextConfig.rideDistance config.rentalRideConfig.actualRideDistance config.rentalRideConfig.baseRideDistance
       ]
-      , horizontalLine (MarginVertical 16 16) Color.grey900
-      , textView $ 
-        [ height WRAP_CONTENT
-        , margin $ MarginBottom 16
-        , width MATCH_PARENT
-        , text $ (config.rentalRideTextConfig.odometerReading) <> ": "
-        , visibility if config.isDriver then VISIBLE else GONE
-        , color Color.black700 
-        ] <> FontStyle.body2 TypoGraphy
-      , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation if config.isDriver then HORIZONTAL else VERTICAL
-        ][  infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardOdometerView config "RideCompletedCardImage3" config.rentalRideConfig.startRideOdometerImage (config.rentalRideTextConfig.rideStart) (config.rentalRideTextConfig.rideStartedAt) (config.rentalRideConfig.rideStartODOReading)
-          , infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardOdometerView config "RideCompletedCardImage4" config.rentalRideConfig.endRideOdometerImage (config.rentalRideTextConfig.rideEnd) (config.rentalRideTextConfig.rideEndedAt) (config.rentalRideConfig.rideEndODOReading)
-        ]
-    ]
+  ] <>
+      if (config.rentalRideConfig.showRideOdometerReading) then
+       [
+        horizontalLine (MarginVertical 16 16) Color.grey900
+        , textView $ 
+          [ height WRAP_CONTENT
+          , margin $ MarginBottom 16
+          , width MATCH_PARENT
+          , text $ (config.rentalRideTextConfig.odometerReading) <> ": "
+          , visibility if config.isDriver then VISIBLE else GONE
+          , color Color.black700 
+          ] <> FontStyle.body2 TypoGraphy
+        , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation if config.isDriver then HORIZONTAL else VERTICAL
+          ][  infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardOdometerView config "RideCompletedCardImage3" config.rentalRideConfig.startRideOdometerImage (config.rentalRideTextConfig.rideStart) (config.rentalRideTextConfig.rideStartedAt) (config.rentalRideConfig.rideStartODOReading)
+            , infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardOdometerView config "RideCompletedCardImage4" config.rentalRideConfig.endRideOdometerImage (config.rentalRideTextConfig.rideEnd) (config.rentalRideTextConfig.rideEndedAt) (config.rentalRideConfig.rideEndODOReading)
+          ]]
+      else [])
+    
 
 getRentalRideInfoCardOdometerView :: forall w. Config -> String -> String -> String -> String -> String -> (InfoCardConfig)
 getRentalRideInfoCardOdometerView config image renderImage heading heading' subHeading1  = 

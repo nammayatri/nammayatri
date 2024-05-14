@@ -657,6 +657,7 @@
       "tip_banner_rectangle" : true,
       "up_hand_arrow" : true,
       "widget_close_gradient" : true,
-      "zone_curve" : true
+      "zone_curve" : true,
+      "ic_cancel_prevention_cab": true
    }
 }

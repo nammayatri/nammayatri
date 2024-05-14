@@ -39,7 +39,6 @@ data Action = StartRide
             | VisuallyImpairedCustomer
             | NoAction
             | ArrivedAtStop
-            | RideStartTimer Int String String 
 
 type Config = { 
   startRideActive :: Boolean,
@@ -69,7 +68,7 @@ type Config = {
   startODOReading :: String,
   tripDuration :: Mb.Maybe String,
   durationTravelled :: String,
-  rideStartTimer :: Int,
+  rideStartRemainingTime :: Int,
   hasToll :: Boolean,
   driverVehicle :: String,
   cityConfig :: CTC.CityConfig,
@@ -78,7 +77,8 @@ type Config = {
   acRide :: Mb.Maybe Boolean,
   isAdvanced :: Boolean,
   bookingFromOtherPlatform :: Boolean,
-  bapName :: String
+  bapName :: String,
+  isOdometerReadingsRequired :: Boolean
   }
 
 type AddressConfig = {
@@ -122,7 +122,7 @@ config = {
   startODOReading : "0",
   tripDuration : Mb.Nothing,
   durationTravelled : "0",
-  rideStartTimer : 0,
+  rideStartRemainingTime : -1,
   rideStartTime : Mb.Nothing,
   hasToll : false,
   capacity : Mb.Nothing,
@@ -130,5 +130,6 @@ config = {
   acRide : Mb.Nothing,
   isAdvanced : false,
   bookingFromOtherPlatform : false,
-  bapName : ""
+  bapName : "",
+  isOdometerReadingsRequired : false
 }

@@ -1428,3 +1428,4 @@ getTA stringKey =
         WHY -> "ஏன்?"
         SOME_FEATURES_ARE_NOT_AVAILABLE_FOR_THIRD_PARTY_RIDES -> "மூன்றாம் தரப்பின் சவாரிகளுக்கு சில அம்சங்கள் கிடைக்காது."
         BOOKING_FROM bapName -> bapName <> " இலிருந்து முன்பதிவு"
+        YOU_ARE_ON_A_INTERCITY_RIDE -> "நீங்கள் இன்டர்சிட்டி ரைடில் இருக்கிறீர்கள்."

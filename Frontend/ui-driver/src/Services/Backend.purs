@@ -559,6 +559,7 @@ mkUpdateDriverInfoReq dummy
     , vehicleName: Nothing
     , availableUpiApps: Nothing
     , canSwitchToRental: Nothing
+    , canSwitchToIntercity: Nothing
     }
 
 

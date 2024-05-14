@@ -481,6 +481,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , isVehicleSupported    :: Maybe Boolean
     , canSwitchToRental     :: Boolean
     , checkIfACWorking      :: Maybe Boolean
+    , canSwitchToIntercity  :: Maybe Boolean
     }
 
 
@@ -622,6 +623,7 @@ newtype RidesInfo = RidesInfo
       actualDuration :: Maybe Int,
       startOdometerReading :: Maybe OdometerReading,
       endOdometerReading :: Maybe OdometerReading,
+      isOdometerReadingsRequired :: Maybe Boolean,
       tollCharges :: Maybe Number,
       estimatedTollCharges :: Maybe Number,
       vehicleServiceTierName :: String,
@@ -877,6 +879,7 @@ newtype UpdateDriverInfoReq
   , vehicleName :: Maybe String
   , availableUpiApps :: Maybe String
   , canSwitchToRental :: Maybe Boolean
+  , canSwitchToIntercity :: Maybe Boolean
   }
 
 newtype UpdateDriverInfoResp = UpdateDriverInfoResp GetDriverInfoResp

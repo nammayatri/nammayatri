@@ -104,6 +104,7 @@ waitTimeConstructor key = case key of
   "NoStatus" -> ST.NoStatus
   "Triggered" -> ST.Triggered
   "PostTriggered" -> ST.PostTriggered
+  "Scheduled" -> ST.Scheduled
   _ -> ST.NoStatus
 
 transformDocText :: ST.RegisterationStep -> String
