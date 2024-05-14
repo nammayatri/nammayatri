@@ -12,7 +12,7 @@ import Helpers.Utils (getVehicleType, fetchImage, FetchImageFrom(..), getVariant
 import Language.Strings (getString)
 import Engineering.Helpers.Utils as EHU
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, not, ($), (<<<), (<>), (==), (<>), (&&), (||))
+import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (<>), (&&), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine, imageUrl, rippleColor, scrollView, scrollBarY, fillViewport)
 import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval, getVehicleCapacity)
 import Screens.Types as ST
@@ -228,13 +228,6 @@ downgradeVehicleView push state =
             , text $ getString DOWNGRADE_VEHICLE
             ]
           <> FontStyle.body4 TypoGraphy
-      , linearLayout
-          [ width MATCH_PARENT
-          , height $ V 1
-          , margin $ MarginBottom 16
-          , background Color.grey700
-          ]
-          []
       , textView
           $ [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -291,14 +284,26 @@ serviceTierItem push service enabled opacity =
             , width $ V 35
             , height $ V 35
             ]
-        , textView
-            [ weight 1.0
-            , height WRAP_CONTENT
+        , linearLayout
+        [ weight 1.0
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        ][ textView
+            [ height WRAP_CONTENT
             , text service.name
             , margin (MarginHorizontal 12 2)
             , color Color.black800
             , singleLine true
             ]
+          , textView $
+            [ height WRAP_CONTENT
+            , text $ fromMaybe "" service.shortDescription
+            , margin (MarginHorizontal 12 2)
+            , color Color.black650
+            , singleLine true
+            , textSize FontSize.a_12
+            ] <> FontStyle.body3 TypoGraphy
+        ]
         , linearLayout
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -444,7 +449,7 @@ vehicleLogoAndType push state =
             , margin $ MarginLeft 7
             ]
             [ customTV (state.data.defaultRidePreference.name) FontSize.a_20 FontStyle.h3 Color.black800
-            , customTV (fromMaybe "" state.data.defaultRidePreference.shortDescription) FontSize.a_12 FontStyle.body3 Color.black650
+            , customTV ((show $ fromMaybe 4 state.data.defaultRidePreference.seatingCapacity) <> " "<> getString PEOPLE) FontSize.a_12 FontStyle.body3 Color.black650
             ]
         ]
     ]
