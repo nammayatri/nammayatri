@@ -181,6 +181,10 @@ FRFSTicketBooking:
     cancellationCharges: Maybe HighPrecMoney
     refundAmount: Maybe HighPrecMoney
     isBookingCancellable: Maybe Bool
+    customerCancelled: Bool
+
+  default:
+    customerCancelled: "false"
 
   beamFields:
     price:
@@ -193,7 +197,7 @@ FRFSTicketBooking:
 
   types:
     FRFSTicketBookingStatus:
-      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED"
+      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED, COUNTER_CANCELLED"
 
   fromTType:
     price: Kernel.Types.Common.mkPrice currency price|E
@@ -263,6 +267,10 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [isBookingCancellable, updatedAt]
       where: id
+    updateCustomerCancelledByBookingId:
+      kvFunction: updateOneWithKV
+      params: [customerCancelled, updatedAt]
+      where: id
 
 # Make use of FareBreakup to store the fare breakup of a ticket
 
@@ -282,7 +290,7 @@ FRFSTicket:
 
   types:
     FRFSTicketStatus:
-      enum: "ACTIVE, EXPIRED, USED, CANCELLED"
+      enum: "ACTIVE, EXPIRED, USED, CANCELLED, COUNTER_CANCELLED"
 
   queries:
     findById:
@@ -299,7 +307,7 @@ FRFSTicket:
       params: [status, updatedAt]
       where:
         and: [frfsTicketBookingId, ticketNumber]
-    updateAllStausByBookingId:
+    updateAllStatusByBookingId:
       kvFunction: updateWithKV
       params: [status, updatedAt]
       where:
@@ -366,6 +374,9 @@ FRFSRecon:
     settlementDate: Maybe UTCTime # to be populated post settlement
     differenceAmount: Maybe Price # Nothing
     message: Maybe Text # Nothing
+    ticketStatus: Maybe FRFSTicketStatus
+    providerId: Text
+    providerName: Text
 
   beamFields:
     fare:

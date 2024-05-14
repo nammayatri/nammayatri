@@ -6,6 +6,7 @@
 module Storage.Beam.FRFSRecon where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.FRFSTicket
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -28,6 +29,8 @@ data FRFSReconT f = FRFSReconT
     message :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     mobileNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     networkOrderId :: B.C f Kernel.Prelude.Text,
+    providerId :: B.C f Kernel.Prelude.Text,
+    providerName :: B.C f Kernel.Prelude.Text,
     receiverSubscriberId :: B.C f Kernel.Prelude.Text,
     settlementAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
     settlementDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
@@ -35,6 +38,7 @@ data FRFSReconT f = FRFSReconT
     sourceStationCode :: B.C f Kernel.Prelude.Text,
     ticketNumber :: B.C f Kernel.Prelude.Text,
     ticketQty :: B.C f Kernel.Prelude.Int,
+    ticketStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.FRFSTicket.FRFSTicketStatus),
     time :: B.C f Kernel.Prelude.Text,
     totalOrderValue :: B.C f Kernel.Types.Common.HighPrecMoney,
     transactionRefNumber :: B.C f Kernel.Prelude.Text,
