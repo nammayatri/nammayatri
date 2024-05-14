@@ -469,6 +469,7 @@ DriverSSN:
     id: Id DriverSSN
     driverId: Id Person
     ssn: EncryptedHashedField e Text
+    verificationStatus: VerificationStatus
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey

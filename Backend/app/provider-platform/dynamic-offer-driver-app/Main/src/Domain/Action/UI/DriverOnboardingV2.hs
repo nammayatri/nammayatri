@@ -8,6 +8,7 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.Types.DocumentVerificationConfig
 import Domain.Types.DriverInformation
 import Domain.Types.DriverSSN
+import qualified Domain.Types.IdfyVerification as DIV
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -212,5 +213,6 @@ postDriverRegisterSsn (mbPersonId, _, _) API.Types.UI.DriverOnboardingV2.SSNReq 
       Domain.Types.DriverSSN.DriverSSN
         { id = id',
           driverId = driverId',
-          ssn = ssn'
+          ssn = ssn',
+          verificationStatus = DIV.PENDING
         }

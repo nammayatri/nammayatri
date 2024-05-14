@@ -55,6 +55,7 @@ import qualified Storage.Queries.AadhaarVerification as SAV
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverRCAssociation as DRAQuery
+import qualified Storage.Queries.DriverSSN as QDSSN
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
 import Storage.Queries.Person as Person
@@ -278,7 +279,9 @@ getProcessedDriverDocuments docType driverId =
       mbAadhaarCard <- SAV.findByDriverId driverId
       return $ boolToStatus <$> (mbAadhaarCard <&> (.isVerified))
     DVC.Permissions -> return $ Just VALID
-    DVC.SocialSecurityNumber -> return $ Just MANUAL_VERIFICATION_REQUIRED
+    DVC.SocialSecurityNumber -> do
+      mbSSN <- QDSSN.findByDriverId driverId
+      return $ mapStatus <$> (mbSSN <&> (.verificationStatus))
     _ -> return Nothing
   where
     boolToStatus :: Bool -> ResponseStatus
