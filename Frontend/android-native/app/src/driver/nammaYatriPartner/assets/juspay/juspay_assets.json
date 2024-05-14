@@ -66,6 +66,9 @@
       "ic_chat" : true,
       "ic_chat_badge" : true,
       "ic_chat_blue" : true,
+      "ny_ic_chat_grey" : true,
+      "ny_ic_alert_hexagon" : true,
+      "ny_ic_alert_hexagon_red" : true,
       "ic_chevrons_right_white" : true,
       "ic_close" : true,
       "ic_creative_zero" : true,
@@ -689,6 +692,8 @@
       "tip_banner_rectangle" : true,
       "up_hand_arrow" : true,
       "widget_close_gradient" : true,
-      "zone_curve" : true
+      "zone_curve" : true,
+      "ny_ic_logo_light" : true,
+      "ny_ic_green_check" : true
    }
 }

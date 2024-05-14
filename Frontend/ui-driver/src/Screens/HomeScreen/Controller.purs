@@ -419,7 +419,8 @@ data Action = NoAction
             | OnAudioCompleted String
             | ACExpController PopUpModal.Action
             | OpenLink String
-            
+            | AccessibilityHeaderAction
+            | PopUpModalInterOperableAction PopUpModal.Action
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -1378,6 +1379,15 @@ eval (GoToEarningsScreen showCoinsView) state = do
 eval (DriverStats driverStats) state = do
   exit $ DriverStatsUpdate driverStats state
 
+eval AccessibilityHeaderAction state = 
+  if state.data.bookingFromOtherPlatform then
+    continue state{ props{ showInterOperablePopUp = true } }
+  else continue state
+
+eval (PopUpModalInterOperableAction PopUpModal.OnButton2Click) state =
+  continue state{ props{ showInterOperablePopUp = false } }
+
+
 eval (IsAcWorkingPopUpAction PopUpModal.OnButton1Click) state = exit $ UpdateAirConditioned state true
 
 eval (IsAcWorkingPopUpAction PopUpModal.OnButton2Click) state = exit $ UpdateAirConditioned state false
@@ -1517,7 +1527,8 @@ activeRideDetail state (RidesInfo ride) =
   capacity : ride.vehicleCapacity,
   hasToll :  maybe false (\charge -> charge /= 0.0) ride.estimatedTollCharges,
   estimatedTollCharge : ride.estimatedTollCharges,
-  acRide : ride.isVehicleAirConditioned
+  acRide : ride.isVehicleAirConditioned,
+  bapName : ride.bapName
 }
   where 
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String

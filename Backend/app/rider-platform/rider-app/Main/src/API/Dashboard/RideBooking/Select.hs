@@ -51,6 +51,7 @@ type CustomerSelectAPI =
     :> Capture "customerId" (Id DP.Person)
     :> Capture "estimateId" (Id DEstimate.Estimate)
     :> "select"
+    :> ReqBody '[JSON] DSelect.DSelectReq
     :> Post '[JSON] APISuccess
 
 type CustomerSelectListAPI =
@@ -74,10 +75,10 @@ type CustomerCancelSearchAPI =
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId = callSelect merchantId :<|> callSelectList merchantId :<|> callSelectResult merchantId :<|> callCancelSearch merchantId
 
-callSelect :: ShortId DM.Merchant -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
-callSelect merchantId personId estimateId = do
+callSelect :: ShortId DM.Merchant -> Id DP.Person -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler APISuccess
+callSelect merchantId personId estimateId req = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  US.select2 (personId, m.id) estimateId $ US.DSelectReq {customerExtraFee = Nothing, customerExtraFeeWithCurrency = Nothing, autoAssignEnabled = False, autoAssignEnabledV2 = Nothing, paymentMethodId = Nothing, otherSelectedEstimates = Nothing}
+  US.select2 (personId, m.id) estimateId req
 
 callSelectList :: ShortId DM.Merchant -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
 callSelectList merchantId personId estimate = do

@@ -645,7 +645,13 @@ public class RideRequestUtils {
         }catch (JSONException e){
             firebaseLogEventWithParams("exception_in_update_extra_charges", "exception", String.valueOf(e), context);
         }
-        if ((pickUpCharges > 0 && !hideZeroPickupCharges) && showPickupCharges) {
+        if (model.isThirdPartyBooking()) {
+            holder.thirdPartyTag.setVisibility(View.VISIBLE);
+            holder.rateText.setVisibility(View.GONE);
+            holder.rateViewDot.setVisibility(View.GONE);
+            holder.textIncludesCharges.setText("No additional fare. No tips. No waiting charges.");
+            holder.textIncludesCharges.setTextColor(Color.parseColor("#E55454"));
+        } else if ((pickUpCharges > 0 && !hideZeroPickupCharges) && showPickupCharges) {
             String formattedPickupChargesText = context.getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(pickUpCharges));
             holder.textIncludesCharges.setText(formattedPickupChargesText);
             holder.textIncludesCharges.setVisibility(View.VISIBLE);

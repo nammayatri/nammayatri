@@ -16,16 +16,18 @@
 module Components.PopUpModal.Controller where
 
 import Common.Styles.Colors as Color
-import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..))
+import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..), PrestoDOM)
 import Font.Size as FontSize
 import Font.Style (Style(..))
 import Common.Types.App as Common
 import PrestoDOM.Types.DomAttributes (Corners(..)) as PTD
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Prelude ((<>))
+import Prelude ((<>), Unit)
 import Data.Maybe as Mb
 import Components.TipsView as TipsView
+import Effect (Effect)
+import Data.Maybe
 
 data Action = OnButton1Click
             | OnButton2Click
@@ -83,7 +85,12 @@ type Config = {
     topTextVisibility :: Boolean,
     isTipEnabled :: Boolean,
     isVisible :: Boolean,
-    isTipPopup :: Boolean
+    isTipPopup :: Boolean,
+    layout :: forall w. Maybe (LayoutConfig -> PrestoDOM (Effect Unit) w)
+}
+
+type LayoutConfig = {
+  visibility :: Visibility
 }
 
 type CoverMediaConfig = {
@@ -504,7 +511,8 @@ config = {
     topTextVisibility : false,
     isVisible : false,
     isTipEnabled : true,
-    isTipPopup : false
+    isTipPopup : false,
+    layout : Nothing
 }
 
 

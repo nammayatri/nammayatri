@@ -160,7 +160,10 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideDuration,
                     rideDistance,
                     rideStartTime,
-                    rideStartDate);
+                    rideStartDate,
+                    rideRequestBundle.getBoolean("thirdpartyBooking")
+            );
+
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);
             sheetAdapter.notifyItemInserted(sheetArrayList.indexOf(sheetModel));

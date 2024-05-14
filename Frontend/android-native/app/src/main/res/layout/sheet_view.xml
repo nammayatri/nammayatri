@@ -36,6 +36,31 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:background="#30E55454"
+                        android:gravity="center"
+                        android:id="@+id/thirdPartyTag"
+                        android:visibility="gone"
+                        android:paddingLeft="6dp">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:text="Third Party Booking"
+                            android:textColor="@color/red900"
+                            android:textSize="14dp"
+                            android:textFontWeight="500"
+                            android:paddingVertical="12dp"
+                            android:paddingHorizontal="6dp"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
                         android:background="@color/grey900"
                         android:visibility="gone"
                         android:id="@+id/tags_block"

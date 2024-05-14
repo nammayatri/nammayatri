@@ -146,6 +146,12 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             String searchRequestId = model.getSearchRequestId();
             boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
 
+            // if (model.isThirdPartyBooking()) {
+            //     holder.thirdPartyTag.setVisibility(View.VISIBLE);
+            //     holder.textIncludesCharges.setText("No additional fare. No tips. No waiting charges.");
+            //     holder.textIncludesCharges.setTextColor(getColor(R.color.red900));
+            // }
+
             if (model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showVariant || showSpecialLocationTag) {
                 if (showSpecialLocationTag && model.getSpecialZoneExtraTip() > 0) {
                     model.setOfferedPrice(model.getSpecialZoneExtraTip());
@@ -673,10 +679,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String rideDistance = String.format("%d km", rideRequestBundle.getInt("rideDistance") / 1000);
                     String rideStartTime = rideRequestBundle.getString("rideStartTime");
                     String rideStartDate= rideRequestBundle.getString("rideStartDate");
+                    boolean isThirdPartyBooking = true; // rideRequestBundle.getBoolean("isThirdPartyBooking");;
                    
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
-
                     }
                     SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                             distanceTobeCovered,
@@ -717,11 +723,12 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             rideDuration,
                             rideDistance,
                             rideStartTime,
-                            rideStartDate);
+                            rideStartDate,
+                            isThirdPartyBooking);
 
                     if (floatyView == null) {
                         startTimer();
-                        showOverLayPopup(rideRequestBundle);
+                        showOverLayPopup(rideRequestBundle, isThirdPartyBooking);
                     }
                     sheetArrayList.add(sheetModel);
                     sheetAdapter.updateSheetList(sheetArrayList);
@@ -750,7 +757,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     }
 
     @SuppressLint("InflateParams")
-    private void showOverLayPopup(Bundle rideRequestBundle) {
+    private void showOverLayPopup(Bundle rideRequestBundle, boolean isThirdPartyBooking) {
         if (!Settings.canDrawOverlays(getApplicationContext())) return;
         windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
         int layoutParamsType;
@@ -778,7 +785,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         }catch (Exception e){
             e.printStackTrace();
         }
-        if (key != null && key.equals("yatrisathiprovider")){
+        if (isThirdPartyBooking) {
+            View merchantBottomTag = floatyView.findViewById(R.id.merchant_bottom_tag);
+            merchantBottomTag.setVisibility(View.GONE);
+        }else if (key != null && key.equals("yatrisathiprovider")){
             merchantLogo.setText("yatri\nsathi");
             ImageView merchantLogoIcon = (ImageView) floatyView.findViewById(R.id.merchantLogoIcon);
             LinearLayout.LayoutParams  layoutParams = new LinearLayout.LayoutParams(100,100);

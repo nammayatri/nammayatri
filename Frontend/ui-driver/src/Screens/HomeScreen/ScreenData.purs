@@ -84,6 +84,7 @@ initData =
           , hasToll: false
           , estimatedTollCharge : Nothing
           , acRide : Nothing
+          , bapName : ""
           }
       , cancelRideModal:
           { selectionOptions: []
@@ -189,6 +190,7 @@ initData =
       , prevLatLon: Nothing
       , noOfLocations: 0
       , isVehicleSupported: true
+      , bookingFromOtherPlatform : true
       }
   , props:
       { isFreeRide: false
@@ -261,6 +263,7 @@ initData =
       , odometerImageUploading: false
       , showAcWorkingPopup: Nothing
       , acExplanationPopup : false
+      , showInterOperablePopUp : false
       }
   }
 
