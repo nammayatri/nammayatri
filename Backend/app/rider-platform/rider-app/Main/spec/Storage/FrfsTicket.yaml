@@ -223,8 +223,9 @@ FRFSTicketBooking:
       kvFunction: findAllWithKV
       where: status
     findAllByRiderId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where: riderId
+      orderBy: createdAt
     updateStatusById:
       kvFunction: updateWithKV
       params: [status, updatedAt]
@@ -416,3 +417,4 @@ FRFSConfig:
 
   constraints:
     merchantOperatingCityId: PrimaryKey
+
