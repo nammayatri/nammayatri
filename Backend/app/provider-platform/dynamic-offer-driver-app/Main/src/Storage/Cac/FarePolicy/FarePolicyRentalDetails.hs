@@ -15,10 +15,10 @@ import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import Storage.Beam.FarePolicy.FarePolicyRentalDetails as BeamFPRD
 import qualified Storage.Cac.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers as CQFPRDB
+import Storage.Queries.FarePolicy.FarePolicyRentalDetails (fromTTypeFarePolicyRentalDetails)
 import Utils.Common.CacUtils
 
 findFarePolicyRentalDetailsFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id Domain.FarePolicy -> Int -> m (Maybe Domain.FullFarePolicyRentalDetails)
@@ -29,25 +29,6 @@ findFarePolicyRentalDetailsFromCAC context tenant id toss = do
     Just config -> fromCacType (config, context, tenant, id, toss)
 
 instance FromCacType (BeamFPRD.FarePolicyRentalDetails, [(CacContext, Value)], String, Id Domain.FarePolicy, Int) Domain.FullFarePolicyRentalDetails where
-  fromCacType (BeamFPRD.FarePolicyRentalDetailsT {..}, context, tenant, id, toss) = do
+  fromCacType (farePolicyRentalDetails, context, tenant, id, toss) = do
     fullFPRDB <- CQFPRDB.findFarePolicyRentalDetailsDistanceBuffersFromCAC context tenant id toss
-    case nonEmpty fullFPRDB of
-      Nothing -> pure Nothing
-      Just fPRDB ->
-        pure $
-          Just
-            ( KTI.Id farePolicyId,
-              Domain.FPRentalDetails
-                { baseFare = mkAmountWithDefault baseFareAmount baseFare,
-                  perHourCharge = mkAmountWithDefault perHourChargeAmount perHourCharge,
-                  perExtraMinRate = mkAmountWithDefault perExtraMinRateAmount perExtraMinRate,
-                  perExtraKmRate = mkAmountWithDefault perExtraKmRateAmount perExtraKmRate,
-                  nightShiftCharge = nightShiftCharge,
-                  includedKmPerHr = includedKmPerHr,
-                  plannedPerKmRate = mkAmountWithDefault plannedPerKmRateAmount plannedPerKmRate,
-                  maxAdditionalKmsLimit = maxAdditionalKmsLimit,
-                  totalAdditionalKmsLimit = totalAdditionalKmsLimit,
-                  distanceBuffers = snd <$> fPRDB,
-                  currency = fromMaybe INR currency
-                }
-            )
+    pure $ fromTTypeFarePolicyRentalDetails farePolicyRentalDetails <$> nonEmpty fullFPRDB
