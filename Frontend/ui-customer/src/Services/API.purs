@@ -3897,3 +3897,35 @@ instance standardEncodeAPISuccessResp :: StandardEncode APISuccessResp where sta
 instance showAPISuccessResp :: Show APISuccessResp where show = genericShow
 instance decodeAPISuccessResp :: Decode APISuccessResp where decode = defaultDecode
 instance encodeAPISuccessResp :: Encode APISuccessResp where encode = defaultEncode
+----------------------------- MetroBookingConfig -----------------------------------------------------
+newtype MetroBookingConfigReq = MetroBookingConfigReq String
+
+newtype MetroBookingConfigRes = MetroBookingConfigRes {
+  bookingStartTime :: String,
+  bookingEndTime :: String,
+  roundTripTicketLimit :: Int,
+  oneWayTicketLimit :: Int,
+  metroStationTtl :: Int,
+  discount :: Int,
+  customEndTime :: String,
+  customDates :: Array String 
+}
+
+instance makeMetroBookingConfigReq :: RestEndpoint MetroBookingConfigReq MetroBookingConfigRes where
+ makeRequest reqBody@(MetroBookingConfigReq city) headers = defaultMakeRequest GET (EP.getMetroBookingConfig city) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = defaultEncode req
+
+derive instance genericMetroBookingConfigReq :: Generic MetroBookingConfigReq _
+derive instance newtypeMetroBookingConfigReq :: Newtype MetroBookingConfigReq _
+instance standardEncodeMetroBookingConfigReq :: StandardEncode MetroBookingConfigReq where standardEncode (MetroBookingConfigReq reqBody) = standardEncode reqBody
+instance showMetroBookingConfigReq :: Show MetroBookingConfigReq where show = genericShow
+instance decodeMetroBookingConfigReq :: Decode MetroBookingConfigReq where decode = defaultDecode
+instance encodeMetroBookingConfigReq :: Encode MetroBookingConfigReq where encode = defaultEncode
+
+derive instance genericMetroBookingConfigRes :: Generic MetroBookingConfigRes _
+derive instance newtypeMetroBookingConfigRes :: Newtype MetroBookingConfigRes _
+instance standardEncodeMetroBookingConfigRes :: StandardEncode MetroBookingConfigRes where standardEncode (MetroBookingConfigRes resp) = standardEncode resp
+instance showMetroBookingConfigRes :: Show MetroBookingConfigRes where show = genericShow
+instance decodeMetroBookingConfigRes :: Decode MetroBookingConfigRes where decode = defaultDecode
+instance encodeMetroBookingConfigRes :: Encode MetroBookingConfigRes where encode = defaultEncode

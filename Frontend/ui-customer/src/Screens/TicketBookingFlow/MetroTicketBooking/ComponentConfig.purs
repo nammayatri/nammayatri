@@ -20,7 +20,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import PrestoDOM
 import Styles.Colors as Color
-import Helpers.Utils (convertTo12HourFormat , fetchImage, FetchImageFrom(..))
+import Helpers.Utils (convertTo12HourFormat , fetchImage, FetchImageFrom(..), getCityFromString)
 import Prelude ((<>))
 import Common.Types.App(LazyCheck(..))
 import Engineering.Helpers.Commons (getNewIDWithTag)
@@ -36,6 +36,9 @@ import Helpers.Utils (CityMetroConfig(..))
 import Components.Banner as Banner
 import DecodeUtil (getAnyFromWindow)
 import Data.Function.Uncurried (runFn3)
+import MerchantConfig.Types (MetroConfig)
+import Storage
+import Services.API (MetroBookingConfigRes(..))
 
 metroTicketBookingHeaderConfig :: ST.MetroTicketBookingScreenState -> GenericHeader.Config
 metroTicketBookingHeaderConfig state = let
@@ -64,10 +67,14 @@ metroTicketBookingHeaderConfig state = let
 
 updateButtonConfig :: ST.MetroTicketBookingScreenState -> PrimaryButton.Config
 updateButtonConfig state = let
+    city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
     config = PrimaryButton.config
+    price = state.data.ticketPrice * state.data.ticketCount
+    (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
+    priceWithoutDiscount = ((metroBookingConfigResp.discount * price) / 100) + price
     updateButtonConfig' = config 
         { 
-         textConfig{ text = if state.props.currentStage /= ST.MetroTicketSelection then ((getString PAY)<>" " <> " ₹" <> (show (state.data.ticketPrice * state.data.ticketCount )) )  else (getString GET_FARE)}
+          textConfig{ textFromHtml = Just $ if (state.props.currentStage /= ST.MetroTicketSelection && price /= priceWithoutDiscount) then ((getString PAY)<>"&nbsp;&nbsp; " <> " ₹ " <> "<strike> " <> (show priceWithoutDiscount) <> " </strike>" <> " " <> (show price)) else if (state.props.currentStage /= ST.MetroTicketSelection) then ((getString PAY)<>" " <> " ₹" <> (show price) )  else (getString GET_FARE)}
         , height = (V 48)
         , cornerRadius = 8.0
         , margin = (Margin 16 0 16 0)
