@@ -1406,3 +1406,4 @@ getTE stringKey =
         FINAL_FARE_EXCLUDES_TOLL -> "తుది ఛార్జీలు టోల్ ఛార్జీలను మినహాయించాయి"
         PLEASE_COLLECT_SEPARATELY -> "దయచేసి <b>టోల్ దాటితే మాత్రమే</b> కస్టమర్ నుండి విడిగా సేకరించండి"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "టోల్ ఛార్జీలు వర్తించవచ్చు"
+        YOU_ARE_ALL_SET_TO_TAKE_RIDES -> "మీరు నమ్మ యాత్రిలో రైడ్లు తీసుకోవడానికి సిద్ధంగా ఉన్నారు"

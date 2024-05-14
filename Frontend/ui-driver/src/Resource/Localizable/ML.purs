@@ -1406,3 +1406,4 @@ getML stringKey =
         FINAL_FARE_EXCLUDES_TOLL -> "അന്തിമ നിരക്ക് ടോൾ നിരക്കുകൾ ഒഴിവാക്കുന്നു"
         PLEASE_COLLECT_SEPARATELY -> "ദയവായി അത് ഉപഭോക്താവിൽ നിന്ന് പ്രത്യേകം ശേഖരിക്കുക <b>ഒരു ടോൾ മറികടന്നാൽ മാത്രം</b>"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "ടോൾ നിരക്കുകൾ ബാധകമായേക്കാം"
+        YOU_ARE_ALL_SET_TO_TAKE_RIDES -> "നമ്മ യാത്രിയിൽ സവാരികൾ എടുക്കാൻ നിങ്ങൾ തയാറാണ്"
