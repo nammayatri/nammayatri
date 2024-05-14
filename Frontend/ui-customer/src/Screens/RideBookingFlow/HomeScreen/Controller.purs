@@ -100,7 +100,7 @@ import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, Curren
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
-import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
+import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore, deleteValueFromLocalStore)
 import Control.Monad.Trans.Class (lift)
 import Presto.Core.Types.Language.Flow (doAff)
 import Effect.Class (liftEffect)
@@ -131,7 +131,7 @@ import Locale.Utils (getLanguageLocale)
 import RemoteConfig as RC
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
-import LocalStorage.Cache (getValueFromCache, setValueToCache, getFromCache, setInCache)
+import LocalStorage.Cache (getValueFromCache, setValueToCache, getFromCache, setInCache, removeValueFromCache)
 import DecodeUtil (getAnyFromWindow, stringifyJSON, decodeForeignAny, parseJSON, decodeForeignAnyImpl)
 import JBridge as JB
 import Helpers.SpecialZoneAndHotSpots (zoneLabelIcon,getSpecialTag)
@@ -3539,5 +3539,6 @@ cacheRateCard state = do
                   , driverAdditions = state.data.selectedEstimatesObject.driverAdditions
                   }
   if state.data.selectedEstimatesObject.vehicleVariant == "BOOK_ANY" then do
-    void $ pure $ setValueToCache (show RATE_CARD_INFO) "" (\i -> i)
+    let _ = JB.removeKeysInSharedPrefs $ show RATE_CARD_INFO
+    void $ pure $ removeValueFromCache (show RATE_CARD_INFO)
   else void $ pure $ setValueToCache (show RATE_CARD_INFO) rateCard (\a -> stringifyJSON $ encode a)
