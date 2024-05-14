@@ -1597,7 +1597,8 @@ rideCompletedCardConfig state =
       headerConfig = mkHeaderConfig state.props.nightSafetyFlow state.props.showOfferedAssistancePopUp
       appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
       isRecentRide = EHC.getExpiryTime (fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _rideEndTime)) true / 60 < state.data.config.safety.pastRideInterval
-      actualTollCharge =  maybe dummyPrice (\(API.FareBreakupAPIEntity obj) ->  obj.amountWithCurrency) $ DA.find (\entity  -> entity ^._description == "TOLL_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
+      actualPrice =  maybe dummyPrice (\(API.FareBreakupAPIEntity obj) ->  obj.amountWithCurrency) $ DA.find (\entity  -> entity ^._description == "TOLL_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
+      actualTollCharge =  actualPrice.amount
       serviceTier = fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _serviceTierName)
   in RideCompletedCard.config {
         isDriver = false,
@@ -1651,7 +1652,7 @@ rideCompletedCardConfig state =
         , text =if actualTollCharge > 0.0 then getString TOLL_CHARGES_INCLUDED  else getString TOLL_ROAD_CHANGED -- Handle after design finalized 
         , visibility = boolToVisibility $ (actualTollCharge > 0.0 || (getValueToLocalStore HAS_TOLL_CHARGES == "true")) && serviceTier /= "Auto"
         , image = fetchImage FF_COMMON_ASSET "ny_ic_grey_toll"
-        , imageVisibility = boolToVisibility $ actualTollCharge.amount > 0.0
+        , imageVisibility = boolToVisibility $ actualTollCharge > 0.0
         }
       }
   where 
