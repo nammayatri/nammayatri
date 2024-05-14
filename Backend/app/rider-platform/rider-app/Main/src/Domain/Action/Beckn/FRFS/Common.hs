@@ -14,6 +14,7 @@
 
 module Domain.Action.Beckn.FRFS.Common where
 
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
@@ -36,6 +37,7 @@ data DOrder = DOrder
     bppOrderId :: Text,
     bppItemId :: Text,
     transactionId :: Text,
+    orderStatus :: Maybe Spec.OrderStatus,
     messageId :: Text,
     tickets :: [DTicket]
   }

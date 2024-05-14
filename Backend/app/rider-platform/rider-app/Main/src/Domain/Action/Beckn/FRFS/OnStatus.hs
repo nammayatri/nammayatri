@@ -16,6 +16,7 @@
 module Domain.Action.Beckn.FRFS.OnStatus where
 
 import qualified Beckn.ACL.FRFS.Utils as Utils
+import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import Domain.Types.Merchant as Merchant
@@ -40,8 +41,11 @@ validateRequest DOrder {..} = do
 
 onStatus :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> Flow ()
 onStatus _merchant booking dOrder = do
-  statuses <- traverse Utils.getTicketStatus dOrder.tickets
-  void $ traverse updateTicket statuses
+  statuses <- traverse (Utils.getTicketStatus booking) dOrder.tickets
+  whenJust dOrder.orderStatus $ \status ->
+    when (status == Spec.ON_CANCEL_CANCELLED && not booking.customerCancelled) $
+      QTBooking.updateStatusById Booking.COUNTER_CANCELLED booking.id
+  traverse_ updateTicket statuses
   where
     updateTicket (ticketNumber, status) =
       void $ QTicket.updateStatusByTBookingIdAndTicketNumber status booking.id ticketNumber

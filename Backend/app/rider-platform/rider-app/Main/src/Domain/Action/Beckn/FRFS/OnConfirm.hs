@@ -19,16 +19,20 @@ import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Text as T
 import Domain.Action.Beckn.FRFS.Common
+import qualified Domain.Action.Beckn.FRFS.OnCancel as DOnCancel
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSRecon as Recon
 import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import Domain.Types.Merchant as Merchant
 import Environment
 import Kernel.Beam.Functions
+import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -41,6 +45,7 @@ import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicket as QTicket
+import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Station as QStation
@@ -83,12 +88,15 @@ buildReconTable merchant booking _dOrder tickets = do
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   transactionRefNumber <- booking.paymentTxnId & fromMaybeM (InternalError "Payment Txn Id not found in booking")
   txn <- runInReplica $ QPaymentTransaction.findById (Id transactionRefNumber) >>= fromMaybeM (InvalidRequest "Payment Transaction not found for approved TicketBookingId")
+  paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+  let paymentBookingStatus = paymentBooking.status
   mRiderNumber <- mapM decrypt person.mobileNumber
   now <- getCurrentTime
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "BPP Order Id not found in booking")
-  let totalOrderValue = booking.price
   let finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee -- FIXME
-  settlementAmount <- totalOrderValue `subtractPrice` finderFee
+  let finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational booking.quantity)
+  let tOrderValue = modifyPrice (totalOrderValue paymentBookingStatus booking) $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational quote.quantity)
+  settlementAmount <- tOrderValue `subtractPrice` finderFeeForEachTicket
   let reconEntry =
         Recon.FRFSRecon
           { Recon.id = "",
@@ -115,22 +123,31 @@ buildReconTable merchant booking _dOrder tickets = do
             Recon.ticketQty = booking.quantity,
             Recon.time = show now,
             Recon.txnId = txn.txnId,
-            Recon.totalOrderValue = booking.price,
+            Recon.totalOrderValue = tOrderValue,
             Recon.transactionRefNumber = transactionRefNumber,
             Recon.merchantId = booking.merchantId,
             Recon.merchantOperatingCityId = booking.merchantOperatingCityId,
             Recon.createdAt = now,
-            Recon.updatedAt = now
+            Recon.updatedAt = now,
+            Recon.ticketStatus = Nothing,
+            Recon.providerId = booking.providerId,
+            Recon.providerName = booking.providerName
           }
 
   reconEntries <- mapM (buildRecon reconEntry) tickets
   void $ QRecon.createMany reconEntries
 
+totalOrderValue :: DFRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus -> Booking.FRFSTicketBooking -> Price
+totalOrderValue paymentBookingStatus booking =
+  if paymentBookingStatus == DFRFSTicketBookingPayment.REFUND_PENDING || paymentBookingStatus == DFRFSTicketBookingPayment.REFUNDED then refundAmountToPrice else booking.price
+  where
+    refundAmountToPrice = mkPrice (Just INR) (fromJust booking.refundAmount)
+
 mkTicket :: Booking.FRFSTicketBooking -> DTicket -> Flow Ticket.FRFSTicket
 mkTicket booking dTicket = do
   now <- getCurrentTime
   ticketId <- generateGUID
-  (_, status) <- Utils.getTicketStatus dTicket
+  (_, status) <- Utils.getTicketStatus booking dTicket
 
   return
     Ticket.FRFSTicket
@@ -155,6 +172,7 @@ buildRecon recon ticket = do
     recon
       { Recon.id = reconId,
         Recon.ticketNumber = ticket.ticketNumber,
+        Recon.ticketStatus = Just ticket.status,
         Recon.createdAt = now,
         Recon.updatedAt = now
       }
@@ -164,6 +182,8 @@ callBPPCancel booking bapConfig cancellationType merchantId = do
   fork "FRFS Cancel Req" $ do
     providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
     merchantOperatingCity <- getMerchantOperatingCityFromBooking booking
+    ttl <- bapConfig.cancelTTLSec & fromMaybeM (InternalError "Invalid ttl")
+    when (cancellationType == Spec.CONFIRM_CANCEL) $ Redis.setExp (DOnCancel.makecancelledTtlKey booking.id) True ttl
     bknCancelReq <- ACL.buildCancelReq booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} cancellationType merchantOperatingCity.city
     logDebug $ "FRFS CancelReq " <> encodeToText bknCancelReq
     void $ CallBPP.cancel providerUrl bknCancelReq merchantId
