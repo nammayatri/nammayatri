@@ -17,9 +17,7 @@
 module Storage.Cac.FarePolicy where
 
 import qualified Client.Main as CM
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
 import qualified Data.Aeson as DA
-import Data.List.NonEmpty
 import qualified Domain.Types.Cac as DTC
 import Domain.Types.FarePolicy as Domain
 import Kernel.Beam.Functions (FromCacType (..))
@@ -35,6 +33,7 @@ import qualified Storage.Cac.FarePolicy.FarePolicyProgressiveDetails as CQueries
 import qualified Storage.Cac.FarePolicy.FarePolicyRentalDetails as CQueriesFPRD
 import qualified Storage.Cac.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as CQueriesFPSDS
 import qualified Storage.CachedQueries.FarePolicy as SCQF
+import Storage.Queries.FarePolicy (FarePolicyHandler (..), fromTTypeFarePolicy)
 import Utils.Common.CacUtils as CCU
 
 fromCacTypeCustom :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ([(CacContext, Value)], String, Id FarePolicy, Int) -> BeamFP.FarePolicy -> m (Maybe FarePolicy)
@@ -78,50 +77,16 @@ update' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
 update' = SCQF.update'
 
 instance FromCacType (BeamFP.FarePolicy, [(CacContext, Value)], String, Id FarePolicy, Int) Domain.FarePolicy where
-  fromCacType (BeamFP.FarePolicyT {..}, context, tenant, id', toss) = do
-    fullDEFB <- CQueriesDEFB.getDriverExtraFeeBoundsFromCAC context tenant id' toss
-    let fDEFB = snd <$> fullDEFB
-    mFarePolicyDetails <-
-      case farePolicyType of
-        Progressive -> do
-          mFPPD <- CQueriesFPPD.getFPProgressiveDetailsFromCAC context tenant id' toss
-          case mFPPD of
-            Just (_, fPPD) -> return $ Just (ProgressiveDetails fPPD)
-            Nothing -> return Nothing
-        Slabs -> do
-          fullSlabs <- CQueriesFPSDS.getFarePolicySlabsDetailsSlabFromCAC context tenant id' toss
-          let slabs = snd <$> fullSlabs
-          case nonEmpty slabs of
-            Just nESlabs -> return $ Just (SlabsDetails (FPSlabsDetails nESlabs))
-            Nothing -> return Nothing
-        Rental -> do
-          mFPRD <- CQueriesFPRD.findFarePolicyRentalDetailsFromCAC context tenant id' toss
-          case mFPRD of
-            Just (_, fPRD) -> return $ Just (RentalDetails fPRD)
-            Nothing -> return Nothing
-    case mFarePolicyDetails of
-      Just farePolicyDetails -> do
-        return $
-          Just
-            Domain.FarePolicy
-              { id = Id id,
-                serviceCharge = mkAmountWithDefault serviceChargeAmount <$> serviceCharge,
-                parkingCharge = parkingCharge,
-                currency = fromMaybe INR currency,
-                nightShiftBounds = DPM.NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
-                allowedTripDistanceBounds =
-                  ((,) <$> minAllowedTripDistance <*> maxAllowedTripDistance) <&> \(minAllowedTripDistance', maxAllowedTripDistance') ->
-                    DPM.AllowedTripDistanceBounds
-                      { minAllowedTripDistance = minAllowedTripDistance',
-                        maxAllowedTripDistance = maxAllowedTripDistance'
-                      },
-                govtCharges = govtCharges,
-                driverExtraFeeBounds = nonEmpty fDEFB,
-                farePolicyDetails,
-                perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,
-                congestionChargeMultiplier = congestionChargeMultiplier,
-                description = description,
-                createdAt = createdAt,
-                updatedAt = updatedAt
-              }
-      Nothing -> return Nothing
+  fromCacType farePolicyCac@(farePolicyT, _, _, _, _) = fromTTypeFarePolicy (mkCacFarePolicyHandler farePolicyCac) farePolicyT
+
+mkCacFarePolicyHandler ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  (BeamFP.FarePolicy, [(CacContext, Value)], String, Id FarePolicy, Int) ->
+  FarePolicyHandler m
+mkCacFarePolicyHandler (_farePolicy, context, tenant, id', toss) =
+  FarePolicyHandler
+    { findAllDriverExtraFeeBounds = CQueriesDEFB.getDriverExtraFeeBoundsFromCAC context tenant id' toss,
+      findProgressiveDetails = CQueriesFPPD.getFPProgressiveDetailsFromCAC context tenant id' toss,
+      findAllSlabDetailsSlabs = CQueriesFPSDS.getFarePolicySlabsDetailsSlabFromCAC context tenant id' toss,
+      findRentalDetails = CQueriesFPRD.findFarePolicyRentalDetailsFromCAC context tenant id' toss
+    }
