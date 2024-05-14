@@ -14,6 +14,10 @@ export const setInCache = function (key, value) {
   cacheMap[key] = value;
   return value;
 }
-export const clearCache = function () {
-  cacheMap = {};
+export const clearCache = function (key) {
+  if (key != "") {
+    delete cacheMap[key];
+  } else {
+    cacheMap = {};
+  }
 }
