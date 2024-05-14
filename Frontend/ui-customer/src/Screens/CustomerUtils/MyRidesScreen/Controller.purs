@@ -21,6 +21,7 @@ import Components.GenericHeader as GenericHeader
 import Components.IndividualRideCard.Controller as IndividualRideCardController
 import Components.PrimaryButton as PrimaryButton
 import Data.Array (union, (!!), length, filter, unionBy, head, all, null, sortWith, reverse)
+import Data.Function.Uncurried (runFn2)
 import Data.Int (fromString, round, toNumber)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
@@ -28,7 +29,7 @@ import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool)
 import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, isHaveFare, withinTimeRange, fetchImage, FetchImageFrom(..), isParentView, emitTerminateApp)
 import Engineering.Helpers.Commons (convertUTCtoISC)
-import JBridge (firebaseLogEvent)
+import JBridge (firebaseLogEvent, differenceBetweenTwoUTCInMinutes)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), (*), negate, (<<<), not, void)
 import PrestoDOM (Eval, ScrollState(..), continue, continueWithCmd, exit, updateAndExit)
@@ -231,6 +232,8 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
     updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
     specialTags = getSpecialTag ride.specialLocationTag
+    startTime = fromMaybe "" ride.rideStartTime
+    endTime = fromMaybe "" ride.rideEndTime
      in {
     date : (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
     time :  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
@@ -275,6 +278,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , isSrcServiceable: state.data.isSrcServiceable
   , optionsVisibility : true
   , merchantExoPhone : ride.merchantExoPhone
+  , totalTime : show (runFn2 differenceBetweenTwoUTCInMinutes endTime startTime) <> " min"
   , showRepeatRide : if rideApiDetails.fareProductType == "RENTAL" then "gone" else "visible"
   , rideType : case rideApiDetails.fareProductType of
       "RENTAL" -> RideType.RENTAL_RIDE

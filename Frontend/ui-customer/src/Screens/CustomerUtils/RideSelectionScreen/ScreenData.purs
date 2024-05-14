@@ -114,6 +114,7 @@ dummyIndividualCard = {
   , optionsVisibility : false
   , vehicleVariant : Nothing
   , merchantExoPhone : ""
+  , totalTime : ""
   , showRepeatRide : ""
   , rideType : NORMAL_RIDE
   , estimatedDistance : 0

@@ -1014,3 +1014,5 @@ getFR stringKey =
         RENTAL_POLICY_DESC_1 -> "Vous pouvez toujours consulter votre tarif sur l'écran suivant avant de confirmer la réservation."
         RENTALS_INTERCITY_AVAILABLE -> "Locations et voyages interurbains, désormais disponibles sur Yatri Sathi"
         CHECK_IT_OUT -> "Vérifiez-le"
+        TIME_TAKEN -> "Temps pris"
+        TRIP_DISTANCE -> "Distance du trajet"

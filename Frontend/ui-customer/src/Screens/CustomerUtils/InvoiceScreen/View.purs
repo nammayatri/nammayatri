@@ -36,7 +36,7 @@ import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig,
 import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Helpers.Utils (isHaveFare)
+import Helpers.Utils (isHaveFare, formatFareType)
 import MerchantConfig.Utils (getMerchant, Merchant (..))
 
 screen :: ST.InvoiceScreenState -> Screen Action ST.InvoiceScreenState ScreenOutput
@@ -229,7 +229,7 @@ getFareText fareType baseDistance estimatedDistance rideType =
         baseDistanceInMeters = getBaseFareForRentalOrInterCity baseDistance
         distanceBasedCharges = if rideType == CTA.RENTAL_RIDE && (baseDistanceInMeters > estimatedDistance) then getString DIST_BASED_CHARGES <> " (" <> (Constants.getKmMeter $ (baseDistanceInMeters) - estimatedDistance ) <> ")" else getString DIST_BASED_CHARGES
     in case fareType of
-        "BASE_FARE" -> (getString BASE_FARES) <> if baseDistance' == "0 m" then "" else " (" <> baseDistance' <> ")"
+        "BASE_FARE" -> (getString BASE_FARES) -- <> if baseDistance' == "0 m" then "" else " (" <> baseDistance' <> ")"
         "PARKING_CHARGE" -> getString PARKING_CHARGE
         "EXTRA_DISTANCE_FARE" -> getString NOMINAL_FARE
         "DRIVER_SELECTED_FARE" -> getString DRIVER_ADDITIONS
@@ -248,4 +248,4 @@ getFareText fareType baseDistance estimatedDistance rideType =
         "DIST_BASED_FARE" -> distanceBasedCharges
         "TIME_BASED_FARE" -> getString TIME_BASED_CHARGES
         "EXTRA_TIME_FARE" -> getString EXTRA_TIME_CHARGES
-        _ -> "Miscellaneous Charges"
+        _ -> formatFareType fareType

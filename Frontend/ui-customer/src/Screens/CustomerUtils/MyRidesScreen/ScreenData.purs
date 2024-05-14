@@ -109,6 +109,7 @@ dummyIndividualCard = {
   , isSrcServiceable : true
   , optionsVisibility : true
   , merchantExoPhone : ""
+  , totalTime : ""
   , showRepeatRide : ""
   , rideType : NORMAL_RIDE
   , estimatedDistance : 0

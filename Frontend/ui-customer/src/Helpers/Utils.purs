@@ -70,6 +70,7 @@ import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Mobility.Prelude
 import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, mod, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<#>), (<$>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>=), (>>>), (||))
 import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>), (<), (#))
 import Presto.Core.Flow (Flow, doAff)
@@ -782,3 +783,9 @@ getDefaultPixelSize size =
   in if os == "IOS" 
     then ceil $ ((toNumber size) / displayZoomFactor) / pixels 
     else ceil $ (toNumber size / pixels) * androidDensity
+
+formatFareType :: String -> String
+formatFareType fareType = 
+  let str = DS.replace (DS.Pattern "_") (DS.Replacement " ") fareType
+  in
+  spaceSeparatedPascalCase str

@@ -36,6 +36,7 @@ import Constants as Const
 import Data.Array (filter, elem)
 import Common.Animation.Config
 import PrestoDOM.Animation as PrestoAnim
+import Common.Types.App (RideType(..)) as RideType
 
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
 genericHeaderConfig state= let 
@@ -114,7 +115,7 @@ sourceToDestinationConfig state = let
       , color = Color.greyDavy
       , ellipsize = false
       }
-    , showDestination = false
+    , showDestination = state.data.selectedItem.rideType /= RideType.RENTAL_RIDE
     }
   in sourceToDestinationConfig'
 

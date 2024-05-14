@@ -23,7 +23,7 @@ import Data.Int (toNumber)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
-import Helpers.Utils (parseFloat, toStringJSON, extractKeyByRegex)
+import Helpers.Utils (parseFloat, toStringJSON, extractKeyByRegex, formatFareType)
 import Engineering.Helpers.Commons (os)
 import Language.Strings (getString)
 import Resources.Localizable.EN (getEN)
@@ -207,10 +207,10 @@ getFaresList fares baseDistance =
             (show $ case item.description of 
               "BASE_FARE" -> item.amount + getMerchSpecBaseFare fares
               "SGST" -> (item.amount * 2) + getFareFromArray fares "FIXED_GOVERNMENT_RATE"
-              "WAITING_OR_PICKUP_CHARGES" -> item.amount + getFareFromArray fares "PLATFORM_FEE"
+              "WAITING_OR_PICKUP_CHARGES" -> item.amount + isPlatformFeeIncluded fares
               _ -> item.amount)
           , title : case item.description of
-                      "BASE_FARE" -> (getEN BASE_FARES) <> if baseDistance == "0 m" then "" else " (" <> baseDistance <> ")"
+                      "BASE_FARE" -> (getEN BASE_FARES) -- <> if baseDistance == "0 m" then "" else " (" <> baseDistance <> ")"
                       "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE
                       "DRIVER_SELECTED_FARE" -> getEN DRIVER_ADDITIONS
                       "TOTAL_FARE" -> getEN TOTAL_PAID
@@ -229,7 +229,7 @@ getFaresList fares baseDistance =
                       "TIME_BASED_FARE" -> getEN TIME_BASED_CHARGES
                       "EXTRA_TIME_FARE" -> getEN EXTRA_TIME_CHARGES
                       "PARKING_CHARGE" -> getEN PARKING_CHARGE
-                      _ -> getEN BASE_FARES
+                      _ -> formatFareType $ item.description
           }
     )
     (getFilteredFares fares)
@@ -237,7 +237,7 @@ getFaresList fares baseDistance =
 getMerchSpecBaseFare :: Array FareBreakupAPIEntity -> Int
 getMerchSpecBaseFare fares =
   case getMerchant FunctionCall of
-    YATRISATHI -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE"]
+    YATRISATHI -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "PICKUP_CHARGES", "DEAD_KILOMETER_FARE", "SERVICE_CHARGE", "PLATFORM_FEE"]
     _ -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE"]
 
 
@@ -257,8 +257,14 @@ dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}
 getMerchantSpecificFilteredFares :: Merchant -> Array String
 getMerchantSpecificFilteredFares merchant = 
   case merchant of
-    YATRISATHI -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "CGST", "PLATFORM_FEE", "FIXED_GOVERNMENT_RATE"]
+    YATRISATHI -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "CGST", "PLATFORM_FEE", "FIXED_GOVERNMENT_RATE", "SERVICE_CHARGE", "PICKUP_CHARGES", "DEAD_KILOMETER_FARE", "PLATFORM_FEE"]
     _ -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE"]
+
+isPlatformFeeIncluded :: Array FareBreakupAPIEntity -> Int
+isPlatformFeeIncluded fares = 
+  case getMerchant FunctionCall of
+    YATRISATHI -> 0
+    _ -> getFareFromArray fares "PLATFORM_FEE" 
 
 getFilteredFares :: Array FareBreakupAPIEntity -> Array FareBreakupAPIEntity
 getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.description) (getMerchantSpecificFilteredFares (getMerchant FunctionCall))))--["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE"]) )

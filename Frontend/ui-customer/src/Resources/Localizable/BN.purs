@@ -1012,3 +1012,5 @@ getBN stringKey =
         RENTAL_POLICY_DESC_1 -> "বুকিং নিশ্চিত করার আগে আপনি এখনও পরবর্তী স্ক্রিনে আপনার ভাড়া পর্যালোচনা করতে পারেন।"
         RENTALS_INTERCITY_AVAILABLE -> "রেন্টাল এবং অন্তহণ্ড ট্রিপ, এখন Yatri Sathi-তে উপলব্ধ"
         CHECK_IT_OUT -> "এটি চেক করুন"
+        TIME_TAKEN -> "সময় নেয়া"
+        TRIP_DISTANCE -> "ভ্রমণের দূরত্ব"
