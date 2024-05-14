@@ -106,6 +106,7 @@ import Screens.HomeScreen.Controller (activeRideDetail, getPreviousVersion, getC
 import Screens.HomeScreen.ScreenData (dummyDriverRideStats)
 import Screens.HomeScreen.ScreenData (initData) as HomeScreenData
 import Screens.DocumentCaptureScreen.ScreenData (initData) as DocumentCaptureData
+import Screens.AcknowledgementScreen.ScreenData (initData) as AckScreenInitData
 import Screens.HomeScreen.Transformer (getDisabledLocById)
 import Screens.HomeScreen.View (rideRequestPollingData)
 import Screens.PaymentHistoryScreen.Controller (ScreenOutput(..))
@@ -705,7 +706,12 @@ onBoardingFlow = do
       if state.props.manageVehicle then driverProfileFlow
       else do
         modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing }
-        getDriverInfoFlow Nothing Nothing Nothing false
+        modifyScreenState $ AcknowledgementScreenType $ \_ -> AckScreenInitData.initData { data {
+          title = Just $ getString CONGRATULATIONS,
+          description = Just $ getString YOU_ARE_ALL_SET_TO_TAKE_RIDES,
+          primaryButtonText = Just $ getString CONTINUE,
+          illustrationAsset = "success_lottie.json"}}
+        ackScreenFlow $ getDriverInfoFlow Nothing Nothing Nothing false
     REFRESH_REGISTERATION_SCREEN -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> registerScreen { props { refreshAnimation = false}})
       onBoardingFlow
@@ -2899,7 +2905,7 @@ ysPaymentFlow = do
     Left (error) -> do
       pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
       homeScreenFlow
-  ackScreenFlow
+  ackScreenFlow homeScreenFlow
 
 setPaymentStatus :: PaymentStatus -> PayPayload -> FlowBT String Unit
 setPaymentStatus paymentStatus (PayPayload payload) = do
@@ -2950,12 +2956,10 @@ setPaymentStatus paymentStatus (PayPayload payload) = do
         Scheduled -> pure unit
 
 
-ackScreenFlow :: FlowBT String Unit
-ackScreenFlow = do
+ackScreenFlow :: FlowBT String Unit -> FlowBT String Unit
+ackScreenFlow postRunflow = do
   action <- UI.acknowledgementScreen
-  case action of
-    EXIT_TO_HOME_SCREEN -> homeScreenFlow
-    RETRY_PAYMENT -> ysPaymentFlow
+  postRunflow
 
 
 subScriptionFlow :: FlowBT String Unit

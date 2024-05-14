@@ -1405,4 +1405,4 @@ getKN stringKey =
         FINAL_FARE_EXCLUDES_TOLL -> "ಅಂತಿಮ ದರವು ಟೋಲ್ ಶುಲ್ಕಗಳನ್ನು ಹೊರತುಪಡಿಸುತ್ತದೆ"
         PLEASE_COLLECT_SEPARATELY -> "ದಯವಿಟ್ಟು ಅದನ್ನು ಗ್ರಾಹಕರಿಂದ ಪ್ರತ್ಯೇಕವಾಗಿ ಸಂಗ್ರಹಿಸಿ <b>ಟೋಲ್ ದಾಟಿದ್ದರೆ ಮಾತ್ರ</b>"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "ಟೋಲ್ ಶುಲ್ಕಗಳು ಅನ್ವಯವಾಗಬಹುದು"
-        
+        YOU_ARE_ALL_SET_TO_TAKE_RIDES -> "ನೀವು ನಮ್ಮ ಯಾತ್ರಿಯಲ್ಲಿ ಸವಾರಿ ಮಾಡಲು ಸಿದ್ಧವಾಗಿದ್ದೀರಿ"

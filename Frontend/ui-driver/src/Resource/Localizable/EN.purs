@@ -1405,7 +1405,5 @@ getEN stringKey =
         PLEASE_DO_NOT_DEMAND_EXTRA -> "Please do not demand extra from the customer"
         FINAL_FARE_EXCLUDES_TOLL -> "Final fare excludes toll charges"
         PLEASE_COLLECT_SEPARATELY -> "Please collect it separately from customer <b>only if a toll was crossed</b>"
-        TOLL_CHARGES_MAYBE_APPLICABLE -> "Toll charges may be applicable"
-         
-
-        
+        TOLL_CHARGES_MAYBE_APPLICABLE -> "Toll charges may be applicable"        
+        YOU_ARE_ALL_SET_TO_TAKE_RIDES -> "You're all set to take rides on Namma Yatri"
