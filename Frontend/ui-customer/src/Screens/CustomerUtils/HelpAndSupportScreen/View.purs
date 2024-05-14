@@ -305,7 +305,7 @@ allTopicsView state push topicList =
                     "CONTACT_US"         -> const $ ContactUs
                     "CALL_SUPPORT"       -> const $ CallSupport
                     "DELETE_ACCOUNT"     -> const $ DeleteAccount
-                    label | label `DA.elem` ["LOST_AND_FOUND", "RIDE_RELATED", "DRIVER_RELATED", "SOS", "FARE_DISCREPANCIES", "PAYMENT_RELATED", "SAFETY"] 
+                    label | label `DA.elem` ["LOST_AND_FOUND", "RIDE_RELATED", "DRIVER_RELATED", "SOS", "FARE_DISCREPANCY", "PAYMENT_RELATED", "SAFETY"] 
                                         -> const $ SelectRide item
                     label | label `DA.elem` ["APP_RELATED", "ACCOUNT_RELATED", "OTHER"] 
                                         -> const $ OpenChat item

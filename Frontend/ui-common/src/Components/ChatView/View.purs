@@ -332,7 +332,7 @@ dummyTextView =
   , height WRAP_CONTENT
   ]
 
-quickMessageView :: forall w. Config -> String -> Boolean -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+quickMessageView :: forall w. Config -> String -> Boolean -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
 quickMessageView config message isLastItem push =
   let value = getMessageFromKey chatSuggestion message config.languageKey
   in
@@ -402,63 +402,90 @@ chatComponentView state push config nextConfig isLastItem userType index =
      , cornerRadii chatConfig.cornerRadii
      , gravity chatConfig.gravity
      ][ case config.type of
-        "Image" -> PrestoAnim.animationSet[translateInXForwardAnim true] $ linearLayout
-                 [ cornerRadius 12.0
-                 , background Color.white900
-                 , width $ V 180
-                 , id $ getNewIDWithTag config.message
-                 , onAnimationEnd (\action -> do
-                                runEffectFn1 displayBase64Image displayBase64ImageConfig {source = config.message, id = (getNewIDWithTag config.message), scaleType =  "FIT_CENTER", inSampleSize = 2} 
-                 ) (const NoAction)
-                 , onClick push (const $ OnImageClick config.message)
-                 , height $ V 180
-                 , gravity CENTER
-                 ][ progressBar
-                    [ width WRAP_CONTENT
-                    , height WRAP_CONTENT
-                    ]
-                  ]
-        "Audio" -> PrestoAnim.animationSet[translateInXForwardAnim true] $ linearLayout
-                   [ width MATCH_PARENT
-                   , height MATCH_PARENT
-                   , orientation HORIZONTAL
-                   , onAnimationEnd (\action -> do
-                                    void $ runEffectFn7 addMediaFile (getNewIDWithTag "ChatAudioPlayer") config.message (getNewIDWithTag "ChatAudioPlayerLoader") "ny_ic_play_no_background" "ny_ic_pause_no_background" (getNewIDWithTag "ChatAudioPlayerTimer") false
-                                    pure unit
-                                  ) (const NoAction)
-                   ][ imageView
-                    [ width $ V 48
-                    , height $ V 48
-                    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_add_audio"
-                    , margin (MarginRight 8)
-                    ]
-                    , linearLayout
-                    [ width $ V 32
-                    , height $ V 32
-                    , id (getNewIDWithTag "ChatAudioPlayerLoader")
-                    , margin (MarginRight 8)
-                    ] []
-                    , linearLayout
-                    [ orientation VERTICAL
-                    ][ linearLayout
-                     [ id (getNewIDWithTag "ChatAudioPlayer")
-                     , height $ V 32
-                     , width $ V (getWidthFromPercent 40)
-                     ] []
-                     , linearLayout
-                     [ id (getNewIDWithTag "ChatAudioPlayerTimer")
-                     , color Color.white900
-                     , width WRAP_CONTENT
-                     , height $ V 16
-                     ] []
-                    ]
-                   ]
-        _ -> textView $ 
-          [ textFromHtml $ if state.spanParent then config.message else value
-          , singleLine false
-          , margin $ MarginTop $ if state.languageKey == "KN_IN" then 6 else 0
-          , color chatConfig.textColor
-          ] <> FontStyle.body1 TypoGraphy
+        "Image"              -> PrestoAnim.animationSet[translateInXForwardAnim true] $ linearLayout
+                                [ cornerRadius 12.0
+                                , background Color.white900
+                                , width $ V 180
+                                , id $ getNewIDWithTag config.message
+                                , onAnimationEnd (\action -> do
+                                                runEffectFn1 displayBase64Image displayBase64ImageConfig {source = config.message, id = (getNewIDWithTag config.message), scaleType =  "FIT_CENTER", inSampleSize = 2} 
+                                ) (const NoAction)
+                                , onClick push (const $ OnImageClick config.message)
+                                , height $ V 180
+                                , gravity CENTER
+                                ][ progressBar
+                                    [ width WRAP_CONTENT
+                                    , height WRAP_CONTENT
+                                    ]
+                                  ]
+        "Audio"              -> PrestoAnim.animationSet[translateInXForwardAnim true] $ linearLayout
+                                [ width MATCH_PARENT
+                                , height MATCH_PARENT
+                                , orientation HORIZONTAL
+                                , onAnimationEnd (\action -> do
+                                                  void $ runEffectFn7 addMediaFile (getNewIDWithTag "ChatAudioPlayer") config.message (getNewIDWithTag "ChatAudioPlayerLoader") "ny_ic_play_no_background" "ny_ic_pause_no_background" (getNewIDWithTag "ChatAudioPlayerTimer") false
+                                                  pure unit
+                                                ) (const NoAction)
+                                ][ imageView
+                                  [ width $ V 48
+                                  , height $ V 48
+                                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_add_audio"
+                                  , margin (MarginRight 8)
+                                  ]
+                                  , linearLayout
+                                  [ width $ V 32
+                                  , height $ V 32
+                                  , id (getNewIDWithTag "ChatAudioPlayerLoader")
+                                  , margin (MarginRight 8)
+                                  ] []
+                                  , linearLayout
+                                  [ orientation VERTICAL
+                                  ][ linearLayout
+                                  [ id (getNewIDWithTag "ChatAudioPlayer")
+                                  , height $ V 32
+                                  , width $ V (getWidthFromPercent 40)
+                                  ] []
+                                  , linearLayout
+                                  [ id (getNewIDWithTag "ChatAudioPlayerTimer")
+                                  , color Color.white900
+                                  , width WRAP_CONTENT
+                                  , height $ V 16
+                                  ] []
+                                  ]
+                                ]
+        "FARE_BREAKUP_MESSAGE" -> linearLayout
+                                [ height MATCH_PARENT
+                                , width MATCH_PARENT
+                                , orientation VERTICAL
+                                , gravity chatConfig.gravity
+                                ][ textView $ 
+                                    [ text $ "Here is some information about your ride."
+                                    , singleLine false
+                                    , margin $ MarginTop $ if state.languageKey == "KN_IN" then 6 else 0
+                                    , color chatConfig.textColor
+                                    ] <> FontStyle.body1 TypoGraphy
+                                  , linearLayout 
+                                    [ color Color.black800
+                                    , background Color.white900
+                                    , padding $ Padding 12 12 12 0
+                                    , cornerRadius 12.0
+                                    , width MATCH_PARENT
+                                    , margin $ MarginTop 12
+                                    , orientation VERTICAL
+                                    ][  textView $ 
+                                        [ textFromHtml $ if state.spanParent then config.message else value
+                                        , singleLine false
+                                        , margin $ MarginTop $ if state.languageKey == "KN_IN" then 6 else 0
+                                        , color chatConfig.textColor
+                                        ] <> FontStyle.body1 TypoGraphy
+                                    ]
+                                ] 
+        _                    -> textView $ 
+                                [ textFromHtml $ if state.spanParent then config.message else value
+                                , singleLine false
+                                , margin $ MarginTop $ if state.languageKey == "KN_IN" then 6 else 0
+                                , color chatConfig.textColor
+                                ] <> FontStyle.body1 TypoGraphy
       ] 
       , textView $ 
        [ text $ convertUTCtoISC config.timeStamp "hh:mm A"

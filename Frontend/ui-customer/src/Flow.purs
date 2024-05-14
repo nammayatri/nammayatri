@@ -2927,7 +2927,7 @@ checkAndUpdateLocations = do
 
 
 
-rideCompletedDetails :: RideBookingRes -> Array ClevertapEventParams
+rideCompletedDetails :: RideBookingRes -> Array ClevertapEventParams  
 rideCompletedDetails (RideBookingRes resp) = do
   let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
       (RideBookingDetails contents) = bookingDetails.contents

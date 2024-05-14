@@ -2629,7 +2629,7 @@ newtype Option = Option
   , issueOptionId :: String
   }
 
-newtype Message = Message
+newtype Message = Message 
   { id  :: String
   , message :: String
   , label :: Maybe String 
