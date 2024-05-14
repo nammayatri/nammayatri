@@ -314,7 +314,7 @@ tripDataView push state =
     earningPerKm =
       let mbDist = NUM.fromString state.data.distance
       in case mbDist of
-          Just dist | dist > 0.0 -> currency <> HU.parseFloat ((INT.toNumber state.data.totalAmount - state.data.tollCharge) / dist) 2 <> "/km"
+          Just dist | dist > 1.0 -> currency <> HU.parseFloat ((INT.toNumber state.data.totalAmount - state.data.tollCharge) / dist) 2 <> "/km"
           _ -> "NA"
 
 tripDetailsRow :: forall w . (Action -> Effect Unit) -> TripDetailsRow -> PrestoDOM (Effect Unit) w

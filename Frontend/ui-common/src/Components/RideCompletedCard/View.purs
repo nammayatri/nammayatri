@@ -67,6 +67,8 @@ topGradientView config push =
     , orientation VERTICAL
     , padding $ if config.isDriver then Padding 16 16 16 6 else PaddingVertical 40 6
     , gradient $ Linear (if os == "IOS" then 90.0 else 0.0) config.topCard.gradient
+    , cornerRadii $ Corners radii false false true true
+    , stroke $ borderWidth <> Color.grey900
     , id $ getNewIDWithTag "topViewId"
     ]
     [  topPillAndSupportView config push
@@ -74,6 +76,10 @@ topGradientView config push =
       , whiteHorizontalLine config
       , rideDetailsButtonView config push 
     ]
+    where 
+      borderWidth = if config.isDriver then "1," else "0,"
+      radii = if config.isDriver then 16.0 else 0.0
+    
 
 tollTextVew :: forall w. Toll -> PrestoDOM (Effect Unit) w
 tollTextVew config = 
