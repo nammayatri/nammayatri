@@ -26,3 +26,6 @@ setValueToCache :: forall a. String -> a -> (a -> String) -> a
 setValueToCache key value (getValue) = 
   let _ =  runFn2 setKeyInSharedPref key $ getValue value
   in runFn2 setInCache key value
+
+removeValueFromCache :: String -> Unit
+removeValueFromCache key = clearCache key
