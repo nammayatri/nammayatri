@@ -57,6 +57,11 @@ updateBppBankDetailsById bppBankAccountNumber bppBankCode (Kernel.Types.Id.Id id
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.bppBankAccountNumber bppBankAccountNumber, Se.Set Beam.bppBankCode bppBankCode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
+updateCustomerCancelledByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateCustomerCancelledByBookingId customerCancelled (Kernel.Types.Id.Id id) = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.customerCancelled customerCancelled, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+
 updateFinalPriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateFinalPriceById finalPrice (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
@@ -117,6 +122,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.bppSubscriberId bppSubscriberId,
       Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
       Se.Set Beam.cancellationCharges cancellationCharges,
+      Se.Set Beam.customerCancelled customerCancelled,
       Se.Set Beam.estimatedPrice ((.amount) estimatedPrice),
       Se.Set Beam.finalPrice (Kernel.Prelude.fmap (.amount) finalPrice),
       Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
@@ -157,6 +163,7 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             bppSubscriberId = bppSubscriberId,
             bppSubscriberUrl = bppSubscriberUrl,
             cancellationCharges = cancellationCharges,
+            customerCancelled = customerCancelled,
             estimatedPrice = Kernel.Types.Common.mkPrice currency estimatedPrice,
             finalPrice = Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice,
             fromStationId = Kernel.Types.Id.Id fromStationId,
@@ -194,6 +201,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.bppSubscriberId = bppSubscriberId,
         Beam.bppSubscriberUrl = bppSubscriberUrl,
         Beam.cancellationCharges = cancellationCharges,
+        Beam.customerCancelled = customerCancelled,
         Beam.estimatedPrice = (.amount) estimatedPrice,
         Beam.finalPrice = Kernel.Prelude.fmap (.amount) finalPrice,
         Beam.fromStationId = Kernel.Types.Id.getId fromStationId,

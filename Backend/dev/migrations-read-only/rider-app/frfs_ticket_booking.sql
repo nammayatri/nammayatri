@@ -50,3 +50,8 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_booking_cancellable bool
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN currency text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN customer_cancelled boolean NOT NULL default false;

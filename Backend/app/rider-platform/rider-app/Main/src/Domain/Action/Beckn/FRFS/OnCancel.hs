@@ -23,6 +23,7 @@ import Domain.Types.Merchant as Merchant
 import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -38,7 +39,7 @@ data DOnCancel = DOnCancel
     bppItemId :: Text,
     transactionId :: Text,
     messageId :: Text,
-    orderStatus :: Spec.OnCancelOrderStatus,
+    orderStatus :: Spec.OrderStatus,
     refundAmount :: HighPrecMoney,
     baseFare :: HighPrecMoney,
     cancellationCharges :: HighPrecMoney
@@ -59,19 +60,31 @@ onCancel _ booking' dOnCancel = do
     Spec.ON_CANCEL_SOFT_CANCEL -> do
       void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just dOnCancel.refundAmount) (Just dOnCancel.cancellationCharges) (Just True) booking.id
     Spec.ON_CANCEL_CANCELLED -> do
-      void $ checkRefundAndCancellationCharges booking.id dOnCancel
-      void $ QTBooking.updateStatusById FTBooking.CANCELLED booking.id
-      void $ QTicket.updateAllStausByBookingId DFRFSTicket.CANCELLED booking.id
-      void $ QTBP.updateStatusByTicketBookingId DTBP.REFUND_PENDING booking.id
-      void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
+      val :: Maybe Text <- Redis.get (makecancelledTtlKey booking.id)
+      case val of
+        Nothing -> do
+          void $ QTBooking.updateStatusById FTBooking.COUNTER_CANCELLED booking.id
+          void $ QTicket.updateAllStatusByBookingId DFRFSTicket.COUNTER_CANCELLED booking.id
+        Just _ttl -> do
+          void $ checkRefundAndCancellationCharges booking.id
+          void $ QTBooking.updateStatusById FTBooking.CANCELLED booking.id
+          void $ QTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED booking.id
+          void $ QTBP.updateStatusByTicketBookingId DTBP.REFUND_PENDING booking.id
+          void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
+          void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
+          void $ Redis.del (makecancelledTtlKey booking.id)
+    _ -> throwError $ InvalidRequest "Unexpected orderStatus received"
   return ()
   where
-    checkRefundAndCancellationCharges bookingId onCancelReq = do
+    checkRefundAndCancellationCharges bookingId = do
       booking <- runInReplica $ QTBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
       case booking of
         Booking.FRFSTicketBooking {refundAmount = Just rfAmount, cancellationCharges = Just charges} -> do
-          when (rfAmount /= onCancelReq.refundAmount) $
+          when (rfAmount /= dOnCancel.refundAmount) $
             throwError $ InternalError "Refund Amount mismatch in onCancel Req"
-          when (charges /= onCancelReq.cancellationCharges) $
+          when (charges /= dOnCancel.cancellationCharges) $
             throwError $ InternalError "Cancellation Charges mismatch in onCancel Req"
         _ -> throwError $ InternalError "Refund Amount or Cancellation Charges not found in booking"
+
+makecancelledTtlKey :: Id FTBooking.FRFSTicketBooking -> Text
+makecancelledTtlKey bookingId = "FRFS:OnConfirm:CancelledTTL:bookingId-" <> bookingId.getId

@@ -25,6 +25,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     bppSubscriberId :: Kernel.Prelude.Text,
     bppSubscriberUrl :: Kernel.Prelude.Text,
     cancellationCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    customerCancelled :: Kernel.Prelude.Bool,
     estimatedPrice :: Kernel.Types.Common.Price,
     finalPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
@@ -52,6 +53,6 @@ data FRFSTicketBooking = FRFSTicketBooking
   }
   deriving (Generic, Show)
 
-data FRFSTicketBookingStatus = NEW | APPROVED | PAYMENT_PENDING | CONFIRMING | FAILED | CONFIRMED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FRFSTicketBookingStatus = NEW | APPROVED | PAYMENT_PENDING | CONFIRMING | FAILED | CONFIRMED | CANCELLED | COUNTER_CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketBookingStatus)

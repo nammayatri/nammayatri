@@ -18,6 +18,7 @@ import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import qualified Data.Aeson as A
 import qualified Domain.Action.Beckn.FRFS.Common as Domain
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -43,7 +44,7 @@ buildOnStatusReq onStatusReq = do
   quotation <- order.orderQuote & fromMaybeM (InvalidRequest "Quotation not found")
   quoteBreakup <- quotation.quotationBreakup & fromMaybeM (InvalidRequest "QuotationBreakup not found")
   totalPrice <- quotation.quotationPrice >>= Utils.parseMoney & fromMaybeM (InvalidRequest "Invalid quotationPrice")
-
+  let orderStatus :: Maybe Spec.OrderStatus = A.decode $ A.encode order.orderStatus
   fareBreakUp <- traverse Utils.mkFareBreakup quoteBreakup
 
   fulfillments <- order.orderFulfillments & fromMaybeM (InvalidRequest "Fulfillments not found")
@@ -56,6 +57,7 @@ buildOnStatusReq onStatusReq = do
         totalPrice,
         fareBreakUp = fareBreakUp,
         bppItemId,
+        orderStatus,
         bppOrderId,
         transactionId,
         messageId,

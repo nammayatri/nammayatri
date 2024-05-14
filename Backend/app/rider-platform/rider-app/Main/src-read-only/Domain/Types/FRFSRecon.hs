@@ -5,6 +5,7 @@
 module Domain.Types.FRFSRecon where
 
 import Data.Aeson
+import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -28,6 +29,8 @@ data FRFSRecon = FRFSRecon
     message :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     networkOrderId :: Kernel.Prelude.Text,
+    providerId :: Kernel.Prelude.Text,
+    providerName :: Kernel.Prelude.Text,
     receiverSubscriberId :: Kernel.Prelude.Text,
     settlementAmount :: Kernel.Types.Common.Price,
     settlementDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -35,6 +38,7 @@ data FRFSRecon = FRFSRecon
     sourceStationCode :: Kernel.Prelude.Text,
     ticketNumber :: Kernel.Prelude.Text,
     ticketQty :: Kernel.Prelude.Int,
+    ticketStatus :: Kernel.Prelude.Maybe Domain.Types.FRFSTicket.FRFSTicketStatus,
     time :: Kernel.Prelude.Text,
     totalOrderValue :: Kernel.Types.Common.Price,
     transactionRefNumber :: Kernel.Prelude.Text,
