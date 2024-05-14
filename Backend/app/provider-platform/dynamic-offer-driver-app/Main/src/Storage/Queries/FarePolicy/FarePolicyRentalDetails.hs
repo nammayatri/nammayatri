@@ -19,32 +19,38 @@ import qualified Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import Sequelize as Se
 import Storage.Beam.FarePolicy.FarePolicyRentalDetails as BeamFPRD
+import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers as BeamFPRDDB
 import qualified Storage.Queries.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers as QueriesFPRDB
 
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m (Maybe Domain.FullFarePolicyRentalDetails)
 findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPRD.farePolicyId $ Se.Eq farePolicyId']
 
 instance FromTType' BeamFPRD.FarePolicyRentalDetails Domain.FullFarePolicyRentalDetails where
-  fromTType' BeamFPRD.FarePolicyRentalDetailsT {..} = do
-    fullFPRDB <- QueriesFPRDB.findAll' (KTI.Id farePolicyId)
+  fromTType' farePolicyRentalDetails = do
+    fullFPRDB <- QueriesFPRDB.findAll' (KTI.Id farePolicyRentalDetails.farePolicyId)
     fPRDB <- fromMaybeM (InternalError "No distance buffer found for rental") (nonEmpty fullFPRDB)
-    pure $
-      Just
-        ( KTI.Id farePolicyId,
-          Domain.FPRentalDetails
-            { baseFare = mkAmountWithDefault baseFareAmount baseFare,
-              perHourCharge = mkAmountWithDefault perHourChargeAmount perHourCharge,
-              perExtraMinRate = mkAmountWithDefault perExtraMinRateAmount perExtraMinRate,
-              perExtraKmRate = mkAmountWithDefault perExtraKmRateAmount perExtraKmRate,
-              nightShiftCharge = nightShiftCharge,
-              includedKmPerHr = includedKmPerHr,
-              plannedPerKmRate = mkAmountWithDefault plannedPerKmRateAmount plannedPerKmRate,
-              maxAdditionalKmsLimit = maxAdditionalKmsLimit,
-              totalAdditionalKmsLimit = totalAdditionalKmsLimit,
-              distanceBuffers = snd <$> fPRDB,
-              currency = fromMaybe INR currency
-            }
-        )
+    pure . Just $ fromTTypeFarePolicyRentalDetails farePolicyRentalDetails fPRDB
+
+fromTTypeFarePolicyRentalDetails ::
+  BeamFPRD.FarePolicyRentalDetails ->
+  NonEmpty BeamFPRDDB.FullFarePolicyRentalDetailsDistanceBuffers ->
+  Domain.FullFarePolicyRentalDetails
+fromTTypeFarePolicyRentalDetails BeamFPRD.FarePolicyRentalDetailsT {..} fPRDB =
+  ( KTI.Id farePolicyId,
+    Domain.FPRentalDetails
+      { baseFare = mkAmountWithDefault baseFareAmount baseFare,
+        perHourCharge = mkAmountWithDefault perHourChargeAmount perHourCharge,
+        perExtraMinRate = mkAmountWithDefault perExtraMinRateAmount perExtraMinRate,
+        perExtraKmRate = mkAmountWithDefault perExtraKmRateAmount perExtraKmRate,
+        nightShiftCharge = nightShiftCharge,
+        includedKmPerHr = includedKmPerHr,
+        plannedPerKmRate = mkAmountWithDefault plannedPerKmRateAmount plannedPerKmRate,
+        maxAdditionalKmsLimit = maxAdditionalKmsLimit,
+        totalAdditionalKmsLimit = totalAdditionalKmsLimit,
+        distanceBuffers = snd <$> fPRDB,
+        currency = fromMaybe INR currency
+      }
+  )
 
 instance ToTType' BeamFPRD.FarePolicyRentalDetails Domain.FullFarePolicyRentalDetails where
   toTType' (KTI.Id farePolicyId, Domain.FPRentalDetails {..}) =
