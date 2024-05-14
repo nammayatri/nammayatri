@@ -120,6 +120,7 @@ instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
             createdAt = createdAt
           }
     where
+      -- TODO move to kernel
       valueToMaybe :: FromJSON a => A.Value -> Maybe a
       valueToMaybe value = case A.fromJSON value of
         A.Success a -> Just a

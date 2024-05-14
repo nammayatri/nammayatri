@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Cac.FarePolicy.FarePolicyProgressiveDetails where
@@ -25,7 +24,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as CQueriesFPPDP
-import Storage.Queries.FarePolicy.FarePolicyProgressiveDetails ()
+import Storage.Queries.FarePolicy.FarePolicyProgressiveDetails (fromTTypeFarePolicyProgressiveDetails)
 import Utils.Common.CacUtils
 
 getFPProgressiveDetailsFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m (Maybe DFP.FullFarePolicyProgressiveDetails)
@@ -36,26 +35,6 @@ getFPProgressiveDetailsFromCAC context tenant id toss = do
     Just fPPD -> fromCacType (fPPD, context, tenant, id, toss)
 
 instance FromCacType (BeamFPPD.FarePolicyProgressiveDetails, [(CacContext, Value)], String, Id DFP.FarePolicy, Int) DFP.FullFarePolicyProgressiveDetails where
-  fromCacType (BeamFPPD.FarePolicyProgressiveDetailsT {..}, context, tenant, id, toss) = do
+  fromCacType (farePolicyProgressiveDetails, context, tenant, id, toss) = do
     fullFPPDP <- CQueriesFPPDP.findFarePolicyProgressiveDetailsPerExtraKmRateSectionFromCAC context tenant id toss
-    case nonEmpty fullFPPDP of
-      Nothing -> pure Nothing
-      Just fPPDP ->
-        pure $
-          Just
-            ( Id farePolicyId,
-              DFP.FPProgressiveDetails
-                { baseDistance = baseDistance,
-                  baseFare = mkAmountWithDefault baseFareAmount baseFare,
-                  perExtraKmRateSections = snd <$> fPPDP,
-                  deadKmFare = mkAmountWithDefault deadKmFareAmount deadKmFare,
-                  currency = fromMaybe INR currency,
-                  waitingChargeInfo =
-                    ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
-                      DFP.WaitingChargeInfo
-                        { waitingCharge = waitingCharge',
-                          freeWaitingTime = freeWaitingTime'
-                        },
-                  nightShiftCharge = nightShiftCharge
-                }
-            )
+    pure $ fromTTypeFarePolicyProgressiveDetails farePolicyProgressiveDetails <$> nonEmpty fullFPPDP
