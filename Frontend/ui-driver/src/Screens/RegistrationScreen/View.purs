@@ -360,7 +360,7 @@ listItem push item state =
     , orientation HORIZONTAL
     , padding $ Padding 12 12 12 12
     , cornerRadius 8.0
-    , visibility $ boolToVisibility $ not item.isHidden
+    , visibility $ boolToVisibility $ compVisibility item
     , stroke $ componentStroke state item
     , background $ compBg state item
     , clickable $ compClickable state item
@@ -412,6 +412,9 @@ listItem push item state =
       docUploadStarted = getStatus item.stage state /= ST.NOT_STARTED
       statusFailed = (getStatus item.stage state) == ST.FAILED
       retryStr = " " <> "<span style='color:#2194FF'>"<> (getString RETRY_UPLOAD) <>"</span>"
+
+      compVisibility :: ST.StepProgress -> Boolean
+      compVisibility item = not item.isHidden && dependentDocAvailable item state
 
       compImage :: ST.StepProgress -> String
       compImage item = 
