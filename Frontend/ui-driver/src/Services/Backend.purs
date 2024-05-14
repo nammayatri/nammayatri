@@ -1494,11 +1494,58 @@ mkUpdateDriverVehiclesServiceTier ridePreferences =
         }
 
 
------------------------------------------------------------------------- Get Token -------------------------------------------------------------------------------
-getSdkToken :: String -> ServiceName -> FlowBT String GetSdkTokenResp
-getSdkToken expiry serviceName = do
+------------------------------------------------------------------------ Get Sdk Token -------------------------------------------------------------------------------
+getSdkTokenBT :: String -> ServiceName -> FlowBT String GetSdkTokenResp
+getSdkTokenBT expiry serviceName = do
         headers <- getHeaders' "" false
         withAPIResultBT (EP.getSdkToken expiry (show serviceName)) identity errorHandler (lift $ lift $ callAPI headers (GetSdkTokenReq expiry serviceName))
     where
     errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
+
+----------------------------------------------------------------------- Onboarding Live selfie, aadhaar, and PAN APIs --------------------------------------------------
+
+-- getLiveSelfieBT :: String -> FlowBT String GetLiveSelfieResp
+-- getLiveSelfieBT status = do
+--     headers <- getHeaders' "" false
+--     withAPIResultBT (EP.getLiveSelfie status) identity errorHandler (lift $ lift $ callAPI headers (GetLiveSelfieReq status))
+--     where
+--     errorHandler (ErrorPayload errorPayload) =  do
+--         BackT $ pure GoBack  
+
+getLiveSelfie :: String -> Flow GlobalState (Either ErrorResponse GetLiveSelfieResp)
+getLiveSelfie status = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.getLiveSelfie status)  unwrapResponse $ callAPI headers (GetLiveSelfieReq status)
+    where
+        unwrapResponse x = x
+
+-- registerDriverPANBT :: PanCardReq -> FlowBT String DriverPANResp
+-- registerDriverPANBT payload = do
+--         headers <- getHeaders' "" false
+--         withAPIResultBT (EP.registerPAN "" ) identity errorHandler (lift $ lift $ callAPI headers payload)
+--     where
+--     errorHandler (ErrorPayload errorPayload) = do
+--         BackT $ pure GoBack
+
+registerDriverPAN :: PanCardReq -> Flow GlobalState (Either ErrorResponse DriverPANResp)
+registerDriverPAN req = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.registerPAN "")  unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse x = x
+
+-- registerDriverAadhaarBT :: AadhaarCardReq -> FlowBT String DriverAadhaarResp
+-- registerDriverAadhaarBT payload = do
+--         headers <- getHeaders' "" false
+--         withAPIResultBT (EP.registerAadhaar "" ) identity errorHandler (lift $ lift $ callAPI headers payload)
+--     where
+--     errorHandler (ErrorPayload errorPayload) = do
+--         BackT $ pure GoBack
+
+registerDriverAadhaar :: AadhaarCardReq -> Flow GlobalState (Either ErrorResponse DriverAadhaarResp)
+registerDriverAadhaar req = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.registerAadhaar "")  unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse x = x

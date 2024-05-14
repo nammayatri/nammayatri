@@ -97,14 +97,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.Map;
 
-import co.hyperverge.hyperkyc.HyperKyc;
-import co.hyperverge.hyperkyc.data.models.HyperKycConfig;
 import co.hyperverge.hyperkyc.data.models.result.HyperKycResult;
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.mobility.app.CheckPermissionOverlay;
+import in.juspay.mobility.app.HyperVergeSdk;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.LocationUpdateWorker;
 import in.juspay.mobility.app.NotificationUtils;
@@ -812,37 +811,9 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     @JavascriptInterface
     public void initHVSdk(String accessToken,  String workFlowId, String transactionId, boolean useLocation, String defLanguageCode, String inputsJson) {
-        HyperKycConfig config = new HyperKycConfig(accessToken, workFlowId, transactionId);
-        config.setUseLocation(useLocation);
-        config.setDefaultLangCode(defLanguageCode);
-        if (inputsJson != null) {
-            Map<String, String> inpMap = new HashMap<>();
-            JSONObject jsonObject;
-            try {
-                jsonObject = new JSONObject(inputsJson);
-            }
-            catch (JSONException e) {
-                Log.e("Unable To parse given JSON", inputsJson);
-                e.printStackTrace();
-                return;
-            }
-            for (Iterator<String> it = jsonObject.keys(); it.hasNext(); ) {
-                String key = it.next();
-                try {
-                    inpMap.put(key, jsonObject.getString(key));
-                }
-                catch (JSONException e) {
-                    Log.e("Unable find Specified Key", inputsJson);
-                    e.printStackTrace();
-                    return;
-                }
-            }
-            if (inpMap.size() > 0)  config.setInputs(inpMap);
-            else System.out.println("Empty json passed as input so not initializing inputs in config");
-        }
-        else System.out.println("Not initializing inputs as inputs json passed is null");
-        Intent hyperKycIntent = new HyperKyc.Contract().createIntent(bridgeComponents.getContext(), config);
-        bridgeComponents.getActivity().startActivityForResult(hyperKycIntent, 54, null);
+        HyperVergeSdk sdk = new HyperVergeSdk();
+        sdk.initHyperVergeSdk(accessToken, workFlowId, transactionId, useLocation, defLanguageCode, inputsJson, bridgeComponents);
+
     }
 }
 

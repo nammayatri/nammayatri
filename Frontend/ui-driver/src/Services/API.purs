@@ -4621,7 +4621,7 @@ instance decodeUpdateAirConditionUpdateResponse :: Decode UpdateAirConditionUpda
 instance encodeUpdateAirConditionUpdateResponse  :: Encode UpdateAirConditionUpdateResponse where encode = defaultEncode
 
 
---------------------------------------------------------- Get Token Api ------------------------------------------------
+--------------------------------------------------------- Get Sdk Token Api ------------------------------------------------
 data ServiceName = HyperVerge
 
 data GetSdkTokenReq = GetSdkTokenReq String ServiceName
@@ -4654,3 +4654,97 @@ instance standardEncodeGetSdkTokenResp :: StandardEncode GetSdkTokenResp where s
 instance showGetSdkTokenResp :: Show GetSdkTokenResp where show = genericShow
 instance decodeGetSdkTokenResp :: Decode GetSdkTokenResp where decode = defaultDecode
 instance encodeGetSdkTokenResp :: Encode GetSdkTokenResp where encode = defaultEncode
+
+------------------------------------------------------ Onboarding Live selfie, aadhaar, and PAN APIs --------------------------------------------------------
+
+data GetLiveSelfieReq = GetLiveSelfieReq String
+
+newtype GetLiveSelfieResp = GetLiveSelfieResp {image :: String}
+
+data ValidationStatus = APPROVED | DECLINED | AUTO_APPROVED | AUTO_DECLINED | NEEDS_REVIEW
+
+newtype PanCardReq = PanCardReq
+  { consent :: Boolean,
+    consentTimestamp :: String,
+    dateOfBirth :: Maybe String,
+    nameOnCard :: Maybe String,
+    panImageId :: Maybe String,
+    panNumber :: Maybe String,
+    validationStatus :: ValidationStatus
+  }
+
+newtype DriverPANResp = DriverPANResp ApiSuccessResult
+
+newtype AadhaarCardReq = AadhaarCardReq
+  { aadhaarBackImageId :: Maybe String,
+    aadhaarFrontImageId :: Maybe String,
+    address :: Maybe String,
+    consent :: Boolean,
+    consentTimestamp :: String,
+    dateOfBirth :: Maybe String,
+    maskedAadhaarNumber :: Maybe String,
+    nameOnCard :: Maybe String,
+    validationStatus :: ValidationStatus
+  }
+
+newtype DriverAadhaarResp = DriverAadhaarResp ApiSuccessResult
+
+instance makeGetLiveSelfieReq  :: RestEndpoint GetLiveSelfieReq GetLiveSelfieResp where
+    makeRequest reqBody@(GetLiveSelfieReq status) headers = defaultMakeRequest GET (EP.getLiveSelfie status) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericGetLiveSelfieReq :: Generic GetLiveSelfieReq _
+instance showGetLiveSelfieReq :: Show GetLiveSelfieReq where show = genericShow
+instance standardEncodeGetLiveSelfieReq :: StandardEncode GetLiveSelfieReq where standardEncode _ = standardEncode{}
+instance decodeGetLiveSelfieReq :: Decode GetLiveSelfieReq where decode = defaultDecode
+instance encodeGetLiveSelfieReq :: Encode GetLiveSelfieReq where encode = defaultEncode
+
+derive instance genericGetLiveSelfieResp :: Generic GetLiveSelfieResp _
+derive instance newtypeGetLiveSelfieResp :: Newtype GetLiveSelfieResp _
+instance standardEncodeGetLiveSelfieResp :: StandardEncode GetLiveSelfieResp where standardEncode (GetLiveSelfieResp rsp) = standardEncode rsp
+instance showGetLiveSelfieResp :: Show GetLiveSelfieResp where show = genericShow
+instance decodeGetLiveSelfieResp :: Decode GetLiveSelfieResp where decode = defaultDecode
+instance encodeGetLiveSelfieResp :: Encode GetLiveSelfieResp where encode = defaultEncode
+
+derive instance genericValidationStatus :: Generic ValidationStatus _
+instance showValidationStatus :: Show ValidationStatus where show = genericShow
+instance decodeValidationStatus :: Decode ValidationStatus where decode = defaultEnumDecode
+instance encodeValidationStatus :: Encode ValidationStatus where encode = defaultEnumEncode
+instance standardEncodeValidationStatus :: StandardEncode ValidationStatus where standardEncode _ = standardEncode {}
+
+instance makePanCardReq :: RestEndpoint PanCardReq DriverPANResp where
+    makeRequest reqBody headers = defaultMakeRequest POST (EP.registerPAN "") headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericPanCardReq :: Generic PanCardReq _
+instance showPanCardReq :: Show PanCardReq where show = genericShow
+instance standardPanCardReq :: StandardEncode PanCardReq where standardEncode (PanCardReq req) = standardEncode req
+instance decodePanCardReq :: Decode PanCardReq where decode = defaultDecode
+instance encodePanCardReq :: Encode PanCardReq where encode = defaultEncode
+
+derive instance genericDriverPANResp :: Generic DriverPANResp _
+derive instance newtypeDriverPANResp :: Newtype DriverPANResp _
+instance standardEncodeDriverPANResp :: StandardEncode DriverPANResp where standardEncode (DriverPANResp body) = standardEncode body
+instance showDriverPANResp :: Show DriverPANResp where show = genericShow
+instance decodeDriverPANResp:: Decode DriverPANResp where decode = defaultDecode
+instance encodeDriverPANResp  :: Encode DriverPANResp where encode = defaultEncode
+
+instance makeAadhaarCardReq :: RestEndpoint AadhaarCardReq DriverAadhaarResp where
+    makeRequest reqBody headers = defaultMakeRequest POST (EP.registerAadhaar "") headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericAadhaarCardReq :: Generic AadhaarCardReq _
+instance showAadhaarCardReq :: Show AadhaarCardReq where show = genericShow
+instance standardAadhaarCardReq :: StandardEncode AadhaarCardReq where standardEncode (AadhaarCardReq req) = standardEncode req
+instance decodeAadhaarCardReq :: Decode AadhaarCardReq where decode = defaultDecode
+instance encodeAadhaarCardReq :: Encode AadhaarCardReq where encode = defaultEncode
+
+derive instance genericDriverAadhaarResp :: Generic DriverAadhaarResp _
+derive instance newtypeDriverAadhaarResp :: Newtype DriverAadhaarResp _
+instance standardEncodeDriverAadhaarResp :: StandardEncode DriverAadhaarResp where standardEncode (DriverAadhaarResp body) = standardEncode body
+instance showDriverAadhaarResp :: Show DriverAadhaarResp where show = genericShow
+instance decodeDriverAadhaarResp:: Decode DriverAadhaarResp where decode = defaultDecode
+instance encodeDriverAadhaarResp  :: Encode DriverAadhaarResp where encode = defaultEncode
