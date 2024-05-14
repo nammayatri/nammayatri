@@ -150,7 +150,7 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
         Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
     when validationOutput.validationAvailable $ do
       checkErrors imageEntity.id imageType validationOutput.detectedImage
-  Query.updateToValid True imageEntity.id
+    Query.updateToValid True imageEntity.id
   return $ ImageValidateResponse {imageId = imageEntity.id}
   where
     checkErrors id_ _ Nothing = throwImageError id_ ImageValidationFailed
