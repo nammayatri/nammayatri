@@ -562,7 +562,8 @@ config =
       oneTwoStarCoinEvent : false,
       driverToCustomerRefCoinEvent : false,
       coinConversionPopupLottie : "",
-      driverToCustomerRefPopupEndDate : ""
+      driverToCustomerRefPopupEndDate : "",
+      coinsValidTill : 150
   }
   , inAppKeyboardModalConfig : {
       enableDeviceKeyboard : true

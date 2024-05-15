@@ -639,8 +639,8 @@ dummyQuestions state lazy =
   , { question: getString $ YATRI_COINS_FAQS_QUES2 "YATRI_COINS_FAQS_QUES2"
     , videoLink: Nothing
     , answer:
-        [ getString $ YATRI_COINS_FAQS_QUES2_ANS1 "YATRI_COINS_FAQS_QUES2_ANS1"
-        , getString $ YATRI_COINS_FAQS_QUES2_ANS2 "YATRI_COINS_FAQS_QUES2_ANS2"
+        [ getString $ YATRI_COINS_FAQS_QUES2_ANS1 $ show state.data.config.coinsConfig.coinsValidTill
+        , getString $ YATRI_COINS_FAQS_QUES2_ANS2 $ show state.data.config.coinsConfig.coinsValidTill
         ]
     , showTable: false
     }
