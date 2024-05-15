@@ -477,3 +477,6 @@ DriverSSN:
       kvFunction: findOneWithKV
       where: driverId
   excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
+  extraOperations:
+    - EXTRA_QUERY_FILE
+

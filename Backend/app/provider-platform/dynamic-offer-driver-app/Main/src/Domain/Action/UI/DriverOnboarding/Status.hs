@@ -324,8 +324,8 @@ checkImageValidity :: DVC.DocumentType -> Id SP.Person -> Flow (Maybe ResponseSt
 checkImageValidity docType driverId = do
   images <- IQuery.findValidImageByPersonIdAndImageType driverId docType
   if null images
-    then return (Just MANUAL_VERIFICATION_REQUIRED)
-    else return Nothing
+    then return Nothing
+    else return (Just MANUAL_VERIFICATION_REQUIRED)
 
 getInProgressDriverDocuments :: DVC.DocumentType -> Id SP.Person -> Int -> Flow (ResponseStatus, Maybe Text)
 getInProgressDriverDocuments docType driverId onboardingTryLimit =
