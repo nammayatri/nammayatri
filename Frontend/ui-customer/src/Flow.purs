@@ -203,6 +203,7 @@ import Screens.HelpAndSupportScreen.Transformer (getUpdatedIssueList, getApiIssu
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
   liftFlowBT $ markPerformance "BASE_APP_FLOW"
+  checkVersion
   baseAppStorage -- TODO:: Restructure the files and names
   baseAppLogs
   liftFlowBT $ runEffectFn1 resetIdMap ""
