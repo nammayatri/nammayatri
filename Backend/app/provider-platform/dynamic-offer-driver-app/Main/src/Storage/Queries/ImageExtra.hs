@@ -41,3 +41,10 @@ findRecentByPersonIdAndImageType personId imgtype = do
     ]
   where
     hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now
+
+findValidImageByPersonIdAndImageType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> DocumentType -> m [Image]
+findValidImageByPersonIdAndImageType personId imgtype = do
+  findAllWithKV
+    [ Se.And
+        [Se.Is BeamI.personId $ Se.Eq $ getId personId, Se.Is BeamI.imageType $ Se.Eq imgtype, Se.Is BeamI.isValid $ Se.Eq True]
+    ]
