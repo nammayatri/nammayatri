@@ -22,3 +22,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_ssn DROP COLUMN created_at;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_ssn ADD COLUMN verification_status text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_ssn ADD COLUMN reject_reason text ;

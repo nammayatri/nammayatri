@@ -16,6 +16,7 @@ import Tools.Beam.UtilsTH
 data DriverSSNT f = DriverSSNT
   { driverId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    rejectReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     ssnEncrypted :: B.C f Kernel.Prelude.Text,
     ssnHash :: B.C f Kernel.External.Encryption.DbHash,
     verificationStatus :: B.C f Domain.Types.IdfyVerification.VerificationStatus
