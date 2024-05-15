@@ -41,7 +41,7 @@ FareBreakup:
   types:
     FareBreakupAPIEntity:
       description: Text
-      amount: HighPrecMoney
+      amount: Money
       amountWithCurrency: PriceAPIEntity
       derive': "Generic, Show, FromJSON, ToJSON, ToSchema"
     FareBreakupEntityType:
