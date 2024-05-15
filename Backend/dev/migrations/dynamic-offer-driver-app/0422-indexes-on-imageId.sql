@@ -1,0 +1,3 @@
+CREATE INDEX idx_vehicle_insurance_document_image_id ON atlas_driver_offer_bpp.vehicle_insurance USING btree (document_image_id);
+CREATE INDEX idx_vehicle_registration_certificate_image_id ON atlas_driver_offer_bpp.vehicle_registration_certificate USING btree (document_image_id);
+CREATE INDEX idx_vehicle_fitness_certificate_image_id ON atlas_driver_offer_bpp.vehicle_fitness_certificate USING btree (document_image_id);
