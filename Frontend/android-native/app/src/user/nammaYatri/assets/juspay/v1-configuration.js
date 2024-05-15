@@ -6,10 +6,23 @@ if (typeof __VERSION__ !== "undefined") {
 window.version["configuration"]= version;
 
 function getAppLink(os) {
-  if (os == "ANDROID") {
-    return "https://play.google.com/store/apps/details?id=in.juspay.nammayatri"
-  } else {
-    return "https://apps.apple.com/in/app/namma-yatri/id1637429831"
+  let sessionInfo = JSON.parse(JBridge.getSessionInfo());
+  if (sessionInfo.app_name.toLowerCase().includes("namma")) {
+    if (os == "ANDROID") {
+      return "https://play.google.com/store/apps/details?id=in.juspay.nammayatri"
+    }
+    else {
+      return "https://apps.apple.com/in/app/namma-yatri/id1637429831"
+      
+    }
+  }
+  else if (sessionInfo.app_name.toLowerCase().includes("mana")) {
+    if (os == "ANDROID") {
+      return "https://play.google.com/store/apps/details?id=in.mobility.manayatri"
+    }
+    else {
+      return "https://apps.apple.com/in/app/mana-yatri/id6477922432"
+    }
   }
 }
 
