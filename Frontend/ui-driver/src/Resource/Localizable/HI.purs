@@ -1377,5 +1377,6 @@ getHI stringKey =
         YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(आप इसे हमेशा प्रोफ़ाइल से बदल सकते हैं)"
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "क्या आपकी कार का एसी चालू और काम कर रहा ह।"
         SET_THE_AC_ON_TO_ENABLE name -> name <> " को सक्षम करने के लिए एसी चालू करें"
-        ALL_ELIGIBLE_VARIANTS_ARE_CHOSEN_PLEASE_CHECK -> "सभी पात्र वेरिएंट चुने गए हैं। कृपया जांचें"
+        VARIANTS_ARE_SWITCHED -> "आपकी पसंदीदा एसी वेरिएंट्स फिर से सक्षम हैं"
+        NON_AC_ARE_SWITCHED -> "डिफ़ॉल्ट रूप से Non-AC mini गाड़ी चालू है"
         TOP_AC_DRIVER -> "देखें कि नम्मा यात्री पर शीर्ष AC ड्राइवर कैसे बनें"

@@ -1377,5 +1377,6 @@ getML stringKey =
         YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(നിങ്ങൾക്ക് എപ്പോഴും പ്രൊഫൈൽ മുതൽ മാറ്റാം)"
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "നിങ്ങളുടെ കാർ എസി പ്രവർത്തിക്കുന്നുണ്ടോ?"
         SET_THE_AC_ON_TO_ENABLE name -> name <> " പ്രവർത്തിക്കാന്‍ എസി ഓണാക്കുക"
-        ALL_ELIGIBLE_VARIANTS_ARE_CHOSEN_PLEASE_CHECK -> "എല്ലാ അനുവദനീയ വാരിയന്റുകൾ തിരഞ്ഞെടുത്തു. ദയവായി പരിശോധിക്കുക"
+        VARIANTS_ARE_SWITCHED -> "നിങ്ങളുടെ പ്രിഫറ്റ് എസി വിവിധതകൾ വീണ്ടും പ്രവർത്തിപ്പിക്കുന്നു"
+        NON_AC_ARE_SWITCHED > "നോൺ-എ.സി മിനി ഡിഫോൾട്ടായി പ്രവർത്തിപ്പിക്കുന്നു"
         TOP_AC_DRIVER -> "നമ്മ യാത്രിയിലെ മികച്ച എസി ഡ്രൈവർ ആകുന്നത് എങ്ങനെയെന്ന് കാണുക"
