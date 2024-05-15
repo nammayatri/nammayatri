@@ -56,9 +56,9 @@ data CreateOverlayReq = CreateOverlayReq
     contactSupportNumber :: Maybe Text,
     toastMessage :: Maybe Text,
     secondaryActions :: Maybe [Text],
-    actions2 :: Maybe [FCM.FCMOverlayAction],
+    actions2 :: Maybe [FCM.FCMActions],
     socialMediaLinks :: Maybe [FCM.FCMMediaLink],
-    secondaryActions2 :: Maybe [FCM.FCMOverlayAction],
+    secondaryActions2 :: Maybe [FCM.FCMActions],
     showPushNotification :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
