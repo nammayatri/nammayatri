@@ -799,6 +799,7 @@ castVerificationStatus :: IV.VerificationStatus -> Common.VerificationStatus
 castVerificationStatus = \case
   IV.PENDING -> Common.PENDING
   IV.VALID -> Common.VALID
+  IV.MANUAL_VERIFICATION_REQUIRED -> Common.MANUAL_VERIFICATION_REQUIRED
   IV.INVALID -> Common.INVALID
 
 ---------------------------------------------------------------------

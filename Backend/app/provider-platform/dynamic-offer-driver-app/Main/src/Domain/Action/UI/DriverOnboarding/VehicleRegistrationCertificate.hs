@@ -350,7 +350,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             reviewedAt = Nothing,
             reviewRequired = Nothing,
             insuranceValidity = input.insuranceValidity,
-            verificationStatus = DIV.PENDING,
+            verificationStatus = DIV.MANUAL_VERIFICATION_REQUIRED,
             fleetOwnerId = input.fleetOwnerId,
             merchantId = Just merchantId,
             merchantOperatingCityId = Just merchantOperatingCityId,
