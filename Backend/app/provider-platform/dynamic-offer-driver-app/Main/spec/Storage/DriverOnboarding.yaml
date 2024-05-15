@@ -38,7 +38,7 @@ IdfyVerification:
     ImageExtractionValidation:
       enum: "Success,Skipped,Failed"
     VerificationStatus:
-      enum: "PENDING,VALID,INVALID"
+      enum: "PENDING,VALID,INVALID,MANUAL_VERIFICATION_REQUIRED"
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
