@@ -60,7 +60,7 @@ issue merchantId _ req = withFlowHandlerAPI $ do
           dIssueRes <- DIssue.handler validatedIssueReq
           becknOnIssueReq <- ACL.buildOnIssueReq transaction_id message_id bap_id bap_uri dIssueRes
           bapUrl <- parseBaseUrl bap_uri
-          void $ CallBAP.callOnIssue becknOnIssueReq bapUrl dIssueRes.merchant'
+          void $ CallBAP.callOnIssue becknOnIssueReq bapUrl dIssueRes.merchant
   pure Utils.ack
 
 issueLockKey :: Text -> Text

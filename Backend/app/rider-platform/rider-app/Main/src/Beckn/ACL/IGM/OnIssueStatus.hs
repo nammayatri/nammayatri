@@ -25,7 +25,7 @@ import Kernel.Utils.Common
 buildOnIssueStatusReq ::
   MonadFlow m =>
   Spec.OnIssueStatusReq ->
-  m (DOnIssueStatus.DOnIssueStatus)
+  m DOnIssueStatus.DOnIssueStatus
 buildOnIssueStatusReq req = do
   let context = req.onIssueStatusReqContext
   Utils.validateContext Spec.ON_ISSUE_STATUS context

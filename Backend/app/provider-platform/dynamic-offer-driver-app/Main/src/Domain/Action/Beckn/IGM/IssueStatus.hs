@@ -62,7 +62,7 @@ data IssueStatusRes = IssueStatusRes
   }
   deriving (Show, Generic)
 
-validateRequest :: DIssueStatus -> Flow (ValidatedDIssueStatus)
+validateRequest :: DIssueStatus -> Flow ValidatedDIssueStatus
 validateRequest DIssueStatus {..} = do
   issue <- QIGM.findByPrimaryKey (Id issueId) >>= fromMaybeM (InvalidRequest "Issue not found")
   merchant <- QM.findById (issue.merchantId) >>= fromMaybeM (InvalidRequest "Merchant not found")
@@ -71,7 +71,7 @@ validateRequest DIssueStatus {..} = do
   merchantOperatingCity <- QMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
   pure ValidatedDIssueStatus {..}
 
-handler :: ValidatedDIssueStatus -> Flow (IssueStatusRes)
+handler :: ValidatedDIssueStatus -> Flow IssueStatusRes
 handler ValidatedDIssueStatus {..} = do
   now <- getCurrentTime
   let issueStatus = issue.issueStatus

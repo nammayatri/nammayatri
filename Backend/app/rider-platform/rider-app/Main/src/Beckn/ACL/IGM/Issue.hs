@@ -38,7 +38,7 @@ buildIssueReq ::
   Booking ->
   Ride ->
   Common.IssueCategory ->
-  Maybe (Common.IssueOption) ->
+  Maybe Common.IssueOption ->
   Text ->
   DM.Merchant ->
   Person ->
@@ -62,7 +62,7 @@ buildIssueReq booking ride category option description merchant rider igmConfig 
     Just igmIssue -> pure (igmIssue.id.getId, Just igmIssue.issueType, igmIssue.transactionId)
   context <- Utils.buildContext Spec.ISSUE Spec.ON_DEMAND merchant transactionId messageId merchantOperatingCity.city (Just $ Utils.BppData booking.providerId (showBaseUrl booking.providerUrl)) (Just $ Utils.durationToText ttl)
   let igmIssue = fromMaybe (Utils.buildIGMIssue nowRFC3339 issueId booking rider transactionId) (Utils.updateIGMIssue mbIgmIssue mbCustomerAction now)
-  pure $
+  pure
     ( Spec.IssueReq
         { context,
           issueReqMessage = tfIssueReqMessage category option description nowRFC3339 issueId merchant booking ride rider igmConfig mbCustomerAction mbCustomerRating mbType
@@ -71,13 +71,13 @@ buildIssueReq booking ride category option description merchant rider igmConfig 
       igmIssue
     )
 
-tfIssueReqMessage :: Common.IssueCategory -> Maybe (Common.IssueOption) -> Text -> UTCTimeRFC3339 -> Text -> DM.Merchant -> Booking -> Ride -> Person -> IGMConfig -> Maybe Common.CustomerResponse -> Maybe Common.CustomerRating -> Maybe IssueType -> Spec.IssueReqMessage
+tfIssueReqMessage :: Common.IssueCategory -> Maybe Common.IssueOption -> Text -> UTCTimeRFC3339 -> Text -> DM.Merchant -> Booking -> Ride -> Person -> IGMConfig -> Maybe Common.CustomerResponse -> Maybe Common.CustomerRating -> Maybe IssueType -> Spec.IssueReqMessage
 tfIssueReqMessage category option description now issueId merchant booking ride rider igmConfig mbCustomerAction mbCustomerRating mbType =
   Spec.IssueReqMessage
     { issueReqMessageIssue = tfIssue category option description now issueId merchant booking ride rider igmConfig mbCustomerAction mbCustomerRating mbType
     }
 
-tfIssue :: Common.IssueCategory -> Maybe (Common.IssueOption) -> Text -> UTCTimeRFC3339 -> Text -> DM.Merchant -> Booking -> Ride -> Person -> IGMConfig -> Maybe Common.CustomerResponse -> Maybe Common.CustomerRating -> Maybe IssueType -> Spec.Issue
+tfIssue :: Common.IssueCategory -> Maybe Common.IssueOption -> Text -> UTCTimeRFC3339 -> Text -> DM.Merchant -> Booking -> Ride -> Person -> IGMConfig -> Maybe Common.CustomerResponse -> Maybe Common.CustomerRating -> Maybe IssueType -> Spec.Issue
 tfIssue category option description now issueId merchant booking ride rider igmConfig mbCustomerAction mbCustomerRating mbType = do
   let issueCategory = category.igmCategory
       issueSubCategory = option >>= (.igmSubCategory)
@@ -91,7 +91,7 @@ tfIssue category option description now issueId merchant booking ride rider igmC
       issueExpectedResolutionTime = Just $ Spec.IssueExpectedResolutionTime (Just $ Utils.computeTtlISO8601 igmConfig.expectedResolutionTime),
       issueExpectedResponseTime = Just $ Spec.IssueExpectedResolutionTime (Just $ Utils.computeTtlISO8601 igmConfig.expectedResponseTime),
       issueId = issueId,
-      issueIssueActions = tfIssueActions merchant now igmConfig,
+      issueIssueActions = tfIssueActions merchant now igmConfig description,
       issueIssueType = issueType,
       issueOrderDetails = tfOrderDetails booking ride,
       issueResolution = Nothing,
@@ -106,20 +106,20 @@ tfIssue category option description now issueId merchant booking ride rider igmC
 tfDescription :: Text -> Maybe Spec.IssueDescription
 tfDescription description = Just $ Spec.IssueDescription (Just description) (Just description)
 
-tfIssueActions :: DM.Merchant -> UTCTimeRFC3339 -> IGMConfig -> Maybe Spec.IssueActions
-tfIssueActions merchant now igmConfig =
+tfIssueActions :: DM.Merchant -> UTCTimeRFC3339 -> IGMConfig -> Text -> Maybe Spec.IssueActions
+tfIssueActions merchant now igmConfig description =
   Just $
     Spec.IssueActions
       { issueActionsRespondentActions = Nothing,
-        issueActionsComplainantActions = tfComplainantActions merchant now igmConfig
+        issueActionsComplainantActions = tfComplainantActions merchant now igmConfig description
       }
 
-tfComplainantActions :: DM.Merchant -> UTCTimeRFC3339 -> IGMConfig -> Maybe [Spec.ComplainantAction]
-tfComplainantActions merchant now igmConfig =
-  Just $
+tfComplainantActions :: DM.Merchant -> UTCTimeRFC3339 -> IGMConfig -> Text -> Maybe [Spec.ComplainantAction]
+tfComplainantActions merchant now igmConfig description =
+  Just
     [ Spec.ComplainantAction
         { complainantActionComplainantAction = Just $ show Spec.OPEN_ISSUE,
-          complainantActionShortDesc = Nothing,
+          complainantActionShortDesc = Just description,
           complainantActionUpdatedAt = Just now,
           complainantActionUpdatedBy = tfUpdatedBy merchant igmConfig
         }
@@ -148,7 +148,7 @@ tfOrderDetails booking ride =
 
 tfFulfillments :: Ride -> Maybe [Spec.Fulfillment]
 tfFulfillments ride =
-  Just $
+  Just
     [ Spec.Fulfillment
         { fulfillmentId = Just $ ride.bppRideId.getId,
           fulfillmentState = Just $ show ride.status
@@ -157,7 +157,7 @@ tfFulfillments ride =
 
 tfItems :: Booking -> Maybe [Spec.Item]
 tfItems booking =
-  Just $
+  Just
     [ Spec.Item
         { itemId = Just booking.itemId,
           itemQuantity = Nothing

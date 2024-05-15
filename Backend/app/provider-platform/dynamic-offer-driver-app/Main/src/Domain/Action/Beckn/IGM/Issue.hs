@@ -83,14 +83,14 @@ data IssueRes = IssueRes
     groEmail :: Text,
     createdAt :: UTCTimeRFC3339,
     updatedAt :: UTCTimeRFC3339,
-    merchant' :: Merchant,
+    merchant :: Merchant,
     merchantOperatingCity :: MerchantOperatingCity,
     issueStatus :: DIGM.Status,
     bapId :: Text,
     bppId :: Text
   }
 
-validateRequest :: Id Merchant -> DIssue -> Flow (ValidatedDIssue)
+validateRequest :: Id Merchant -> DIssue -> Flow ValidatedDIssue
 validateRequest merchantId dIssue@DIssue {..} = do
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   booking <- QB.findById (Id dIssue.bookingId) >>= fromMaybeM (BookingDoesNotExist dIssue.bookingId)
@@ -101,16 +101,15 @@ validateRequest merchantId dIssue@DIssue {..} = do
   let bppId = merchant.subscriberId.getShortId
   pure $ ValidatedDIssue {..}
 
-handler :: ValidatedDIssue -> Flow (IssueRes)
+handler :: ValidatedDIssue -> Flow IssueRes
 handler ValidatedDIssue {..} = do
   now <- getCurrentTime
-  issueRes <- case issueStatus of
+  case issueStatus of
     DIGM.OPEN -> openBecknIssue ValidatedDIssue {..}
     DIGM.ESCALATED -> escalateBecknIssue ValidatedDIssue {..} now
     DIGM.CLOSED -> closeBecknIssue ValidatedDIssue {..} now
-  pure $ issueRes
 
-openBecknIssue :: ValidatedDIssue -> Flow (IssueRes)
+openBecknIssue :: ValidatedDIssue -> Flow IssueRes
 openBecknIssue dIssue@ValidatedDIssue {..} = do
   ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
   -- riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id") -- shrey00 : incorporate it back?
@@ -134,9 +133,9 @@ openBecknIssue dIssue@ValidatedDIssue {..} = do
   QIGM.create igmIssue
   mbOption <- QIO.findByIGMIssueSubCategory issueSubCategory
   let optionId = mbOption <&> (.id)
-      description = mbOption <&> (.option) & fromMaybe "No description provided"
+      description = maybe "No description provided" (. option) mbOption
   let issueReport = Common.IssueReportReq (Just $ cast ride.id) [] optionId category.id description Nothing (Just True)
-  void $ Common.createIssueReport (cast ride.driverId, cast dIssue.merchant.id, cast booking.merchantOperatingCityId) Nothing issueReport (buildMerchantConfig booking.merchantOperatingCityId ride.driverId) driverIssueHandle Common.DRIVER (Just issueId)
+  void $ Common.createIssueReport (cast ride.driverId, cast dIssue.merchant.id) Nothing issueReport driverIssueHandle Common.DRIVER (Just issueId)
   pure $
     IssueRes
       { issueId = issueId,
@@ -146,13 +145,12 @@ openBecknIssue dIssue@ValidatedDIssue {..} = do
         groEmail = igmConfig.groEmail,
         createdAt = createdAt,
         updatedAt = createdAt,
-        merchant' = dIssue.merchant,
         merchantOperatingCity = merchantOperatingCity,
         ..
       }
 
-escalateBecknIssue :: ValidatedDIssue -> UTCTime -> Flow (IssueRes)
-escalateBecknIssue dIssue@ValidatedDIssue {..} now = do
+escalateBecknIssue :: ValidatedDIssue -> UTCTime -> Flow IssueRes
+escalateBecknIssue ValidatedDIssue {..} now = do
   igmIssue <- QIGM.findByPrimaryKey (Id issueId) >>= fromMaybeM (InvalidRequest "Issue not found")
   let updatedIssue =
         igmIssue
@@ -170,13 +168,12 @@ escalateBecknIssue dIssue@ValidatedDIssue {..} now = do
         groEmail = igmConfig.groEmail,
         createdAt = UTCTimeRFC3339 igmIssue.createdAt,
         updatedAt = UTCTimeRFC3339 now,
-        merchant' = dIssue.merchant,
         merchantOperatingCity = merchantOperatingCity,
         ..
       }
 
-closeBecknIssue :: ValidatedDIssue -> UTCTime -> Flow (IssueRes)
-closeBecknIssue dIssue@ValidatedDIssue {..} now = do
+closeBecknIssue :: ValidatedDIssue -> UTCTime -> Flow IssueRes
+closeBecknIssue ValidatedDIssue {..} now = do
   igmIssue <- QIGM.findByPrimaryKey (Id issueId) >>= fromMaybeM (InvalidRequest "Issue not found")
   let updatedIssue =
         igmIssue
@@ -196,7 +193,6 @@ closeBecknIssue dIssue@ValidatedDIssue {..} now = do
         groEmail = igmConfig.groEmail,
         createdAt = UTCTimeRFC3339 igmIssue.createdAt,
         updatedAt = UTCTimeRFC3339 now,
-        merchant' = dIssue.merchant,
         merchantOperatingCity = merchantOperatingCity,
         ..
       }

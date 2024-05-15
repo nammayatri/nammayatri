@@ -2,9 +2,9 @@
 
 module API.UI.Issue where
 
-import qualified Data.HashMap.Strict as HM
 import qualified Beckn.ACL.IGM.Issue as ACL
 import qualified Beckn.ACL.IGM.IssueStatus as ACL
+import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.Dashboard.Ride as DRide
 import Domain.Action.UI.IGM
 import qualified Domain.Types.IGMIssue as DIGM
@@ -31,17 +31,17 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
-import qualified SharedLogic.CallIGMBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.CallIGMBPP as CallBPP
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.IGMConfig as QIGMConfig
 import qualified Storage.Queries.IGMIssue as QIGM
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
@@ -199,13 +199,13 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
   becknIssueId <- case mbIGMReq of
     Just igmReq | not igmReq.isValueAddNP -> processIGMReq igmReq person
     _ -> return Nothing
-  Common.createIssueReport (cast personId, cast merchantId) mbLanguage req (buildMerchantConfig merchantId) customerIssueHandle CUSTOMER becknIssueId
+  Common.createIssueReport (cast personId, cast merchantId) mbLanguage req customerIssueHandle CUSTOMER becknIssueId
   where
     processIGMReq igmReq person = do
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       igmConfig <- QIGMConfig.findByMerchantId merchantId >>= fromMaybeM (InternalError $ "IGMConfig not found " <> show merchantId)
       merchantOperatingCity <- CQMOC.findById igmReq.booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show igmReq.booking.merchantOperatingCityId)
-      option <- maybe (return Nothing) (\id -> QIO.findById id CUSTOMER) req.optionId
+      option <- maybe (return Nothing) (QIO.findById CUSTOMER) req.optionId
       category <- QIC.findById req.categoryId CUSTOMER >>= fromMaybeM (InvalidRequest "Issue Category not found")
       (becknIssueReq, issueId, igmIssue) <- ACL.buildIssueReq igmReq.booking igmReq.ride category option req.description merchant person igmConfig merchantOperatingCity Nothing Nothing Nothing
       QIGM.create igmIssue
@@ -263,7 +263,7 @@ resolveIGMIssue (personId, merchantId) issueReportId response rating = withFlowH
       merchantOperatingCity <- CQMOC.findById igmIssue.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show igmIssue.merchantOperatingCityId)
       booking <- QB.findById igmIssue.bookingId >>= fromMaybeM (BookingNotFound igmIssue.bookingId.getId)
       ride <- runInReplica $ QR.findByRBId booking.id >>= fromMaybeM (RideNotFound booking.id.getId)
-      option <- maybe (return Nothing) (\id -> QIO.findById id CUSTOMER) issueReport.optionId
+      option <- maybe (return Nothing) (QIO.findById CUSTOMER) issueReport.optionId
       category <- QIC.findById issueReport.categoryId CUSTOMER >>= fromMaybeM (InvalidRequest "Issue Category not found")
       (becknIssueReq, _, updatedIgmIssue) <- ACL.buildIssueReq booking ride category option issueReport.description merchant person igmConfig merchantOperatingCity (Just response) (Just rating) (Just igmIssue)
       QIGM.updateByPrimaryKey updatedIgmIssue
