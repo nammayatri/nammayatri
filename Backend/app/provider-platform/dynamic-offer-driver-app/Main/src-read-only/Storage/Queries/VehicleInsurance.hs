@@ -4,6 +4,8 @@
 
 module Storage.Queries.VehicleInsurance where
 
+import qualified Domain.Types.IdfyVerification
+import qualified Domain.Types.Image
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleInsurance
 import qualified Domain.Types.VehicleRegistrationCertificate
@@ -22,10 +24,18 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VehicleInsurance.VehicleInsurance] -> m ())
 createMany = traverse_ create
 
+findByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.VehicleInsurance.VehicleInsurance))
+findByImageId (Kernel.Types.Id.Id documentImageId) = do findOneWithKV [Se.Is Beam.documentImageId $ Se.Eq documentImageId]
+
 findByRcIdAndDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.VehicleInsurance.VehicleInsurance])
 findByRcIdAndDriverId (Kernel.Types.Id.Id rcId) (Kernel.Types.Id.Id driverId) = do findAllWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.driverId $ Se.Eq driverId]]
+
+updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.IdfyVerification.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
+updateVerificationStatus verificationStatus (Kernel.Types.Id.Id documentImageId) = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.documentImageId $ Se.Eq documentImageId]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleInsurance.VehicleInsurance -> m (Maybe Domain.Types.VehicleInsurance.VehicleInsurance))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]

@@ -78,5 +78,5 @@ underReviewDriversList merchantShortId opCity limit = withFlowHandlerAPI . DReg.
 driverDocumentInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler [Common.DriverDocument]
 driverDocumentInfo merchantShortId opCity = withFlowHandlerAPI . DReg.driverDocumentInfo merchantShortId opCity
 
-updateDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Image -> Common.UpdateDocumentRequest -> FlowHandler APISuccess
-updateDocument merchantShortId opCity imageId = withFlowHandlerAPI . DReg.updateDocument merchantShortId opCity imageId
+updateDocument :: ShortId DM.Merchant -> Context.City -> Common.UpdateDocumentRequest -> FlowHandler APISuccess
+updateDocument merchantShortId opCity = withFlowHandlerAPI . DReg.updateDocument merchantShortId opCity
