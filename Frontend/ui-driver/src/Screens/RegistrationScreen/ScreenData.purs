@@ -99,6 +99,7 @@ dummyCityConfig = {
                       callSupport : false,
                       supportWAN : "", 
                       whatsappSupport : false,
+                      enableAc: true,
                       defVariantList : []
                     },
                     variantSubscriptionConfig : {

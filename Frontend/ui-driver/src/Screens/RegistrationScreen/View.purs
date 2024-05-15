@@ -41,6 +41,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge (lottieAnimationConfig, startLottieProcess)
+import JBridge  as JB
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import PaymentPage (consumeBP)
@@ -232,7 +233,6 @@ menuOptionModal push state =
   linearLayout 
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , background Color.blackLessTrans
     ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 
 contactSupportView :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
@@ -284,9 +284,11 @@ commonTV push text' color' theme gravity' marginTop action visibility' padding' 
 
 cardsListView :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
 cardsListView push state =
-  scrollView
+  let documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs else state.data.registerationStepsAuto
+      isRefreshVisible = any (_ == IN_PROGRESS) $ map (\item -> getStatus item.stage state) documentList
+  in scrollView
     [ width MATCH_PARENT
-    , height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - (if state.data.cityConfig.showDriverReferral then 300 else 200) - EHC.safeMarginBottom else WRAP_CONTENT
+    , height $ if EHC.os == "IOS" then V $ (JB.getHeightFromPercent (if state.data.cityConfig.showDriverReferral || isRefreshVisible then 70 else 80)) - EHC.safeMarginBottom else WRAP_CONTENT
     , scrollBarY false
     , fillViewport true
     ][ linearLayout
@@ -671,7 +673,7 @@ getStatus step state =
                           then find (\docStatus -> docStatus.docType == step && filterCondition docStatus) documentStatusArr
                           else find (\docStatus -> docStatus.docType == step) documentStatusArr
           case findStatus of
-            Nothing -> if step == ST.ProfileDetails && state.props.isProfileDetailsCompleted then ST.NOT_STARTED else ST.NOT_STARTED
+            Nothing -> if step == ST.ProfileDetails && state.props.isProfileDetailsCompleted then ST.COMPLETED else ST.NOT_STARTED
             Just docStatus -> docStatus.status
   where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) ||  (isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
 

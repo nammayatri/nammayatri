@@ -449,6 +449,7 @@ config =
                   supportWAN : "",
                   callSupport : false,
                   whatsappSupport : false,
+                  enableAc :true,
                   defVariantList : []
               },
               variantSubscriptionConfig : {
@@ -479,7 +480,7 @@ config =
             , uploadRCandDL: true
             , enableYatriCoins: false
             , vehicleNSImg : ""
-            , registration: registrationConfig{defVariantList = [CTA.CarCategory]}
+            , registration: registrationConfig{defVariantList = [CTA.CarCategory], enableAc = false}
             , variantSubscriptionConfig:
                 { enableVariantBasedSubscription: false
                 , variantList: []
@@ -646,7 +647,8 @@ registrationConfig = {
   supportWAN : "919625724848",
   callSupport : true,
   whatsappSupport : false,
-  defVariantList : []
+  defVariantList : [],
+  enableAc : true
 }
 
 getStaticViewPlans :: Array CTC.StaticViewPlans

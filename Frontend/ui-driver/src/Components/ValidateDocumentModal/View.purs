@@ -52,6 +52,7 @@ view push state =
       , width MATCH_PARENT
       , orientation VERTICAL
       , afterRender push (const AfterRender)
+      , padding $ PaddingTop EHC.safeMarginTop
       ][  headerLayout state push
         , linearLayout
           [ width MATCH_PARENT

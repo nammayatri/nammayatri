@@ -57,7 +57,7 @@ primaryButtonConfig state = let
     activate =  (( rcMatch || (not state.data.cityConfig.uploadRCandDL)) && 
                 -- (state.data.dateOfRegistration /= Just "") && 
                 state.data.vehicle_registration_number /= "" &&
-                (state.data.vehicleCategory /= Just ST.CarCategory || isJust state.props.buttonIndex) &&
+                ((state.data.vehicleCategory /= Just ST.CarCategory || isJust state.props.buttonIndex) || (not state.data.cityConfig.registration.enableAc)) &&
                 ((DS.length state.data.vehicle_registration_number >= 2) && validateRCPrefix state.data.vehicle_registration_number state.data.rcNumberPrefixList) && ((not state.data.config.vehicleRegisterationScreen.collectVehicleDetails) || (DA.length state.data.dropDownList == selectedCount state.data.dropDownList)))
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfRegistration then getString CONFIRM 
@@ -65,7 +65,7 @@ primaryButtonConfig state = let
                            else getString UPLOAD_REGISTRATION_CERTIFICATE}
       , width = MATCH_PARENT
       , height = (V 50)
-      , margin = if imageUploadCondition then Margin 15 0 15 10 else Margin 15 0 15 30
+      , margin = if imageUploadCondition then Margin 15 0 15 (EHC.safeMarginBottomWithDefault 10) else Margin 15 0 15 (EHC.safeMarginBottomWithDefault 30)
       , cornerRadius = 6.0
       , alpha = if activate then 1.0 else 0.4
       , isClickable = activate

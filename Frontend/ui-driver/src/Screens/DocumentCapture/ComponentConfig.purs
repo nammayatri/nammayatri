@@ -172,7 +172,7 @@ ssnPrimaryEditTextConfig state =
         { color = Color.black800
         , textStyle = FontStyle.Body1
         , margin = (Margin 16 16 16 16)
-        , placeholder = "000-00-000"
+        , placeholder = "000-00-0000"
         , pattern = Just "[0-9]*,9"
         }
       , background = Color.white900

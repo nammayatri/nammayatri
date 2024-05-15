@@ -27,7 +27,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Components.MobileNumberEditor as MobileNumberEditor
 import Engineering.Helpers.Commons as EHC
-import Prelude (Unit, const, ($), (<<<), (<>), bind, discard, unit, pure, map, (==), (/=), (-))
+import Prelude (Unit, const, ($), (<<<), (<>), bind, discard, unit, pure, map, (==), (/=), (-), (&&))
 import Screens.DocumentCaptureScreen.Controller (Action(..), eval, ScreenOutput(..))
 import Screens.DocumentCaptureScreen.ComponentConfig
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
@@ -86,7 +86,7 @@ view push state =
       , padding $ PaddingBottom EHC.safeMarginBottom
       ][ AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
         , scrollView
-          [ height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - (if state.props.isProfileView then 150 else 200) - EHC.safeMarginBottom else WRAP_CONTENT
+          [ height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - (if state.props.isProfileView then 150 else 210) - EHC.safeMarginBottom else WRAP_CONTENT
           , width MATCH_PARENT
           , disableKeyboardAvoidance true
           , scrollBarY false
@@ -136,7 +136,6 @@ menuOptionModal push state =
   linearLayout 
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , background Color.blackLessTrans
     ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 
 popupModal :: forall w . (Action -> Effect Unit) -> ST.DocumentCaptureScreenState -> PrestoDOM (Effect Unit) w
@@ -168,7 +167,7 @@ howToUpload push state =
     , orientation VERTICAL
     , margin $ MarginVertical 0 10
     , padding $ PaddingVertical 16 16
-    ][ 
+    ]$[ 
       textView $ 
       [ text $ getVarString CAPTURE_DOC_DESC_1 [Constant.transformDocText state.data.docType]
       , color Color.black800
@@ -196,8 +195,17 @@ howToUpload push state =
         , padding $ Padding 16 16 16 0
         ][ rightWrongView true state
          , rightWrongView false state
-         ]  
-    ]
+         ] 
+    ] <> if (state.data.docType == ST.VehicleInspectionForm) && (state.data.cityConfig.cityName == "Minneapolis") then
+            [ textView
+                $ [ text $ "Note: Upload any valid vehicle inspection form. Specifically need not be issued for Bridge"
+                  , color Color.black800
+                  , margin $ MarginTop 12
+                  ]
+                <> FontStyle.body3 TypoGraphy
+            ]
+          else
+            []
   ]
 
 ssnView :: (Action -> Effect Unit) -> ST.DocumentCaptureScreenState -> forall w. PrestoDOM (Effect Unit) w

@@ -664,7 +664,8 @@ getCityConfig cityConfig cityName = do
                             callSupport : false,
                             supportWAN : "", 
                             whatsappSupport : false,
-                            defVariantList : []
+                            defVariantList : [],
+                            enableAc: true
                           },
                           variantSubscriptionConfig : {
                             enableVariantBasedSubscription : true,

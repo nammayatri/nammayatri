@@ -136,7 +136,8 @@ type RegistrationConfig = {
   supportWAN :: String,
   callSupport :: Boolean,
   whatsappSupport :: Boolean,
-  defVariantList :: Array VehicleCategory
+  defVariantList :: Array VehicleCategory,
+  enableAc :: Boolean
 }
 
 type BannerCarousalConfig = {
