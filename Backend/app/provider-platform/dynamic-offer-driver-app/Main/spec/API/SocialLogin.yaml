@@ -18,6 +18,7 @@ types:
     registrationLat: Maybe Double
     registrationLon: Maybe Double
   SocialLoginRes:
+    isNew: Bool
     token: Text
   SocialUpdateProfileReq:
     email: Text
