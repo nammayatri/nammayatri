@@ -19,7 +19,6 @@ where
 
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Utils.GenericPretty (PrettyShow)
 
 data DriverOfferAPIEntity = DriverOfferAPIEntity
   { driverName :: Text,
@@ -27,6 +26,7 @@ data DriverOfferAPIEntity = DriverOfferAPIEntity
     distanceToPickup :: Maybe HighPrecMeters,
     distanceToPickupWithUnit :: Maybe Distance,
     validTill :: UTCTime,
-    rating :: Maybe Centesimal
+    rating :: Maybe Centesimal,
+    tollCharges :: Maybe PriceAPIEntity
   }
-  deriving (Generic, Show, PrettyShow, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

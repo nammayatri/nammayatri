@@ -65,6 +65,7 @@ data Ride = Ride
     status :: Domain.Types.Ride.RideStatus,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    tollConfidence :: Kernel.Prelude.Maybe Domain.Types.Ride.Confidence,
     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     trackingUrl :: Kernel.Types.Common.BaseUrl,
     traveledDistance :: Kernel.Types.Common.HighPrecMeters,
@@ -80,12 +81,18 @@ data Ride = Ride
   }
   deriving (Generic, Show)
 
+data Confidence = Sure | Unsure | Neutral deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 data OdometerReading = OdometerReading {fileId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile), value :: Kernel.Types.Common.Centesimal}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data RideEndedBy = Driver | Dashboard | CallBased | CronJob deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Confidence)
+
+$(mkHttpInstancesForEnum ''Confidence)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
 

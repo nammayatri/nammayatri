@@ -2,6 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Price: Kernel.Types.Common
+  PriceAPIEntity: Kernel.Types.Common
   BaseUrl: Kernel.Types.Common
   VehicleServiceTierType: Domain.Types.VehicleServiceTier
   SpecialZoneQuote: Domain.Types.SpecialZoneQuote
@@ -43,6 +44,7 @@ Quote:
     OneWayQuoteAPIDetails:
       distanceToNearestDriver: HighPrecMeters
       distanceToNearestDriverWithUnit: Distance
+      tollCharges: Maybe PriceAPIEntity
 
     OneWaySpecialZoneQuoteAPIDetails:
       distanceToNearestDriver: HighPrecMeters

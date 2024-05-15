@@ -15,13 +15,16 @@
 module Domain.Action.UI.SpecialZoneQuote where
 
 import Kernel.Prelude
+import Kernel.Types.Common
 
-newtype SpecialZoneQuoteAPIEntity = SpecialZoneQuoteAPIEntity
-  { quoteId :: Text
+data SpecialZoneQuoteAPIEntity = SpecialZoneQuoteAPIEntity
+  { quoteId :: Text,
+    tollCharges :: Maybe PriceAPIEntity
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-newtype InterCityQuoteAPIEntity = InterCityQuoteAPIEntity
-  { quoteId :: Text
+data InterCityQuoteAPIEntity = InterCityQuoteAPIEntity
+  { quoteId :: Text,
+    tollCharges :: Maybe PriceAPIEntity
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

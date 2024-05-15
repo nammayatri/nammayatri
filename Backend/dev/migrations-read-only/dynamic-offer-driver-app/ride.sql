@@ -85,3 +85,10 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN driver_deviated_to_toll_route
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN fare_amount double precision ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN currency character varying(255) ;
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN toll_confidence text ;
