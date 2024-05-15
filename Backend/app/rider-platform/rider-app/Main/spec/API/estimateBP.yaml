@@ -1,0 +1,23 @@
+imports:
+  Text: Data.Text
+  Ride: Domain.Types.Ride
+  PriceAPIEntity : Kernel.Types.Price
+module: EstimateBP
+types:
+  EstimateDetailsRes:
+    estimateBreakup: "[EstimateBreakup]"
+  EstimateBreakup:
+    title: Text
+    price: EstimateBreakupPrice
+  EstimateBreakupPrice:
+    value: PriceAPIEntity
+
+apis:
+  # GET /ride/{rideId}/estimateBreakup
+  - GET:
+      endpoint: /ride/{rideId}/estimateBreakup
+      auth: TokenAuth
+      params:
+        rideId: Id Ride
+      response:
+        type: API.Types.UI.EstimateBP.EstimateDetailsRes

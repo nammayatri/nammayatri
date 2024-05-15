@@ -177,6 +177,7 @@ library
       Domain.Action.UI.DriverOffer
       Domain.Action.UI.EditLocation
       Domain.Action.UI.Estimate
+      Domain.Action.UI.EstimateBP
       Domain.Action.UI.FareBreakup
       Domain.Action.UI.Feedback
       Domain.Action.UI.FeedbackForm
@@ -359,6 +360,7 @@ library
       API.Action.UI.Cac
       API.Action.UI.CustomerReferral
       API.Action.UI.EditLocation
+      API.Action.UI.EstimateBP
       API.Action.UI.FollowRide
       API.Action.UI.FRFSTicketService
       API.Action.UI.Invoice
@@ -367,6 +369,7 @@ library
       API.Action.UI.TicketService
       API.Types.UI.CustomerReferral
       API.Types.UI.EditLocation
+      API.Types.UI.EstimateBP
       API.Types.UI.FollowRide
       API.Types.UI.FRFSTicketService
       API.Types.UI.Invoice
