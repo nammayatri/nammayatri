@@ -184,6 +184,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId = do
         numberOfDeviation = Nothing,
         tollCharges = Nothing,
         tollNames = Nothing,
+        tollConfidence = Nothing,
         estimatedTollCharges = booking.fareParams.tollCharges,
         estimatedTollNames = booking.tollNames,
         uiDistanceCalculationWithAccuracy = Nothing,

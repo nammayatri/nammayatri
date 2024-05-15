@@ -107,7 +107,7 @@ makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
         { agencyName = bppDetails.name,
           agencyNumber = Just providerNum,
           tripTerms = maybe [] (.descriptions) tripTerms,
-          quoteDetails = mkQuoteAPIDetails quoteDetails,
+          quoteDetails = mkQuoteAPIDetails (tollChargesInfo <&> (mkPriceAPIEntity . (.tollCharges))) quoteDetails,
           estimatedFare = estimatedFare.amountInt,
           estimatedTotalFare = estimatedTotalFare.amountInt,
           discount = discount <&> (.amountInt),
@@ -127,14 +127,15 @@ instance FromJSON QuoteAPIDetails where
 instance ToSchema QuoteAPIDetails where
   declareNamedSchema = genericDeclareNamedSchema S.fareProductSchemaOptions
 
-mkQuoteAPIDetails :: QuoteDetails -> QuoteAPIDetails
-mkQuoteAPIDetails = \case
-  DQuote.RentalDetails details -> DQuote.RentalAPIDetails $ DRentalDetails.mkRentalDetailsAPIEntity details
+mkQuoteAPIDetails :: Maybe PriceAPIEntity -> QuoteDetails -> QuoteAPIDetails
+mkQuoteAPIDetails tollCharges = \case
+  DQuote.RentalDetails details -> DQuote.RentalAPIDetails $ DRentalDetails.mkRentalDetailsAPIEntity details tollCharges
   DQuote.OneWayDetails OneWayQuoteDetails {..} ->
     DQuote.OneWayAPIDetails
       OneWayQuoteAPIDetails
         { distanceToNearestDriver = distanceToHighPrecMeters distanceToNearestDriver,
-          distanceToNearestDriverWithUnit = distanceToNearestDriver
+          distanceToNearestDriverWithUnit = distanceToNearestDriver,
+          ..
         }
   DQuote.DriverOfferDetails DDriverOffer.DriverOffer {..} ->
     let distanceToPickup' = (distanceToHighPrecMeters <$> distanceToPickup) <|> (Just . HighPrecMeters $ toCentesimal 0) -- TODO::remove this default value

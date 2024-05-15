@@ -51,9 +51,13 @@ data Quote = Quote
     validTill :: Kernel.Prelude.UTCTime,
     vehicleServiceTierType :: Domain.Types.VehicleServiceTier.VehicleServiceTierType
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
-data OneWayQuoteAPIDetails = OneWayQuoteAPIDetails {distanceToNearestDriver :: Kernel.Types.Common.HighPrecMeters, distanceToNearestDriverWithUnit :: Kernel.Types.Common.Distance}
+data OneWayQuoteAPIDetails = OneWayQuoteAPIDetails
+  { distanceToNearestDriver :: Kernel.Types.Common.HighPrecMeters,
+    distanceToNearestDriverWithUnit :: Kernel.Types.Common.Distance,
+    tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity
+  }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data OneWayQuoteDetails = OneWayQuoteDetails {distanceToNearestDriver :: Kernel.Types.Common.Distance} deriving (Generic, Show)
@@ -77,4 +81,4 @@ data QuoteDetails
   | OneWaySpecialZoneDetails Domain.Types.SpecialZoneQuote.SpecialZoneQuote
   deriving (Generic, Show)
 
-data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, Show)
+data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, (Show))

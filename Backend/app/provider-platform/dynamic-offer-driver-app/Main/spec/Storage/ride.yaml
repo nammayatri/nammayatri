@@ -32,6 +32,9 @@ Ride:
     RideStatus:
       enum: "NEW,INPROGRESS,COMPLETED,CANCELLED"
       derive: "'ListInstance,HttpInstance"
+    Confidence:
+      enum: "Sure,Unsure,Neutral"
+      derive: "'ListInstance,HttpInstance"
   fields:
     id: Id Ride
     bookingId: Id Booking
@@ -77,6 +80,7 @@ Ride:
     tollNames: Maybe [Text]
     driverGoHomeRequestId: Maybe (Id DriverGoHomeRequest)
     safetyAlertTriggered: Bool
+    tollConfidence: Maybe Confidence
     enableFrequentLocationUpdates: Maybe Bool
     vehicleServiceTierSeatingCapacity: Maybe Int
     vehicleServiceTierAirConditioned: Maybe Double
