@@ -21,6 +21,7 @@ where
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CustomerReferral as CustomerReferral
 import qualified API.Action.UI.EditLocation as EditLocation
+import qualified API.Action.UI.EstimateBP as EstimateBP
 import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Invoice as Invoice
@@ -103,6 +104,7 @@ type API =
            :<|> CustomerReferral.API
            :<|> EditLocation.API
            :<|> SocialLogin.API
+           :<|> EstimateBP.API
        )
 
 handler :: FlowServer API
@@ -147,3 +149,4 @@ handler =
     :<|> CustomerReferral.handler
     :<|> EditLocation.handler
     :<|> SocialLogin.handler
+    :<|> EstimateBP.handler
