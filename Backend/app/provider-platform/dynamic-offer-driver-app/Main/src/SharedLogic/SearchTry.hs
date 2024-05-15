@@ -72,7 +72,7 @@ getNextScheduleTime driverPoolConfig searchRequest = do
     (scheduleTryTime : rest) -> do
       setKey rest
       now <- getCurrentTime
-      return $ Just $ searchRequest.startTime `diffUTCTime` (scheduleTryTime `addUTCTime` now)
+      return $ Just $ max 5 (searchRequest.startTime `diffUTCTime` (scheduleTryTime `addUTCTime` now)) -- 5 seconds buffer
   where
     scheduleSearchKey = "ScheduleSearch-" <> searchRequest.id.getId
     setKey scheduleTryTimes = Redis.withCrossAppRedis $ Redis.setExp scheduleSearchKey scheduleTryTimes 3600
