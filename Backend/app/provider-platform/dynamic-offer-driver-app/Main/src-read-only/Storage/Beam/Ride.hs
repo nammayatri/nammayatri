@@ -59,6 +59,7 @@ data RideT f = RideT
     startOdometerReadingValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     status :: B.C f Domain.Types.Ride.RideStatus,
     tollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    tollConfidence :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.Confidence),
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     trackingUrl :: B.C f Kernel.Prelude.Text,
     traveledDistance :: B.C f Kernel.Types.Common.HighPrecMeters,

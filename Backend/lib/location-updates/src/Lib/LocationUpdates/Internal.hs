@@ -166,15 +166,15 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
         then do
           currSnapToRoadState <- processSnapToRoadCall
           updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls currSnapToRoadState.numberOfSelfTuned
-          when (isNothing rectifyDistantPointsFailureUsing && isTollApplicable) $ do
+          when isTollApplicable $ do
             mbTollCharges :: Maybe HighPrecMoney <- Redis.safeGet (onRideTollChargesKey driverId)
-            tollNames :: [Text] <- Redis.lRange (onRideTollChargesKey driverId) 0 (-1)
+            tollNames :: [Text] <- Redis.lRange (onRideTollNamesKey driverId) 0 (-1)
             whenJust mbTollCharges $ \tollCharges -> updateTollChargesAndNames driverId tollCharges tollNames
         else do
           (distanceToBeUpdated, tollChargesInfo) <- getTravelledDistanceAndTollInfo driverId estDist ((,,False) <$> estTollCharges <*> estTollNames)
           updateDistance driverId (metersToHighPrecMeters distanceToBeUpdated) 0 0 (Just 0)
           whenJust tollChargesInfo $ \(tollCharges, tollNames, _) ->
-            when (isNothing rectifyDistantPointsFailureUsing && isTollApplicable) $
+            when isTollApplicable $
               updateTollChargesAndNames driverId tollCharges tollNames
     else do
       isAtLeastBatchPlusOne <- atLeastBatchPlusOne
@@ -227,6 +227,10 @@ recalcDistanceBatchStep RideInterpolationHandler {..} rectifyDistantPointsFailur
     logInfo $ mconcat ["points interpolation: input=", show batchWaypoints, "; output=", show interpolatedWps]
     logInfo $ mconcat ["calculated distance for ", show (length interpolatedWps), " points, ", "distance is ", show distance]
     deleteFirstNwaypoints driverId batchSize
+    when isTollApplicable $ do
+      mbTollCharges :: Maybe HighPrecMoney <- Redis.safeGet (onRideTollChargesKey driverId)
+      tollNames :: [Text] <- Redis.lRange (onRideTollNamesKey driverId) 0 (-1)
+      whenJust mbTollCharges $ \tollCharges -> updateTollChargesAndNames driverId tollCharges tollNames
   pure (distance, servicesUsed, snapToRoadFailed)
 
 redisOnRideKeysCleanup :: (HedisFlow m env) => Id person -> m ()
@@ -359,7 +363,7 @@ interpolatePointsAndCalculateDistanceAndTollImplementation isEndRide snapToRoadC
         Left _ -> pure (0, [], [], True, Nothing)
         Right response -> do
           tollInfo <-
-            if isNothing rectifyDistantPointsFailureUsing && isTollApplicable
+            if isTollApplicable
               then getTollInfoOnTheRoute (Just driverId) response.snappedPoints
               else return Nothing
           pure (response.distance, response.snappedPoints, servicesUsed, False, tollInfo)

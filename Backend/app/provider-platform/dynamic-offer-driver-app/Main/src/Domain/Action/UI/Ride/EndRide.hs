@@ -339,13 +339,27 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                     else pure Nothing
                 withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rectificationMapsConfig (DTC.isTollApplicable booking.vehicleServiceTier) rideOld.id driverId tripEndPoints' estimatedDistance estimatedTollCharges estimatedTollNames pickupDropOutsideOfThreshold
 
+              updRide <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+
               distanceCalculationFailed <- withTimeAPI "endRide" "isDistanceCalculationFailed" $ isDistanceCalculationFailed driverId
+
               when distanceCalculationFailed $ do
                 logWarning $ "Failed to calculate distance for this ride: " <> rideId.getId
-                case (estimatedTollCharges, estimatedTollNames) of
-                  (Just tollCharges, Just tollNames) -> void $ QRide.updateTollChargesAndNames driverId tollCharges tollNames
-                  _ -> pure ()
-              ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+
+              let (tollCharges, tollNames, tollConfidence) = do
+                    let distanceCalculationFailure = distanceCalculationFailed || (maybe False (> 0) updRide.numberOfSelfTuned)
+                        driverDeviationToTollRoute = fromMaybe False updRide.driverDeviatedToTollRoute
+                    if isJust updRide.estimatedTollCharges && distanceCalculationFailure && driverDeviationToTollRoute
+                      then (updRide.estimatedTollCharges, updRide.estimatedTollNames, Just DRide.Neutral)
+                      else
+                        if (isJust updRide.estimatedTollCharges && isJust updRide.tollCharges && distanceCalculationFailure) || (isNothing updRide.estimatedTollCharges && isNothing updRide.tollCharges && distanceCalculationFailure && driverDeviationToTollRoute)
+                          then (Nothing, Nothing, Just DRide.Unsure)
+                          else
+                            if distanceCalculationFailure
+                              then (Nothing, Nothing, Nothing)
+                              else (updRide.tollCharges, updRide.tollNames, Just DRide.Sure)
+
+              let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollConfidence = tollConfidence}
 
               (chargeableDistance, finalFare, mbUpdatedFareParams) <-
                 if distanceCalculationFailed
