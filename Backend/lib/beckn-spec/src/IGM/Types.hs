@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-unused-imports #-}
 
 module IGM.Types
@@ -94,7 +93,7 @@ optionsAck =
       ]
 
 -- |
-data AckMessage = AckMessage
+newtype AckMessage = AckMessage
   { -- |
     ackMessageAck :: Ack
   }
@@ -232,7 +231,7 @@ optionsComplainantAction =
       ]
 
 -- | Describes a person.
-data ComplainantPerson = ComplainantPerson
+newtype ComplainantPerson = ComplainantPerson
   { -- | Describes the name of a person in format: ./{given_name}/{honorific_prefix}/{first_name}/{middle_name}/{last_name}/{honorific_suffix}
     complainantPersonName :: Maybe Text
   }
@@ -663,7 +662,7 @@ optionsIssueDescription =
       ]
 
 -- | Describes time in its various forms. It can be a single point in time; duration; or a structured timetable of operations
-data IssueExpectedResolutionTime = IssueExpectedResolutionTime
+newtype IssueExpectedResolutionTime = IssueExpectedResolutionTime
   { -- | Describes duration as per ISO8601 format
     issueExpectedResolutionTimeDuration :: Maybe Text
   }
@@ -747,7 +746,7 @@ optionsIssuePost200ResponseError =
       ]
 
 -- |
-data IssuePost200ResponseMessage = IssuePost200ResponseMessage
+newtype IssuePost200ResponseMessage = IssuePost200ResponseMessage
   { -- |
     issuePost200ResponseMessageAck :: IssuePost200ResponseMessageAck
   }
@@ -771,7 +770,7 @@ optionsIssuePost200ResponseMessage =
       ]
 
 -- | Describes the ACK response
-data IssuePost200ResponseMessageAck = IssuePost200ResponseMessageAck
+newtype IssuePost200ResponseMessageAck = IssuePost200ResponseMessageAck
   { -- | Describe the status of the ACK response. If schema validation passes, status is ACK else it is NACK
     issuePost200ResponseMessageAckStatus :: Text
   }
@@ -822,7 +821,7 @@ optionsIssueReq =
       ]
 
 -- |
-data IssueReqMessage = IssueReqMessage
+newtype IssueReqMessage = IssueReqMessage
   { -- |
     issueReqMessageIssue :: Issue
   }
@@ -1072,7 +1071,7 @@ optionsOnIssueReq =
       ]
 
 -- |
-data OnIssueReqMessage = OnIssueReqMessage
+newtype OnIssueReqMessage = OnIssueReqMessage
   { -- |
     onIssueReqMessageIssue :: Issue
   }
@@ -1195,7 +1194,7 @@ optionsOrganization =
       ]
 
 -- | Describes an organization
-data OrganizationOrg = OrganizationOrg
+newtype OrganizationOrg = OrganizationOrg
   { -- |
     organizationOrgName :: Maybe Text
   }
@@ -1219,7 +1218,7 @@ optionsOrganizationOrg =
       ]
 
 -- | Describes the details of the entity that provides the resolution for the issue
-data ResolutionProvider = ResolutionProvider
+newtype ResolutionProvider = ResolutionProvider
   { -- |
     resolutionProviderRespondentInfo :: ResolutionProviderRespondentInfo
   }

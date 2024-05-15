@@ -85,7 +85,7 @@ tfRespondentActions res =
   Just
     [ Spec.RespondentAction
         { respondentActionRespondentAction = Just res.respondentAction,
-          respondentActionShortDesc = Nothing,
+          respondentActionShortDesc = Just $ "Issue registered and " <> toLower res.respondentAction,
           respondentActionUpdatedAt = Just res.updatedAt,
           respondentActionUpdatedBy = tfUpdatedBy res
         }
@@ -112,7 +112,7 @@ tfOrganzationOrg :: DIssueStatus.IssueStatusRes -> Maybe Spec.OrganizationOrg
 tfOrganzationOrg res =
   Just $
     Spec.OrganizationOrg
-      { organizationOrgName = Just $ res.bapId <> "::ONDC:TRV10"
+      { organizationOrgName = Just $ res.merchant.subscriberId.getShortId <> "::ONDC:TRV10"
       }
 
 tfOrganizationPerson :: DIssueStatus.IssueStatusRes -> Maybe Spec.ComplainantPerson

@@ -36,7 +36,7 @@ data DOnIssue = DOnIssue
     updatedAt :: Maybe UTCTimeRFC3339
   }
 
-validateRequest :: DOnIssue -> Flow (DIGM.IGMIssue)
+validateRequest :: DOnIssue -> Flow DIGM.IGMIssue
 validateRequest igmIssue = QIGM.findByPrimaryKey (Id igmIssue.id) >>= fromMaybeM (InvalidRequest "Issue not found")
 
 handler ::
