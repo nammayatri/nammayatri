@@ -19,7 +19,7 @@ data FareBreakup = FareBreakup
   }
   deriving (Show)
 
-data FareBreakupAPIEntity = FareBreakupAPIEntity {amount :: Kernel.Types.Common.HighPrecMoney, amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity, description :: Kernel.Prelude.Text}
+data FareBreakupAPIEntity = FareBreakupAPIEntity {amount :: Kernel.Types.Common.Money, amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity, description :: Kernel.Prelude.Text}
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data FareBreakupEntityType = BOOKING_UPDATE_REQUEST | BOOKING deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)

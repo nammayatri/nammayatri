@@ -11,7 +11,7 @@ import Kernel.Types.Common
 mkFareBreakupAPIEntity :: FareBreakup -> FareBreakupAPIEntity
 mkFareBreakupAPIEntity FareBreakup {..} =
   FareBreakupAPIEntity
-    { amount = amount.amount,
+    { amount = roundToIntegral amount.amount,
       amountWithCurrency = mkPriceAPIEntity amount,
       ..
     }
