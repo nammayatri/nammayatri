@@ -283,6 +283,9 @@ getProcessedDriverDocuments docType driverId =
     DVC.SocialSecurityNumber -> do
       mbSSN <- QDSSN.findByDriverId driverId
       return $ mapStatus <$> (mbSSN <&> (.verificationStatus))
+    DVC.ProfilePhoto -> checkImageValidity DVC.ProfilePhoto driverId
+    DVC.UploadProfile -> checkImageValidity DVC.UploadProfile driverId
+    DVC.PanCard -> checkImageValidity DVC.PanCard driverId
     _ -> return Nothing
   where
     boolToStatus :: Bool -> ResponseStatus
@@ -309,12 +312,20 @@ getProcessedVehicleDocuments docType driverId vehicleRC =
     DVC.VehiclePUC -> do
       mbDoc <- listToMaybe <$> VPUCQuery.findByRcIdAndDriverId vehicleRC.id driverId
       return $ mapStatus <$> (mbDoc <&> (.verificationStatus))
+    DVC.VehicleInspectionForm -> checkImageValidity DVC.VehicleInspectionForm driverId
     _ -> return Nothing
   where
     boolToStatus :: Bool -> ResponseStatus
     boolToStatus = \case
       True -> VALID
       False -> NO_DOC_AVAILABLE
+
+checkImageValidity :: DVC.DocumentType -> Id SP.Person -> Flow (Maybe ResponseStatus)
+checkImageValidity docType driverId = do
+  images <- IQuery.findValidImageByPersonIdAndImageType driverId docType
+  if null images
+    then return (Just MANUAL_VERIFICATION_REQUIRED)
+    else return Nothing
 
 getInProgressDriverDocuments :: DVC.DocumentType -> Id SP.Person -> Int -> Flow (ResponseStatus, Maybe Text)
 getInProgressDriverDocuments docType driverId onboardingTryLimit =
@@ -446,6 +457,7 @@ getRCAndStatus driverId merchantOpCityId onboardingTryLimit multipleRC language 
 mapStatus :: IV.VerificationStatus -> ResponseStatus
 mapStatus = \case
   IV.PENDING -> PENDING
+  IV.MANUAL_VERIFICATION_REQUIRED -> MANUAL_VERIFICATION_REQUIRED
   IV.VALID -> VALID
   IV.INVALID -> INVALID
 

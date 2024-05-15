@@ -290,7 +290,7 @@ createDL merchantId configs driverId covDetails name dob id imageId1 imageId2 na
   let verificationStatus =
         if configs.doStrictVerifcation
           then validateDLStatus configs expiry classOfVehicles now
-          else Domain.PENDING
+          else Domain.MANUAL_VERIFICATION_REQUIRED
   let verifiedName = (\n -> if '*' `T.elem` n then Nothing else Just n) =<< name
   let driverName = verifiedName <|> nameOnCard
   Domain.DriverLicense
