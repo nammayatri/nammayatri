@@ -289,6 +289,7 @@ foreign import startAudioPlayer :: forall action. Fn3 String (action -> Effect U
 foreign import displayBase64Image :: EffectFn1 DisplayBase64ImageConig Unit
 foreign import jBridgeMethodExists :: String -> Boolean
 foreign import initHVSdk :: EffectFn6 String String String Boolean String String (Effect Unit)
+foreign import generateUUID :: Effect String
 
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
 setMapPadding = runEffectFn4 setMapPaddingImpl

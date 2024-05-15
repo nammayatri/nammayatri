@@ -2556,3 +2556,7 @@ export const jBridgeMethodExists = function (method) {
 export const initHVSdk = function (accessToken, workFLowId, transactionId, useLocation, defLanguageCode, inputJson) {
   return JBridge.initHVSdk(accessToken, workFLowId, transactionId, useLocation, defLanguageCode, inputJson);         
 }
+
+export const generateUUID = function () {
+  return Math.random().toString(16);
+}

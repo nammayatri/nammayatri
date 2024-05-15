@@ -80,6 +80,7 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.gson.Gson;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView;
 
@@ -128,6 +129,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     // CallBacks
     private static String storeUpdateTimeCallBack = null;
     private String storeAddRideStopCallBack = null;
+    private String hvCallback;
     private LocationUpdateService.UpdateTimeCallback locationCallback;
     private PreviewView previewView;
     private ImageCapture imageCapture;
@@ -627,32 +629,32 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         }
         return 0;
     }
-    
-    @Override
-    public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
-        switch (requestCode) {
 
-            case HV_REQUEST_CODE:
-                if (resultCode == RESULT_OK) {
-                    HyperKycResult result = data.getParcelableExtra("hyperKycResult");
-                    switch (result.getStatus()) {
-                        case "USER_CANCELLED":
-                            return true;
-                        case "ERROR":
-                            return true;
-                        case "AUTO_APPROVED":
-                            return true;
-                        case "AUTO_DECLINED":
-                            return true;
-                        case "NEEDS_REVIEW":
-                            return true;
-                    }
-                }
-                break;
-        }
+   @JavascriptInterface
+   public void storeHvCallback(String callback) {
+       hvCallback = callback;
+   }
 
-        return super.onActivityResult(requestCode, resultCode, data);
-    }
+   @Override
+   public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
+       switch (requestCode) {
+           case HV_REQUEST_CODE:
+               if (resultCode == RESULT_OK) {
+                   try{
+                       HyperKycResult result = data.getParcelableExtra("hyperKycResult");
+                       Gson gson = new Gson();
+                       String jsonStr = gson.toJson(result); //"window.callUICallback('%s','%s','%s','%s');",
+                       String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%d','%s');",
+                               hvCallback, requestCode, jsonStr);
+                       bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                   }catch (Exception e) {
+                       System.out.println("zxc ex " + e);
+                   }
+               }
+               break;
+       }
+       return super.onActivityResult(requestCode, resultCode, data);
+   }
 
     @Override
     public boolean onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {

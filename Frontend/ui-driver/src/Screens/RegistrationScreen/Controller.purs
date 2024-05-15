@@ -48,6 +48,7 @@ import Screens.RegistrationScreen.ScreenData as SD
 import Components.OptionsMenu as OptionsMenu
 import Components.BottomDrawerList as BottomDrawerList
 import Effect.Uncurried (runEffectFn6)
+import Effect.Class (liftEffect)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -152,9 +153,9 @@ eval (RegistrationAction step ) state = do
           VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state step.rcNumberPrefixList
           GRANT_PERMISSION -> exit $ GoToPermissionScreen state
           SUBSCRIPTION_PLAN -> exit GoToOnboardSubscription
-          PROFILE_PHOTO -> continueWithCmd state [ pure $ CallHV "ny-selfie-flow" ""]
-          AADHAAR_CARD -> continueWithCmd state [ pure $ CallHV "ny-aadhaar-flow" ""]
-          PAN_CARD  -> continueWithCmd state [ pure $ CallHV "ny-pan-flow" ""]
+          PROFILE_PHOTO -> continueWithCmd state [ pure $ CallHV "ny-selfie-flow" "{\"key1\":\"value1\",\"key2\":\"value2\",\"key3\":\"value3\"}"]
+          AADHAAR_CARD -> continueWithCmd state [ pure $ CallHV "ny-aadhaar-flow" "{\"selfie\":\"https://prod-audit-portal-ind.s3.ap-south-1.amazonaws.com/gkyc-ap-south-1/checkLiveness/2024-05-15/tmdhyd/1715768121953-42922574-37f0-4bd4-9f86-9c151d6ea690/image.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAZRKK5ZMR2KBYHCHQ%2F20240515%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20240515T101522Z&X-Amz-Expires=900&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEDYaCmFwLXNvdXRoLTEiRjBEAiA3iUuVjbetQXdEFGZYy4%2BR7u7Vux2gGiwTgRVyZtKs3QIgH3ARfKT0C929PHBaJovxY9CMCTpujIWCPumq7OfIj7kqxwUIn%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARABGgw2NTU2NzY1MjUzNDciDKG9kKENMtAVSJuOUCqbBZaifBK7tZoa1nVOIUdtRuqwzRjWpTCw9tnVzfhAUfku3rwtyGKnA9ixN5dooIn%2B2t72wUup%2FrcyYeja7oHruUKrRXPaKi8IrO%2FY858TqVW2jKEDoXXODwpXCBvVgLKSyK2zFKarlNaq3U3N80eBQlZSMFYAg3KSGDKeTUMWA5uBkOlIpLze4ozDSY79rRUiDQEoe6v4fKRbkkFlOwcex3L4L%2BkpsichkE%2F6JriJMlt2AYUJDtrHYSWrRLk9yi8pdmjxf2idOsRZsA6YDvPB6raQ7%2F%2FRDMW6M5jvaJO9qJ%2Ff%2BtwHSWee23WwxmXRm1WtnraDCBdheITWBcO4lVkbt7oRkGWTVtX3RuFSqp3cAnUCAdq7S33V7Hg2EA33C%2BwsUApDRXMhVsn915l2osNScbeKaHjnJDMp2cesbe5EstOI5OeipL85wHCxcDCIte4ln89oA7YNlXQHaxskBSJkOpd1It71ffZsTsNQdFSDBwZrIIURNsteYRFl8aOIlrCssAWhAQAoVaen0lUAlD9JcQ01lU7RjNLyLysHRoXTrdB41zw9uFljDJDoeZpzZLQckDLWoCwH%2Bip7muui%2FIjyHplwKp0zfdHqUYh0O%2B7QoqwIew6FPcxU%2FBKJmBEW%2BkBtWZEFGXCnz5Wg91NL5Hi1mU25dq7LZ7MHnZY3OvLPQmjTGoALdZ33FO8nTCTIqmJko4vbPe65MzKnBvnM2RKvJT%2BEyWkk2Cn9vvWA3TA4rg%2Bs2%2Bz3h0tbkxPYsuooR9CJCj%2FUy5DD5FnWQMAce8DuxU0HZvUKAN%2FVnO2NU5hBUgNKD94MK2Mchi9ZbItBgrxzL17aIBDetQdNK0KLhbFAvUys578weiSbUHWaT9ekq7SDUIorjew0yh8xaiownaaRsgY6sgEGllafblc6fifVlsNPEyzfNKpg1PudYZdGohT2lU6yE%2Bx6BIzRY0RfeTIm%2FxAKCTudrEV%2BRQo6hZHKkbQo74B7FgESt7G6PbTrebm4hvp6qjZzLd9%2B2gtA1C%2B9p1%2BmUo122289Z5M%2F7sY%2FHY2w%2Bj5QDNN6UeJbQEjm79981sOAINT8OEKRIrP5pXsNsErANqlj12To1NhJIpiBgB8aYPRtI3kSwFZchFqAsVfOPiQnuQbZ&X-Amz-Signature=40b330eeedcaa0b26362dd96f2a9cf9ce63cf0aefb79bd14d8ef0395a013a1bc&X-Amz-SignedHeaders=host\"}"] --HVTODO: replace with selfie obtained from backend api.
+          PAN_CARD  -> continueWithCmd state [ pure $ CallHV "ny-pan-flow" "{\"selfie\":\"https://prod-audit-portal-ind.s3.ap-south-1.amazonaws.com/gkyc-ap-south-1/checkLiveness/2024-05-15/tmdhyd/1715768121953-42922574-37f0-4bd4-9f86-9c151d6ea690/image.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAZRKK5ZMR2KBYHCHQ%2F20240515%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20240515T101522Z&X-Amz-Expires=900&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEDYaCmFwLXNvdXRoLTEiRjBEAiA3iUuVjbetQXdEFGZYy4%2BR7u7Vux2gGiwTgRVyZtKs3QIgH3ARfKT0C929PHBaJovxY9CMCTpujIWCPumq7OfIj7kqxwUIn%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARABGgw2NTU2NzY1MjUzNDciDKG9kKENMtAVSJuOUCqbBZaifBK7tZoa1nVOIUdtRuqwzRjWpTCw9tnVzfhAUfku3rwtyGKnA9ixN5dooIn%2B2t72wUup%2FrcyYeja7oHruUKrRXPaKi8IrO%2FY858TqVW2jKEDoXXODwpXCBvVgLKSyK2zFKarlNaq3U3N80eBQlZSMFYAg3KSGDKeTUMWA5uBkOlIpLze4ozDSY79rRUiDQEoe6v4fKRbkkFlOwcex3L4L%2BkpsichkE%2F6JriJMlt2AYUJDtrHYSWrRLk9yi8pdmjxf2idOsRZsA6YDvPB6raQ7%2F%2FRDMW6M5jvaJO9qJ%2Ff%2BtwHSWee23WwxmXRm1WtnraDCBdheITWBcO4lVkbt7oRkGWTVtX3RuFSqp3cAnUCAdq7S33V7Hg2EA33C%2BwsUApDRXMhVsn915l2osNScbeKaHjnJDMp2cesbe5EstOI5OeipL85wHCxcDCIte4ln89oA7YNlXQHaxskBSJkOpd1It71ffZsTsNQdFSDBwZrIIURNsteYRFl8aOIlrCssAWhAQAoVaen0lUAlD9JcQ01lU7RjNLyLysHRoXTrdB41zw9uFljDJDoeZpzZLQckDLWoCwH%2Bip7muui%2FIjyHplwKp0zfdHqUYh0O%2B7QoqwIew6FPcxU%2FBKJmBEW%2BkBtWZEFGXCnz5Wg91NL5Hi1mU25dq7LZ7MHnZY3OvLPQmjTGoALdZ33FO8nTCTIqmJko4vbPe65MzKnBvnM2RKvJT%2BEyWkk2Cn9vvWA3TA4rg%2Bs2%2Bz3h0tbkxPYsuooR9CJCj%2FUy5DD5FnWQMAce8DuxU0HZvUKAN%2FVnO2NU5hBUgNKD94MK2Mchi9ZbItBgrxzL17aIBDetQdNK0KLhbFAvUys578weiSbUHWaT9ekq7SDUIorjew0yh8xaiownaaRsgY6sgEGllafblc6fifVlsNPEyzfNKpg1PudYZdGohT2lU6yE%2Bx6BIzRY0RfeTIm%2FxAKCTudrEV%2BRQo6hZHKkbQo74B7FgESt7G6PbTrebm4hvp6qjZzLd9%2B2gtA1C%2B9p1%2BmUo122289Z5M%2F7sY%2FHY2w%2Bj5QDNN6UeJbQEjm79981sOAINT8OEKRIrP5pXsNsErANqlj12To1NhJIpiBgB8aYPRtI3kSwFZchFqAsVfOPiQnuQbZ&X-Amz-Signature=40b330eeedcaa0b26362dd96f2a9cf9ce63cf0aefb79bd14d8ef0395a013a1bc&X-Amz-SignedHeaders=host\"}"] --HVTODO: replace with selfie obtained from backend api.
           VEHICLE_PERMIT  -> exit $ DocCapture state item
           FITNESS_CERTIFICATE  -> exit $ DocCapture state item
           VEHICLE_INSURANCE -> exit $ DocCapture state item
@@ -163,7 +164,8 @@ eval (RegistrationAction step ) state = do
 
 eval (CallHV workFLowId inputJson) state = 
   continueWithCmd state [do
-    void $ runEffectFn6 JB.initHVSdk state.data.accessToken workFLowId "857694385765439" true "en" "{\"key1\":\"value1\",\"key2\":\"value2\",\"key3\":\"value3\"}"
+    transactionId <- liftEffect $ JB.generateUUID
+    void $ runEffectFn6 JB.initHVSdk state.data.accessToken workFLowId transactionId true "en" inputJson 
     pure NoAction
   ]
 
@@ -290,6 +292,20 @@ eval ExpandOptionalDocs state = continue state { props { optionalDocsExpanded = 
 eval (OnActivityResult requestCode bundle) state = do
   -- bundle is the data returned from the activity
   continue state
+
+-- eval (OnActivityResult requestCode bundle) state = do
+--   void $ pure $ spy "zxc " bundle
+--   case runExcept $ decodeJSON bundle of
+--     Left _ -> do
+--       void $ pure $ spy "zxc failed to parse response " result
+--       JB.toast "Some Error Occurred. Please try again."
+--       continue state
+--     Right (result :: HyperVergeKycReult) -> do
+--       void $ pure $ spy "zxc parsed result : " result
+--       case result of
+--         "success" -> continue state
+--         _ ->
+--   continue state
 
 eval _ state = update state
 
