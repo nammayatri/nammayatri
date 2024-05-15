@@ -1378,5 +1378,6 @@ getBN stringKey =
         YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(আপনি সবসময় প্রোফাইল থেকে এটি পরিবর্তন করতে পারেন)"
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "আপনার গাড়ির এসি চালু এবং কাজ করছে?"
         SET_THE_AC_ON_TO_ENABLE name -> name <> " এসি চালু করুন"
-        ALL_ELIGIBLE_VARIANTS_ARE_CHOSEN_PLEASE_CHECK -> "সমস্ত যোগ্য ভেরিয়েন্ট নির্বাচিত হয়েছে। অনুগ্রহ করে চেক করুন"
+        VARIANTS_ARE_SWITCHED -> "আপনার পছন্দনীয় এসি ভেরিয়েন্টগুলি আবার সক্রিয় করা হয়েছে"
+        NON_AC_ARE_SWITCHED -> "এসি ছাড়া মিনি ডিফল্টভাবে সক্রিয় করা হয়েছে"
         TOP_AC_DRIVER -> "দেখুন কীভাবে নম্মা যাত্রীতে শীর্ষ এসি ড্রাইভার হতে হয়"

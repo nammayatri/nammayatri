@@ -67,7 +67,7 @@ import Log (printLog)
 import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shadow, clipChildren)
 import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
@@ -428,32 +428,41 @@ bookingPreferenceNavView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , gravity CENTER_VERTICAL
-  , padding $ Padding 12 12 12 12
-  , margin $ Margin 16 0 16 16
-  , onClick push $ const BookingOptions
-  , background Color.white900
-  , rippleColor Color.rippleShade
-  , cornerRadius 8.0
-  ][
-    imageView
-    [ imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_preferences_filter"
-    , height $ V 20
-    , width $ V 20
-    , margin $ MarginRight 8
-    ],
-    textView
-     $ [ text $ getString BOOKING_OPTIONS
-      , color Color.black900
-      , weight 1.0
-      , textSize FontSize.a_16
-      , fontStyle $ FontStyle.semiBold LanguageStyle
-      ]
-    , imageView
-      [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_arrow_right"
-      , height $ V 18
-      , width $ V 18
-      ]
+  , color Color.red
+  , clipChildren false
+  ]
+  [linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER_VERTICAL
+    , padding $ Padding 12 12 12 12
+    , margin $ Margin 16 16 16 16
+    , onClick push $ const BookingOptions
+    , background Color.white900
+    , rippleColor Color.rippleShade
+    , stroke $ "1," <> Color.grey900
+    , shadow $ Shadow 0.1 2.0 10.0 15.0 Color.greyBackDarkColor 0.5
+    , cornerRadius 8.0
+    ][
+      imageView
+      [ imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_preferences_filter"
+      , height $ V 20
+      , width $ V 20
+      , margin $ MarginRight 8
+      ],
+      textView
+      $ [ text $ getString BOOKING_OPTIONS
+        , color Color.black900
+        , weight 1.0
+        , textSize FontSize.a_16
+        , fontStyle $ FontStyle.semiBold LanguageStyle
+        ]
+      , imageView
+        [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_arrow_right"
+        , height $ V 18
+        , width $ V 18
+        ]
+    ]
   ]
 
 specialPickupZone :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -524,7 +533,7 @@ bannersCarousal view bottomMargin state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , margin if bottomMargin then MarginVertical 12 12 else MarginTop 12
+  , margin if bottomMargin then MarginVertical 12 0 else MarginTop 12
   ][CarouselHolder.carouselView push $ getCarouselConfig view state]
 
 getCarouselConfig ∷ forall a. ListItem → HomeScreenState → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
@@ -767,7 +776,7 @@ offlineView push state =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       ][ linearLayout
-          [ height $ V 280
+          [ height $ V 340
           , width MATCH_PARENT
           , gravity CENTER_HORIZONTAL
           ][ lottieAnimationView
@@ -784,9 +793,10 @@ offlineView push state =
         , width MATCH_PARENT
         , gravity BOTTOM
         ][ linearLayout
-            [ height $ V 140
+            [ height $ V 205
             , width MATCH_PARENT
             , gravity BOTTOM
+            , orientation VERTICAL
             , background Color.white900
             , PP.cornerRadii $ PTD.Corners 40.0 true true false false
             ][
@@ -795,16 +805,15 @@ offlineView push state =
                 height WRAP_CONTENT
               , width MATCH_PARENT
               , gravity CENTER_HORIZONTAL
-              , margin $ MarginBottom 10
               , text $ getString if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then GO_ONLINE_PROMPT_PAYMENT_PENDING
                                  else if state.data.paymentState.driverBlocked then GO_ONLINE_PROMPT_SUBSCRIBE
                                  else GO_ONLINE_PROMPT
               ] <> FontStyle.paragraphText TypoGraphy
-              -- , if state.data.linkedVehicleCategory /= "AUTO_RICKSHAW" && state.props.driverStatusSet == ST.Offline then bookingPreferenceNavView push state else dummyTextView
+              , if state.data.linkedVehicleCategory /= "AUTO_RICKSHAW" && state.props.driverStatusSet == ST.Offline then bookingPreferenceNavView push state else dummyTextView
             ]
         ]
     , linearLayout
-        [ height $ V 205
+        [ height $ V 245
         , width MATCH_PARENT
         , gravity CENTER_HORIZONTAL
         ][ linearLayout

@@ -1376,5 +1376,6 @@ getKN stringKey =
         YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(ನೀವು ಎಲ್ಲಾ ಸಮಯದಲ್ಲೂ ನಿಮ್ಮ ಪ್ರೊಫೈಲ್ ನಿಂದ ಈ ಮಾಹಿತಿಯನ್ನು ಬದಲಾಯಿಸಬಹುದು)"
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "ನಿಮ್ಮ ಕಾರ್ AC ಸುವರ್ಣಾವಸ್ಥೆಯಲ್ಲಿದೆಯೇ ಮತ್ತು ಕಾರ್ ಯಾವಾಗಲೂ ಚಾಲುತ್ತಿದೆಯೇ?"
         SET_THE_AC_ON_TO_ENABLE name -> name <> " ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಲು AC ಅನ್ ಮಾಡಿ"
-        ALL_ELIGIBLE_VARIANTS_ARE_CHOSEN_PLEASE_CHECK -> "ಎಲ್ಲಾ ಅರ್ಹ ವ್ಯವಿಧಿಗಳನ್ನು ಆಯ್ಕೆಮಾಡಲಾಗಿದೆ. ದಯವಿಟ್ಟು ಪರಿಶೀಲಿಸಿ"
+        VARIANTS_ARE_SWITCHED -> "ನಿಮ್ಮ ಆದ್ಯತೆಯ AC ವ್ಯಾರಿಯಂಟ್‌ಗಳನ್ನು ಮರುಸ್ಥಾಪಿಸಲಾಗಿದೆ"
+        NON_AC_ARE_SWITCHED -> "ನಿಮ್ಮ ಆದ್ಯತೆಯ Non-AC ವ್ಯಾರಿಯಂಟ್‌ಗಳನ್ನು ಮರುಸ್ಥಾಪಿಸಲಾಗಿದೆ"
         TOP_AC_DRIVER -> "ನಮ್ಮ ಯಾತ್ರಿಯಲ್ಲಿ ಉನ್ನತ AC ಡ್ರೈವರ್ ಆಗುವುದು ಹೇಗೆ ಎಂದು ನೋಡಿ"

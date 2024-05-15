@@ -1377,5 +1377,6 @@ getTA stringKey =
         YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(நீங்கள் எப்போதும் இந்தத் தகவலை சுயவிவரத்திலிருந்து மாற்றலாம்)"
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "உங்கள் கார் ஏசி இயக்கப்பட்டு வேலை செய்கிறதா?"
         SET_THE_AC_ON_TO_ENABLE name -> name <> " ஐ இயக்கவும்"
-        ALL_ELIGIBLE_VARIANTS_ARE_CHOSEN_PLEASE_CHECK -> "அனைத்து தகுதியுள்ள வேரியன்ட்களைத் தேர்ந்தெடுக்கப்பட்டுள்ளன. தயவு செய்து சரிபார்க்கவும்"
+        VARIANTS_ARE_SWITCHED -> "உங்கள் விருப்பினர் ஏசி வகைகள் மீண்டும் இயக்கப்பட்டுள்ளன"
+        NON_AC_ARE_SWITCHED -> "நான்-ஏசி மினி இயக்கப்பட்டுள்ளது"
         TOP_AC_DRIVER -> "நம்ம யாத்ரியில் சிறந்த ஏசி டிரைவராக எப்படி இருக்க வேண்டும் என்பதைப் பார்க்கவும்"
