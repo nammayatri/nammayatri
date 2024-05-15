@@ -4,8 +4,8 @@ import Domain.Types.RentalDetails
 import Kernel.Prelude
 import Kernel.Types.Common
 
-mkRentalDetailsAPIEntity :: RentalDetails -> RentalDetailsAPIEntity
-mkRentalDetailsAPIEntity RentalDetails {..} = do
+mkRentalDetailsAPIEntity :: RentalDetails -> Maybe PriceAPIEntity -> RentalDetailsAPIEntity
+mkRentalDetailsAPIEntity RentalDetails {..} tollCharges = do
   RentalDetailsAPIEntity
     { baseFare = baseFare.amountInt,
       perHourCharge = perHourCharge.amountInt,
