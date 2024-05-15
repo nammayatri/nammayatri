@@ -73,17 +73,18 @@ postSocialLogin req = do
     Right info -> do
       oldPerson <- PQ.findByEmailAndMerchant req.merchantId info.email
       moc <- CQMOC.findByMerchantIdAndCity req.merchantId req.merchantOperatingCity >>= fromMaybeM (MerchantOperatingCityNotFound $ show req.merchantOperatingCity)
-      person <-
+      (person, isNew) <-
         case oldPerson of
-          Just person' -> pure person'
-          Nothing -> do
-            deploymentVersion <- asks (.version)
-            let createPersonInput = buildCreatePersonInput moc.city req.name info.email
-            DR.createDriverWithDetails createPersonInput Nothing Nothing Nothing Nothing (Just deploymentVersion.getDeploymentVersion) req.merchantId moc.id False
+          Just person' -> pure (person', False)
+          Nothing ->
+            (,True) <$> do
+              deploymentVersion <- asks (.version)
+              let createPersonInput = buildCreatePersonInput moc.city req.name info.email
+              DR.createDriverWithDetails createPersonInput Nothing Nothing Nothing Nothing (Just deploymentVersion.getDeploymentVersion) req.merchantId moc.id False
       QR.deleteByPersonId person.id
       token <- makeSession person.id.getId req.merchantId.getId moc.id.getId
       _ <- QR.create token
-      pure $ SL.SocialLoginRes token.token
+      pure $ SL.SocialLoginRes isNew token.token
     Left _ -> throwError . FailedToVerifyIdToken $ show req.oauthProvider <> ", idToken: " <> req.tokenId <> " error: "
   where
     buildCreatePersonInput city name email =
