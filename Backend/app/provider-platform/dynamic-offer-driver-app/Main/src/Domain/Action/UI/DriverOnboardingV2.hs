@@ -335,7 +335,8 @@ postDriverRegisterSsn (mbPersonId, _, _) API.Types.UI.DriverOnboardingV2.SSNReq 
         { id = id',
           driverId = driverId',
           ssn = ssn',
-          verificationStatus = DIV.MANUAL_VERIFICATION_REQUIRED
+          verificationStatus = DIV.MANUAL_VERIFICATION_REQUIRED,
+          rejectReason = Nothing
         }
 
 postDriverRegisterPancard ::

@@ -4,6 +4,8 @@
 module Storage.Queries.DriverSSNExtra where
 
 import Domain.Types.DriverSSN
+import Domain.Types.IdfyVerification
+import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -18,7 +20,7 @@ import Storage.Queries.OrphanInstances.DriverSSN
 
 upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => (Domain.Types.DriverSSN.DriverSSN -> m ())
 upsert driverSsn@(Domain.Types.DriverSSN.DriverSSN {..}) = do
-  res <- findOneWithKV [Se.Is Beam.driverId $ Se.Eq (getId driverId)]
+  res <- findOneWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
   if isJust res
     then
       updateWithKV
@@ -29,3 +31,16 @@ upsert driverSsn@(Domain.Types.DriverSSN.DriverSSN {..}) = do
         ]
         [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
     else createWithKV driverSsn
+
+findBySSN :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => (Kernel.External.Encryption.DbHash -> m (Maybe Domain.Types.DriverSSN.DriverSSN))
+findBySSN ssn = do findOneWithKV [Se.Is Beam.ssnHash $ Se.Eq ssn]
+
+updateVerificationStatusAndReasonBySSN ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.IdfyVerification.VerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.External.Encryption.DbHash -> m ())
+updateVerificationStatusAndReasonBySSN verificationStatus rejectReason ssn = do
+  updateOneWithKV
+    [ Se.Set Beam.verificationStatus verificationStatus,
+      Se.Set Beam.rejectReason rejectReason
+    ]
+    [Se.Is Beam.ssnHash $ Se.Eq ssn]

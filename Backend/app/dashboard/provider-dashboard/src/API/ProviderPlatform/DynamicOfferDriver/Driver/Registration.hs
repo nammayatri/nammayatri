@@ -186,10 +186,8 @@ driverDocumentInfo merchantShortId opCity apiTokenInfo driverId =
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.driverDocumentInfo) driverId
 
-updateDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Image -> Common.UpdateDocumentRequest -> FlowHandler APISuccess
-updateDocument merchantShortId opCity apiTokenInfo imageId req =
+updateDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpdateDocumentRequest -> FlowHandler APISuccess
+updateDocument merchantShortId opCity apiTokenInfo req =
   withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    transaction <- buildTransaction Common.UpdateDocumentEndpoint apiTokenInfo (cast imageId) (Just req) -- TODO: fix this
-    T.withTransactionStoring transaction $
-      Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.updateDocument) imageId req
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.updateDocument) req
