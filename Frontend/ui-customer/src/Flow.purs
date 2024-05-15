@@ -316,11 +316,7 @@ currentFlowStatus = do
       liftFlowBT $ markPerformance "VERIFY_PROFILE"
       response <- Remote.getProfileBT ""
       config <- getAppConfigFlowBT appConfig
-      let appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just 
-      case appName of
-        "Namma Yatri" -> logFirstCabRideEvent (fromMaybe false $ response ^. _hasTakenValidCabRide) "ny_cab_firstride"
-        "Mana Yatri" -> logFirstCabRideEvent (fromMaybe false $ response ^. _hasTakenValidCabRide) "my_cab_firstride"
-        _ -> pure unit
+
       updateVersion (response ^. _clientVersion) (response ^. _bundleVersion)
       updateFirebaseToken (response ^. _maskedDeviceToken) getUpdateToken
       updateLanguageAndReferralCode $ response ^. _language
@@ -368,15 +364,6 @@ currentFlowStatus = do
         requiredData = initialData { deviceToken = Just token }
       in
         void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
-    
-    logFirstCabRideEvent :: Boolean -> String -> FlowBT String Unit
-    logFirstCabRideEvent toLogEvent event = 
-      if toLogEvent
-        then do
-          logField_ <- lift $ lift $ getLogFields
-          void $ liftFlowBT $ logEvent logField_ $ event
-          void $ pure $ metaLogEvent $ event
-        else pure unit
 
     updateLanguageAndReferralCode :: Maybe String -> FlowBT String Unit
     updateLanguageAndReferralCode language = do

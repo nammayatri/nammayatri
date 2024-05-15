@@ -70,6 +70,7 @@ checkVersion = do
         && forceIOSupdate majorUpdateIndex minorUpdateIndex patchUpdateIndex updatedIOSversion
       ) $ do
           liftFlowBT $ JB.hideLoader
+          modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppVersion})
           void $ UI.handleAppUpdatePopUp
           checkVersion
       else pure unit
@@ -141,7 +142,7 @@ updateVersion dbClientVersion dbBundleVersion = do
 getIosVersion :: Merchant -> IosVersion
 getIosVersion merchant =
   case merchant of
-    NAMMAYATRI  -> mkIOSVersion 1 2 4 false
+    NAMMAYATRI  -> mkIOSVersion 1 3 12 true
     YATRI       -> mkIOSVersion 1 1 0 true
     YATRISATHI  -> mkIOSVersion 0 1 0 false
     _           -> mkIOSVersion 0 1 0 false
