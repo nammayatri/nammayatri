@@ -87,7 +87,6 @@ data DriverDocument = DriverDocument
 -- Approve/Reject Document --------------
 type UpdateDocumentAPI =
   "documents"
-    :> Capture "documentImageId" (Id Image)
     :> "update"
     :> ReqBody '[JSON] UpdateDocumentRequest
     :> Post '[JSON] APISuccess
@@ -98,10 +97,21 @@ data UpdateDocumentRequest = Approve ApproveDetails | Reject RejectDetails
 instance HideSecrets UpdateDocumentRequest where
   hideSecrets = identity
 
-data RejectDetails = RejectDetails
+data ImageDocumentsRejectDetails = ImageDocumentsRejectDetails
   { reason :: Text,
-    documentImageId :: Maybe (Id Image)
+    documentImageId :: Id Image
   }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data SSNRejectDetails = SSNRejectDetails
+  { reason :: Text,
+    ssn :: Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data RejectDetails
+  = SSNReject SSNRejectDetails
+  | ImageDocuments ImageDocumentsRejectDetails
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data FitnessApproveDetails = FitnessApproveDetails
@@ -148,14 +158,18 @@ data VPUCApproveDetails = VPUCApproveDetails
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-newtype RCApproveDetails = RCApproveDetails
-  { vehicleVariant :: Variant
+data RCApproveDetails = RCApproveDetails
+  { documentImageId :: Id Image,
+    vehicleVariant :: Maybe Variant
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data ApproveDetails
   = RC RCApproveDetails
-  | DL
+  | DL (Id Image)
+  | UploadProfile (Id Image)
+  | SSNApprove Text
+  | ProfilePhoto (Id Image)
   | VehiclePermit VPermitApproveDetails
   | VehiclePUC VPUCApproveDetails
   | VehicleInsurance VInsuranceApproveDetails
@@ -173,7 +187,11 @@ type DocumentsListAPI =
 
 data DocumentsListResponse = DocumentsListResponse
   { driverLicense :: [Text],
-    vehicleRegistrationCertificate :: [Text]
+    vehicleRegistrationCertificate :: [Text],
+    vehicleInsurance :: [Text],
+    uploadProfile :: [Text],
+    ssn :: Text,
+    vehicleFitnessCertificate :: [Text]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

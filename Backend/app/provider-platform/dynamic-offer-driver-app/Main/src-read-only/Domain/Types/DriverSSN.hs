@@ -15,6 +15,7 @@ import qualified Tools.Beam.UtilsTH
 data DriverSSNE e = DriverSSN
   { driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     id :: Kernel.Types.Id.Id Domain.Types.DriverSSN.DriverSSN,
+    rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ssn :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     verificationStatus :: Domain.Types.IdfyVerification.VerificationStatus
   }
@@ -26,8 +27,12 @@ type DecryptedDriverSSN = DriverSSNE 'AsUnencrypted
 
 instance EncryptedItem DriverSSN where
   type Unencrypted DriverSSN = (DecryptedDriverSSN, HashSalt)
-  encryptItem (entity, salt) = do ssn_ <- encryptItem (ssn entity, salt); pure DriverSSN {driverId = driverId entity, id = id entity, ssn = ssn_, verificationStatus = verificationStatus entity}
-  decryptItem entity = do ssn_ <- fst <$> decryptItem (ssn entity); pure (DriverSSN {driverId = driverId entity, id = id entity, ssn = ssn_, verificationStatus = verificationStatus entity}, "")
+  encryptItem (entity, salt) = do
+    ssn_ <- encryptItem (ssn entity, salt)
+    pure DriverSSN {driverId = driverId entity, id = id entity, rejectReason = rejectReason entity, ssn = ssn_, verificationStatus = verificationStatus entity}
+  decryptItem entity = do
+    ssn_ <- fst <$> decryptItem (ssn entity)
+    pure (DriverSSN {driverId = driverId entity, id = id entity, rejectReason = rejectReason entity, ssn = ssn_, verificationStatus = verificationStatus entity}, "")
 
 instance EncryptedItem' DriverSSN where
   type UnencryptedItem DriverSSN = DecryptedDriverSSN

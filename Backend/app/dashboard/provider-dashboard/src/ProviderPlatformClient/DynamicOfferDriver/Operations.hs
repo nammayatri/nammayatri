@@ -121,7 +121,7 @@ data DriverRegistrationAPIs = DriverRegistrationAPIs
     verifyAadhaarOtp :: Id Driver.Driver -> Registration.VerifyAadhaarOtpReq -> Euler.EulerClient Registration.VerifyAadhaarOtpRes,
     underReviewDriversList :: Maybe Int -> Maybe Int -> Euler.EulerClient Registration.UnderReviewDriversListResponse,
     driverDocumentInfo :: Id Driver.Driver -> Euler.EulerClient [Registration.DriverDocument],
-    updateDocument :: Id Driver.Image -> Registration.UpdateDocumentRequest -> Euler.EulerClient APISuccess
+    updateDocument :: Registration.UpdateDocumentRequest -> Euler.EulerClient APISuccess
   }
 
 data DriversAPIs = DriversAPIs

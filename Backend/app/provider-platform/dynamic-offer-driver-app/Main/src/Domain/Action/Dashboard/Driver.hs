@@ -74,6 +74,7 @@ module Domain.Action.Dashboard.Driver
     updateVehicleVariant,
     bulkReviewRCVariant,
     updateDriverTag,
+    castVehicleVariant,
   )
 where
 

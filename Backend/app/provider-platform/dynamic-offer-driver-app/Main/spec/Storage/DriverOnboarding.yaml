@@ -179,6 +179,10 @@ DriverLicense:
     deleteByDriverId:
       kvFunction: deleteWithKV
       where: driverId
+    updateVerificationStatus:
+      kvFunction: updateWithKV
+      params: [verificationStatus]
+      where: documentImageId1
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -234,6 +238,13 @@ VehicleRegistrationCertificate:
       kvFunction: updateOneWithKV
       params: [airConditioned]
       where: id
+    updateVerificationStatus:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus]
+      where: documentImageId
+    findByImageId:
+      kvFunction: findOneWithKV
+      where: documentImageId
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -312,6 +323,10 @@ Image:
     deleteByPersonId:
       kvFunction: deleteWithKV
       where: personId
+    updateIsValidAndFailureReason:
+      kvFunction: updateWithKV
+      params: [isValid, failureReason]
+      where: id
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -425,6 +440,13 @@ VehicleInsurance:
       kvFunction: findAllWithKV
       where:
         and: [rcId, driverId]
+    updateVerificationStatus:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus]
+      where: documentImageId
+    findByImageId:
+      kvFunction: findOneWithKV
+      where: documentImageId
 
 VehicleFitnessCertificate:
   tableName: vehicle_fitness_certificate
@@ -446,6 +468,13 @@ VehicleFitnessCertificate:
       kvFunction: findAllWithKV
       where:
         and: [rcId, driverId]
+    updateVerificationStatus:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus]
+      where: documentImageId
+    findByImageId:
+      kvFunction: findOneWithKV
+      where: documentImageId
 
 VehiclePUC:
   tableName: vehicle_puc
@@ -469,6 +498,7 @@ DriverSSN:
     driverId: Id Person
     ssn: EncryptedHashedField e Text
     verificationStatus: VerificationStatus
+    rejectReason: Maybe Text
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
@@ -476,6 +506,8 @@ DriverSSN:
     findByDriverId:
       kvFunction: findOneWithKV
       where: driverId
+  extraOperations:
+    - EXTRA_QUERY_FILE
   excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
   extraOperations:
     - EXTRA_QUERY_FILE
