@@ -311,6 +311,7 @@ vehicleSpecificList :: forall w. (Action -> Effect Unit) -> ST.RegistrationScree
 vehicleSpecificList push state registerationSteps = 
   let mandatoryDocs = filter(\elem -> elem.isMandatory) registerationSteps
       optionalDocs = filter(\elem -> not elem.isMandatory) registerationSteps
+      visibleOptionalItems = filter(\elem -> compVisibility state elem) optionalDocs
   in
   linearLayout
     [ width MATCH_PARENT
@@ -325,7 +326,7 @@ vehicleSpecificList push state registerationSteps =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , gravity CENTER_VERTICAL
-        , visibility $ boolToVisibility $ length optionalDocs > 0
+        , visibility $ boolToVisibility $ length visibleOptionalItems > 0
         , onClick push $ const ExpandOptionalDocs
         ][ textView $
             [ text $ getString OPTIONAL_DOCUMENT
@@ -360,7 +361,7 @@ listItem push item state =
     , orientation HORIZONTAL
     , padding $ Padding 12 12 12 12
     , cornerRadius 8.0
-    , visibility $ boolToVisibility $ compVisibility item
+    , visibility $ boolToVisibility $ compVisibility state item
     , stroke $ componentStroke state item
     , background $ compBg state item
     , clickable $ compClickable state item
@@ -412,9 +413,6 @@ listItem push item state =
       docUploadStarted = getStatus item.stage state /= ST.NOT_STARTED
       statusFailed = (getStatus item.stage state) == ST.FAILED
       retryStr = " " <> "<span style='color:#2194FF'>"<> (getString RETRY_UPLOAD) <>"</span>"
-
-      compVisibility :: ST.StepProgress -> Boolean
-      compVisibility item = not item.isHidden && dependentDocAvailable item state
 
       compImage :: ST.StepProgress -> String
       compImage item = 
@@ -681,3 +679,6 @@ getStatus step state =
 
 dependentDocAvailable :: ST.StepProgress -> ST.RegistrationScreenState -> Boolean
 dependentDocAvailable item state = all (\docType -> (getStatus docType state) == ST.COMPLETED) item.dependencyDocumentType
+
+compVisibility :: ST.RegistrationScreenState -> ST.StepProgress -> Boolean
+compVisibility state item = not item.isHidden && dependentDocAvailable item state

@@ -241,7 +241,8 @@ type CoinsConfig = {
   oneTwoStarCoinEvent :: Boolean,
   driverToCustomerRefCoinEvent :: Boolean,
   coinConversionPopupLottie :: String,
-  driverToCustomerRefPopupEndDate :: String
+  driverToCustomerRefPopupEndDate :: String,
+  coinsValidTill :: Int
 }
 
 type InAppKeyboardModalConfig = {
