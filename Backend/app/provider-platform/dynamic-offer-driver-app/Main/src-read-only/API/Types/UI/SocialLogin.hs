@@ -26,7 +26,7 @@ data SocialLoginReq = SocialLoginReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data SocialLoginRes = SocialLoginRes {token :: Kernel.Prelude.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data SocialLoginRes = SocialLoginRes {isNew :: Kernel.Prelude.Bool, token :: Kernel.Prelude.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data SocialUpdateProfileReq = SocialUpdateProfileReq
   { email :: Kernel.Prelude.Text,

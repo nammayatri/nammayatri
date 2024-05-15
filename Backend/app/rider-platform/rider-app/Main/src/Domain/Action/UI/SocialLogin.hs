@@ -70,17 +70,18 @@ postSocialLogin req = do
   case result of
     Right info -> do
       oldPerson <- PQ.findByEmailAndMerchantId req.merchantId info.email
-      person <-
+      (person, isNew) <-
         case oldPerson of
-          Just person' -> pure person'
-          Nothing -> do
-            merchant <- CQMOC.findById req.merchantId >>= fromMaybeM (MerchantNotFound req.merchantId.getId)
-            let authReq = buildAuthReq info.email
-            PR.createPerson authReq SP.EMAIL Nothing Nothing Nothing Nothing Nothing merchant
+          Just person' -> pure (person', False)
+          Nothing ->
+            (,True) <$> do
+              merchant <- CQMOC.findById req.merchantId >>= fromMaybeM (MerchantNotFound req.merchantId.getId)
+              let authReq = buildAuthReq info.email
+              PR.createPerson authReq SP.EMAIL Nothing Nothing Nothing Nothing Nothing merchant
       QR.deleteByPersonId person.id
       token <- makeSession person.id.getId req.merchantId.getId
       _ <- QR.create token
-      pure $ SL.SocialLoginRes token.token
+      pure $ SL.SocialLoginRes isNew token.token
     Left _ -> throwError . InternalError $ show req.oauthProvider <> ", idToken: " <> req.tokenId <> " error: "
   where
     buildAuthReq email =
