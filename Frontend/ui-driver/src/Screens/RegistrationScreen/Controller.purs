@@ -124,6 +124,7 @@ data Action = BackPressed
             | OptionsMenuAction OptionsMenu.Action
             | BottomDrawerListAC BottomDrawerList.Action
             | CallHV String String
+            | OnActivityResult Int String
             
 derive instance genericAction :: Generic Action _
 instance eqAction :: Eq Action where
@@ -285,6 +286,10 @@ eval (ContinueButtonAction PrimaryButtonController.OnClick) state = do
         Mb.Nothing -> continue state
 
 eval ExpandOptionalDocs state = continue state { props { optionalDocsExpanded = not state.props.optionalDocsExpanded}}
+
+eval (OnActivityResult requestCode bundle) state = do
+  -- bundle is the data returned from the activity
+  continue state
 
 eval _ state = update state
 

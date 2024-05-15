@@ -371,7 +371,7 @@ window.listenForActivityResult = function (requestCode, callback) {
 window.onActivityResult = function (requestCode, resultCode, bundle) {
   if (window.activityResultListeners[requestCode]) {
     window.activityResultListeners[requestCode](resultCode, bundle);
-    window.activityResultListeners[requestCode] = undefined;
+    // window.activityResultListeners[requestCode] = undefined;
   }
 }
 
