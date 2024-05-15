@@ -2,16 +2,18 @@ module Api.Types where
 
 import Prelude
 
+import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
+import Data.Ord.Generic (genericCompare)
 import Foreign.Generic (class Decode, decodeJSON)
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, Method(..), defaultMakeRequest, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode)
 import Services.Endpoint (nearBySearchRequest)
 
 instance makeRideBooking :: RestEndpoint NearBySearchRequest NearBySearchRequestRes where
-  makeRequest reqBody headers = defaultMakeRequest GET (nearBySearchRequest) headers reqBody Nothing
+  makeRequest reqBody@(NearBySearchRequest id) headers = defaultMakeRequest GET (nearBySearchRequest id) headers reqBody Nothing
   decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
@@ -28,7 +30,7 @@ newtype SearchRequest
   { airConditioned :: Maybe Boolean
   , bapLogo :: Maybe String
   , bapName :: Maybe String
-  , baseFare :: Int
+  , baseFare :: Number
   , customerCancellationDues :: Number
   , customerExtraFee :: Maybe Int
   , disabilityTag :: Maybe String
@@ -91,10 +93,15 @@ instance standardEncodeBookingLocationAPIEntity :: StandardEncode BookingLocatio
 instance decodeBookingLocationAPIEntity :: Decode BookingLocationAPIEntity where
   decode = defaultDecode
 
+instance ordBookingLocationAPIEntity :: Ord BookingLocationAPIEntity where
+  compare = genericCompare
+instance eqBookingLocationAPIEntity :: Eq BookingLocationAPIEntity where
+  eq = genericEq
+
 derive instance genericNearBySearchRequest :: Generic NearBySearchRequest _
 
 instance standardEncodeNearBySearchRequest :: StandardEncode NearBySearchRequest where
-  standardEncode (NearBySearchRequest body) = standardEncode body
+  standardEncode _ = standardEncode {}
 
 instance decodeNearBySearchRequest :: Decode NearBySearchRequest where
   decode = defaultDecode
@@ -108,6 +115,11 @@ instance standardEncodeSearchRequest :: StandardEncode SearchRequest where
 
 instance decodeSearchRequest :: Decode SearchRequest where
   decode = defaultDecode
+instance ordSearchRequest :: Ord SearchRequest where
+  compare = genericCompare
+
+instance eqSearchRequest :: Eq SearchRequest where
+  eq = genericEq
 
 derive instance genericNearBySearchRequestRes :: Generic NearBySearchRequestRes _
 
@@ -125,6 +137,11 @@ derive instance newtypeTripCategory :: Newtype TripCategory _
 
 instance standardEncodeTripCategory :: StandardEncode TripCategory where
   standardEncode (TripCategory body) = standardEncode body
+
+instance ordTripCategory :: Ord TripCategory where
+  compare = genericCompare
+instance eqTripCategory :: Eq TripCategory where
+  eq = genericEq
 
 instance decodeTripCategory :: Decode TripCategory where
   decode = defaultDecode

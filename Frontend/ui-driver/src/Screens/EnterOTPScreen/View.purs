@@ -15,7 +15,7 @@
 
 module Screens.EnterOTPScreen.View where
 import Data.Maybe (Maybe(..))
-import Prelude (Unit, const, bind, pure, unit, ($), (<<<), (<>), (==), (>), discard)
+import Prelude (Unit, const, bind, pure, unit, ($), (<<<), (<>), (==), (>), (+), discard)
 import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, weight, width, afterRender, visibility, imageWithFallback, textFromHtml)
 import Components.PrimaryEditText.View as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
@@ -70,7 +70,7 @@ view push state =
         pure unit
         ) (const AfterRender)
   , onBackPressed push (const BackPressed)
-  , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
+  , padding $ PaddingBottom EHC.safeMarginBottom
   ][    PrestoAnim.animationSet
           [ Anim.fadeIn true
           ] $ headerView state push 
@@ -96,7 +96,7 @@ view push state =
       , width MATCH_PARENT
       , orientation VERTICAL
       , background state.data.config.enterMobileNumberScreen.headerBackground
-      , padding $ Padding 16 16 16 16
+      , padding $ Padding 16 (EHC.safeMarginTop + 16) 16 16
       ][  imageView
           [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_left_white"
           , height $ V 25 

@@ -472,7 +472,7 @@ config =
             , showSubscriptions: false
             , cityLat: 44.977753
             , cityLong: - 93.2650108
-            , supportNumber: "+918069724848"
+            , supportNumber: "+19522390127"
             , languageKey: "EN_US"
             , showDriverReferral: false
             , showCustomerReferral: false

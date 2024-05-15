@@ -83,7 +83,7 @@ view push state =
       , orientation VERTICAL
       , background Color.white900
       , onBackPressed push $ const BackPressed 
-      , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
+      , padding $ PaddingBottom EHC.safeMarginBottom
       ][ AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
         , scrollView
           [ height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - (if state.props.isProfileView then 150 else 200) - EHC.safeMarginBottom else WRAP_CONTENT
@@ -136,7 +136,6 @@ menuOptionModal push state =
   linearLayout 
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , padding $ PaddingTop 55
     , background Color.blackLessTrans
     ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 
@@ -279,8 +278,10 @@ sampleImage isRight state =
   case state.data.docType of
     ST.VEHICLE_PERMIT -> if isRight then "ny_ic_permit_clear" else "ny_ic_permit_blur"
     ST.FITNESS_CERTIFICATE -> if isRight then "ny_ic_fitness_clear" else "ny_ic_fitness_blur"
+    ST.VehicleInspectionForm -> if isRight then "ny_ic_fitness_clear" else "ny_ic_fitness_blur"
     ST.VEHICLE_INSURANCE -> if isRight then "ny_ic_insurance_clear" else "ny_ic_insurance_blur"
     ST.UploadProfile -> if isRight then "ny_ic_upload_profile_clear" else "ny_ic_upload_profile_blur"
+    ST.PROFILE_PHOTO -> if isRight then "ny_ic_profile_phote_right" else "ny_ic_profile_phote_wrong"
     ST.VEHICLE_PUC -> if isRight then "ny_ic_puc_clear" else "ny_ic_puc_blur"
     _ -> if isRight then "ny_ic_upload_right" else "ny_ic_image_wrong"
 

@@ -12,6 +12,7 @@ initData =
   , holderView: Nothing
   , holderData: []
   , rideRequests: []
+  , selectedRequest: 0
   }
 
 type RideRequestPopUpScreenData
@@ -19,6 +20,7 @@ type RideRequestPopUpScreenData
     , holderView :: Maybe ListItem
     , holderData :: Array PopupProps
     , rideRequests :: Array SearchRequest
+    , selectedRequest :: Int
     }
 
 type PopupProps

@@ -104,7 +104,6 @@ linearLayout
     , width MATCH_PARENT
     , orientation VERTICAL
     , background Color.white900
-    , padding $ PaddingTop EHC.safeMarginTop
     , onBackPressed push (const BackPressed state.props.openLicenseManual)
     , afterRender  (\action -> do
                       _<- push action
@@ -193,7 +192,6 @@ menuOptionModal push state =
   linearLayout 
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , padding $ PaddingTop 55
     , background Color.blackLessTrans
     ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 

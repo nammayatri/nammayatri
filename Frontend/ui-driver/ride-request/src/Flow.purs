@@ -2,16 +2,16 @@ module Flow where
 
 import Prelude
 
-import Api.Types (NearBySearchRequestRes(..))
+import Api.Types (NearBySearchRequestRes(..), SearchRequest(..))
 import Control.Monad.Trans.Class (lift)
-import Data.Array (elem, foldM)
+import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Debug (spy)
 import Effect.Aff (makeAff, nonCanceler)
 import Effect.Uncurried (runEffectFn1, runEffectFn3)
 import Foreign (unsafeToForeign)
-import Helpers.Commons (bootDriverInParallel, emitEvent, liftFlow, openDriverApp, waitTillDriverAppBoot)
+import Helpers.Commons (bootDriverInParallel, emitEvent, getSearchRequestId, liftFlow, openDriverApp, waitTillDriverAppBoot)
 import Presto.Core.Types.Language.Flow (Flow, await, doAff, fork, loadS, modifyState)
 import PrestoDOM (initUIWithNameSpace)
 import PrestoDOM.Core (terminateUI)
@@ -26,13 +26,16 @@ startOverlay = do
   regToken <- loadS "REGISTERATION_TOKEN"
   if validateToken regToken then do
     void $ liftFlow $ initUIWithNameSpace "RideRequestPopUp" Nothing
+    void $ liftFlow $ initUIWithNameSpace "TopPriceView" Nothing
     void $ fork $ liftFlow $ runEffectFn3 emitEvent "java" "onEvent" (unsafeToForeign { event: "start_location_updates" })
-    eiResp <- nearBySearchRequest
+    getSearchId <- liftFlow $ runEffectFn1 getSearchRequestId ""
+    eiRespWithId <- nearBySearchRequest getSearchId
+    case eiRespWithId of
+      Right (NearBySearchRequestRes resp) -> if DA.null resp.searchRequestsForDriver then pure unit else showPopUp resp.searchRequestsForDriver
+      Left _ -> pure unit
+    eiResp <- nearBySearchRequest ""
     case eiResp of
-      Right (NearBySearchRequestRes resp) -> do
-        void $ modifyState \(OverlayData oState) -> OverlayData oState { rideRequestPopUpScreen { holderData = toPopupProp resp.searchRequestsForDriver , rideRequests = resp.searchRequestsForDriver} }
-        void $ rideRequestPopUp
-        void $ liftFlow $ terminateUI $ Just "RideRequestPopUp"
+      Right (NearBySearchRequestRes resp) -> if DA.null resp.searchRequestsForDriver then pure unit else showPopUp resp.searchRequestsForDriver
       Left _ -> pure unit
   else
     pure unit
@@ -40,10 +43,16 @@ startOverlay = do
   where
   validateToken mbToken = case mbToken of
     Nothing -> false
-    Just token -> not $ elem token [ "__failed", "(null)" ]
+    Just token -> not $ DA.elem token [ "__failed", "(null)" ]
 
   loadDriverAppInParallel = do
     pure unit
+  showPopUp :: Array SearchRequest -> Flow OverlayData Unit
+  showPopUp list = do 
+    void $ modifyState \(OverlayData oState) -> OverlayData oState { rideRequestPopUpScreen { holderData = toPopupProp list , rideRequests = list} }
+    void $ rideRequestPopUp
+    void $ liftFlow $ terminateUI $ Just "TopPriceView"
+    void $ liftFlow $ terminateUI $ Just "RideRequestPopUp"
     -- void $ liftFlow $ runEffectFn1 bootDriverInParallel ""
     -- void $ doAff $ makeAff \cb -> runEffectFn1 waitTillDriverAppBoot (cb <<< Right) $> nonCanceler
     -- void $ liftFlow $ runEffectFn1 openDriverApp ""

@@ -3,5 +3,5 @@ module Services.Endpoint where
 import Prelude
 import Services.Config (getBaseUrl)
 
-nearBySearchRequest :: String
-nearBySearchRequest = (getBaseUrl "") <> "/driver/nearbyRideRequest"
+nearBySearchRequest :: String -> String
+nearBySearchRequest id = (getBaseUrl "") <> "/driver/nearbyRideRequest" <> if id == "" then "" else "?searchTryId=" <> id

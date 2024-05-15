@@ -490,7 +490,8 @@ export const datePicker = function (label) {
         const callback = callbackMapper.map(function (resp, year, month, date) {
           cb(action(resp)(year)(month)(date))();
         });
-        return window.JBridge.datePicker(callback, label, "DatePicker");
+        if (window.__OS == "IOS") window.JBridge.datePicker(callback, label, "DatePicker");
+        else window.JBridge.datePicker(callback, label);
       };
     };
   };

@@ -12,7 +12,7 @@ import Api.Types (NearBySearchRequestRes(..), SearchRequest(..))
 import Components.SeparatorView.View as SeparatorView
 import Data.Array (elem, index, mapWithIndex)
 import Data.Either (Either(..))
-import Data.Function.Uncurried (mkFn1)
+import Data.Function.Uncurried (mkFn1, mkFn2)
 import Data.Time (Millisecond)
 import Data.Time.Duration (Milliseconds(..))
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
@@ -31,6 +31,7 @@ import PrestoDOM.List (listDataV2, listItem, onClickHolder, textHolder, viewPage
 import Screens.RideRequestPopUp.ScreenData (RideRequestPopUpScreenData)
 import Screens.TopPriceView.Handler (topPriceView)
 import Services.Backend (nearBySearchRequest)
+import Timers (clearAllTimers)
 import Types (LazyCheck(..), OverlayData(..), defaultOverlayData)
 
 type Layout w
@@ -42,23 +43,21 @@ screen (OverlayData oState) =
   , view: view
   , name: "RideRequestPopUp"
   , globalEvents:
-      [ ( \push -> do
-            fiber <- launchAff $ flowRunner (OverlayData oState) $ getRideRequest push
-            pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber
-        ),
-        (\push ->  do 
+      [ (\push ->  do 
                 void $ runEffectFn1 hideLoader ""
-                void $ runEffectFn1 storeNotifitionListener (mkFn1 \entityId -> push $ NotificationLister entityId)
+                void $ runEffectFn1 storeNotifitionListener (\nType entityId -> push $ NotificationLister nType entityId)
                 pure (pure unit)),
         (\_->
           do 
             fiber <- launchAff $ flowRunner (OverlayData oState) $ showTopPriceView oState.rideRequestPopUpScreen.rideRequests
-            pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber)
+            pure $ do 
+              launchAff_ $ killFiber (error "Failed to Cancel") fiber
+              runEffectFn1 clearAllTimers "")
       ]
   , parent: Just "RideRequestPopUp"
   , eval : (\action state -> do
-            let _ = spy "RideRequestPopUp -> action " action
-                _ = spy "RideRequestPopUp -> state " state
+            let _ = spy "RideRequestPopUp RideRequestPopUp -> action " action
+                _ = spy "RideRequestPopUp RideRequestPopUp -> state " state
             eval action state)
   }
 
@@ -137,6 +136,7 @@ sheetView push state = case state.holderView of
         , listItem item
         , listDataV2 $ state.holderData -- getListData state
         , scrollDirection HORIZONTAL
+        , currentItem state.selectedRequest
         ]
     ]
   Nothing -> linearLayout[][]
@@ -383,21 +383,6 @@ separatorConfig =
   , layoutHeight: WRAP_CONTENT
   , color: Color.black500
   }
-
-getRideRequest :: (Action -> Effect Unit) -> Flow OverlayData Unit
-getRideRequest push = do pure unit
-  -- eiResp <- nearBySearchRequest
-  -- case eiResp of
-  --   Right (NearBySearchRequestRes resp) -> do 
-  --     liftFlow $ push $ UpdateRideRequest resp.searchRequestsForDriver
-  --     restart
-  --   Left err -> do
-  --     let _ = spy "Left err ->" err
-  --     restart
-  -- where
-  -- restart = do
-  --   delayViaTimer $ Milliseconds 1000.0
-  --   getRideRequest push
 
 showTopPriceView :: Array SearchRequest -> Flow OverlayData Unit
 showTopPriceView = topPriceView 

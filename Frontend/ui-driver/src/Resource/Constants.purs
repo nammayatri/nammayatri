@@ -122,7 +122,7 @@ transformDocText stage =
     ST.VEHICLE_PUC -> getString VEHICLE_PUC_STR
     ST.SocialSecurityNumber -> getString SOCIAL_SECURITY_NUMBER_STR
     ST.ProfileDetails -> "Profile Details"
-    ST.VehicleInspectionForm -> "Fitness Certificate"
+    ST.VehicleInspectionForm -> "Vehicle Inspection"
     ST.UploadProfile -> "Driver Profile of Another App"
     ST.NO_OPTION -> ""
 

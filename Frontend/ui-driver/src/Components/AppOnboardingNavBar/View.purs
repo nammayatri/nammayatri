@@ -16,7 +16,7 @@
 
 module Components.AppOnboardingNavBar.View where
 
-import Prelude (Unit, const, ($), (<>), (<<<))
+import Prelude (Unit, const, ($), (<>), (<<<), (+))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onClick, orientation, padding, stroke, text, textView, visibility, weight, width)
 import Effect (Effect)
 import Components.AppOnboardingNavBar.Controller (Action(..), Config)
@@ -27,6 +27,7 @@ import Font.Style as FontStyle
 import Common.Types.App (LazyCheck(..))
 import Helpers.Utils as HU
 import Components.GenericHeader as GenericHeader
+import Engineering.Helpers.Commons as EHC
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -34,7 +35,7 @@ view push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
-  , padding $ Padding 16 16 16 16
+  , padding $ Padding 16 (EHC.safeMarginTop + 16) 16 16
   , orientation VERTICAL
   , background state.appConfig.secondaryBackground
   ][  linearLayout

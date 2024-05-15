@@ -410,9 +410,16 @@ enterOTPFlow = do
       getDriverInfoFlow Nothing Nothing Nothing true
     RETRY updatedState -> do
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen -> updatedState)
-      (ResendOTPResp resp_resend) <- Remote.resendOTPBT updatedState.data.tokenId
+      config <- getAppConfigFlowBT appConfig
+      if config.enterMobileNumberScreen.emailAuth then do
+        (GlobalState global) <- getState
+        latLong <- getCurrentLocation 0.0 0.0 0.0 0.0 400 false true
+        TriggerOTPResp triggerOtpResp <- Remote.triggerOTPBT (makeTriggerOTPReq global.mobileNumberScreen latLong)
+        modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data { tokenId = triggerOtpResp.authId, attemptCount = triggerOtpResp.attempts}})
+        else do
+          (ResendOTPResp resp_resend) <- Remote.resendOTPBT updatedState.data.tokenId
+          modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data { tokenId = resp_resend.authId, attemptCount = resp_resend.attempts}})
       pure $ toast $ getString OTP_HAS_BEEN_RESENT
-      modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data { tokenId = resp_resend.authId, attemptCount = resp_resend.attempts}})
       enterOTPFlow
 
 getDriverInfoFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> Maybe (Either ErrorResponse GetDriverInfoResp) -> Boolean -> FlowBT String Unit

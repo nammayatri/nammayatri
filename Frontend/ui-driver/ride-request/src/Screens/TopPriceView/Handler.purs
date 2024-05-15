@@ -13,12 +13,14 @@ import PrestoDOM (getPushFn, showScreenWithNameSpace)
 import PrestoDOM.Core (initUIWithNameSpace)
 import PrestoDOM.List (preComputeListItem)
 import Screens.RideRequestPopUp.Controller (Action)
-import Screens.TopPriceView.Controller (ScreenOutput)
+import Screens.TopPriceView.Controller (ScreenOutput(..))
 import Screens.TopPriceView.View as View
 import Types (OverlayData(..))
 
 topPriceView :: Array SearchRequest -> Flow OverlayData Unit
 topPriceView searchRequests = do
-  void $ liftFlow $ initUIWithNameSpace "TopPriceView" (Just "TopPriceView") 
   OverlayData oState <- modifyState \(OverlayData oState) -> OverlayData $ oState{topPriceViewState{rideRequests = searchRequests}}
-  void $ showScreenWithNameSpace $ View.screen (OverlayData oState)
+  (UpdateTimers state) <- showScreenWithNameSpace $ View.screen (OverlayData oState)
+  void $ modifyState \(OverlayData currentOState) -> OverlayData $ currentOState{topPriceViewState = state}
+  topPriceView state.rideRequests
+

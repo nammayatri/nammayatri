@@ -70,10 +70,10 @@ export const clearTimerWithId = function (id) {
 export const startTimerWithTimeV2Impl = function (time, cdTimerId, interval, cb) {
   activeTimerIds.push(cdTimerId);
   if (JBridge.startCountDownTimerWithTimeV2) {
-    const callback = callbackMapper.map(function (seconds, timerStatus, timerID, diffTime) {
-      cb(seconds)(timerStatus)(timerID)(parseFloat(diffTime))();
+    const callback = callbackMapper.map(function (timerID, _time, diffTime) {
+      cb(timerID)(_time)(parseFloat(diffTime))();
     });
-    return JBridge.startCountDownTimerWithTimeV2(time, interval, cdTimerId, callback);
+    return JBridge.startCountUpTimerV2(time, interval, cdTimerId, callback);
   }
 }
 

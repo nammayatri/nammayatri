@@ -21,18 +21,18 @@ import Effect (Effect)
 import Effect.Uncurried (EffectFn1, EffectFn4, runEffectFn4)
 import Helpers.Commons (os)
 
-foreign import countDownImpl :: EffectFn4 Int String String (Int -> String -> String -> Number -> Effect Unit) Unit
+foreign import countDownImpl :: EffectFn4 Int String String (String -> Int -> Number -> Effect Unit) Unit
 foreign import clearAllTimers :: EffectFn1 String Unit
 foreign import clearTimerWithId :: String -> Unit
-foreign import startTimerWithTimeV2Impl :: EffectFn4 String String String (Int -> String -> String -> Number -> Effect Unit) Unit
+foreign import startTimerWithTimeV2Impl :: EffectFn4 String String String (String -> Int -> Number -> Effect Unit) Unit
 
-startTimerWithTimeV2 :: String -> String -> String -> (Int -> String -> String -> Number -> Effect Unit) -> Effect Unit
+startTimerWithTimeV2 :: String -> String -> String -> (String -> Int -> Number -> Effect Unit) -> Effect Unit
 startTimerWithTimeV2 = runEffectFn4 startTimerWithTimeV2Impl 
 
-countDown :: Int -> String -> String -> (Int -> String -> String -> Number -> Effect Unit) -> Effect Unit
+countDown :: Int -> String -> String -> (String -> Int -> Number -> Effect Unit) -> Effect Unit
 countDown = runEffectFn4 countDownImpl
 
-startTimer :: Int -> String -> String -> (Int -> String -> String -> Number -> Effect Unit) -> Effect Unit
+startTimer :: Int -> String -> String -> (String -> Int -> Number -> Effect Unit) -> Effect Unit
 startTimer seconds id interval action = 
   if os == "IOS" 
     then startTimerWithTimeV2 (show seconds) id interval action

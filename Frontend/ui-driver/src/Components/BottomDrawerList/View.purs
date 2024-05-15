@@ -22,6 +22,7 @@ import ConfigProvider
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state = 
   let config = getAppConfig appConfig
+      filteredList = DA.filter (\item -> item.visibility) state.itemList
   in
   linearLayout
   [ height MATCH_PARENT
@@ -58,7 +59,7 @@ view push state =
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
                   , orientation VERTICAL
-                  ] $ DA.mapWithIndex (listComponent push) state.itemList
+                  ] $ DA.mapWithIndex (listComponent push) filteredList
               ]
           ]
   ]
@@ -69,7 +70,6 @@ listComponent push index item =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , visibility $ boolToVisibility item.visibility
   ][ linearLayout
       [ height $ V 1
       , width MATCH_PARENT

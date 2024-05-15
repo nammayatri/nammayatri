@@ -257,6 +257,7 @@ mobileNumberPrimaryEditTextConfig state =
         }
       , background = Color.white900
       , showErrorLabel = not state.props.isValidMobileNumber
+      , id = (EHC.getNewIDWithTag "EnterMobileNumberEditText")
       , topLabel
         { text = "Mobile Number"
         , color = Color.black800

@@ -129,7 +129,7 @@ view push state =
       , onBackPressed push (const BackPressed state.props.openRCManual)
       , onClick push (const ScreenClick)
       , afterRender push (const AfterRender)
-      , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom 
+      , padding $ PaddingBottom EHC.safeMarginBottom 
       ][  PrestoAnim.animationSet
           [ Anim.fadeIn true
           ] $  headerView state push
@@ -175,7 +175,6 @@ menuOptionModal push state =
   linearLayout 
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , padding $ PaddingTop 55
     , background Color.blackLessTrans
     ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 
@@ -202,7 +201,7 @@ defaultVehicleDetailsScreen state push =
           , cornerRadius 8.0
           , visibility if state.data.dateOfRegistration == Nothing then GONE else VISIBLE            
           ] <> FontStyle.body3 TypoGraphy
-        , vehicleRegistrationNumber state push
+        , vehicleRegistrationNumber state push true
         , howToUpload push state 
         , dateOfRCRegistrationView push state true
         ]
@@ -286,8 +285,8 @@ referralAppliedView state push =
 ----------------------------------------------- vehicleRegistrationNumber ----------------------------------------------
 
 
-vehicleRegistrationNumber :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-vehicleRegistrationNumber state push = 
+vehicleRegistrationNumber :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> Boolean -> forall w . PrestoDOM (Effect Unit) w
+vehicleRegistrationNumber state push showAc = 
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -297,7 +296,7 @@ vehicleRegistrationNumber state push =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      ][  linearLayout
+      ]$[  linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , orientation HORIZONTAL
@@ -425,8 +424,7 @@ vehicleRegistrationNumber state push =
                 , color Color.darkGrey
                 ]
           ]
-        , checkACView state push
-        ]
+        ] <> if showAc then [checkACView state push] else []
       ]
       where validateRegistrationNumber regNum = validateRCPrefix regNum state.data.rcNumberPrefixList
 
@@ -999,6 +997,7 @@ dummyLinearLayout =
     , height $ V 0
     ][]
 
+collectVehicleDetails :: (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> forall w . PrestoDOM (Effect Unit) w
 collectVehicleDetails push state = 
   scrollView
   [ width MATCH_PARENT
@@ -1009,7 +1008,8 @@ collectVehicleDetails push state =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      ]$[ vehicleRegistrationNumber state push
+      , padding $ PaddingBottom 10
+      ]$[ vehicleRegistrationNumber state push false
       , howToUpload push state 
       ,   linearLayout
           [ width MATCH_PARENT

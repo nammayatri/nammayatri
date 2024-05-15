@@ -27,7 +27,7 @@ getEN stringKey =
         INVALID_MOBILE_NUMBER -> "Invalid mobile number"
         REGISTER -> "Register"
         MOBILE_NUMBER -> "Mobile Number"
-        AUTO_READING_OTP -> "Auto Reading OTP..."
+        AUTO_READING_OTP -> "Enter OTP"
         UPLOAD_DRIVING_LICENSE -> "Upload Driving Licence"
         UPLOAD_BACK_SIDE -> "Upload Back Side"
         UPLOAD_FRONT_SIDE -> "Upload Photo side of your DL"

@@ -45,6 +45,7 @@ import Mobility.Prelude
 import Common.Types.App (MobileNumberValidatorResp(..)) as MVR
 import ConfigProvider
 import Engineering.Helpers.Utils (mobileNumberValidator, mobileNumberMaxLength)
+import Debug
 
 instance showAction :: Show Action where
   show _ = ""
@@ -94,8 +95,8 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state =
             let config = getAppConfig appConfig
                 validatorResp = mobileNumberValidator config.defaultCountryCodeConfig.countryCode config.defaultCountryCodeConfig.countryShortCode mobileNumber
                 isValidFirstName = (DS.length name) > 2 
-                isValid = isValidFirstName && isValidMobileNumber validatorResp
-            let newState = state{props{isValidMobileNumber = isValidMobileNumber validatorResp, isValidFirstName = isValidFirstName}}
+                isValid = isValidFirstName && (validatorResp == MVR.Valid)
+            let newState = state{props{isValidMobileNumber = validatorResp == MVR.Valid, isValidFirstName = isValidFirstName}}
             if isValid then exit $ UpdateProfile newState else continue newState
       else
         continueWithCmd state [do
@@ -196,8 +197,8 @@ eval (MobileEditText (PrimaryEditText.TextChanged id newVal)) state = do
   continue  state { props = state.props { isValidMobileNumber = isValidMobileNumber validatorResp }
                                         , data = state.data { mobileNumber = if validatorResp == MVR.MaxLengthExceeded then state.data.mobileNumber else strToMaybe newVal}}
 
-eval (KeyboardCallback event) state = case event of
-  "onKeyboardOpen" ->
+eval (KeyboardCallback event) state
+  | event == "onKeyboardOpen" && (EHC.os == "IOS") =
     if state.props.isProfileView then do
       continueWithCmd state
         [ do 
@@ -206,7 +207,7 @@ eval (KeyboardCallback event) state = case event of
         ]
     else
       update state
-  _ -> update state
+  | otherwise = update state
 
 eval (MobileNumberEditText (MobileNumberEditor.TextChanged valId newVal)) state = do
   let config = getAppConfig appConfig

@@ -441,8 +441,10 @@ eval BgLocationAC state = continue state { props { bgLocationPopup = true}}
 
 eval (BgLocationPopupAC PopUpModal.OnButton1Click) state = 
   continueWithCmd state { props { bgLocationPopup = false}} [do
-    if EHC.os == "IOS" then
-      runEffectFn1 JB.openLocationSettings ""
+    if EHC.os == "IOS" then do
+      enabled <- isLocationPermissionEnabled unit
+      if enabled then pure unit
+        else runEffectFn1 JB.openLocationSettings ""
       else void $ JB.requestBackgroundLocation unit
     pure NoAction
   ]

@@ -27,11 +27,27 @@ function callInitiateResult() {
   JOS.emitEvent(JOS.parent)("onEvent")(JSON.stringify(payload))()();
 }
 
+export const getSearchRequestId = function () {
+  if (window.__payload.payload && window.__payload.payload["rideData"]) {
+    if (window.__payload.payload["rideData"]["entity_ids"]) return window.__payload.payload["rideData"]["entity_ids"];
+    else {
+      const data = JSON.parse(window.__payload.payload["rideData"]["entity_data"])
+      return data["searchRequestId"] ? data["searchRequestId"] : ""; 
+    }
+  }
+  return ""; 
+}
+export const getNotificationType = function () {
+  if (window.__payload.payload && window.__payload.payload["rideData"]) {
+    if (window.__payload.payload["rideData"]["notification_type"]) return window.__payload.payload["rideData"]["notification_type"];
+  }
+  return ""; 
+}
   
 function checkAndStart() {
   window.retry = window.retry || 0;
   window.retry++;
-  if (window.isDriverAppInitiated) {
+  if (window.JOS.parent == "in.yatri.provider" || window.isDriverAppInitiated) {
     purescript.main()();
   } else {
     setTimeout(() => {checkAndStart()},5);
@@ -39,7 +55,7 @@ function checkAndStart() {
 }
   
 window.onMerchantEvent = function (_event, payload) {
-  console.log(payload);
+  console.warn("onMerchantEvent RideRequest",_event, payload);
   const clientPaylod = JSON.parse(payload);
   const appName = clientPaylod.payload.appName;
   window.appName = appName;
@@ -47,7 +63,11 @@ window.onMerchantEvent = function (_event, payload) {
   if (_event == "initiate") {
     callInitiateResult();
   } else if (_event == "process") {
-    checkAndStart();
+    if (window.notificationCallBack) {
+      window.notificationCallBack(getNotificationType())(getSearchRequestId())()
+    } else {
+      checkAndStart();
+    }
   }
 }
 

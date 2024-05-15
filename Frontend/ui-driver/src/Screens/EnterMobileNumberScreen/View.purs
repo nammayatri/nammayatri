@@ -16,7 +16,7 @@
 module Screens.EnterMobileNumberScreen.View where
 
 import Data.Maybe (Maybe(..))
-import Prelude (Unit, const, ($), (<<<), (<>), bind, pure , unit, void, (==), (-), discard)
+import Prelude (Unit, const, ($), (<<<), (<>), bind, pure , unit, void, (==), (-), (+), discard)
 import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textView, visibility, weight, width, afterRender, imageWithFallback, singleLine, textFromHtml, adjustViewWithKeyboard, scrollView, disableKeyboardAvoidance, scrollBarY, id)
 import Components.PrimaryButton as PrimaryButton
 import Components.MobileNumberEditor as MobileNumberEditor
@@ -70,7 +70,7 @@ view push state =
     , orientation VERTICAL
     , afterRender push (const AfterRender)
     , margin $ MarginBottom 24
-    , padding (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom)
+    , padding $ PaddingBottom EHC.safeMarginBottom
     , background Color.white900
     , onBackPressed push (const BackPressed)
     ][  headerView state push
@@ -89,7 +89,7 @@ view push state =
         , width MATCH_PARENT
         , orientation VERTICAL
         , background state.data.config.enterMobileNumberScreen.headerBackground
-        , padding $ Padding 16 16 16 16
+        , padding $ Padding 16 (EHC.safeMarginTop + 16) 16 16
         ][  imageView
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
             , height $ V 25 

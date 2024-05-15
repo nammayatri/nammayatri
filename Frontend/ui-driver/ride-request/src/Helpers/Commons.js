@@ -331,3 +331,15 @@ export const getExpiryTime = function (str1) {
 export const storeNotifitionListener = function (callBack) {
   window.notificationCallBack = callBack;
 }
+
+
+
+export const getSearchRequestId = function () {
+  if (window.__payload.payload && window.__payload.payload["rideData"]) {
+    if (window.__payload.payload["rideData"]["entity_ids"]) return window.__payload.payload["rideData"]["entity_ids"];
+    else {
+      const data = JSON.parse(window.__payload.payload["rideData"]["entity_data"])
+      return data["searchRequestId"]; 
+    }
+  }
+}

@@ -1,14 +1,23 @@
-module Screens.RideRequestPopUp.Controller where
+module Screens.RideRequestPopUp.Controller (module Screens.RideRequestPopUp.Controller, module ActionType) where
 
 import Prelude
-import PrestoDOM
 
-import Api.Types (SearchRequest(..))
+import Api.Types (NearBySearchRequestRes(..), SearchRequest(..))
+import Data.Array (foldr, nub, null)
+import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
-import Data.String.Regex (search)
+import Debug (spy)
+import Effect (Effect)
+import Effect.Aff (launchAff)
+import Helpers.Commons (flowRunner, liftFlow)
+import Presto.Core.Types.Language.Flow (Flow)
+import PrestoDOM (Eval, continue, continueWithCmd, exit, getPushFn, update)
 import Screens.RideRequestPopUp.ScreenData (RideRequestPopUpScreenData)
 import Screens.RideRequestPopUp.TransFormer (toPopupProp)
 import Screens.TopPriceView.Controller as TopPriceView
+import Services.Backend (nearBySearchRequest)
+import Types (Action(..)) as ActionType
+import Types (Action(..), OverlayData(..), defaultOverlayData)
 
 -- Controller
 -- All actions which can be performed on the screen. Sample click includes NextClick and BackClick.
@@ -18,25 +27,26 @@ data ScreenOutput
   = NextScreen RideRequestPopUpScreenData
   | Back RideRequestPopUpScreenData
 
-data Action
-  = NextClick
-  | BackClick
-  | Decline Int
-  | UpdateRideRequest (Array SearchRequest)
-  | NoAction
-  | NotificationLister String
-
-instance showAction :: Show Action where
-  show _ = "BackClick"
-
-instance loggableAction :: Loggable Action where
-  performLog = defaultPerformLog
-
 eval :: Action -> RideRequestPopUpScreenData -> Eval Action ScreenOutput RideRequestPopUpScreenData
+eval (UpdateRideRequest searchData) state =
+  if null searchData then 
+    exit $ Back state
+    else
+    continueWithCmd state { holderData = toPopupProp searchData, rideRequests = searchData }
+      [ do
+          notifyTopView (TopPriceView.UpdateRideRequest searchData)
+          pure NoAction
+      ]
 
-eval (UpdateRideRequest searchData) state = continueWithCmd state{holderData = toPopupProp searchData, rideRequests = searchData} [do 
-  notifyTopView searchData
-  pure NoAction]
+eval (AppendRequest request) state = do
+  -- let updatedRequest = foldr (\item acc -> zcc) state.rideRequests state.rideRequests
+  let popup = toPopupProp request
+      updatedState = state { holderData = state.holderData <> popup, rideRequests = nub $  state.rideRequests <> request }
+  continueWithCmd updatedState
+    [ do
+        notifyTopView $ TopPriceView.AppendRequest updatedState.rideRequests
+        pure NoAction
+    ]
 
 eval NextClick state = exit $ NextScreen state
 
@@ -46,10 +56,32 @@ eval NoAction state = continue state
 
 eval (Decline idx) state = exit $ Back state
 
+eval (UpdateCarousel idx) state = continue state{selectedRequest = idx}
+
+eval (NotificationLister nType id) state 
+  | nType == "CLEARED_FARE" || nType == "CANCELLED_SEARCH_REQUEST" = do 
+    let updatedRequests = foldr (\(SearchRequest item) acc -> if item.searchTryId == id then acc else acc <> [(SearchRequest item)]) [] state.rideRequests
+    continueWithCmd state [(pure $ UpdateRideRequest updatedRequests)]
+  | otherwise =  continueWithCmd state [ (do
+                push <- getPushFn (Just "RideRequestPopUp") "RideRequestPopUp"
+                fiber <- launchAff $ flowRunner defaultOverlayData $ getRideRequest push id
+                pure $ NoAction
+            )]
+
 eval _ state = update state
 
-
-
-notifyTopView searchData = do
+notifyTopView :: TopPriceView.Action -> Effect Unit
+notifyTopView action = do
   push <- getPushFn (Just "TopPriceView") "TopPriceView"
-  void $ push $ TopPriceView.UpdateRideRequest searchData
+  void $ push action
+
+
+getRideRequest :: (Action -> Effect Unit) -> String -> Flow OverlayData Unit
+getRideRequest push id = do
+  eiResp <- nearBySearchRequest id
+  case eiResp of
+    Right (NearBySearchRequestRes resp) -> do 
+      liftFlow $ push $ AppendRequest resp.searchRequestsForDriver
+    Left err -> do
+      let _ = spy "Left err ->" err
+      pure unit

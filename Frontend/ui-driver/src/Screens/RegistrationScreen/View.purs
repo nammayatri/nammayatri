@@ -94,7 +94,7 @@ view push state =
           , background Color.white900
           , clickable true
           , onBackPressed push (const BackPressed)
-          , padding (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom)
+          , padding $ PaddingBottom EHC.safeMarginBottom
           , afterRender push $ const AfterRender
           ]
       $ [ chooseVehicleView push state
@@ -232,7 +232,6 @@ menuOptionModal push state =
   linearLayout 
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , padding $ PaddingTop 55
     , background Color.blackLessTrans
     ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 
@@ -672,7 +671,7 @@ getStatus step state =
                           then find (\docStatus -> docStatus.docType == step && filterCondition docStatus) documentStatusArr
                           else find (\docStatus -> docStatus.docType == step) documentStatusArr
           case findStatus of
-            Nothing -> if step == ST.ProfileDetails && state.props.isProfileDetailsCompleted then ST.COMPLETED else ST.NOT_STARTED
+            Nothing -> if step == ST.ProfileDetails && state.props.isProfileDetailsCompleted then ST.NOT_STARTED else ST.NOT_STARTED
             Just docStatus -> docStatus.status
   where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) ||  (isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
 

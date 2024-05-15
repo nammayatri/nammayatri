@@ -40,8 +40,8 @@ unwrapResponse = case _ of
   Right resp -> Right resp.response
   Left err -> Left err
 
-nearBySearchRequest ∷ Flow OverlayData (Either ErrorResponse NearBySearchRequestRes)
-nearBySearchRequest = do
+nearBySearchRequest ∷ String -> Flow OverlayData (Either ErrorResponse NearBySearchRequestRes)
+nearBySearchRequest id = do
   headers <- getHeaders "" false
-  resp <- callAPI headers (NearBySearchRequest "")
+  resp <- callAPI headers (NearBySearchRequest id)
   pure $ unwrapResponse resp
