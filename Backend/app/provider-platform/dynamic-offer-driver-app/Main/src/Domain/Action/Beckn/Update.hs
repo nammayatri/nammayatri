@@ -256,26 +256,30 @@ handler (UEditLocationReq EditLocationReq {..}) = do
           else void $ EditBooking.postEditResult (Just person.id, merchantOperatingCity.merchantId, merchantOperatingCity.id) bookingUpdateReq.id (EditBooking.EditBookingRespondAPIReq {action = EditBooking.ACCEPT})
       _ -> throwError (InvalidRequest "Invalid status for edit location request")
 
-mkActions2 :: Text -> Double -> Double -> FCM.FCMOverlayAction -> FCM.FCMOverlayAction
+mkActions2 :: Text -> Double -> Double -> FCM.FCMActions -> FCM.FCMActions
 mkActions2 bookingUpdateReqId lat long action = do
-  case action of
-    FCM.CALL_API details -> do
-      let ep = T.replace (Notify.templateText "bookingUpdateRequestId") bookingUpdateReqId details.endPoint
-      let details' = details{endPoint = ep}
-      CALL_API details'
-    FCM.NAVIGATE details -> do
-      let details' = details{lat, long}
-      NAVIGATE details'
-    _ -> action
+  let primaryAction' = case action.primaryAction of
+        FCM.CALL_API details -> do
+          let ep = T.replace (Notify.templateText "bookingUpdateRequestId") bookingUpdateReqId details.endPoint
+          let details' = details{endPoint = ep}
+          CALL_API details'
+        FCM.NAVIGATE details -> do
+          let details' = details{lat, long}
+          NAVIGATE details'
+        _ -> action.primaryAction
+  let dependentActions' = map (mkActions2 bookingUpdateReqId lat long) action.dependentActions
+  FCM.FCMActions {primaryAction = primaryAction', dependentActions = dependentActions'}
 
-mkSecondaryActions2 :: Text -> FCM.FCMOverlayAction -> FCM.FCMOverlayAction
+mkSecondaryActions2 :: Text -> FCM.FCMActions -> FCM.FCMActions
 mkSecondaryActions2 bookingUpdateReqId action = do
-  case action of
-    FCM.CALL_API details -> do
-      let ep = T.replace (Notify.templateText "bookingUpdateRequestId") bookingUpdateReqId details.endPoint
-      let details' = details{endPoint = ep}
-      CALL_API details'
-    _ -> action
+  let primaryAction' = case action.primaryAction of
+        FCM.CALL_API details -> do
+          let ep = T.replace (Notify.templateText "bookingUpdateRequestId") bookingUpdateReqId details.endPoint
+          let details' = details{endPoint = ep}
+          CALL_API details'
+        _ -> action.primaryAction
+  let dependentActions' = map (mkSecondaryActions2 bookingUpdateReqId) action.dependentActions
+  FCM.FCMActions {primaryAction = primaryAction', dependentActions = dependentActions'}
 
 buildLocation :: MonadFlow m => Common.Location -> m DL.Location
 buildLocation location = do
