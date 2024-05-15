@@ -331,6 +331,13 @@ export const isBackgroundLocationEnabled = function(unit) {
 }
 
 export const getKeyInSharedPrefKeys = function (key) {
+  if (key == "LOCAL_STAGE") {
+    if (window.LOCAL_STAGE != undefined)
+      return window.LOCAL_STAGE;
+    const stage = JBridge.getFromSharedPrefs(key);
+    window.LOCAL_STAGE = stage;
+    return stage;
+  }
   return JBridge.getFromSharedPrefs(key);
 };
 
@@ -1418,46 +1425,50 @@ const aggregate = function (key) {
 export const getKeyInNativeSharedPrefKeys = function (key) {
   aggregate("getKeyInNativeSharedPrefKeys");
   aggregate("JBridgeCalls");
-  return JBridge.getFromSharedPrefs(key);
+  return getKeyInSharedPrefKeys(key);
 };
 
 export const setKeyInSharedPrefKeysImpl = function (key) {
   return function (value) {
     aggregate("setKeyInSharedPrefKeysImpl");
     aggregate("JBridgeCalls");
-    return JBridge.setInSharedPrefs(key, value);
+    return setInSharedPreference(key, value);
   };
 };
 
 export const setKeyInSharedPref = function (key, value) {
   aggregate("setKeyInSharedPref");
   aggregate("JBridgeCalls");
-  return JBridge.setInSharedPrefs(key, value);
+  return setInSharedPreference(key, value);
 };
 
 export const setEnvInNativeSharedPrefKeysImpl = function (key) {
   return function (value) {
     aggregate("setEnvInNativeSharedPrefKeysImpl");
     aggregate("JBridgeCalls");
-    return JBridge.setInSharedPrefs(key, value);
+    return setInSharedPreference(key, value);
   };
 };
 
-// exports.setKeyInSharedPrefKeyss = function (key) {
-//   return function (value) {
-//     return JBridge.setKeysInSharedPrefs(key, value);
-//   };
-// };
+const setInSharedPreference = function (key, value) {
+  if (key == "LOCAL_STAGE")
+    window.LOCAL_STAGE = value;
+  return JBridge.setInSharedPrefs(key, value);
+}
 
 export const removeKeysInSharedPrefs = function (key) {
   aggregate("removeKeysInSharedPrefs");
   aggregate("JBridgeCalls");
+  if (key == "LOCAL_STAGE")
+    window.LOCAL_STAGE = undefined;
   return JBridge.removeDataFromSharedPrefs(key);
 };
 
 export const removeKeysInNativeSharedPrefs = function (key) {
   aggregate("removeKeysInNativeSharedPrefs");
   aggregate("JBridgeCalls");
+  if (key == "LOCAL_STAGE")
+    window.LOCAL_STAGE = undefined;
   return JBridge.removeDataFromSharedPrefs(key);
 };
 
