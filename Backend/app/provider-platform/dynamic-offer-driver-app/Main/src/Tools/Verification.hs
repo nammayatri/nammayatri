@@ -40,6 +40,7 @@ import Kernel.External.Verification as Reexport hiding
 import qualified Kernel.External.Verification as Verification
 import Kernel.External.Verification.Interface.InternalScripts
 import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.GovtDataRC ()
@@ -56,7 +57,7 @@ verifyDLAsync ::
 verifyDLAsync = runWithServiceConfig Verification.verifyDLAsync (.verificationService)
 
 verifyRC ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   VerifyRCReq ->

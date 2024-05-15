@@ -25,3 +25,21 @@ CREATE TABLE atlas_driver_offer_bpp.ride (
     `fare` Nullable(Int),
     `driver_id` Nullable(String)
 ) ENGINE = MergeTree() PRIMARY KEY (id);
+
+CREATE TABLE atlas_driver_offer_bpp.govt_data(
+    `id` String,
+    `merchant_operating_city_id` String,
+    `owner_serial_number` Nullable(String),
+    `registration_number` Nullable(String),
+    `manufacturer_model` Nullable(String),
+    `permit_validity_from` Nullable(String),
+    `permit_validity_upto` Nullable(String),
+    `manufacturer` Nullable(String),
+    `body_type` Nullable(String),
+    `number_of_cylinder` Nullable(Int),
+    `fuel_type` Nullable(String),
+    `seating_capacity` Nullable(Int),
+    `from_date` Nullable(String),
+    `to_date` Nullable(String),
+    `created_at`  DateTime DEFAULT now()
+) ENGINE = MergeTree() PRIMARY KEY (id);

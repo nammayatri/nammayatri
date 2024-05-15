@@ -23,6 +23,7 @@ import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -39,7 +40,8 @@ retryDocumentVerificationJob ::
   ( TranslateFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
   ) =>
   Job 'RetryDocumentVerification ->
   m ExecutionResult
