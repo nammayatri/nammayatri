@@ -21,8 +21,8 @@ import Tools.Error
 
 -- Extra code goes here --
 
-getAlternateNumberAttempts :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m Int
+getAlternateNumberAttempts :: KvDbFlow m r => Id Person -> m Int
 getAlternateNumberAttempts (Id personId) = findOneWithKV [Se.Is BeamRT.entityId $ Se.Eq personId] <&> maybe 5 DRT.attempts
 
-deleteByPersonIdExceptNew :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id RegistrationToken -> m ()
+deleteByPersonIdExceptNew :: KvDbFlow m r => Id Person -> Id RegistrationToken -> m ()
 deleteByPersonIdExceptNew (Id personId) (Id newRT) = deleteWithKV [Se.And [Se.Is BeamRT.entityId (Se.Eq personId), Se.Is BeamRT.id (Se.Not $ Se.Eq newRT)]]

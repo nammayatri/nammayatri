@@ -42,12 +42,12 @@ data SearchTry = SearchTry
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data SearchRepeatType = INITIAL | RETRIED | REALLOCATION | CANCELLED_AND_RETRIED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data SearchRepeatType = INITIAL | RETRIED | REALLOCATION | CANCELLED_AND_RETRIED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SearchTryStatus = ACTIVE | CANCELLED | COMPLETED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data SearchTryStatus = ACTIVE | CANCELLED | COMPLETED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''SearchTryStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''SearchTryStatus)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''SearchTryStatus))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''SearchTryStatus)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''SearchRepeatType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''SearchRepeatType)

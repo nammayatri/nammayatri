@@ -10,17 +10,17 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.Person as Beam
 import qualified Storage.Queries.Transformers.Person
 
 instance FromTType' Beam.Person Domain.Types.Person.Person where
   fromTType' (Beam.PersonT {..}) = do
-    backendConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))
-    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
-    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
-    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
+    backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
+    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
+    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
+    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     merchantOperatingCityId' <- Storage.Queries.Transformers.Person.getMerchantOpCId merchantId merchantOperatingCityId
     pure $
       Just
@@ -30,7 +30,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
             backendConfigVersion = backendConfigVersion',
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion),
+            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion,
             clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
             description = description,
@@ -71,14 +71,14 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
 instance ToTType' Beam.Person Domain.Types.Person.Person where
   toTType' (Domain.Types.Person.Person {..}) = do
     Beam.PersonT
-      { Beam.alternateMobileNumberEncrypted = ((alternateMobileNumber <&> unEncrypted . (.encrypted))),
-        Beam.alternateMobileNumberHash = (alternateMobileNumber <&> (.hash)),
+      { Beam.alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted),
+        Beam.alternateMobileNumberHash = alternateMobileNumber <&> (.hash),
         Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientOsType = (clientDevice <&> (.deviceType)),
-        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
+        Beam.clientOsType = clientDevice <&> (.deviceType),
+        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = createdAt,
         Beam.description = description,
@@ -100,8 +100,8 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.middleName = middleName,
         Beam.mobileCountryCode = mobileCountryCode,
-        Beam.mobileNumberEncrypted = ((mobileNumber <&> unEncrypted . (.encrypted))),
-        Beam.mobileNumberHash = (mobileNumber <&> (.hash)),
+        Beam.mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
+        Beam.mobileNumberHash = mobileNumber <&> (.hash),
         Beam.onboardedFromDashboard = onboardedFromDashboard,
         Beam.passwordHash = passwordHash,
         Beam.rating = rating,

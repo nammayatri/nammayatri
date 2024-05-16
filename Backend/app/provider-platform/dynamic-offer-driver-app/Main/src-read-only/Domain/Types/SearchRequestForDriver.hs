@@ -69,12 +69,12 @@ data SearchRequestForDriver = SearchRequestForDriver
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.Vehicle.Variant
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show)
 
 data DriverSearchRequestStatus = Active | Inactive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SearchRequestForDriverResponse = Accept | Reject | Pulled deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverSearchRequestStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverSearchRequestStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SearchRequestForDriverResponse))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchRequestForDriverResponse)

@@ -2,7 +2,6 @@ import json
 import os
 from kafka import KafkaConsumer # type: ignore
 import time
-import threading
 from kafka.admin import KafkaAdminClient, NewTopic # type: ignore
 
 def getFilePath(file_name):
@@ -167,7 +166,7 @@ def write_diff_checker_data_to_file(groupedRequestIdsForDiffChecker, output_file
 
 
 # --------------------------------- Paths ---------------------------------------#
-input_file_path = getFilePath("custom.log")
+input_file_path = getFilePath("recordedData.log")
 output_file_path_api = getFilePath("APIdata.json")
 output_log_file_path_grouped = getFilePath("groupedRequestIds.log")
 diff_checker_file_path_mocker = getFilePath("groupedRequestIdsForDiffChecker.log")

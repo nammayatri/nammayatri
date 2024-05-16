@@ -35,7 +35,6 @@ deleteByPersonId (Kernel.Types.Id.Id personId) = do deleteWithKV [Se.Is Beam.per
 findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.Image.Image))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m [Domain.Types.Image.Image])
 findByMerchantId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m [Domain.Types.Image.Image])
 findByMerchantId (Kernel.Types.Id.Id merchantId) = do findAllWithKV [Se.Is Beam.merchantId $ Se.Eq merchantId]
 
@@ -51,9 +50,7 @@ findImagesByPersonAndType (Kernel.Types.Id.Id merchantId) (Kernel.Types.Id.Id pe
         ]
     ]
 
-updateIsValidAndFailureReason ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Tools.Error.DriverOnboardingError -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
+updateIsValidAndFailureReason :: KvDbFlow m r => (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Tools.Error.DriverOnboardingError -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
 updateIsValidAndFailureReason isValid failureReason (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.isValid isValid, Se.Set Beam.failureReason failureReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]

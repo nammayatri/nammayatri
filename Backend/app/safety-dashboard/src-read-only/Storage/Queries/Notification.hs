@@ -40,7 +40,7 @@ findByReceiverId limit offset receiverId = do findAllWithOptionsKV [Se.And [Se.I
 findByReceiverIdAndId :: KvDbFlow m r => (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Notification.Notification -> m (Maybe Domain.Types.Notification.Notification))
 findByReceiverIdAndId receiverId (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.receiverId $ Se.Eq receiverId, Se.Is Beam.id $ Se.Eq id]]
 
-findByReceiverIdAndReadStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m ([Domain.Types.Notification.Notification]))
+findByReceiverIdAndReadStatus :: KvDbFlow m r => (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m ([Domain.Types.Notification.Notification]))
 findByReceiverIdAndReadStatus limit offset receiverId readStatus = do
   findAllWithOptionsKV
     [ Se.And

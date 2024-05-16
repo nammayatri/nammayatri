@@ -12,20 +12,20 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverQuote as Beam
 import Storage.Queries.DriverQuoteExtra as ReExport
 import Storage.Queries.Transformers.DriverQuote
 
-deleteByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+deleteByDriverId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteByDriverId (Kernel.Types.Id.Id driverId) = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq driverId]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverQuote.DriverQuote -> m (Maybe Domain.Types.DriverQuote.DriverQuote))
+findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.DriverQuote.DriverQuote -> m (Maybe Domain.Types.DriverQuote.DriverQuote))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findDriverQuoteBySTId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry -> m (Maybe Domain.Types.DriverQuote.DriverQuote))
+findDriverQuoteBySTId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry -> m (Maybe Domain.Types.DriverQuote.DriverQuote))
 findDriverQuoteBySTId (Kernel.Types.Id.Id searchTryId) = do findOneWithKV [Se.Is Beam.searchTryId $ Se.Eq searchTryId]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverQuote.DriverQuote -> m (Maybe Domain.Types.DriverQuote.DriverQuote))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.DriverQuote.DriverQuote -> m (Maybe Domain.Types.DriverQuote.DriverQuote))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]

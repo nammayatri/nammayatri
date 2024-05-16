@@ -106,7 +106,7 @@ def write_forked_data_to_file(data):
         create_folder_with_file(file_name)
         with open(file_name, 'w') as file:
             file.write(lines)
-        print(f"Forked Data written to file: {key}.log")
+        print(f"Forked Data written to file: {key}.log\n")
 
 def groupDataIntoFile(file_path,apikey):
     with open(file_path, 'r') as file:
@@ -122,7 +122,7 @@ def groupDataIntoFile(file_path,apikey):
 
                 with open(dataFilePath, 'w') as file:
                     file.write(lines)
-                print("Data written to file")
+                print(f"Data written to file: data.log\n")
                 return
             else:
                 continue
@@ -130,7 +130,7 @@ def groupDataIntoFile(file_path,apikey):
 
 def callApiForART (path):
     with open(path, 'r') as file:
-        time_to_sleep = 2
+        time_to_sleep = 1
         api_data = json.load(file)
         for api_name, api_details in api_data.items():
             for line in api_details:
@@ -192,36 +192,38 @@ def callApiForART (path):
                     continue
 
 # --------------------------------- Paths ---------------------------------------#
-input_file_path = getFilePath("custom.log")
+input_file_path = getFilePath("recordedData.log")
 input_path_mocked_data = getFilePath("artRunner.log")
 
 # =====================================================================================================#'
 
 
 # write data for art mocker
+print(f"{colors.CYAN}Writing data for ART Mocker =>{colors.RESET}")
 art_kafka_data.write_data_for_art_mocker(input_file_path)
-print("Data written for ART Mocker")
+print(f"{colors.GREEN}Data written for ART Mocker{colors.RESET}\n")
 
-print("Deleting kafka topic............\n")
+print(f"{colors.CYAN}Deleting Kafka Topic: ART-Logs =>{colors.RESET}")
 art_kafka_data.delete_kafka_topic("ART-Logs")
+print(f"{colors.GREEN}Kafka Topic Deleted: ART-Logs{colors.RESET}\n")
 
-print("Reading data and calling API for ART")
+print(f"{colors.CYAN}Calling API for ART =>{colors.RESET}")
 callApiForART(path)
-print("API called for ART")
+print(f"{colors.GREEN}API called for ART{colors.RESET}\n")
 
 # write data for art runner mocker
 # get mocked logs from kafka
-print("Reading data from Kafka")
+print(f"{colors.CYAN}Reading data from Kafka => {colors.RESET}")
 art_kafka_data.read_data_from_kafka("ART-Logs", input_path_mocked_data)
-print("Data read from Kafka")
+print(f"{colors.GREEN}Data read from Kafka{colors.RESET}\n")
 
-print("Writing data for ART Diff Checker")
+print(f"{colors.CYAN}Writing data for ART Diff Checker => {colors.RESET}")
 art_kafka_data.write_data_for_art_diff_checker(input_path_mocked_data)
-print("Data written for ART Diff Checker")
+print(f"{colors.GREEN}Data written for ART Diff Checker{colors.RESET}\n")
 
 
 # lets run diff checker here
-print("Running Diff Checker")
+print(f"{colors.CYAN}Running ART Diff Checker => {colors.RESET}")
 art_diff_checker.main()
 
 

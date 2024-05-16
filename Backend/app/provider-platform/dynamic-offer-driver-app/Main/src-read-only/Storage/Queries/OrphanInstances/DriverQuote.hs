@@ -14,7 +14,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified SharedLogic.DriverPool.Types
 import qualified Storage.Beam.DriverQuote as Beam
@@ -22,10 +22,10 @@ import Storage.Queries.Transformers.DriverQuote
 
 instance FromTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
   fromTType' (Beam.DriverQuoteT {..}) = do
-    backendConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))
-    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
-    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
-    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
+    backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
+    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
+    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
+    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     fareParams' <- getFareParams fareParametersId
     pure $
       Just
@@ -34,7 +34,7 @@ instance FromTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
             backendConfigVersion = backendConfigVersion',
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion),
+            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion,
             clientId = Kernel.Types.Id.Id <$> clientId,
             clientSdkVersion = clientSdkVersion',
             createdAt = Data.Time.localTimeToUTC Data.Time.utc createdAt,
@@ -70,8 +70,8 @@ instance ToTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientOsType = (clientDevice <&> (.deviceType)),
-        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
+        Beam.clientOsType = clientDevice <&> (.deviceType),
+        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
         Beam.clientId = Kernel.Types.Id.getId <$> clientId,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = Data.Time.utcToLocalTime Data.Time.utc createdAt,

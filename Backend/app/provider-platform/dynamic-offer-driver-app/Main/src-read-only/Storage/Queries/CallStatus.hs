@@ -25,7 +25,7 @@ findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.CallStatus.CallStat
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
 updateCallError ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus -> m ())
 updateCallError callError callService merchantId (Kernel.Types.Id.Id id) = do
   updateWithKV
@@ -36,7 +36,7 @@ updateCallError callError callService merchantId (Kernel.Types.Id.Id id) = do
     [Se.Is Beam.id $ Se.Eq id]
 
 updateCallStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.External.Call.Interface.Types.CallStatus -> Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus -> m ())
 updateCallStatus conversationDuration recordingUrl status (Kernel.Types.Id.Id id) = do
   updateWithKV
@@ -47,7 +47,7 @@ updateCallStatus conversationDuration recordingUrl status (Kernel.Types.Id.Id id
     [Se.Is Beam.id $ Se.Eq id]
 
 updateCallStatusWithRideId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService -> Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus -> m ())
 updateCallStatusWithRideId entityId dtmfNumberUsed merchantId callService (Kernel.Types.Id.Id id) = do
   updateWithKV

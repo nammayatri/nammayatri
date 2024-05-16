@@ -143,9 +143,6 @@ getDriversList driverInfos = findAllWithKV [Se.Is BeamP.id $ Se.In personsKeys]
   where
     personsKeys = getId <$> fetchDriverIDsFromInfo driverInfos
 
-getDriversByIdIn :: KvDbFlow m r => [Id Person] -> m [Person]
-getDriversByIdIn personIds = findAllWithKV [Se.Is BeamP.id $ Se.In $ getId <$> personIds]
-
 getDriverInformations ::
   (KvDbFlow m r, CoreMetrics m) =>
   [DriverLocation] ->
@@ -320,17 +317,9 @@ fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbD
     snd' (_, x, _, _, _, _) = x
     thd' (_, _, x, _, _, _) = x
 
-findByIdAndRoleAndMerchantId :: KvDbFlow m r => Id Person -> Person.Role -> Id Merchant -> m (Maybe Person)
-findByIdAndRoleAndMerchantId (Id pid) role_ (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.id $ Se.Eq pid, Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
-
-findAllByMerchantId :: KvDbFlow m r => [Person.Role] -> Id Merchant -> m [Person]
-findAllByMerchantId roles (Id merchantId) = findAllWithDb [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In roles]]
-
-findAdminsByMerchantId :: KvDbFlow m r => Id Merchant -> m [Person]
-findAdminsByMerchantId (Id merchantId) = findAllWithDb [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.ADMIN]]
-
-findByMobileNumberAndMerchant :: KvDbFlow m r => Text -> DbHash -> Id Merchant -> m (Maybe Person)
-findByMobileNumberAndMerchant countryCode mobileNumberHash (Id merchantId) =
+findByRoleAndMobileNumberAndMerchantId :: (KvDbFlow m r, EncFlow m r) => Role -> Text -> Text -> Id Merchant -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber (Id merchantId) = do
+  mobileNumberDbHash <- getDbHash mobileNumber
   findOneWithKV
     [ Se.And
         [ Se.Is BeamP.role $ Se.Eq role_,
@@ -350,43 +339,6 @@ findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash (Id merchantId
           Se.Is BeamP.role $ Se.Eq mbRole
         ]
     ]
-
-findByIdentifierAndMerchant :: KvDbFlow m r => Id Merchant -> Text -> m (Maybe Person)
-findByIdentifierAndMerchant (Id merchantId) identifier_ = findOneWithKV [Se.And [Se.Is BeamP.identifier $ Se.Eq $ Just identifier_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
-
-findByEmailAndMerchant :: KvDbFlow m r => Id Merchant -> Text -> m (Maybe Person)
-findByEmailAndMerchant (Id merchantId) email_ = findOneWithKV [Se.And [Se.Is BeamP.email $ Se.Eq $ Just email_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
-
-findByRoleAndMobileNumberAndMerchantId :: (KvDbFlow m r, EncFlow m r) => Role -> Text -> Text -> Id Merchant -> m (Maybe Person)
-findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber (Id merchantId) = do
-  mobileNumberDbHash <- getDbHash mobileNumber
-  findOneWithKV
-    [ Se.And
-        [ Se.Is BeamP.role $ Se.Eq role_,
-          Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
-          Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberDbHash,
-          Se.Is BeamP.merchantId $ Se.Eq merchantId
-        ]
-    ]
-
-updateMerchantIdAndMakeAdmin :: KvDbFlow m r => Id Person -> Id Merchant -> m ()
-updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamP.merchantId merchantId,
-      Se.Set BeamP.role Person.ADMIN,
-      Se.Set BeamP.updatedAt now
-    ]
-    [Se.Is BeamP.id (Se.Eq personId)]
-
-updateName :: KvDbFlow m r => Id Person -> Text -> m ()
-updateName (Id personId) name = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamP.firstName name,
-      Se.Set BeamP.updatedAt now
-    ]
-    [Se.Is BeamP.id (Se.Eq personId)]
 
 updatePersonRec :: KvDbFlow m r => Id Person -> Person -> m ()
 updatePersonRec (Id personId) person = do
@@ -440,59 +392,6 @@ updatePersonVersions person mbBundleVersion mbClientVersion mbConfigVersion mbDe
         ]
         [Se.Is BeamP.id (Se.Eq $ getId person.id)]
 
-updateDeviceToken :: KvDbFlow m r => Id Person -> Maybe FCMRecipientToken -> m ()
-updateDeviceToken (Id personId) mbDeviceToken = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamP.deviceToken mbDeviceToken,
-      Se.Set BeamP.updatedAt now
-    ]
-    [Se.Is BeamP.id (Se.Eq personId)]
-
-updateWhatsappNotificationEnrollStatus :: KvDbFlow m r => Id Person -> Maybe Whatsapp.OptApiMethods -> m ()
-updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamP.whatsappNotificationEnrollStatus enrollStatus,
-      Se.Set BeamP.updatedAt now
-    ]
-    [Se.Is BeamP.id (Se.Eq personId)]
-
-updatePersonDetails :: (KvDbFlow m r, EncFlow m r) => Person -> m ()
-updatePersonDetails person = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamP.firstName $ person.firstName,
-      Se.Set BeamP.lastName $ person.lastName,
-      Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
-      Se.Set BeamP.mobileNumberEncrypted $ person.mobileNumber <&> unEncrypted . (.encrypted),
-      Se.Set BeamP.mobileNumberHash $ person.mobileNumber <&> (.hash),
-      Se.Set BeamP.unencryptedMobileNumber $ person.unencryptedMobileNumber,
-      Se.Set BeamP.updatedAt now
-    ]
-    [Se.Is BeamP.id (Se.Eq $ getId person.id)]
-
-setIsNewFalse :: KvDbFlow m r => Id Person -> m ()
-setIsNewFalse (Id personId) = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamP.isNew False,
-      Se.Set BeamP.updatedAt now
-    ]
-    [Se.Is BeamP.id (Se.Eq personId)]
-
-deleteById :: KvDbFlow m r => Id Person -> m ()
-deleteById (Id personId) = deleteWithKV [Se.Is BeamP.id (Se.Eq personId)]
-
-updateAverageRating :: KvDbFlow m r => Id Person -> Centesimal -> m ()
-updateAverageRating (Id personId) newAverageRating = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamP.rating (Just newAverageRating),
-      Se.Set BeamP.updatedAt now
-    ]
-    [Se.Is BeamP.id (Se.Eq personId)]
-
 updateAlternateMobileNumberAndCode :: KvDbFlow m r => Person -> m ()
 updateAlternateMobileNumberAndCode person = do
   now <- getCurrentTime
@@ -519,19 +418,13 @@ findAllMerchantIdByPhoneNo countryCode mobileNumberHash =
         ]
     ]
 
-updateTotalEarnedCoins :: KvDbFlow m r => Id Person -> Int -> m ()
-updateTotalEarnedCoins (Id driverId) coinValue = updateWithKV [Se.Set BeamP.totalEarnedCoins coinValue] [Se.Is BeamP.id $ Se.Eq driverId]
-
-updateUsedCoins :: KvDbFlow m r => Id Person -> Int -> m ()
-updateUsedCoins (Id driverId) usedCoinValue = updateWithKV [Se.Set BeamP.usedCoins usedCoinValue] [Se.Is BeamP.id $ Se.Eq driverId]
-
 updateMerchantOperatingCityId :: KvDbFlow m r => Id Person -> Id DMOC.MerchantOperatingCity -> m ()
 updateMerchantOperatingCityId (Id driverId) (Id opCityId) = updateWithKV [Se.Set BeamP.merchantOperatingCityId (Just opCityId)] [Se.Is BeamP.id $ Se.Eq driverId]
 
 updateTag :: KvDbFlow m r => Id Person -> [Text] -> m ()
 updateTag (Id driverId) tags = updateOneWithKV [Se.Set BeamP.driverTag $ Just tags] [Se.Is BeamP.id $ Se.Eq driverId]
 
-updateMobileNumberAndCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Person -> m ()
+updateMobileNumberAndCode :: (KvDbFlow m r, EncFlow m r) => Person -> m ()
 updateMobileNumberAndCode person = do
   now <- getCurrentTime
   updateOneWithKV
@@ -543,7 +436,7 @@ updateMobileNumberAndCode person = do
     ]
     [Se.Is BeamP.id (Se.Eq $ getId person.id)]
 
-updateAverageRating :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Centesimal -> m ()
+updateAverageRating :: KvDbFlow m r => Id Person -> Centesimal -> m ()
 updateAverageRating (Id personId) newAverageRating = do
   now <- getCurrentTime
   updateOneWithKV
@@ -552,7 +445,7 @@ updateAverageRating (Id personId) newAverageRating = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updatePersonDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Person -> m ()
+updatePersonDetails :: (KvDbFlow m r, EncFlow m r) => Person -> m ()
 updatePersonDetails person = do
   now <- getCurrentTime
   updateOneWithKV

@@ -25,7 +25,7 @@ import Storage.Queries.OrphanInstances.FareProduct
 -- Extra code goes here --
 
 findUnboundedByMerchantOpCityIdVariantArea ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   TripCategory ->
   DVST.ServiceTierType ->

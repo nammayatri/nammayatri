@@ -24,13 +24,13 @@ import qualified Storage.Queries.SearchRequest as QR
 -- Extra code goes here --
 
 findLastByRequestId ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id SearchRequest ->
   m (Maybe SearchTry)
 findLastByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.Is BeamST.requestId $ Se.Eq searchRequest] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing <&> listToMaybe
 
 findTryByRequestId ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id SearchRequest ->
   m (Maybe SearchTry)
 findTryByRequestId (Id searchRequest) =
@@ -42,7 +42,7 @@ findTryByRequestId (Id searchRequest) =
     <&> listToMaybe
 
 findActiveTryByQuoteId ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Text ->
   m (Maybe SearchTry)
 findActiveTryByQuoteId quoteId =
@@ -58,13 +58,13 @@ findActiveTryByQuoteId quoteId =
     <&> listToMaybe
 
 getSearchTryStatusAndValidTill ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id SearchTry ->
   m (Maybe (UTCTime, SearchTryStatus))
 getSearchTryStatusAndValidTill (Id searchTryId) = findOneWithKV [Se.Is BeamST.id $ Se.Eq searchTryId] <&> fmap (\st -> (Domain.validTill st, Domain.status st))
 
 cancelActiveTriesByRequestId ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id SearchRequest ->
   m ()
 cancelActiveTriesByRequestId (Id searchId) = do

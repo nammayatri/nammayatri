@@ -19,7 +19,6 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import Kernel.Utils.Version
 import qualified Sequelize as Se
 import SharedLogic.DriverPool.Types
@@ -30,7 +29,7 @@ import Storage.Queries.OrphanInstances.DriverQuote
 
 -- Extra code goes here --
 
-findAllBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DST.SearchTry -> m [Domain.DriverQuote]
+findAllBySTId :: KvDbFlow m r => Id DST.SearchTry -> m [Domain.DriverQuote]
 findAllBySTId (Id searchTryId) =
   findAllWithKVAndConditionalDB
     [ Se.And
@@ -40,7 +39,7 @@ findAllBySTId (Id searchTryId) =
     ]
     Nothing
 
-countAllBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DST.SearchTry -> m Int
+countAllBySTId :: KvDbFlow m r => Id DST.SearchTry -> m Int
 countAllBySTId searchTId =
   findAllWithKVAndConditionalDB
     [ Se.And
@@ -51,19 +50,19 @@ countAllBySTId searchTId =
     Nothing
     <&> length
 
-setInactiveAllDQByEstId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DEstimate.Estimate -> UTCTime -> m () -- push
+setInactiveAllDQByEstId :: KvDbFlow m r => Id DEstimate.Estimate -> UTCTime -> m () -- push
 setInactiveAllDQByEstId (Id estimateId) now = updateWithKV [Se.Set BeamDQ.status Domain.Inactive, Se.Set BeamDQ.updatedAt (T.utcToLocalTime T.utc now)] [Se.And [Se.Is BeamDQ.estimateId $ Se.Eq estimateId, Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.validTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]]
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverQuote.DriverQuote -> m ())
+create :: KvDbFlow m r => (Domain.Types.DriverQuote.DriverQuote -> m ())
 create tbl = do SQFP.create tbl.fareParams; createWithKV tbl
 
-setInactiveBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DST.SearchTry -> m ()
+setInactiveBySTId :: KvDbFlow m r => Id DST.SearchTry -> m ()
 setInactiveBySTId (Id searchTryId) = updateWithKV [Se.Set BeamDQ.status Domain.Inactive] [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
 
-setInactiveBySRId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DSR.SearchRequest -> m ()
+setInactiveBySRId :: KvDbFlow m r => Id DSR.SearchRequest -> m ()
 setInactiveBySRId (Id searchReqId) = updateWithKV [Se.Set BeamDQ.status Domain.Inactive] [Se.Is BeamDQ.requestId $ Se.Eq searchReqId]
 
-findActiveQuotesByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Seconds -> m [Domain.DriverQuote]
+findActiveQuotesByDriverId :: KvDbFlow m r => Id Person -> Seconds -> m [Domain.DriverQuote]
 findActiveQuotesByDriverId (Id driverId) driverUnlockDelay = do
   now <- getCurrentTime
   let delayToAvoidRaces = secondsToNominalDiffTime . negate $ driverUnlockDelay

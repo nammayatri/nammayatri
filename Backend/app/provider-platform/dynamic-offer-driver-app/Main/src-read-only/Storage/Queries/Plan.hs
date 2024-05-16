@@ -12,19 +12,19 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Plan as Beam
 import Storage.Queries.PlanExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Plan.Plan -> m ())
+create :: KvDbFlow m r => (Domain.Types.Plan.Plan -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Plan.Plan] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.Plan.Plan] -> m ())
 createMany = traverse_ create
 
 findByIdAndPaymentModeWithServiceName ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Types.Id.Id Domain.Types.Plan.Plan -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> m (Maybe Domain.Types.Plan.Plan))
 findByIdAndPaymentModeWithServiceName (Kernel.Types.Id.Id id) paymentMode serviceName = do
   findOneWithKV
@@ -36,8 +36,8 @@ findByIdAndPaymentModeWithServiceName (Kernel.Types.Id.Id id) paymentMode servic
     ]
 
 findByMerchantOpCityIdAndTypeWithServiceName ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PlanType -> Domain.Types.Plan.ServiceNames -> m ([Domain.Types.Plan.Plan]))
+  KvDbFlow m r =>
+  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PlanType -> Domain.Types.Plan.ServiceNames -> m [Domain.Types.Plan.Plan])
 findByMerchantOpCityIdAndTypeWithServiceName (Kernel.Types.Id.Id merchantOpCityId) planType serviceName = do
   findAllWithKV
     [ Se.And
@@ -48,8 +48,8 @@ findByMerchantOpCityIdAndTypeWithServiceName (Kernel.Types.Id.Id merchantOpCityI
     ]
 
 findByMerchantOpCityIdWithServiceName ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.ServiceNames -> m ([Domain.Types.Plan.Plan]))
+  KvDbFlow m r =>
+  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.ServiceNames -> m [Domain.Types.Plan.Plan])
 findByMerchantOpCityIdWithServiceName (Kernel.Types.Id.Id merchantOpCityId) serviceName = do
   findAllWithKV
     [ Se.And
@@ -58,10 +58,10 @@ findByMerchantOpCityIdWithServiceName (Kernel.Types.Id.Id merchantOpCityId) serv
         ]
     ]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Plan.Plan -> m (Maybe Domain.Types.Plan.Plan))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Plan.Plan -> m (Maybe Domain.Types.Plan.Plan))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Plan.Plan -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.Plan.Plan -> m ())
 updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
   updateWithKV
     [ Se.Set Beam.basedOnEntity basedOnEntity,

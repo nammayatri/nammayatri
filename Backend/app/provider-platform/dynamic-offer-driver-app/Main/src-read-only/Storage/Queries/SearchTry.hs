@@ -11,28 +11,28 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchTry as Beam
 import Storage.Queries.SearchTryExtra as ReExport
 import Storage.Queries.Transformers.SearchTry
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SearchTry.SearchTry -> m ())
+create :: KvDbFlow m r => (Domain.Types.SearchTry.SearchTry -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.SearchTry.SearchTry] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.SearchTry.SearchTry] -> m ())
 createMany = traverse_ create
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry -> m (Maybe Domain.Types.SearchTry.SearchTry))
+findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry -> m (Maybe Domain.Types.SearchTry.SearchTry))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SearchTry.SearchTryStatus -> Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry -> m ())
+updateStatus :: KvDbFlow m r => (Domain.Types.SearchTry.SearchTryStatus -> Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry -> m ())
 updateStatus status (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry -> m (Maybe Domain.Types.SearchTry.SearchTry))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry -> m (Maybe Domain.Types.SearchTry.SearchTry))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SearchTry.SearchTry -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.SearchTry.SearchTry -> m ())
 updateByPrimaryKey (Domain.Types.SearchTry.SearchTry {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -41,7 +41,7 @@ updateByPrimaryKey (Domain.Types.SearchTry.SearchTry {..}) = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.customerExtraFee (Kernel.Prelude.roundToIntegral <$> customerExtraFee),
-      Se.Set Beam.customerExtraFeeAmount (customerExtraFee),
+      Se.Set Beam.customerExtraFeeAmount customerExtraFee,
       Se.Set Beam.estimateId estimateId,
       Se.Set Beam.estimateIds (Kernel.Prelude.Just estimateIds),
       Se.Set Beam.isScheduled (Kernel.Prelude.Just isScheduled),
@@ -56,7 +56,7 @@ updateByPrimaryKey (Domain.Types.SearchTry.SearchTry {..}) = do
       Se.Set Beam.tripCategory (Kernel.Prelude.Just tripCategory),
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.validTill validTill,
-      Se.Set Beam.vehicleVariant (vehicleServiceTier),
+      Se.Set Beam.vehicleVariant vehicleServiceTier,
       Se.Set Beam.vehicleServiceTierName (Kernel.Prelude.Just vehicleServiceTierName)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

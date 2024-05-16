@@ -32,11 +32,11 @@ upsert driverSsn@(Domain.Types.DriverSSN.DriverSSN {..}) = do
         [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
     else createWithKV driverSsn
 
-findBySSN :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => (Kernel.External.Encryption.DbHash -> m (Maybe Domain.Types.DriverSSN.DriverSSN))
+findBySSN :: (KvDbFlow m r, EncFlow m r) => (Kernel.External.Encryption.DbHash -> m (Maybe Domain.Types.DriverSSN.DriverSSN))
 findBySSN ssn = do findOneWithKV [Se.Is Beam.ssnHash $ Se.Eq ssn]
 
 updateVerificationStatusAndReasonBySSN ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Domain.Types.IdfyVerification.VerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.External.Encryption.DbHash -> m ())
 updateVerificationStatusAndReasonBySSN verificationStatus rejectReason ssn = do
   updateOneWithKV

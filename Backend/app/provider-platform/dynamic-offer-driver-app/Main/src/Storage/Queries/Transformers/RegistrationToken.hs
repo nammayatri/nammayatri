@@ -9,11 +9,11 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
-getMerchantOperatingCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => (Maybe Kernel.Prelude.Text -> Text -> m (Kernel.Prelude.Text))
+getMerchantOperatingCityId :: KvDbFlow m r => (Maybe Kernel.Prelude.Text -> Text -> m (Kernel.Prelude.Text))
 getMerchantOperatingCityId merchantOperatingCityId merchantId = do
   case merchantOperatingCityId of
     Just opCityId -> return opCityId
