@@ -13,7 +13,7 @@ import Data.Array as DA
 import Data.Maybe as Mb
 import Mobility.Prelude (boolToInvisibility, boolToVisibility)
 import Prelude (Unit, const, negate, not, pure, void, ($), (&&), (+), (-), (<), (<<<), (<>), (==), (>), map)
-import PrestoDOM (Gradient(..), Gravity(..), ImageUrl(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, alignParentBottom, alpha, background, color, cornerRadius, gradient, gravity, height, id, imageUrl, imageUrlWithFallback, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, relativeLayout, rippleColor, scrollView, stroke, text, textFromHtml, textView, visibility, weight, width)
+import PrestoDOM (Gradient(..), Gravity(..), ImageUrl(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, alignParentBottom, alpha, background, color, cornerRadius, gradient, gravity, height, id, imageUrl, imageUrlWithFallback, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, relativeLayout, rippleColor, scrollView, stroke, text, textFromHtml, textView, visibility, weight, width, accessibilityHint)
 import Screens.Types (NammaSafetyScreenState)
 import Common.Types.App (LazyCheck(..))
 import Data.Function.Uncurried (runFn5)
@@ -269,6 +269,7 @@ arrowButtonView isDirectionRight marginRight isActive push isDarkTheme action =
       , background background'
       , cornerRadius 21.0
       , margin $ MarginRight marginRight
+      , accessibilityHint $ if isDirectionRight then "Go to next video button " else "Go to previous video button"
       ]
         <> if isActive then
             [ rippleColor Color.rippleShade, onClick push $ const action ]
@@ -315,6 +316,7 @@ descriptionView push state =
                     , height WRAP_CONTENT
                     , gravity CENTER_VERTICAL
                     , onClick push $ const $ ShowVideoView true
+                    , accessibilityHint $ "Play Video Button"
                     ]
                     [ imageView
                         [ if EHC.os == "IOS" then

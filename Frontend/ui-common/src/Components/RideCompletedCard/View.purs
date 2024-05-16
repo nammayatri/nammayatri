@@ -540,6 +540,8 @@ needHelpPillView config push =
     , onClick push $ const $ HelpAndSupportAC
     , margin $ MarginVertical 20 20
     , rippleColor Color.rippleShade
+    , accessibility ENABLE
+    , accessibilityHint $ "Need help : Button"
     ][imageView [
         width $ V 16
       , height $ V 16

@@ -25,7 +25,7 @@ import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude
-import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
+import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..))
 import Screens.RideSelectionScreen.Controller (getTitle)
 import Storage as Storage
 import Styles.Colors as Color
@@ -100,6 +100,8 @@ genericHeaderConfig state = let
       , margin = Margin 8 8 8 8
       , layoutMargin = Margin 4 4 4 4
       , enableRipple = true
+      , accessibility = ENABLE
+      , accessibilityHint = "Back Button"
       } 
     , textConfig {
         text = (getTitle state.selectedCategory.categoryAction)

@@ -213,6 +213,7 @@ sosButtonView state push useMargin =
           ( [ width MATCH_PARENT
             , height WRAP_CONTENT
             , gravity CENTER
+            , accessibilityHint if not state.props.triggeringSos then "Test SOS button" else ""
             ]
               <> ( if not state.props.triggeringSos then
                     [ onClick
@@ -266,6 +267,8 @@ imageWithTextView config =
       , width if config.useFullWidth then MATCH_PARENT else WRAP_CONTENT
       , visibility $ boolToVisibility config.visibility
       , alpha $ if config.isActive then 1.0 else 0.6
+      , accessibility ENABLE
+      , accessibilityHint $ config.text' <> " : Button"
       ]
         <> if config.useMargin then
             [ margin $ MarginTop 12 ]
@@ -895,6 +898,7 @@ confirmSafetyDrillView state push =
         , width WRAP_CONTENT
         , padding $ Padding 0 16 16 16
         , onClick push $ const BackPressed
+        , accessibilityHint "Back : button"
         ]
         [ imageView
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
@@ -1099,6 +1103,7 @@ callPoliceView state push =
       , padding $ PaddingVertical 12 12
       , cornerRadius 8.0
       , background Color.redOpacity20
+      , accessibilityHint "Call Police Button"
       ]
         <> if state.props.showTestDrill then [ alpha 0.6 ] else [ rippleColor Color.rippleShade, onClick push $ const $ CallPolice ]
     )

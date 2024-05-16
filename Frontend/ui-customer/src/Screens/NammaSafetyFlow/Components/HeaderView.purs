@@ -9,7 +9,7 @@
 module Screens.NammaSafetyFlow.Components.HeaderView where
 
 import Prelude (Unit, const, ($), (<<<), (<>), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textFromHtml, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textFromHtml, textView, visibility, weight, width, accessibilityHint, accessibility, Accessiblity(..))
 import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Effect (Effect)
@@ -134,6 +134,8 @@ testSafetyHeaderView push =
         , margin $ MarginRight 8
         , visibility $ boolToVisibility $ EHC.os == "IOS"
         , onClick push $ const BackClicked
+        , accessibility ENABLE
+        , accessibilityHint $ "Back : Button"
         ]
     , linearLayout
         [ height WRAP_CONTENT
@@ -161,6 +163,7 @@ testSafetyHeaderView push =
               , color Color.black900
               , gravity RIGHT
               , padding $ Padding 16 16 16 16
+              , accessibilityHint "Learn More Button"
               , onClick push $ const LearnMoreClicked
               ]
             <> FontStyle.body2 TypoGraphy

@@ -6,7 +6,7 @@ import Components.ChooseVehicle.Controller (Action(..), Config, SearchType(..))
 import Effect (Effect)
 import Font.Style as FontStyle
 import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||), negate, (*), (/), (>), (-), (/=), (<), discard, void)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Shadow(..), Accessiblity(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout, onAnimationEnd, shimmerFrameLayout, alpha, shadow, pivotY, accessibility, clipChildren, maxLines)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Shadow(..), Accessiblity(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout, onAnimationEnd, shimmerFrameLayout, alpha, shadow, pivotY, accessibility, clipChildren, maxLines, accessibilityHint, accessibility, Accessiblity(..))
 import Common.Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -18,7 +18,7 @@ import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
 import Animation.Config (translateFullYAnimWithDurationConfig, translateYAnimConfig, Direction(..), AnimConfig, animConfig)
 import Mobility.Prelude (boolToInvisibility)
-import Data.Maybe (isJust, Maybe (..), fromMaybe)
+import Data.Maybe (isJust, Maybe (..), fromMaybe, maybe)
 import Engineering.Helpers.Utils as EHU
 import JBridge as JB
 import PrestoDOM.Elements.Keyed as Keyed
@@ -26,6 +26,8 @@ import Data.Tuple (Tuple(..))
 import Data.Array (length, mapWithIndex, findIndex, elem, length)
 import Engineering.Helpers.Commons(os)
 import Common.Animation.Config (estimateExpandingAnimationConfig)
+import Data.Array as DA
+import Data.String as DS
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -38,6 +40,10 @@ view push config =
     selectedEstimateHeight = if config.selectedEstimateHeight == 0 then 72 else config.selectedEstimateHeight
     currentEstimateHeight = if config.currentEstimateHeight < 80 then 176 else config.currentEstimateHeight
     margin' = MarginTop $ if config.index == 0 then 0 else 8
+    selectedVehicle = maybe (getVehicleName config) (\name -> name) config.serviceTierName
+    priceRange = DS.split(DS.Pattern ("-")) config.price
+    fromPrice = fromMaybe "" (priceRange DA.!! 0)
+    toPrice = fromMaybe "" (priceRange DA.!! 1)
   in
     frameLayout
       [ width MATCH_PARENT
@@ -57,6 +63,7 @@ view push config =
           , stroke stroke'
           , gravity RIGHT
           , afterRender push $ const $ NoAction config
+          , accessibility DISABLE
           ] <> if os == "IOS" then [] else [pivotY 1.0])[]
         , linearLayout
             [ width MATCH_PARENT
@@ -86,6 +93,7 @@ view push config =
                  , orientation VERTICAL
                  , gravity CENTER_VERTICAL
                  , padding $ PaddingLeft 8
+                 , accessibilityHint $ selectedVehicle <> (if isActiveIndex then " selected : " else " : ") <> fromPrice <> (if toPrice /= "" then " to " <> toPrice else "") <> " with capacity of " <> config.capacity
                  ][ linearLayout
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
@@ -108,13 +116,15 @@ view push config =
         , width $ MATCH_PARENT
         , gravity RIGHT
         , visibility $ boolToVisibility $ config.vehicleVariant /= "BOOK_ANY"
+        , accessibility DISABLE
         ][linearLayout
           [ height $ V selectedEstimateHeight
           , width $ V ((EHC.screenWidth unit) * 3/10)
           , clickable true
+          , accessibility DISABLE
           , onClick push $ const $ case config.showInfo && isActiveIndex of
                                     false -> OnSelect config
-                                    true  -> if config.showInfo then ShowRateCard config else NoAction config
+                                    true  -> if config.showInfo then ShowRateCard config else NoAction config                        
           ][]
        ]
     ]
@@ -185,6 +195,8 @@ variantsView push state =
                                                      void $ pure $ JB.toast "Not available at this moment"
                                                      pure unit
                                                   else push action ) $ const $ ServicesOnClick state item
+                            , accessibility if isInActive then DISABLE else ENABLE
+                            , accessibilityHint $ item <> if isActiveIndex && (not isInActive) then " Checkbox : selected " else " Checkbox : Un Selected"
                             ][ linearLayout
                               [ height MATCH_PARENT
                               , width MATCH_PARENT
@@ -206,6 +218,7 @@ variantsView push state =
                                  , maxLines 1
                                  , padding $ PaddingBottom $ if isActiveIndex && (not isInActive) then 2 else 0
                                  , color $ if isActiveIndex && (not isInActive) then Color.blue800 else Color.black800
+                                 , accessibility if isInActive then DISABLE else ENABLE
                                  ] <> FontStyle.tags LanguageStyle
                               ]
                           ]
@@ -218,20 +231,21 @@ variantsView push state =
 
 vehicleDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 vehicleDetailsView push config =
+  let selectedVehicle = maybe (getVehicleName config) (\name -> name) config.serviceTierName
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , orientation HORIZONTAL
     , gravity CENTER_VERTICAL
+    , accessibility DISABLE
     ]
     [ textView
         $ [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , singleLine true
           , ellipsize true
-          , text $ case config.serviceTierName of
-                     Just name -> name
-                     Nothing -> getVehicleName config
+          , text selectedVehicle
           , color Color.black800
           ]
         <> FontStyle.body7 TypoGraphy
@@ -260,22 +274,22 @@ vehicleDetailsView push config =
         ] <> FontStyle.tags TypoGraphy
       ]
     ]
-  where 
-    getVehicleName :: Config -> String
-    getVehicleName config = 
-      case (getMerchant FunctionCall) of
-        YATRISATHI -> case config.vehicleVariant of
-                        "TAXI" -> "Non AC Taxi"
-                        "SUV"  -> "AC SUV"
-                        _      -> "AC Cab"
-        _          -> case config.vehicleVariant of
-                        "AUTO_RICKSHAW" -> "Auto Rickshaw"
-                        "TAXI" -> "Non-AC Taxi"
-                        "TAXI_PLUS" -> "AC Taxi"
-                        "SEDAN" -> "Sedan"
-                        "SUV" -> "SUV"
-                        "HATCHBACK" -> "Hatchback"
-                        _ -> "Non-AC Taxi"
+
+getVehicleName :: Config -> String
+getVehicleName config = 
+  case (getMerchant FunctionCall) of
+    YATRISATHI -> case config.vehicleVariant of
+                    "TAXI" -> "Non AC Taxi"
+                    "SUV"  -> "AC SUV"
+                    _      -> "AC Cab"
+    _          -> case config.vehicleVariant of
+                    "AUTO_RICKSHAW" -> "Auto Rickshaw"
+                    "TAXI" -> "Non-AC Taxi"
+                    "TAXI_PLUS" -> "AC Taxi"
+                    "SEDAN" -> "Sedan"
+                    "SUV" -> "SUV"
+                    "HATCHBACK" -> "Hatchback"
+                    _ -> "Non-AC Taxi"
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 priceDetailsView push config =
@@ -293,6 +307,7 @@ priceDetailsView push config =
     , onClick push $ case enableRateCard of
                           false -> const $ NoAction config
                           true  -> const $ ShowRateCard config
+    , accessibility DISABLE
     ][linearLayout
       ([ height MATCH_PARENT
       , width $ if (isBookAny && os == "IOS") then V (((EHC.screenWidth unit) * 33) / 100) else WRAP_CONTENT
@@ -331,6 +346,7 @@ priceDetailsView push config =
          , gravity CENTER_VERTICAL
          , padding $ PaddingHorizontal 6 6
          , visibility $ boolToVisibility isBookAny
+         , accessibility DISABLE
          ][ imageView
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_faster_lightning"
             , width $ V 12

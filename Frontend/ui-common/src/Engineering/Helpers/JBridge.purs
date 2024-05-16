@@ -286,6 +286,7 @@ foreign import displayBase64Image :: EffectFn1 DisplayBase64ImageConig Unit
 foreign import drawRouteV2 :: DrawRouteConfig -> Effect Unit 
 foreign import renderSliderImpl :: forall action. EffectFn3 (action -> Effect Unit) (Int -> action) SliderConfig Unit
 
+foreign import isAccessibilityEnabled :: String -> Boolean
 foreign import getFromUTC :: String -> String -> String
 type SliderConfig = { 
   id :: String,

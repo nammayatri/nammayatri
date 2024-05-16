@@ -72,6 +72,8 @@ view config = let
             , width WRAP_CONTENT
             , gravity CENTER_VERTICAL
             , margin $ MarginLeft 4
+            , accessibility ENABLE
+            , accessibilityHint $ "Vehicle capacity : " <> show capacity
             ]
             [ textView $
                 [ height WRAP_CONTENT

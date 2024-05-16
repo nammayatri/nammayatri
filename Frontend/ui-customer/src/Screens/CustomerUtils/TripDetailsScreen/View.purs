@@ -271,6 +271,7 @@ distanceAndTimeTaken state =
           [ text state.data.selectedItem.totalTime
           , width WRAP_CONTENT
           , color Color.black900
+          , accessibility DISABLE_DESCENDANT
           ] <> FontStyle.paragraphText LanguageStyle
       ]
    ]

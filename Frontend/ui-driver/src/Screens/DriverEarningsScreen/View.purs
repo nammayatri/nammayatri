@@ -432,7 +432,7 @@ totalEarningsView push state =
             [ imageView
                 $ [ width (V 32)
                   , height (V 32)
-                  , imageWithFallback $ fetchImage FF_ASSET $ if state.props.weekIndex == 0 then "ny_ic_chevron_left_light_grey" else "ny_ic_chevron_left_light"
+                  , imageWithFallback $ fetchImage FF_ASSET $ if state.props.weekIndex == 0 then "ny_ic_chevron_left_grey" else "ny_ic_chevron_left_black"
                   , onClick push $ const $ LeftChevronClicked state.props.weekIndex
                   , clickable $ state.props.weekIndex > 0
                   ]
@@ -473,7 +473,7 @@ totalEarningsView push state =
             [ imageView
                 $ [ width $ V 32
                   , height $ V 32
-                  , imageWithFallback $ fetchImage FF_ASSET $ if state.props.weekIndex == 3 then "ny_ic_chevron_right_light_grey" else "ny_ic_chevron_right"
+                  , imageWithFallback $ fetchImage FF_ASSET $ if state.props.weekIndex == 3 then "ny_ic_chevron_right_grey" else "ny_ic_chevron_right_black"
                   , gravity RIGHT
                   , onClick push $ const $ RightChevronClicked state.props.weekIndex
                   , clickable $ state.props.weekIndex < 3

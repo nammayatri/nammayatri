@@ -200,6 +200,7 @@ callPoliceView state push text' =
       , margin $ Margin 12 12 12 12
       , cornerRadius 8.0
       , background Color.redOpacity20
+      , accessibilityHint "Call Police Button"
       ]
         <> [ rippleColor Color.rippleShade, onClick push $ const $ DialPolice ]
     )
@@ -475,6 +476,7 @@ userSettingsView state push visibility' =
                       , margin $ MarginLeft 8
                       , gravity CENTER
                       , onClick push $ const $ EditEmergencyContacts
+                      , accessibilityHint $ if null state.data.emergencyContactsList then "Add Contacts Button" else "Edit Button"
                       ]
                     <> FontStyle.body2 TypoGraphy
                 ]
@@ -569,6 +571,7 @@ toggleSwitchView isActive visibility' action push =
     , gravity CENTER_VERTICAL
     , onClick push $ const action --ToggleSwitch stage
     , visibility $ boolToVisibility visibility'
+    , accessibilityHint $ if isActive then "Toggle Button Enabled" else "toggle button disabled"
     ]
     [ imageView
         [ imageUrl if isActive then "ny_ic_switch_active" else "ny_ic_switch_inactive"

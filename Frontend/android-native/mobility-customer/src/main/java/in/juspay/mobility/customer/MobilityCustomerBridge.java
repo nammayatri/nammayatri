@@ -72,6 +72,7 @@ import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.mobility.common.MapRemoteConfig;
 import in.juspay.mobility.common.MobilityCommonBridge;
+import android.view.accessibility.AccessibilityManager;
 
 public class MobilityCustomerBridge extends MobilityCommonBridge {
 
@@ -610,4 +611,10 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         return super.onRequestPermissionResult(requestCode, permissions, grantResults);
     }
     //endregion
+
+    @JavascriptInterface
+    public boolean isAccessibilityEnabled() {
+        AccessibilityManager accessibilityManager = (AccessibilityManager) bridgeComponents.getContext().getSystemService(Context.ACCESSIBILITY_SERVICE);
+        return accessibilityManager.isEnabled();
+    }
 }

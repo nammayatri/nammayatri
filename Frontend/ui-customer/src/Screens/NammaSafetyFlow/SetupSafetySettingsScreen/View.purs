@@ -16,7 +16,7 @@ module Screens.NammaSafetyFlow.SetupSafetySettingsScreen.View where
 
 import Animation (fadeIn, screenAnimation)
 import Prelude (Unit, bind, const, discard, map, not, pure, unit, void, ($), (&&), (+), (/=), (<<<), (<>), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, alignParentBottom, background, color, cornerRadius, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, shimmerFrameLayout, stroke, text, textFromHtml, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, alignParentBottom, background, color, cornerRadius, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, shimmerFrameLayout, stroke, text, textFromHtml, textView, visibility, weight, width, accessibilityHint)
 import Screens.NammaSafetyFlow.ComponentConfig (continueNextStepButtonConfig, removeContactPopUpModelConfig)
 import Screens.NammaSafetyFlow.Components.HelperViews (emptyTextView, recommendContactsToInstallView, shimmerView)
 import Common.Types.App (LazyCheck(..))
@@ -325,6 +325,7 @@ toggleSwitchView isActive stage push =
     , gravity CENTER_VERTICAL
     , onClick push $ const $ ToggleSwitch stage
     , visibility $ boolToVisibility $ stage /= ST.SetPersonalSafetySettings
+    , accessibilityHint $ (if isActive then "enable " else "disable ") <> accessibilityHintText
     ]
     [ imageView
         [ imageUrl if isActive then "ny_ic_switch_active" else "ny_ic_switch_inactive"
@@ -332,6 +333,11 @@ toggleSwitchView isActive stage push =
         , height $ V 24
         ]
     ]
+    where 
+    accessibilityHintText = case stage of 
+      ST.SetDefaultEmergencyContacts -> "Share Emergency Contacts Button"
+      ST.SetNightTimeSafetyAlert -> "Night time safety check Button"
+      _ -> ""
 
 measureView :: String -> Boolean -> Boolean -> String -> Int -> FontStyle.Style -> forall w. PrestoDOM (Effect Unit) w
 measureView text' showBullet isCorrect color' marginBottom style =
