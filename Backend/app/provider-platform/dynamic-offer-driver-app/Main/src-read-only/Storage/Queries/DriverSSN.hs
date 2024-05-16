@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.DriverSSN where
+module Storage.Queries.DriverSSN (module Storage.Queries.DriverSSN, module ReExport) where
 
 import qualified Domain.Types.DriverSSN
 import qualified Domain.Types.Person
@@ -14,6 +14,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverSSN as Beam
+import Storage.Queries.DriverSSNExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverSSN.DriverSSN -> m ())
 create = createWithKV
@@ -36,24 +37,3 @@ updateByPrimaryKey (Domain.Types.DriverSSN.DriverSSN {..}) = do
       Se.Set Beam.verificationStatus verificationStatus
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.DriverSSN Domain.Types.DriverSSN.DriverSSN where
-  fromTType' (Beam.DriverSSNT {..}) = do
-    pure $
-      Just
-        Domain.Types.DriverSSN.DriverSSN
-          { driverId = Kernel.Types.Id.Id driverId,
-            id = Kernel.Types.Id.Id id,
-            ssn = EncryptedHashed (Encrypted ssnEncrypted) ssnHash,
-            verificationStatus = verificationStatus
-          }
-
-instance ToTType' Beam.DriverSSN Domain.Types.DriverSSN.DriverSSN where
-  toTType' (Domain.Types.DriverSSN.DriverSSN {..}) = do
-    Beam.DriverSSNT
-      { Beam.driverId = Kernel.Types.Id.getId driverId,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.ssnEncrypted = ssn & unEncrypted . encrypted,
-        Beam.ssnHash = ssn & hash,
-        Beam.verificationStatus = verificationStatus
-      }
