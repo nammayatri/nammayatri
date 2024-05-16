@@ -89,7 +89,7 @@ createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, FromJSO
 createThroughConfigHelper toss context cpf = do
   cacConfig <- asks (.cacConfig)
   config' <- KSQS.findById $ Text.pack cacConfig.tenant
-  config <- maybe (throwError $ InternalError "config not found for transporterConfig in db") pure config'
+  config <- maybe (throwError $ InternalError ("config not found for" <> getTableName cpf <> " in db")) pure config'
   _ <- initializeCACThroughConfig CM.createClientFromConfig config cacConfig.tenant cacConfig.host (fromIntegral cacConfig.interval)
   getConfigFromCACStrictCommon toss context cpf
 
@@ -155,7 +155,8 @@ getConfigFromCacOrDB cachedConfig context stickyKey fromCacTyp cpf = do
         if getTableName cpf `GL.elem` useCACConfig
           then do
             config <-
-              getConfigFromCACCommon context stickyKey fromCacTyp cpf `safeCatch` \(_ :: SomeException) -> do
+              getConfigFromCACCommon context stickyKey fromCacTyp cpf `safeCatch` \(err :: SomeException) -> do
+                logInfo $ "CAC failed us: " <> show err
                 incrementSystemConfigsFailedCounter $ getCacMetricErrorFromDB cpf
                 pure Nothing
             when (isJust config) do
