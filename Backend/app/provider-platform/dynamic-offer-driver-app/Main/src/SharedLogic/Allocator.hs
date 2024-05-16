@@ -18,12 +18,14 @@
 module SharedLogic.Allocator where
 
 import Data.Singletons.TH
+import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Overlay
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as Plan
+import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
@@ -42,6 +44,7 @@ data AllocatorJobType
   | BadDebtCalculation
   | SendManualPaymentLink
   | RetryDocumentVerification
+  | ScheduledRideNotificationsToDriver
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -59,6 +62,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SBadDebtCalculation jobData = AnyJobInfo <$> restoreJobInfo SBadDebtCalculation jobData
   restoreAnyJobInfo SSendManualPaymentLink jobData = AnyJobInfo <$> restoreJobInfo SSendManualPaymentLink jobData
   restoreAnyJobInfo SRetryDocumentVerification jobData = AnyJobInfo <$> restoreJobInfo SRetryDocumentVerification jobData
+  restoreAnyJobInfo SScheduledRideNotificationsToDriver jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideNotificationsToDriver jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
@@ -190,3 +194,20 @@ data SendManualPaymentLinkJobData = SendManualPaymentLinkJobData
 instance JobInfoProcessor 'SendManualPaymentLink
 
 type instance JobContent 'SendManualPaymentLink = SendManualPaymentLinkJobData
+
+data ScheduledRideNotificationsToDriverJobData = ScheduledRideNotificationsToDriverJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    timeDiffEvent :: DRN.TimeDiffEvent,
+    bookingStatus :: DB.BookingStatus,
+    notificationType :: DRN.NotificationType,
+    notificationKey :: Text,
+    onlyIfOffline :: Bool,
+    bookingId :: Id DB.Booking,
+    driverId :: Id DP.Person
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ScheduledRideNotificationsToDriver
+
+type instance JobContent 'ScheduledRideNotificationsToDriver = ScheduledRideNotificationsToDriverJobData

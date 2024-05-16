@@ -26,6 +26,7 @@ import Domain.Types.Person
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as SRD
+import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchRequestForDriver as SReqD
 import Domain.Types.SearchTry
@@ -41,8 +42,10 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRNC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
@@ -83,8 +86,9 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
           Just otp -> pure otp
   ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
   previousRideInprogress <- QRide.getInProgressByDriverId driver.id
+  now <- getCurrentTime
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
-  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress vehicle
+  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle
   rideDetails <- buildRideDetails ride driver vehicle
 
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
@@ -103,6 +107,9 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
   fork "DriverScoreEventHandler OnNewRideAssigned" $
     DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency, distanceUnit = booking.distanceUnit}
 
+  notifyRideRelatedNotificationOnEvent ride now DRN.RIDE_ASSIGNED
+  notifyRideRelatedNotificationOnEvent ride now DRN.PICKUP_TIME
+
   return (ride, rideDetails, vehicle)
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
@@ -114,6 +121,10 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
             cs (showTimeIst uBooking.startTime) <> ".",
             "Check the app for more details."
           ]
+
+    notifyRideRelatedNotificationOnEvent ride now timeDiffEvent = do
+      rideRelatedNotificationConfigList <- SCRRNC.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId timeDiffEvent
+      forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now driver.id)
 
 buildRideDetails ::
   DRide.Ride ->
@@ -149,12 +160,12 @@ buildRide ::
   Maybe Bool ->
   Maybe (Id DC.Client) ->
   Maybe DRide.Ride ->
+  UTCTime ->
   DVeh.Vehicle ->
   Flow DRide.Ride
-buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previousRide vehicle = do
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previousRide now vehicle = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
-  now <- getCurrentTime
   deploymentVersion <- asks (.version)
   transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   trackingUrl <- buildTrackingUrl guid

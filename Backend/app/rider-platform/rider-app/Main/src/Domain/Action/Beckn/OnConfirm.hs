@@ -34,6 +34,7 @@ import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps (LatLong (..))
+import Kernel.External.Types (SchedulerFlow)
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common hiding (id)
@@ -96,6 +97,7 @@ onConfirm ::
     EsqDBFlow m r,
     MonadFlow m,
     EncFlow m r,
+    SchedulerFlow r,
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],

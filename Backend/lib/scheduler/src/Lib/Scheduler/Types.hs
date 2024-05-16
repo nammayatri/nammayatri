@@ -15,18 +15,18 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Lib.Scheduler.Types where
+module Lib.Scheduler.Types (module Reexport, module Lib.Scheduler.Types) where
 
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Singletons
 import qualified Data.Text as T
 import Kernel.Beam.Lib.UtilsTH
+import Kernel.External.Types as Reexport (SchedulerType (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common as Comon
-import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.GenericPretty
 
 data JobEntry (e :: t) = (JobProcessor t, JobInfoProcessor e) =>
@@ -137,8 +137,6 @@ data Job (e :: t) = JobFlow t e =>
     status :: JobStatus,
     parentJobId :: Id AnyJob
   }
-
-data SchedulerType = RedisBased | DbBased deriving (Show, Enum, Eq, Read, Generic, FromDhall)
 
 data JobStatus = Pending | Completed | Failed | Revived
   deriving (Show, Eq, Read, Generic, FromJSON, ToJSON, Ord)
