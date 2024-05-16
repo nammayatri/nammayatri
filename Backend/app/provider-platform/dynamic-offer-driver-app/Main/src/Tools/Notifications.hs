@@ -741,7 +741,7 @@ notifyPickupOrDropLocationChange person entityData = do
           [ "Customer has changed pickup or drop location. Please check the app for more details"
           ]
 
-mkOverlayReq :: DTMO.Overlay -> FCM.FCMOverlayReq
+mkOverlayReq :: DTMO.Overlay -> FCM.FCMOverlayReq -- handle mod Title
 mkOverlayReq _overlay@DTMO.Overlay {..} =
   FCM.FCMOverlayReq
     { ..
@@ -900,3 +900,42 @@ cityFallback :: Maybe Version.Version -> Id DMOC.MerchantOperatingCity -> Id DMO
 cityFallback version "2c618bb1-508d-90d6-c8f5-001e9d11c871" = getNewMerchantOpCityId version "2c618bb1-508d-90d6-c8f5-001e9d11c871" ---- PROD Kochi city ID
 cityFallback version "1984f6b4-95eb-4683-b6b5-251b1b008566" = getNewMerchantOpCityId version "1984f6b4-95eb-4683-b6b5-251b1b008566" ---- MASTER Kochi city
 cityFallback _ currentMerchantCityId = currentMerchantCityId
+
+data NotifReq = NotifReq
+  { bookingId :: Id Booking,
+    title :: Text,
+    message :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+notifyDriverOnEvents ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  NotifReq ->
+  FCM.FCMNotificationType ->
+  m ()
+notifyDriverOnEvents merchantOpCityId personId mbDeviceToken entityData notifType = do
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) (clearDeviceToken personId) False notificationData (FCMNotificationRecipient personId.getId mbDeviceToken) EulerHS.Prelude.id
+  where
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notifType,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = entityData.bookingId.getId,
+          fcmEntityData = (),
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType Nothing,
+          fcmOverlayNotificationJSON = Nothing,
+          fcmNotificationId = Nothing
+        }
+    title = FCMNotificationTitle entityData.title
+    body =
+      FCMNotificationBody $
+        EulerHS.Prelude.unwords
+          [ entityData.message
+          ]

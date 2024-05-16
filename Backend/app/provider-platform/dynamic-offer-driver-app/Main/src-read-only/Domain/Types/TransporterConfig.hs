@@ -149,6 +149,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     thresholdCancellationPercentageToUnlist :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     thresholdCancellationScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,
+    toNotifyDriverForExtraKmsLimitExceed :: Kernel.Prelude.Bool,
     updateNotificationStatusBatchSize :: Kernel.Prelude.Int,
     updateOrderStatusBatchSize :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,

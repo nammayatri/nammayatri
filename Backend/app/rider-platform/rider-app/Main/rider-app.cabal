@@ -247,7 +247,9 @@ library
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PublicTransport
+      SharedLogic.ScheduledNotifications
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
+      SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
       Storage.Beam.BecknRequest
       Storage.Beam.Common
       Storage.Beam.EstimateBreakup
@@ -271,6 +273,7 @@ library
       Storage.CachedQueries.Merchant.MerchantMessage
       Storage.CachedQueries.Merchant.MerchantOperatingCity
       Storage.CachedQueries.Merchant.MerchantPaymentMethod
+      Storage.CachedQueries.Merchant.MerchantPushNotification
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.Merchant.MerchantState
@@ -279,6 +282,7 @@ library
       Storage.CachedQueries.Person
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.PlaceBasedServiceConfig
+      Storage.CachedQueries.RideRelatedNotificationConfig
       Storage.CachedQueries.SavedLocation
       Storage.CachedQueries.Sos
       Storage.CachedQueries.ValueAddNP
@@ -425,6 +429,7 @@ library
       Domain.Types.MerchantMessage
       Domain.Types.MerchantOperatingCity
       Domain.Types.MerchantPaymentMethod
+      Domain.Types.MerchantPushNotification
       Domain.Types.MerchantServiceConfig
       Domain.Types.MerchantServiceUsageConfig
       Domain.Types.MerchantState
@@ -443,6 +448,7 @@ library
       Domain.Types.RentalDetails
       Domain.Types.Ride
       Domain.Types.RiderConfig
+      Domain.Types.RideRelatedNotificationConfig
       Domain.Types.SavedReqLocation
       Domain.Types.SearchReqLocation
       Domain.Types.SearchRequest
@@ -504,6 +510,7 @@ library
       Storage.Beam.MerchantMessage
       Storage.Beam.MerchantOperatingCity
       Storage.Beam.MerchantPaymentMethod
+      Storage.Beam.MerchantPushNotification
       Storage.Beam.MerchantServiceConfig
       Storage.Beam.MerchantServiceUsageConfig
       Storage.Beam.MerchantState
@@ -522,6 +529,7 @@ library
       Storage.Beam.RentalDetails
       Storage.Beam.Ride
       Storage.Beam.RiderConfig
+      Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchReqLocation
       Storage.Beam.SearchRequest
@@ -583,6 +591,7 @@ library
       Storage.Queries.MerchantMessage
       Storage.Queries.MerchantOperatingCity
       Storage.Queries.MerchantPaymentMethod
+      Storage.Queries.MerchantPushNotification
       Storage.Queries.MerchantServiceConfig
       Storage.Queries.MerchantServiceUsageConfig
       Storage.Queries.MerchantState
@@ -633,6 +642,7 @@ library
       Storage.Queries.RentalDetails
       Storage.Queries.Ride
       Storage.Queries.RiderConfig
+      Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchReqLocation
       Storage.Queries.SearchRequest

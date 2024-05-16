@@ -51,6 +51,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.VehicleVariant
 import Environment ()
 import Kernel.Beam.Functions
+import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
@@ -283,6 +284,7 @@ onUpdate ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     ClickhouseFlow m r,
+    SchedulerFlow r,
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
     HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],

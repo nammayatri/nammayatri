@@ -30,6 +30,8 @@ imports:
   NominalDiffTime: Kernel.Prelude
   Currency: Kernel.Types.Common
   FCMActions: Kernel.External.Notification.FCM.Types
+  BookingStatus: Domain.Types.Booking
+  FCMNotificationType: Kernel.External.Notification.FCM.Types
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -140,7 +142,7 @@ MerchantMessage:
   derives: Generic,Show,'UsageSafety
   types:
     MessageKey:
-      enum: SEND_OTP,WELCOME_TO_PLATFORM,ALTERNATE_NUMBER_OTP,ONBOARD_SUPPORT_SMS_TEMPLATE,END_RIDE_MESSAGE,ONBOARDING_YATRI_MESSAGE,BOOKING_MESSAGE,CASH_COLLECTED_MESSAGE,SEND_PAYMENT_LINK,WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,WHATSAPP_SETUP_AUTOPAY_MESSAGE,WHATSAPP_SWITCH_PLAN_MESSAGE,WHATSAPP_HOW_IT_WORKS_MESSAGE,SMS_CLEAR_DUES_CALL_MISSED_MESSAGE,SMS_CLEAR_DUES_MESSAGE,SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,SMS_SETUP_AUTOPAY_MESSAGE,SMS_SWITCH_PLAN_MESSAGE,SMS_HOW_IT_WORKS_MESSAGE,WHATSAPP_SETUP_MANDATE_MESSAGE,WHATSAPP_VEHICLE_UNLINKED_MESSAGE,WHATSAPP_VEHICLE_LINKED_MESSAGE,YATRI_RENTAL_PAUSE,YATRI_RENTAL_RESUME,WHATSAPP_SEND_MANUAL_PAYMENT_LINK
+      enum: SEND_OTP,WELCOME_TO_PLATFORM,ALTERNATE_NUMBER_OTP,ONBOARD_SUPPORT_SMS_TEMPLATE,END_RIDE_MESSAGE,ONBOARDING_YATRI_MESSAGE,BOOKING_MESSAGE,CASH_COLLECTED_MESSAGE,SEND_PAYMENT_LINK,WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,WHATSAPP_SETUP_AUTOPAY_MESSAGE,WHATSAPP_SWITCH_PLAN_MESSAGE,WHATSAPP_HOW_IT_WORKS_MESSAGE,SMS_CLEAR_DUES_CALL_MISSED_MESSAGE,SMS_CLEAR_DUES_MESSAGE,SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,SMS_SETUP_AUTOPAY_MESSAGE,SMS_SWITCH_PLAN_MESSAGE,SMS_HOW_IT_WORKS_MESSAGE,WHATSAPP_SETUP_MANDATE_MESSAGE,WHATSAPP_VEHICLE_UNLINKED_MESSAGE,WHATSAPP_VEHICLE_LINKED_MESSAGE,YATRI_RENTAL_PAUSE,YATRI_RENTAL_RESUME,WHATSAPP_SEND_MANUAL_PAYMENT_LINK,SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE
 
     MediaChannel:
       enum: SMS,WHATSAPP,OVERLAY,ALERT
@@ -765,6 +767,7 @@ TransporterConfig:
     useSilentFCMForForwardBatch: Bool
     fareRecomputeDailyExtraKmsThreshold: HighPrecMeters
     fareRecomputeWeeklyExtraKmsThreshold: HighPrecMeters
+    toNotifyDriverForExtraKmsLimitExceed: Bool
   beamType:
     currency: Maybe Currency
     driverPaymentCycleBuffer: Seconds
@@ -1032,6 +1035,7 @@ TransporterConfig:
     useSilentFCMForForwardBatch: "false"
     fareRecomputeDailyExtraKmsThreshold: "5000"
     fareRecomputeWeeklyExtraKmsThreshold: "20000"
+    toNotifyDriverForExtraKmsLimitExceed: "True"
 
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -1108,3 +1112,65 @@ MerchantServiceConfig:
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
     - EXTRA_QUERY_FILE
+
+MerchantPushNotification:
+  tableName: merchant_push_notification
+  derives: "Generic,Show,ToJSON,FromJSON"
+  fields:
+    key: Text
+    title: Text
+    body: Text
+    language: Language
+    fcmNotificationType: FCMNotificationType
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    key: PrimaryKey
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+    findByMerchantOpCityIdAndMessageKey:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, key]
+
+RideRelatedNotificationConfig:
+  tableName : ride_related_notification_config
+  derives: "Generic,Show,ToJSON,FromJSON"
+  types:
+    NotificationType:
+      enum: "SMS,PN,WHATSAPP,OVERLAY,CALL"
+    TimeDiffEvent:
+      enum: "RIDE_ASSIGNED,PICKUP_TIME,START_TIME,END_TIME"
+    EventTime:
+      enum: "PreEvent,PostEvent,OnEvent"
+  fields:
+    id: Id RideRelatedNotificationConfig
+    timeDiff : NominalDiffTime
+    timeDiffEvent: TimeDiffEvent
+    notificationType: NotificationType
+    notificationKey: Text
+    onBookingStatus: BookingStatus
+    onScheduledBooking: Bool
+    onlyIfOffline: Bool
+    eventTime: EventTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  beamType:
+    timeDiff: Seconds
+  toTType:
+    timeDiff: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+  fromTType:
+    timeDiff: Kernel.Utils.Common.secondsToNominalDiffTime|I
+  constraints:
+    key: PrimaryKey
+    merchantOperatingCityId: PrimaryKey
+  queries:
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+    findAllByMerchantOperatingCityIdAndTimeDiffEvent:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, timeDiffEvent]

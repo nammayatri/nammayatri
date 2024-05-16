@@ -872,6 +872,43 @@ getNotificationSound tag notificationSoundFromConfig =
     (_, Just ns) -> ns.defaultSound
     (_, _) -> Nothing
 
+data NotifReq = NotifReq
+  { title :: Text,
+    message :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, Show)
+
+notifyPersonOnEvents ::
+  ServiceFlow m r =>
+  Person ->
+  NotifReq ->
+  Notification.Category ->
+  m ()
+notifyPersonOnEvents person entityData notifType = do
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType notifType merchantOperatingCityId
+  let notificationSound = NSC.defaultSound =<< notificationSoundFromConfig
+  let notificationData =
+        Notification.NotificationReq
+          { category = notifType,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product person.id.getId (),
+            body = body,
+            title = title,
+            dynamicParams = EmptyDynamicParam,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing,
+            sound = notificationSound
+          }
+      title = entityData.title
+      body =
+        unwords
+          [ entityData.message
+          ]
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+
 notifyTicketCancelled :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> Person.Person -> m ()
 notifyTicketCancelled ticketBookingId ticketBookingCategoryName person = do
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.CANCELLED_PRODUCT person.merchantOperatingCityId

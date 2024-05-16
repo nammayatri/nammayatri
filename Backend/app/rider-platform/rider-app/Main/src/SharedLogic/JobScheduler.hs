@@ -20,9 +20,11 @@ module SharedLogic.JobScheduler where
 
 import Data.Singletons.TH
 import Domain.Types.Booking
+import qualified Domain.Types.Extra.Booking as DEB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
+import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
@@ -30,6 +32,7 @@ import Lib.Scheduler
 
 data RiderJobType
   = CheckPNAndSendSMS
+  | ScheduledRideNotificationsToRider
   | OtherJobTypes
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
@@ -39,6 +42,7 @@ showSingInstance ''RiderJobType
 instance JobProcessor RiderJobType where
   restoreAnyJobInfo :: Sing (e :: RiderJobType) -> Text -> Maybe (AnyJobInfo RiderJobType)
   restoreAnyJobInfo SCheckPNAndSendSMS jobData = AnyJobInfo <$> restoreJobInfo SCheckPNAndSendSMS jobData
+  restoreAnyJobInfo SScheduledRideNotificationsToRider jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideNotificationsToRider jobData
   restoreAnyJobInfo SOtherJobTypes jobData = AnyJobInfo <$> restoreJobInfo SOtherJobTypes jobData
 
 data CheckPNAndSendSMSJobData = CheckPNAndSendSMSJobData
@@ -56,6 +60,22 @@ data CheckPNAndSendSMSJobData = CheckPNAndSendSMSJobData
 instance JobInfoProcessor 'CheckPNAndSendSMS
 
 type instance JobContent 'CheckPNAndSendSMS = CheckPNAndSendSMSJobData
+
+data ScheduledRideNotificationsToRiderJobData = ScheduledRideNotificationsToRiderJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    timeDiffEvent :: DRN.TimeDiffEvent,
+    bookingStatus :: DEB.BookingStatus,
+    notificationType :: DRN.NotificationType,
+    notificationKey :: Text,
+    bookingId :: Id Booking,
+    personId :: Id Person
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ScheduledRideNotificationsToRider
+
+type instance JobContent 'ScheduledRideNotificationsToRider = ScheduledRideNotificationsToRiderJobData
 
 data OtherJobTypesJobData = OtherJobTypesJobData
   { bookingId :: Id Booking,

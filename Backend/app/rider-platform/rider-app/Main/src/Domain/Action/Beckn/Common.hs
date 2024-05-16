@@ -31,10 +31,12 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Beam.Functions
 import Kernel.Beam.Functions as B
 import qualified Kernel.External.Maps as Maps
+import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
@@ -47,10 +49,12 @@ import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.MerchantConfig as SMC
+import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRRN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.ClientPersonInfo as QCP
@@ -207,6 +211,7 @@ rideAssignedReqHandler ::
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    SchedulerFlow r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r
@@ -218,7 +223,8 @@ rideAssignedReqHandler req = do
   void $ QRB.updateBPPBookingId req.booking.id bppBookingId
   let booking = req.booking {DRB.bppBookingId = Just bppBookingId}
   mbMerchant <- CQM.findById booking.merchantId
-  ride <- buildRide mbMerchant booking req.bookingDetails req.previousRideEndPos
+  now <- getCurrentTime
+  ride <- buildRide mbMerchant booking req.bookingDetails req.previousRideEndPos now
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
   let category = case booking.specialLocationTag of
         Just _ -> "specialLocation"
@@ -234,12 +240,14 @@ rideAssignedReqHandler req = do
     when req.isDriverBirthDay $ do
       Notify.notifyDriverBirthDay booking.riderId driverName
   withLongRetry $ CallBPP.callTrack booking ride
+
+  notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
+  notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
   where
-    buildRide :: (MonadFlow m, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> m DRide.Ride
-    buildRide mbMerchant booking BookingDetails {..} previousRideEndPos = do
+    buildRide :: (MonadFlow m, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> m DRide.Ride
+    buildRide mbMerchant booking BookingDetails {..} previousRideEndPos now = do
       guid <- generateGUID
       shortId <- generateShortId
-      now <- getCurrentTime
       deploymentVersion <- asks (.version)
       let fromLocation = booking.fromLocation
           toLocation = case booking.bookingDetails of
@@ -286,6 +294,9 @@ rideAssignedReqHandler req = do
             tollConfidence = Nothing,
             ..
           }
+    notifyRideRelatedNotificationOnEvent booking ride now timeDiffEvent = do
+      rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId timeDiffEvent
+      forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now)
 
 rideStartedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
@@ -294,6 +305,7 @@ rideStartedReqHandler ::
     MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
+    SchedulerFlow r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
@@ -321,6 +333,9 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
   _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
   _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_STARTED {rideId = ride.id, bookingId = booking.id, trackingUrl = ride.trackingUrl, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
+  now <- getCurrentTime
+  rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId DRN.START_TIME
+  forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updRideForStartReq (fromMaybe now rideStartTime))
   unless isInitiatedByCronJob $ do
     fork "notify emergency contacts" $ Notify.notifyRideStartToEmergencyContacts booking ride
     Notify.notifyOnRideStarted booking ride
@@ -333,6 +348,7 @@ rideCompletedReqHandler ::
     EncFlow m r,
     EsqDBReplicaFlow m r,
     ClickhouseFlow m r,
+    SchedulerFlow r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
@@ -383,6 +399,9 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
   when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId
   unless (booking.status == DRB.COMPLETED) $ void $ QRB.updateStatus booking.id DRB.COMPLETED
+  now <- getCurrentTime
+  rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId DRN.END_TIME
+  forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updRide (fromMaybe now rideEndTime))
   when (isJust paymentStatus && booking.paymentStatus /= Just DRB.PAID) $ QRB.updatePaymentStatus booking.id (fromJust paymentStatus)
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
   _ <- QRide.updateMultiple updRide.id updRide

@@ -31,10 +31,12 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import Environment (Flow)
 import EulerHS.Prelude
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
+import Kernel.External.Types (SchedulerFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -47,7 +49,9 @@ import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
@@ -98,7 +102,7 @@ buildStartRideHandle merchantId merchantOpCityId = do
 type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r)
 
 driverStartRide ::
-  (StartRideFlow m r) =>
+  (StartRideFlow m r, SchedulerFlow r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverStartRideReq ->
@@ -109,7 +113,7 @@ driverStartRide handle rideId req =
     $ DriverReq req
 
 dashboardStartRide ::
-  (StartRideFlow m r) =>
+  (StartRideFlow m r, SchedulerFlow r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardStartRideReq ->
@@ -120,7 +124,7 @@ dashboardStartRide handle rideId req =
     $ DashboardReq req
 
 startRide ::
-  (StartRideFlow m r) =>
+  (StartRideFlow m r, SchedulerFlow r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   StartRideReq ->
@@ -185,6 +189,10 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
     withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking updatedRide (Just point)
 
   fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride
+
+  rideRelatedNotificationConfigList <- CRN.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId DRN.START_TIME
+  forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updatedRide now driverId)
+
   pure APISuccess.Success
   where
     isValidRideStatus status = status == DRide.NEW
