@@ -110,7 +110,7 @@ initiateCallToDriver rideId = do
   let callReq =
         Call.InitiateCallReq
           { fromPhoneNum = customerPhone,
-            toPhoneNum = providerPhone,
+            toPhoneNum = Just providerPhone,
             attachments = Call.Attachments $ CallAttachments {callStatusId = callStatusId, rideId = rideId}
           }
   let merchantOperatingCityId = booking.merchantOperatingCityId

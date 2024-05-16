@@ -58,6 +58,7 @@ data MessageKey
   | YATRI_RENTAL_PAUSE
   | YATRI_RENTAL_RESUME
   | WHATSAPP_SEND_MANUAL_PAYMENT_LINK
+  | SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe
