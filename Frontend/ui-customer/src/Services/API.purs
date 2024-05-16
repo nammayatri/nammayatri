@@ -610,12 +610,19 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   estimatedFare :: Int,
   tripTerms :: Array String,
   id :: String,
-  agencyCompletedRidesCount :: Int,
+  agencyCompletedRidesCount :: Maybe Int,
   estimateFareBreakup :: Maybe (Array EstimateFares),
   totalFareRange :: Maybe FareRange,
   nightShiftRate :: Maybe NightShiftRate,
   specialLocationTag :: Maybe String,
-  driversLatLong :: Array LatLong
+  driversLatLong :: Array LatLong,
+  serviceTierName :: Maybe String,
+  serviceTierShortDesc :: Maybe String,
+  airConditioned :: Maybe Boolean,
+  providerName :: Maybe String,
+  providerId :: Maybe String,
+  isValueAddNP :: Maybe Boolean, --true if entity is from ny
+  validTill :: String
 }
 
 newtype NightShiftRate = NightShiftRate {

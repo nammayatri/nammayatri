@@ -26,7 +26,7 @@ import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Pay
 import Components.LocationListItem.Controller (locationListStateObj)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume, runFree)
-import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find)
+import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find, elem)
 import Data.Array.NonEmpty (fromArray)
 import Data.Boolean (otherwise)
 import Data.Date (Date)
@@ -92,8 +92,7 @@ import MerchantConfig.Types (CityConfig)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Constants (defaultDensity)
 import Mobility.Prelude
-import MerchantConfig.Types 
-import Common.Resources.Constants (assetDomain)
+import MerchantConfig.Types
 import Common.Types.App as CT
 
 foreign import shuffle :: forall a. Array a -> Array a
@@ -531,6 +530,7 @@ getScreenFromStage stage = case stage of
   FavouriteLocationModel -> "search_location_screen"
   ChatWithDriver -> "trip_accepted_screen"
   FindEstimateAndSearch -> "finding_rides_screen"
+  RetryFindingQuote -> "finding_rides_screen"
   DistanceOutsideLimits -> "finding_driver_loader"
   ShortDistance -> "finding_driver_loader"
   TryAgain -> "finding_rides_screen"
@@ -790,59 +790,6 @@ formatFareType fareType =
   in
   spaceSeparatedPascalCase str
 
-newtype CityMetroConfig = CityMetroConfig { 
-    logoImage :: String
-  , title :: String
-  , mapImage :: String
-  , bannerImage :: String
-  , bannerBackgroundColor :: String
-  , bannerTextColor :: String
-  , termsAndConditionsUrl :: String
-  , termsAndConditions :: Array String
-  , errorPopupTitle :: String
-  , showCancelButton :: Boolean
-}
-
-getMetroConfigFromAppConfig :: AppConfig -> String -> MetroConfig
-getMetroConfigFromAppConfig config city = do
-  let cityConfig = find (\cityCfg -> cityCfg.cityName == toLower city) config.metroTicketingConfig
-  case cityConfig of
-    Nothing -> {
-        cityName : ""
-      , cityCode : ""
-      , customEndTime : "01:00:00" 
-      , customDates : ["23/04/2024","28/04/2024","01/05/2024","12/05/2024"] 
-      , metroStationTtl : 10080
-      , bookingStartTime : "04:30:00"
-      , bookingEndTime : "22:30:00"
-      , ticketLimit : {
-          oneWay : 6
-        , roundTrip : 6
-      }
-     }
-    Just cfg -> cfg
-
-getMetroConfigFromCity :: City -> CityMetroConfig
-getMetroConfigFromCity city =
-  case city of
-    Kochi -> mkCityBasedConfig "ny_ic_kochi_metro" (getString TICKETS_FOR_KOCHI_METRO) "ny_ic_kochi_metro_map" "ny_ic_kochi_metro_banner" "#F5FFFF" "#02B0AF" "https://metro-terms.triffy.in/kochi/index.html" [getString KOCHI_METRO_TERM_1 ,getString KOCHI_METRO_TERM_2] (getString KOCHI_METRO_TIME)  true
-    Chennai -> mkCityBasedConfig "ny_ic_chennai_metro" (getString TICKETS_FOR_CHENNAI_METRO) "ny_ic_chennai_metro_map" "ny_ic_chennai_metro_banner" "#D8E2FF" "#2250BF" "https://metro-terms.triffy.in/chennai/index.html" [getString CHENNAI_METRO_TERM_2 ,getString CHENNAI_METRO_TERM_1] (getString $ CHENNAI_METRO_TIME "04:30:00" "22:30:00") false
-    _ -> mkCityBasedConfig "" "" "" "" "" "" "" [] "" false
-  where
-    mkCityBasedConfig logoImage title mapImage bannerImage bannerBackgroundColor bannerTextColor termsAndConditionsUrl termsAndConditions errorPopupTitle showCancelButton = 
-      CityMetroConfig
-        { logoImage
-        , title
-        , mapImage
-        , bannerImage
-        , bannerBackgroundColor
-        , bannerTextColor
-        , termsAndConditionsUrl
-        , termsAndConditions
-        , errorPopupTitle
-        , showCancelButton
-        }
-        
 getImageBasedOnCity :: String -> String
 getImageBasedOnCity image =
   let cityStr = getValueToLocalStore CUSTOMER_LOCATION

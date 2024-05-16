@@ -7,6 +7,8 @@ import Data.Show.Generic (genericShow)
 import Foreign.Generic (decode, encode, class Decode, class Encode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (Margin(..))
+import Common.Types.App as CT
+import Data.Maybe (Maybe(..))
 
 data Action
   = NoAction
@@ -26,7 +28,7 @@ type Config
     , index :: Int
     , activeIndex :: Int
     , id :: String
-    , maxPrice :: Int
+    , maxPrice :: Maybe Int
     , basePrice :: Int
     , showInfo :: Boolean
     , searchResultType :: CT.SearchResultType
@@ -34,9 +36,6 @@ type Config
     , pickUpCharges :: Int 
     , layoutMargin :: Margin 
     , showStroke :: Boolean
-    , providerName :: String
-    , providerId :: String
-    , providerType :: CT.ProviderType
     , singleVehicle :: Boolean
     , priceShimmer :: Boolean
     , availableServices :: Array String
@@ -46,6 +45,7 @@ type Config
     , selectedEstimateHeight :: Int
     , validTill :: String
     , specialLocationTag :: Maybe String
+    , serviceTierName :: Maybe String
     }
 
 
@@ -62,7 +62,7 @@ config =
   , activeIndex: 0
   , index: 0
   , id: ""
-  , maxPrice : 123
+  , maxPrice : Nothing
   , basePrice : 0 
   , showInfo : false
   , searchResultType : CT.QUOTES CT.ONE_WAY
@@ -70,22 +70,7 @@ config =
   , pickUpCharges : 0
   , layoutMargin : MarginHorizontal 12 12
   , showStroke : true
-  , tollCharge : 0.0
-  , serviceTierShortDesc : Nothing
   , serviceTierName : Nothing
-  , extraFare: []
-  , additionalFare: 0
-  , fareInfoDescription: []
-  , driverAdditions: []
-  , isNightShift : false
-  , nightChargeTill : ""
-  , nightChargeFrom : ""
-  , airConditioned : Nothing
-  , showEditButton : false
-  , editBtnText : ""
-  , providerName : ""
-  , providerId : ""
-  , providerType : CT.ONUS
   , singleVehicle : false
   , priceShimmer : true
   , availableServices : []

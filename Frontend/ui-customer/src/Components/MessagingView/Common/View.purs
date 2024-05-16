@@ -118,7 +118,11 @@ messageNotificationView push state =
   , accessibility $ if state.isNotificationExpanded && os /= "IOS" then ENABLE else if not state.isNotificationExpanded then DISABLE_DESCENDANT else DISABLE
   , accessibilityHint $ "Quick Chat : Widget"
   , onAnimationEnd push $ const state.messageViewAnimationEnd
-  , visibility $ boolToVisibility $ (((any (_ == state.currentStage)) [ RideAccepted, ChatWithDriver, RideStarted]) && state.currentSearchResultType /= CT.QUOTES CT.OneWaySpecialZoneAPIDetails && state.config.feature.enableChat) && state.config.feature.enableSuggestions && not state.removeNotification
+  , visibility $ if ((not state.showNotificationBanner) && state.currentSearchResultType == CT.ESTIMATES && state.config.feature.enableChat) && state.config.feature.enableSuggestions 
+                  then VISIBLE 
+                  else if state.showNotificationBanner && os == "IOS" 
+                    then INVISIBLE 
+                    else GONE
   , cornerRadius 20.0
   ][linearLayout 
     [ height $ WRAP_CONTENT

@@ -44,10 +44,7 @@ import PrestoDOM (BottomSheetState(..), Accessiblity(..), Gradient(..), Gravity(
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Resources.Localizable.EN (getEN)
-import Screens.Types (Stage(..), ZoneType(..), SheetState(..), City(..), NavigationMode(..))
-import Storage (KeyStore(..))
-import Storage ( getValueToLocalStore, KeyStore(..)) as STO
+import Screens.Types (Stage(..), ZoneType(..), SheetState(..),City(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
@@ -87,7 +84,7 @@ driverInfoViewSpecialZone push state =
   linearLayout
   [ width  MATCH_PARENT
   , height WRAP_CONTENT
-  , visibility if state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails then VISIBLE else GONE
+  , visibility $ boolToVisibility $ state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -138,303 +135,6 @@ driverInfoViewSpecialZone push state =
             ]
           ]
       ]
-  ]
-
-sizedBox :: forall w. Length -> Length -> PrestoDOM ( Effect Unit) w
-sizedBox height' width' = 
-  linearLayout
-  [ height height'
-  , width width'
-  , accessibility DISABLE
-  , accessibility DISABLE_DESCENDANT
-  ][]
-
-shareRideButton :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
-shareRideButton push state = 
-  linearLayout
-  [ height $ WRAP_CONTENT
-  , width $ WRAP_CONTENT
-  , orientation VERTICAL
-  , clickable $ state.data.providerType == ONUS
-  , accessibility DISABLE
-  , clipChildren false
-  ][ linearLayout
-     [ width $ V 40
-     , height $ V 40
-     , gravity CENTER
-     , background Color.white900
-     , stroke $ "1,"<> Color.grey900
-     , cornerRadius if os == "IOS" then 20.0 else 32.0
-     , clickable $ state.data.providerType == ONUS
-     , accessibilityHint "Share Ride : Button : Select to share ride details"
-     , accessibility ENABLE
-     , onClick push $ const ShareRide
-     , margin $ Margin 8 8 8 8
-     , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
-     , rippleColor Color.rippleShade
-     ][ imageView
-       [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_share_icon"
-       , height $ V 16
-       , width $ V 16
-       , accessibility DISABLE
-       , alpha if state.data.providerType == ONUS then 1.0 else 0.5
-       ]
-     ]
-  ]
-
-contactSupport :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
-contactSupport push state =
-  linearLayout
-  [ width $ V 40
-  , height $ V 40
-  , gravity CENTER
-  , clickable true
-  , margin $ Margin 8 8 8 8
-  , background Color.white900
-  , stroke $ "1,"<> Color.grey900
-  , cornerRadius if os == "IOS" then 20.0 else 32.0
-  , onClick push $ const RideSupport
-  , accessibilityHint "Contact Support : Button"
-  , accessibility ENABLE
-  , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
-  , rippleColor Color.rippleShade
-  ][ imageView
-    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_contact_support"
-    , height $ V 16
-    , width $ V 16
-    , accessibility DISABLE
-    ]
-  ]
-
-otpAndWaitView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
-otpAndWaitView push state =
-  horizontalScrollView
-  [ height $ V 56
-  , width $ V $ (screenWidth unit) - 56
-  , disableKeyboardAvoidance true
-  , scrollBarX false
-  , scrollBarY false
-  , gravity CENTER
-  , accessibility DISABLE
-  ][ linearLayout
-     [ height$ V 56
-     , width MATCH_PARENT
-     , orientation HORIZONTAL
-     , clipChildren false
-     , clickable true
-     , accessibility DISABLE
-     ]([linearLayout
-       [ width WRAP_CONTENT
-       , height $ V 40
-       , cornerRadius if os == "IOS" then 20.0 else 32.0
-       , background Color.white900
-       , gravity CENTER
-       , visibility $ boolToVisibility $ rideNotStarted state
-       , clickable true
-       , accessibility DISABLE
-       , margin $ Margin 8 8 6 8
-       , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
-       ][ textView $
-          [ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , accessibilityHint $ "O T P : " <> (STR.replaceAll (STR.Pattern "") (STR.Replacement " ")  state.data.otp)
-          , accessibility ENABLE
-          , text $ getString OTP
-          , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
-          , color Color.black700
-          ] <> FontStyle.body26 TypoGraphy
-        , otpView push state
-        ]
-      -- , trackRideView push state -- TODO :: may use in future
-     ] <> if (state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails || state.data.driverArrived) then 
-           [(PrestoAnim.animationSet [ fadeIn true ] $ 
-           let isQuotes = state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails
-           in
-           linearLayout
-           [ width WRAP_CONTENT
-           , height $ V 40
-           , visibility $ boolToVisibility $ rideNotStarted state
-           , cornerRadius if os == "IOS" then 20.0 else 32.0
-           , background Color.white900
-           , clickable true
-           , onClick push $ const $ if state.props.isRateCardAvailable then WaitingInfo else NoAction
-           , gravity CENTER
-           , accessibility DISABLE
-           , margin $ Margin 6 8 8 8
-           , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
-           ][ textView $ 
-             [ width WRAP_CONTENT
-             , height WRAP_CONTENT
-             , accessibility ENABLE
-             , accessibilityHint $ (if isQuotes then "O T P Expiry Info" else "Wait time info : ") <> "Button : Select to learn more about " <> if isQuotes then "O T P Expiry Time" else "wait time"   
-             , text $ if isQuotes then getString EXPIRES_IN else getString WAIT_TIME
-             , color Color.black700
-             , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
-             ] <> FontStyle.body26 TypoGraphy
-           , imageView
-               [ height $ V 12
-               , width  $ V 12
-               , gravity CENTER_VERTICAL
-               , accessibility DISABLE
-               , margin $ MarginRight 4
-               , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
-               , visibility $ boolToVisibility state.props.isRateCardAvailable 
-               ]
-           , waitTimeView push state
-           ])]
-         else [])
-  ]
-  
-
-shineAnimation :: forall w . Int -> Int -> PrestoDOM (Effect Unit) w
-shineAnimation height' width' =
-  linearLayout
-  [ height $ MATCH_PARENT
-  , width $ WRAP_CONTENT
-  , gravity CENTER_VERTICAL
-  , cornerRadius 16.0
-  , clipChildren true
-  , clipToPadding true
-  ][ PrestoAnim.animationSet
-    [ shimmerAnimation (-100) width' 1500
-    ] $ linearLayout
-        [ width $ V $ width'
-        , height $ MATCH_PARENT
-        , gravity CENTER_VERTICAL
-        ][ linearLayout
-          [ width $ V 10
-          , height $ V $ height'
-          , background Color.white200
-          , rotation 20.0
-          , cornerRadius 2.0
-          , margin $ MarginHorizontal 10 8
-          ][]
-         , linearLayout
-           [ width $ V 5
-           , height $ V $ height'
-           , background Color.white200
-           , rotation 20.0
-           , cornerRadius 2.0
-           , margin $ MarginRight 20
-           ][]
-        ]
-  ]
-
-waitTimeView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
-waitTimeView push state =
-  linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , cornerRadius 16.0
-  , margin $ Margin 0 4 4 4
-  , background $ colorForWaitTime state
-  , gravity CENTER_VERTICAL
-  , accessibility DISABLE
-  ][ textView $ 
-     [ height $ WRAP_CONTENT 
-     , width $ V $ 60
-     , padding $ Padding 0 4 0 6
-     , accessibilityHint $ waitTimeHint state
-     , accessibility ENABLE 
-     , text $ state.data.waitingTime
-     , color Color.black900
-     , gravity CENTER
-     , singleLine true
-     ] <> FontStyle.body26 TypoGraphy
-  ]
-
-waitTimeHint :: DriverInfoCardState -> String
-waitTimeHint state = (if state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails then "O T P Expires in : " else "Wait Time : ") <> case STR.split (STR.Pattern ":") state.data.waitingTime of
-                        [minutes, seconds] -> do 
-                          let min = STR.trim $ minutes
-                          let sec = STR.trim $ seconds
-                          if min /= "00" then min <> " Minutes and " <> sec <> " Seconds" else sec <> " Seconds" 
-                        _ -> ""
-
-colorForWaitTime:: DriverInfoCardState -> String
-colorForWaitTime state =
-  let waitTime = STR.split (STR.Pattern ":") state.data.waitingTime
-  in
-  case waitTime of
-    [minutes, _] -> 
-      let mins = fromMaybe 0 (fromString (STR.trim minutes))
-          threshold = if state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails then mins < 5 else mins > 2
-      in
-      if threshold then Color.carnation100 else Color.grey700 
-    _ -> Color.grey700
-
-
-otpView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
-otpView push state =
-  let otpDimensions = runFn1 getLayoutBounds $ getNewIDWithTag "OTPView"
-      shimmerHeight = (getDefaultPixelSize (otpDimensions.height)) + 3
-      shimmerWidth = (getDefaultPixelSize (otpDimensions.width)) - (if os == "IOS" then 3 else 10)
-  in
-  relativeLayout
-  [ height $ MATCH_PARENT
-  , width $ WRAP_CONTENT
-  , cornerRadius 16.0
-  , accessibility DISABLE_DESCENDANT
-  ][linearLayout
-      [ height MATCH_PARENT
-      , width WRAP_CONTENT
-      , cornerRadius 16.0
-      , id $ getNewIDWithTag "OTPView"
-      , margin $ Margin 0 4 4 4
-      , gravity CENTER_VERTICAL
-      , background Color.grey700
-      ][ textView $ 
-        [ text $ state.data.otp
-        , color Color.black900
-        , width MATCH_PARENT
-        , height MATCH_PARENT
-        , padding $ Padding 8 4 8 6
-        ] <> FontStyle.body26 TypoGraphy
-      ]
-  , shineAnimation shimmerHeight shimmerWidth
-  ]
-
-trackRideView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
-trackRideView push state =
-  PrestoAnim.animationSet[fadeIn true] $
-  linearLayout
-  [ height $ V 56
-  , width WRAP_CONTENT
-  , clipChildren false
-  , clickable true
-  , visibility $ boolToVisibility $ not $ rideNotStarted state
-  ][ linearLayout
-    [ height $ V 40
-    , width WRAP_CONTENT
-    , background Color.white900
-    , cornerRadius if os == "IOS" then 20.0 else 32.0
-    , padding $ PaddingHorizontal 12 12
-    , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
-    , rippleColor Color.rippleShade
-    , clickable true
-    , margin $ Margin 8 8 8 8
-    , onClick push $ const $ StartLocationTracking "GOOGLE_MAP"
-    , gravity CENTER
-    , accessibility ENABLE
-    , accessibilityHint $ "Real Time Tracking on Google Maps : Button"
-    , accessibility DISABLE_DESCENDANT
-    ][ linearLayout
-      [ height $ WRAP_CONTENT
-      , width $ WRAP_CONTENT
-      ][ imageView
-          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_nav_grey"
-          , height $ V 16
-          , width $ V 16
-          , accessibilityHint "Track on Gooole Maps : Button"
-          , accessibility ENABLE
-          , margin $ MarginRight 4
-          ]
-        , textView $ 
-          [ text $ getString TRACK_ON_GOOGLE_MAPS
-          , color Color.black800
-          ] <> FontStyle.body9 TypoGraphy
-      ]
-    ]
   ]
 
 titleAndETA :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
@@ -509,7 +209,7 @@ navigateView push state =
   , accessibility ENABLE
   , accessibilityHint $ (getEN $ GO_TO_ZONE "GO_TO_ZONE") <> " : Button"
   , accessibility DISABLE_DESCENDANT
-  , visibility $ boolToVisibility $ state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails && rideNotStarted state
+  , visibility $ boolToVisibility $ state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails && state.props.currentStage == RideAccepted
   , onClick push $ const $ OnNavigateToZone
   ][ imageView
      [ width $ V 20
@@ -531,7 +231,7 @@ driverInfoView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , visibility if state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails then GONE else VISIBLE
+  , visibility $ boolToVisibility $ state.props.currentSearchResultType /= QUOTES OneWaySpecialZoneAPIDetails
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT

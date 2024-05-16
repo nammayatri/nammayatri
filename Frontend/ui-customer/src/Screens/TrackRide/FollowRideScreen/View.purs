@@ -288,41 +288,6 @@ followerItem item push =
         ]
     ]
 
-getMessageNotificationViewConfig :: FollowRideScreenState -> MessageNotificationView Action
-getMessageNotificationViewConfig state =
-  let config = MessagingView.config
-      driverInfoCard = fromMaybe mockDriverInfo state.data.driverInfoCardState
-      currentFollower = getCurrentFollower state.data.currentFollower
-      name = fromMaybe currentFollower.mobileNumber currentFollower.name
-      removeNotification = if state.props.isRideStarted && not state.props.currentUserOnRide && currentFollower.priority == 0 
-                              then state.props.removeNotification 
-                              else true
-  in {
-    showChatNotification : state.props.showChatNotification
-  , enableChatWidget : state.props.enableChatWidget
-  , isNotificationExpanded :state.props.isNotificationExpanded
-  , currentSearchResultType : Common.ESTIMATES
-  , config : state.data.config
-  , rideStarted : true
-  , lastMessage : state.data.lastMessage
-  , lastSentMessage : state.data.lastSentMessage
-  , lastReceivedMessage : state.data.lastReceivedMessage
-  , removeNotificationAction : RemoveNotification
-  , messageViewAnimationEnd : MessageViewAnimationEnd
-  , messageReceiverAction : MessageEmergencyContact
-  , sendQuickMessageAction : SendQuickMessage
-  , timerCounter : state.data.counter
-  , messageExpiryAction : MessageExpiryTimer
-  , chatSuggestions : getChatSuggestions state
-  , messages : state.data.messages
-  , removeNotification : removeNotification
-  , currentStage : RideStarted
-  , suggestionKey : emChatSuggestion
-  , user :{ userName : name
-    , receiver : name
-    }
-  }
-
 bottomSheetView ::
   forall w.
   (Action -> Effect Unit) ->

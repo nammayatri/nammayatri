@@ -130,20 +130,20 @@ eval (GetRentalQuotes (GetQuotesRes quoteRes)) state = do
       filteredQuoteList = (getFilteredQuotes quoteRes.quotes state.data.config.estimateAndQuoteConfig)
       sortedByFare = DA.sortBy compareByFare filteredQuoteList
       rentalsQuoteList =  (DA.mapWithIndex (\index quote -> 
-    let quoteDetails = getSpecialZoneQuote quote index 
-        currIndex = index 
-        activeIndex = 0 
-        fareDetails = case quote of 
-          RentalQuotes body -> 
-            let (QuoteAPIEntity quoteEntity) = body.onRentalCab
-            in case (quoteEntity.quoteDetails)^._contents of
-              (RENTAL contents) -> 
-                let (RentalQuoteAPIDetails quoteDetails) = contents 
-                in (transFormQuoteDetails quoteDetails)
-              _ -> dummyFareQuoteDetails
-          _  -> dummyFareQuoteDetails
-    in { quoteDetails : quoteDetails, index : currIndex, activeIndex : 0 , fareDetails : fareDetails}
-    ) sortedByFare)
+        let quoteDetails = getSpecialZoneQuote quote index 
+            currIndex = index 
+            activeIndex = 0 
+            fareDetails = case quote of 
+              RentalQuotes body -> 
+                let (QuoteAPIEntity quoteEntity) = body.onRentalCab
+                in case (quoteEntity.quoteDetails)^._contents of
+                  (RENTAL contents) -> 
+                    let (RentalQuoteAPIDetails quoteDetails) = contents 
+                    in (transFormQuoteDetails quoteDetails)
+                  _ -> dummyFareQuoteDetails
+              _  -> dummyFareQuoteDetails
+        in { quoteDetails : quoteDetails, index : currIndex, activeIndex : 0 , fareDetails : fareDetails}
+        ) sortedByFare)
   continue state { data{rentalsQuoteList = rentalsQuoteList}, props{showShimmer = false, showPrimaryButton = if state.data.currentStage == RENTAL_SELECT_VARIANT then not (DA.null rentalsQuoteList) else true}}
   where 
     transFormQuoteDetails quoteDetails = 

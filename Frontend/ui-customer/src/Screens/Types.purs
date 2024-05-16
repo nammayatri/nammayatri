@@ -688,6 +688,7 @@ data Stage = HomeScreen
            | ChangeToRideAccepted
            | ChangeToRideStarted
            | ConfirmingQuotes
+           | RetryFindingQuote
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -1163,13 +1164,6 @@ type EstimateInfo = {
   extraFare :: Int,
   showRateCardIcon :: Boolean,
   zoneType :: SpecialTags
-}
-
-type EstimatesAndQuotesInfo = {
-    defaultQuote :: ChooseVehicle.Config
-  , nearByDrivers :: Maybe Int
-  , zoneType :: SpecialTags
-  , hasToll :: Boolean
 }
 
 -- ################################## SelectLanguageScreenState ###############################
@@ -2175,13 +2169,6 @@ data LocationActionId = Src | Dest
 derive instance genericLocationActionId :: Generic LocationActionId _
 instance eqLocationActionId :: Eq LocationActionId where eq = genericEq
 instance showLocationActionId :: Show LocationActionId where show = genericShow
-
-
--- ######################################### MetroTicketStatusScreenState ####################################################
-type MetroTicketStatusScreenState = {
-  data :: MetroTicketStatusScreenData,
-  props :: MetroTicketStatusScreenProps
-}
 
 data RentalScreenStage = RENTAL_SELECT_PACKAGE | RENTAL_SELECT_VARIANT | RENTAL_CONFIRMATION
 
