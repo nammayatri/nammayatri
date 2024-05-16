@@ -80,4 +80,6 @@
     <string name="rental"> Rental</string>
     <string name="intercity"> Intercity</string>
     <string name="toll_text">Toll included</string>
+    <string name="new_distance">New Distance :</string>
+    <string name="new_fare">New fare :</string>
 </resources>
