@@ -496,6 +496,10 @@ DriverSSN:
       kvFunction: findOneWithKV
       where: driverId
   excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+
 
 DriverPanCard:
   tableName: driver_pan_card

@@ -327,7 +327,7 @@ postDriverRegisterSsn (mbPersonId, _, _) API.Types.UI.DriverOnboardingV2.SSNReq 
   ssn' <- encrypt ssn
   id' <- generateGUID
   driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  QDriverSSN.create (buildDriverSSN id' ssn' driverId)
+  QDriverSSN.upsert (buildDriverSSN id' ssn' driverId)
   return Success
   where
     buildDriverSSN id' ssn' driverId' =
