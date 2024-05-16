@@ -28,7 +28,7 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data UsageSafety = Safe | Unsafe
 
-data TripCategory = OneWay OneWayMode | RoundTrip RoundTripMode | Rental RentalMode | RideShare RideShareMode | InterCity OneWayMode
+data TripCategory = OneWay OneWayMode | RoundTrip RoundTripMode | Rental RentalMode | RideShare RideShareMode | InterCity OneWayMode | CrossCity OneWayMode
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, PrettyShow, ToJSON, ToSchema)
 
@@ -62,6 +62,7 @@ instance Show TripCategory where
   show (Rental s) = "Rental_" <> show s
   show (RideShare s) = "RideShare_" <> show s
   show (InterCity s) = "InterCity_" <> show s
+  show (CrossCity s) = "CrossCity_" <> show s
 
 instance Read TripCategory where
   readsPrec d' =
