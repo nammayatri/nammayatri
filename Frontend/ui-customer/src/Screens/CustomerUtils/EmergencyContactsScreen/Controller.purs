@@ -1,7 +1,7 @@
 module Screens.EmergencyContactsScreen.Controller where
 
 import Prelude (class Show, bind, compare, discard, map, not, pure, unit, ($), (&&), (+), (-), (/=), (<), (<=), (<>), (==), (>), (>=), (||))
-import PrestoDOM (Eval, ScrollState, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, ScrollState, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
@@ -232,7 +232,7 @@ eval (ContactListAction (ContactsList.ContactCardClicked index)) state = do
 
 eval (ContactListAction (ContactsList.AddContacts)) state = continueWithCmd state [pure AddContacts]
 
-eval _ state = continue state
+eval _ state = update state
 
 startsWith :: String -> String -> Boolean
 startsWith prefix str = DS.take (DS.length prefix) (DS.toLower str) == (DS.toLower prefix)

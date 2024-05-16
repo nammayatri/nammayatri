@@ -20,7 +20,7 @@ import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -32,6 +32,8 @@ import PrestoDOM (BottomSheetState(..), Margin(..))
 import Data.Map as Map 
 import JBridge (Location)
 import Data.HashMap as DHM
+import Common.Types.App as CT
+import MerchantConfig.DefaultConfig as MRC
 
 initData :: HomeScreenState
 initData = {
@@ -65,16 +67,19 @@ initData = {
     , startedAtUTC : ""
     , rateCard : {
        additionalFare : 0,
-       nightShiftMultiplier : 0.0,
-       nightCharges : false,
        currentRateCardType : DefaultRateCard,
        onFirstPage:false,
        baseFare : 0,
        extraFare : [],
-       pickUpCharges : 0,
+       pickUpCharges : 0.0,
        vehicleVariant : "",
        createdTime : "",
-       tollCharge : 0
+       tollCharge : 0.0,
+       driverAdditions : [],
+       fareInfoDescription : [],
+       isNightShift : false,
+       nightChargeTill : "",
+       nightChargeFrom : ""
        }
     , speed : 0
     , selectedLocationListItem : Nothing
@@ -109,25 +114,38 @@ initData = {
       , activeIndex: 0
       , index: 0
       , id: ""
-      , maxPrice : 0
+      , maxPrice : Nothing
+      , minPrice : Nothing
       , basePrice : 0
       , showInfo : true
       , searchResultType : CV.ESTIMATES
       , isBookingOption : false
-      , pickUpCharges : 0
+      , pickUpCharges : 0.0
       , layoutMargin : Margin 0 0 0 0
-      , isSingleEstimate : false
-      , tollCharge : 0
+      , tollCharge : 0.0
       , serviceTierName : Nothing
       , serviceTierShortDesc : Nothing
       , extraFare: []
       , additionalFare: 0
-      , nightShiftMultiplier: 0.0
-      , nightCharges: false
-      , baseFare : 0
+      , driverAdditions: []
+      , fareInfoDescription: []
+      , isNightShift : false
+      , nightChargeTill : ""
+      , nightChargeFrom : ""
       , airConditioned : Nothing
       , showEditButton : false
       , editBtnText : ""
+      , providerName : ""
+      , providerId : ""
+      , providerType : CT.ONUS
+      , singleVehicle : false
+      , priceShimmer : true
+      , services : []
+      , availableServices : []
+      , selectedServices : []
+      , currentEstimateHeight : 184
+      , selectedEstimateHeight : 0
+      , validTill : ""
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -145,6 +163,7 @@ initData = {
         wasOfferedAssistance : Nothing
     }
     , config : getAppConfig appConfig
+    , currentCityConfig : MRC.defaultCityConfig
     , logField : empty
     , nearByDrivers : Nothing
     , disability : Nothing
@@ -167,6 +186,18 @@ initData = {
     , followers : Nothing
     , vehicleVariant : ""
     , hotSpotInfo : []
+    , iopState : {
+        timerId : "",
+        timerVal : "",
+        showMultiProvider : false,
+        providerPrefVisible : false,
+        providerSelectionStage : false,
+        showPrefButton : false,
+        providerPrefInfo : false,
+        hasTopProviderEstimate : true
+    }
+    , otherSelectedEstimates : []
+    , rateCardCache : Nothing
     },
     props: {
       rideRequestFlow : false
@@ -306,7 +337,8 @@ initData = {
     , isChatWithEMEnabled: false
     , referral : {
         referralStatus : NO_REFERRAL,
-        referralCode : Nothing
+        referralCode : Nothing,
+        showAddReferralPopup : false
       }
     , safetyAlertType : Nothing
     , rideSearchProps : {
@@ -320,13 +352,24 @@ initData = {
     , selectedEstimateHeight : 0
     , isSafetyCenterDisabled : false
     , suggestedRideFlow : false
-    , locateOnMapProps : { sourceLocationName : Nothing, sourceGeoJson : Nothing, sourceGates : Nothing, isSpecialPickUpGate : false }
+    , locateOnMapProps : { sourceLocationName : Nothing, sourceGeoJson : Nothing, sourceGates : Nothing, isSpecialPickUpGate : false, cameraAnimatedToSource : true }
     , showSpecialZoneInfoPopup : false
     , hotSpot : { selectedSpot : Nothing, centroidPoint : Nothing }
     , isBannerDataComputed : false
     , repeatRideVariant : ""
     , hasToll : false
     , repeatRideServiceTierName : Nothing
+    , isSearchCancelled : false
+    , referralComponentProps : { stage : NO_REFERRAL_STAGE
+                               , referralCode : Nothing
+                               , applyButtonActive : false
+                               , showReferredUserInfoPopup : false
+                               , showReferralProgramInfoPopup : false 
+                               , isInvalidCode : false 
+                               }
+    , showAcWorkingPopup : false
+    , repeateRideTimerStoped : false
+    , currentEstimateHeight : 184
   }
 }
 
@@ -430,6 +473,10 @@ dummyDriverInfo =
   , destinationAddress : dummyAddress
   , status : ""
   , serviceTierName : Nothing
+  , vehicleModel : ""
+  , vehicleColor : ""
+  , providerName : ""
+  , providerType : CT.ONUS
   }
 
 dummySettingBar :: SettingSideBarState
@@ -544,7 +591,9 @@ dummyRideBooking = RideBookingRes
   hasDisability : Nothing,
   sosStatus: Nothing,
   serviceTierName : Nothing, 
-  airConditioned : Nothing
+  airConditioned : Nothing,
+  isValueAddNP : Nothing,
+  providerName : Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails
@@ -560,11 +609,6 @@ dummyRideBookingDetails = RideBookingDetails {
   otpCode : Nothing
 }
 
-dummyFareBreakUp :: FareBreakupAPIEntity
-dummyFareBreakUp = FareBreakupAPIEntity{
-  amount : 0,
-  description : "fare"
-}
 
 dummyTrip :: Trip
 dummyTrip = {

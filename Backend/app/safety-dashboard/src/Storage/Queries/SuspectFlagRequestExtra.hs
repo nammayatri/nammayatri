@@ -17,8 +17,8 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.SuspectFlagRequest as Beam
 import Storage.Queries.OrphanInstances.SuspectFlagRequest
 
-findAllByDlAndVoterIdAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Kernel.Prelude.Text] -> [Kernel.Prelude.Text] -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
-findAllByDlAndVoterIdAndMerchantId dls voterIds merchantId = do
+findAllByDlAndVoterIdAndMerchantIdAndAdminApproval :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Kernel.Prelude.Text] -> [Kernel.Prelude.Text] -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Domain.Types.SuspectFlagRequest.AdminApproval -> m [Domain.Types.SuspectFlagRequest.SuspectFlagRequest]
+findAllByDlAndVoterIdAndMerchantIdAndAdminApproval dls voterIds merchantId adminApproval = do
   let dlList = map Just dls
       voterIdList = map Just voterIds
   findAllWithKV
@@ -28,10 +28,7 @@ findAllByDlAndVoterIdAndMerchantId dls voterIds merchantId = do
               Se.Is Beam.voterId $ Se.In voterIdList
             ],
           Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId),
-          Se.Or
-            [ Se.Is Beam.adminApproval $ Se.Eq Domain.Types.SuspectFlagRequest.Pending,
-              Se.Is Beam.adminApproval $ Se.Eq Domain.Types.SuspectFlagRequest.Approved
-            ]
+          Se.Is Beam.adminApproval $ Se.Eq adminApproval
         ]
     ]
 

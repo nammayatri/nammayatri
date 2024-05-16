@@ -43,7 +43,7 @@ import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSup
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+), void)
-import PrestoDOM (Eval, Props, continue, continueWithCmd, exit, updateAndExit, toast)
+import PrestoDOM (Eval, update, Props, continue, continueWithCmd, exit, updateAndExit, toast)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (AddVehicleDetailsScreenState, VehicalTypes(..), StageStatus(..))
@@ -56,6 +56,7 @@ import Components.BottomDrawerList as BottomDrawerList
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge as JB
+import Components.RequestInfoCard as RequestInfoCard
 
 instance showAction :: Show Action where
   show _ = ""
@@ -210,6 +211,9 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | ChangeVehicleAC PopUpModal.Action
   | BottomDrawerListAC BottomDrawerList.Action
   | WhatsAppClick
+  | SelectButton Int
+  | OpenAcModal
+  | RequestInfoCardAction RequestInfoCard.Action
 
 
 eval :: Action -> AddVehicleDetailsScreenState -> Eval Action ScreenOutput AddVehicleDetailsScreenState
@@ -456,7 +460,15 @@ eval WhatsAppClick state = continueWithCmd state [do
   pure NoAction
   ]
 
-eval _ state = continue state
+eval (SelectButton index) state = continue state { props { buttonIndex = Just index}}
+
+eval OpenAcModal state = continue state { props { acModal = true}}
+
+eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { acModal = false}}
+
+eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { acModal = false}}
+
+eval _ state = update state
 
 checkRegNum :: String -> Boolean
 checkRegNum temp = if (length temp > 1) then true else false

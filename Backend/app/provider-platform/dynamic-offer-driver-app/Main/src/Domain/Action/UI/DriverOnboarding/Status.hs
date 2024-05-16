@@ -48,13 +48,14 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.DriverOnboarding
+import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
-import Storage.CachedQueries.Merchant.TransporterConfig
 import qualified Storage.Queries.AadhaarVerification as SAV
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverRCAssociation as DRAQuery
+import qualified Storage.Queries.DriverSSN as QDSSN
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
 import Storage.Queries.Person as Person
@@ -65,6 +66,7 @@ import qualified Storage.Queries.VehicleInsurance as VIQuery
 import qualified Storage.Queries.VehiclePUC as VPUCQuery
 import qualified Storage.Queries.VehiclePermit as VPQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
+import Utils.Common.Cac.KeyNameConstants
 
 -- PENDING means "pending verification"
 -- FAILED is used when verification is failed
@@ -109,7 +111,7 @@ statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -
 statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
   -- multipleRC flag is temporary to support backward compatibility
   person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   merchantOperatingCity <- SMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   let language = fromMaybe merchantOperatingCity.language person.language
   (dlStatus, mDL, dlVerficationMessage) <- getDLAndStatus personId merchantOpCityId transporterConfig.onboardingTryLimit merchantOperatingCity.language
@@ -263,7 +265,7 @@ checkIfDocumentValid merchantOperatingCityId docType category status = do
       if verificationConfig.isMandatory
         then case status of
           VALID -> return True
-          MANUAL_VERIFICATION_REQUIRED -> return True
+          MANUAL_VERIFICATION_REQUIRED -> return verificationConfig.isDefaultEnabledOnManualVerification
           _ -> return False
         else return True
     Nothing -> return True
@@ -277,9 +279,13 @@ getProcessedDriverDocuments docType driverId =
     DVC.AadhaarCard -> do
       mbAadhaarCard <- SAV.findByDriverId driverId
       return $ boolToStatus <$> (mbAadhaarCard <&> (.isVerified))
-    DVC.PanCard -> return Nothing
     DVC.Permissions -> return $ Just VALID
-    DVC.ProfilePhoto -> return Nothing
+    DVC.SocialSecurityNumber -> do
+      mbSSN <- QDSSN.findByDriverId driverId
+      return $ mapStatus <$> (mbSSN <&> (.verificationStatus))
+    DVC.ProfilePhoto -> checkImageValidity DVC.ProfilePhoto driverId
+    DVC.UploadProfile -> checkImageValidity DVC.UploadProfile driverId
+    DVC.PanCard -> checkImageValidity DVC.PanCard driverId
     _ -> return Nothing
   where
     boolToStatus :: Bool -> ResponseStatus
@@ -306,12 +312,20 @@ getProcessedVehicleDocuments docType driverId vehicleRC =
     DVC.VehiclePUC -> do
       mbDoc <- listToMaybe <$> VPUCQuery.findByRcIdAndDriverId vehicleRC.id driverId
       return $ mapStatus <$> (mbDoc <&> (.verificationStatus))
+    DVC.VehicleInspectionForm -> checkImageValidity DVC.VehicleInspectionForm driverId
     _ -> return Nothing
   where
     boolToStatus :: Bool -> ResponseStatus
     boolToStatus = \case
       True -> VALID
       False -> NO_DOC_AVAILABLE
+
+checkImageValidity :: DVC.DocumentType -> Id SP.Person -> Flow (Maybe ResponseStatus)
+checkImageValidity docType driverId = do
+  images <- IQuery.findValidImageByPersonIdAndImageType driverId docType
+  if null images
+    then return Nothing
+    else return (Just MANUAL_VERIFICATION_REQUIRED)
 
 getInProgressDriverDocuments :: DVC.DocumentType -> Id SP.Person -> Int -> Flow (ResponseStatus, Maybe Text)
 getInProgressDriverDocuments docType driverId onboardingTryLimit =
@@ -321,6 +335,7 @@ getInProgressDriverDocuments docType driverId onboardingTryLimit =
     DVC.PanCard -> checkIfImageUploaded DVC.PanCard driverId
     DVC.Permissions -> return (VALID, Nothing)
     DVC.ProfilePhoto -> checkIfImageUploaded DVC.ProfilePhoto driverId
+    DVC.UploadProfile -> checkIfImageUploaded DVC.UploadProfile driverId
     _ -> return (NO_DOC_AVAILABLE, Nothing)
 
 getInProgressVehicleDocuments :: DVC.DocumentType -> Id SP.Person -> Int -> Flow (ResponseStatus, Maybe Text)
@@ -332,6 +347,7 @@ getInProgressVehicleDocuments docType driverId onboardingTryLimit =
     DVC.VehicleFitnessCertificate -> checkIfImageUploaded DVC.VehicleFitnessCertificate driverId
     DVC.VehicleInsurance -> checkIfImageUploaded DVC.VehicleInsurance driverId
     DVC.VehiclePUC -> checkIfImageUploaded DVC.VehiclePUC driverId
+    DVC.VehicleInspectionForm -> checkIfImageUploaded DVC.VehicleInspectionForm driverId
     _ -> return (NO_DOC_AVAILABLE, Nothing)
 
 checkIfImageUploaded :: DVC.DocumentType -> Id SP.Person -> Flow (ResponseStatus, Maybe Text)
@@ -441,6 +457,7 @@ getRCAndStatus driverId merchantOpCityId onboardingTryLimit multipleRC language 
 mapStatus :: IV.VerificationStatus -> ResponseStatus
 mapStatus = \case
   IV.PENDING -> PENDING
+  IV.MANUAL_VERIFICATION_REQUIRED -> MANUAL_VERIFICATION_REQUIRED
   IV.VALID -> VALID
   IV.INVALID -> INVALID
 

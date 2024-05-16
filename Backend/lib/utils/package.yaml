@@ -109,6 +109,7 @@ dependencies:
   - JuicyPixels
   - JuicyPixels-extra
   - base64-bytestring
+  - http-conduit
 
 ghc-options:
   - -fwrite-ide-info
@@ -130,4 +131,5 @@ library:
     - special-zone-a
     - payment
     - sessionizer-metrics
+    - haskell-cac
 

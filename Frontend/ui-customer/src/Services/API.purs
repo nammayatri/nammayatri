@@ -585,7 +585,7 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   estimatedFare :: Int,
   tripTerms :: Array String,
   id :: String,
-  agencyCompletedRidesCount :: Int,
+  agencyCompletedRidesCount :: Maybe Int,
   estimateFareBreakup :: Maybe (Array EstimateFares),
   totalFareRange :: Maybe FareRange,
   nightShiftRate :: Maybe NightShiftRate,
@@ -593,7 +593,11 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   driversLatLong :: Array LatLong,
   serviceTierName :: Maybe String,
   serviceTierShortDesc :: Maybe String,
-  airConditioned :: Maybe Boolean
+  airConditioned :: Maybe Boolean,
+  providerName :: Maybe String,
+  providerId :: Maybe String,
+  isValueAddNP :: Maybe Boolean, --true if entity is from ny
+  validTill :: String
 }
 
 newtype NightShiftRate = NightShiftRate {
@@ -608,7 +612,7 @@ newtype FareRange = FareRange {
 }
 
 newtype EstimateFares = EstimateFares {
-  price :: Int,
+  priceWithCurrency :: CTA.Price,
   title :: String
 }
 
@@ -925,11 +929,13 @@ newtype RideBookingRes = RideBookingRes {
   hasNightIssue :: Maybe Boolean,
   sosStatus :: Maybe CTA.SosStatus,
   serviceTierName :: Maybe String,
-  airConditioned :: Maybe Boolean
+  airConditioned :: Maybe Boolean,
+  isValueAddNP :: Maybe Boolean,
+  providerName :: Maybe String
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
-  amount :: Int,
+  amountWithCurrency :: CTA.Price,
   description :: String
 }
 
@@ -940,7 +946,7 @@ newtype RideAPIEntity = RideAPIEntity {
   createdAt :: String,
   driverNumber :: Maybe String,
   shortRideId :: String,
-  driverRegisteredAt :: String,
+  driverRegisteredAt :: Maybe String,
   vehicleNumber :: String,
   rideOtp :: String,
   driverName :: String,
@@ -1044,7 +1050,8 @@ newtype DEstimateSelect = DEstimateSelect
   {
     customerExtraFee :: Maybe Int,
     autoAssignEnabled :: Boolean,
-    autoAssignEnabledV2 :: Boolean
+    autoAssignEnabledV2 :: Boolean,
+    otherSelectedEstimates :: Array String
   }
 
 newtype SelectEstimateRes = SelectEstimateRes
@@ -1155,14 +1162,14 @@ instance decodeCancelRequest :: Decode CancelRequest where decode = defaultDecod
 instance encodeCancelRequest  :: Encode CancelRequest where encode = defaultEncode
 -------------------------------------------------------------------------------RideBookingList API Types ------------------------------------------------------------
 
-data RideBookingListReq = RideBookingListReq String String String (Maybe String)
+data RideBookingListReq = RideBookingListReq String String String (Maybe String) (Maybe String)
 
 newtype RideBookingListRes = RideBookingListRes {
   list :: Array RideBookingRes
 }
 
 derive instance genericRideBookingListReq:: Generic RideBookingListReq _
-instance standardRideBookingListReq :: StandardEncode RideBookingListReq where standardEncode (RideBookingListReq offset limit onlyActive _) = standardEncode {}
+instance standardRideBookingListReq :: StandardEncode RideBookingListReq where standardEncode (RideBookingListReq offset limit onlyActive _ _) = standardEncode {}
 instance showRideBookingListReq :: Show RideBookingListReq where show = genericShow
 instance decodeRideBookingListReq :: Decode RideBookingListReq where decode = defaultDecode
 instance encodeRideBookingListReq :: Encode RideBookingListReq where encode = defaultEncode
@@ -1176,7 +1183,7 @@ instance encodeRideBookingListRes :: Encode RideBookingListRes where encode = de
 
 
 instance makeRideBookingListReq :: RestEndpoint RideBookingListReq RideBookingListRes where
- makeRequest reqBody@(RideBookingListReq limit offset onlyActive status) headers = defaultMakeRequest GET (EP.rideBookingList limit offset onlyActive status) headers reqBody Nothing
+ makeRequest reqBody@(RideBookingListReq limit offset onlyActive status clientId ) headers = defaultMakeRequest GET (EP.rideBookingList limit offset onlyActive status clientId) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
@@ -1252,6 +1259,10 @@ newtype GetProfileRes = GetProfileRes
   , maskedMobileNumber :: Maybe String
   , email :: Maybe String
   , hasTakenRide :: Boolean
+  , hasTakenValidCabRide :: Maybe Boolean
+  , hasTakenValidAutoRide :: Maybe Boolean
+  , hasTakenValidBikeRide :: Maybe Boolean
+  , hasTakenValidRide :: Maybe Boolean
   , referralCode :: Maybe String
   , language :: Maybe String
   , gender :: Maybe String
@@ -1750,14 +1761,15 @@ data FlowStatusReq = FlowStatusReq
 newtype FlowStatusRes = FlowStatusRes
   { currentStatus :: FlowStatus
   , oldStatus :: Maybe FlowStatus
+  , isValueAddNP :: Maybe Boolean
   }
 
 data FlowStatus = IDLE {}
                 | SEARCHING { requestId :: String , validTill :: String }
                 | GOT_ESTIMATE { requestId :: String , validTill :: String }
-                | WAITING_FOR_DRIVER_OFFERS { validTill :: String , estimateId :: String }
-                | DRIVER_OFFERED_QUOTE { validTill :: String , estimateId :: String }
-                | WAITING_FOR_DRIVER_ASSIGNMENT { bookingId :: String , validTill :: String }
+                | WAITING_FOR_DRIVER_OFFERS { validTill :: String , estimateId :: String, otherSelectedEstimates :: Maybe (Array String)}
+                | DRIVER_OFFERED_QUOTE { validTill :: String , estimateId :: String}
+                | WAITING_FOR_DRIVER_ASSIGNMENT { bookingId :: String , validTill :: String, fareProductType :: Maybe String }
                 | RIDE_ASSIGNED { rideId :: String }
                 | PENDING_RATING { rideId :: String }
 
@@ -2540,7 +2552,9 @@ newtype IssueReportCustomerListItem = IssueReportCustomerListItem
     status :: String,
     category :: String,
     createdAt :: String,
-    issueReportShortId :: Maybe String
+    issueReportShortId :: Maybe String,
+    optionLabel :: Maybe String,
+    rideId :: Maybe String
   }
 
 instance makeFetchIssueListReq :: RestEndpoint FetchIssueListReq FetchIssueListResp where

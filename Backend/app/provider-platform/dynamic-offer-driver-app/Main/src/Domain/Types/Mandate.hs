@@ -17,7 +17,7 @@ module Domain.Types.Mandate where
 
 import Data.Aeson
 import Kernel.Prelude
-import Kernel.Types.Common (HighPrecMoney)
+import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
@@ -29,6 +29,7 @@ data Mandate = Mandate
     startDate :: UTCTime,
     endDate :: UTCTime,
     maxAmount :: HighPrecMoney,
+    currency :: Currency,
     payerApp :: Maybe Text,
     payerAppName :: Maybe Text,
     mandatePaymentFlow :: Maybe Text,

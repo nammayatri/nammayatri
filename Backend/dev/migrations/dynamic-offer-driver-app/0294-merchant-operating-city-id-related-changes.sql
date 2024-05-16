@@ -52,9 +52,6 @@ ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offe
 ALTER TABLE atlas_driver_offer_bpp.driver_intelligent_pool_config
 ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offer_bpp.merchant_operating_city (id);
 
-ALTER TABLE atlas_driver_offer_bpp.leader_board_configs
-ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offer_bpp.merchant_operating_city (id);
-
 ALTER TABLE atlas_driver_offer_bpp.merchant_message
 ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offer_bpp.merchant_operating_city (id);
 
@@ -88,11 +85,6 @@ UPDATE atlas_driver_offer_bpp.driver_intelligent_pool_config
 SET merchant_operating_city_id = merchant_operating_city.id
 FROM atlas_driver_offer_bpp.merchant_operating_city
 WHERE atlas_driver_offer_bpp.driver_intelligent_pool_config.merchant_id = merchant_operating_city.merchant_id;
-
-UPDATE atlas_driver_offer_bpp.leader_board_configs
-SET merchant_operating_city_id = merchant_operating_city.id
-FROM atlas_driver_offer_bpp.merchant_operating_city
-WHERE atlas_driver_offer_bpp.leader_board_configs.merchant_id = merchant_operating_city.merchant_id;
 
 UPDATE atlas_driver_offer_bpp.merchant_message
 SET merchant_operating_city_id = merchant_operating_city.id
@@ -134,8 +126,6 @@ ALTER COLUMN merchant_operating_city_id SET NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.driver_intelligent_pool_config
 ALTER COLUMN merchant_operating_city_id SET NOT NULL;
 
-ALTER TABLE atlas_driver_offer_bpp.leader_board_configs
-ALTER COLUMN merchant_operating_city_id SET NOT NULL;
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_message
 ALTER COLUMN merchant_operating_city_id SET NOT NULL;

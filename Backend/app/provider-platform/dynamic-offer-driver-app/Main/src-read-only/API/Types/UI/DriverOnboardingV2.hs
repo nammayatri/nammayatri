@@ -4,13 +4,22 @@
 module API.Types.UI.DriverOnboardingV2 where
 
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.Common
 import qualified Domain.Types.DocumentVerificationConfig
+import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.ServiceTierType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Servant
 import Tools.Auth
+
+data AirConditionedTier = AirConditionedTier
+  { isWorking :: Kernel.Prelude.Bool,
+    restrictionMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    usageRestrictionType :: Domain.Types.DriverInformation.AirConditionedRestrictionType
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
   { checkExpiry :: Kernel.Prelude.Bool,
@@ -39,9 +48,11 @@ data DriverVehicleServiceTier = DriverVehicleServiceTier
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     isDefault :: Kernel.Prelude.Bool,
     isSelected :: Kernel.Prelude.Bool,
+    isUsageRestricted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     longDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     name :: Kernel.Prelude.Text,
+    priority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     serviceTierType :: Domain.Types.ServiceTierType.ServiceTierType,
     shortDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -49,4 +60,30 @@ data DriverVehicleServiceTier = DriverVehicleServiceTier
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-newtype DriverVehicleServiceTiers = DriverVehicleServiceTiers {tiers :: [API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier]} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data DriverVehicleServiceTiers = DriverVehicleServiceTiers
+  { airConditioned :: Kernel.Prelude.Maybe API.Types.UI.DriverOnboardingV2.AirConditionedTier,
+    canSwitchToInterCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    canSwitchToRental :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    tiers :: [API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data FarePolicyHour = Peak | NonPeak | Night deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data RateCardItem = RateCardItem {price :: Kernel.Types.Common.Money, priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity, title :: Kernel.Prelude.Text}
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data RateCardResp = RateCardResp
+  { farePolicyHour :: API.Types.UI.DriverOnboardingV2.FarePolicyHour,
+    perKmRate :: Kernel.Types.Common.PriceAPIEntity,
+    perMinuteRate :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    rateCardItems :: [API.Types.UI.DriverOnboardingV2.RateCardItem],
+    serviceTierType :: Domain.Types.ServiceTierType.ServiceTierType,
+    totalFare :: Kernel.Types.Common.PriceAPIEntity,
+    tripCategory :: Domain.Types.Common.TripCategory
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data SSNReq = SSNReq {ssn :: Kernel.Prelude.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+newtype UpdateAirConditionUpdateRequest = UpdateAirConditionUpdateRequest {isAirConditioned :: Kernel.Prelude.Bool} deriving (Generic, ToJSON, FromJSON, ToSchema)

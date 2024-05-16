@@ -31,13 +31,14 @@ IdfyVerification:
     idfyResponse: Maybe Text
     multipleRC: Maybe Bool
     retryCount: Maybe Int
+    airConditioned: Maybe Bool
     nameOnCard: Maybe Text
   beamInstance: MakeTableInstancesWithTModifier [("multipleRC", "multiple_r_c")]
   types:
     ImageExtractionValidation:
       enum: "Success,Skipped,Failed"
     VerificationStatus:
-      enum: "PENDING,VALID,INVALID"
+      enum: "PENDING,VALID,INVALID,MANUAL_VERIFICATION_REQUIRED"
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
@@ -200,6 +201,8 @@ VehicleRegistrationCertificate:
     manufacturerModel: Maybe Text
     vehicleColor: Maybe Text
     vehicleEnergyType: Maybe Text
+    vehicleDoors: Maybe Int
+    vehicleSeatBelts: Maybe Int
     reviewedAt: Maybe UTCTime
     reviewRequired: Maybe Bool
     verificationStatus: VerificationStatus
@@ -227,6 +230,10 @@ VehicleRegistrationCertificate:
       kvFunction: findAllWithOptionsKV
       where: fleetOwnerId
       orderBy: updatedAt
+    updateAirConditioned:
+      kvFunction: updateOneWithKV
+      params: [airConditioned]
+      where: id
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -325,7 +332,7 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix"
   fields:
@@ -346,9 +353,15 @@ DocumentVerificationConfig:
     vehicleClassCheckType: VehicleClassCheckType
     rcNumberPrefixList: '[Text]'
     maxRetryCount: Int
+    isDefaultEnabledOnManualVerification: Bool
+    isImageValidationRequired: Bool
+    doStrictVerifcation: Bool
     order: Int
   default:
     order: "0"
+    doStrictVerifcation: "true"
+    isDefaultEnabledOnManualVerification: "true"
+    isImageValidationRequired: "true"
   constraints:
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey
@@ -448,3 +461,19 @@ VehiclePUC:
       kvFunction: findAllWithKV
       where:
         and: [rcId, driverId]
+
+DriverSSN:
+  tableName: driver_ssn
+  fields:
+    id: Id DriverSSN
+    driverId: Id Person
+    ssn: EncryptedHashedField e Text
+    verificationStatus: VerificationStatus
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+  queries:
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where: driverId
+  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]

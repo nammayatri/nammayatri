@@ -410,6 +410,8 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_EARNINGS_SCREEN
                           | GOT_DRIVER_STATS DriverProfileStatsResp
                           | UPDATE_SPECIAL_LOCATION_LIST
+                          | UPDATE_AIR_CONDITIONED Boolean
+                          | GO_TO_BOOKING_PREFERENCES
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -438,7 +440,7 @@ data NOTIFICATIONS_SCREEN_OUTPUT = REFRESH_SCREEN NotificationsScreenState
                                     | CHECK_RIDE_FLOW_STATUS
                                     | NOTIFICATION_SCREEN_NAV NAVIGATION_ACTIONS
 
-data BOOKING_OPTIONS_SCREEN_OUTPUT = SELECT_CAB BookingOptionsScreenState Boolean | ENABLE_RENTAL_RIDE BookingOptionsScreenState Boolean | GO_TO_PROFILE | CHANGE_RIDE_PREFERENCE BookingOptionsScreenState RidePreference
+data BOOKING_OPTIONS_SCREEN_OUTPUT = SELECT_CAB BookingOptionsScreenState Boolean | ENABLE_RENTAL_RIDE BookingOptionsScreenState Boolean | GO_TO_PROFILE | CHANGE_RIDE_PREFERENCE BookingOptionsScreenState RidePreference | UPDATE_AC_AVAILABILITY BookingOptionsScreenState Boolean
 
 data ACKNOWLEDGEMENT_SCREEN_OUTPUT = EXIT_TO_HOME_SCREEN | RETRY_PAYMENT
 

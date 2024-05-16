@@ -53,16 +53,17 @@ import Styles.Colors as Color
 import Data.Tuple as TPL
 import Control.Apply as CA
 import Locale.Utils
+import Engineering.Helpers.Utils (getFixedTwoDecimals)
 
 clearDueButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 clearDueButtonConfig state = let
     config = PrimaryButton.config
     buttonText = 
       case state.data.myPlanData.manualDueAmount > 0.0, state.data.myPlanData.autoPayStatus, isJust state.data.orderId of
-        true, ACTIVE_AUTOPAY, true  -> (getString RETRY_STR) <> " " <>  if state.props.myPlanProps.overDue then (getString CLEAR_DUES) else (getString CLEAR_MANUAL_DUES) <> "(₹" <> HU.getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")"
-        true, ACTIVE_AUTOPAY, false  -> if state.props.myPlanProps.overDue then (getString CLEAR_DUES) else (getString CLEAR_MANUAL_DUES) <> "(₹" <> HU.getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")"
-        true, _, true  -> (getString RETRY_AUTOPAY) <> " & " <>  (getString CLEAR_DUES) <> " (₹" <> HU.getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")" 
-        true, _, false  -> (getString SETUP_AUTOPAY_STR) <> " & " <>  (getString CLEAR_DUES) <> " (₹" <> HU.getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")" 
+        true, ACTIVE_AUTOPAY, true  -> (getString RETRY_STR) <> " " <>  if state.props.myPlanProps.overDue then (getString CLEAR_DUES) else (getString CLEAR_MANUAL_DUES) <> "(₹" <> getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")"
+        true, ACTIVE_AUTOPAY, false  -> if state.props.myPlanProps.overDue then (getString CLEAR_DUES) else (getString CLEAR_MANUAL_DUES) <> "(₹" <> getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")"
+        true, _, true  -> (getString RETRY_AUTOPAY) <> " & " <>  (getString CLEAR_DUES) <> " (₹" <> getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")" 
+        true, _, false  -> (getString SETUP_AUTOPAY_STR) <> " & " <>  (getString CLEAR_DUES) <> " (₹" <> getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")" 
         false,_, _ -> getString SETUP_AUTOPAY_STR
     primaryButtonConfig' = config 
       { textConfig { text = buttonText }
@@ -406,10 +407,10 @@ optionsMenuConfig state =
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_settings_unfilled", textdata : getString MANAGE_PLAN, action : "manage_plan", isVisible : optionsMenuItems.managePlan},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_calendar_black", textdata : getString PAYMENT_HISTORY, action : "payment_history", isVisible : optionsMenuItems.paymentHistory},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CALL_SUPPORT, action : "call_support", isVisible :  optionsMenuItems.callSupport},
-    {image : "ny_ic_message_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_message_unfilled.png", textdata : getString CHAT_FOR_HELP, action : "chat_for_help", isVisible : optionsMenuItems.chatSupport},
+    {image : "ny_ic_message_unfilled,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_message_unfilled.png", textdata : getString CHAT_FOR_HELP, action : "chat_for_help", isVisible : optionsMenuItems.chatSupport},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_loc_grey", textdata : getString (FIND_HELP_CENTRE "FIND_HELP_CENTRE"), action : "find_help_centre", isVisible : optionsMenuItems.kioskLocation},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_help_circle_transparent", textdata : getString VIEW_FAQs, action : "view_faq", isVisible : optionsMenuItems.viewFaqs},
-    {image : "ny_ic_settings_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_settings_unfilled.png", textdata : getString VIEW_AUTOPAY_DETAILS, action : "view_autopay_details", isVisible : optionsMenuItems.viewAutopayDetails && state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY}],
+    {image : "ny_ic_settings_unfilled,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_settings_unfilled.png", textdata : getString VIEW_AUTOPAY_DETAILS, action : "view_autopay_details", isVisible : optionsMenuItems.viewAutopayDetails && state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY}],
   backgroundColor = Color.blackLessTrans,
   menuBackgroundColor = Color.white900,
   gravity = RIGHT,
@@ -456,7 +457,7 @@ dueDetailsListState :: ST.SubscriptionScreenState -> DueDetailsListState
 dueDetailsListState state = let 
     calculateCharges count charges = 
       if count == 0 || charges == 0.0 then Nothing 
-      else Just $ show count <> " " <> getString (if count > 1 then RIDES else RIDE) <> " x ₹" <> HU.getFixedTwoDecimals (charges / DI.toNumber count) <> " " <> getString GST_INCLUDE
+      else Just $ show count <> " " <> getString (if count > 1 then RIDES else RIDE) <> " x ₹" <> getFixedTwoDecimals (charges / DI.toNumber count) <> " " <> getString GST_INCLUDE
   in
   {
   dues : map (\ item -> do

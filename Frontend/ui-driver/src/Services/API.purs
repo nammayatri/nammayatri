@@ -31,12 +31,12 @@ import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import Debug (spy)
-import Foreign (ForeignError(..), fail, unsafeFromForeign)
+import Foreign (ForeignError(..), fail, unsafeFromForeign, typeOf)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
 import Foreign.Generic.EnumEncoding (genericDecodeEnum, genericEncodeEnum, defaultGenericEnumOptions)
 import Foreign.Index (readProp)
-import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=))
+import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=), (==))
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorResponse, Method(..), defaultMakeRequest, standardEncode, defaultDecodeResponse, defaultMakeRequestString)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 import Services.EndPoints as EP
@@ -475,6 +475,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , operatingCity         :: Maybe String
     , isVehicleSupported    :: Maybe Boolean
     , canSwitchToRental     :: Boolean
+    , checkIfACWorking      :: Maybe Boolean
     }
 
 
@@ -597,8 +598,8 @@ newtype RidesInfo = RidesInfo
       actualDuration :: Maybe Int,
       startOdometerReading :: Maybe OdometerReading,
       endOdometerReading :: Maybe OdometerReading,
-      tollCharges :: Maybe Int,
-      estimatedTollCharges :: Maybe Int,
+      tollCharges :: Maybe Number,
+      estimatedTollCharges :: Maybe Number,
       vehicleServiceTierName :: String,
       vehicleServiceTier :: String,
       isVehicleAirConditioned :: Maybe Boolean,
@@ -985,7 +986,8 @@ newtype DriverRCReq = DriverRCReq {
   operatingCity :: String,
   imageId :: String,
   dateOfRegistration :: Maybe String,
-  vehicleCategory :: Maybe String
+  vehicleCategory :: Maybe String,
+  airConditioned :: Maybe Boolean
 }
 
 newtype DriverRCResp = DriverRCResp ApiSuccessResult
@@ -1164,6 +1166,7 @@ newtype DriverProfileStatsResp = DriverProfileStatsResp
     , totalEarningsOfDay :: Int
     , bonusEarning :: Int
     , coinBalance :: Int
+    , totalEarningsOfDayPerKm :: Maybe Int
     }
 
 instance makeGetDriverProfileStatsReq :: RestEndpoint DriverProfileStatsReq DriverProfileStatsResp where
@@ -1824,7 +1827,9 @@ newtype IssueReportDriverListItem = IssueReportDriverListItem
     status :: String,
     category :: String,
     createdAt :: String,
-    issueReportShortId :: Maybe String
+    issueReportShortId :: Maybe String,
+    optionLabel :: Maybe String,
+    rideId :: Maybe String
   }
 
 instance makeFetchIssueListReq :: RestEndpoint FetchIssueListReq FetchIssueListResp where
@@ -3521,12 +3526,12 @@ data DriverCoinsFunctionType
   | LeaderBoardTopFiveHundred
   | TrainingCompleted
   | BulkUploadFunction
-  | BulkUploadFunctionV2 String
+  | BulkUploadFunctionV2
 
 instance makeCoinTransactionReq :: RestEndpoint CoinTransactionReq CoinTransactionRes where
     makeRequest reqBody@(CoinTransactionReq date) headers = defaultMakeRequest GET (EP.getCoinTransactions date) headers reqBody Nothing
     decodeResponse = decodeJSON
-    encodeRequest req = defaultEncode req
+    encodeRequest = standardEncode
 
 derive instance genericCoinTransactionReq :: Generic CoinTransactionReq _
 instance showCoinTransactionReq :: Show CoinTransactionReq where show = genericShow
@@ -3543,13 +3548,19 @@ instance encodeCoinTransactionRes :: Encode CoinTransactionRes where encode = de
 
 derive instance genericDriverCoinsFunctionType :: Generic DriverCoinsFunctionType _
 instance showDriverCoinsFunctionType :: Show DriverCoinsFunctionType where show = genericShow
-instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType where decode = defaultDecode
+instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType 
+  where 
+    decode body =
+      case (typeOf body == "object") of
+        true ->  case (runExcept $ (readProp "tag" body)) of
+                    Right functionType -> defaultEnumDecode $ functionType
+                    _ -> defaultEnumDecode body          
+        false -> defaultEnumDecode body
 instance encodeDriverCoinsFunctionType :: Encode DriverCoinsFunctionType where encode = defaultEncode
 instance eqDriverCoinsFunctionType :: Eq DriverCoinsFunctionType where eq = genericEq
 instance standardEncodeDriverCoinsFunctionType :: StandardEncode DriverCoinsFunctionType
   where
     standardEncode _ = standardEncode {}
-    standardEncode (BulkUploadFunctionV2 param) = standardEncode param
 
 derive instance genericCoinTransactionHistoryItem :: Generic CoinTransactionHistoryItem _
 derive instance newtypeCoinTransactionHistoryItem :: Newtype CoinTransactionHistoryItem _
@@ -4452,16 +4463,31 @@ data ServiceTierType
   | RENTALS
   | INTERCITY
 
+data AirConditionedRestrictionType
+  = ToggleAllowed
+  | ToggleNotAllowed
+  | NoRestriction
+
 data DriverVehicleServiceTierReq = DriverVehicleServiceTierReq
 
 data UpdateDriverVehicleServiceTierReq = UpdateDriverVehicleServiceTierReq {
-  tiers :: Array DriverVehicleServiceTier
+  tiers :: Array DriverVehicleServiceTier,
+  airConditioned :: Maybe AirConditionedTier
 }
 
 data UpdateDriverVehicleServiceTierResp = UpdateDriverVehicleServiceTierResp String
 
 newtype DriverVehicleServiceTierResponse = DriverVehicleServiceTierResponse {
-  tiers :: Array DriverVehicleServiceTier
+  tiers :: Array DriverVehicleServiceTier,
+  airConditioned :: Maybe AirConditionedTier,
+  canSwitchToInterCity :: Maybe Boolean,
+  canSwitchToRental :: Maybe Boolean
+}
+
+newtype AirConditionedTier = AirConditionedTier {
+  isWorking :: Boolean,
+  restrictionMessage :: Maybe String,
+  usageRestrictionType :: AirConditionedRestrictionType
 }
 
 newtype DriverVehicleServiceTier = DriverVehicleServiceTier {
@@ -4475,7 +4501,9 @@ newtype DriverVehicleServiceTier = DriverVehicleServiceTier {
   seatingCapacity :: Maybe Int,
   serviceTierType :: ServiceTierType,
   shortDescription :: Maybe String,
-  vehicleRating :: Maybe Number
+  vehicleRating :: Maybe Number,
+  isUsageRestricted :: Maybe Boolean,
+  priority :: Maybe Int
 }
 
 derive instance genericServiceTierType :: Generic ServiceTierType _
@@ -4510,11 +4538,33 @@ instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
     standardEncode RENTALS = standardEncode "RENTALS"
     standardEncode INTERCITY = standardEncode "INTERCITY"
 
+derive instance genericAirConditionedRestrictionType :: Generic AirConditionedRestrictionType _
+instance showAirConditionedRestrictionType :: Show AirConditionedRestrictionType where show = genericShow
+instance decodeAirConditionedRestrictionType :: Decode AirConditionedRestrictionType
+  where decode body = case unsafeFromForeign body of
+                  "ToggleAllowed"        -> except $ Right ToggleAllowed
+                  "ToggleNotAllowed"     -> except $ Right ToggleNotAllowed
+                  "NoRestriction"        -> except $ Right NoRestriction
+                  _                      -> except $ Right NoRestriction
+instance encodeAirConditionedRestrictionType :: Encode AirConditionedRestrictionType where encode = defaultEnumEncode
+instance eqAirConditionedRestrictionType :: Eq AirConditionedRestrictionType where eq = genericEq
+instance standardEncodeAirConditionedRestrictionType :: StandardEncode AirConditionedRestrictionType
+  where
+    standardEncode ToggleAllowed = standardEncode "ToggleAllowed"
+    standardEncode ToggleNotAllowed = standardEncode "ToggleNotAllowed"
+    standardEncode NoRestriction = standardEncode "NoRestriction"
+
 derive instance genericDriverVehicleServiceTierReq :: Generic DriverVehicleServiceTierReq _
 instance standardEncodeDriverVehicleServiceTierReq :: StandardEncode DriverVehicleServiceTierReq where standardEncode (DriverVehicleServiceTierReq) = standardEncode {}
 instance showDriverVehicleServiceTierReq :: Show DriverVehicleServiceTierReq where show = genericShow
 instance decodeDriverVehicleServiceTierReq :: Decode DriverVehicleServiceTierReq where decode = defaultDecode
 instance encodeDriverVehicleServiceTierReq  :: Encode DriverVehicleServiceTierReq where encode = defaultEncode
+
+derive instance genericAirConditionedTier :: Generic AirConditionedTier _
+instance standardEncodeAirConditionedTier :: StandardEncode AirConditionedTier where standardEncode (AirConditionedTier res) = standardEncode res
+instance showAirConditionedTier :: Show AirConditionedTier where show = genericShow
+instance decodeAirConditionedTier :: Decode AirConditionedTier where decode = defaultDecode
+instance encodeAirConditionedTier  :: Encode AirConditionedTier where encode = defaultEncode
 
 derive instance genericDriverVehicleServiceTierResponse :: Generic DriverVehicleServiceTierResponse _
 instance standardEncodeDriverVehicleServiceTierResponse :: StandardEncode DriverVehicleServiceTierResponse where standardEncode (DriverVehicleServiceTierResponse res) = standardEncode res
@@ -4549,3 +4599,26 @@ instance makeDriverVehicleServiceTierReq :: RestEndpoint DriverVehicleServiceTie
   makeRequest reqBody headers = defaultMakeRequest GET (EP.driverVehicleServiceTier "") headers reqBody Nothing
   decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
+
+newtype UpdateAirConditionUpdateRequest = UpdateAirConditionUpdateRequest {
+  isAirConditioned :: Boolean
+}
+
+newtype UpdateAirConditionUpdateResponse = UpdateAirConditionUpdateResponse ApiSuccessResult
+
+instance makeUpdateAirConditionUpdateRequest :: RestEndpoint UpdateAirConditionUpdateRequest UpdateAirConditionUpdateResponse where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.updateAirConditioned "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericUpdateAirConditionUpdateRequest :: Generic UpdateAirConditionUpdateRequest _
+instance standardEncodeUpdateAirConditionUpdateRequest :: StandardEncode UpdateAirConditionUpdateRequest where standardEncode (UpdateAirConditionUpdateRequest res) = standardEncode res
+instance showUpdateAirConditionUpdateRequest :: Show UpdateAirConditionUpdateRequest where show = genericShow
+instance decodeUpdateAirConditionUpdateRequest :: Decode UpdateAirConditionUpdateRequest where decode = defaultDecode
+instance encodeUpdateAirConditionUpdateRequest  :: Encode UpdateAirConditionUpdateRequest where encode = defaultEncode
+
+derive instance genericUpdateAirConditionUpdateResponse :: Generic UpdateAirConditionUpdateResponse _
+instance standardEncodeUpdateAirConditionUpdateResponse :: StandardEncode UpdateAirConditionUpdateResponse where standardEncode (UpdateAirConditionUpdateResponse res) = standardEncode res
+instance showUpdateAirConditionUpdateResponse :: Show UpdateAirConditionUpdateResponse where show = genericShow
+instance decodeUpdateAirConditionUpdateResponse :: Decode UpdateAirConditionUpdateResponse where decode = defaultDecode
+instance encodeUpdateAirConditionUpdateResponse  :: Encode UpdateAirConditionUpdateResponse where encode = defaultEncode

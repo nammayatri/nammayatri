@@ -33,6 +33,7 @@ import Domain.Types
 import Domain.Types.BecknConfig
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Common as DCT
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Estimate as DEst
@@ -54,10 +55,11 @@ import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id, state, view, (%~), (^?))
 import qualified EulerHS.Prelude as Prelude
 import GHC.Float (double2Int)
-import Kernel.External.Maps as Maps
+import qualified Kernel.External.Maps as Maps
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common hiding (mkPrice)
+import qualified Kernel.Types.Common as Common
 import Kernel.Utils.Common hiding (mkPrice)
 import SharedLogic.DriverPool.Types
 import SharedLogic.FareCalculator
@@ -66,8 +68,8 @@ import Tools.Error
 
 data Pricing = Pricing
   { pricingId :: Text,
-    pricingMaxFare :: Money,
-    pricingMinFare :: Money,
+    pricingMaxFare :: HighPrecMoney,
+    pricingMinFare :: HighPrecMoney,
     vehicleServiceTier :: DVST.ServiceTierType,
     serviceTierName :: Text,
     serviceTierDescription :: Maybe Text,
@@ -77,8 +79,12 @@ data Pricing = Pricing
     farePolicy :: Maybe Policy.FarePolicy,
     estimatedDistance :: Maybe Meters,
     specialLocationTag :: Maybe Text,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool,
     fulfillmentType :: Text,
-    distanceToNearestDriver :: Maybe Meters
+    distanceToNearestDriver :: Maybe Meters,
+    tollNames :: Maybe [Text],
+    currency :: Currency
   }
 
 data RateCardBreakupItem = RateCardBreakupItem
@@ -92,7 +98,7 @@ firstStop = find (\stop -> Spec.stopType stop == Just (show Enums.START))
 lastStop :: [Spec.Stop] -> Maybe Spec.Stop
 lastStop = find (\stop -> Spec.stopType stop == Just (show Enums.END))
 
-mkStops :: LatLong -> Maybe LatLong -> Maybe [Spec.Stop]
+mkStops :: Maps.LatLong -> Maybe Maps.LatLong -> Maybe [Spec.Stop]
 mkStops origin mbDestination = do
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
       destinationGps destination = Gps.Gps {lat = destination.lat, lon = destination.lon}
@@ -144,7 +150,7 @@ parseLatLong a =
     [latStr, longStr] ->
       let lat = fromMaybe 0.0 $ readMaybe $ T.unpack latStr
           lon = fromMaybe 0.0 $ readMaybe $ T.unpack longStr
-       in return $ LatLong lat lon
+       in return $ Maps.LatLong lat lon
     _ -> throwError . InvalidRequest $ "Unable to parse LatLong"
 
 getTransactionId :: MonadFlow m => Spec.Context -> m Text
@@ -206,6 +212,7 @@ castVariant Variant.SUV = (show Enums.CAB, "SUV")
 castVariant Variant.AUTO_RICKSHAW = (show Enums.AUTO_RICKSHAW, "AUTO_RICKSHAW")
 castVariant Variant.TAXI = (show Enums.CAB, "TAXI")
 castVariant Variant.TAXI_PLUS = (show Enums.CAB, "TAXI_PLUS")
+castVariant Variant.BIKE = (show Enums.BIKE, "BIKE")
 
 mkFulfillmentType :: DCT.TripCategory -> Text
 mkFulfillmentType = \case
@@ -366,26 +373,24 @@ mkStopsOUS booking ride rideOtp =
                         },
                   stopTime = ride.tripStartTime <&> \tripStartTime' -> Spec.Time {timeTimestamp = Just tripStartTime', timeDuration = Nothing}
                 },
-            ( \destination ->
-                Spec.Stop
-                  { stopLocation =
-                      Just $
-                        Spec.Location
-                          { locationAddress = Just $ mkAddress destination.address,
-                            locationAreaCode = destination.address.areaCode,
-                            locationCity = Just $ Spec.City Nothing destination.address.city,
-                            locationCountry = Just $ Spec.Country Nothing destination.address.country,
-                            locationGps = Utils.gpsToText $ destinationGps destination,
-                            locationState = Just $ Spec.State destination.address.state,
-                            locationId = Nothing,
-                            locationUpdatedAt = Nothing
-                          },
-                    stopType = Just $ show Enums.END,
-                    stopAuthorization = Nothing,
-                    stopTime = ride.tripEndTime <&> \tripEndTime' -> Spec.Time {timeTimestamp = Just tripEndTime', timeDuration = Nothing}
-                  }
-            )
-              <$> mbDestination
+            Just $
+              Spec.Stop
+                { stopLocation =
+                    Just $
+                      Spec.Location
+                        { locationAddress = (\dest -> Just $ mkAddress dest.address) =<< mbDestination,
+                          locationAreaCode = (\dest -> dest.address.areaCode) =<< mbDestination,
+                          locationCity = (\dest -> Just $ Spec.City Nothing $ dest.address.city) =<< mbDestination,
+                          locationCountry = (\dest -> Just $ Spec.Country Nothing $ dest.address.country) =<< mbDestination,
+                          locationGps = (\dest -> Utils.gpsToText (destinationGps dest)) =<< mbDestination,
+                          locationState = (\dest -> Just $ Spec.State dest.address.state) =<< mbDestination,
+                          locationId = Nothing,
+                          locationUpdatedAt = Nothing
+                        },
+                  stopType = Just $ show Enums.END,
+                  stopAuthorization = Nothing,
+                  stopTime = ride.tripEndTime <&> \tripEndTime' -> Spec.Time {timeTimestamp = Just tripEndTime', timeDuration = Nothing}
+                }
           ]
 
 type IsValueAddNP = Bool
@@ -703,6 +708,7 @@ mapServiceTierToCategory serviceTier =
     DVST.ECO -> CAB
     DVST.PREMIUM -> CAB
     DVST.AUTO_RICKSHAW -> AUTO_RICKSHAW
+    DVST.BIKE -> MOTORCYCLE
 
 mapRideStatus :: Maybe DRide.RideStatus -> Enums.FulfillmentState
 mapRideStatus rideStatus =
@@ -750,27 +756,36 @@ tfQuotation :: DBooking.Booking -> Maybe Spec.Quotation
 tfQuotation booking =
   Just
     Spec.Quotation
-      { quotationBreakup = mkQuotationBreakup booking,
-        quotationPrice = tfQuotationPrice booking,
+      { quotationBreakup = mkQuotationBreakup booking.fareParams,
+        quotationPrice = tfQuotationPrice $ HighPrecMoney $ toRational booking.estimatedFare,
         quotationTtl = Nothing
       }
 
-tfQuotationPrice :: DBooking.Booking -> Maybe Spec.Price
-tfQuotationPrice booking =
+tfQuotationSU :: DFParams.FareParameters -> HighPrecMoney -> Maybe Spec.Quotation
+tfQuotationSU fareParams estimatedFare =
+  Just
+    Spec.Quotation
+      { quotationBreakup = mkQuotationBreakup fareParams,
+        quotationPrice = tfQuotationPrice estimatedFare,
+        quotationTtl = Nothing
+      }
+
+tfQuotationPrice :: HighPrecMoney -> Maybe Spec.Price
+tfQuotationPrice estimatedFare =
   Just
     Spec.Price
       { priceComputedValue = Nothing,
         priceCurrency = Just "INR",
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
-        priceOfferedValue = Just $ encodeToText booking.estimatedFare,
-        priceValue = Just $ encodeToText booking.estimatedFare
+        priceOfferedValue = Just $ encodeToText estimatedFare,
+        priceValue = Just $ encodeToText estimatedFare
       }
 
-mkQuotationBreakup :: DBooking.Booking -> Maybe [Spec.QuotationBreakupInner]
-mkQuotationBreakup booking =
-  let fareParams = mkFareParamsBreakups mkPrice mkQuotationBreakupInner booking.fareParams
-   in Just $ filter (filterRequiredBreakups $ DFParams.getFareParametersType booking.fareParams) fareParams -- TODO: Remove after roll out
+mkQuotationBreakup :: DFParams.FareParameters -> Maybe [Spec.QuotationBreakupInner]
+mkQuotationBreakup fareParams =
+  let fareParameters = mkFareParamsBreakups mkPrice mkQuotationBreakupInner fareParams
+   in Just $ filter (filterRequiredBreakups $ DFParams.getFareParametersType fareParams) fareParameters -- TODO: Remove after roll out
   where
     mkPrice money =
       Just
@@ -802,6 +817,7 @@ mkQuotationBreakup booking =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.TOTAL_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
         DFParams.Slab ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
@@ -814,6 +830,7 @@ mkQuotationBreakup booking =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.TOTAL_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.NIGHT_SHIFT_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
         DFParams.Rental ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
@@ -826,6 +843,7 @@ mkQuotationBreakup booking =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.NIGHT_SHIFT_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
 
 type MerchantShortId = Text
 
@@ -838,8 +856,23 @@ tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           itemId = Just $ Common.mkItemId shortId booking.vehicleServiceTier,
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
-          itemPrice = tfItemPrice booking,
+          itemPrice = tfItemPrice $ booking.estimatedFare,
           itemTags = mkRateCardTag estimatedDistance Nothing mbFarePolicy
+        }
+    ]
+
+tfItemsSoftUpdate :: DBooking.Booking -> MerchantShortId -> Maybe HighPrecMeters -> Maybe FarePolicyD.FarePolicy -> Maybe Text -> DBUR.BookingUpdateRequest -> Text -> Maybe [Spec.Item]
+tfItemsSoftUpdate booking shortId estimatedDistance mbFarePolicy mbPaymentId updatedBooking rideId = do
+  let estimatedDistance' = maybe Nothing (\dist -> Just $ highPrecMetersToMeters dist) estimatedDistance
+  Just
+    [ Spec.Item
+        { itemDescriptor = tfItemDescriptor booking,
+          itemFulfillmentIds = Just [rideId],
+          itemId = Just $ Common.mkItemId shortId booking.vehicleServiceTier,
+          itemLocationIds = Nothing,
+          itemPaymentIds = tfPaymentId mbPaymentId,
+          itemPrice = tfItemPrice updatedBooking.estimatedFare,
+          itemTags = mkRateCardTag estimatedDistance' Nothing mbFarePolicy
         }
     ]
 
@@ -848,16 +881,16 @@ tfPaymentId mbPaymentId = do
   paymentId <- mbPaymentId
   Just [paymentId]
 
-tfItemPrice :: DBooking.Booking -> Maybe Spec.Price
-tfItemPrice booking =
+tfItemPrice :: HighPrecMoney -> Maybe Spec.Price
+tfItemPrice estimatedFare =
   Just
     Spec.Price
       { priceComputedValue = Nothing,
         priceCurrency = Just "INR",
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
-        priceOfferedValue = Just $ encodeToText booking.estimatedFare, -- TODO : Remove this and make non mandatory on BAP side
-        priceValue = Just $ encodeToText booking.estimatedFare
+        priceOfferedValue = Just $ encodeToText estimatedFare, -- TODO : Remove this and make non mandatory on BAP side
+        priceValue = Just $ encodeToText estimatedFare
       }
 
 tfItemDescriptor :: DBooking.Booking -> Maybe Spec.Descriptor
@@ -920,11 +953,13 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       serviceTierDescription = serviceTier.shortDescription,
       vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = Nothing,
+      isCustomerPrefferedSearchRoute = Nothing,
+      isBlockedRoute = Nothing,
       ..
     }
 
-mkGeneralInfoTagGroup :: Pricing -> Maybe Spec.TagGroup
-mkGeneralInfoTagGroup pricing
+mkGeneralInfoTagGroup :: Pricing -> Bool -> Maybe Spec.TagGroup
+mkGeneralInfoTagGroup pricing isValueAddNP
   | isNothing pricing.specialLocationTag && isNothing pricing.distanceToNearestDriver = Nothing
   | otherwise =
     Just $
@@ -937,7 +972,12 @@ mkGeneralInfoTagGroup pricing
                   descriptorName = Just "Information",
                   descriptorShortDesc = Nothing
                 },
-          tagGroupList = specialLocationTagSingleton pricing.specialLocationTag <> distanceToNearestDriverTagSingleton pricing.distanceToNearestDriver
+          tagGroupList =
+            specialLocationTagSingleton pricing.specialLocationTag
+              <> distanceToNearestDriverTagSingleton pricing.distanceToNearestDriver
+              <> isCustomerPrefferedSearchRouteSingleton pricing.isCustomerPrefferedSearchRoute
+              <> isBlockedRouteSingleton pricing.isBlockedRoute
+              <> tollNamesSingleton pricing.tollNames
         }
   where
     specialLocationTagSingleton specialLocationTag
@@ -969,6 +1009,51 @@ mkGeneralInfoTagGroup pricing
                       descriptorShortDesc = Nothing
                     },
               tagValue = show . double2Int . realToFrac <$> distanceToNearestDriver
+            }
+    isCustomerPrefferedSearchRouteSingleton isCustomerPrefferedSearchRoute
+      | isNothing isCustomerPrefferedSearchRoute || not isValueAddNP = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE,
+                      descriptorName = Just "Is Customer Preffered Search Route",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> isCustomerPrefferedSearchRoute
+            }
+    isBlockedRouteSingleton isBlockedRoute
+      | isNothing isBlockedRoute || not isValueAddNP = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.IS_BLOCKED_SEARCH_ROUTE,
+                      descriptorName = Just "Is Blocked Search Route",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> isBlockedRoute
+            }
+    tollNamesSingleton tollNames
+      | isNothing tollNames || not isValueAddNP = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.TOLL_NAMES,
+                      descriptorName = Just "Toll Names",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> tollNames
             }
 
 mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.TagGroup]
@@ -1017,7 +1102,7 @@ tfCancellationTerms becknConfig =
 
 tfPayments :: DBooking.Booking -> DM.Merchant -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments booking transporter bppConfig = do
-  let mPrice = Just $ mkPriceFromMoney booking.estimatedFare -- FIXME
+  let mPrice = Just $ Common.mkPrice (Just booking.currency) booking.estimatedFare
   let mkParams :: Maybe BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
   Just . List.singleton $ mkPayment (show transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
@@ -1032,3 +1117,118 @@ tfProvider becknConfig =
         providerLocations = Nothing,
         providerPayments = Nothing
       }
+
+mkFulfillmentV2SoftUpdate ::
+  (MonadFlow m, EncFlow m r) =>
+  Maybe SP.Person ->
+  DRide.Ride ->
+  DBooking.Booking ->
+  Maybe DVeh.Vehicle ->
+  Maybe Text ->
+  Maybe [Spec.TagGroup] ->
+  Maybe [Spec.TagGroup] ->
+  Bool ->
+  Bool ->
+  Maybe Text ->
+  IsValueAddNP ->
+  DLoc.Location ->
+  m Spec.Fulfillment
+mkFulfillmentV2SoftUpdate mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide mbEvent isValueAddNP newDestination = do
+  mbDInfo <- driverInfo
+  let rideOtp = fromMaybe ride.otp ride.endOtp
+  pure $
+    Spec.Fulfillment
+      { fulfillmentId = Just ride.id.getId,
+        fulfillmentStops = mkStops' booking.fromLocation (Just newDestination) (Just rideOtp),
+        fulfillmentType = Just $ mkFulfillmentType booking.tripCategory,
+        fulfillmentAgent =
+          Just $
+            Spec.Agent
+              { agentContact =
+                  mbDInfo >>= \dInfo ->
+                    Just $
+                      Spec.Contact
+                        { contactPhone = Just dInfo.mobileNumber
+                        },
+                agentPerson =
+                  Just $
+                    Spec.Person
+                      { personId = Nothing,
+                        personImage =
+                          mbImage <&> \mbImage' ->
+                            Spec.Image
+                              { imageHeight = Nothing,
+                                imageSizeType = Nothing,
+                                imageUrl = Just mbImage',
+                                imageWidth = Nothing
+                              },
+                        personName = mbDInfo >>= Just . (.name),
+                        personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
+                      }
+              },
+        fulfillmentVehicle =
+          mbVehicle >>= \vehicle -> do
+            let (category, variant) = castVariant vehicle.variant
+            Just $
+              Spec.Vehicle
+                { vehicleColor = Just vehicle.color,
+                  vehicleModel = Just vehicle.model,
+                  vehicleRegistration = Just vehicle.registrationNo,
+                  vehicleCategory = Just category,
+                  vehicleVariant = Just variant,
+                  vehicleMake = Nothing
+                },
+        fulfillmentCustomer = Nothing,
+        fulfillmentState =
+          mbEvent
+            >> ( Just $
+                   Spec.FulfillmentState
+                     { fulfillmentStateDescriptor =
+                         Just $
+                           Spec.Descriptor
+                             { descriptorCode = mbEvent,
+                               descriptorName = Nothing,
+                               descriptorShortDesc = Nothing
+                             }
+                     }
+               ),
+        fulfillmentTags = mbTags
+      }
+  where
+    driverInfo = forM mbDriver $ \driver -> do
+      dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
+      dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
+      let dTags = mkDriverDetailsTags driver isDriverBirthDay isFreeRide
+      pure $
+        DriverInfo
+          { mobileNumber = dPhoneNum,
+            name = dName,
+            tags = if isValueAddNP then dTags else Nothing
+          }
+
+buildLocation :: MonadFlow m => Spec.Stop -> m DL.Location
+buildLocation stop = do
+  location <- stop.stopLocation & fromMaybeM (InvalidRequest "Location not present")
+  guid <- generateGUID
+  now <- getCurrentTime
+  gps <- parseLatLong =<< (location.locationGps & fromMaybeM (InvalidRequest "Location GPS not present"))
+  address <- parseAddress location >>= fromMaybeM (InvalidRequest "Location Address not present")
+  return $
+    DL.Location
+      { DL.id = guid,
+        createdAt = now,
+        updatedAt = now,
+        lat = gps.lat,
+        lon = gps.lon,
+        address
+      }
+
+castPaymentCollector :: MonadFlow m => Text -> m DMPM.PaymentCollector
+castPaymentCollector "BAP" = return DMPM.BAP
+castPaymentCollector "BPP" = return DMPM.BPP
+castPaymentCollector _ = throwM $ InvalidRequest "Unknown Payment Collector"
+
+castPaymentType :: MonadFlow m => Text -> m DMPM.PaymentType
+castPaymentType "ON_ORDER" = return DMPM.ON_FULFILLMENT
+castPaymentType "ON_FULFILLMENT" = return DMPM.POSTPAID
+castPaymentType _ = throwM $ InvalidRequest "Unknown Payment Type"

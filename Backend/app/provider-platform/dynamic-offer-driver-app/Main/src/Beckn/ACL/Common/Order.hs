@@ -49,6 +49,7 @@ import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
 import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Common
 import Kernel.Utils.Common
 import SharedLogic.Beckn.Common as Common
@@ -194,21 +195,19 @@ mkArrivalTimeTagGroup arrivalTime =
       }
   ]
 
--- FIXME
-defaultCurrency :: Text
-defaultCurrency = "INR"
-
 buildRideCompletedQuote :: MonadFlow m => DRide.Ride -> DFParams.FareParameters -> m Quote.RideCompletedQuote
 buildRideCompletedQuote ride fareParams = do
-  fare <- realToFrac <$> ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
+  fare <- ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
+  let value = Quote.DecimalValue $ fare.getHighPrecMoney
+      currency = show ride.currency
   let price =
         Quote.QuotePrice
-          { currency = defaultCurrency,
-            value = fare,
-            computed_value = fare
+          { currency,
+            value,
+            computed_value = value
           }
       breakup =
-        Fare.mkFareParamsBreakups (Breakup.BreakupItemPrice defaultCurrency . fromIntegral) Breakup.BreakupItem fareParams
+        Fare.mkFareParamsBreakups (Breakup.BreakupItemPrice currency . DecimalValue.DecimalValue . getHighPrecMoney) Breakup.BreakupItem fareParams
           & filter (Common.filterRequiredBreakups $ DFParams.getFareParametersType fareParams) -- TODO: Remove after roll out
   pure
     Quote.RideCompletedQuote
@@ -216,15 +215,15 @@ buildRideCompletedQuote ride fareParams = do
         breakup
       }
 
-mkRideCompletedPayment :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Payment.Payment
-mkRideCompletedPayment paymentMethodInfo paymentUrl = do
+mkRideCompletedPayment :: Currency -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Payment.Payment
+mkRideCompletedPayment currency paymentMethodInfo paymentUrl = do
   Payment.Payment
     { _type = maybe Payment.ON_FULFILLMENT (Common.castDPaymentType . (.paymentType)) paymentMethodInfo,
       params =
         Payment.PaymentParams
           { collected_by = maybe Payment.BPP (Common.castDPaymentCollector . (.collectedBy)) paymentMethodInfo,
             instrument = Nothing,
-            currency = defaultCurrency,
+            currency = show currency,
             amount = Nothing
           },
       uri = paymentUrl

@@ -23,3 +23,23 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ALTER COLUMN trip_category DROP NOT 
 ALTER TABLE atlas_driver_offer_bpp.estimate ALTER COLUMN is_scheduled DROP NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN vehicle_service_tier_name text ;
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN driver_pick_up_charge integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN toll_names text[] ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN is_customer_preffered_search_route boolean ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN is_blocked_route boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate DROP COLUMN driver_pick_up_charge;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN min_fare_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN max_fare_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN currency character varying(255) ;

@@ -21,14 +21,18 @@ import qualified Domain.Action.Beckn.Rating as DRating
 import Domain.Types.Merchant (Merchant)
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Functions as B
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Domain as Domain
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.Booking as QRB
+import TransactionLogs.PushLogs
 
 type API =
   Capture "merchantId" (Id Merchant)
@@ -54,6 +58,9 @@ rating merchantId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBeck
       fork "rating request processing" $
         Redis.whenWithLockRedis (ratingProcessingLockKey dRatingReq.bookingId.getId) 60 $
           DRating.handler merchantId dRatingReq ride
+      fork "rating received pushing ondc logs" do
+        booking <- B.runInReplica $ QRB.findById dRatingReq.bookingId >>= fromMaybeM (BookingDoesNotExist dRatingReq.bookingId.getId)
+        void $ pushLogs "rating" (toJSON reqV2) booking.providerId.getId
     pure Ack
 
 ratingLockKey :: Text -> Text

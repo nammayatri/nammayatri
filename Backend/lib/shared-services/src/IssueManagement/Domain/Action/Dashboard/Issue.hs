@@ -152,7 +152,7 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
       option <- mapM (\optionId -> CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionNotFound optionId.getId)) issueReport.optionId
       issueChats <- case identifier of
         DRIVER -> return Nothing
-        CUSTOMER -> Just <$> UIR.mkIssueChats issueReport ENGLISH identifier
+        CUSTOMER -> Just <$> UIR.recreateIssueChats issueReport ENGLISH identifier
       pure $
         Common.IssueInfoRes
           { issueReportId = cast issueReport.id,

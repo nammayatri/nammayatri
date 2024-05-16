@@ -23,9 +23,12 @@ import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
+import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.Booking as QRB
+import TransactionLogs.PushLogs
 
 type API = OnStatus.OnStatusAPIV2
 
@@ -48,7 +51,10 @@ onStatus _ reqV2 = withFlowHandlerBecknAPI do
         fork "on status processing" $ do
           Redis.whenWithLockRedis (onStatusProcessngLockKey messageId) 60 $
             DOnStatus.onStatus validatedOnStatusReq
-    pure Ack
+          fork "on status received pushing ondc logs" do
+            booking <- QRB.findByBPPBookingId onStatusReq.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> onStatusReq.bppBookingId.getId)
+            void $ pushLogs "on_status" (toJSON reqV2) booking.merchantId.getId
+  pure Ack
 
 onStatusLockKey :: Text -> Text
 onStatusLockKey id = "Customer:OnStatus:MessageId-" <> id

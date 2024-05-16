@@ -8,13 +8,13 @@ RegistrationToken:
 
   types:
     Medium:
-      enum: "SMS, EMAIL, SIGNATURE"
+      enum: "SMS, WHATSAPP, EMAIL, SIGNATURE"
 
     RTEntityType:
       enum: "CUSTOMER, USER"
 
     LoginType:
-      enum: "OTP,PASSWORD,DIRECT"
+      enum: "OTP,PASSWORD,DIRECT,OAUTH"
 
   fields:
     id : Id RegistrationToken

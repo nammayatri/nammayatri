@@ -81,6 +81,9 @@ initData =
           , endOdometerReading: Nothing
           , serviceTier : ""
           , capacity : Nothing
+          , hasToll: false
+          , estimatedTollCharge : Nothing
+          , acRide : Nothing
           }
       , cancelRideModal:
           { selectionOptions: []
@@ -95,6 +98,7 @@ initData =
       , locationLastUpdatedTime: ""
       , totalRidesOfDay: 0
       , totalEarningsOfDay: 0
+      , earningPerKm : Nothing
       , bonusEarned: 0
       , route: []
       , cancelRideConfirmationPopUp:
@@ -153,8 +157,8 @@ initData =
           , disability: Nothing
           , payerVpa: ""
           , specialZonePickup: Nothing
-          , actualTollCharge : 0
-          , estimatedTollCharge : 0
+          , actualTollCharge : 0.0
+          , estimatedTollCharge : 0.0
           , capacity : Nothing
           , serviceTier : ""
           }
@@ -255,7 +259,8 @@ initData =
       , odometerFileId: Nothing
       , odometerUploadAttempts: 0
       , odometerImageUploading: false
-      , hasToll: false
+      , showAcWorkingPopup: Nothing
+      , acExplanationPopup : false
       }
   }
 
@@ -266,4 +271,5 @@ dummyDriverRideStats =
     , totalEarningsOfDay: 0
     , bonusEarning: 0
     , coinBalance: 0
+    , totalEarningsOfDayPerKm : Nothing
     }

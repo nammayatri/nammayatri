@@ -69,6 +69,7 @@ data SchedulerConfig = SchedulerConfig
     graceTerminationPeriod :: Seconds,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
+    cacConfig :: CacConfig,
     kafkaProducerCfg :: KafkaProducerCfg
   }
   deriving (Generic, FromDhall)
@@ -110,6 +111,7 @@ data SchedulerEnv = SchedulerEnv
     cacheConfig :: CacheConfig,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
+    cacConfig :: CacConfig,
     kafkaProducerForART :: Maybe KafkaProducerTools
   }
   deriving (Generic)

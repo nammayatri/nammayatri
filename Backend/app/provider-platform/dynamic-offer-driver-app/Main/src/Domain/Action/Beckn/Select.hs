@@ -21,8 +21,10 @@ where
 
 import Data.Text as Text
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchRequestForDriver as DTSRD
 import Environment
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -46,7 +48,7 @@ data DSelectReq = DSelectReq
     bapUri :: BaseUrl,
     pickupTime :: UTCTime,
     autoAssignEnabled :: Bool,
-    customerExtraFee :: Maybe Money,
+    customerExtraFee :: Maybe HighPrecMoney,
     customerPhoneNum :: Maybe Text
   }
 
@@ -56,7 +58,7 @@ handler merchant sReq searchReq estimates = do
   now <- getCurrentTime
   case sReq.customerPhoneNum of
     Just number -> do
-      (riderDetails, isNewRider) <- SRD.getRiderDetails merchant.id (fromMaybe "+91" merchant.mobileCountryCode) number now False
+      (riderDetails, isNewRider) <- SRD.getRiderDetails searchReq.currency merchant.id (fromMaybe "+91" merchant.mobileCountryCode) number now False
       when isNewRider $ QRD.create riderDetails
       QSR.updateRiderId searchReq.id riderDetails.id
     Nothing -> do
@@ -65,7 +67,9 @@ handler merchant sReq searchReq estimates = do
   tripQuoteDetails <-
     estimates `forM` \estimate -> do
       QDQ.setInactiveAllDQByEstId estimate.id now
-      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee) (Just 0) (Just $ estimate.maxFare - estimate.minFare) estimate.driverPickUpCharge estimate.id.getId
+      let mbDriverExtraFeeBounds = ((,) <$> estimate.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> estimate.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
+          driverPickUpCharge = join $ DTSRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
+      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge estimate.id.getId
   let driverSearchBatchInput =
         DriverSearchBatchInput
           { sendSearchRequestToDrivers = sendSearchRequestToDrivers',

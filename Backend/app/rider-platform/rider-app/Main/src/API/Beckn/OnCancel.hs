@@ -28,6 +28,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import Tools.Error
+import TransactionLogs.PushLogs
 
 type API = OnCancel.OnCancelAPIV2
 
@@ -58,8 +59,10 @@ onCancel _ req = withFlowHandlerBecknAPI do
             fork "on cancel processing" $ do
               Redis.whenWithLockRedis (onCancelProcessingLockKey messageId) 60 $ do
                 DOnCancel.onCancel validatedOnCancelReq
-        pure Ack
+                fork "on cancel received pushing ondc logs" do
+                  void $ pushLogs "on_cancel" (toJSON req) validatedOnCancelReq.booking.merchantId.getId
       _ -> throwError . InvalidBecknSchema $ "on_cancel order.status expected:-CANCELLED, received:-" <> cancelStatus'
+  pure Ack
 
 onCancelLockKey :: Text -> Text
 onCancelLockKey id = "Customer:OnCancel:MessageId-" <> id

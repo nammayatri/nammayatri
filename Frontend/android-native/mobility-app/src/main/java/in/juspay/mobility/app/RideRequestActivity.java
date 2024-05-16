@@ -95,6 +95,7 @@ public class RideRequestActivity extends AppCompatActivity {
             String searchRequestValidTill = rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQ_VALID_TILL));
             float distanceToPickup = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_PICKUP));
             float distanceTobeCovered = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_BE_COVERED));
+            int tollCharges = rideRequestBundle.getInt("tollCharges");
             String durationToPickup = rideRequestBundle.getString("durationToPickup");
             DecimalFormat df = new DecimalFormat();
             df.setMaximumFractionDigits(2);
@@ -122,6 +123,7 @@ public class RideRequestActivity extends AppCompatActivity {
                     
             SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                     distanceTobeCovered,
+                    tollCharges,
                     RideRequestUtils.calculateDp(durationToPickup, df),
                     rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_PICKUP)),
                     rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_DROP)),
@@ -249,6 +251,7 @@ public class RideRequestActivity extends AppCompatActivity {
             holder.pickUpDistance.setText(model.getPickUpDistance()+" km ");
             holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount() + model.getSpecialZoneExtraTip()));
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
+            holder.tollTag.setVisibility(model.getTollCharges() > 0? View.VISIBLE : View.GONE);
 
             if( service.equals("yatrisathiprovider") && !model.getDurationToPickup().isEmpty()){
                 holder.durationToPickup.setVisibility(View.VISIBLE);
@@ -288,7 +291,7 @@ public class RideRequestActivity extends AppCompatActivity {
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
-            RideRequestUtils.updateTierAndAC(holder, model);
+            RideRequestUtils.updateTierAndAC(holder, model, RideRequestActivity.this);
             RideRequestUtils.updateRateView(holder, model);
             RideRequestUtils.updateRentalView(holder, model, RideRequestActivity.this);
             RideRequestUtils.updateIntercityView(holder, model, RideRequestActivity.this);

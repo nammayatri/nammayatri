@@ -23,7 +23,7 @@ import Dashboard.Common as Reexport
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForJSON)
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
-import Kernel.Types.Common (HighPrecMoney)
+import Kernel.Types.Common (HighPrecMoney, PriceAPIEntity)
 import Kernel.Types.Id
 import Servant hiding (Summary, throwError)
 
@@ -61,7 +61,8 @@ data BulkUploadCoinsReqV2 = BulkUploadCoinsReqV2
 
 data DriverIdListWithAmount = DriverIdListWithAmount
   { driverId :: Text,
-    amount :: HighPrecMoney
+    amount :: HighPrecMoney,
+    amountWithCurrency :: Maybe PriceAPIEntity
   }
   deriving (Generic, Read, Eq, Show, FromJSON, ToJSON, Ord, ToSchema)
 
@@ -91,7 +92,7 @@ data CoinHistoryRes = CoinHistoryRes
     coinEarnHistory :: [CoinEarnHistoryItem],
     coinBurnHistory :: [CoinBurnHistoryItem]
   }
-  deriving (Generic, Read, Eq, Show, FromJSON, ToJSON, Ord, ToSchema)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data CoinEarnHistoryItem = CoinEarnHistoryItem
   { coins :: Int,
@@ -107,11 +108,12 @@ data CoinEarnHistoryItem = CoinEarnHistoryItem
 data CoinBurnHistoryItem = CoinBurnHistoryItem
   { numCoins :: Int,
     cash :: HighPrecMoney,
+    cashWithCurrency :: PriceAPIEntity,
     title :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Read, Eq, Show, FromJSON, ToJSON, Ord, ToSchema)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data CoinStatus = Used | Remaining deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 

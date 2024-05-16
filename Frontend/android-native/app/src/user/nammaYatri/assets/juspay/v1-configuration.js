@@ -6,10 +6,23 @@ if (typeof __VERSION__ !== "undefined") {
 window.version["configuration"]= version;
 
 function getAppLink(os) {
-  if (os == "ANDROID") {
-    return "https://play.google.com/store/apps/details?id=in.juspay.nammayatri"
-  } else {
-    return "https://apps.apple.com/in/app/namma-yatri/id1637429831"
+  let sessionInfo = JSON.parse(JBridge.getSessionInfo());
+  if (sessionInfo.app_name.toLowerCase().includes("namma")) {
+    if (os == "ANDROID") {
+      return "https://play.google.com/store/apps/details?id=in.juspay.nammayatri"
+    }
+    else {
+      return "https://apps.apple.com/in/app/namma-yatri/id1637429831"
+      
+    }
+  }
+  else if (sessionInfo.app_name.toLowerCase().includes("mana")) {
+    if (os == "ANDROID") {
+      return "https://play.google.com/store/apps/details?id=in.mobility.manayatri"
+    }
+    else {
+      return "https://apps.apple.com/in/app/mana-yatri/id6477922432"
+    }
   }
 }
 
@@ -51,7 +64,6 @@ window.getMerchantConfig = function () {
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"],
     "primaryButtonCornerRadius" : 8.0,
     "cancelSearchTextColor": "#E55454",
-    "enableSingleEstimate": true,
     "dashboardUrl" : "https://nammayatri.in/open?source=in-app",
     "driverInfoConfig": {
       "showTrackingButton" : false
@@ -66,7 +78,7 @@ window.getMerchantConfig = function () {
     "feedbackBackground": "#2C2F3A",
     "profileCompletion" : "#FCC32C",
     "cancelRideColor" : "#E55454",
-    "merchantLogo" : "ic_invoice_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ic_invoice_logo.png",
+    "merchantLogo" : "ny_ic_ny_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_ny_logo.png",
     "infoIconUrl" : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png",
     "sideBarList": ["MyRides", "Favorites", "NammaSafety", "MetroTickets", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
     "rateCardColor": "#2C2F3A",
@@ -195,6 +207,10 @@ window.getMerchantConfig = function () {
       "isServiceablePopupFullScreen" : true,
     }
     , "tipEnabledCities" : ["Bangalore", "Hyderabad"]
+    , "acPopupConfig" : {
+        "enableAcPopup" : false,
+        "enableNonAcPopup" : true
+    }
     , "autoSelectBackground" : "#53BB6F"
     , "enableMockLocation" : true
     , "defaultLanguage" : "EN_US"
@@ -230,13 +246,16 @@ window.getMerchantConfig = function () {
       }
     ]
     , "callOptions" : ["ANONYMOUS", "DIRECT"]
+    , "tipDisplayDuration" : 30
     , "termsVersion" : 2.0
     , "showDisabilityBanner" : false
     , "enableContactSupport" : false
     , "enableGeocoder" : true
     , "metroTicketingConfig" : [
       { "cityName" : "kochi"
-      , "cityCode" : "std:0484"      
+      , "cityCode" : "std:0484"
+      , "customEndTime" : "23:59:59" 
+      , "customDates" : ["03/05/2024", "04/05/2024", "05/05/2024", "06/05/2024", "07/05/2024", "08/05/2024", "09/05/2024", "10/05/2024","11/05/2024"]       
       , "metroStationTtl" : 10080
       , "bookingStartTime" : "05:45:00"
       , "bookingEndTime" : "22:30:00"
@@ -246,7 +265,9 @@ window.getMerchantConfig = function () {
     }
       },
       { "cityName" : "chennai"
-      , "cityCode" : "std:040"  
+      , "cityCode" : "std:040"
+      , "customEndTime" : "01:00:00" 
+      , "customDates" : ["23/04/2024","28/04/2024","01/05/2024","12/05/2024"] 
       , "metroStationTtl" : 10080
       , "bookingStartTime" : "04:30:00"
       , "bookingEndTime" : "22:30:00"
@@ -258,7 +279,7 @@ window.getMerchantConfig = function () {
     ]
     , "estimateAndQuoteConfig" : 
       { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ]
-      , "variantOrder" : ["AUTO_RICKSHAW"]
+      , "variantOrder" : ["AUTO_RICKSHAW", "BOOK_ANY"]
       , "variantInfo" : {
         "hatchback" : {
           "name" : "Hatchback",
@@ -283,8 +304,11 @@ window.getMerchantConfig = function () {
         "autoRickshaw" : {
           "name" : "Auto Rickshaw",
           "image" : "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png"
-        }
-
+        },
+        "bookAny" : {
+          "name" : "Book Any",
+          "image" : "ny_ic_auto_cab_green,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_cab_green.png"
+        },
       }
       , "enableOnlyAuto" : true
       , "showNearByDrivers": false
@@ -292,10 +316,15 @@ window.getMerchantConfig = function () {
       , "textColor": "#6D7280"
       , "showInfoIcon" : true 
       }
+    , "rideCompletedCardConfig" : {
+        "topCard" : {
+          "horizontalLineColor" : "#454545"
+        }
+      }
     , "feature" : {
         "enableSupport" : false
       , "enableSuggestions" : true
-      ,  "enableRepeatTripBackfilling" : true
+      , "enableRepeatTripBackfilling" : true
     }
     , "appData" : {
       "link" : getAppLink(window.__OS)
@@ -306,6 +335,6 @@ window.getMerchantConfig = function () {
     , "referral" : {
       "domain" : "https://nammayatri.in/"
     , "customerAppId" : "in.juspay.nammayatri"
-  },
+  }
   })
 }

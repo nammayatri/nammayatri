@@ -15,7 +15,7 @@
 module Screens.NammaSafetyFlow.SetupSafetySettingsScreen.Controller where
 
 import Prelude (class Show, discard, map, not, pure, void, ($), (/=), (<>), (==), (||))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import Screens.Types (NammaSafetyScreenState, SafetySetupStage(..))
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton.Controller as PrimaryButtonController
@@ -160,4 +160,4 @@ eval (ContactListAction (ContactList.ContactCardClicked index)) state = do
 eval (ContactListAction ContactList.AddContacts) state = do
   exit $ GoToEmergencyContactScreen state
 
-eval _ state = continue state
+eval _ state = update state

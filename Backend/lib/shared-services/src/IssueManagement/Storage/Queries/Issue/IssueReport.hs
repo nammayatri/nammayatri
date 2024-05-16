@@ -39,6 +39,9 @@ findByShortId (ShortId issueReportShortId) = findOneWithKV [And [Is BeamIR.short
 findAllByPerson :: BeamFlow m r => Id Person -> m [IssueReport]
 findAllByPerson (Id personId) = findAllWithOptionsKV [And [Is BeamIR.personId $ Eq personId, Is BeamIR.deleted $ Eq False]] (Desc BeamIR.updatedAt) Nothing Nothing
 
+findAllByPersonAndRideId :: BeamFlow m r => Id Person -> Id Ride -> m [IssueReport]
+findAllByPersonAndRideId (Id personId) (Id rideId) = findAllWithOptionsKV [And [Is BeamIR.personId $ Eq personId, Is BeamIR.rideId $ Eq (Just rideId), Is BeamIR.deleted $ Eq False]] (Desc BeamIR.updatedAt) Nothing Nothing
+
 safeToDelete :: BeamFlow m r => Id IssueReport -> Id Person -> m (Maybe IssueReport)
 safeToDelete (Id issueReportId) (Id personId) = findOneWithKV [And [Is BeamIR.id $ Eq issueReportId, Is BeamIR.personId $ Eq personId, Is BeamIR.deleted $ Eq False]]
 

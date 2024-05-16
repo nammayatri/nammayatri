@@ -34,7 +34,7 @@ import qualified "rider-app" Domain.Types.Booking as SRB
 import qualified "rider-app" Domain.Types.Booking.API as DB
 import qualified "rider-app" Domain.Types.Estimate as DEstimate
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "rider-app" Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified "rider-app" Domain.Types.MerchantPaymentMethod as DMPM
 import qualified "rider-app" Domain.Types.Person as DP
 import qualified "rider-app" Domain.Types.Quote as Quote
 import qualified "rider-app" Domain.Types.RegistrationToken as DTR
@@ -89,7 +89,7 @@ newtype QuoteAPIs = QuoteAPIs
   }
 
 data SelectAPIs = SelectAPIs
-  { rSelect :: Id DP.Person -> Id DEstimate.Estimate -> Euler.EulerClient APISuccess,
+  { rSelect :: Id DP.Person -> Id DEstimate.Estimate -> DSelect.DSelectReq -> Euler.EulerClient APISuccess,
     selectList :: Id DP.Person -> Id DEstimate.Estimate -> Euler.EulerClient DSelect.SelectListRes,
     selectResult :: Id DP.Person -> Id DEstimate.Estimate -> Euler.EulerClient DSelect.QuotesResultResponse,
     cancelSearch :: Id DP.Person -> Id DEstimate.Estimate -> Euler.EulerClient DSelect.CancelAPIResponse

@@ -36,6 +36,7 @@ import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
@@ -47,6 +48,7 @@ import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics (HasBAPMetrics)
+import TransactionLogs.Types
 
 data DOnStatusReq = DOnStatusReq
   { bppBookingId :: Id DB.BPPBooking,
@@ -164,6 +166,7 @@ onStatus ::
     HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
     CacheFlow m r,
     EsqDBFlow m r,
+    ClickhouseFlow m r,
     HasBAPMetrics m r,
     EncFlow m r,
     HasHttpClientOptions r c,
@@ -172,6 +175,7 @@ onStatus ::
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasField "hotSpotExpiry" r Seconds
   ) =>
   ValidatedOnStatusReq ->
@@ -203,7 +207,7 @@ onStatus req = do
       let rideId = case rideEntity of
             UpdatedRide (DUpdatedRide {ride}) -> ride.id
             RenewedRide ride -> ride.id
-      let bookingCancellationReason = mkBookingCancellationReason booking.id (Just rideId) reallocationSource booking.merchantId
+      bookingCancellationReason <- mkBookingCancellationReason booking.id (Just rideId) reallocationSource booking.merchantId
       rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity
       when (isStatusChanged booking.status bookingNewStatus rideEntity) $ do
         QBCR.upsert bookingCancellationReason
@@ -302,23 +306,34 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       startOdometerReading = Nothing
       endOdometerReading = Nothing
       clientId = booking.clientId
+      backendAppVersion = Nothing
+      backendConfigVersion = Nothing
+      clientBundleVersion = Nothing
+      clientConfigVersion = Nothing
+      clientDevice = Nothing
+      clientSdkVersion = Nothing
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::
+  (MonadFlow m) =>
   Id DB.Booking ->
   Maybe (Id DRide.Ride) ->
   DBCR.CancellationSource ->
   Id DM.Merchant ->
-  DBCR.BookingCancellationReason
+  m DBCR.BookingCancellationReason
 mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId = do
-  DBCR.BookingCancellationReason
-    { bookingId = bookingId,
-      rideId = mbRideId,
-      merchantId = Just merchantId,
-      source = cancellationSource,
-      reasonCode = Nothing,
-      reasonStage = Nothing,
-      additionalInfo = Nothing,
-      driverCancellationLocation = Nothing,
-      driverDistToPickup = Nothing
-    }
+  now <- getCurrentTime
+  return $
+    DBCR.BookingCancellationReason
+      { bookingId = bookingId,
+        rideId = mbRideId,
+        merchantId = Just merchantId,
+        source = cancellationSource,
+        reasonCode = Nothing,
+        reasonStage = Nothing,
+        additionalInfo = Nothing,
+        driverCancellationLocation = Nothing,
+        driverDistToPickup = Nothing,
+        createdAt = now,
+        updatedAt = now
+      }

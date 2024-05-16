@@ -19,6 +19,8 @@
 module Domain.Types.Common where
 
 import qualified Data.List as List
+import Domain.Types.ServiceTierType
+import EulerHS.Prelude hiding (length)
 import Kernel.Prelude
 import Kernel.Utils.GenericPretty
 import qualified Text.Show
@@ -124,6 +126,15 @@ isRentalTrip tripCategory = case tripCategory of
   Rental _ -> True
   _ -> False
 
+isInterCityTrip :: TripCategory -> Bool
+isInterCityTrip tripCategory = case tripCategory of
+  InterCity _ -> True
+  _ -> False
+
 isDynamicOfferTrip :: TripCategory -> Bool
 isDynamicOfferTrip (OneWay OneWayOnDemandDynamicOffer) = True
 isDynamicOfferTrip _ = False
+
+isTollApplicable :: ServiceTierType -> Bool
+isTollApplicable AUTO_RICKSHAW = False
+isTollApplicable _ = True

@@ -4,6 +4,7 @@
 
 module Domain.Types.FRFSTicketBooking where
 
+import Data.Aeson
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.Merchant

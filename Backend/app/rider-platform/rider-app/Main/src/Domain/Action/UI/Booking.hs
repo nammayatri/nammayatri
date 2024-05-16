@@ -15,13 +15,15 @@
 module Domain.Action.UI.Booking where
 
 import qualified Beckn.ACL.Cancel as CancelACL
+import qualified Beckn.ACL.Status as StatusACL
 import qualified Beckn.ACL.Update as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
-import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import BecknV2.Utils
 import Data.OpenApi (ToSchema (..))
+import qualified Data.Time as DT
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.Booking.API as SRB
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Client as DC
 import Domain.Types.Location
@@ -38,13 +40,15 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude (intToNominalDiffTime)
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
@@ -76,7 +80,7 @@ bookingStatus bookingId _ = do
       ttlUtcTime = addDurationToUTCTime booking.createdAt ttlToNominalDiffTime
   when (booking.status == SRB.NEW && (ttlUtcTime < now)) do
     dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
-    void . withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+    void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
     throwError $ RideInvalidStatus "Booking Invalid"
   SRB.buildBookingAPIEntity booking booking.riderId
   where
@@ -84,12 +88,33 @@ bookingStatus bookingId _ = do
       DCancel.CancelReq
         { reasonCode = CancellationReasonCode "External/Beckn API failure",
           reasonStage = OnConfirm,
-          additionalInfo = Nothing
+          additionalInfo = Nothing,
+          reallocate = Nothing
         }
 
-bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> m BookingListRes
+checkBookingsForStatus :: [SRB.Booking] -> Flow ()
+checkBookingsForStatus (currBooking : bookings) = do
+  riderConfig <- QRC.findByMerchantOperatingCityId currBooking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist currBooking.merchantOperatingCityId.getId)
+  case (riderConfig.bookingSyncStatusCallSecondsDiffThreshold, currBooking.estimatedDuration) of
+    (Just timeDiffThreshold, Just estimatedEndDuration) -> do
+      now <- getCurrentTime
+      let estimatedEndTime = DT.addUTCTime (fromIntegral estimatedEndDuration.getSeconds) currBooking.createdAt
+      let diff = DT.diffUTCTime now estimatedEndTime
+      let callStatusCondition = currBooking.status /= SRB.CANCELLED && currBooking.status /= SRB.COMPLETED && diff > fromIntegral timeDiffThreshold
+      when callStatusCondition $ do
+        merchant <- CQMerchant.findById currBooking.merchantId >>= fromMaybeM (MerchantNotFound currBooking.merchantId.getId)
+        city <- CQMOC.findById currBooking.merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound currBooking.merchantOperatingCityId.getId)
+        let dStatusReq = StatusACL.DStatusReq currBooking merchant city
+        becknStatusReq <- StatusACL.buildStatusReqV2 dStatusReq
+        void $ withShortRetry $ CallBPP.callStatusV2 currBooking.providerUrl becknStatusReq merchant.id
+        checkBookingsForStatus bookings
+    (_, _) -> logError "Nothing values for time diff threshold or booking end duration"
+checkBookingsForStatus [] = pure ()
+
+bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Flow BookingListRes
 bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId = do
   rbList <- runInReplica $ QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId
+  fork "booking list status update" $ checkBookingsForStatus rbList
   logInfo $ "rbList: test " <> show rbList
   BookingListRes <$> traverse (`SRB.buildBookingAPIEntity` personId) rbList
 
@@ -106,9 +131,11 @@ editStop (_, merchantId) bookingId req = do
 processStop :: Id SRB.Booking -> StopReq -> Id Merchant -> Bool -> Flow ()
 processStop bookingId loc merchantId isEdit = do
   booking <- runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
+  uuid <- generateGUID
   validateStopReq booking isEdit
   location <- buildLocation loc
-  locationMapping <- buildLocationMapping location.id booking.id.getId isEdit (Just booking.merchantId) (Just booking.merchantOperatingCityId)
+  prevOrder <- QLM.maxOrderByEntity booking.id.getId
+  locationMapping <- buildLocationMapping location.id booking.id.getId isEdit (Just booking.merchantId) (Just booking.merchantOperatingCityId) prevOrder
   QL.create location
   QLM.create locationMapping
   QRB.updateStop booking (Just location)
@@ -116,26 +143,29 @@ processStop bookingId loc merchantId isEdit = do
   merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   let details =
         if isEdit
-          then
+          then do
+            let stopLocation = location{id = Id $ show prevOrder}
             ACL.UEditStopBuildReqDetails $
               ACL.EditStopBuildReqDetails
-                { stops = [mkDomainLocation location]
+                { stops = [stopLocation]
                 }
-          else
+          else do
+            let stopLocation = location{id = Id $ show (prevOrder + 1)}
             ACL.UAddStopBuildReqDetails $
               ACL.AddStopBuildReqDetails
-                { stops = [mkDomainLocation location]
+                { stops = [stopLocation]
                 }
   let dUpdateReq =
         ACL.UpdateBuildReq
           { bppId = booking.providerId,
             bppUrl = booking.providerUrl,
             transactionId = booking.transactionId,
+            messageId = uuid,
             city = merchant.defaultCity, -- TODO: Correct during interoperability
             ..
           }
   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
-  void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
+  void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
 
 validateStopReq :: (MonadFlow m) => SRB.Booking -> Bool -> m ()
 validateStopReq booking isEdit = do
@@ -164,11 +194,10 @@ buildLocation req = do
         ..
       }
 
-buildLocationMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Location -> Text -> Bool -> Maybe (Id DM.Merchant) -> Maybe (Id DMOC.MerchantOperatingCity) -> m DLM.LocationMapping
-buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCityId = do
+buildLocationMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Location -> Text -> Bool -> Maybe (Id DM.Merchant) -> Maybe (Id DMOC.MerchantOperatingCity) -> Int -> m DLM.LocationMapping
+buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCityId prevOrder = do
   id <- generateGUID
   now <- getCurrentTime
-  prevOrder <- QLM.maxOrderByEntity entityId
   when isEdit $ QLM.updatePastMappingVersions entityId prevOrder
   let version = QLM.latestTag
       tag = DLM.BOOKING
@@ -179,21 +208,3 @@ buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCity
         updatedAt = now,
         ..
       }
-
-mkDomainLocation :: Location -> Common.Location
-mkDomainLocation Location {..} =
-  Common.Location
-    { gps = Common.Gps {..},
-      address =
-        Common.Address
-          { locality = address.area,
-            area_code = address.areaCode,
-            state = address.state,
-            country = address.country,
-            building = address.building,
-            street = address.street,
-            city = address.city,
-            ward = address.ward,
-            door = address.door
-          }
-    }

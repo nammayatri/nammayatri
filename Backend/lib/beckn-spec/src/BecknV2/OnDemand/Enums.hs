@@ -30,6 +30,7 @@ data VehicleCategory
   = -- ..fulfillments.vehicle.category
     AUTO_RICKSHAW
   | CAB
+  | BIKE
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data FulfillmentType
@@ -45,6 +46,7 @@ data StopType
   = -- ..fulfillments.stops.type
     START
   | END
+  | INTERMEDIATE_STOP
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data AuthorizationType
@@ -62,6 +64,10 @@ data FulfillmentState
   | RIDE_ENROUTE_PICKUP
   | RIDE_ARRIVED_PICKUP
   | NEW -- Custom type only used for on-us transaction
+  | PAYMENT_COMPLETED -- Custom type only used for on-us transaction
+  | EDIT_LOCATION -- Custom type only used for on-us transaction
+  | ADD_STOP -- Custom type only used for on-us transaction
+  | EDIT_STOP -- Custom type only used for on-us transaction
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data PaymentStatus
@@ -123,6 +129,8 @@ data OrderStatus
   | ACTIVE
   | COMPLETE
   | CANCELLED
+  | SOFT_UPDATE
+  | CONFIRM_UPDATE
   deriving (Eq, Generic, Read, Show, FromJSON, ToJSON)
 
 data QuoteBreakupTitle
@@ -139,6 +147,7 @@ data QuoteBreakupTitle
   | CUSTOMER_SELECTED_FARE
   | TOTAL_FARE -- removed from init/on_init
   | WAITING_OR_PICKUP_CHARGES
+  | PARKING_CHARGE
   | EXTRA_TIME_FARE
   | NIGHT_SHIFT_CHARGE
   | FIXED_GOVERNMENT_RATE

@@ -36,3 +36,20 @@ export const stringifyJSON = function (obj) {
   }
   return result;
 }
+
+export const toastWithLog = function (str) {
+  if (window.__OS == "IOS") {
+    // window.JBridge.toast(str); //remove once toast is fixed in iOS.
+  }
+  
+  else if (window.JBridge.toaster)
+    window.JBridge.toaster(str);
+  else
+    window.JBridge.toast(str);
+  console.error(str);
+};
+
+export const unsafeSetForeign = function (key,obj,value) {
+  obj[key] = value;
+  return obj;
+};

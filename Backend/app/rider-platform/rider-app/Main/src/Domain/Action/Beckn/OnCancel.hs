@@ -26,12 +26,13 @@ import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as SRide
 import Environment ()
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -74,7 +75,8 @@ onCancel ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r,
-    HasField "hotSpotExpiry" r Seconds
+    HasField "hotSpotExpiry" r Seconds,
+    ClickhouseFlow m r
   ) =>
   ValidatedOnCancelReq ->
   m ()
@@ -83,7 +85,7 @@ onCancel ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ""
   whenJust cancellationSource $ \source -> logTagInfo ("Cancellation source " <> source) ""
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
-  let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) (castCancellatonSource cancellationSource_) booking.merchantId
+  bookingCancellationReason <- mkBookingCancellationReason booking.id (mbRide <&> (.id)) (castCancellatonSource cancellationSource_) booking.merchantId
   fork "incrementing fraud counters" $ do
     let merchantOperatingCityId = booking.merchantOperatingCityId
     mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs
@@ -135,20 +137,25 @@ validateRequest BookingCancelledReq {..} = do
       booking.status `elem` [SRB.NEW, SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.TRIP_ASSIGNED]
 
 mkBookingCancellationReason ::
+  (MonadFlow m) =>
   Id SRB.Booking ->
   Maybe (Id SRide.Ride) ->
   SBCR.CancellationSource ->
   Id DMerchant.Merchant ->
-  SBCR.BookingCancellationReason
-mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId =
-  SBCR.BookingCancellationReason
-    { bookingId = bookingId,
-      rideId = mbRideId,
-      merchantId = Just merchantId,
-      source = cancellationSource,
-      reasonCode = Nothing,
-      reasonStage = Nothing,
-      additionalInfo = Nothing,
-      driverCancellationLocation = Nothing,
-      driverDistToPickup = Nothing
-    }
+  m SBCR.BookingCancellationReason
+mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId = do
+  now <- getCurrentTime
+  return $
+    SBCR.BookingCancellationReason
+      { bookingId = bookingId,
+        rideId = mbRideId,
+        merchantId = Just merchantId,
+        source = cancellationSource,
+        reasonCode = Nothing,
+        reasonStage = Nothing,
+        additionalInfo = Nothing,
+        driverCancellationLocation = Nothing,
+        driverDistToPickup = Nothing,
+        createdAt = now,
+        updatedAt = now
+      }

@@ -29,6 +29,7 @@ where
 
 import qualified AWS.S3 as S3
 import qualified Data.ByteString as BS
+import Data.HashMap.Strict as HMS
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T hiding (count, map)
 import Data.Time (Day)
@@ -63,6 +64,7 @@ import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -75,10 +77,10 @@ import SharedLogic.DriverPool.Types
 import SharedLogic.FareCalculator (fareSum)
 import SharedLogic.Ride
 import Storage.Beam.IssueManagement ()
+import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
-import Storage.CachedQueries.Merchant.TransporterConfig as QMTC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QBooking
@@ -92,6 +94,8 @@ import qualified Storage.Queries.RideDetails as QRD
 import Storage.Queries.Vehicle as QVeh
 import qualified Text.Read as TR (read)
 import Tools.Error
+import TransactionLogs.Types
+import Utils.Common.Cac.KeyNameConstants
 
 data UploadOdometerReq = UploadOdometerReq
   { file :: FilePath,
@@ -135,8 +139,11 @@ data DriverRideRes = DriverRideRes
     vehicleNumber :: Text,
     computedFare :: Maybe Money,
     estimatedBaseFare :: Money,
+    computedFareWithCurrency :: Maybe PriceAPIEntity,
+    estimatedBaseFareWithCurrency :: PriceAPIEntity,
     estimatedDistance :: Maybe Meters,
     driverSelectedFare :: Money,
+    driverSelectedFareWithCurrency :: PriceAPIEntity,
     actualRideDistance :: HighPrecMeters,
     rideRating :: Maybe Int,
     riderName :: Maybe Text,
@@ -152,6 +159,7 @@ data DriverRideRes = DriverRideRes
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     customerExtraFee :: Maybe Money,
+    customerExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     disabilityTag :: Maybe Text,
     requestedVehicleVariant :: DVeh.Variant,
     isOdometerReadingsRequired :: Bool,
@@ -164,7 +172,12 @@ data DriverRideRes = DriverRideRes
     autoPayStatus :: Maybe DI.DriverAutoPayStatus,
     customerCancellationDues :: HighPrecMoney,
     estimatedTollCharges :: Maybe HighPrecMoney,
+    parkingCharge :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
+    customerCancellationDuesWithCurrency :: PriceAPIEntity,
+    estimatedTollChargesWithCurrency :: Maybe PriceAPIEntity,
+    parkingChargeWithCurrency :: Maybe PriceAPIEntity,
+    tollChargesWithCurrency :: Maybe PriceAPIEntity,
     isFreeRide :: Maybe Bool,
     stopLocationId :: Maybe (Id DLoc.Location),
     tripCategory :: DTC.TripCategory,
@@ -254,12 +267,15 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         vehicleColor = fromMaybe initial rideDetails.vehicleColor,
         vehicleVariant = fromMaybe DVeh.SEDAN rideDetails.vehicleVariant,
         vehicleModel = fromMaybe initial rideDetails.vehicleModel,
-        computedFare = ride.fare,
+        computedFare = roundToIntegral <$> ride.fare,
+        computedFareWithCurrency = flip PriceAPIEntity ride.currency <$> ride.fare,
         estimatedDuration = booking.estimatedDuration,
         actualDuration = roundToIntegral <$> (diffUTCTime <$> ride.tripEndTime <*> ride.tripStartTime),
-        estimatedBaseFare = estimatedBaseFare,
+        estimatedBaseFare = roundToIntegral estimatedBaseFare,
+        estimatedBaseFareWithCurrency = PriceAPIEntity estimatedBaseFare ride.currency,
         estimatedDistance = booking.estimatedDistance,
-        driverSelectedFare = fromMaybe 0 fareParams.driverSelectedFare,
+        driverSelectedFare = roundToIntegral $ fromMaybe 0.0 fareParams.driverSelectedFare,
+        driverSelectedFareWithCurrency = flip PriceAPIEntity fareParams.currency $ fromMaybe 0.0 fareParams.driverSelectedFare,
         actualRideDistance = ride.traveledDistance,
         createdAt = ride.createdAt,
         updatedAt = ride.updatedAt,
@@ -271,7 +287,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         rideRating = rideRating <&> (.ratingValue),
         chargeableDistance = ride.chargeableDistance,
         exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
-        customerExtraFee = fareParams.customerExtraFee,
+        customerExtraFee = roundToIntegral <$> fareParams.customerExtraFee,
+        customerExtraFeeWithCurrency = flip PriceAPIEntity fareParams.currency <$> fareParams.customerExtraFee,
         bapName = bapMetadata <&> (.name),
         bapLogo = bapMetadata <&> (.logoUrl),
         disabilityTag = booking.disabilityTag,
@@ -287,7 +304,12 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         isFreeRide = ride.isFreeRide,
         customerCancellationDues = fromMaybe 0 fareParams.customerCancellationDues,
         estimatedTollCharges = fareParams.tollCharges,
+        parkingCharge = fareParams.parkingCharge,
         tollCharges = ride.tollCharges,
+        customerCancellationDuesWithCurrency = flip PriceAPIEntity fareParams.currency $ fromMaybe 0 fareParams.customerCancellationDues,
+        estimatedTollChargesWithCurrency = flip PriceAPIEntity fareParams.currency <$> fareParams.tollCharges,
+        parkingChargeWithCurrency = flip PriceAPIEntity fareParams.currency <$> fareParams.parkingCharge,
+        tollChargesWithCurrency = flip PriceAPIEntity ride.currency <$> ride.tollCharges,
         startOdometerReading = ride.startOdometerReading,
         endOdometerReading = ride.endOdometerReading,
         stopLocationId = booking.stopLocationId,
@@ -317,14 +339,14 @@ calculateLocations bookingId stopLocationId = do
       lastLoc <- mkLocationFromLocationMapping bookingId.getId (maxOrder - 1)
       return (nextLoc, lastLoc)
 
-arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id DRide.Ride -> LatLong -> m APISuccess
+arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let pickupLoc = getCoordinates booking.fromLocation
   let distance = distanceBetweenInMeters req pickupLoc
-  transporterConfig <- QMTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   unless (distance < transporterConfig.arrivedPickupThreshold) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
   unless (isJust ride.driverArrivalTime) $ do
     now <- getCurrentTime
@@ -364,9 +386,9 @@ otpRideCreate driver otpCode booking clientId = do
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = SBooking.cancelBooking uBooking (Just driver) transporter >> throwM exc
       | otherwise = throwM exc
 
-    isNotAllowedVehicleVariant driverVehicle bookingServiceTier = do
+    isNotAllowedVehicleVariant driverVehicleVariant bookingServiceTier = do
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId bookingServiceTier booking.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show bookingServiceTier))
-      return $ driverVehicle `notElem` vehicleServiceTierItem.allowedVehicleVariant
+      return $ driverVehicleVariant `notElem` vehicleServiceTierItem.allowedVehicleVariant
 
 arrivedAtStop :: Id DRide.Ride -> LatLong -> Flow APISuccess
 arrivedAtStop rideId pt = do
@@ -382,7 +404,7 @@ arrivedAtStop rideId pt = do
       stopLoc <- runInReplica $ QLoc.findById nextStopId >>= fromMaybeM (InvalidRequest $ "Stop location doesn't exist for ride " <> ride.id.getId)
       let curPt = LatLong stopLoc.lat stopLoc.lon
           distance = distanceBetweenInMeters pt curPt
-      transporterConfig <- QMTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+      transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
       unless (distance < fromMaybe 500 transporterConfig.arrivedStopThreshold) $ throwError $ InvalidRequest ("Driver is not at stop location for ride " <> ride.id.getId)
       QBooking.updateStopArrival booking.id
       BP.sendStopArrivalUpdateToBAP booking ride driver vehicle
@@ -399,7 +421,7 @@ uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
   contentType <- validateContentType
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  config <- QMTC.findByMerchantOpCityId merchantOpCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  config <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   fileSize <- L.runIO $ withFile file ReadMode hFileSize
   when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)

@@ -18,4 +18,7 @@ bookingOptions = do
     ChangeRidePreference updatedState service -> do
       modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CHANGE_RIDE_PREFERENCE updatedState service)
+    ToggleACAvailability updatedState toogleVal -> do
+      modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ UPDATE_AC_AVAILABILITY updatedState toogleVal)
     GoBack -> App.BackT $ pure App.GoBack

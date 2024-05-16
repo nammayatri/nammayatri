@@ -36,6 +36,7 @@ import Constants as Const
 import Data.Array (filter, elem)
 import Common.Animation.Config
 import PrestoDOM.Animation as PrestoAnim
+import Engineering.Helpers.Commons (convertUTCtoISC)
 
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
 genericHeaderConfig state= let 
@@ -89,6 +90,14 @@ confirmLostAndFoundConfig state = let
 
 sourceToDestinationConfig :: ST.TripDetailsScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state = let 
+  startDate = state.data.selectedItem.rideStartTime <> " . " <> (convertUTCtoISC state.data.selectedItem.rideStartTimeUTC "DD/MM/YYYY") 
+  endDate = state.data.selectedItem.rideEndTime <> " . " <> (convertUTCtoISC state.data.selectedItem.rideEndTimeUTC "DD/MM/YYYY")
+  sourceText = if state.data.selectedItem.status /= "CANCELLED"
+                  then startDate <> "\n" <> state.data.source
+                  else state.data.source
+  destinationText = if state.data.selectedItem.status /= "CANCELLED"
+                  then endDate <> "\n" <> state.data.destination
+                  else state.data.destination
   sourceToDestinationConfig' = SourceToDestination.config
     { id = Just $ "TripDetailsSTDC_" <> state.data.tripId
     , sourceImageConfig {
@@ -96,7 +105,7 @@ sourceToDestinationConfig state = let
       , margin = (MarginTop 3)
       }
     , sourceTextConfig {
-        text = state.data.source
+        text = sourceText
       , padding = (Padding 2 0 2 2)
       , margin = (MarginHorizontal 12 15)
       , color = Color.greyDavy
@@ -108,7 +117,7 @@ sourceToDestinationConfig state = let
       }
     , destinationBackground = Color.blue600
     , destinationTextConfig {
-        text = state.data.destination
+        text = destinationText
       , padding = (Padding 2 0 2 2)
       , margin = MarginHorizontal 12 15
       , color = Color.greyDavy
@@ -120,7 +129,7 @@ sourceToDestinationConfig state = let
 topicsList :: ST.TripDetailsScreenState -> Array CategoryListType
 topicsList state =  
   let appConfig = getAppConfig Const.appConfig 
-      neededCategories = ["LOST_AND_FOUND", "PAYMENT_RELATED", "FARE_DISCREPANCY", "SAFETY"]
+      neededCategories = ["RIDE_RELATED", "LOST_AND_FOUND", "PAYMENT_RELATED", "FARE_DISCREPANCY", "SAFETY"]
   in 
   if appConfig.feature.enableSelfServe then 
     filter (\obj -> elem obj.categoryAction neededCategories) state.data.categories 

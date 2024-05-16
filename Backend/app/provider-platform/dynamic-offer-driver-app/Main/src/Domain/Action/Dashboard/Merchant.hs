@@ -60,9 +60,9 @@ import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DFPEFB
 import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Geometry as DGEO
 import qualified Domain.Types.GoHomeConfig as DGoHomeConfig
+import qualified Domain.Types.LeaderBoardConfigs as DLC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DDIPC
-import qualified Domain.Types.Merchant.LeaderBoardConfig as DLC
 import qualified Domain.Types.Merchant.MerchantMessage as DMM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -98,14 +98,20 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import qualified SharedLogic.DriverFee as SDF
 import qualified SharedLogic.DriverPool.Types as DriverPool
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified SharedLogic.Merchant as SMerchant
+import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIPC
+import qualified Storage.Cac.DriverIntelligentPoolConfig as CQDIPC
+import qualified Storage.Cac.DriverPoolConfig as CQDPC
+import qualified Storage.Cac.FarePolicy as CFP
+import qualified Storage.Cac.FarePolicy as CQFP
+import qualified Storage.Cac.GoHomeConfig as CGHC
+import qualified Storage.Cac.GoHomeConfig as CQGHC
+import qualified Storage.Cac.TransporterConfig as CQTC
+import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Exophone as CQExophone
-import qualified Storage.CachedQueries.FarePolicy as CQFP
 import qualified Storage.CachedQueries.FareProduct as CQFProduct
-import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as CQDIPC
-import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CQDPC
 import qualified Storage.CachedQueries.Merchant.LeaderBoardConfig as CQLBC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CQMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -113,7 +119,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.Overlay as CQMO
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFPPDEKM
@@ -199,7 +204,7 @@ merchantCommonConfig :: ShortId DM.Merchant -> Context.City -> Flow Common.Merch
 merchantCommonConfig merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQTC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  config <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   pure $ mkMerchantCommonConfigRes config
 
 mkMerchantCommonConfigRes :: DTC.TransporterConfig -> Common.MerchantCommonConfigRes
@@ -211,7 +216,7 @@ merchantCommonConfigUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateMerchantCommonConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQTC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  config <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let updConfig =
         config{pickupLocThreshold = maybe config.pickupLocThreshold (.value) req.pickupLocThreshold,
                dropLocThreshold = maybe config.dropLocThreshold (.value) req.dropLocThreshold,
@@ -413,7 +418,7 @@ driverIntelligentPoolConfig :: ShortId DM.Merchant -> Context.City -> Flow Commo
 driverIntelligentPoolConfig merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQDIPC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
+  config <- CDIPC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
   pure $ mkDriverIntelligentPoolConfigRes config
 
 mkDriverIntelligentPoolConfigRes :: DDIPC.DriverIntelligentPoolConfig -> Common.DriverIntelligentPoolConfigRes
@@ -429,7 +434,7 @@ driverIntelligentPoolConfigUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateDriverIntelligentPoolConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQDIPC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
+  config <- CDIPC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
   let updConfig =
         config{availabilityTimeWeightage = maybe config.availabilityTimeWeightage (.value) req.availabilityTimeWeightage,
                availabilityTimeWindowOption = fromMaybe config.availabilityTimeWindowOption req.availabilityTimeWindowOption,
@@ -495,6 +500,7 @@ castDVehicleVariant = \case
   DVeh.AUTO_RICKSHAW -> Common.AUTO_RICKSHAW
   DVeh.TAXI -> Common.TAXI
   DVeh.TAXI_PLUS -> Common.TAXI_PLUS
+  DVeh.BIKE -> Common.BIKE
 
 castDVehicleClassCheckType :: DVC.VehicleClassCheckType -> Common.VehicleClassCheckType
 castDVehicleClassCheckType = \case
@@ -557,6 +563,7 @@ castVehicleVariant = \case
   Common.AUTO_RICKSHAW -> DVeh.AUTO_RICKSHAW
   Common.TAXI -> DVeh.TAXI
   Common.TAXI_PLUS -> DVeh.TAXI_PLUS
+  Common.BIKE -> DVeh.BIKE
 
 castVehicleClassCheckType :: Common.VehicleClassCheckType -> DVC.VehicleClassCheckType
 castVehicleClassCheckType = \case
@@ -626,6 +633,9 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         title = "Empty title",
         vehicleCategory = DVeh.AUTO_CATEGORY,
         order = 0,
+        isDefaultEnabledOnManualVerification = fromMaybe True isDefaultEnabledOnManualVerification,
+        isImageValidationRequired = fromMaybe True isImageValidationRequired,
+        doStrictVerifcation = fromMaybe True doStrictVerifcation,
         updatedAt = now,
         createdAt = now,
         ..
@@ -766,7 +776,10 @@ verificationServiceConfigUpdate merchantShortId city req = do
 ---------------------------------------------------------------------
 
 createFPDriverExtraFee :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
-createFPDriverExtraFee _ _ farePolicyId startDistance req = do
+createFPDriverExtraFee merchantShortId city farePolicyId startDistance req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- CQMOC.getMerchantOpCity merchant (Just city)
+  SMerchant.checkCurrencies merchantOperatingCity.currency [req.minFeeWithCurrency, req.maxFeeWithCurrency, req.stepFeeWithCurrency, req.defaultStepFeeWithCurrency]
   mbFarePolicy <- QFPEFB.findByFarePolicyIdAndStartDistance farePolicyId startDistance
   whenJust mbFarePolicy $ \_ -> throwError $ InvalidRequest "Fare policy with the same id and startDistance already exists"
   farePolicyDetails <- buildFarePolicy farePolicyId startDistance req
@@ -778,29 +791,48 @@ createFPDriverExtraFee _ _ farePolicyId startDistance req = do
       let driverExtraFeeBounds =
             DFPEFB.DriverExtraFeeBounds
               { startDistance = strtDistance,
-                minFee = request.minFee,
-                maxFee = request.maxFee
+                minFee = fromMaybe (toHighPrecMoney request.minFee) $ request.minFeeWithCurrency <&> (.amount),
+                maxFee = fromMaybe (toHighPrecMoney request.maxFee) $ request.maxFeeWithCurrency <&> (.amount),
+                stepFee = fromMaybe (toHighPrecMoney request.stepFee) $ request.stepFeeWithCurrency <&> (.amount),
+                defaultStepFee = fromMaybe (toHighPrecMoney request.defaultStepFee) $ request.defaultStepFeeWithCurrency <&> (.amount)
               }
       return (fpId, driverExtraFeeBounds)
 
 ---------------------------------------------------------------------
 updateFPDriverExtraFee :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
-updateFPDriverExtraFee _ _ farePolicyId startDistance req = do
+updateFPDriverExtraFee merchantShortId city farePolicyId startDistance req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- CQMOC.getMerchantOpCity merchant (Just city)
+  SMerchant.checkCurrencies merchantOperatingCity.currency [req.minFeeWithCurrency, req.maxFeeWithCurrency, req.stepFeeWithCurrency, req.defaultStepFeeWithCurrency]
+  let reqMinFee = fromMaybe (toHighPrecMoney req.minFee) $ req.minFeeWithCurrency <&> (.amount)
+  let reqMaxFee = fromMaybe (toHighPrecMoney req.maxFee) $ req.maxFeeWithCurrency <&> (.amount)
   _ <- QFPEFB.findByFarePolicyIdAndStartDistance farePolicyId startDistance >>= fromMaybeM (InvalidRequest "Fare Policy with given id and startDistance not found")
-  _ <- QFPEFB.update farePolicyId startDistance req.minFee req.maxFee
+  _ <- QFPEFB.update farePolicyId startDistance reqMinFee reqMaxFee
   CQFP.clearCacheById farePolicyId
   pure Success
 
 updateFPPerExtraKmRate :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Meters -> Common.UpdateFPPerExtraKmRateReq -> Flow APISuccess
-updateFPPerExtraKmRate _ _ farePolicyId startDistance req = do
+updateFPPerExtraKmRate merchantShortId city farePolicyId startDistance req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- CQMOC.getMerchantOpCity merchant (Just city)
+  SMerchant.checkCurrencies merchantOperatingCity.currency [req.perExtraKmRateWithCurrency]
   _ <- QFPPDEKM.findByIdAndStartDistance farePolicyId startDistance >>= fromMaybeM (InvalidRequest "Fare Policy Parameters Per Extra Km Section with given id and start distance not found")
-  _ <- QFPPDEKM.updatePerExtraKmRate farePolicyId startDistance req.perExtraKmRate
+  _ <- QFPPDEKM.updatePerExtraKmRate farePolicyId startDistance $ fromMaybe req.perExtraKmRate (req.perExtraKmRateWithCurrency <&> (.amount))
   CQFP.clearCacheById farePolicyId
   pure Success
 
 updateFarePolicy :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Common.UpdateFarePolicyReq -> Flow APISuccess
 updateFarePolicy _ _ farePolicyId req = do
-  farePolicy <- CQFP.findById Nothing Nothing farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
+  farePolicy <- CFP.findById Nothing farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
+  SMerchant.checkCurrencies farePolicy.currency $
+    [ req.serviceChargeWithCurrency,
+      req.perMinuteRideExtraTimeChargeWithCurrency,
+      req.baseFareWithCurrency,
+      req.deadKmFareWithCurrency
+    ]
+      <> maybe [] FarePolicy.getWaitingChargeFields req.waitingCharge
+      <> maybe [] FarePolicy.getWaitingChargeInfoFields req.waitingChargeInfo
+      <> maybe [] FarePolicy.getNightShiftChargeFields req.nightShiftCharge
   updatedFarePolicy <- mkUpdatedFarePolicy farePolicy
   CQFP.update' updatedFarePolicy
   CQFP.clearCacheById farePolicyId
@@ -810,11 +842,11 @@ updateFarePolicy _ _ farePolicyId req = do
       fPDetails <- mkFarePolicyDetails farePolicyDetails
       pure $
         FarePolicy.FarePolicy
-          { serviceCharge = req.serviceCharge <|> serviceCharge,
+          { serviceCharge = (req.serviceChargeWithCurrency <&> (.amount)) <|> (toHighPrecMoney <$> req.serviceCharge) <|> serviceCharge,
             nightShiftBounds = req.nightShiftBounds <|> nightShiftBounds,
             allowedTripDistanceBounds = req.allowedTripDistanceBounds <|> allowedTripDistanceBounds,
             govtCharges = req.govtCharges <|> govtCharges,
-            perMinuteRideExtraTimeCharge = req.perMinuteRideExtraTimeCharge <|> perMinuteRideExtraTimeCharge,
+            perMinuteRideExtraTimeCharge = (req.perMinuteRideExtraTimeChargeWithCurrency <&> (.amount)) <|> req.perMinuteRideExtraTimeCharge <|> perMinuteRideExtraTimeCharge,
             farePolicyDetails = fPDetails,
             description = req.description <|> description,
             ..
@@ -830,11 +862,11 @@ updateFarePolicy _ _ farePolicyId req = do
 
     mkUpdatedFPProgressiveDetails FarePolicy.FPProgressiveDetails {..} =
       FarePolicy.FPProgressiveDetails
-        { baseFare = fromMaybe baseFare req.baseFare,
+        { baseFare = fromMaybe baseFare $ (req.baseFareWithCurrency <&> (.amount)) <|> (toHighPrecMoney <$> req.baseFare),
           baseDistance = fromMaybe baseDistance req.baseDistance,
-          deadKmFare = fromMaybe deadKmFare req.deadKmFare,
-          waitingChargeInfo = req.waitingChargeInfo <|> waitingChargeInfo,
-          nightShiftCharge = req.nightShiftCharge <|> nightShiftCharge,
+          deadKmFare = fromMaybe deadKmFare $ (req.deadKmFareWithCurrency <&> (.amount)) <|> (toHighPrecMoney <$> req.deadKmFare),
+          waitingChargeInfo = FarePolicy.mkWaitingChargeInfo <$> req.waitingChargeInfo <|> waitingChargeInfo,
+          nightShiftCharge = FarePolicy.mkNightShiftCharge <$> req.nightShiftCharge <|> nightShiftCharge,
           ..
         }
 
@@ -935,7 +967,7 @@ createMerchantOperatingCity merchantShortId city req = do
   newOperatingCity <- buildMerchantOperatingCity merchant.id baseOperatingCity
 
   -- intelligent pool config
-  intelligentPoolConfig <- CQDIPC.findByMerchantOpCityId baseOperatingCityId Nothing Nothing >>= fromMaybeM (InvalidRequest "Intelligent Pool Config not found")
+  intelligentPoolConfig <- CDIPC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Intelligent Pool Config not found")
   newIntelligentPoolConfig <- buildIntelligentPoolConfig newOperatingCity.id intelligentPoolConfig
 
   -- driver pool config
@@ -947,7 +979,7 @@ createMerchantOperatingCity merchantShortId city req = do
   newFareProducts <- mapM (buildFareProduct newOperatingCity.id) fareProducts
 
   -- go home config
-  goHomeConfig <- CQGHC.findByMerchantOpCityId baseOperatingCityId Nothing Nothing
+  goHomeConfig <- CGHC.findByMerchantOpCityId baseOperatingCityId Nothing
   newGoHomeConfig <- buildGoHomeConfig newOperatingCity.id goHomeConfig
 
   -- leader board configs
@@ -979,7 +1011,7 @@ createMerchantOperatingCity merchantShortId city req = do
   newDocumentVerificationConfigs <- mapM (buildNewDocumentVerificationConfig newOperatingCity.id) documentVerificationConfigs
 
   -- transporter config
-  transporterConfig <- CQTC.findByMerchantOpCityId baseOperatingCityId Nothing Nothing >>= fromMaybeM (InvalidRequest "Transporter Config not found")
+  transporterConfig <- CTC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Transporter Config not found")
   newTransporterConfig <- buildTransporterConfig newOperatingCity.id transporterConfig
 
   -- geometry
@@ -1041,7 +1073,8 @@ createMerchantOperatingCity merchantShortId city req = do
             state = req.state,
             country = req.country,
             supportNumber = req.supportNumber <|> baseCity.supportNumber,
-            language = fromMaybe baseCity.language req.primaryLanguage
+            language = fromMaybe baseCity.language req.primaryLanguage,
+            currency = fromMaybe baseCity.currency req.currency
           }
 
     buildIntelligentPoolConfig newCityId DDIPC.DriverIntelligentPoolConfig {..} = do

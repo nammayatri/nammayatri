@@ -26,7 +26,7 @@ import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Pay
 import Components.LocationListItem.Controller (locationListStateObj)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume, runFree)
-import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find)
+import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find, elem)
 import Data.Array.NonEmpty (fromArray)
 import Data.Boolean (otherwise)
 import Data.Date (Date)
@@ -93,14 +93,8 @@ import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Data.Function.Uncurried (runFn1)
 import Constants (defaultDensity)
 import Mobility.Prelude
-import Data.Array as DA
-import Data.Argonaut.Decode.Class as AD
-import Data.Argonaut.Encode.Class as AE
-import Data.Argonaut.Core as AC
-import Data.Argonaut.Decode.Parser as ADP
-import Common.DefaultConfig as CC
-import Common.Types.Config as CCT
 import MerchantConfig.Types 
+import Common.Resources.Constants (assetDomain)
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -195,40 +189,10 @@ foreign import incrOrDecrTimeFrom :: Fn3 String Int Boolean String
 
 foreign import getMockFollowerName :: String -> String
 
-decodeGeoJson :: String -> Maybe CCT.GeoJson
-decodeGeoJson stringGeoJson = 
-  case (AD.decodeJson =<< ADP.parseJson stringGeoJson) of
-    Right resp -> Just resp
-    Left err   -> Nothing
-
 data TimeUnit
   = HOUR
   | MINUTE
   | SECOND
-
-type SpecialZoneTagConfig = {
-    icon :: String
-  , text :: String
-  , infoPopUpConfig :: Maybe SpecialZoneInfoPopUp
-  , backgroundColor :: String
-}
-
-type SpecialZoneInfoPopUp = {
-    title :: String
-  , primaryText :: String
-  , secondaryText :: String
-  , primaryButtonText :: String
-  , icon :: String
-}
-
-type SpecialLocationList = {
-    geoJson :: String
-  , gates :: Array Location
-  , locationName :: String
-  , category :: String
-  , city :: String
-}
-
 
 convertUTCToISTAnd12HourFormat :: String -> Maybe String
 convertUTCToISTAnd12HourFormat inputTime = do
@@ -509,30 +473,30 @@ updateLocListWithDistance arr currLat currLon useThreshold threshold =
 
 getAssetLink :: LazyCheck -> String
 getAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/user/images/"
-  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/images/"
-  YATRI -> "https://assets.juspay.in/beckn/yatri/user/images/"
-  MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
-  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/user/images/"
-  MOBILITY_RS -> "https://assets.juspay.in/beckn/mobilityredbus/user/images/"
+  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/user/images/"
+  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/user/images/"
+  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/user/images/"
+  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/user/"
+  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/user/images/"
+  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/mobilityredbus/user/images/"
 
 getCommonAssetLink :: LazyCheck -> String
 getCommonAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
-  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
-  YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
-  MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
-  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
-  MOBILITY_RS -> "https://assets.juspay.in/beckn/mobilityredbus/mobilityredbuscommon/"
+  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/nammayatricommon/images/"
+  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/jatrisaathicommon/images/"
+  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/yatricommon/images/"
+  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/mobilitypaytmcommon/"
+  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
+  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/mobilityredbus/mobilityredbuscommon/"
 
 getAssetsBaseUrl :: LazyCheck -> String
 getAssetsBaseUrl lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/user/"
-  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/"
-  YATRI -> "https://assets.juspay.in/beckn/yatri/user/"
-  MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
-  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/user/"
-  MOBILITY_RS -> "https://assets.juspay.in/beckn/mobilityredbus/user/"
+  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/user/"
+  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/user/"
+  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/user/"
+  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/user/"
+  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/user/"
+  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/mobilityredbus/user/"
 
 fetchImage :: FetchImageFrom -> String -> String
 fetchImage fetchImageFrom imageName = do
@@ -540,8 +504,10 @@ fetchImage fetchImageFrom imageName = do
   else case fetchImageFrom of
     FF_ASSET -> imageName <> "," <> (getAssetLink FunctionCall) <> imageName <> ".png"
     FF_COMMON_ASSET -> imageName <> "," <> (getCommonAssetLink FunctionCall) <> imageName <> ".png"
+    COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/user/images/" <> imageName <> ".png"
+    GLOBAL_COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/common/images/" <> imageName <> ".png"
 
-data FetchImageFrom = FF_ASSET | FF_COMMON_ASSET
+data FetchImageFrom = FF_ASSET | FF_COMMON_ASSET | COMMON_ASSET | GLOBAL_COMMON_ASSET
 
 derive instance genericFetchImageFrom :: Generic FetchImageFrom _
 instance eqFetchImageFrom :: Eq FetchImageFrom where eq = genericEq
@@ -594,6 +560,7 @@ getScreenFromStage stage = case stage of
   FindingQuotes -> "finding_rides_screen"
   QuoteList -> "no_rides_screen"
   PreviousRating -> "previous_ride_rating_screen"
+  GoToConfirmLocation -> "confirm_location_screen"
   ConfirmingLocation -> "confirm_location_screen"
   RideRating -> "ride_rating_screen"
   FavouriteLocationModel -> "search_location_screen"
@@ -605,11 +572,12 @@ getScreenFromStage stage = case stage of
   TryAgain -> "finding_rides_screen"
   PickUpFarFromCurrentLocation -> "finding_driver_loader"
   LoadMap -> "map_loader"
+  ProviderSelection -> "provider_selection_screen"
 
 getGlobalPayload :: String -> Maybe GlobalPayload
 getGlobalPayload key = do
   let mBPayload = runFn3 getFromWindow key Nothing Just
-  maybe (Nothing) (\payload -> decodeForeignObjImpl payload) mBPayload
+  maybe (Nothing) (\payload -> decodeForeignAnyImpl payload) mBPayload
 
 getSearchType :: Unit -> String
 getSearchType _ = 
@@ -671,7 +639,16 @@ getVehicleVariantImage variant =
                           Kochi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
                           Chennai -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
                           Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
+                          Delhi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
                           _ -> variantConfig.autoRickshaw.image
+      "BOOK_ANY"      -> case getMerchant FunctionCall of 
+                           YATRISATHI -> variantConfig.bookAny.image
+                           _ -> case city of 
+                                  Hyderabad -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
+                                  Chennai -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
+                                  Kochi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
+                                  Delhi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
+                                  _ -> variantConfig.bookAny.image
       _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
 getVariantRideType :: String -> String
@@ -816,101 +793,6 @@ formatFareType fareType =
   let str = DS.replace (DS.Pattern "_") (DS.Replacement " ") fareType
   in
   spaceSeparatedPascalCase str
-  
-specialZoneTagConfig :: ZoneType -> SpecialZoneTagConfig
-specialZoneTagConfig zoneType =
-  case zoneType of
-    SPECIAL_PICKUP -> 
-      { icon : "ny_ic_location_pin_white"
-      , text : if isLocalStageOn ConfirmingLocation then getString SPECIAL_PICKUP_ZONE else getString SPECIAL_PICKUP_ZONE_RIDE
-      , infoPopUpConfig : Just $ { title : getString SPECIAL_PICKUP_ZONE
-                                 , primaryText : getString WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE
-                                 , secondaryText : getString THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE
-                                 , primaryButtonText : getString GOT_IT
-                                 , icon : "ny_ic_sp_pickup_zone_map" }
-      , backgroundColor : Color.green900
-      }
-    AUTO_BLOCKED -> 
-      { icon : "ny_ic_zone_walk"
-      , text : getString GO_TO_SELECTED_PICKUP_SPOT_AS_AUTOS_ARE_RESTRICTED
-      , infoPopUpConfig : Nothing
-      , backgroundColor : Color.blue800
-      }
-    METRO ->
-      { icon : "ny_ic_metro_white"
-      , text : getString METRO_RIDE
-      , infoPopUpConfig : Nothing
-      , backgroundColor : Color.blue800
-      }
-    HOTSPOT onSpot ->
-      { icon : if onSpot then "ny_ic_zone_walk" else "ny_ic_select_spot"
-      , text : getString $ if onSpot then GO_TO_SELECTED_SPOT_FOR_PICKUP else SELECT_POPULAR_SPOT_FOR_HASSLE_FREE_PICKUP
-      , infoPopUpConfig : Nothing
-      , backgroundColor : Color.blue800
-      }
-    _ ->
-      { icon : "ny_ic_zone_walk"
-      , text : getString GO_TO_SELECTED_SPOT_FOR_PICKUP
-      , infoPopUpConfig : Nothing
-      , backgroundColor : Color.blue800
-      }
-
-zoneLabelIcon :: ZoneType -> String
-zoneLabelIcon zoneType =
-  case zoneType of
-    METRO -> "ny_ic_metro_white"
-    _ -> ""
-
-transformGeoJsonFeature :: Maybe String -> Array GateInfoFull -> String
-transformGeoJsonFeature geoJson gateInfoFulls =
-  if DS.null (fromMaybe "" geoJson) && DA.null gateInfoFulls then ""
-  else
-    AC.stringify $ AE.encodeJson CC.defaultGeoJson { features = geoJsonFeatures }
-    where
-      geoJsonFeatures :: Array CCT.GeoJsonFeature
-      geoJsonFeatures = 
-        DA.foldr (\(GateInfoFull gateInfoFull) specialZones -> 
-                  case gateInfoFull.geoJson of
-                    Just _ -> specialZones <> [createGeoJsonFeature (GateInfoFull gateInfoFull)]
-                    Nothing -> specialZones
-                 ) [] gateInfoFulls
-        <> case geoJson of
-              Just geoJson' -> DA.singleton CC.defaultGeoJsonFeature{ geometry = fromMaybe CC.defaultGeoJsonGeometry (decodeGeoJsonGeometry geoJson') }
-              Nothing -> []
-
-      decodeGeoJsonGeometry :: String -> Maybe CCT.GeoJsonGeometry
-      decodeGeoJsonGeometry stringGeometry =
-        case (AD.decodeJson =<< ADP.parseJson stringGeometry) of
-          Right resp -> Just resp
-          Left err   -> Nothing
-      
-      createGeoJsonFeature :: GateInfoFull -> CCT.GeoJsonFeature
-      createGeoJsonFeature (GateInfoFull gateInfoFull) = 
-        CC.defaultGeoJsonFeature {
-            properties {
-                name = gateInfoFull.name
-              , defaultDriverExtra = fromMaybe 0 gateInfoFull.defaultDriverExtra
-              , canQueueUpOnGate = fromMaybe false gateInfoFull.canQueueUpOnGate
-            }
-          , geometry = case gateInfoFull.geoJson of
-                          Just geoJson -> fromMaybe CC.defaultGeoJsonGeometry (decodeGeoJsonGeometry geoJson)
-                          Nothing      -> CC.defaultGeoJsonGeometry
-        }
-
-findSpecialPickupZone :: Maybe String -> Maybe (Array Location) -> Number -> Number -> Maybe SpecialLocationList
-findSpecialPickupZone stringGeoJson gates lat lon =
-  case stringGeoJson, gates of
-    Just stringGeoJson', Just gates' -> 
-      case decodeGeoJson stringGeoJson' of
-        Just geoJson -> 
-          let gate = DA.find (\gate -> gate.lat == lat && gate.lng == lon) gates'
-          in case gate of
-                Just gate' -> 
-                  let feature = DA.find (\feature -> feature.properties.name == gate'.place) geoJson.features
-                  in Just { geoJson : AC.stringify $ AE.encodeJson geoJson{ features = [feature] }, gates : [gate'], locationName : "", category : "", city : "" }
-                Nothing -> Nothing
-        Nothing -> Nothing
-    _, _ -> Nothing
 
 newtype CityMetroConfig = CityMetroConfig { 
     logoImage :: String
@@ -932,6 +814,8 @@ getMetroConfigFromAppConfig config city = do
     Nothing -> {
         cityName : ""
       , cityCode : ""
+      , customEndTime : "01:00:00" 
+      , customDates : ["23/04/2024","28/04/2024","01/05/2024","12/05/2024"] 
       , metroStationTtl : 10080
       , bookingStartTime : "04:30:00"
       , bookingEndTime : "22:30:00"
@@ -971,3 +855,37 @@ getImageBasedOnCity image =
   if city == AnyCity 
     then fetchImage FF_ASSET image
     else fetchImage FF_ASSET $ image <> "_" <> DS.toLower cityStr
+
+intersection :: forall a. Eq a => Array a -> Array a -> Array a
+intersection arr1 arr2 =
+  filter (\x -> elem x arr2) arr1
+
+getAllServices :: LazyCheck -> Array String 
+getAllServices dummy = 
+  let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  in case city of 
+    Bangalore -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
+    Tumakuru -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
+    Hyderabad -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+    Delhi -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+    Chennai -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+    Mysore -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
+    Kolkata -> ["Non-AC", "Hatchback", "Sedan", "SUV"]
+    Kochi -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+    Pondicherry -> ["Eco", "Auto"]
+    _ ->  ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+
+getSelectedServices :: LazyCheck -> Array String
+getSelectedServices dummy = 
+  let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  in case city of 
+    Bangalore -> ["Non-AC Mini", "AC Mini", "Sedan"]
+    Tumakuru -> ["Non-AC Mini", "AC Mini", "Sedan"]
+    Hyderabad -> ["Eco", "Hatchback", "Sedan"]
+    Delhi -> ["Eco", "Hatchback", "Sedan"]
+    Chennai -> ["Eco", "Hatchback", "Sedan"]
+    Mysore -> ["Non-AC Mini", "AC Mini", "Sedan"]
+    Kolkata -> ["Non-AC", "Hatchback", "Sedan"]
+    Kochi -> ["Eco", "Hatchback", "Sedan"]
+    Pondicherry -> ["Eco", "Auto"]
+    _ ->  ["Eco", "Hatchback", "Sedan"] 

@@ -43,7 +43,6 @@ import Components.RequestInfoCard as RequestInfoCard
 import Components.RideActionModal as RideActionModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
-import Components.StatsModel.Controller as StatsModelController
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
@@ -87,7 +86,7 @@ import Log (printLog, trackAppActionClick, trackAppBackPress, trackAppEndScreen,
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when, negate, (<<<), (>>=), (<$>))
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Core (getPushFn)
 import PrestoDOM.Types.Core (class Loggable)
 import RemoteConfig as RC
@@ -199,7 +198,6 @@ instance loggableAction :: Loggable Action where
     AutoPayBanner act -> pure unit
     RetryTimeUpdate -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "retry_time_update_onclick"
     RideActiveAction activeRide -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "ride_active_action"
-    StatsModelAction act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "stats_model_action"
     TimeUpdate time lat lng -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "time_update"
     ModifyRoute lat lon -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "modify_route"
     SetToken id -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "set_token"
@@ -298,10 +296,13 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | UpdateSpecialLocationList ST.HomeScreenState
                     | FetchOdometerReading ST.HomeScreenState
                     | GoToNewStop ST.HomeScreenState
+                    | UpdateAirConditioned ST.HomeScreenState Boolean
+                    | GoToBookingPreferences ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
             | ScreenClick
+            | BookingOptions
             | Notification String
             | ChangeStatus Boolean
             | GoOffline Boolean
@@ -324,7 +325,6 @@ data Action = NoAction
             | ModifyRoute String String
             | RetryTimeUpdate
             | TimeUpdate String String String
-            | StatsModelAction StatsModelController.Action
             | RideActiveAction RidesInfo
             | RecenterButtonAction
             | ChatViewActionController ChatView.Action
@@ -415,6 +415,10 @@ data Action = NoAction
             | SpecialZoneCardAC RequestInfoCard.Action
             | BgLocationAC
             | BgLocationPopupAC PopUpModal.Action
+            | IsAcWorkingPopUpAction PopUpModal.Action
+            | OnAudioCompleted String
+            | ACExpController PopUpModal.Action
+            | OpenLink String
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -448,7 +452,9 @@ eval (AccountBlockedAC PopUpModal.OnButton2Click) state = continue state { props
 eval (AccountBlockedAC PopUpModal.OnButton1Click) state = do 
   void $ pure $ showDialer (SC.getSupportNumber "") false 
   continue state
-  
+
+eval BookingOptions state = exit $ GoToBookingPreferences state  
+
 eval UpdateBanner state = do
   if state.data.bannerData.bannerScrollState == "1" then continue state
   else do
@@ -540,11 +546,23 @@ eval BackPressed state = do
   else if state.props.vehicleNSPopup then continue state { props { vehicleNSPopup = false}}
   else if state.props.specialZoneProps.specialZonePopup then continue state { props { specialZoneProps{specialZonePopup = false} }}
   else if state.props.bgLocationPopup then continue state { props { bgLocationPopup = false}}
+  else if state.props.acExplanationPopup then continue state { props { acExplanationPopup = false }}
   else do
     _ <- pure $ minimizeApp ""
     continue state
 
+eval (OnAudioCompleted status) state = do 
+  let 
+    needToTriggerMap = getValueToLocalStore TRIGGER_MAPS 
+    _ = runFn2  EHC.updatePushInIdMap "PlayAudioAndLaunchMap" true
+
+  if needToTriggerMap == "true" then
+    continueWithCmd state [pure TriggerMaps]
+  else
+    continue state
+
 eval TriggerMaps state = continueWithCmd state[ do
+  let _ = runFn2 EHC.updatePushInIdMap "PlayAudioAndLaunchMap" true
   if state.data.activeRide.tripType == ST.Rental then
       case state.data.activeRide.nextStopLat, state.data.activeRide.nextStopLon of
         Just nextStopLat,Just nextStopLon -> pure $ openNavigation nextStopLat nextStopLon "DRIVE"
@@ -852,7 +870,9 @@ eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
   let isRideStartActive = (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) && ((getHomeStageFromString $ getValueToLocalStore PREVIOUS_LOCAL_STAGE) /= ST.RideStarted)
       srcLat = state.data.activeRide.src_lat
       srcLon = state.data.activeRide.src_lon
-  _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
+      _ = runFn2  EHC.updatePushInIdMap "PlayAudioAndLaunchMap" true
+  void $ pure $ setValueToLocalStore TRIGGER_MAPS "false"
+  void $ pure $ JB.clearAudioPlayer ""
   if isRideStartActive then
     action srcLat srcLon
   else if state.data.activeRide.tripType == ST.Rental then do
@@ -1244,8 +1264,6 @@ eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{s
 
 eval (ToggleBonusPopup) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = not state.props.showBonusInfo } }
 
-eval (StatsModelAction StatsModelController.OnIconClick) state = continueWithCmd state [ pure $ ToggleBonusPopup]
-
 eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = false } }
 
 eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = false } }
@@ -1360,7 +1378,28 @@ eval (GoToEarningsScreen showCoinsView) state = do
 eval (DriverStats driverStats) state = do
   exit $ DriverStatsUpdate driverStats state
 
-eval _ state = continue state
+eval (IsAcWorkingPopUpAction PopUpModal.OnButton1Click) state = exit $ UpdateAirConditioned state true
+
+eval (IsAcWorkingPopUpAction PopUpModal.OnButton2Click) state = exit $ UpdateAirConditioned state false
+
+eval (IsAcWorkingPopUpAction PopUpModal.DismissPopup) state = continue state{props{showAcWorkingPopup = Just false}}
+
+eval (ACExpController action) state = do
+  let acVideoLink = "https://www.youtube.com/watch?v=MbgxZkqxPLQ"
+      newState = state { props { acExplanationPopup = false } }
+  case action of
+    PopUpModal.DismissPopup -> continue newState
+    PopUpModal.OnButton2Click -> continue newState
+    PopUpModal.OnCoverImageClick -> continueWithCmd newState [pure $ OpenLink acVideoLink]
+    PopUpModal.OnButton1Click -> continueWithCmd newState [pure $ OpenLink acVideoLink]
+    _ -> continue state
+
+eval (OpenLink link) state = continueWithCmd state [ do 
+  void $ JB.openUrlInApp link
+  pure AfterRender
+  ]
+
+eval _ state = update state
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Boolean -> Effect Unit
 checkPermissionAndUpdateDriverMarker state toAnimateCamera = do
@@ -1475,7 +1514,10 @@ activeRideDetail state (RidesInfo ride) =
   endOdometerReading : (\(API.OdometerReading {value}) -> value) <$> ride.endOdometerReading,
   driverVehicle : ride.vehicleVariant,
   serviceTier : ride.vehicleServiceTierName,
-  capacity : ride.vehicleCapacity
+  capacity : ride.vehicleCapacity,
+  hasToll :  maybe false (\charge -> charge /= 0.0) ride.estimatedTollCharges,
+  estimatedTollCharge : ride.estimatedTollCharges,
+  acRide : ride.isVehicleAirConditioned
 }
   where 
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String

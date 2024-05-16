@@ -9,10 +9,12 @@ import qualified Domain.Action.UI.DriverOnboardingV2 as Domain.Action.UI.DriverO
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.ServiceTierType
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -24,6 +26,25 @@ type API =
       :> Get
            '[JSON]
            API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
+      :<|> TokenAuth
+      :> "driver"
+      :> "rateCard"
+      :> QueryParam "distance" Kernel.Types.Common.Meters
+      :> QueryParam
+           "vehicleServiceTier"
+           Domain.Types.ServiceTierType.ServiceTierType
+      :> Get
+           '[JSON]
+           [API.Types.UI.DriverOnboardingV2.RateCardResp]
+      :<|> TokenAuth
+      :> "driver"
+      :> "updateAirCondition"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "driver"
       :> "vehicleServiceTiers"
@@ -39,10 +60,20 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "driver"
+      :> "register"
+      :> "ssn"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.SSNReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getOnboardingConfigs :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers
+handler = getOnboardingConfigs :<|> getDriverRateCard :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn
 
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -53,6 +84,27 @@ getOnboardingConfigs ::
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
   )
 getOnboardingConfigs a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getOnboardingConfigs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getDriverRateCard ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Types.Common.Meters ->
+    Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType ->
+    Environment.FlowHandler [API.Types.UI.DriverOnboardingV2.RateCardResp]
+  )
+getDriverRateCard a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRateCard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postDriverUpdateAirCondition ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postDriverUpdateAirCondition a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverUpdateAirCondition (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDriverVehicleServiceTiers ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -72,3 +124,13 @@ postDriverUpdateServiceTiers ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postDriverUpdateServiceTiers a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverUpdateServiceTiers (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postDriverRegisterSsn ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.SSNReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postDriverRegisterSsn a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterSsn (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

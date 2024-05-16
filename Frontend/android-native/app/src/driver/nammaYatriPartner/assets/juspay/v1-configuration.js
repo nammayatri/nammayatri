@@ -351,7 +351,7 @@ window.getMerchantConfig = function () {
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
-        "showEarningSection" : false,
+        "showEarningSection" : true,
         "referral" : {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
@@ -404,7 +404,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig
       },
       {
-        "cityName" : "Puducherry",
+        "cityName" : "Pondicherry",
         "mapImage" : "ny_ic_puducherry_map",
         "cityCode" : "std:0413",
         "showSubscriptions" : false,
@@ -428,7 +428,7 @@ window.getMerchantConfig = function () {
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
-        "showEarningSection" : false,
+        "showEarningSection" : true,
         "referral" : {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
@@ -448,6 +448,7 @@ window.getMerchantConfig = function () {
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
+        "vehicleNSImg" : "ny_ic_auto_image_old",
         "uploadRCandDL" : true,
         "enableYatriCoins" : true,
         "registration" : {
@@ -522,6 +523,7 @@ window.getMerchantConfig = function () {
           "callSupport" : true,
           "whatsappSupport" : true
         },
+        "vehicleNSImg" : "ny_ic_auto_image_old",
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
           "variantList" : [],
@@ -562,7 +564,7 @@ window.getMerchantConfig = function () {
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
-        "showEarningSection" : false,
+        "showEarningSection" : true,
         "referral" : {
           "domain" : "https://nammayatri.in"
         , "customerAppId" : "in.juspay.nammayatri"
@@ -579,6 +581,7 @@ window.getMerchantConfig = function () {
         "cityLat" : 44.977753,
         "cityLong" : -93.2650108,
         "supportNumber" : "+918069724848",
+        "vehicleNSImg" : "ny_ic_auto_image_old",
         "languageKey" : "EN_US",
         "showDriverReferral" : true,
         "showCustomerReferral" : true,

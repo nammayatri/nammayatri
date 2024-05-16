@@ -18,18 +18,17 @@ import Data.Aeson (object)
 import qualified Data.List as L
 import qualified Data.Text as T
 import Data.Time hiding (secondsToNominalDiffTime)
+import Domain.Action.UI.Quote as UQuote
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.Estimate (Estimate)
-import qualified Domain.Types.Estimate as DEst
 import Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
-import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import qualified Domain.Types.MerchantServiceConfig as DMSC
+import Domain.Types.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import qualified Domain.Types.NotificationSoundsConfig as NSC
 import Domain.Types.Person as Person
-import Domain.Types.Quote (mkQAPIEntityList)
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
@@ -56,8 +55,8 @@ import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as Person
-import Storage.Queries.Person.PersonDefaultEmergencyNumber as QPDEN
-import qualified Storage.Queries.Person.PersonDisability as PD
+import Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
+import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
 import qualified Tools.SMS as Sms
@@ -125,7 +124,7 @@ notifyOnDriverOfferIncoming estimateId quotes person bppDetailList = do
             subCategory = Nothing,
             showNotification = Notification.SHOW,
             messagePriority = Nothing,
-            entity = Notification.Entity Notification.Product estimateId.getId $ mkQAPIEntityList quotes bppDetailList isValueAddNPList,
+            entity = Notification.Entity Notification.Product estimateId.getId $ UQuote.mkQAPIEntityList quotes bppDetailList isValueAddNPList,
             body = body,
             title = title,
             dynamicParams = EmptyDynamicParam,
@@ -196,6 +195,7 @@ notifyOnRideStarted booking ride = do
   let personId = booking.riderId
       rideId = ride.id
       driverName = ride.driverName
+      serviceTierName = fromMaybe (show booking.vehicleServiceTierType) booking.serviceTierName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.TRIP_STARTED merchantOperatingCityId
@@ -215,11 +215,19 @@ notifyOnRideStarted booking ride = do
             ttl = Nothing,
             sound = notificationSound
           }
-      title = T.pack "Trip started!"
+      title =
+        unwords
+          [ "Your",
+            serviceTierName,
+            "ride has started!"
+          ]
       body =
         unwords
-          [ driverName,
-            "has started your trip. Please enjoy the ride!"
+          [ "Your",
+            serviceTierName,
+            "ride with",
+            driverName,
+            "has started. Enjoy the ride!"
           ]
   notifyPerson person.merchantId merchantOperatingCityId notificationData
 
@@ -282,14 +290,14 @@ disableFollowRide personId = do
     ( \contact -> maybe (pure ()) updateFollowRideCount contact.contactPersonId
     )
     followingContacts
-  void $ QPDEN.updateShareRideForAll personId $ Just False
+  void $ QPDEN.updateShareRideForAll personId False
   where
     updateFollowRideCount emPersonId = do
       CQFollowRide.updateFollowRideList emPersonId personId False
       list <- CQFollowRide.getFollowRideCounter emPersonId
       when (L.null list) $ do
         CQFollowRide.clearFollowsRideCounter emPersonId
-        Person.updateFollowsRide emPersonId False
+        Person.updateFollowsRide False emPersonId
 
 notifyOnExpiration ::
   ServiceFlow m r =>
@@ -474,12 +482,13 @@ notifyOnBookingReallocated booking = do
           "Please wait until we allocate another driver."
         ]
 
-notifyOnEstimatedReallocated ::
+notifyOnEstOrQuoteReallocated ::
   ServiceFlow m r =>
+  SBCR.CancellationSource ->
   SRB.Booking ->
-  Id DEst.Estimate ->
+  Text ->
   m ()
-notifyOnEstimatedReallocated booking estimateId = do
+notifyOnEstOrQuoteReallocated cancellationSource booking estOrQuoteId = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
   tag <- getDisabilityTag person.hasDisability person.id
@@ -493,7 +502,7 @@ notifyOnEstimatedReallocated booking estimateId = do
           subCategory = Nothing,
           showNotification = Notification.SHOW,
           messagePriority = Nothing,
-          entity = Notification.Entity Notification.Product estimateId.getId (),
+          entity = Notification.Entity Notification.Product estOrQuoteId (),
           body = body,
           title = title,
           dynamicParams = EmptyDynamicParam,
@@ -502,12 +511,38 @@ notifyOnEstimatedReallocated booking estimateId = do
           sound = notificationSound
         }
     title = T.pack "Searching for a New Driver!"
-    body =
-      unwords
-        [ "The driver had cancelled the ride for",
-          showTimeIst (booking.startTime) <> ".",
-          "Please wait while we allocate you another driver."
-        ]
+    body = case cancellationSource of
+      SBCR.ByUser ->
+        unwords
+          [ "You have cancelled your ride for",
+            showTimeIst (booking.startTime) <> ".",
+            "Please wait while we allocate you another driver."
+          ]
+      SBCR.ByMerchant ->
+        unwords
+          [ "The ride for",
+            showTimeIst (booking.startTime),
+            "is cancelled. Please wait while we allocate you another driver."
+          ]
+      SBCR.ByDriver ->
+        unwords
+          [ "The driver had cancelled the ride for",
+            showTimeIst (booking.startTime) <> ".",
+            "Please wait while we allocate you another driver."
+          ]
+      SBCR.ByAllocator ->
+        unwords
+          [ "The ride for",
+            showTimeIst (booking.startTime),
+            "is cancelled. Please wait while we allocate you another driver."
+          ]
+      SBCR.ByApplication ->
+        unwords
+          [ "Sorry your ride for",
+            showTimeIst (booking.startTime),
+            "was cancelled.",
+            "Please wait while we allocate you another driver."
+          ]
 
 notifyOnQuoteReceived ::
   ServiceFlow m r =>
@@ -741,7 +776,7 @@ notifyRideStartToEmergencyContacts booking ride = do
   where
     updateFollowsRideCount emPersonId = do
       void $ CQFollowRide.updateFollowRideList emPersonId booking.riderId True
-      Person.updateFollowsRide emPersonId True
+      Person.updateFollowsRide True emPersonId
 
     sendFCM personId name notificationSound = do
       person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)

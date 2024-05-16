@@ -70,7 +70,6 @@ type AppConfigCustomer a =
   , homeScreen :: HomeScreen
   , locationTagBar :: LocationTagBarConfig
   , cityConfig :: Array CityConfig
-  , enableSingleEstimate :: Boolean
   , driverLocationPolling :: DriverLocationPollingConfig
   , banners :: Banners
   , tipDisplayDuration :: Int
@@ -78,6 +77,8 @@ type AppConfigCustomer a =
   , tipEnabledCities :: Array String
   , referral :: ReferalConfig
   , safety :: Safety
+  , enableBookAny :: Boolean
+  , acPopupConfig :: AcPopupConfig
   | a
   }
 
@@ -259,7 +260,7 @@ type Features = {
   enableRepeatTripBackfilling :: Boolean,
   enableCustomerSupportForSafety :: Boolean,
   enableSpecialPickup :: Boolean
-  }
+}
 
 type RideCompletedCardConfig = {
   topCard :: TopCardConfig
@@ -272,6 +273,7 @@ type TopCardConfig = {
 , background :: String
 , titleColor :: String
 , rideDescription :: RideDescriptionConfig
+, horizontalLineColor :: String
 }
 
 type RideDescriptionConfig = {
@@ -289,6 +291,8 @@ type MapConfig = {
 type MetroConfig = {
   cityName :: String
 , cityCode :: String
+, customEndTime :: String
+, customDates :: Array String 
 , metroStationTtl :: Int
 , bookingStartTime :: String
 , bookingEndTime :: String
@@ -373,7 +377,8 @@ type VariantConfig = {
   suv :: VariantInfo,
   autoRickshaw :: VariantInfo,
   taxi :: VariantInfo,
-  taxiPlus :: VariantInfo
+  taxiPlus :: VariantInfo,
+  bookAny :: VariantInfo
 }
 
 type VariantInfo = {
@@ -384,7 +389,8 @@ type VariantInfo = {
 type HotSpotConfig = {
   goToNearestPointWithinRadius :: Number,
   showHotSpotsWithinRadius :: Number,
-  enableHotSpot :: Boolean
+  enableHotSpot :: Boolean,
+  updateHotSpotOutSideRange :: Number
 }
 
 type CityConfig = {
@@ -392,8 +398,13 @@ type CityConfig = {
   cityCode :: String,
   geoCodeConfig :: GeoCodeConfig,
   enableCabs :: Boolean,
+  iopConfig :: InteroperabilityConfig,
   estimateAndQuoteConfig :: EstimateConfig,
-  featureConfig :: CityBasedFeatures
+  featureConfig :: CityBasedFeatures,
+  referral :: ReferalConfig,
+  dashboardUrl :: String,
+  appLogo :: String,
+  appLogoLight :: String
 }
 
 type CityBasedFeatures = {
@@ -421,4 +432,15 @@ type Banners = {
 
 type Safety = {
   pastRideInterval :: Int
+}
+
+type InteroperabilityConfig = {
+  enable :: Boolean,
+  autoSelectTime :: Int
+}
+
+type AcPopupConfig = {
+  enableAcPopup :: Boolean,
+  enableNonAcPopup :: Boolean,
+  showAfterTime :: Int
 }

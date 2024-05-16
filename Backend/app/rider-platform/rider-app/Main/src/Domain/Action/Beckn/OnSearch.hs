@@ -16,6 +16,7 @@ module Domain.Action.Beckn.OnSearch
   ( DOnSearchReq (..),
     ProviderInfo (..),
     EstimateInfo (..),
+    TollChargesInfo (..),
     DEstimate.FareRange (..),
     QuoteInfo (..),
     QuoteDetails (..),
@@ -36,8 +37,8 @@ import qualified Domain.Action.UI.Quote as DQ (estimateBuildLockKey)
 import Domain.Types.BppDetails
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalDetails as DRentalDetails
 import Domain.Types.SearchRequest
@@ -51,6 +52,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -104,13 +106,16 @@ data EstimateInfo = EstimateInfo
     descriptions :: [Text],
     estimateBreakupList :: [EstimateBreakupInfo],
     nightShiftInfo :: Maybe NightShiftInfo,
+    tollChargesInfo :: Maybe TollChargesInfo,
     waitingCharges :: Maybe WaitingChargesInfo,
     driversLocation :: [LatLong],
     specialLocationTag :: Maybe Text,
     validTill :: UTCTime,
     serviceTierName :: Maybe Text,
     serviceTierType :: Maybe DVST.VehicleServiceTierType,
-    serviceTierShortDesc :: Maybe Text
+    serviceTierShortDesc :: Maybe Text,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -118,6 +123,11 @@ data NightShiftInfo = NightShiftInfo
     oldNightShiftCharge :: Maybe Centesimal,
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
+  }
+
+data TollChargesInfo = TollChargesInfo
+  { tollCharges :: Price,
+    tollNames :: [Text]
   }
 
 newtype WaitingChargesInfo = WaitingChargesInfo
@@ -145,7 +155,10 @@ data QuoteInfo = QuoteInfo
     validTill :: UTCTime,
     serviceTierName :: Maybe Text,
     serviceTierType :: Maybe DVST.VehicleServiceTierType,
-    serviceTierShortDesc :: Maybe Text
+    serviceTierShortDesc :: Maybe Text,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool,
+    tollChargesInfo :: Maybe TollChargesInfo
   }
 
 data QuoteDetails
@@ -201,8 +214,9 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       logTagError "onSearch" "disability tag enabled search estimates discarded, not supported for OFF-US transactions"
       pure ()
     else do
-      estimates <- traverse (buildEstimate providerInfo now searchRequest) (filterEstimtesByPrefference estimatesInfo)
-      quotes <- traverse (buildQuote requestId providerInfo now searchRequest) (filterQuotesByPrefference quotesInfo)
+      deploymentVersion <- asks (.version)
+      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo)
+      quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo)
       merchantPaymentMethods <- CQMPM.findAllByMerchantOperatingCityId merchantOperatingCityId
       let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
       forM_ estimates $ \est -> do
@@ -231,13 +245,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     filterEstimtesByPrefference _estimateInfo =
       case searchRequest.riderPreferredOption of
         Rental -> []
-        OneWay ->
-          case quotesInfo of
-            (qInfo : _) ->
-              case qInfo.quoteDetails of
-                OneWaySpecialZoneDetails _ -> []
-                _ -> _estimateInfo
-            _ -> _estimateInfo
+        OneWay -> _estimateInfo
 
     mkBppDetails :: Flow BppDetails
     mkBppDetails = do
@@ -261,9 +269,10 @@ buildEstimate ::
   ProviderInfo ->
   UTCTime ->
   SearchRequest ->
+  DeploymentVersion ->
   EstimateInfo ->
   m DEstimate.Estimate
-buildEstimate providerInfo now searchRequest EstimateInfo {..} = do
+buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
@@ -297,10 +306,22 @@ buildEstimate providerInfo now searchRequest EstimateInfo {..} = do
                 nightShiftStart = nightShiftInfo'.nightShiftStart,
                 nightShiftEnd = nightShiftInfo'.nightShiftEnd
               },
+        tollChargesInfo =
+          tollChargesInfo <&> \tollChargesInfo' ->
+            DEstimate.TollChargesInfo
+              { tollCharges = tollChargesInfo'.tollCharges,
+                tollNames = tollChargesInfo'.tollNames
+              },
         waitingCharges =
           DEstimate.WaitingCharges
             { waitingChargePerMin = waitingCharges >>= (.waitingChargePerMin)
             },
+        clientBundleVersion = searchRequest.clientBundleVersion,
+        clientSdkVersion = searchRequest.clientSdkVersion,
+        clientDevice = searchRequest.clientDevice,
+        clientConfigVersion = searchRequest.clientConfigVersion,
+        backendConfigVersion = searchRequest.backendConfigVersion,
+        backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         ..
       }
 
@@ -310,9 +331,10 @@ buildQuote ::
   ProviderInfo ->
   UTCTime ->
   SearchRequest ->
+  DeploymentVersion ->
   QuoteInfo ->
   m DQuote.Quote
-buildQuote requestId providerInfo now searchRequest QuoteInfo {..} = do
+buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   quoteDetails' <- case quoteDetails of
@@ -330,10 +352,23 @@ buildQuote requestId providerInfo now searchRequest QuoteInfo {..} = do
         providerId = providerInfo.providerId,
         providerUrl = providerInfo.url,
         createdAt = now,
+        updatedAt = now,
         quoteDetails = quoteDetails',
         merchantId = searchRequest.merchantId,
         merchantOperatingCityId = searchRequest.merchantOperatingCityId,
         vehicleServiceTierType = fromMaybe (DVST.castVariantToServiceTier vehicleVariant) serviceTierType,
+        clientBundleVersion = searchRequest.clientBundleVersion,
+        clientSdkVersion = searchRequest.clientSdkVersion,
+        clientDevice = searchRequest.clientDevice,
+        clientConfigVersion = searchRequest.clientConfigVersion,
+        backendConfigVersion = searchRequest.backendConfigVersion,
+        backendAppVersion = Just deploymentVersion.getDeploymentVersion,
+        tollChargesInfo =
+          tollChargesInfo <&> \tollChargesInfo' ->
+            DQuote.TollChargesInfo
+              { tollCharges = tollChargesInfo'.tollCharges,
+                tollNames = tollChargesInfo'.tollNames
+              },
         ..
       }
 
@@ -343,11 +378,17 @@ mkOneWayQuoteDetails OneWayQuoteDetails {..} = DQuote.OneWayQuoteDetails {..}
 buildOneWaySpecialZoneQuoteDetails :: MonadFlow m => OneWaySpecialZoneQuoteDetails -> m DSpecialZoneQuote.SpecialZoneQuote
 buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
   id <- generateGUID
+  now <- getCurrentTime
+  let createdAt = now
+      updatedAt = now
   pure DSpecialZoneQuote.SpecialZoneQuote {..}
 
 buildInterCityQuoteDetails :: MonadFlow m => InterCityQuoteDetails -> m DSpecialZoneQuote.SpecialZoneQuote
 buildInterCityQuoteDetails InterCityQuoteDetails {..} = do
   id <- generateGUID
+  now <- getCurrentTime
+  let createdAt = now
+      updatedAt = now
   pure DSpecialZoneQuote.SpecialZoneQuote {..}
 
 buildRentalDetails :: MonadFlow m => RentalQuoteDetails -> m DRentalDetails.RentalDetails
@@ -367,6 +408,9 @@ buildTripTerms ::
 buildTripTerms [] = pure Nothing
 buildTripTerms descriptions = do
   id <- generateGUID
+  now <- getCurrentTime
+  let createdAt = now
+      updatedAt = now
   pure . Just $ DTripTerms.TripTerms {..}
 
 buildEstimateBreakUp ::

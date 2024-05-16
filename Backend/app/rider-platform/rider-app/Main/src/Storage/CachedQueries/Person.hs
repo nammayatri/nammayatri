@@ -18,6 +18,7 @@ module Storage.CachedQueries.Person
   )
 where
 
+import Domain.Action.UI.Person
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Kernel.Prelude

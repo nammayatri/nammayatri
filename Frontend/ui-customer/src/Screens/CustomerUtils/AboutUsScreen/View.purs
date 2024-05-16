@@ -28,11 +28,11 @@ import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityConfig)
 import JBridge as JB
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), not)
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), not, (&&))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, accessibility, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarY, scrollView, text, textSize, textView, visibility, weight, width, accessibilityHint)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.CustomerUtils.AboutUsScreen.ComponentConfig (genericHeaderConfig)
@@ -41,6 +41,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Data.Function.Uncurried (runFn3)
 import DecodeUtil (getAnyFromWindow)
+import Data.String as DS
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -130,7 +131,10 @@ topTextView push state =
 --------------------------------------------------- logoView -----------------------------------------------------
 logoView :: forall w . ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
 logoView state = 
-  linearLayout
+  let 
+    cityConfig = getCityConfig state.appConfig.cityConfig $ getValueToLocalStore CUSTOMER_LOCATION
+    appLogo = if DS.null cityConfig.appLogo then state.appConfig.merchantLogo else cityConfig.appLogo
+  in linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , gravity CENTER
@@ -138,7 +142,7 @@ logoView state =
         ][  imageView
               [ height $ V 52
               , width $ V 176
-              , imageWithFallback state.appConfig.merchantLogo
+              , imageWithFallback appLogo
               ]
           ]
 

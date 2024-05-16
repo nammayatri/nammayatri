@@ -25,6 +25,7 @@ import Data.Maybe (Maybe)
 import PrestoDOM
 import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), NavigationMode(..))
 import Components.BannerCarousel as BannerCarousel
+import Common.Types.App as CTP
 
 data Action = NoAction
             | PrimaryButtonAC PrimaryButtonController.Action
@@ -45,6 +46,7 @@ data Action = NoAction
             | BannerStateChanged String
             | BannerCarousel BannerCarousel.Action
             | SpecialZoneInfoTag
+            | RateCardInfo
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -63,7 +65,8 @@ type DriverInfoCardProps =
     zoneType :: ZoneType,
     merchantCity :: City,
     showBanner :: Boolean,
-    isChatWithEMEnabled :: Boolean
+    isChatWithEMEnabled :: Boolean,
+    isRateCardAvailable :: Boolean
   }
 
 type DriverInfoCardData =
@@ -103,4 +106,9 @@ type DriverInfoCardData =
   , bottomSheetState :: BottomSheetState
   , bannerData :: BannerCarousalData
   , bannerArray :: Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
+  , vehicleModel :: String
+  , vehicleColor :: String
+  , serviceTierName :: Maybe String
+  , providerName :: String 
+  , providerType :: CTP.ProviderType
   }

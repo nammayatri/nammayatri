@@ -36,6 +36,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import Storage.Queries.DriverStats
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as FPQ
+import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as FPPDQ
 import qualified Storage.Queries.Feedback.FeedbackBadge as QFB
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Rating as QRating
@@ -72,7 +73,7 @@ getDriverProfileSummary (driverId, _, _) = do
   decaltMobNum <- mapM decrypt person.alternateMobileNumber
   driverStats_ <- B.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
   driverStats <-
-    if driverStats_.totalEarnings == 0 && driverStats_.bonusEarned == 0 && driverStats_.lateNightTrips == 0 && driverStats_.earningsMissed == 0
+    if driverStats_.totalEarnings == 0.0 && driverStats_.bonusEarned == 0.0 && driverStats_.lateNightTrips == 0 && driverStats_.earningsMissed == 0.0
       then do
         allRides <- B.runInReplica $ RQ.findAllRidesByDriverId driverId
         let completedRides = filter ((== DR.COMPLETED) . (.status)) allRides
@@ -82,7 +83,8 @@ getDriverProfileSummary (driverId, _, _) = do
         missedEarnings <- B.runInReplica $ BQ.findFareForCancelledBookings cancelledBookingIdsByDriver
         driverSelectedFare <- B.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
         customerExtraFee <- B.runInReplica $ FPQ.findCustomerExtraFees farePramIds
-        let bonusEarnings = Money (driverSelectedFare + customerExtraFee + length farePramIds * 10)
+        deadKmFare <- B.runInReplica $ FPPDQ.findDeadKmFareEarnings farePramIds
+        let bonusEarnings = driverSelectedFare + customerExtraFee + deadKmFare
             totalEarnings = sum $ map (fromMaybe 0 . (.fare)) completedRides
         incrementTotalEarningsAndBonusEarnedAndLateNightTrip (cast person.id) totalEarnings bonusEarnings lateNightTripsCount
         setMissedEarnings (cast person.id) missedEarnings
@@ -93,8 +95,10 @@ getDriverProfileSummary (driverId, _, _) = do
 
   let driverSummary =
         DriverInfo.DriverSummary
-          { totalEarnings = driverStats.totalEarnings,
-            bonusEarned = driverStats.bonusEarned,
+          { totalEarnings = roundToIntegral driverStats.totalEarnings,
+            totalEarningsWithCurrency = PriceAPIEntity driverStats.totalEarnings driverStats.currency,
+            bonusEarned = roundToIntegral driverStats.bonusEarned,
+            bonusEarnedWithCurrency = PriceAPIEntity driverStats.bonusEarned driverStats.currency,
             totalCompletedTrips = driverStats.totalRides,
             lateNightTrips = driverStats.lateNightTrips,
             lastRegistered = person.createdAt
@@ -104,7 +108,8 @@ getDriverProfileSummary (driverId, _, _) = do
           { cancellationRate = div ((fromMaybe 0 driverStats.ridesCancelled) * 100 :: Int) (nonZero driverStats.totalRidesAssigned :: Int),
             ridesCancelled = fromMaybe 0 driverStats.ridesCancelled,
             totalRides = driverStats.totalRides,
-            missedEarnings = driverStats.earningsMissed
+            missedEarnings = roundToIntegral driverStats.earningsMissed,
+            missedEarningsWithCurrency = PriceAPIEntity driverStats.earningsMissed driverStats.currency
           }
   mbDefaultServiceTier <-
     case vehicleMB of

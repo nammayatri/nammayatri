@@ -15,27 +15,34 @@
 
 module Beckn.OnDemand.Utils.Callback where
 
+import Data.HashMap.Strict as HMS
 import Domain.Types.Merchant as DM
 import EulerHS.Prelude hiding ((.~))
 import qualified EulerHS.Types as ET
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.SignatureAuth
 import Servant.Client
+import TransactionLogs.PushLogs
+import TransactionLogs.Types
 
 withCallback ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "httpClientOptions" ::: HttpClientOptions],
     HasShortDurationRetryCfg r c,
     CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
   ) =>
   DM.Merchant ->
   WithBecknCallback api callback_success m
 withCallback = withCallback' withShortRetry
 
 withCallback' ::
+  (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]) =>
   (m () -> m ()) ->
   (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, CacheFlow m r) =>
   DM.Merchant ->
@@ -43,7 +50,7 @@ withCallback' ::
 withCallback' doWithCallback transporter action api cbUrl internalEndPointHashMap fromError f = do
   let bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
-  withBecknCallback doWithCallback (Just $ ET.ManagerSelector authKey) action api cbUrl internalEndPointHashMap fromError f
+  withBecknCallback doWithCallback (Just $ ET.ManagerSelector authKey) transporter.id.getId action api cbUrl internalEndPointHashMap fromError f
 
 type Action = Text
 
@@ -53,7 +60,8 @@ type WithBecknCallback api callback_result m =
     CoreMetrics m,
     HasClient ET.EulerClient api,
     Client ET.EulerClient api
-      ~ (callback_result -> ET.EulerClient AckResponse)
+      ~ (callback_result -> ET.EulerClient AckResponse),
+    ToJSON callback_result
   ) =>
   Action ->
   Proxy api ->
@@ -64,16 +72,23 @@ type WithBecknCallback api callback_result m =
   m AckResponse
 
 withBecknCallback ::
+  (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]) =>
   (m () -> m ()) ->
   Maybe ET.ManagerSelector ->
+  Text ->
   WithBecknCallback api callback_result m
-withBecknCallback doWithCallback auth action api cbUrl internalEndPointHashMap fromError cbHandler = do
+withBecknCallback doWithCallback auth transporterId action api cbUrl internalEndPointHashMap fromError cbHandler = do
   forkBecknCallback
     fromError
-    (doWithCallback . void . callBecknAPI auth Nothing action api cbUrl internalEndPointHashMap)
+    doWithResult
     action
     cbHandler
   return Ack
+  where
+    doWithResult result = do
+      fork ("sending " <> show action <> ", pushing ondc logs") do
+        void $ pushLogs action (toJSON result) transporterId
+      doWithCallback . void . callBecknAPI auth Nothing action api cbUrl internalEndPointHashMap $ result
 
 forkBecknCallback ::
   (Forkable m, MonadCatch m, Log m) =>

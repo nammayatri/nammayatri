@@ -355,3 +355,12 @@ lightCyan = "#EEF3FF"
 
 white800 :: Color
 white800 = "#80FFFFFF"
+
+tealBlue :: Color
+tealBlue = "#3D475C"
+
+transparentWhite :: Color
+transparentWhite = "#30FFFFFF"
+
+greyDark :: Color
+greyDark = "#D8D8D8"

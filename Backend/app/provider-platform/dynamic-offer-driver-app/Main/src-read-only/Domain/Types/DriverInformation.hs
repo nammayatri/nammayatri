@@ -16,6 +16,8 @@ import qualified Tools.Beam.UtilsTH
 
 data DriverInformation = DriverInformation
   { aadhaarVerified :: Kernel.Prelude.Bool,
+    acRestrictionLiftCount :: Kernel.Prelude.Int,
+    acUsageRestrictionType :: Domain.Types.DriverInformation.AirConditionedRestrictionType,
     active :: Kernel.Prelude.Bool,
     adminId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     airConditionScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
@@ -28,12 +30,14 @@ data DriverInformation = DriverInformation
     canDowngradeToHatchback :: Kernel.Prelude.Bool,
     canDowngradeToSedan :: Kernel.Prelude.Bool,
     canDowngradeToTaxi :: Kernel.Prelude.Bool,
+    canSwitchToInterCity :: Kernel.Prelude.Bool,
     canSwitchToRental :: Kernel.Prelude.Bool,
     compAadhaarImagePath :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     enabled :: Kernel.Prelude.Bool,
     enabledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    lastACStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     lastEnabledOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     mode :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverMode,
     numOfLocks :: Kernel.Prelude.Int,
@@ -52,6 +56,8 @@ data DriverInformation = DriverInformation
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data AirConditionedRestrictionType = NoRestriction | ToggleAllowed | ToggleNotAllowed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data Badges = Badges {badgeCount :: Kernel.Prelude.Int, badgeName :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data DriverAutoPayStatus
@@ -66,19 +72,29 @@ data DriverAutoPayStatus
 
 newtype DriverBadges = DriverBadges {driverBadges :: [Domain.Types.DriverInformation.Badges]} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data DriverMissedOpp = DriverMissedOpp {cancellationRate :: Kernel.Prelude.Int, missedEarnings :: Kernel.Types.Common.Money, ridesCancelled :: Kernel.Prelude.Int, totalRides :: Kernel.Prelude.Int}
+data DriverMissedOpp = DriverMissedOpp
+  { cancellationRate :: Kernel.Prelude.Int,
+    missedEarnings :: Kernel.Types.Common.Money,
+    missedEarningsWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
+    ridesCancelled :: Kernel.Prelude.Int,
+    totalRides :: Kernel.Prelude.Int
+  }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data DriverMode = ONLINE | OFFLINE | SILENT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data DriverSummary = DriverSummary
   { bonusEarned :: Kernel.Types.Common.Money,
+    bonusEarnedWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     lastRegistered :: Kernel.Prelude.UTCTime,
     lateNightTrips :: Kernel.Prelude.Int,
     totalCompletedTrips :: Kernel.Prelude.Int,
-    totalEarnings :: Kernel.Types.Common.Money
+    totalEarnings :: Kernel.Types.Common.Money,
+    totalEarningsWithCurrency :: Kernel.Types.Common.PriceAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirConditionedRestrictionType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverAutoPayStatus)
 

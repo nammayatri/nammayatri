@@ -22,10 +22,10 @@ import Data.String (toLower)
 import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC, liftFlow, getNewIDWithTag)
-import Engineering.Helpers.Utils (saveObject)
+import Engineering.Helpers.Utils (saveObject, getFixedTwoDecimals)
 import Foreign (unsafeToForeign)
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getDistanceBwCordinates, getFixedTwoDecimals, getCityConfig)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getDistanceBwCordinates, getCityConfig)
 import JBridge (openUrlInApp, shareTextMessage, addReels, cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport, metaLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -33,7 +33,7 @@ import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (void, class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard, Ordering, compare, (<=), (>), (>=), (||), (<>))
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants as Const
 import Screens (getScreen, ScreenName(..))
@@ -46,7 +46,7 @@ import PrestoDOM.Core (getPushFn)
 import Effect.Uncurried (runEffectFn5, runEffectFn1)
 import RemoteConfig (ReelItem(..))
 import Foreign (Foreign)
-import DecodeUtil(decodeForeignObject)
+import DecodeUtil(decodeForeignObject, decodeForeignAny)
 import RemoteConfig as RC
 import Foreign.Generic (encodeJSON)
 
@@ -370,9 +370,9 @@ eval (ShowError errorPayload )state = continue state{props{showError = true, sho
 eval (LoadAlternatePlans plansArray) state = continue state { data { managePlanData { alternatePlans = alternatePlansTransformer plansArray state}}, props {subView = ManagePlan, showShimmer = false}}
 
 eval (TryAgainButtonAC PrimaryButton.OnClick) state = 
-  let updateState = state { props{showShimmer = true}}
-    in if state.props.subView == FindHelpCentre then updateAndExit updateState $ RefreshHelpCentre updateState
-      else updateAndExit updateState $ Refresh
+  let update = state { props{showShimmer = true}}
+    in if state.props.subView == FindHelpCentre then updateAndExit update $ RefreshHelpCentre update
+      else updateAndExit update $ Refresh
 
 eval CallSupport state = do
   _ <- pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
@@ -409,7 +409,7 @@ eval (OpenReelsView index) state = do
 eval (GetCurrentPosition label stringData reelItemData buttonData) state = case label of
   "CURRENT_POSITION" -> continue state
   "ACTION" -> 
-      let  currentButtonConfig = decodeForeignObject buttonData RC.defaultReelButtonConfig
+      let  currentButtonConfig = decodeForeignAny buttonData RC.defaultReelButtonConfig
            shareMessageTitle = Mb.maybe Mb.Nothing (\rButtonData -> rButtonData.shareMessageTitle) currentButtonConfig
            shareText = Mb.maybe Mb.Nothing (\rButtonData -> rButtonData.shareText) currentButtonConfig
            shareLink = Mb.maybe Mb.Nothing (\rButtonData -> rButtonData.shareLink) currentButtonConfig
@@ -429,7 +429,7 @@ eval (GetCurrentPosition label stringData reelItemData buttonData) state = case 
                 _ -> continue state
   _ -> continue state
 
-eval _ state = continue state
+eval _ state = update state
 
 getPlanPrice :: Array PaymentBreakUp -> String -> String
 getPlanPrice fares priceType = do

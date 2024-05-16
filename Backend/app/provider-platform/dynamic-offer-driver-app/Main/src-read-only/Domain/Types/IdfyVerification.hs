@@ -4,6 +4,7 @@
 
 module Domain.Types.IdfyVerification where
 
+import Data.Aeson
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
@@ -16,7 +17,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data IdfyVerificationE e = IdfyVerification
-  { docType :: Domain.Types.DocumentVerificationConfig.DocumentType,
+  { airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    docType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     documentImageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     documentImageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     documentNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
@@ -49,7 +51,8 @@ instance EncryptedItem IdfyVerification where
     documentNumber_ <- encryptItem (documentNumber entity, salt)
     pure
       IdfyVerification
-        { docType = docType entity,
+        { airConditioned = airConditioned entity,
+          docType = docType entity,
           documentImageId1 = documentImageId1 entity,
           documentImageId2 = documentImageId2 entity,
           documentNumber = documentNumber_,
@@ -74,7 +77,8 @@ instance EncryptedItem IdfyVerification where
     documentNumber_ <- fst <$> decryptItem (documentNumber entity)
     pure
       ( IdfyVerification
-          { docType = docType entity,
+          { airConditioned = airConditioned entity,
+            docType = docType entity,
             documentImageId1 = documentImageId1 entity,
             documentImageId2 = documentImageId2 entity,
             documentNumber = documentNumber_,
@@ -105,7 +109,7 @@ instance EncryptedItem' IdfyVerification where
 
 data ImageExtractionValidation = Success | Skipped | Failed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data VerificationStatus = PENDING | VALID | INVALID deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ImageExtractionValidation)
 

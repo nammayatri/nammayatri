@@ -4,6 +4,7 @@
 
 module Domain.Types.BecknConfig where
 
+import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Prelude
@@ -45,7 +46,7 @@ data BecknConfig = BecknConfig
 
 data PaymentCollectedBy = BAP | BPP deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data VehicleCategory = CAB | AUTO_RICKSHAW | METRO deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data VehicleCategory = CAB | AUTO_RICKSHAW | METRO | MOTORCYCLE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentCollectedBy)
 

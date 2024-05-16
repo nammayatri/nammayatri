@@ -106,9 +106,6 @@ lightRed = "#16D76893"
 blueBack :: Color
 blueBack = "#F6FAFF"
 
-greyDark :: Color
-greyDark = "#D8D8D8"
-
 greyDarker :: Color
 greyDarker = "#D6D6D6"
 
@@ -415,3 +412,12 @@ darkGreyishBlue = "#313440"
 
 lightGreyBlue :: Color
 lightGreyBlue = "#E9EEF2F6"
+
+lightGreyBlue1 :: Color
+lightGreyBlue1 = "#383B46"
+
+lightGreyBlue2 :: Color
+lightGreyBlue2 = "#6C7393"
+
+lightGrey1 :: Color
+lightGrey1 = "#F3F3F3"

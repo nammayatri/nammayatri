@@ -17,6 +17,7 @@ module Domain.Action.UI.Ride
     GetRideStatusResp (..),
     EditLocation (..),
     EditLocationReq (..),
+    EditLocationResp (..),
     getDriverLoc,
     getRideStatus,
     editLocation,
@@ -25,14 +26,16 @@ where
 
 import qualified Beckn.ACL.Update as ACL
 import qualified Beckn.OnDemand.Utils.Common as Common
-import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import qualified Data.HashMap.Strict as HM
 import Data.List (sortBy)
 import Data.Ord
 import qualified Domain.Action.Beckn.OnTrack as OnTrack
+import Domain.Action.UI.Location (makeLocationAPIEntity)
+import qualified Domain.Action.UI.Person as UPerson
+import qualified Domain.Types.Booking as DB
 import Domain.Types.Booking.API (makeRideAPIEntity)
-import qualified Domain.Types.Booking.Type as DB
-import Domain.Types.Location (LocationAPIEntity, makeLocationAPIEntity)
+import qualified Domain.Types.BookingUpdateRequest as DBUR
+import Domain.Types.Location (LocationAPIEntity)
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.LocationMapping as DLM
@@ -47,7 +50,7 @@ import Kernel.Prelude hiding (HasField)
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Kernel.Utils.CalculateDistance as CD
@@ -58,14 +61,16 @@ import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Person.PersonDisability as PDisability
+import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as MapSearch
 import qualified Tools.Notifications as Notify
+import TransactionLogs.Types
 
 data GetDriverLocResp = GetDriverLocResp
   { lat :: Double,
@@ -78,7 +83,7 @@ data GetRideStatusResp = GetRideStatusResp
   { fromLocation :: LocationAPIEntity,
     toLocation :: Maybe LocationAPIEntity,
     ride :: RideAPIEntity,
-    customer :: SPerson.PersonAPIEntity,
+    customer :: UPerson.PersonAPIEntity,
     driverPosition :: Maybe MapSearch.LatLong
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -86,6 +91,11 @@ data GetRideStatusResp = GetRideStatusResp
 data EditLocationReq = EditLocationReq
   { origin :: Maybe EditLocation,
     destination :: Maybe EditLocation
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+newtype EditLocationResp = EditLocationResp
+  { bookingUpdateRequestId :: Maybe (Id DBUR.BookingUpdateRequest)
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -101,7 +111,9 @@ getDriverLoc ::
     EsqDBFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     EsqDBReplicaFlow m r,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasLongDurationRetryCfg r c
   ) =>
   Id SRide.Ride ->
@@ -183,7 +195,7 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
           DB.InterCityDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.DriverOfferDetails details -> Just $ makeLocationAPIEntity details.toLocation,
         ride = makeRideAPIEntity ride,
-        customer = SPerson.makePersonAPIEntity decRider tag isSafetyCenterDisabled,
+        customer = UPerson.makePersonAPIEntity decRider tag isSafetyCenterDisabled,
         driverPosition = mbPos <&> (.currPoint)
       }
 
@@ -199,7 +211,7 @@ editLocation ::
   Id SRide.Ride ->
   (Id SPerson.Person, Id DM.Merchant) ->
   EditLocationReq ->
-  m APISuccess
+  m EditLocationResp
 editLocation rideId (_, merchantId) req = do
   when (isNothing req.origin && isNothing req.destination) do
     throwError PickupOrDropLocationNotFound
@@ -213,58 +225,100 @@ editLocation rideId (_, merchantId) req = do
 
   let bookingId = ride.bookingId
   booking <- B.runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
+  case (req.origin, req.destination) of
+    (Just pickup, _) -> do
+      when (ride.status /= SRide.NEW) do
+        throwError (InvalidRequest $ "Customer is not allowed to change pickup as the ride is not NEW for rideId: " <> ride.id.getId)
+      pickupLocationMappings <- QLM.findAllByEntityIdAndOrder ride.id.getId 0
+      oldestMapping <- (listToMaybe $ sortBy (comparing (Down . (.version))) pickupLocationMappings) & fromMaybeM (InternalError $ "Latest mapping not found for rideId: " <> ride.id.getId)
+      initialLocationForRide <- QL.findById oldestMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId:" <> oldestMapping.locationId.getId)
+      let initialLatLong = Maps.LatLong {lat = initialLocationForRide.lat, lon = initialLocationForRide.lon}
+          currentLatLong = pickup.gps
+      let distance = CD.distanceBetweenInMeters initialLatLong currentLatLong
+      when (distance > distanceToHighPrecMeters merchant.editPickupDistanceThreshold) do
+        throwError EditPickupLocationNotServiceable
 
-  whenJust req.origin $ \pickup -> do
-    when (ride.status /= SRide.NEW) do
-      throwError (InvalidRequest $ "Customer is not allowed to change pickup as the ride is not NEW for rideId: " <> ride.id.getId)
-    pickupLocationMappings <- QLM.findAllByEntityIdAndOrder ride.id.getId 0
-    oldestMapping <- (listToMaybe $ sortBy (comparing (Down . (.version))) pickupLocationMappings) & fromMaybeM (InternalError $ "Latest mapping not found for rideId: " <> ride.id.getId)
-    initialLocationForRide <- QL.findById oldestMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId:" <> oldestMapping.locationId.getId)
-    let initialLatLong = Maps.LatLong {lat = initialLocationForRide.lat, lon = initialLocationForRide.lon}
-        currentLatLong = pickup.gps
-    let distance = CD.distanceBetweenInMeters initialLatLong currentLatLong
-    when (distance > distanceToHighPrecMeters merchant.editPickupDistanceThreshold) do
-      throwError EditPickupLocationNotServiceable
+      res <- try @_ @SomeException (CallBPP.callGetDriverLocation ride.trackingUrl)
+      case res of
+        Right res' -> do
+          let curDriverLocation = res'.currPoint
+          let distanceOfDriverFromChangingPickup = CD.distanceBetweenInMeters curDriverLocation currentLatLong
+          when (distanceOfDriverFromChangingPickup < distanceToHighPrecMeters merchant.driverDistanceThresholdFromPickup) do
+            throwError $ DriverAboutToReachAtInitialPickup (show distanceOfDriverFromChangingPickup)
+        Left err -> do
+          logTagInfo "DriverLocationFetchFailed" $ show err
 
-    res <- try @_ @SomeException (CallBPP.callGetDriverLocation ride.trackingUrl)
-    case res of
-      Right res' -> do
-        let curDriverLocation = res'.currPoint
-        let distanceOfDriverFromChangingPickup = CD.distanceBetweenInMeters curDriverLocation currentLatLong
-        when (distanceOfDriverFromChangingPickup < distanceToHighPrecMeters merchant.driverDistanceThresholdFromPickup) do
-          throwError $ DriverAboutToReachAtInitialPickup (show distanceOfDriverFromChangingPickup)
-      Left err -> do
-        logTagInfo "DriverLocationFetchFailed" $ show err
-
-    startLocation <- buildLocation pickup
-    QL.create startLocation
-    pickupMapForBooking <- SLM.buildPickUpLocationMapping startLocation.id bookingId.getId DLM.BOOKING (Just merchantId) ride.merchantOperatingCityId
-    QLM.create pickupMapForBooking
-    pickupMapForRide <- SLM.buildPickUpLocationMapping startLocation.id ride.id.getId DLM.RIDE (Just merchantId) ride.merchantOperatingCityId
-    QLM.create pickupMapForRide
-
-    let origin = Just $ mkDomainLocation pickup
-    bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
-    let dUpdateReq =
-          ACL.UpdateBuildReq
-            { bppBookingId,
-              merchant,
-              bppId = booking.providerId,
-              bppUrl = booking.providerUrl,
-              transactionId = booking.transactionId,
-              city = merchant.defaultCity, -- TODO: Correct during interoperability
-              details =
-                ACL.UEditLocationBuildReqDetails $
-                  ACL.EditLocationBuildReqDetails
-                    { bppRideId = ride.bppRideId,
-                      origin,
-                      destination = Nothing
-                    }
-            }
-    becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
-    void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
-    QRide.updateEditLocationAttempts ride.id (Just (attemptsLeft -1))
-  pure Success
+      startLocation <- buildLocation pickup
+      QL.create startLocation
+      pickupMapForBooking <- SLM.buildPickUpLocationMapping startLocation.id bookingId.getId DLM.BOOKING (Just merchantId) ride.merchantOperatingCityId
+      QLM.create pickupMapForBooking
+      pickupMapForRide <- SLM.buildPickUpLocationMapping startLocation.id ride.id.getId DLM.RIDE (Just merchantId) ride.merchantOperatingCityId
+      QLM.create pickupMapForRide
+      let origin = Just $ startLocation{id = "0"}
+      bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+      uuid <- generateGUID
+      let dUpdateReq =
+            ACL.UpdateBuildReq
+              { bppBookingId,
+                merchant,
+                bppId = booking.providerId,
+                bppUrl = booking.providerUrl,
+                transactionId = booking.transactionId,
+                messageId = uuid,
+                city = merchant.defaultCity, -- TODO: Correct during interoperability
+                details =
+                  ACL.UEditLocationBuildReqDetails $
+                    ACL.EditLocationBuildReqDetails
+                      { bppRideId = ride.bppRideId,
+                        origin,
+                        status = ACL.CONFIRM_UPDATE,
+                        destination = Nothing
+                      },
+                ..
+              }
+      becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
+      void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
+      QRide.updateEditLocationAttempts ride.id (Just (attemptsLeft -1))
+      pure $ EditLocationResp Nothing
+    (_, Just destination) -> do
+      when (ride.status == SRide.CANCELLED || ride.status == SRide.COMPLETED) do
+        throwError (InvalidRequest $ "Customer is not allowed to change destination as the ride is in terminal state for rideId: " <> ride.id.getId)
+      newDropLocation <- buildLocation destination
+      QL.create newDropLocation
+      startLocMapping <- QLM.getLatestStartByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> booking.id.getId)
+      oldDropLocMapping <- QLM.getLatestEndByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingId: " <> booking.id.getId)
+      bookingUpdateReq <- buildbookingUpdateRequest booking
+      QBUR.create bookingUpdateReq
+      startLocMap <- SLM.buildPickUpLocationMapping startLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
+      oldDropLocMap <- SLM.buildDropLocationMapping oldDropLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
+      newDropLocationMap <- SLM.buildDropLocationMapping newDropLocation.id bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
+      QLM.create startLocMap
+      QLM.create oldDropLocMap
+      QLM.create newDropLocationMap
+      prevOrder <- QLM.maxOrderByEntity booking.id.getId
+      let destination' = Just $ newDropLocation{id = show prevOrder}
+      bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+      let dUpdateReq =
+            ACL.UpdateBuildReq
+              { bppId = booking.providerId,
+                bppUrl = booking.providerUrl,
+                transactionId = booking.transactionId,
+                messageId = bookingUpdateReq.id.getId,
+                city = merchant.defaultCity, -- TODO: Correct during interoperability
+                details =
+                  ACL.UEditLocationBuildReqDetails $
+                    ACL.EditLocationBuildReqDetails
+                      { bppRideId = ride.bppRideId,
+                        origin = Nothing,
+                        status = ACL.SOFT_UPDATE,
+                        destination = destination'
+                      },
+                ..
+              }
+      becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
+      void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
+      pure $ EditLocationResp (Just bookingUpdateReq.id)
+    (_, _) -> throwError PickupOrDropLocationNotFound
 
 buildLocation :: MonadFlow m => EditLocation -> m DL.Location
 buildLocation location = do
@@ -280,24 +334,25 @@ buildLocation location = do
         address = location.address
       }
 
-mkDomainLocation :: EditLocation -> Common.Location
-mkDomainLocation EditLocation {..} =
-  Common.Location
-    { gps =
-        Common.Gps
-          { lat = gps.lat,
-            lon = gps.lon
-          },
-      address =
-        Common.Address
-          { locality = address.area,
-            area_code = address.areaCode,
-            state = address.state,
-            country = address.country,
-            building = address.building,
-            street = address.street,
-            city = address.city,
-            ward = address.ward,
-            door = address.door
-          }
-    }
+buildbookingUpdateRequest :: MonadFlow m => DB.Booking -> m DBUR.BookingUpdateRequest
+buildbookingUpdateRequest booking = do
+  guid <- generateGUID
+  now <- getCurrentTime
+  return $
+    DBUR.BookingUpdateRequest
+      { id = guid,
+        status = DBUR.SOFT,
+        createdAt = now,
+        updatedAt = now,
+        bookingId = booking.id,
+        merchantId = booking.merchantId,
+        merchantOperatingCityId = booking.merchantOperatingCityId,
+        currentPointLat = Nothing,
+        currentPointLon = Nothing,
+        estimatedFare = Nothing,
+        estimatedDistance = Nothing,
+        oldEstimatedFare = booking.estimatedFare.amount,
+        oldEstimatedDistance = distanceToHighPrecMeters <$> booking.estimatedDistance,
+        totalDistance = Nothing,
+        travelledDistance = Nothing
+      }

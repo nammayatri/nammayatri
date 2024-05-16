@@ -7,6 +7,7 @@ import ConfigProvider
 import MerchantConfig.Types
 import Screens.Types(TipViewProps, TipViewStage(..), ZoneType(..))
 import Prelude (negate)
+import Resources.Constants (intMin, intMax)
 
 data Action
   = NoAction
@@ -31,7 +32,6 @@ type Config
     , showPreferences :: Boolean
     , bookingPreferenceEnabled :: Boolean
     , flowWithoutOffers :: Boolean
-    , enableSingleEstimate :: Boolean
     , selectedEstimateHeight :: Int
     , zoneType :: ZoneType
     , tipViewProps :: TipViewProps
@@ -39,6 +39,15 @@ type Config
     , customerTipArray :: Array String
     , customerTipArrayWithValues :: Array Int
     , enableTips :: Boolean
+    , showMultiProvider :: Boolean
+    , currentEstimateHeight :: Int
+    }
+
+type BookAnyProps 
+  = { minPrice :: Int
+    , maxPrice :: Int
+    , minCapacity :: Int
+    , maxCapacity :: Int 
     }
 
 config :: Config
@@ -52,11 +61,11 @@ config =
   , showPreferences : false
   , bookingPreferenceEnabled : false
   , flowWithoutOffers : false
-  , enableSingleEstimate : false
   , selectedEstimateHeight : 0
   , zoneType : NOZONE
   , customerTipArray : []
   , customerTipArrayWithValues : []
+  , currentEstimateHeight : 0
   , tipViewProps : {
       stage : DEFAULT
     , isVisible : false
@@ -71,4 +80,13 @@ config =
     }
   , tipForDriver : 0
   , enableTips : true
+  , showMultiProvider : false
+  }
+
+bookAnyProps :: BookAnyProps
+bookAnyProps = 
+  { minPrice : intMax
+  , maxPrice : intMin
+  , minCapacity : intMax
+  , maxCapacity : intMin
   }

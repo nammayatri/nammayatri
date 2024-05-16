@@ -7,6 +7,8 @@ import qualified Domain.Types.DailyStats
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -17,12 +19,13 @@ instance FromTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
     pure $
       Just
         Domain.Types.DailyStats.DailyStats
-          { driverId = Kernel.Types.Id.Id driverId,
+          { currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
+            driverId = Kernel.Types.Id.Id driverId,
             id = id,
             merchantLocalDate = merchantLocalDate,
             numRides = numRides,
             totalDistance = totalDistance,
-            totalEarnings = totalEarnings,
+            totalEarnings = Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -30,12 +33,14 @@ instance FromTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
 instance ToTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
   toTType' (Domain.Types.DailyStats.DailyStats {..}) = do
     Beam.DailyStatsT
-      { Beam.driverId = Kernel.Types.Id.getId driverId,
+      { Beam.currency = Kernel.Prelude.Just currency,
+        Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = id,
         Beam.merchantLocalDate = merchantLocalDate,
         Beam.numRides = numRides,
         Beam.totalDistance = totalDistance,
-        Beam.totalEarnings = totalEarnings,
+        Beam.totalEarnings = Kernel.Prelude.roundToIntegral totalEarnings,
+        Beam.totalEarningsAmount = Kernel.Prelude.Just totalEarnings,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

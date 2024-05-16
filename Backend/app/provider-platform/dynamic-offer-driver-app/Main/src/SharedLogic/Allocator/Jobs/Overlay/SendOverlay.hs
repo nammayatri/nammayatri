@@ -31,6 +31,24 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QP
 import qualified Tools.Notifications as TN
 
+acUsageRestrictionKey :: Text
+acUsageRestrictionKey = "AC_USAGE_RESTRICTED"
+
+acUsageRestrictionLiftedKey :: Text
+acUsageRestrictionLiftedKey = "AC_USAGE_RESTRICTION_LIFTED"
+
+sendACUsageRestrictionLiftedOverlay :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> m ()
+sendACUsageRestrictionLiftedOverlay = sendACOverlay acUsageRestrictionLiftedKey
+
+sendACUsageRestrictionOverlay :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> m ()
+sendACUsageRestrictionOverlay = sendACOverlay acUsageRestrictionKey
+
+sendACOverlay :: (CacheFlow m r, EsqDBFlow m r) => Text -> DP.Person -> m ()
+sendACOverlay overlayKey person = do
+  mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf person.merchantOperatingCityId overlayKey (fromMaybe ENGLISH person.language) Nothing
+  whenJust mOverlay $ \overlay -> do
+    TN.sendOverlay person.merchantOperatingCityId person $ TN.mkOverlayReq overlay
+
 sendOverlayToDriver ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -100,7 +118,7 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
 
     getAllManualDuesWithoutFilter driverId serviceName = do
       pendingDriverFees <- QDF.findAllOverdueDriverFeeByDriverIdForServiceName driverId serviceName
-      return $ sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
+      return $ sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
 
     getManualDues driverId timeDiffFromUtc driverFeeOverlaySendingTimeLimitInDays serviceName = do
       windowEndTime <- getLocalCurrentTime timeDiffFromUtc
@@ -110,7 +128,7 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
       return $
         if null filteredDriverFees
           then 0
-          else sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
+          else sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
 
 getRescheduledTime :: (MonadTime m) => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> getCurrentTime
@@ -121,8 +139,9 @@ sendOverlay driver overlayKey udf1 amount = do
   whenJust mOverlay $ \overlay -> do
     let okButtonText = T.replace (templateText "dueAmount") (show amount) <$> overlay.okButtonText
     let description = T.replace (templateText "dueAmount") (show amount) <$> overlay.description
+    let overlay' :: DOverlay.Overlay = overlay {DOverlay.okButtonText = okButtonText, DOverlay.description = description}
     fork ("sending overlay to driver with driverId " <> (show driver.id)) $ do
-      TN.sendOverlay driver.merchantOperatingCityId driver.id driver.deviceToken $ TN.mkOverlayReq overlay description okButtonText overlay.cancelButtonText overlay.endPoint
+      TN.sendOverlay driver.merchantOperatingCityId driver $ TN.mkOverlayReq overlay'
 
 getSendOverlaySchedulerDriverIdsLength :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id AnyJob -> m Integer
 getSendOverlaySchedulerDriverIdsLength merchantOpCityId jobId = Hedis.lLen $ makeSendOverlaySchedulerDriverIdsKey merchantOpCityId jobId

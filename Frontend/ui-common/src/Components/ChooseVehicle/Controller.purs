@@ -9,13 +9,15 @@ import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (Margin(..))
 import Data.Maybe (Maybe(..))
 import Common.Types.App (RateCardType(..), FareList)
+import Common.Types.App as CT
 
 data Action
-  = NoAction
+  = NoAction Config
   | OnSelect Config
   | OnImageClick
   | ShowRateCard Config
   | OnEditClick
+  | ServicesOnClick Config String
 
 type Config
   = { vehicleImage :: String
@@ -29,25 +31,38 @@ type Config
     , index :: Int
     , activeIndex :: Int
     , id :: String
-    , maxPrice :: Int
+    , maxPrice :: Maybe Int
+    , minPrice :: Maybe Int
     , basePrice :: Int
     , showInfo :: Boolean
     , searchResultType :: SearchType
     , isBookingOption :: Boolean
-    , pickUpCharges :: Int 
-    , layoutMargin :: Margin
-    , isSingleEstimate :: Boolean
-    , tollCharge :: Int
+    , pickUpCharges :: Number 
+    , tollCharge :: Number
     , serviceTierShortDesc :: Maybe String
     , serviceTierName :: Maybe String
     , extraFare :: Array FareList
     , additionalFare :: Int
-    , nightShiftMultiplier :: Number
-    , nightCharges :: Boolean
-    , baseFare :: Int
+    , driverAdditions :: Array FareList
+    , fareInfoDescription :: Array String
+    , isNightShift :: Boolean
+    , nightChargeTill :: String
+    , nightChargeFrom :: String
     , airConditioned :: Maybe Boolean
     , showEditButton :: Boolean
     , editBtnText :: String
+    , layoutMargin :: Margin 
+    , providerName :: String
+    , providerId :: String
+    , providerType :: CT.ProviderType
+    , singleVehicle :: Boolean
+    , priceShimmer :: Boolean
+    , availableServices :: Array String
+    , services :: Array String
+    , selectedServices :: Array String
+    , currentEstimateHeight :: Int
+    , selectedEstimateHeight :: Int
+    , validTill :: String
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -72,23 +87,36 @@ config =
   , activeIndex: 0
   , index: 0
   , id: ""
-  , maxPrice : 123
+  , maxPrice : Nothing
+  , minPrice : Nothing
   , basePrice : 0 
   , showInfo : false
   , searchResultType : QUOTES
   , isBookingOption : false
-  , pickUpCharges : 0
+  , pickUpCharges : 0.0
   , layoutMargin : MarginHorizontal 12 12
-  , isSingleEstimate : false
-  , tollCharge : 0
+  , tollCharge : 0.0
   , serviceTierShortDesc : Nothing
   , serviceTierName : Nothing
   , extraFare: []
   , additionalFare: 0
-  , nightShiftMultiplier: 0.0
-  , nightCharges: false
-  , baseFare : 0
+  , fareInfoDescription: []
+  , driverAdditions: []
+  , isNightShift : false
+  , nightChargeTill : ""
+  , nightChargeFrom : ""
   , airConditioned : Nothing
   , showEditButton : false
   , editBtnText : ""
+  , providerName : ""
+  , providerId : ""
+  , providerType : CT.ONUS
+  , singleVehicle : false
+  , priceShimmer : true
+  , availableServices : []
+  , services : [] 
+  , selectedServices : []
+  , currentEstimateHeight : 184 
+  , selectedEstimateHeight : 0
+  , validTill : ""
   }

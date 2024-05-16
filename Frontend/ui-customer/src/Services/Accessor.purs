@@ -56,8 +56,11 @@ _contents = lens (unwrap >>> _.contents) (\oldRec newVal -> wrap ((unwrap oldRec
 _toLocation :: forall a b c. Newtype a {toLocation :: c | b} => Lens' a c
 _toLocation = lens (unwrap >>> _.toLocation) (\oldRec newVal -> wrap ((unwrap oldRec) {toLocation = newVal}))
 
-_amount :: forall a b c. Newtype a {amount :: c | b} => Lens' a c
+_amount :: forall a b c. Newtype a {amount :: c | b} => Lens' a c -- Deprecated
 _amount = lens (unwrap >>> _.amount) (\oldRec newVal -> wrap ((unwrap oldRec) {amount = newVal}))
+
+_amountWithCurrency :: forall a b c. Newtype a {amountWithCurrency :: c | b} => Lens' a c
+_amountWithCurrency = lens (unwrap >>> _.amountWithCurrency) (\oldRec newVal -> wrap ((unwrap oldRec) {amountWithCurrency = newVal}))
 
 _driverRatings :: forall a b c. Newtype a {driverRatings :: c | b} => Lens' a c
 _driverRatings = lens (unwrap >>> _.driverRatings) (\oldRec newVal -> wrap ((unwrap oldRec) {driverRatings = newVal}))
@@ -105,8 +108,8 @@ _estimateFareBreakup = lens (unwrap >>> _.estimateFareBreakup) (\oldRec newVal -
 _title :: forall a b c. Newtype a {title :: b | c } => Lens' a b
 _title = lens (unwrap >>> _.title) (\oldRec newVal -> wrap ((unwrap oldRec) { title = newVal }))
 
-_price :: forall a b c. Newtype a {price :: b | c } => Lens' a b
-_price = lens (unwrap >>> _.price) (\oldRec newVal -> wrap ((unwrap oldRec) { price = newVal }))
+_priceWithCurrency :: forall a b c. Newtype a {priceWithCurrency :: b | c } => Lens' a b
+_priceWithCurrency = lens (unwrap >>> _.priceWithCurrency) (\oldRec newVal -> wrap ((unwrap oldRec) { priceWithCurrency = newVal }))
 
 _totalFareRange :: forall a b c. Newtype a {totalFareRange :: b | c } => Lens' a b
 _totalFareRange = lens (unwrap >>> _.totalFareRange) (\oldRec newVal -> wrap ((unwrap oldRec) { totalFareRange = newVal }))
@@ -299,3 +302,18 @@ _rideEndTime = lens (unwrap >>> _.rideEndTime) (\oldRec newVal -> wrap ((unwrap 
 
 _customerReferralCode :: forall a b c. Newtype a { customerReferralCode :: b | c } => Lens' a b
 _customerReferralCode = lens (unwrap >>> _.customerReferralCode) (\oldRec newVal -> wrap ((unwrap oldRec) { customerReferralCode = newVal }))
+
+_serviceTierName :: forall a b c. Newtype a { serviceTierName :: b | c } => Lens' a b
+_serviceTierName = lens (unwrap >>> _.serviceTierName) (\oldRec newVal -> wrap ((unwrap oldRec) { serviceTierName = newVal }))
+
+_hasTakenValidCabRide :: forall a b c. Newtype a { hasTakenValidCabRide :: b | c } => Lens' a b
+_hasTakenValidCabRide = lens (unwrap >>> _.hasTakenValidCabRide) (\oldRec newVal -> wrap ((unwrap oldRec) { hasTakenValidCabRide = newVal }))
+
+_hasTakenValidAutoRide :: forall a b c. Newtype a { hasTakenValidAutoRide :: b | c } => Lens' a b
+_hasTakenValidAutoRide = lens (unwrap >>> _.hasTakenValidAutoRide) (\oldRec newVal -> wrap ((unwrap oldRec) { hasTakenValidAutoRide = newVal }))
+
+_hasTakenValidBikeRide :: forall a b c. Newtype a { hasTakenValidBikeRide :: b | c } => Lens' a b
+_hasTakenValidBikeRide = lens (unwrap >>> _.hasTakenValidBikeRide) (\oldRec newVal -> wrap ((unwrap oldRec) { hasTakenValidBikeRide = newVal }))
+
+_isValueAddNP :: forall a b c. Newtype a { isValueAddNP :: b | c } => Lens' a b
+_isValueAddNP = lens (unwrap >>> _.isValueAddNP) (\oldRec newVal -> wrap ((unwrap oldRec) { isValueAddNP = newVal }))

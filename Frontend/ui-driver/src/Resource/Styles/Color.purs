@@ -117,9 +117,6 @@ lightRed = "#16D76893"
 blueBack :: Color
 blueBack = "#F6FAFF"
 
-greyDark :: Color
-greyDark = "#D8D8D8"
-
 greyDarker :: Color
 greyDarker = "#D6D6D6"
 
@@ -414,9 +411,6 @@ greenDull = "#5FAF9E"
 
 greenDisabled :: Color
 greenDisabled = "#B2D6D5"
-
-transparentWhite :: Color
-transparentWhite = "#30FFFFFF"
 
 lightGradientBlue :: Color
 lightGradientBlue = "#F5F8FF"

@@ -41,34 +41,36 @@ import Types.App (defaultGlobalState)
 import JBridge(fromMetersToKm, getLayoutBounds)
 import Engineering.Helpers.Suggestions (getMessageFromKey, chatSuggestion)
 import Helpers.Utils (parseFloat)
-import Data.Int(toNumber)
+import Data.Int(toNumber, fromString)
 import MerchantConfig.Types (DriverInfoConfig)
 import Mobility.Prelude (boolToVisibility)
 import Data.Function.Uncurried(runFn1)
-
+import Components.ServiceTierCard.View as ServiceTierCard
+import Resources.Constants (getVehicleCapacity)
+ 
 ---------------------------------- driverDetailsView ---------------------------------------
 driverDetailsView :: forall w. DriverDetailsType -> String -> String -> PrestoDOM (Effect Unit) w
 driverDetailsView config uid nid =
  linearLayout
   [ orientation HORIZONTAL
-  , height $ V 150
-  , padding $ PaddingHorizontal 16 16
+  , height WRAP_CONTENT 
+  , padding $ Padding 16 16 16 8
   , width MATCH_PARENT
   , id $ getNewIDWithTag uid
   , margin $ Margin 16 (if config.searchType == QUOTES then 12 else 0) 16 (if config.enablePaddingBottom then safeMarginBottom else 0)
   , background Color.white900
   , cornerRadius 8.0
   , visibility $  boolToVisibility $ if config.searchType == QUOTES then config.rideStarted else true
-  , gravity BOTTOM
   ][  linearLayout
       [ orientation VERTICAL
-      , height MATCH_PARENT
-      , width $ V ((screenWidth unit) /2 - 64)
+      , height WRAP_CONTENT
+      , weight 1.0
       , gravity CENTER_VERTICAL
-      , alignParentLeft "true,-1"
+      , background Color.white900
+      , padding $ PaddingRight 16
       ][linearLayout
         [ height WRAP_CONTENT
-        , width MATCH_PARENT
+        , width WRAP_CONTENT
         , gravity LEFT
         ][ frameLayout
           [ orientation VERTICAL
@@ -92,70 +94,65 @@ driverDetailsView config uid nid =
           , ellipsize true
           , accessibility DISABLE
           , color Color.black800
-          , width $ V ((screenWidth unit) /2 - 64)
+          , width WRAP_CONTENT
           , height WRAP_CONTENT
           , gravity LEFT
           ] <> FontStyle.body27 TypoGraphy
         , textView (
-          [ text $ config.vehicleDetails <> " " 
-                    <> case getMerchant FunctionCall of
-                          YATRISATHI -> "· " <> getVariantRideType config.vehicleVariant
-                          _          -> case config.vehicleVariant of
-                                          "TAXI_PLUS" -> " (" <> (getString AC_TAXI) <> ")"
-                                          "TAXI" -> " (" <> (getString NON_AC_TAXI) <> ")"
-                                          _ -> ""
+          [ text $ config.vehicleColor <> " " <> config.vehicleModel
           , color Color.black700
-          , accessibilityHint $ "Driver : " <> config.driverName <> " : Vehicle : " <> getVehicleType
+          , accessibilityHint $ "Driver : " <> config.driverName <> " : Vehicle : " <>  config.vehicleModel
           , accessibility ENABLE
-          , width $ V ((screenWidth unit) /2 - 64)
+          , width WRAP_CONTENT
           , maxLines 2
           , ellipsize true
           , height WRAP_CONTENT
           , gravity LEFT
+          , margin $ MarginBottom 6
           ] <> FontStyle.captions TypoGraphy)
+        , case config.serviceTierName of
+            Just name -> ServiceTierCard.view $ serviceTierConfig name
+            Nothing -> linearLayout [] []
       ]
     , linearLayout
       [ height WRAP_CONTENT
-      , width $ V ((screenWidth unit) / 2)
+      , width WRAP_CONTENT
       , orientation VERTICAL
       , accessibility DISABLE
-      , gravity RIGHT
       ][  frameLayout
-          [ height MATCH_PARENT
+          [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , id $ getNewIDWithTag nid
           , margin $ MarginBottom 16
           , accessibility DISABLE 
           ][linearLayout
             [ height WRAP_CONTENT
-            , width MATCH_PARENT
+            , width WRAP_CONTENT
             , gravity CENTER_HORIZONTAL
+            , alpha if config.providerType == ONUS then 1.0 else 0.5
             ][ imageView
                [ imageWithFallback $ getVehicleImage config.vehicleVariant config.vehicleDetails config.merchantCity
                , height $ V 125
                , width $ V 125
-               , margin if os == "IOS" then Margin vehicleMargin 0 0 15 else MarginBottom 15
                , accessibility DISABLE_DESCENDANT
                ]
             ]
             , linearLayout
-              [ height $ V 130
-              , width MATCH_PARENT
-              , gravity BOTTOM
+              [ height WRAP_CONTENT
+              , width WRAP_CONTENT
               , accessibility ENABLE
               , accessibilityHint $ "Vehicle Number " <> (STR.replaceAll (STR.Pattern "") (STR.Replacement " ") config.registrationNumber)
               , accessibility DISABLE_DESCENDANT
               ][linearLayout
                 [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , gravity RIGHT
+                , width WRAP_CONTENT
+                , margin $ MarginTop 90
                 ][ linearLayout
                   [ height $ V 38
                   , width WRAP_CONTENT
                   , background config.config.driverInfoConfig.numberPlateBackground
                   , cornerRadius 4.0
                   , orientation HORIZONTAL
-                  , gravity BOTTOM
                   , margin $ MarginRight 2
                   , padding $ Padding 2 2 2 2
                   , alignParentBottom "true,-1"
@@ -209,6 +206,12 @@ driverDetailsView config uid nid =
         vehicleMargin = do 
           let width = (runFn1 getLayoutBounds $ getNewIDWithTag nid).width
           if width > 125 then ((width - 125)/2) else 0
+
+        serviceTierConfig name = {
+          name : name,
+          capacity : fromString $ getVehicleCapacity config.vehicleVariant,
+          isAc : Nothing
+        }
 
 
 ---------------------------------- ratingView ---------------------------------------

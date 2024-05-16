@@ -4,6 +4,7 @@
 
 module Domain.Types.LocationMapping where
 
+import Data.Aeson
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -25,6 +26,6 @@ data LocationMapping = LocationMapping
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data LocationMappingTags = BOOKING | SEARCH_REQUEST | RIDE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data LocationMappingTags = BOOKING | SEARCH_REQUEST | RIDE | BOOKING_UPDATE_REQUEST deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''LocationMappingTags)

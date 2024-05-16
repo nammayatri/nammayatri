@@ -20,6 +20,7 @@ imports:
   # Gps: Kernel.Types.Common
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   Person: Domain.Types.Person
+  City: Kernel.Types.Beckn.Context
 
 FRFSSearch:
   tableName: frfs_search
@@ -222,8 +223,9 @@ FRFSTicketBooking:
       kvFunction: findAllWithKV
       where: status
     findAllByRiderId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where: riderId
+      orderBy: createdAt
     updateStatusById:
       kvFunction: updateWithKV
       params: [status, updatedAt]
@@ -392,3 +394,27 @@ FRFSRecon:
     settlementAmount: (.amount)|I
     differenceAmount: Kernel.Prelude.fmap (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
+
+FRFSConfig:
+  tableName: frfs_config
+  derives: "Generic,Show,FromJSON,ToJSON"
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    bookingStartTime: UTCTime
+    bookingEndTime: UTCTime
+    roundTripTicketLimit: Int
+    oneWayTicketLimit: Int
+    metroStationTtl: Int
+    discount: Int
+    customDates: '[Text]'
+    customEndTime: Text
+
+  queries:
+    findByMerchantOperatingCityId:
+      kvFunction: findOneWithKV
+      where: merchantOperatingCityId
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+

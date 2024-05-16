@@ -46,7 +46,8 @@ import Effect.Aff (launchAff)
 import Types.App (defaultGlobalState)
 import Debug(spy)
 import Control.Monad.Free (runFree)
-import Helpers.Utils (fetchAndUpdateCurrentLocation, specialZoneTagConfig)
+import Helpers.Utils (fetchAndUpdateCurrentLocation)
+import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig)
 import Data.Maybe (isNothing, maybe, Maybe(..), isJust, fromMaybe ) as MB
 import Resources.Constants (getDelayForAutoComplete)
 import Engineering.Helpers.Commons as EHC
@@ -84,7 +85,7 @@ searchLocationScreen initialState globalProps =
 
 view :: forall w. GlobalProps -> (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w 
 view globalProps push state = 
-  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ] $ 
+  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true ] $ 
   relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -196,7 +197,7 @@ confirmLocationView push state = let
                       [ width (V 20)
                       , height (V 20)
                       , margin (MarginRight 6)
-                      , imageWithFallback $ fetchImage FF_COMMON_ASSET tagConfig.icon
+                      , imageWithFallback $ fetchImage COMMON_ASSET tagConfig.icon
                       ]
                     , textView
                       [ width if os == "IOS" && state.data.confirmLocCategory == AUTO_BLOCKED then (V 230) else WRAP_CONTENT
@@ -388,7 +389,7 @@ locateOnMapFooterView push state = let
   viewVisibility = boolToVisibility $ currentStageOn state PredictionsStage
   locateOnMapData = getDataBasedActionType state.props.actionType 
   
-  in PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ] $ linearLayout
+  in PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true ] $ linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , alignParentBottom "true,-1"
@@ -501,7 +502,7 @@ predictionsView push state globalProps = let
                 else 
                   MB.maybe "" (\ currField -> if currField == SearchLocPickup then (getString PAST_SEARCHES) else (getString SUGGESTED_DESTINATION)) state.props.focussedTextField
   in
-  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ] $ 
+  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true ] $ 
   scrollView
     [ height WRAP_CONTENT
     , width MATCH_PARENT

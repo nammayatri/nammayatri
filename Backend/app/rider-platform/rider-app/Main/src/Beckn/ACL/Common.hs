@@ -25,7 +25,7 @@ import qualified Data.Text as T
 import Domain.Action.Beckn.Common as Common
 import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -135,8 +135,8 @@ parseBookingDetails order msgId = do
       registeredAt :: Maybe UTCTime = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.REGISTERED_AT tagGroups
   let driverImage = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personImage) >>= (.imageUrl)
   let vehicleColor = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleColor)
-  vehicleModel <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleModel) & fromMaybeM (InvalidRequest "vehicleModel is not present in RideAssigned Event.")
-  vehicleNumber <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleRegistration) & fromMaybeM (InvalidRequest "vehicleNumber is not present in RideAssigned Event.")
+      vehicleModel = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleModel)
+      vehicleNumber = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleRegistration)
   pure $
     Common.BookingDetails
       { bppBookingId = Id bppBookingId,
@@ -144,6 +144,8 @@ parseBookingDetails order msgId = do
         driverMobileCountryCode = Just "+91", -----------TODO needs to be added in agent Tags------------
         driverRating = realToFrac <$> rating,
         driverRegisteredAt = registeredAt,
+        vehicleModel = fromMaybe "UNKWOWN" vehicleModel,
+        vehicleNumber = fromMaybe "UNKWOWN" vehicleNumber,
         ..
       }
 
@@ -227,16 +229,17 @@ parseRideCompletedEvent order msgId = do
         paymentUrl = Nothing,
         ..
       }
-  where
-    mkDFareBreakup breakup = do
-      val :: DecimalValue.DecimalValue <- breakup.quotationBreakupInnerPrice >>= (.priceValue) >>= DecimalValue.valueFromString & fromMaybeM (InvalidRequest "quote.breakup.price.value is not present in RideCompleted Event.")
-      currency :: Currency <- breakup.quotationBreakupInnerPrice >>= (.priceCurrency) >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "quote.breakup.price.currency is not present in RideCompleted Event.")
-      title <- breakup.quotationBreakupInnerTitle & fromMaybeM (InvalidRequest "breakup_title is not present in RideCompleted Event.")
-      pure $
-        Common.DFareBreakup
-          { amount = Utils.decimalValueToPrice currency val,
-            description = title
-          }
+
+mkDFareBreakup :: (MonadFlow m, CacheFlow m r) => Spec.QuotationBreakupInner -> m Common.DFareBreakup
+mkDFareBreakup breakup = do
+  val :: DecimalValue.DecimalValue <- breakup.quotationBreakupInnerPrice >>= (.priceValue) >>= DecimalValue.valueFromString & fromMaybeM (InvalidRequest "quote.breakup.price.value is not present in RideCompleted Event.")
+  currency :: Currency <- breakup.quotationBreakupInnerPrice >>= (.priceCurrency) >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "quote.breakup.price.currency is not present in RideCompleted Event.")
+  title <- breakup.quotationBreakupInnerTitle & fromMaybeM (InvalidRequest "breakup_title is not present in RideCompleted Event.")
+  pure $
+    Common.DFareBreakup
+      { amount = Utils.decimalValueToPrice currency val,
+        description = title
+      }
 
 parseBookingCancelledEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m Common.BookingCancelledReq
 parseBookingCancelledEvent order msgId = do

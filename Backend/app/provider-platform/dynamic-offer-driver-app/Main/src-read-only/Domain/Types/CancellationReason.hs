@@ -4,6 +4,7 @@
 
 module Domain.Types.CancellationReason where
 
+import Data.Aeson
 import qualified Data.Text
 import Kernel.Prelude
 import qualified Tools.Beam.UtilsTH

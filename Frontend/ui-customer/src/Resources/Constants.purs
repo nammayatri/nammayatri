@@ -15,26 +15,27 @@
 
 module Resources.Constants where
 
-import Accessor (_description, _amount)
-import Common.Types.App (LazyCheck(..))
-import Data.Array (filter, length, null, reverse, (!!), head, all, elem, foldl)
+import ConfigProvider
+
+import Accessor (_description, _amountWithCurrency)
+import Common.Types.App (LazyCheck(..), Price)
+import Data.Array (filter, length, null, reverse, (!!), head, all, elem, foldl, mapMaybe, find)
 import Data.Function.Uncurried (runFn2)
 import Data.Int (toNumber)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
-import Helpers.Utils (parseFloat, toStringJSON, extractKeyByRegex, formatFareType)
+import Data.String as DS
 import Engineering.Helpers.Commons (os)
+import Helpers.Utils (parseFloat, toStringJSON, extractKeyByRegex, formatFareType)
+import JBridge as JB
 import Language.Strings (getString)
-import Resources.Localizable.EN (getEN)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import Prelude (map, show, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
+import Prelude (map, show, negate, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
+import Resources.Localizable.EN (getEN)
 import Screens.Types as ST
-import JBridge as JB
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
-import ConfigProvider
-import Data.String as DS
 
 type Language
   = { name :: String
@@ -198,20 +199,22 @@ getGender gender placeHolderText =
     Nothing -> placeHolderText
 
 getFaresList :: Array FareBreakupAPIEntity -> String -> Array ST.FareComponent
-getFaresList fares baseDistance =
+getFaresList fares chargeableRideDistance =
   let currency = (getAppConfig appConfig).currency
   in
   map
-    ( \(FareBreakupAPIEntity item) ->
+    ( \(FareBreakupAPIEntity item) -> let
+          price = item.amountWithCurrency
+          in
           { fareType : item.description
           , price : currency <> " " <> 
             (show $ case item.description of 
-              "BASE_FARE" -> item.amount + getMerchSpecBaseFare fares
-              "SGST" -> (item.amount * 2) + getFareFromArray fares "FIXED_GOVERNMENT_RATE"
-              "WAITING_OR_PICKUP_CHARGES" -> item.amount + getFareFromArray fares "PLATFORM_FEE"
-              _ -> item.amount)
+              "BASE_FARE" -> price.amount + getMerchSpecBaseFare fares
+              "SGST" -> (price.amount * 2.0) + getFareFromArray fares "FIXED_GOVERNMENT_RATE"
+              "WAITING_OR_PICKUP_CHARGES" -> price.amount + getFareFromArray fares "PLATFORM_FEE"
+              _ -> price.amount)
           , title : case item.description of
-                      "BASE_FARE" -> (getEN BASE_FARES) <> if baseDistance == "0 m" then "" else " (" <> baseDistance <> ")"
+                      "BASE_FARE" -> (getEN BASE_FARES) -- <> if chargeableRideDistance == "0 m" then "" else " (" <> chargeableRideDistance <> ")"
                       "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE
                       "DRIVER_SELECTED_FARE" -> getEN DRIVER_ADDITIONS
                       "TOTAL_FARE" -> getEN TOTAL_PAID
@@ -232,25 +235,36 @@ getFaresList fares baseDistance =
     )
     (getFilteredFares fares)
 
-getMerchSpecBaseFare :: Array FareBreakupAPIEntity -> Int
+getMerchSpecBaseFare :: Array FareBreakupAPIEntity -> Number
 getMerchSpecBaseFare fares =
   case getMerchant FunctionCall of
     YATRISATHI -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE"]
     _ -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE"]
 
 
-getAllFareFromArray :: Array FareBreakupAPIEntity -> Array String -> Int
+getAllFareFromArray :: Array FareBreakupAPIEntity -> Array String -> Number
 getAllFareFromArray fares titles =
   let
-    matchingFares = filter (\fare -> (fare^._description) `elem` titles) fares
+    matchingFarePrices = mapMaybe 
+                    (\(FareBreakupAPIEntity fare) -> 
+                        if fare.description `elem` titles 
+                          then Just fare.amountWithCurrency
+                        else Nothing) fares
   in
-    foldl (\acc fare -> acc + fare^._amount) 0 matchingFares
+    foldl (\acc fare -> acc + fare.amount) 0.0 matchingFarePrices
 
-getFareFromArray :: Array FareBreakupAPIEntity -> String -> Int
-getFareFromArray fareBreakUp fareType = (fromMaybe dummyFareBreakUp (head (filter (\fare -> fare^._description == (fareType)) fareBreakUp)))^._amount
+getFareFromArray :: Array FareBreakupAPIEntity -> String -> Number
+getFareFromArray fareBreakUp fareType = do
+  let fare = find (\fare -> fare^._description == (fareType)) fareBreakUp
+  case fare of
+    Just (FareBreakupAPIEntity fare) -> fare.amountWithCurrency.amount
+    Nothing -> 0.0
 
 dummyFareBreakUp :: FareBreakupAPIEntity
-dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}
+dummyFareBreakUp = FareBreakupAPIEntity{amountWithCurrency : dummyPrice ,description: ""}
+
+dummyPrice :: Price
+dummyPrice = {amount: 0.0, currency: ""}
 
 getMerchantSpecificFilteredFares :: Merchant -> Array String
 getMerchantSpecificFilteredFares merchant = 
@@ -282,7 +296,13 @@ getVehicleCapacity variant =
   case fetchVehicleVariant variant of
     Just ST.SUV -> "6" 
     Just ST.AUTO_RICKSHAW -> "3"
-    _ -> "4" 
+    _ -> "4"
+
+intMax :: Int
+intMax = 2147483647
+
+intMin :: Int
+intMin = (-2147483647)
 
 getDisabilityType :: String -> Array ST.DisabilityT -> ST.DisabilityT 
 getDisabilityType disType disList = (fromMaybe dummyDisabilityList (head (filter(\item -> item.tag == disType) disList)))
@@ -315,3 +335,4 @@ maxImageUploadInIssueReporting = 3
 -- Id for emergency contact initial chat suggestion on remote config
 emergencyContactInitialChatSuggestionId :: String
 emergencyContactInitialChatSuggestionId = "d6cddbb1a6aee372c0c7f05173da8f95"
+

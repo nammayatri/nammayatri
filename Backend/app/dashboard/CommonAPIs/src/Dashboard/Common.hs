@@ -56,7 +56,7 @@ data DriverGoHomeRequest
 
 data Document
 
-data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
+data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
@@ -68,7 +68,7 @@ data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY
 
 $(mkHttpInstancesForEnum ''Category)
 
-data VerificationStatus = PENDING | VALID | INVALID
+data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

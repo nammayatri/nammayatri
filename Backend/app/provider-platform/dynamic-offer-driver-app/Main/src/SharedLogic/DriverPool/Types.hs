@@ -15,6 +15,7 @@
 module SharedLogic.DriverPool.Types
   ( PoolCalculationStage (..),
     CalculateGoHomeDriverPoolReq (..),
+    CancellationScoreRelatedConfig (..),
     DriverPoolResult (..),
     DriverPoolResultCurrentlyOnRide (..),
     DriverPoolWithActualDistResult (..),
@@ -45,6 +46,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Types.Id
+import Kernel.Types.Version
 import Kernel.Utils.Common
 import Lib.Scheduler.Types
 import Tools.Maps as Google
@@ -65,8 +67,16 @@ data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
     fromLocation :: a,
     toLocation :: a,
     merchantId :: Id DM.Merchant,
-    isRental :: Bool
+    isRental :: Bool,
+    isInterCity :: Bool
   }
+
+data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
+  { popupDelayToAddAsPenalty :: Maybe Seconds,
+    thresholdCancellationScore :: Maybe Int,
+    minRidesForCancellationScore :: Maybe Int
+  }
+  deriving (Generic)
 
 data DriverPoolResult = DriverPoolResult
   { driverId :: Id Driver,
@@ -80,7 +90,13 @@ data DriverPoolResult = DriverPoolResult
     airConditioned :: Maybe Double,
     lat :: Double,
     lon :: Double,
-    mode :: Maybe DI.DriverMode
+    mode :: Maybe DI.DriverMode,
+    clientSdkVersion :: Maybe Version,
+    clientBundleVersion :: Maybe Version,
+    clientConfigVersion :: Maybe Version,
+    clientDevice :: Maybe Device,
+    backendConfigVersion :: Maybe Version,
+    backendAppVersion :: Maybe Text
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
@@ -98,7 +114,13 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     destinationLon :: Double,
     distanceToPickup :: Meters,
     distanceFromDriverToDestination :: Meters,
-    mode :: Maybe DI.DriverMode
+    mode :: Maybe DI.DriverMode,
+    clientSdkVersion :: Maybe Version,
+    clientBundleVersion :: Maybe Version,
+    clientConfigVersion :: Maybe Version,
+    clientDevice :: Maybe Device,
+    backendConfigVersion :: Maybe Version,
+    backendAppVersion :: Maybe Text
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
@@ -110,7 +132,7 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     intelligentScores :: IntelligentScores,
     isPartOfIntelligentPool :: Bool,
     pickupZone :: Bool,
-    specialZoneExtraTip :: Maybe Money,
+    specialZoneExtraTip :: Maybe HighPrecMoney,
     goHomeReqId :: Maybe (Id DDGR.DriverGoHomeRequest)
   }
   deriving (Generic, Show, FromJSON, ToJSON)
@@ -129,10 +151,12 @@ data TripQuoteDetail = TripQuoteDetail
   { tripCategory :: DTC.TripCategory,
     vehicleServiceTier :: DVST.ServiceTierType,
     vehicleServiceTierName :: Text,
-    baseFare :: Money,
-    driverMinFee :: Maybe Money,
-    driverMaxFee :: Maybe Money,
-    driverPickUpCharge :: Maybe Money,
+    baseFare :: HighPrecMoney,
+    driverMinFee :: Maybe HighPrecMoney,
+    driverMaxFee :: Maybe HighPrecMoney,
+    driverStepFee :: Maybe HighPrecMoney,
+    driverDefaultStepFee :: Maybe HighPrecMoney,
+    driverPickUpCharge :: Maybe HighPrecMoney,
     estimateOrQuoteId :: Text
   }
 
@@ -141,7 +165,7 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     merchant :: DM.Merchant,
     searchReq :: DSR.SearchRequest,
     tripQuoteDetails :: [TripQuoteDetail],
-    customerExtraFee :: Maybe Money,
+    customerExtraFee :: Maybe HighPrecMoney,
     messageId :: Text,
     isRepeatSearch :: Bool
   }
@@ -154,6 +178,7 @@ castServiceTierToVariant = \case
   DVST.SUV -> Vehicle.SUV
   DVST.TAXI_PLUS -> Vehicle.TAXI_PLUS
   DVST.AUTO_RICKSHAW -> Vehicle.AUTO_RICKSHAW
+  DVST.BIKE -> Vehicle.BIKE
   _ -> Vehicle.SEDAN
 
 castVariantToServiceTier :: Vehicle.Variant -> DVST.ServiceTierType
@@ -164,3 +189,4 @@ castVariantToServiceTier = \case
   Vehicle.SUV -> DVST.SUV
   Vehicle.TAXI_PLUS -> DVST.TAXI_PLUS
   Vehicle.AUTO_RICKSHAW -> DVST.AUTO_RICKSHAW
+  Vehicle.BIKE -> DVST.BIKE

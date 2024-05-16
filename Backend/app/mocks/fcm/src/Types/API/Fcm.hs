@@ -23,4 +23,4 @@ type ReadFcmAPI =
     :> Capture "token" FCMRecipientToken
     :> Get '[JSON] ReadFcmRes
 
-type ReadFcmRes = [FCMMessage Value]
+type ReadFcmRes = [FCMMessage Value Value]

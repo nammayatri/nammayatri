@@ -62,6 +62,14 @@ let rccfg =
 
 let cacheConfig = { configsExpTime = +86400 }
 
+let cacConfig =
+      { host = "http://localhost:8080"
+      , interval = 10
+      , tenant = "dev"
+      , retryConnection = False
+      , cacExpTime = +86400
+      }
+
 let kafkaProducerCfg =
       { brokers = [ "localhost:29092" ]
       , kafkaCompression = common.kafkaCompression.LZ4
@@ -103,4 +111,5 @@ in  { esqDBCfg
     , internalEndPointMap = common.internalEndPointMap
     , cacheConfig
     , kvConfigUpdateFrequency = +60
+    , cacConfig
     }

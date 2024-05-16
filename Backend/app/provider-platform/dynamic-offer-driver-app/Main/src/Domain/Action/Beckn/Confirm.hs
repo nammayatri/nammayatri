@@ -18,17 +18,20 @@ import qualified Data.HashMap.Strict as HM
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverQuote as DDQ
+import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQ
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DRD
+import qualified Domain.Types.SearchRequestForDriver as DTSRD
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -51,6 +54,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
+import TransactionLogs.Types
 
 data DConfirmReq = DConfirmReq
   { bookingId :: Id DRB.Booking,
@@ -92,7 +96,7 @@ handler merchant req validatedQuote = do
   unless (booking.status == DRB.NEW) $ throwError (BookingInvalidStatus $ show booking.status)
   now <- getCurrentTime
 
-  (riderDetails, isNewRider) <- SRD.getRiderDetails merchant.id req.customerMobileCountryCode req.customerPhoneNumber now req.nightSafetyCheck
+  (riderDetails, isNewRider) <- SRD.getRiderDetails booking.currency merchant.id req.customerMobileCountryCode req.customerPhoneNumber now req.nightSafetyCheck
   unless isNewRider $ QRD.updateNightSafetyChecks riderDetails.id req.nightSafetyCheck
 
   case validatedQuote of
@@ -104,7 +108,7 @@ handler merchant req validatedQuote = do
       updateBookingDetails isNewRider booking riderDetails
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       (ride, _, vehicle) <- initializeRide merchant.id driver uBooking Nothing (Just req.enableFrequentLocationUpdates) driverQuote.clientId
-      void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId driverQuote.estimatedFare
+      void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId $ mkPrice (Just driverQuote.currency) driverQuote.estimatedFare
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       return $ mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
 
@@ -118,7 +122,9 @@ handler merchant req validatedQuote = do
     handleStaticOfferFlow isNewRider quote booking riderDetails = do
       updateBookingDetails isNewRider booking riderDetails
       searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
-      tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare quote.driverMinFee quote.driverMaxFee quote.driverPickUpCharge quote.id.getId
+      let mbDriverExtraFeeBounds = ((,) <$> searchReq.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> quote.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
+          driverPickUpCharge = join $ DTSRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> quote.farePolicy)
+      tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge quote.id.getId
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
@@ -168,7 +174,9 @@ validateRequest ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasLongDurationRetryCfg r c,
     LT.HasLocationService m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->

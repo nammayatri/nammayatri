@@ -4,6 +4,7 @@
 
 module Domain.Types.DailyStats where
 
+import Data.Aeson
 import qualified Data.Text
 import qualified Data.Time.Calendar
 import qualified Domain.Types.Person
@@ -13,13 +14,14 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data DailyStats = DailyStats
-  { driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+  { currency :: Kernel.Types.Common.Currency,
+    driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     id :: Data.Text.Text,
     merchantLocalDate :: Data.Time.Calendar.Day,
     numRides :: Kernel.Prelude.Int,
     totalDistance :: Kernel.Types.Common.Meters,
-    totalEarnings :: Kernel.Types.Common.Money,
+    totalEarnings :: Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show)

@@ -3,6 +3,7 @@ module Screens.BookingOptionsScreen.View where
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Ord (compare)
 import Debug (spy)
 import Effect (Effect)
 import Font.Size as FontSize
@@ -11,8 +12,8 @@ import Helpers.Utils (getVehicleType, fetchImage, FetchImageFrom(..), getVariant
 import Language.Strings (getString)
 import Engineering.Helpers.Utils as EHU
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, not, ($), (<<<), (<>), (==), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine)
+import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (<>), (&&), (||))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine, imageUrl, rippleColor, scrollView, scrollBarY, fillViewport)
 import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval, getVehicleCapacity)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -22,6 +23,9 @@ import Data.Array as DA
 import Data.String as DS
 import Mobility.Prelude as MP
 import Services.API as API
+import Data.Maybe as MB
+import Components.PopUpModal as PopUpModal
+import Screens.BookingOptionsScreen.ComponentConfig (topAcDriverPopUpConfig)
 
 screen :: ST.BookingOptionsScreenState -> Screen Action ST.BookingOptionsScreenState ScreenOutput
 screen initialState =
@@ -41,30 +45,171 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , onBackPressed push $ const BackPressed
-    , afterRender push $ const AfterRender
-    , background Color.white900
-    , padding $ PaddingBottom 24
-    ]
-    $ [ headerLayout push state
-      , defaultVehicleView push state
-      , downgradeVehicleView push state
-      , linearLayout
+  Anim.screenAnimation
+    $ frameLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        ]
+    $ [ linearLayout
           [ height MATCH_PARENT
-          , width $ V 1
-          , weight 1.0
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , onBackPressed push $ const BackPressed
+          , afterRender push $ const AfterRender
+          , background Color.white900
+          , padding $ PaddingBottom 24
           ]
-          []
+          $ [ headerLayout push state
+            , scrollView
+                [ width MATCH_PARENT
+                , weight 1.0
+                , scrollBarY false
+                , fillViewport true
+                ]
+                [ linearLayout
+                    [ height MATCH_PARENT
+                    , width MATCH_PARENT
+                    , orientation VERTICAL
+                    ]
+                    [ defaultVehicleView push state
+                    , acCheckForDriversView push state
+                    , downgradeVehicleView push state
+                    ]
+                ]
+            ]
       ]
+    <> if state.props.acExplanationPopup then [ PopUpModal.view (push <<< TopAcDriverAction) (topAcDriverPopUpConfig state) ] else []
+
+acCheckForDriversView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
+acCheckForDriversView push state =
+  let
+    acCheckVisibility = MP.boolToVisibility $ MB.isJust state.data.airConditioned
+
+    (API.AirConditionedTier airConditionedData) = MB.fromMaybe defaultAirConditionedData state.data.airConditioned
+
+    backgroundColor = if airConditionedData.isWorking then Color.blue800 else Color.black600
+
+    align = if airConditionedData.isWorking then RIGHT else LEFT
+
+    messageColor = if airConditionedData.isWorking then Color.black600 else Color.red900
+
+    callSupportVisibility = not airConditionedData.isWorking && airConditionedData.usageRestrictionType == API.ToggleNotAllowed
+  in
+    linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin (Margin 16 0 16 16)
+      , padding $ Padding 16 0 16 0
+      , visibility acCheckVisibility
+      , stroke $ "1," <> Color.grey900
+      , cornerRadius 8.0
+      , gravity CENTER_VERTICAL
+      , orientation VERTICAL
+      ]
+      [ linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity CENTER_VERTICAL
+          ]
+          [ linearLayout
+            [ weight 1.0
+            , height WRAP_CONTENT
+            , onClick push $ const $ ShowACVideoPopup
+            , gravity CENTER_VERTICAL
+            ][  textView
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , color Color.black800
+                , text $ getString AC_CHECK_TITILE
+                , margin $ MarginRight 7
+                ]
+              , imageView
+                [ width $ V 32
+                , height $ V 32
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_youtube"
+                , rippleColor Color.rippleShade
+                , padding $ Padding 0 5 5 5
+                ]
+            ]
+          , linearLayout 
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , padding $ PaddingVertical 16 16
+            , onClick push $ const $ UpdateACAvailability airConditionedData.isWorking
+           ][
+            linearLayout
+              [ width $ V 40
+              , height $ V 22
+              , cornerRadius 100.0
+              , background backgroundColor
+              , stroke $ "1," <> backgroundColor
+              , onClick push $ const $ UpdateACAvailability airConditionedData.isWorking
+              , gravity CENTER_VERTICAL
+              ]
+              [ linearLayout
+                  [ width MATCH_PARENT
+                  , height WRAP_CONTENT
+                  , gravity align
+                  ]
+                  [ linearLayout
+                      [ width $ V 16
+                      , height $ V 16
+                      , background Color.white900
+                      , cornerRadius 100.0
+                      , gravity CENTER_VERTICAL
+                      , margin (MarginHorizontal 2 2)
+                      ]
+                      []
+                  ]
+              ]
+            ]
+          ]
+      , textView
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , visibility $ MP.boolToVisibility $ MB.isJust airConditionedData.restrictionMessage
+          , color messageColor
+          , padding $ if callSupportVisibility then Padding 0 0 0 0 else PaddingBottom 12
+          , text $ fromMaybe "" airConditionedData.restrictionMessage
+          ]
+      , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation HORIZONTAL
+          , cornerRadius 4.0
+          , padding $ PaddingHorizontal 6 12
+          , gravity CENTER_VERTICAL
+          , onClick push $ const $ CallSupport
+          , visibility $ MP.boolToVisibility callSupportVisibility
+          ]
+          [ imageView
+              [ width $ V 18
+              , height $ V 18
+              , margin $ MarginRight 7
+              , imageUrl "ny_ic_phone_filled_blue"
+              ]
+          , textView
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , text $ getString CONTACT_SUPPORT
+              , color Color.blue900
+              ]
+          ]
+      ]
+  where
+  defaultAirConditionedData :: API.AirConditionedTier
+  defaultAirConditionedData =
+    API.AirConditionedTier
+      { isWorking: true
+      , restrictionMessage: Nothing
+      , usageRestrictionType: API.ToggleAllowed
+      }
 
 downgradeVehicleView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 downgradeVehicleView push state =
   let
-    canDowngrade = not $ DA.null state.data.downgradeOptions
+    compareRidePreferences a b = compare a.priority b.priority
+    defaultRidePreferences = DA.sortBy compareRidePreferences state.data.ridePreferences
   in
     linearLayout
       [ width MATCH_PARENT
@@ -83,13 +228,6 @@ downgradeVehicleView push state =
             , text $ getString DOWNGRADE_VEHICLE
             ]
           <> FontStyle.body4 TypoGraphy
-      , linearLayout
-          [ width MATCH_PARENT
-          , height $ V 1
-          , margin $ MarginBottom 16
-          , background Color.grey700
-          ]
-          []
       , textView
           $ [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -108,21 +246,21 @@ downgradeVehicleView push state =
               , height WRAP_CONTENT
               , orientation VERTICAL
               ]
-              ( [ serviceTierItem push state.data.defaultRidePreference state.props.downgraded false
-                ]
-                  <> ( map
-                        ( \item ->
-                            linearLayout
-                              [ height WRAP_CONTENT
-                              , width MATCH_PARENT
-                              ]
-                              [ serviceTierItem push item state.props.downgraded false ]
-                        )
-                        (DA.filter (\pref -> not pref.isDefault) state.data.ridePreferences)
-                    )
-              )
+              ( ridePreferencesView push state defaultRidePreferences)
           ]
       ]
+
+ridePreferencesView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> Array ST.RidePreference -> Array ( PrestoDOM (Effect Unit) w )
+ridePreferencesView push state ridePreferences =
+  map
+    ( \item ->
+        linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          ]
+          [ serviceTierItem push item state.props.downgraded false ]
+    ) ridePreferences
+  
 
 serviceTierItem :: forall w. (Action -> Effect Unit) -> ST.RidePreference -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
 serviceTierItem push service enabled opacity =
@@ -134,7 +272,7 @@ serviceTierItem push service enabled opacity =
     [ linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , padding (Padding 12 12 12 12)
+        , padding (Padding 12 4 12 4)
         , margin $ MarginVertical 5 5
         , orientation HORIZONTAL
         , stroke $ "1," <> Color.grey900
@@ -146,17 +284,31 @@ serviceTierItem push service enabled opacity =
             , width $ V 35
             , height $ V 35
             ]
-        , textView
-            [ weight 1.0
-            , height WRAP_CONTENT
+        , linearLayout
+        [ weight 1.0
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        ][ textView
+            [ height WRAP_CONTENT
             , text service.name
             , margin (MarginHorizontal 12 2)
             , color Color.black800
             , singleLine true
             ]
+          , textView $
+            [ height WRAP_CONTENT
+            , text $ fromMaybe "" service.shortDescription
+            , margin (MarginHorizontal 12 2)
+            , color Color.black650
+            , singleLine true
+            , textSize FontSize.a_12
+            ] <> FontStyle.body3 TypoGraphy
+        ]
         , linearLayout
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
+            , padding $ PaddingVertical 12 12
+            , onClick push $ const $ ToggleRidePreference service
             , gravity RIGHT
             ]
             [ toggleView push service.isSelected service.isDefault service ]
@@ -180,9 +332,9 @@ serviceTierItem push service enabled opacity =
 toggleView :: forall w. (Action -> Effect Unit) -> Boolean -> Boolean -> ST.RidePreference -> PrestoDOM (Effect Unit) w
 toggleView push enabled default service =
   let
-    backgroundColor = if enabled then Color.blue800 else Color.black600
+    backgroundColor = if enabled && not service.isUsageRestricted then Color.blue800 else Color.black600
 
-    align = if enabled then RIGHT else LEFT
+    align = if enabled && not service.isUsageRestricted then RIGHT else LEFT
   in
     linearLayout
       [ width $ V 40
@@ -191,9 +343,9 @@ toggleView push enabled default service =
       , alpha if default then 0.5 else 1.0
       , background backgroundColor
       , stroke $ "1," <> backgroundColor
-      , gravity CENTER_VERTICAL
       , onClick push $ const $ ToggleRidePreference service
-      , clickable $ not default
+      , gravity CENTER_VERTICAL
+      , clickable $ not $ default
       ]
       [ linearLayout
           [ width MATCH_PARENT
@@ -297,7 +449,7 @@ vehicleLogoAndType push state =
             , margin $ MarginLeft 7
             ]
             [ customTV (state.data.defaultRidePreference.name) FontSize.a_20 FontStyle.h3 Color.black800
-            , customTV (fromMaybe "" state.data.defaultRidePreference.shortDescription) FontSize.a_12 FontStyle.body3 Color.black650
+            , customTV ((show $ fromMaybe 4 state.data.defaultRidePreference.seatingCapacity) <> " "<> getString PEOPLE) FontSize.a_12 FontStyle.body3 Color.black650
             ]
         ]
     ]

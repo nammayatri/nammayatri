@@ -30,11 +30,11 @@ import qualified Domain.Types.Location as Location
 import Domain.Types.LocationAddress
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
@@ -45,13 +45,16 @@ import qualified Kernel.External.Maps as MapsK
 import qualified Kernel.External.Maps.Interface as MapsRoutes
 import qualified Kernel.External.Maps.Interface.NextBillion as NextBillion
 import qualified Kernel.External.Maps.NextBillion.Types as NBT
+import qualified Kernel.External.Maps.Utils as Search
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Context (City)
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
+import Kernel.Utils.Version
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.MerchantConfig as SMC
@@ -65,7 +68,7 @@ import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedLocation as CSavedLocation
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Person.PersonDisability as PD
+import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import Tools.Event
@@ -73,7 +76,6 @@ import qualified Tools.JSON as J
 import qualified Tools.Maps as Maps
 import Tools.Metrics
 import qualified Tools.Metrics as Metrics
-import qualified Tools.Search as Search
 
 data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq
   deriving (Generic, Show)
@@ -133,7 +135,8 @@ data RentalSearchReq = RentalSearchReq
     isSpecialLocation :: Maybe Bool,
     startTime :: UTCTime,
     estimatedRentalDistance :: Meters,
-    estimatedRentalDuration :: Seconds
+    estimatedRentalDuration :: Seconds,
+    isReallocationEnabled :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -198,6 +201,7 @@ updateForSpecialLocation merchantId origin mbIsSpecialLocation = do
 search ::
   ( CacheFlow m r,
     EncFlow m r,
+    ClickhouseFlow m r,
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     EsqDBFlow m r,
@@ -211,17 +215,18 @@ search ::
   SearchReq ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Version ->
   Maybe (Id DC.Client) ->
   Maybe Text ->
   m SearchRes
-search personId req bundleVersion clientVersion clientId device = do
+search personId req bundleVersion clientVersion clientConfigVersion clientId device = do
   now <- getCurrentTime
   let (riderPreferredOption, origin, stops, isSourceManuallyMoved, isSpecialLocation, startTime, isReallocationEnabled) =
         case req of
           OneWaySearch oneWayReq ->
             (SearchRequest.OneWay, oneWayReq.origin, [oneWayReq.destination], oneWayReq.isSourceManuallyMoved, oneWayReq.isSpecialLocation, fromMaybe now oneWayReq.startTime, oneWayReq.isReallocationEnabled)
           RentalSearch rentalReq ->
-            (SearchRequest.Rental, rentalReq.origin, fromMaybe [] rentalReq.stops, rentalReq.isSourceManuallyMoved, rentalReq.isSpecialLocation, rentalReq.startTime, Nothing)
+            (SearchRequest.Rental, rentalReq.origin, fromMaybe [] rentalReq.stops, rentalReq.isSourceManuallyMoved, rentalReq.isSpecialLocation, rentalReq.startTime, rentalReq.isReallocationEnabled)
   unless ((120 `addUTCTime` startTime) >= now) $ throwError (InvalidRequest "Ride time should only be future time") -- 2 mins buffer
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber
@@ -316,12 +321,12 @@ search personId req bundleVersion clientVersion clientId device = do
 
         let distanceWeightage = riderConfig.distanceWeightage
             durationWeightage = 100 - distanceWeightage
-            (shortestRouteInfo, shortestRouteIndex) = getEfficientRouteInfo routeResponse distanceWeightage durationWeightage
-            longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
+            (shortestRouteInfo, shortestRouteIndex) = Search.getEfficientRouteInfo routeResponse distanceWeightage durationWeightage
+            longestRouteDistance = (.distance) =<< Search.getLongestRouteDistance routeResponse
             shortestRouteDistance = (.distance) =<< shortestRouteInfo
             shortestRouteDuration = (.duration) =<< shortestRouteInfo
-        return (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo, Just $ updateEfficientRoutePosition routeResponse shortestRouteIndex)
-      RentalSearch rentalReq -> return (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Nothing, Nothing)
+        return (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo, Just $ Search.updateEfficientRoutePosition routeResponse shortestRouteIndex)
+      RentalSearch rentalReq -> return (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Just (RouteInfo (Just rentalReq.estimatedRentalDuration) (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] []), Nothing)
 
   fromLocation <- buildSearchReqLoc origin
   stopLocations <- buildSearchReqLoc `mapM` stops
@@ -338,6 +343,7 @@ search personId req bundleVersion clientVersion clientId device = do
       startTime
       bundleVersion
       clientVersion
+      clientConfigVersion
       device
       tag
       shortestRouteDuration
@@ -378,38 +384,8 @@ search personId req bundleVersion clientVersion clientId device = do
         then return nearestOperatingCity.city
         else throwError RideNotServiceable
 
-getLongestRouteDistance :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
-getLongestRouteDistance [] = Nothing
-getLongestRouteDistance (routeInfo : routeInfoArray) =
-  if null routeInfoArray
-    then Just routeInfo
-    else do
-      restRouteresult <- getLongestRouteDistance routeInfoArray
-      Just $ comparator' routeInfo restRouteresult
-  where
-    comparator' route1 route2 =
-      if route1.distance > route2.distance
-        then route1
-        else route2
-
-getEfficientRouteInfo :: [Maps.RouteInfo] -> Int -> Int -> (Maybe Maps.RouteInfo, Int)
-getEfficientRouteInfo [] _ _ = (Nothing, 0)
-getEfficientRouteInfo routeInfos distanceWeight durationWeight = do
-  let minD = Search.minDistance routeInfos
-      minDur = Search.minDuration routeInfos
-      normalizedInfos = Search.normalizeArr (Just minD) (Just minDur) routeInfos
-      resultInfoIdx = Search.findMaxWeightedInfoIdx (fromIntegral distanceWeight) (fromIntegral durationWeight) normalizedInfos
-  if resultInfoIdx < length routeInfos
-    then (Just (routeInfos !! resultInfoIdx), resultInfoIdx)
-    else (Nothing, 0)
-
-updateEfficientRoutePosition :: [Maps.RouteInfo] -> Int -> [Maps.RouteInfo]
-updateEfficientRoutePosition routeInfos idx = do
-  let (x, y) = splitAt idx routeInfos
-  y ++ x
-
 buildSearchRequest ::
-  ( (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]),
+  ( (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds, "version" ::: DeploymentVersion]),
     EsqDBFlow m r,
     CoreMetrics m,
     MonadFlow m
@@ -425,14 +401,16 @@ buildSearchRequest ::
   UTCTime ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Version ->
   Maybe Text ->
   Maybe Text ->
   Maybe Seconds ->
   SearchRequest.RiderPreferredOption ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime bundleVersion clientVersion device disabilityTag duration riderPreferredOption = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime bundleVersion clientVersion clientConfigVersion device disabilityTag duration riderPreferredOption = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
+  deploymentVersion <- asks (.version)
   return
     SearchRequest.SearchRequest
       { id = searchRequestId,
@@ -449,8 +427,12 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         createdAt = now,
         estimatedRideDuration = duration,
         device = device,
-        bundleVersion = bundleVersion,
-        clientVersion = clientVersion,
+        clientBundleVersion = bundleVersion,
+        clientSdkVersion = clientVersion,
+        clientDevice = getDeviceFromText device,
+        clientConfigVersion = clientConfigVersion,
+        backendConfigVersion = Nothing,
+        backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         language = person.language,
         disabilityTag = disabilityTag,
         customerExtraFee = Nothing,

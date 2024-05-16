@@ -43,7 +43,7 @@ config =
     , noQuotesImageWidth : 137
     , separatorColor : "#00FFFFFF"
     , showSeparator : false
-    , closeIcon : "ny_ic_close_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_close_white.png"
+    , closeIcon : "ny_ic_close_white,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_close_white.png"
     }
   , searchLocationConfig : 
     { searchLocationTheme: "#2C2F3A"
@@ -64,7 +64,7 @@ config =
     , hintColor : "#A7A7A7"
     , showSeparator : false
     , showChargeDesc: false
-    , backArrow : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png"
+    , backArrow : "ny_ic_chevron_left_white,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png"
     , enableRateCard: true
     , clearTextImage: "ny_ic_close_grey"
     }
@@ -86,7 +86,7 @@ config =
     , showTrackingButton : true
     , specialZoneQuoteExpirySeconds : 3600
     , footerVisibility : false
-    , footerImageUrl : "ic_namma_yatri_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ic_namma_yatri_logo.png"
+    , footerImageUrl : "ic_namma_yatri_logo,https://assets.moving.tech/beckn/nammayatri/user/images/ic_namma_yatri_logo.png"
     , footerBackgroundColor : "#FFFFFF"
     }
   , ratingConfig : 
@@ -115,23 +115,23 @@ config =
       , titleColor :"#21C179"
       , actionText : "Update now"
       , actionTextColor : "#27AE5F"
-      , imageUrl : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
+      , imageUrl : "ny_ic_banner_gender_feat,https://assets.moving.tech/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
       }
   , popupBackground : "#FFFFFF"
   , profileCompletion : "#FCC32C"
   , showProfileStatus: true
-  , profileArrowImage: "ny_ic_chevron_right_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_right_white.png"
+  , profileArrowImage: "ny_ic_chevron_right_white,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_chevron_right_white.png"
   , cancelRideColor : "#E55454"
-  , infoIconUrl : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png"
+  , infoIconUrl : "ny_ic_info,https://assets.moving.tech/beckn/common/user/ny_ic_information_grey.png"
   , profileEditGravity : "center"
-  , merchantLogo : "ic_launcher,https://assets.juspay.in/nammayatri/images/user/ny_ic_launcher.png"
+  , merchantLogo : "ic_launcher,https://assets.moving.tech/beckn/common/user/ny_ic_launcher.png"
   , logs: [ "JUSPAY" ]
   , showCorporateAddress : true
   , terminateBtnConfig : {
           visibility: false, 
           title : "",
           backgroundColor : "#00FFFFFF",
-          imageUrl : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
+          imageUrl : "ny_ic_chevron_left_double,https://assets.moving.tech/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
       }
   , suggestedTripsAndLocationConfig : {
         geohashLimitForMap : 60,
@@ -175,36 +175,39 @@ config =
       , variantInfo : {
         hatchback : {
           name : "Hatchback",
-          image : "ny_ic_hatchback,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_hatchback-2.png"
+          image : "ny_ic_hatchback,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_hatchback-2.png"
           },
         taxiPlus : {
           name : "AC Taxi",
-          image : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan_ac.png"
+          image : "ny_ic_sedan_ac,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_sedan_ac.png"
         },
         sedan : {
           name : "Sedan",
-          image : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
+          image : "ny_ic_sedan,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_sedan.png"
         },
         taxi : {
           name : "Non-AC Taxi",
-          image : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
+          image : "ny_ic_sedan,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_sedan.png"
         },
         suv : {
           name : "SUV",
-          image : "ny_ic_suv,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_suv.png"
+          image : "ny_ic_suv,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv.png"
         },
         autoRickshaw : {
           name : "Auto Rickshaw",
-          image : "ny_ic_auto_quote_list,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_quote_list.png"
+          image : "ny_ic_auto_quote_list,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_auto_quote_list.png"
+        },
+        bookAny : {
+          name : "Book Any",
+          image : "ny_ic_auto_cab_green,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_auto_cab_green.png"
         }
-
       }
       , enableOnlyAuto : false
       , showNearByDrivers: false
-      , enableBookingPreference: false
+      , enableBookingPreference: true
       , textColor: "#6D7280"
       , showInfoIcon : true 
-      , genericLoaderLottie : "https://assets.juspay.in/beckn/nammayatri/user/lottie/ny_ic_generic_loader.json"
+      , genericLoaderLottie : "https://assets.moving.tech/beckn/nammayatri/user/lottie/ny_ic_generic_loader.json"
       }
   , customerTip : {
       auto : true,
@@ -222,7 +225,7 @@ config =
     enableSupport: true,
     enableShareApp: false,
     enableReAllocation : true,
-    enableRepeatTripBackfilling : false,
+    enableRepeatTripBackfilling : true,
     forceLogReferrerUrl : true,
     enableSelfServe : true,
     enableAdditionalServices : false,
@@ -240,9 +243,10 @@ config =
       , background : "#2C2F3A"
       , titleColor : "#E5E7EB"
       , rideDescription : { 
-          background : "#00FFFFFF"
+          background : "#08FFFFFF"
         , textColor : "#A7A7A7"
-        }                     
+        }        
+      , horizontalLineColor : "#E5E7EB"
       }
      , showCallSupport : false
     }
@@ -259,6 +263,7 @@ config =
               { goToNearestPointWithinRadius : 12.0
               , showHotSpotsWithinRadius : 150.0
               , enableHotSpot : JB.jBridgeMethodExists "locateOnMapV2"
+              , updateHotSpotOutSideRange : 200.0
               }
           }
       , labelTextSize : 30
@@ -269,6 +274,8 @@ config =
     { 
       cityName : "chennai"
     , cityCode : "std:040"
+    , customEndTime : "01:00:00" 
+    , customDates : ["23/04/2024","28/04/2024","01/05/2024","12/05/2024"] 
     , metroStationTtl : 10080 -- in Minutes
     , bookingStartTime : "04:30:00"
     , bookingEndTime : "22:30:00"
@@ -280,6 +287,8 @@ config =
     {
       cityName : "kochi"
     , cityCode : "std:0484"
+    , customEndTime : "23:59:59" 
+    , customDates : ["03/05/2024", "04/05/2024", "05/05/2024", "06/05/2024", "07/05/2024", "08/05/2024", "09/05/2024", "10/05/2024","11/05/2024"]
     , metroStationTtl : 10080
     , bookingStartTime : "00:00:00"
     , bookingEndTime : "23:59:59"
@@ -338,7 +347,7 @@ config =
   , privacyLink : "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F"
   , shareAppConfig : {
       title : "Share Namma Yatri!"
-    , description : "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n#beOpen #chooseOpen \n\nDownload Namma Yatri now! \n"--https://nammayatri.in/link/rider/SJ8D"
+    , description : "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n#beOpen #chooseOpen \n\n"--https://nammayatri.in/link/rider/SJ8D"
   }
   , dashboard :{
       url : "https://nammayatri.in/open?source=in-app"
@@ -363,39 +372,48 @@ config =
       }
     ]
   , cityConfig :
-      [ { cityCode : "std:080"
-        , cityName : "Bangalore"
-        , geoCodeConfig :
-            { radius : 50000
-            , strictBounds : true
+      [ defaultCityConfig 
+          { cityName = "Bangalore",
+            cityCode = "std:080",
+            geoCodeConfig
+              { radius = 50000,
+                strictBounds = true
+              },
+            featureConfig {
+              enableCabBanner = true,
+              enableChangeRideVariant = true
             }
-        , enableCabs : false
-        , estimateAndQuoteConfig : {
-          showInfoIcon : true
+          },
+        defaultCityConfig 
+          { cityName = "Chennai",
+            cityCode = "std:044",
+            geoCodeConfig
+              { radius = 50000,
+                strictBounds = true
+              },
+            enableCabs = true
+          },
+        defaultCityConfig
+          { cityName = "Hyderabad",
+            cityCode = "std:040",
+            referral
+              { domain = "https://www.manayatri.in",
+                customerAppId = "in.mobility.manayatri"
+              },
+            dashboardUrl = "https://www.manayatri.in/open?source=in-app",
+            appLogoLight = "ny_ic_logo_light_my,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_logo_light_my.png",
+            appLogo = "ic_namma_yatri_logo,https://assets.moving.tech/beckn/nammayatri/user/images/ic_namma_yatri_logo.png"
+          },
+        defaultCityConfig
+          { cityName = "Kolkata",
+            cityCode = "std:033",
+            referral
+              { domain = "https://www.yatrisathi.in",
+                customerAppId = "in.juspay.jatrisaathi"
+              }
           }
-        , featureConfig : {
-            enableCabBanner : true,
-            enableChangeRideVariant : true
-          }
-        }
-      , { cityCode : "std:044"
-        , cityName : "Chennai"
-        , geoCodeConfig :
-            { radius : 50000
-            , strictBounds : true
-            }
-        , enableCabs : true
-        , estimateAndQuoteConfig : {
-          showInfoIcon : false
-          }
-        , featureConfig : {
-            enableCabBanner : false,
-            enableChangeRideVariant : false
-          }
-        }
       ]
   , bannerCarousel : defaultBannerCarousel
-  , enableSingleEstimate : false
   , driverLocationPolling : {
     retryExpFactor : 3
   },
@@ -403,9 +421,9 @@ config =
     homeScreenSafety : false,
     homeScreenCabLaunch : true
   }
-  , tipDisplayDuration : 10
+  , tipDisplayDuration : 30
   , tipsEnabled : true
-  , tipEnabledCities : []
+  , tipEnabledCities : ["Bangalore", "Hyderabad"]
   , referral : {
           domain : "https://nammayatri.in/"
         , customerAppId : "in.juspay.nammayatri"
@@ -413,15 +431,24 @@ config =
   , safety : {
       pastRideInterval : 15
   }
+  , enableBookAny : true
+  , acPopupConfig : {
+      enableAcPopup : false,
+      enableNonAcPopup : false,
+      showAfterTime : 3
+    }
 }
 
 defaultCityConfig :: CityConfig
 defaultCityConfig =
   { cityName : "",
     cityCode : "",
-    estimateAndQuoteConfig : {
-          showInfoIcon : true
+    iopConfig : {
+            enable : false,
+            autoSelectTime : 8
           },
+    estimateAndQuoteConfig : {
+          showInfoIcon : true},
     geoCodeConfig :
       { radius : 100000
       , strictBounds : false
@@ -430,5 +457,12 @@ defaultCityConfig =
     featureConfig : {
       enableCabBanner : false,
       enableChangeRideVariant : false
-    }
+    },
+    referral : {
+      domain : "https://nammayatri.in",
+      customerAppId : "in.juspay.nammayatri"
+    },
+    appLogo : "",
+    dashboardUrl : "",
+    appLogoLight : ""
   }

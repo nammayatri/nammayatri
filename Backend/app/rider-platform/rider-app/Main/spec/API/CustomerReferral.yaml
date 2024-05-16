@@ -1,0 +1,13 @@
+imports:
+module: CustomerReferral
+types:
+  ReferredCustomers:
+    count: Int
+
+apis:
+  # GET /customerReferralCount
+  - GET:
+      endpoint: /CustomerRefferal/count
+      auth: TokenAuth
+      response:
+        type: "API.Types.UI.CustomerReferral.ReferredCustomers"

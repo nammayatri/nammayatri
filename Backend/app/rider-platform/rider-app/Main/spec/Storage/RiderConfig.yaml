@@ -1,6 +1,7 @@
 imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  EmailOTPConfig: Email.Types
 
 RiderConfig:
   tableName: rider_config
@@ -11,7 +12,7 @@ RiderConfig:
     localPoliceNumber: Maybe Text
     enableSupportForSafety: Bool
     videoFileSizeUpperLimit: Int
-    timeDiffFromUtc : Seconds
+    timeDiffFromUtc: Seconds
     enableEmergencyContactAddedMessage: Bool
     safetyCheckStartTime: Seconds
     safetyCheckEndTime: Seconds
@@ -24,6 +25,9 @@ RiderConfig:
     isAvoidToll: Bool
     autoUnblockSafetyCenterAfterDays: Int
     placeNameCacheExpiryDays: Maybe Int
+    bookingSyncStatusCallSecondsDiffThreshold: Maybe Int
+    kaptureQueue: Text
+    emailOtpConfig: Maybe Email.Types.EmailOTPConfig
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -42,8 +46,11 @@ RiderConfig:
     distanceWeightage: "70"
     isAvoidToll: "true"
     autoUnblockSafetyCenterAfterDays: "14"
+    kaptureQueue: "''"
 
   queries:
     findByMerchantOperatingCityId:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId
+  sqlType:
+    emailOtpConfig: "json"

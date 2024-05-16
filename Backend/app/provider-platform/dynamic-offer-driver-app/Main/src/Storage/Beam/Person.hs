@@ -57,14 +57,20 @@ data PersonT f = PersonT
     alternateMobileNumberHash :: B.C f (Maybe DbHash),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
-    bundleVersion :: B.C f (Maybe Text),
-    clientVersion :: B.C f (Maybe Text),
+    clientSdkVersion :: B.C f (Maybe Text),
+    clientBundleVersion :: B.C f (Maybe Text),
+    clientConfigVersion :: B.C f (Maybe Text),
+    clientOsVersion :: B.C f (Maybe Text),
+    clientOsType :: B.C f (Maybe DeviceType),
+    backendConfigVersion :: B.C f (Maybe Text),
+    backendAppVersion :: B.C f (Maybe Text),
     faceImageId :: B.C f (Maybe Text),
     totalEarnedCoins :: B.C f Int,
     usedCoins :: B.C f Int,
     registrationLat :: B.C f (Maybe Double),
     registrationLon :: B.C f (Maybe Double),
-    useFakeOtp :: B.C f (Maybe Text)
+    useFakeOtp :: B.C f (Maybe Text),
+    driverTag :: B.C f (Maybe [Text])
   }
   deriving (Generic, B.Beamable)
 

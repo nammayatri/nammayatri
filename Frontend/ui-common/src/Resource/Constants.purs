@@ -13,3 +13,9 @@ chatSuggestion = "chat_suggestions"
 
 emChatSuggestion :: String
 emChatSuggestion = "emergency_chat_suggestions"
+
+policeNumber :: String
+policeNumber = "112"
+
+assetDomain :: String
+assetDomain = "assets.moving.tech"

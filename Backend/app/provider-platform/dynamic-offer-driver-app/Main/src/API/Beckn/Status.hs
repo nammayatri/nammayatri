@@ -32,6 +32,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import TransactionLogs.PushLogs
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -54,10 +55,13 @@ status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
     let context = reqV2.statusReqContext
     callbackUrl <- Utils.getContextBapUri context
     dStatusRes <- DStatus.handler transporterId dStatusReq
+    fork "status received pushing ondc logs" do
+      void $ pushLogs "status" (toJSON reqV2) dStatusRes.booking.providerId.getId
     internalEndPointHashMap <- asks (.internalEndPointHashMap)
-    onStautusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info
-    Callback.withCallback dStatusRes.transporter "STATUS" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler onStautusReq.onStatusReqContext) $
-      pure onStautusReq
+    msgId <- Utils.getMessageId context
+    onStatusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info (Just msgId)
+    Callback.withCallback dStatusRes.transporter "on_status" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler onStatusReq.onStatusReqContext) $
+      pure onStatusReq
 
 errHandler :: Spec.Context -> BecknAPIError -> Spec.OnStatusReq
 errHandler context (BecknAPIError err) =

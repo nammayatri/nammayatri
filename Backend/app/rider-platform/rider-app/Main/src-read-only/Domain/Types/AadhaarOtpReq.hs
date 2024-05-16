@@ -4,6 +4,7 @@
 
 module Domain.Types.AadhaarOtpReq where
 
+import Data.Aeson
 import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Id

@@ -39,6 +39,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Mobility.Prelude
 import LocalStorage.Cache (getValueFromCache)
 import JBridge as JB
+import Engineering.Helpers.Utils (getFixedTwoDecimals)
 
 primaryButtonConfig :: Boolean -> PrimaryButtonConfig.Config
 primaryButtonConfig isActive =
@@ -151,7 +152,7 @@ getPopupConfig :: ST.DriverEarningsScreenState -> { optionButtonOrientation :: S
 getPopupConfig state = case state.props.popupType of
   ST.COIN_TO_CASH_POPUP ->
     { optionButtonOrientation: "HORIZONTAL"
-    , primaryText: getVarString WILL_BE_ADJUSTED_IN_YOUR_FUTURE_SUBSCRIPTION_DUES [ HU.getFixedTwoDecimals (state.data.coinConversionRate * toNumber state.data.coinsToUse) ]
+    , primaryText: getVarString WILL_BE_ADJUSTED_IN_YOUR_FUTURE_SUBSCRIPTION_DUES [ getFixedTwoDecimals (state.data.coinConversionRate * toNumber state.data.coinsToUse) ]
     , secondaryText: ""
     , option1: getString OKAY
     , option2: getString GO_BACK
@@ -273,7 +274,7 @@ errorModalConfig state =
               else
                 "ny_ic_no_coins_history"
           else
-            "ny_ic_no_rides_history_cab,https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_no_rides_history_cab.png"
+            "ny_ic_no_rides_history_cab,https://assets.moving.tech/beckn/jatrisaathi/driver/images/ny_ic_no_rides_history_cab.png"
       , height = V if state.props.subView == ST.EARNINGS_VIEW then 110 else 115
       , width = V if state.props.subView == ST.EARNINGS_VIEW then 124 else 200
       , margin = MarginBottom 61

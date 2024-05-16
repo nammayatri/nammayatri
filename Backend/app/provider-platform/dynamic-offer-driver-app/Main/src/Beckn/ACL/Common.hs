@@ -37,6 +37,7 @@ castVariant Variant.SUV = Common.SUV
 castVariant Variant.AUTO_RICKSHAW = Common.AUTO_RICKSHAW
 castVariant Variant.TAXI = Common.TAXI
 castVariant Variant.TAXI_PLUS = Common.TAXI_PLUS
+castVariant Variant.BIKE = Common.BIKE
 
 castDPaymentCollector :: DMPM.PaymentCollector -> Payment.PaymentCollector
 castDPaymentCollector DMPM.BAP = Payment.BAP
@@ -123,7 +124,8 @@ filterRequiredBreakups fParamsType breakup = do
                  "TOTAL_FARE",
                  "WAITING_OR_PICKUP_CHARGES",
                  "EXTRA_TIME_FARE",
-                 "CANCELLATION_CHARGES"
+                 "CANCELLATION_CHARGES",
+                 "PARKING_CHARGE"
                ]
     DFParams.Slab ->
       title
@@ -138,7 +140,8 @@ filterRequiredBreakups fParamsType breakup = do
                  "TOTAL_FARE",
                  "NIGHT_SHIFT_CHARGE",
                  "EXTRA_TIME_FARE",
-                 "CANCELLATION_CHARGES"
+                 "CANCELLATION_CHARGES",
+                 "PARKING_CHARGE"
                ]
     DFParams.Rental ->
       title
@@ -153,7 +156,8 @@ filterRequiredBreakups fParamsType breakup = do
                  "TOTAL_FARE",
                  "WAITING_OR_PICKUP_CHARGES",
                  "EXTRA_TIME_FARE",
-                 "CANCELLATION_CHARGES"
+                 "CANCELLATION_CHARGES",
+                 "PARKING_CHARGE"
                ]
 
 -- Fix these tage properly

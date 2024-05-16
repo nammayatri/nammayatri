@@ -83,7 +83,6 @@ import Styles.Colors as Color
 import Screens.Types (LocalStoreSubscriptionInfo)
 import Data.Int (fromString, even, fromNumber)
 import Data.Int as Int
-import Data.Number.Format (fixed, toStringWith)
 import Data.Function.Uncurried (Fn1)
 import Storage (getValueToLocalStore)
 import Services.Config (getWhatsAppSupportNo, getSupportNumber)
@@ -106,6 +105,7 @@ import Data.Argonaut.Encode.Class as AE
 import Data.Argonaut.Core as AC
 import Data.Argonaut.Decode.Parser as ADP
 import Common.Types.Config as CTC
+import Common.Resources.Constants (assetDomain)
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -353,25 +353,25 @@ rideLabelConfig _ = [
       backgroundColor : "#2194FF",
       text : "Metro Pickup",
       secondaryText : "",
-      imageUrl : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
+      imageUrl : "ic_metro_white,https://" <> assetDomain <> "/beckn/nammayatri/driver/images/ic_metro_white.png",
       cancelText : "ZONE_CANCEL_TEXT_PICKUP",
-      cancelConfirmImage : "ic_cancelride_metro_pickup,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_pickup.png"
+      cancelConfirmImage : "ic_cancelride_metro_pickup,https://" <> assetDomain <> "/beckn/nammayatri/driver/images/ic_cancelride_metro_pickup.png"
     },
     { label : "SureMetro_Drop",
       backgroundColor : "#2194FF",
       text : "Metro Drop",
       secondaryText : "",
-      imageUrl : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
+      imageUrl : "ic_metro_white,https://" <> assetDomain <> "/beckn/nammayatri/driver/images/ic_metro_white.png",
       cancelText : "ZONE_CANCEL_TEXT_DROP",
-      cancelConfirmImage : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
+      cancelConfirmImage : "ic_cancelride_metro_drop,https://" <> assetDomain <> "/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
     },
     { label : "Accessibility",
       backgroundColor : "#9747FF",
       text : getString ASSISTANCE_REQUIRED,
       secondaryText : getString LEARN_MORE,
-      imageUrl : "ny_ic_wheelchair,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
+      imageUrl : "ny_ic_wheelchair,https://" <> assetDomain <> "/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
       cancelText : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
-      cancelConfirmImage : "ic_cancel_prevention,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
+      cancelConfirmImage : "ic_cancel_prevention,https://" <> assetDomain <> "/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
     },
     { label : "Safety",
       backgroundColor : Color.green900,
@@ -396,7 +396,7 @@ rideLabelConfig _ = [
       secondaryText : getString LEARN_MORE,
       imageUrl : "ny_ic_location_pin_white,",
       cancelText : "ZONE_CANCEL_TEXT_DROP",
-      cancelConfirmImage : "ic_cancel_prevention,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
+      cancelConfirmImage : "ic_cancel_prevention,https://" <> assetDomain <> "/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
     }
 ]
 
@@ -413,30 +413,30 @@ getMerchantVehicleSize unit =
 
 getAssetLink :: LazyCheck -> String
 getAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/driver/images/"
-  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/images/"
-  YATRI -> "https://assets.juspay.in/beckn/yatri/driver/images/"
-  MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/driver/"
-  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/driver/images"
-  MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/driver/images"
+  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/images/"
+  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/driver/images/"
+  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/driver/images/"
+  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/driver/"
+  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
+  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
 
 getAssetsBaseUrl :: LazyCheck -> String
 getAssetsBaseUrl lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/driver/"
-  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/"
-  YATRI -> "https://assets.juspay.in/beckn/yatri/driver/"
-  MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/"
-  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/driver"
-  MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/driver"
+  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/"
+  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/driver/"
+  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/driver/"
+  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/"
+  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver"
+  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver"
 
 getCommonAssetLink :: LazyCheck -> String
 getCommonAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
-  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
-  YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
-  MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
-  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
-  MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
+  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/nammayatricommon/images/"
+  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/jatrisaathicommon/images/"
+  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/yatricommon/images/"
+  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/mobilitypaytmcommon/"
+  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
+  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
 
 fetchImage :: FetchImageFrom -> String -> String
 fetchImage fetchImageFrom imageName =   
@@ -445,8 +445,10 @@ fetchImage fetchImageFrom imageName =
     case fetchImageFrom of
       FF_ASSET -> imageName <> "," <> (getAssetLink FunctionCall) <> imageName <> ".png"
       FF_COMMON_ASSET -> imageName <> "," <> (getCommonAssetLink FunctionCall) <> imageName <> ".png"
+      COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/driver/images/" <> imageName <> ".png"
+      GLOBAL_COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/common/images/" <> imageName <> ".png"
 
-data FetchImageFrom = FF_ASSET | FF_COMMON_ASSET
+data FetchImageFrom = FF_ASSET | FF_COMMON_ASSET | COMMON_ASSET | GLOBAL_COMMON_ASSET
 
 derive instance genericFetchImageFrom :: Generic FetchImageFrom _
 instance eqFetchImageFrom :: Eq FetchImageFrom where eq = genericEq
@@ -556,13 +558,17 @@ getVehicleVariantImage variant =
         YATRISATHI -> case variant of
                         "TAXI"      -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"
                         "SUV"       -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
+                        "SUV_TIER"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
                         "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
                         "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
                         _           -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
         NAMMAYATRI -> case variant of
                         "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
+                        "SEDAN_TIER" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
                         "SUV"       -> "ic_suv_ac," <> commonUrl <> "ic_suv_ac.png"
+                        "SUV_TIER"  -> "ic_suv_ac," <> commonUrl <> "ic_suv_ac.png"
                         "HATCHBACK" -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
+                        "HATCHBACK_TIER" -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
                         "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
                         "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
                         "TAXI"      -> "ic_taxi," <> commonUrl <> "ic_taxi.png"
@@ -578,8 +584,11 @@ getVehicleVariantImage variant =
                         _ -> fetchImage FF_ASSET "ic_vehicle_front"
         _          -> case variant of
                         "SEDAN"     -> "ny_ic_sedan_car_side," <> url <> "ny_ic_sedan_car_side.png"
+                        "SEDAN_TIER" -> "ny_ic_sedan_car_side," <> url <> "ny_ic_sedan_car_side.png"
                         "SUV"       -> "ny_ic_suv_car_side," <> url <> "ny_ic_suv_car_side.png"
+                        "SUV_TIER"  -> "ny_ic_suv_car_side," <> url <> "ny_ic_suv_car_side.png"
                         "HATCHBACK" -> "ny_ic_hatchback_car_side," <> url <> "ny_ic_hatchback_car_side.png"
+                        "HATCHBACK_TIER" -> "ny_ic_hatchback_car_side," <> url <> "ny_ic_hatchback_car_side.png"
                         "TAXI"      -> "ic_sedan_non_ac," <> url <> "ic_sedan_non_ac.png"
                         "TAXI_PLUS" -> "ic_sedan_ac," <> url <> "ic_sedan_ac.png"
                         "RENTALS"   -> "ic_rentals," <> url <> "ic_rentals.png"
@@ -609,11 +618,6 @@ getStatus status = case status of
   "Failed" -> Failed
   "Scheduled" -> Scheduled
   _ -> Pending
-
-getFixedTwoDecimals :: Number -> String
-getFixedTwoDecimals amount = case (fromNumber amount) of
-                                Just value -> show value
-                                Nothing ->  toStringWith (fixed 2) amount
 
 incrementValueOfLocalStoreKey :: KeyStore -> Effect Unit
 incrementValueOfLocalStoreKey key = do

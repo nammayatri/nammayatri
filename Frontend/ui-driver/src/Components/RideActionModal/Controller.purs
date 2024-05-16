@@ -70,11 +70,12 @@ type Config = {
   tripDuration :: Mb.Maybe String,
   durationTravelled :: String,
   rideStartTimer :: Int,
-  tollText :: Boolean,
+  hasToll :: Boolean,
   driverVehicle :: String,
   cityConfig :: CTC.CityConfig,
   capacity :: Mb.Maybe Int,
-  serviceTierAndAC :: String
+  serviceTierAndAC :: String,
+  acRide :: Mb.Maybe Boolean
   }
 
 type AddressConfig = {
@@ -120,7 +121,8 @@ config = {
   durationTravelled : "0",
   rideStartTimer : 0,
   rideStartTime : Mb.Nothing,
-  tollText : false,
+  hasToll : false,
   capacity : Mb.Nothing,
-  serviceTierAndAC : ""
+  serviceTierAndAC : "",
+  acRide : Mb.Nothing
 }

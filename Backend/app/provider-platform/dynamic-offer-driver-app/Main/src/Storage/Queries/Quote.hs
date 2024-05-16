@@ -25,7 +25,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Quote as BeamQSZ
-import Storage.CachedQueries.FarePolicy as BeamFPolicy
+import Storage.Cac.FarePolicy as BeamFPolicy
 import Storage.Queries.FareParameters as BeamQFP
 import qualified Storage.Queries.FareParameters as SQFP
 
@@ -43,7 +43,7 @@ findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
 -}
 instance FromTType' BeamQSZ.QuoteSpecialZone Quote where
   fromTType' BeamQSZ.QuoteSpecialZoneT {..} = do
-    farePolicy <- maybe (pure Nothing) (BeamFPolicy.findById Nothing Nothing . Id) farePolicyId
+    farePolicy <- maybe (pure Nothing) (BeamFPolicy.findById Nothing . Id) farePolicyId
     fareParams <- BeamQFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError $ "FareParameters not found in Quote for id: " <> show fareParametersId)
     return $
       Just
@@ -57,6 +57,8 @@ instance FromTType' BeamQSZ.QuoteSpecialZone Quote where
             createdAt = T.localTimeToUTC T.utc createdAt,
             updatedAt = T.localTimeToUTC T.utc updatedAt,
             validTill = T.localTimeToUTC T.utc validTill,
+            estimatedFare = mkAmountWithDefault estimatedFareAmount estimatedFare,
+            currency = fromMaybe INR currency,
             ..
           }
 
@@ -70,16 +72,18 @@ instance ToTType' BeamQSZ.QuoteSpecialZone Quote where
         BeamQSZ.estimatedFinishTime = estimatedFinishTime,
         BeamQSZ.tripCategory = Just tripCategory,
         BeamQSZ.vehicleServiceTierName = vehicleServiceTierName,
-        BeamQSZ.driverMinFee = driverMinFee,
-        BeamQSZ.driverMaxFee = driverMaxFee,
-        BeamQSZ.driverPickUpCharge = driverPickUpCharge,
         BeamQSZ.distance = distance,
         BeamQSZ.createdAt = T.utcToLocalTime T.utc createdAt,
         BeamQSZ.updatedAt = T.utcToLocalTime T.utc updatedAt,
         BeamQSZ.validTill = T.utcToLocalTime T.utc validTill,
-        BeamQSZ.estimatedFare = estimatedFare,
+        BeamQSZ.estimatedFare = roundToIntegral estimatedFare,
+        BeamQSZ.estimatedFareAmount = Just estimatedFare,
+        BeamQSZ.currency = Just currency,
         BeamQSZ.specialLocationTag = specialLocationTag,
         BeamQSZ.fareParametersId = getId fareParams.id,
         BeamQSZ.isScheduled = Just isScheduled,
+        BeamQSZ.isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,
+        BeamQSZ.isBlockedRoute = isBlockedRoute,
+        BeamQSZ.tollNames = tollNames,
         BeamQSZ.farePolicyId = getId . (.id) <$> farePolicy
       }

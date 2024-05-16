@@ -25,6 +25,7 @@ module Lib.DriverCoins.Coins
     sendCoinsNotification,
     sendCoinsNotificationV2,
     safeIncrBy,
+    getValidRideCountByDriverIdKey,
   )
 where
 
@@ -45,17 +46,18 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Types as DCT
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.Coins.CoinsConfig as DCQ
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Tools.Notifications as Notify
+import Utils.Common.Cac.KeyNameConstants
 
 type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters))
 
 getCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m Int
-getCoinsByDriverId driverId timeDiffFromUtc = do
+getCoinsByDriverId driverId timeDiffFromUtc = Hedis.withLockRedisAndReturnValue driverId.getId 60 $ do
   now <- getCurrentTime
   let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
   let currentDate = show $ utctDay istTime
@@ -88,7 +90,7 @@ updateDriverCoins driverId finalCoinsValue timeDiffFromUtc = do
 driverCoinsEvent :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> m ()
 driverCoinsEvent driverId merchantId merchantOpCityId eventType = do
   logDebug $ "Driver Coins Event Triggered for merchantOpCityId - " <> merchantOpCityId.getId <> " and driverId - " <> driverId.getId
-  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   coinConfiguration <- DCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId
   finalCoinsValue <- sum <$> forM coinConfiguration (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig)
   updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
@@ -220,7 +222,7 @@ sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue (DCT.BulkUpl
           case T.splitOn " | " coinsMessage.message of
             [title, description] -> do
               let descriptionReplaced = replaceAmountValue amount' $ replaceCoinsValue description
-              Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS title descriptionReplaced driverId (driver.deviceToken)
+              Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS title descriptionReplaced driver (driver.deviceToken)
             _ -> logDebug "Invalid message format."
         Nothing -> logDebug "Could not find Translations."
     replaceCoinsValue = T.replace "{#coinsValue#}" (T.pack $ show coinsValue)
@@ -239,7 +241,7 @@ sendCoinsNotification merchantOpCityId driverId coinsValue =
         Just coinsMessage ->
           case T.splitOn " | " coinsMessage.message of
             [title, description] ->
-              Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS title (replaceCoinsValue description) driverId (driver.deviceToken)
+              Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS title (replaceCoinsValue description) driver (driver.deviceToken)
             _ -> logDebug "Invalid message format."
         Nothing -> logDebug "Could not find Translations."
     replaceCoinsValue = T.replace "{#coinsValue#}" (T.pack $ show coinsValue)

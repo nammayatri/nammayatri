@@ -21,6 +21,8 @@ import qualified "rider-app" API.UI.Search as AppSearch
 import qualified API.UI.Select as AppSelect
 import Common
 import qualified "rider-app" Domain.Action.UI.Cancel as AppCancel
+import qualified "rider-app" Domain.Action.UI.Estimate as AppEstimate
+import qualified "rider-app" Domain.Action.UI.Quote as AppQuote
 import qualified "dynamic-offer-driver-app" Domain.Types.Booking as TRB
 import qualified "rider-app" Domain.Types.Booking as AppRB
 import qualified "dynamic-offer-driver-app" Domain.Types.CancellationReason as SCR
@@ -42,7 +44,7 @@ import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Common (Currency (INR), Money, PriceAPIEntity (..))
+import Kernel.Types.Common (Currency (INR), Money, PriceAPIEntity (..), toHighPrecMoney)
 import Kernel.Types.Id
 import qualified Mobility.ARDU.APICalls as API
 import Mobility.ARDU.Fixtures as Fixtures
@@ -134,7 +136,7 @@ resetDriver driver = runARDUFlow "" $ do
 
 -- flow primitives
 search :: Text -> AppSearch.SearchReq -> ClientsM (Id AppSearchReq.SearchRequest)
-search token searchReq_ = callBAP $ searchServices token searchReq_ (Just defaultVersion) (Just defaultVersion) Nothing Nothing <&> (.searchId)
+search token searchReq_ = callBAP $ searchServices token searchReq_ (Just defaultVersion) (Just defaultVersion) Nothing Nothing Nothing <&> (.searchId)
 
 getOnSearchTaxiEstimatesByTransporterName ::
   Text ->
@@ -168,23 +170,23 @@ getNearbySearchRequestForDriver driver estimateId =
         mbSReq <- liftIO $ runARDUFlow "" $ QST.findById p.searchTryId
         pure $ fmap (.messageId) mbSReq == Just estimateId.getId
     )
-    ((.searchRequestsForDriver) <$> callBPP (API.ui.driver.getNearbySearchRequests driver.token))
+    ((.searchRequestsForDriver) <$> callBPP (API.ui.driver.getNearbySearchRequests driver.token Nothing))
 
 respondQuote :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM ()
 respondQuote driver fare bppSearchRequestId response =
-  void $ callBPP $ API.ui.driver.respondQuote driver.token Nothing $ TDriver.DriverRespondReq (Just fare) Nothing (Just bppSearchRequestId) response
+  void $ callBPP $ API.ui.driver.respondQuote driver.token Nothing Nothing Nothing Nothing Nothing $ TDriver.DriverRespondReq (Just fare) (Just $ PriceAPIEntity (toHighPrecMoney fare) INR) Nothing (Just bppSearchRequestId) response
 
 offerQuote :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> ClientsM ()
 offerQuote driver fare bppSearchRequestId =
-  void $ callBPP $ API.ui.driver.offerQuote driver.token Nothing $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
+  void $ callBPP $ API.ui.driver.offerQuote driver.token Nothing $ TDriver.DriverOfferReq (Just fare) (Just $ PriceAPIEntity (toHighPrecMoney fare) INR) bppSearchRequestId
 
 respondQuoteEither :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM (Either ClientError APISuccess)
 respondQuoteEither driver fare bppSearchRequestId response =
-  callBppEither $ API.ui.driver.respondQuote driver.token Nothing $ TDriver.DriverRespondReq (Just fare) Nothing (Just bppSearchRequestId) response
+  callBppEither $ API.ui.driver.respondQuote driver.token Nothing Nothing Nothing Nothing Nothing $ TDriver.DriverRespondReq (Just fare) (Just $ PriceAPIEntity (toHighPrecMoney fare) INR) Nothing (Just bppSearchRequestId) response
 
 offerQuoteEither :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> ClientsM (Either ClientError APISuccess)
 offerQuoteEither driver fare bppSearchRequestId =
-  callBppEither $ API.ui.driver.offerQuote driver.token Nothing $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
+  callBppEither $ API.ui.driver.offerQuote driver.token Nothing $ TDriver.DriverOfferReq (Just fare) (Just $ PriceAPIEntity (toHighPrecMoney fare) INR) bppSearchRequestId
 
 getQuotesByEstimateId :: Text -> Id AppEstimate.Estimate -> ClientsM (NonEmpty AppQuote.QuoteAPIEntity)
 getQuotesByEstimateId appToken estimateId =
@@ -278,7 +280,8 @@ cancelRideByApp appToken driver bapBookingId = do
       AppCancel.CancelReq
         { reasonCode = AppCR.CancellationReasonCode "",
           reasonStage = AppCR.OnAssign,
-          additionalInfo = Nothing
+          additionalInfo = Nothing,
+          reallocate = Nothing
         }
   cancellationChecks bapBookingId driver
 

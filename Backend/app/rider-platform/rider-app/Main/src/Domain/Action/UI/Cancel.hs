@@ -37,7 +37,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.SearchRequest (SearchRequest)
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -70,7 +70,8 @@ import qualified Tools.Maps as Maps
 data CancelReq = CancelReq
   { reasonCode :: SCR.CancellationReasonCode,
     reasonStage :: SCR.CancellationStage,
-    additionalInfo :: Maybe Text
+    additionalInfo :: Maybe Text,
+    reallocate :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -100,6 +101,7 @@ data CancelSearch = CancelSearch
 
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
   { cancellationDues :: HighPrecMoney,
+    cancellationDuesWithCurrency :: Maybe PriceAPIEntity,
     disputeChancesUsed :: Int,
     canBlockCustomer :: Maybe Bool
   }
@@ -178,6 +180,7 @@ cancel bookingId _ req = do
   where
     buildBookingCancelationReason currentDriverLocation disToPickup merchantId = do
       let CancelReq {..} = req
+      now <- getCurrentTime
       return $
         SBCR.BookingCancellationReason
           { bookingId = bookingId,
@@ -189,6 +192,8 @@ cancel bookingId _ req = do
             additionalInfo = additionalInfo,
             driverCancellationLocation = currentDriverLocation,
             driverDistToPickup = disToPickup,
+            createdAt = now,
+            updatedAt = now,
             ..
           }
 
@@ -245,12 +250,12 @@ cancelSearch personId dcr = do
       then -- then Esq.runTransaction $ do
       do
         _ <- QPFS.updateStatus personId DPFS.IDLE
-        void $ QEstimate.updateStatus dcr.estimateId DEstimate.DRIVER_QUOTE_CANCELLED
-        QDOffer.updateStatus dcr.estimateId DDO.INACTIVE
+        void $ QEstimate.updateStatus DEstimate.DRIVER_QUOTE_CANCELLED dcr.estimateId
+        QDOffer.updateStatus DDO.INACTIVE dcr.estimateId
       else do
         _ <- QPFS.updateStatus personId DPFS.IDLE
-        void $ QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
-        QDOffer.updateStatus dcr.estimateId DDO.INACTIVE
+        void $ QEstimate.updateStatus DEstimate.CANCELLED dcr.estimateId
+        QDOffer.updateStatus DDO.INACTIVE dcr.estimateId
   QPFS.clearCache personId
 
 driverDistanceToPickup ::
@@ -291,5 +296,5 @@ getCancellationDuesDetails (personId, merchantId) = do
   case (person.mobileNumber, person.mobileCountryCode) of
     (Just mobileNumber, Just countryCode) -> do
       res <- CallBPPInternal.getCancellationDuesDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
-      return $ CancellationDuesDetailsRes {cancellationDues = res.customerCancellationDues, disputeChancesUsed = res.disputeChancesUsed, canBlockCustomer = res.canBlockCustomer}
+      return $ CancellationDuesDetailsRes {cancellationDues = res.customerCancellationDues, cancellationDuesWithCurrency = res.customerCancellationDuesWithCurrency, disputeChancesUsed = res.disputeChancesUsed, canBlockCustomer = res.canBlockCustomer}
     _ -> throwError (PersonMobileNumberIsNULL person.id.getId)

@@ -3,14 +3,14 @@ module Screens.Benefits.BenefitsScreen.Controller where
 import JBridge (shareTextMessage, minimizeApp, firebaseLogEvent, hideKeyboardOnNavigation, cleverTapCustomEvent, metaLogEvent, shareImageMessage, setCleverTapUserProp)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import Prelude (class Show, bind, pure, ($))
-import PrestoDOM (Eval, continue, exit)
+import PrestoDOM (Eval, update, continue, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types 
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithMultipleParams)
 import Components.GenericHeader as GenericHeader
-import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
+import PrestoDOM (Eval, update, continue, exit, continueWithCmd, updateAndExit)
 import Prelude (bind, class Show, pure, unit, ($), discard, (>=), (<=), (==), (&&), not, (+), show, void, (<>), when, map, negate, (-), (>), (/=), (<))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Language.Strings (getString)
@@ -166,7 +166,7 @@ eval (UpdateModuleList modules) state = continue state {data {moduleList = build
 
 eval UpdateModuleListErrorOccurred state = continue state {props {showShimmer = false}}
 
-eval _ state = continue state
+eval _ state = update state
 
 shareImageMessageConfig :: BenefitsScreenState -> ShareImageConfig
 shareImageMessageConfig state = {

@@ -41,21 +41,23 @@ data DriverFeeByInvoice = DriverFeeByInvoice
     platformFee :: PlatformFee,
     numRides :: Int,
     payBy :: UTCTime,
-    totalEarnings :: Money,
-    totalFee :: Money,
+    totalEarnings :: HighPrecMoney,
+    totalFee :: HighPrecMoney,
     startTime :: UTCTime,
     endTime :: UTCTime,
-    status :: DDF.DriverFeeStatus
+    status :: DDF.DriverFeeStatus,
+    currency :: Currency
   }
 
 data PlatformFee = PlatformFee
   { fee :: HighPrecMoney,
     cgst :: HighPrecMoney,
-    sgst :: HighPrecMoney
+    sgst :: HighPrecMoney,
+    currency :: Currency
   }
 
-groupDriverFeeByInvoices :: (EsqDBReplicaFlow m r, EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [DDF.DriverFee] -> m [DriverFeeByInvoice]
-groupDriverFeeByInvoices driverFees_ = do
+groupDriverFeeByInvoices :: (EsqDBReplicaFlow m r, EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Currency -> [DDF.DriverFee] -> m [DriverFeeByInvoice]
+groupDriverFeeByInvoices currency driverFees_ = do
   let pendingFees = filter (\df -> elem df.status [DDF.PAYMENT_PENDING, DDF.PAYMENT_OVERDUE]) driverFees_
 
   pendingFeeInvoiceId <- getInvoiceIdForPendingFees pendingFees
@@ -140,12 +142,12 @@ groupDriverFeeByInvoices driverFees_ = do
           startTime = DL.minimum (invoiceDriverFees <&> (.startTime))
           endTime = DL.maximum (invoiceDriverFees <&> (.endTime))
           totalEarnings = sum (invoiceDriverFees <&> (.totalEarnings))
-          govtCharges = sum (invoiceDriverFees <&> fromIntegral . (.govtCharges))
+          govtCharges = sum (invoiceDriverFees <&> (.govtCharges))
           fee = sum (invoiceDriverFees <&> (.platformFee.fee))
           cgst = sum (invoiceDriverFees <&> (.platformFee.cgst))
           sgst = sum (invoiceDriverFees <&> (.platformFee.sgst))
           platformFee = PlatformFee {..}
-          totalFee = round $ govtCharges + platformFee.fee + platformFee.cgst + platformFee.sgst
+          totalFee = govtCharges + platformFee.fee + platformFee.cgst + platformFee.sgst
           status =
             case mStatus of
               (Just status_) -> status_
@@ -159,8 +161,9 @@ changeAutoPayFeesAndInvoicesForDriverFeesToManual alldriverFeeIdsInBatch validDr
   QDF.updateToManualFeeByDriverFeeIds driverFeeIdsToBeShiftedToManual
   QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE driverFeeIdsToBeShiftedToManual Nothing
 
-roundToHalf :: HighPrecMoney -> HighPrecMoney
-roundToHalf x = fromInteger (round (x * 2)) / 2
+roundToHalf :: Currency -> HighPrecMoney -> HighPrecMoney
+roundToHalf INR x = fromInteger (round (x * 2)) / 2
+roundToHalf _ x = x
 
 calcNumRides :: DDF.DriverFee -> TC.TransporterConfig -> Int
 calcNumRides driverFee transporterConfig =

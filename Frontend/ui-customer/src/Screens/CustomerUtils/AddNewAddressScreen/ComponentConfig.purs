@@ -67,7 +67,7 @@ genericHeaderConfig state = let
       , accessibilityHint = if state.props.showSavePlaceView then "Close : Button" else "Back : Button"
       , visibility = VISIBLE
       , accessibility = ENABLE
-      , imageUrl = if state.props.showSavePlaceView then fetchImage FF_COMMON_ASSET "ny_ic_close_white" else config.prefixImageConfig.imageUrl
+      , imageUrl = if state.props.showSavePlaceView then fetchImage FF_COMMON_ASSET "ny_ic_close_white" else fetchImage COMMON_ASSET "ny_ic_chevron_left_white"
       , enableRipple = true
       }
     , textConfig {

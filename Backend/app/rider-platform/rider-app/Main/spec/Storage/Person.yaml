@@ -1,0 +1,284 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  City: Kernel.Types.Beckn.Context
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+  Centesimal: Kernel.Types.Common
+  Version : Kernel.Types.Version
+  OptApiMethods: Kernel.External.Whatsapp.Interface.Types
+  MerchantConfig: Domain.Types.MerchantConfig
+  Language: Kernel.External.Maps
+  LocalTime: Data.Time
+  Device: Kernel.Types.Version
+  DeviceType: Kernel.Types.Version
+
+Person:
+  tableName: person
+
+  types:
+    Role:
+      enum: "USER, CUSTOMER_SUPPORT"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
+
+    IdentifierType:
+      enum: "MOBILENUMBER, AADHAAR, EMAIL"
+      derive': "Show, Eq, Read, Ord, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+    Gender:
+      enum: "MALE, FEMALE, OTHER, UNKNOWN, PREFER_NOT_TO_SAY"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
+
+    RideShareOptions:
+      enum: "ALWAYS_SHARE, SHARE_WITH_TIME_CONSTRAINTS, NEVER_SHARE"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  fields:
+    id : Id Person
+    firstName : Maybe Text
+    middleName : Maybe Text
+    lastName : Maybe Text
+    role : Role
+    gender : Gender
+    identifierType : IdentifierType
+    email : Maybe (EncryptedHashedField e Text)
+    unencryptedMobileNumber : Maybe Text
+    mobileNumber : Maybe (EncryptedHashedField e Text)
+    mobileCountryCode : Maybe Text
+    passwordHash : Maybe DbHash
+    identifier : Maybe Text
+    rating : Maybe Centesimal
+    totalRatings : Int
+    totalRatingScore : Int
+    isValidRating : Bool
+    language : Maybe Language
+    isNew : Bool
+    enabled : Bool
+    blocked : Bool
+    deviceToken : Maybe Text
+    notificationToken : Maybe Text
+    description : Maybe Text
+    merchantId : Id Merchant
+    currentCity : City
+    merchantOperatingCityId : Id MerchantOperatingCity
+    whatsappNotificationEnrollStatus : Maybe OptApiMethods
+    referralCode : Maybe Text
+    referredAt : Maybe UTCTime
+    hasTakenValidRide : Bool
+    hasDisability : Maybe Bool
+    blockedAt : Maybe UTCTime
+    blockedByRuleId : Maybe (Id MerchantConfig)
+    aadhaarVerified : Bool
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    shareEmergencyContacts : Bool
+    nightSafetyChecks : Bool
+    shareTripWithEmergencyContactOption : Maybe RideShareOptions
+    hasCompletedMockSafetyDrill : Maybe Bool
+    hasCompletedSafetySetup : Bool
+    registrationLat : Maybe Double
+    registrationLon : Maybe Double
+    useFakeOtp : Maybe Text
+    followsRide : Bool
+    falseSafetyAlarmCount : Int
+    safetyCenterDisabledOnDate : Maybe UTCTime
+    referredByCustomer: Maybe Text
+    customerReferralCode: Maybe Text
+    clientSdkVersion : Maybe Version
+    clientBundleVersion : Maybe Version
+    clientConfigVersion : Maybe Version
+    clientDevice : Maybe Device
+    backendAppVersion : Maybe Text
+    blockedCount : Maybe Int
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <Role>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <IdentifierType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <IdentifierType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <Gender>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Gender>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <RideShareOptions>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <RideShareOptions>
+
+  beamFields:
+    mobileNumber:
+      mobileNumberEncrypted: Maybe Text
+      mobileNumberHash: Maybe DbHash
+    clientDevice:
+      clientOsType: Maybe DeviceType
+      clientOsVersion: Maybe Text
+    email:
+      emailEncrypted: Maybe Text
+      emailHash: Maybe DbHash
+    rating: {}
+  intermediateTransformers:
+      fromTType:
+      - updateMerchantOpIdAndCity: Storage.Queries.Transformers.Person.backfillCityAndMOCId currentCity merchantOperatingCityId merchantId|EM
+  beamType:
+    currentCity: Maybe City
+    merchantOperatingCityId: Maybe Text
+    blockedAt: Maybe LocalTime
+    falseSafetyAlarmCount: Maybe Int
+    clientBundleVersion: Maybe Text
+    clientSdkVersion: Maybe Text
+    clientConfigVersion: Maybe Text
+    backendConfigVersion: Maybe Text
+    clientOsVersion: Maybe Text
+
+
+  fromTType:
+    merchantOperatingCityId: Kernel.Prelude.fst updateMerchantOpIdAndCity|E
+    currentCity: Kernel.Prelude.snd updateMerchantOpIdAndCity|E
+    email: EncryptedHashed <$> (Encrypted <$> emailEncrypted) <*> emailHash|E
+    mobileNumber: EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash|E
+    blockedAt: Data.Time.localTimeToUTC Data.Time.utc <$> blockedAt|E
+    falseSafetyAlarmCount: fromMaybe 0 falseSafetyAlarmCount|E
+    rating: Just $ fromIntegral totalRatingScore / fromIntegral totalRatings|E
+    clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
+    clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
+    clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
+    backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
+    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion)|E
+
+
+  toTType:
+    blockedAt: (Data.Time.utcToLocalTime Data.Time.utc <$> blockedAt)|E
+    currentCity: Kernel.Prelude.Just|I
+    emailEncrypted: (email <&> unEncrypted . (.encrypted))|E
+    emailHash: (email <&> (.hash))|E
+    mobileNumberEncrypted: (mobileNumber <&> unEncrypted . (.encrypted))|E
+    mobileNumberHash: (mobileNumber <&> (.hash))|E
+    merchantOperatingCityId: (Kernel.Prelude.Just . Kernel.Types.Id.getId)|I
+    falseSafetyAlarmCount: (Just falseSafetyAlarmCount)|E
+    clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
+    clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
+    clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
+    backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
+    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
+    clientOsType:  (clientDevice <&> (.deviceType))|E
+
+  constraints:
+    id: PrimaryKey
+    mobileNumberHash: SecondaryKey
+    emailHash: SecondaryKey
+    referralCode: SecondaryKey
+    deviceToken: SecondaryKey
+    customerReferralCode: SecondaryKey
+
+  sqlType:
+    firstName: character varying(255)
+    middleName: character varying(255)
+    lastName: character varying(255)
+    role: character varying(255)
+    gender: character varying(255)
+    identifierType: character varying(255)
+    mobileNumberEncrypted: character varying(255)
+    mobileNumberHash: bytea
+    mobileCountryCode: character varying(255)
+    identifier: character varying(255)
+    rating: character varying(255)
+    deviceToken: character varying(255)
+    description: character varying(255)
+    passwordHash: bytea
+    emailEncrypted: character varying(255)
+    emailHash: bytea
+    whatsappNotificationEnrollStatus: character varying(255)
+    unencryptedMobileNumber: character varying(255)
+    referralCode: character varying(15)
+    language: character varying(255)
+    notificationToken: character varying(255)
+    current_city: character varying(255)
+
+  default:
+    followsRide: "false"
+    hasCompletedMockSafetyDrill: "false"
+    hasCompletedSafetySetup: "false"
+    nightSafetyChecks: "true"
+    shareEmergencyContacts: "false"
+    aadhaarVerified: "false"
+    totalRatingScore: "0"
+    totalRatings: "0"
+    enabled: "true"
+    merchantId: "'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51'"
+
+
+
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    updateAverageRating:
+      kvFunction: updateOneWithKV
+      params: [totalRatings, totalRatingScore, isValidRating, updatedAt]
+      where: id
+
+    updateDeviceToken:
+      kvFunction: updateWithKV
+      params: [deviceToken, updatedAt]
+      where: id
+
+    updateWhatsappNotificationEnrollStatus:
+      kvFunction: updateWithKV
+      params: [whatsappNotificationEnrollStatus, updatedAt]
+      where: id
+
+    setIsNewFalse:
+      kvFunction: updateWithKV
+      params: [isNew, updatedAt]
+      where: id
+
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+    updateIsValidRating:
+      kvFunction: updateWithKV
+      params: [isValidRating, updatedAt]
+      where: id
+
+    updateHasDisability:
+      kvFunction: updateWithKV
+      params: [hasDisability, updatedAt]
+      where: id
+
+    updateReferralCodeAndReferredAt:
+      kvFunction: updateWithKV
+      params: [referredAt, referralCode, updatedAt]
+      where: id
+
+    findByReferralCode:
+      kvFunction: findOneWithKV
+      where: referralCode
+
+    updateBlockedState:
+      kvFunction: updateWithKV
+      params: [blocked, updatedAt]
+      where: id
+
+    updateAadhaarVerifiedState:
+      kvFunction: updateOneWithKV
+      params: [aadhaarVerified, updatedAt]
+      where: id
+
+    updateFollowsRide:
+      kvFunction: updateOneWithKV
+      params: [followsRide, updatedAt]
+      where: id
+
+    updateSafetyDrillStatus:
+      kvFunction: updateWithKV
+      params: [hasCompletedMockSafetyDrill, updatedAt]
+      where: id
+
+    findPersonByCustomerReferralCode:
+      kvFunction: findOneWithKV
+      where: customerReferralCode
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantOperatingCityId]
+

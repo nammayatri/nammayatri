@@ -15,6 +15,7 @@
 module SharedLogic.Confirm where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Quote as DQuote
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.CancellationReason
@@ -22,10 +23,10 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalDetails as DRental
 import qualified Domain.Types.SearchRequest as DSReq
@@ -36,6 +37,7 @@ import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -51,8 +53,10 @@ import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSReq
+import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
 import Tools.Event
+import TransactionLogs.Types
 
 data DConfirmReq = DConfirmReq
   { personId :: Id DP.Person,
@@ -99,7 +103,8 @@ confirm ::
     CacheFlow m r,
     EventStreamFlow m r,
     HasField "shortDurationRetryCfg" r RetryCfg,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "version" ::: DeploymentVersion],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     EncFlow m r
   ) =>
@@ -114,7 +119,7 @@ confirm DConfirmReq {..} = do
       DQuote.RentalDetails rentalDetails -> return $ Just rentalDetails.id.getId
       DQuote.DriverOfferDetails driverOffer -> do
         estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
-        when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
+        when (UEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
         when (driverOffer.validTill < now) $
           throwError $ QuoteExpired quote.id.getId
         pure (Just driverOffer.bppQuoteId)
@@ -146,7 +151,7 @@ confirm DConfirmReq {..} = do
   riderPhone <-
     if isValueAddNP
       then mapM decrypt person.mobileNumber
-      else pure $ Just booking.primaryExophone
+      else pure . Just $ prependZero booking.primaryExophone
   let riderName = person.firstName
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   details <- mkConfirmQuoteDetails quote.quoteDetails fulfillmentId
@@ -157,11 +162,11 @@ confirm DConfirmReq {..} = do
     unless (paymentMethodId' `elem` searchRequest.availablePaymentMethods) $
       throwError (InvalidRequest "Payment method not allowed")
     pure paymentMethod
-
+  let fareProduct = QTB.getFareProductType booking.bookingDetails
   -- DB.runTransaction $ do
   _ <- QRideB.createBooking booking
-  _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
-  _ <- QEstimate.updateStatusByRequestId quote.requestId DEstimate.COMPLETED
+  _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just fareProduct}
+  _ <- QEstimate.updateStatusByRequestId DEstimate.COMPLETED quote.requestId
   QPFS.clearCache searchRequest.riderId
   return $
     DConfirmRes
@@ -175,10 +180,16 @@ confirm DConfirmReq {..} = do
         quoteDetails = details,
         searchRequestId = searchRequest.id,
         maxEstimatedDistance = searchRequest.maxDistance,
-        paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> paymentMethod,
+        paymentMethodInfo = mkPaymentMethodInfo <$> paymentMethod,
         ..
       }
   where
+    prependZero :: Text -> Text
+    prependZero str = "0" <> str
+
+    mkPaymentMethodInfo :: DMPM.MerchantPaymentMethod -> DMPM.PaymentMethodInfo
+    mkPaymentMethodInfo DMPM.MerchantPaymentMethod {..} = DMPM.PaymentMethodInfo {..}
+
     mkConfirmQuoteDetails quoteDetails fulfillmentId = do
       case quoteDetails of
         DQuote.OneWayDetails _ -> pure ConfirmOneWayDetails
@@ -196,7 +207,9 @@ confirm DConfirmReq {..} = do
       max estRideEndTimeByDuration estRideEndTimeByDist >= booking.startTime
 
 buildBooking ::
-  MonadFlow m =>
+  ( MonadFlow m,
+    HasFlowEnv m r '["version" ::: DeploymentVersion]
+  ) =>
   DSReq.SearchRequest ->
   Maybe Text ->
   DQuote.Quote ->
@@ -211,6 +224,7 @@ buildBooking ::
 buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
+  deploymentVersion <- asks (.version)
   return $
     DRB.Booking
       { id = Id id,
@@ -246,6 +260,12 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         serviceTierName = quote.serviceTierName,
         vehicleServiceTierType = quote.vehicleServiceTierType,
         serviceTierShortDesc = quote.serviceTierShortDesc,
+        clientBundleVersion = quote.clientBundleVersion,
+        clientSdkVersion = quote.clientSdkVersion,
+        clientDevice = quote.clientDevice,
+        clientConfigVersion = quote.clientConfigVersion,
+        backendConfigVersion = quote.backendConfigVersion,
+        backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         paymentStatus = Nothing
       }
   where

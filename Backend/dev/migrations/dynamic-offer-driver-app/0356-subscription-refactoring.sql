@@ -13,10 +13,6 @@ Alter table atlas_driver_offer_bpp.driver_plan add PRIMARY KEY(driver_id, servic
 
 --- alter in driver fee ---
 
-Alter table atlas_driver_offer_bpp.driver_fee add column service_name Text DEFAULT 'YATRI_SUBSCRIPTION';
-Alter table atlas_driver_offer_bpp.driver_fee add column merchant_operating_city_id Text;
-Alter table atlas_driver_offer_bpp.driver_fee add column vehicle_number Text;
-
 
 ----------- NOTE :- don't run this query in prod, just to rectify the column in local------------
 Alter table atlas_driver_offer_bpp.driver_fee alter column collected_at SET DATA TYPE  timestamp with time zone;

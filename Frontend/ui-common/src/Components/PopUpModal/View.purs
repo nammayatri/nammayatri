@@ -117,6 +117,7 @@ view push state =
                 , padding state.coverImageConfig.padding
                 , imageWithFallback state.coverImageConfig.imageUrl
                 , visibility state.coverImageConfig.visibility
+                , onClick push $ const OnCoverImageClick
                 ]
             ]
         ,   linearLayout
@@ -547,6 +548,7 @@ tipsViewConfig state = let
   , tipSelectedText = state.tipSelectedText
   , showTipInfo = true
   , enableTips = state.isTipEnabled
+  , searchExpired = true
   }
   in tipsViewConfig'
 

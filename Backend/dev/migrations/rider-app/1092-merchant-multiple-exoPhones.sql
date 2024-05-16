@@ -20,22 +20,13 @@ UPDATE atlas_app.merchant
 
 ALTER TABLE atlas_app.merchant ALTER COLUMN exo_phones SET NOT NULL;
 
-ALTER TABLE atlas_app.booking
-    ADD COLUMN provider_exo_phone character varying(255);
 
-UPDATE atlas_app.booking
-    SET provider_exo_phone = 'UNKNOWN';
-
-ALTER TABLE atlas_app.booking ALTER COLUMN provider_exo_phone SET NOT NULL;
-
-ALTER TABLE atlas_app.merchant_service_usage_config
-    ADD COLUMN initiate_call character varying(30);
 UPDATE atlas_app.merchant_service_usage_config
     SET initiate_call = 'Exotel';
 ALTER TABLE atlas_app.merchant_service_usage_config ALTER COLUMN initiate_call SET NOT NULL;
 
 WITH MerchantCallServiceConfigs AS (
-  SELECT T1.id, 'Call_Exotel', CAST ('{
+  SELECT T1.merchant_id, T1.id, 'Call_Exotel', CAST ('{
    "exotelUrl":"https://api.exotel.com/",
    "callbackUrl":"http://localhost:8013/v1/ride/call/statusCallback",
    "apiKey":"xxxxxxx",
@@ -43,7 +34,7 @@ WITH MerchantCallServiceConfigs AS (
    "sid":"xxxxxxx",
    "callerId":"xxxxxxx"
   }' AS json)
-  FROM atlas_app.merchant AS T1
+  FROM atlas_app.merchant_operating_city AS T1
 )
-INSERT INTO atlas_app.merchant_service_config (merchant_id, service_name, config_json)
+INSERT INTO atlas_app.merchant_service_config (merchant_id, merchant_operating_city_id, service_name, config_json)
   (SELECT * FROM MerchantCallServiceConfigs);

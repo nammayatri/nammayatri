@@ -1,0 +1,65 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  CancellationReasonCode: Domain.Types.Extra.CancellationReason
+  Aeson: Data.Aeson
+
+CancellationReason:
+  tableName: cancellation_reason
+
+  types:
+    CancellationStage:
+      enum: "OnSearch, OnInit, OnConfirm, OnAssign"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
+
+  fields:
+    reasonCode : Domain.Types.Extra.CancellationReason.CancellationReasonCode|I
+    description : Text
+    enabled : Bool
+    onSearch : Bool
+    onInit : Bool
+    onConfirm : Bool
+    onAssign : Bool
+    priority : Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <CancellationStage>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CancellationStage>
+
+  beamType:
+    createdAt: Maybe UTCTime
+    updatedAt: Maybe UTCTime
+
+  fromTType:
+    createdAt: getCreatedAt|M
+    updatedAt: getUpdatedAt|M
+
+  toTType:
+    createdAt: Kernel.Prelude.Just|I
+    updatedAt: Kernel.Prelude.Just|I
+
+  sqlType:
+    reasonCode: character varying(255)
+    description: character varying(255)
+    priority: smallint
+
+  default:
+    onSearch: "true"
+    onConfirm: "true"
+    onAssign: "true"
+    priority: "0"
+
+  constraints:
+    reasonCode: PrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
+
+

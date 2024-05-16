@@ -24,8 +24,8 @@ import Engineering.Helpers.Commons (getNewIDWithTag, setText, updateIdMap, flowR
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey, emChatSuggestion)
 import JBridge (clearAudioPlayer, getChatMessages, hideKeyboardOnNavigation, scrollToEnd, sendMessage, showDialer, startAudioPlayer, stopChatListenerService, getKeyInSharedPrefKeys, toast, getLayoutBounds, setMapPadding)
 import Prelude
-import PrestoDOM (BottomSheetState(..), Eval, continue, continueWithCmd, defaultPerformLog, exit, updateAndExit)
-import Screens.HomeScreen.Transformer (getDriverInfo, getSpecialTag)
+import PrestoDOM (BottomSheetState(..), Eval, update, continue, continueWithCmd, defaultPerformLog, exit, updateAndExit)
+import Screens.HomeScreen.Transformer (getDriverInfo)
 import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState)
 import Services.API (RideBookingRes(..), Route, GetDriverLocationResp(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore, setValueToLocalStore)
@@ -56,7 +56,8 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Timers (clearTimerWithId)
 import Storage (getValueToLocalStore)
-import DecodeUtil (stringifyJSON, decodeForeignObject, parseJSON)
+import DecodeUtil (stringifyJSON, decodeForeignAny, parseJSON)
+import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -281,7 +282,7 @@ eval action state = case action of
         Just follower -> do
           if state.data.config.feature.enableChat && follower.priority == 0 && state.props.isRideStarted && not state.props.currentUserOnRide then do
             if not state.props.chatCallbackInitiated then continue state else do
-              _ <- pure $ performHapticFeedback unit
+              void $ pure $ performHapticFeedback unit
               _ <- pure $ setValueToLocalStore READ_MESSAGES (show (length state.data.messages))
               let allMessages = getChatMessages FunctionCall
               continueWithCmd state {data{messages = allMessages, currentStage = ST.ChatWithEM}, props {sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}} [do 
@@ -351,7 +352,7 @@ eval action state = case action of
       else
         continue state
     MessagingView.BackPressed -> do
-      _ <- pure $ performHapticFeedback unit
+      void $ pure $ performHapticFeedback unit
       _ <- pure $ hideKeyboardOnNavigation true
       continueWithCmd state
         [ do
@@ -402,7 +403,7 @@ canStartAudioPlayer state =
   in (status == STOPPED && (checkCurrentFollower currentFollower state.props.isMock)) || (status == RESTARTED)
 
 getMockSosAlarmStatus :: String -> Array String
-getMockSosAlarmStatus key = decodeForeignObject (parseJSON (getKeyInSharedPrefKeys key)) []
+getMockSosAlarmStatus key = decodeForeignAny (parseJSON (getKeyInSharedPrefKeys key)) []
 
 checkCurrentFollower :: ST.Followers -> Boolean -> Boolean
 checkCurrentFollower follower isMock = do

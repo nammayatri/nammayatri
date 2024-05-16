@@ -44,14 +44,15 @@ import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
-import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as Maps
+import Utils.Common.Cac.KeyNameConstants
 
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
@@ -148,7 +149,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
           buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, DRide.CallBased)
         DP.DRIVER -> do
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
-          goHomeConfig <- CQGHC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId")
+          goHomeConfig <- CGHC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId)))
           dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)
           (cancellationCount, isGoToDisabled) <-
             if dghInfo.status == Just DDGR.ACTIVE

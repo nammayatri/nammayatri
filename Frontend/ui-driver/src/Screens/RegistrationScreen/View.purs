@@ -360,7 +360,7 @@ listItem push item state =
     , orientation HORIZONTAL
     , padding $ Padding 12 12 12 12
     , cornerRadius 8.0
-    , visibility $ boolToVisibility $ not item.isHidden
+    , visibility $ boolToVisibility $ compVisibility item
     , stroke $ componentStroke state item
     , background $ compBg state item
     , clickable $ compClickable state item
@@ -413,6 +413,9 @@ listItem push item state =
       statusFailed = (getStatus item.stage state) == ST.FAILED
       retryStr = " " <> "<span style='color:#2194FF'>"<> (getString RETRY_UPLOAD) <>"</span>"
 
+      compVisibility :: ST.StepProgress -> Boolean
+      compVisibility item = not item.isHidden && dependentDocAvailable item state
+
       compImage :: ST.StepProgress -> String
       compImage item = 
         fetchImage FF_ASSET $ case item.stage of
@@ -462,10 +465,10 @@ listItem push item state =
       compStatusImg :: ST.RegistrationScreenState -> ST.StepProgress -> String
       compStatusImg state item = 
         case getStatus item.stage state of
-          ST.COMPLETED -> "ny_ic_green_tick,https://assets.juspay.in/nammayatri/images/driver/ny_ic_green_tick"
-          ST.IN_PROGRESS -> "ny_ic_pending,https://assets.juspay.in/nammayatri/images/driver/ny_ic_pending"
-          ST.NOT_STARTED -> "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_right"
-          ST.FAILED -> "ny_ic_warning_filled_red,https://assets.juspay.in/nammayatri/images/driver/ny_ic_warning_filled_red"
+          ST.COMPLETED -> fetchImage COMMON_ASSET "ny_ic_green_tick"
+          ST.IN_PROGRESS -> fetchImage COMMON_ASSET "ny_ic_pending"
+          ST.NOT_STARTED -> fetchImage COMMON_ASSET "ny_ic_chevron_right"
+          ST.FAILED -> fetchImage COMMON_ASSET "ny_ic_warning_filled_red"
 
       getVerificationMessage :: ST.RegisterationStep -> ST.RegistrationScreenState -> Maybe String
       getVerificationMessage step state = 

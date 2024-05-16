@@ -32,7 +32,7 @@
       };
     };
 
-    location-tracking-service.url = "github:nammayatri/location-tracking-service/86def9d54734c0bfd45375ca97ece0a461254745";
+    location-tracking-service.url = "github:nammayatri/location-tracking-service";
     passetto = {
       url = "github:nammayatri/passetto/nixify";
       inputs = {

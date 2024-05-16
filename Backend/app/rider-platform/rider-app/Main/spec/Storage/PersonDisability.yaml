@@ -1,0 +1,92 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+
+
+PersonDisability:
+  tableName: person_disability
+
+  fields:
+    personId : Id Person
+    disabilityId : Text
+    tag : Text
+    description : Maybe Text
+    createdAt: UTCTime
+    updatedAt : UTCTime
+
+  types: {}
+
+  beamType:
+    createdAt: Maybe UTCTime
+
+  fromTType:
+    createdAt: Kernel.Prelude.fromMaybe updatedAt|I
+
+  toTType:
+    createdAt: Kernel.Prelude.Just|I
+
+  constraints:
+    personId: PrimaryKey
+
+  sqlType:
+    disabilityId: character(36)
+    tag: character varying(255)
+    description: character varying(255)
+
+  queries:
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where: personId
+
+    updateDisabilityByPersonId:
+      kvFunction: updateWithKV
+      params: [disabilityId, tag, description, updatedAt]
+      where: personId
+
+    deleteByPersonId:
+      kvFunction: deleteWithKV
+      where: personId
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+Disability:
+  tableName: disability
+  fields:
+    id: Id Disability
+    tag: Text
+    description: Text
+  excludedFields: [merchantId, merchantOperatingCityId, updatedAt, createdAt]
+  constraints:
+    id: PrimaryKey
+  sqlType:
+    id: character varying(36)
+    tag: character varying(255)
+    description: character varying(255)
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey
+    - create
+    - createMany
+  extraOperations:
+   - EXTRA_QUERY_FILE
+
+DisabilityTranslation:
+  tableName: disability_translation
+  fields:
+    disabilityId: Id DisabilityTranslation
+    language: Text
+    disabilityTag: Text
+    translation: Text
+  excludedFields: [merchantId, merchantOperatingCityId, updatedAt, createdAt]
+  constraints:
+    disabilityId: PrimaryKey
+    language: PrimaryKey
+  sqlType:
+    disabilityId: character varying(36)
+    language: character varying(255)
+    disabilityTag: character varying(255)
+    translation: character varying(255)
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey

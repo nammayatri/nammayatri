@@ -63,10 +63,11 @@ import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.EventTracking as SEVT
 import SharedLogic.Merchant
+import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -80,6 +81,7 @@ import Tools.Error
 import Tools.Notifications
 import qualified Tools.Payment as Payment
 import qualified Tools.PaymentNudge as PaymentNudge
+import Utils.Common.Cac.KeyNameConstants
 
 -- create order -----------------------------------------------------
 createOrder :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id INV.Invoice -> Flow Payment.CreateOrderResp
@@ -255,13 +257,13 @@ processPayment ::
   [INV.Invoice] ->
   m ()
 processPayment _ driver orderId sendNotification (serviceName, subsConfig) invoices = do
-  transporterConfig <- SCT.findByMerchantOpCityId driver.merchantOperatingCityId (Just driver.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId driver.merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let invoice = listToMaybe invoices
   let driverFeeIds = (.driverFeeId) <$> invoices
   Redis.whenWithLockRedis (paymentProcessingLockKey driver.id.getId) 60 $ do
     when ((invoice <&> (.paymentMode)) == Just INV.AUTOPAY_INVOICE && (invoice <&> (.invoiceStatus)) == Just INV.ACTIVE_INVOICE) $ do
-      maybe (pure ()) (QDF.updateAutopayPaymentStageById (Just EXECUTION_SUCCESS)) (invoice <&> (.driverFeeId))
+      maybe (pure ()) (QDF.updateAutopayPaymentStageById (Just EXECUTION_SUCCESS) (Just now)) (invoice <&> (.driverFeeId))
     QDF.updateStatusByIds CLEARED driverFeeIds now
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
     updatePaymentStatus driver.id driver.merchantOperatingCityId serviceName
@@ -286,15 +288,15 @@ updatePaymentStatus driverId merchantOpCityId serviceName = do
     calcDueAmount =
       map
         ( \dueInvoice ->
-            SLDriverFee.roundToHalf $
-              fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst
+            SLDriverFee.roundToHalf dueInvoice.currency $
+              dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst
         )
 
 notifyPaymentSuccessIfNotNotified :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> Id DOrder.PaymentOrder -> m ()
 notifyPaymentSuccessIfNotNotified driver orderId = do
   let key = "driver-offer:SuccessNotif-" <> orderId.getId
   sendNotificationIfNotSent key 86400 $ do
-    notifyPaymentSuccess driver.merchantOperatingCityId driver.id driver.deviceToken orderId
+    notifyPaymentSuccess driver.merchantOperatingCityId driver orderId
 
 shouldSendSuccessNotification :: Payment.MandateStatus -> Bool
 shouldSendSuccessNotification mandateStatus = mandateStatus `notElem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]
@@ -311,6 +313,7 @@ notifyAndUpdateInvoiceStatusIfPaymentFailed ::
   m ()
 notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventName mbBankErrorCode fromWebhook (serviceName, subsConfig) = do
   activeExecutionInvoice <- QIN.findByIdWithPaymenModeAndStatus (cast orderId) INV.AUTOPAY_INVOICE INV.ACTIVE_INVOICE
+  now <- getCurrentTime
   let paymentMode = if isJust activeExecutionInvoice then DP.AUTOPAY else DP.MANUAL
   let (notifyFailure, updateFailure) = toNotifyFailure (isJust activeExecutionInvoice) eventName orderStatus
   when (updateFailure || (not fromWebhook && notifyFailure)) $ do
@@ -318,7 +321,7 @@ notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventNa
     case activeExecutionInvoice of
       Just invoice' -> do
         QDF.updateAutoPayToManual invoice'.driverFeeId
-        QDF.updateAutopayPaymentStageById (Just EXECUTION_FAILED) invoice'.driverFeeId
+        QDF.updateAutopayPaymentStageById (Just EXECUTION_FAILED) (Just now) invoice'.driverFeeId
       Nothing -> pure ()
     when (subsConfig.sendInAppFcmNotifications) $ do
       notifyPaymentFailureIfNotNotified paymentMode
@@ -388,8 +391,9 @@ processNotification ::
   m ()
 processNotification merchantOpCityId notification notificationStatus respCode respMessage driverFee driver fromWebhook = do
   let driverFeeId = driverFee.id
+  now <- getCurrentTime
   unless (notification.status == Juspay.SUCCESS) $ do
-    transporterConfig <- SCT.findByMerchantOpCityId driver.merchantOperatingCityId (Just driver.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+    transporterConfig <- SCTC.findByMerchantOpCityId driver.merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
     case notificationStatus of
       Juspay.NOTIFICATION_FAILURE -> do
         --- here based on notification status failed update driver fee to payment_overdue and reccuring invoice----
@@ -402,7 +406,7 @@ processNotification merchantOpCityId notification notificationStatus respCode re
             then do
               QIN.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.ACTIVE_INVOICE [driverFeeId] (Just INV.AUTOPAY_INVOICE)
               QDF.updateManualToAutoPay driverFeeId
-              QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) driverFeeId
+              QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) (Just now) driverFeeId
               QDF.updateNotificationRetryCountById (driverFee.notificationRetryCount + 1) driverFeeId
             else do
               QDF.updateAutoPayToManual driverFeeId
@@ -412,7 +416,7 @@ processNotification merchantOpCityId notification notificationStatus respCode re
         unless (driverFee.status == CLEARED) $ do
           QIN.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.ACTIVE_INVOICE [driverFeeId] (Just INV.AUTOPAY_INVOICE)
           QDF.updateManualToAutoPay driverFeeId
-        QDF.updateAutopayPaymentStageById (Just EXECUTION_SCHEDULED) driverFeeId
+        QDF.updateAutopayPaymentStageById (Just EXECUTION_SCHEDULED) (Just now) driverFeeId
       _ -> pure ()
     QNTF.updateNotificationStatusAndResponseInfoById notification.id notificationStatus respCode respMessage
 
@@ -433,7 +437,8 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
       payerAppName = upiDetails >>= (.payerAppName)
       mandatePaymentFlow = upiDetails >>= (.txnFlowType)
   mbExistingMandate <- QM.findById mandateId
-  when (isNothing mbExistingMandate) $ QM.create =<< mkMandate payerApp payerAppName mandatePaymentFlow
+  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
+  when (isNothing mbExistingMandate) $ QM.create =<< mkMandate currency payerApp payerAppName mandatePaymentFlow
   when (mandateStatus == Payment.ACTIVE) $ do
     Redis.withWaitOnLockRedisWithExpiry (mandateProcessingLockKey driverId.getId) 60 60 $ do
       --- do not update payer vpa from euler for older active mandates also we update only when autopayStatus not suspended because on suspend we make the mandate inactive in table
@@ -463,12 +468,12 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
             QDF.updateAllExecutionPendingToManualOverdueByDriverIdForServiceName (cast driver.id) serviceName
             QIN.inActivateAllAutopayActiveInvoices (cast driver.id) serviceName
             when (subsConfig.sendInAppFcmNotifications) $ do
-              PaymentNudge.notifyMandatePaused driver.id driver.merchantId driver.deviceToken driver.language
+              PaymentNudge.notifyMandatePaused driver
           when (mandateStatus == Payment.REVOKED) $ do
             QDF.updateAllExecutionPendingToManualOverdueByDriverIdForServiceName (cast driver.id) serviceName
             QIN.inActivateAllAutopayActiveInvoices (cast driver.id) serviceName
             when (subsConfig.sendInAppFcmNotifications) $ do
-              PaymentNudge.notifyMandateCancelled driver.id driver.merchantId driver.deviceToken driver.language
+              PaymentNudge.notifyMandateCancelled driver
           fork "track autopay status" $ SEVT.trackAutoPayStatusChange driverPlan $ show (castAutoPayStatus mandateStatus)
         Nothing -> do
           (autoPayStatus, mbDriverPlanByDriverId) <- ADPlan.getSubcriptionStatusWithPlan serviceName driverId
@@ -484,7 +489,7 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
       Payment.PAUSED -> Just DI.PAUSED_PSP
       Payment.FAILURE -> Just DI.MANDATE_FAILED
       Payment.EXPIRED -> Just DI.MANDATE_EXPIRED
-    mkMandate payerApp payerAppName mandatePaymentFlow = do
+    mkMandate currency payerApp payerAppName mandatePaymentFlow = do
       now <- getCurrentTime
       return $
         DM.Mandate

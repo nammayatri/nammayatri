@@ -235,6 +235,8 @@ type LayoutBound =
 data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup | WaitingCharges | TollOrParkingCharges
 derive instance genericRateCardType :: Generic RateCardType _
 instance eqRateCardType :: Eq RateCardType where eq = genericEq
+instance decodeRateCardType :: Decode RateCardType where decode = defaultEnumDecode
+instance encodeRateCardType :: Encode RateCardType where encode = defaultEnumEncode
 
 type FareList = {
   key :: String,
@@ -539,3 +541,15 @@ instance decodeSosStatus :: Decode SosStatus where decode = defaultEnumDecode
 instance encodeSosStatus  :: Encode SosStatus where encode = defaultEnumEncode
 instance eqSosStatus :: Eq SosStatus where eq = genericEq
 
+data ProviderType = ONUS | OFFUS
+
+derive instance genericProviderType :: Generic ProviderType _
+instance eqProviderType :: Eq ProviderType where eq = genericEq
+instance showProviderType :: Show ProviderType where show = genericShow
+instance encodeProviderType :: Encode ProviderType where encode = defaultEnumEncode
+instance decodeProviderType :: Decode ProviderType where decode = defaultEnumDecode
+
+type Price = {
+    amount :: Number
+  , currency :: String
+}

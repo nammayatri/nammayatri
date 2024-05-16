@@ -18,7 +18,7 @@ module API.Dashboard.RideBooking.Confirm where
 
 import qualified API.UI.Confirm as UC
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as Quote
 import Environment

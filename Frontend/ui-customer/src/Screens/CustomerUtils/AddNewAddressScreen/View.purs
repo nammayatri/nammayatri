@@ -85,7 +85,7 @@ view push state =
           _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" pickupZoomLevel 0.0 0.0 push MAPREADY)
           pure $ HU.setText (EHC.getNewIDWithTag "SavedLocationEditText") (state.data.address)
           pure $ HU.setText (EHC.getNewIDWithTag "SaveAsEditText") (state.data.addressSavedAs)
-          _ <- runEffectFn1 JB.locateOnMap JB.locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = pickupZoomLevel, labelId = EHC.getNewIDWithTag "AddAddressPin"}
+          -- _ <- runEffectFn1 JB.locateOnMap JB.locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = pickupZoomLevel, labelId = EHC.getNewIDWithTag "AddAddressPin"}
           _ <- if (state.data.activeIndex == Just 2 && state.props.showSavePlaceView) then JB.requestKeyboardShow (EHC.getNewIDWithTag ("SaveAsEditText")) else pure unit
           pure unit
           ) (const AfterRender)

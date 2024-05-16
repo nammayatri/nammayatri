@@ -4,6 +4,8 @@ let sec = ./secrets/rider-app.dhall
 
 let globalCommon = ../generic/common.dhall
 
+let ondcUrl = "https://analytics-api.aws.ondc.org/v1/api/push-txn-logs"
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -183,16 +185,14 @@ let jobInfoMapx =
       ]
 
 let cacConfig =
-        { host = "http://localhost:8080"
-        , interval = 10
-        , tenants = [ "dev", "test" ]
-        , retryConnection = False
-        }
-      : { host : Text
-        , interval : Natural
-        , tenants : List Text
-        , retryConnection : Bool
-        }
+      { host = "http://localhost:8080"
+      , interval = 10
+      , tenant = "dev"
+      , retryConnection = False
+      , cacExpTime = +86400
+      }
+
+let cacTenants = [ "dev", "test" ]
 
 let superPositionConfig =
         { host = "http://localhost:8080"
@@ -290,8 +290,11 @@ in  { esqDBCfg
     , _version = "2.0.0"
     , hotSpotExpiry = +604800
     , cacConfig
+    , cacTenants
     , superPositionConfig
     , collectRouteData = True
     , kafkaClickhouseCfg
     , riderClickhouseCfg
+    , ondcTokenMap = sec.ondcTokenMap
+    , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
     }

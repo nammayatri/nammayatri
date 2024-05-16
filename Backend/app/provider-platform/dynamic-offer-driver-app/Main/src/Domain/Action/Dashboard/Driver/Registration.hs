@@ -37,6 +37,7 @@ import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.FleetDriverAssociation as FDV
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import Environment
 import Kernel.Beam.Functions
@@ -85,7 +86,8 @@ uploadDocument merchantShortId opCity driverId_ req = do
       ImageValidateRequest
         { image = req.imageBase64,
           imageType = mapDocumentType req.imageType,
-          rcNumber = req.rcNumber
+          rcNumber = req.rcNumber,
+          vehicleCategory = Nothing
         }
   pure $ Common.UploadDocumentResp {imageId = cast res.imageId}
 
@@ -115,6 +117,7 @@ registerRC merchantShortId opCity driverId_ Common.RegisterRCReq {..} = do
     ( DriverRCReq
         { imageId = cast imageId,
           vehicleCategory = Nothing,
+          vehicleDetails = Nothing,
           ..
         }
     )
@@ -157,13 +160,18 @@ auth merchantShortId opCity req = do
     DReg.auth
       True
       DReg.AuthReq
-        { mobileNumber = req.mobileNumber,
-          mobileCountryCode = req.mobileCountryCode,
+        { mobileNumber = Just req.mobileNumber,
+          mobileCountryCode = Just req.mobileCountryCode,
           merchantId = merchant.id.getId,
           merchantOperatingCity = Just opCity,
           registrationLat = Nothing,
-          registrationLon = Nothing
+          registrationLon = Nothing,
+          name = Nothing,
+          email = Nothing,
+          identifierType = Just SP.MOBILENUMBER
         }
+      Nothing
+      Nothing
       Nothing
       Nothing
   pure $ Common.AuthRes {authId = res.authId.getId, attempts = res.attempts}

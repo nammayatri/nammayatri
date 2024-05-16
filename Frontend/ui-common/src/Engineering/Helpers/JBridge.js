@@ -1071,6 +1071,25 @@ export const animateCamera = function (lat) {
   };
 };
 
+export const moveCameraWithoutAnimation = function (lat) {
+  return function (lng) {
+    return function (zoom) {
+      return function (zoomType) {
+        return function () {
+          try {
+            if (window.JBridge.moveCameraWithoutAnimation){
+              window.JBridge.moveCameraWithoutAnimation(lat, lng, zoom, zoomType);
+            }
+          } catch (err) {
+            window.JBridge.moveCameraWithoutAnimation(lat, lng, zoom);
+          }
+        };
+      };
+    };
+  };
+};
+
+
 export const showMapImpl = function (id) {
   return function (isEnableCurrentLocation) {
     return function (type) {
@@ -1081,8 +1100,8 @@ export const showMapImpl = function (id) {
               return function (action) {
                 return function () {
                   const callback = callbackMapper.map(function (key, lat, lon) {
-                    console.log("Lat long ::" , lat, lon);
-                    if(lat != 0.0 && lon != 0.0){
+                    console.log("Lat long ::" , sourceLat, sourceLon);
+                    if(sourceLat != 0.0 && sourceLon != 0.0 ){
                       animateCamera(sourceLat)(sourceLon)(zoom)("ZOOM")();
                     }
                     window.x = cb;
@@ -1818,6 +1837,8 @@ export const showKeyboard = function (id) {
 
 export const locateOnMap = (configObj) => {
   if (JBridge.locateOnMapV2) {
+    configObj.lat = configObj.lat == 0.0 ? "0.0" : configObj.lat.toString();
+    configObj.lon = configObj.lon == 0.0 ? "0.0" : configObj.lon.toString();
     return JBridge.locateOnMapV2(JSON.stringify(configObj));
   } else {
     try {
@@ -1880,35 +1901,8 @@ export const shareImageMessage = function (message) {
   }
 }
 
-export const showInAppNotification = function (title) {
-  return function (message) {
-    return function (onTapAction) {
-      return function (action1Text) {
-        return function (action2Text) {
-          return function (action1Image) {
-            return function (action2Image) {
-              return function (channelId) {
-                return function (duration) {
-                  return window.JOS.emitEvent("java")("onEvent")(JSON.stringify({
-                    event: "in_app_notification",
-                    title: title,
-                    message: message,
-                    onTapAction: onTapAction,
-                    action1Text: action1Text,
-                    action2Text: action2Text,
-                    action1Image: action1Image,
-                    action2Image: action2Image,
-                    channelId: channelId,
-                    durationInMilliSeconds: duration
-                  }))()
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+export const showInAppNotification = function (payload) {
+  return window.JOS.emitEvent("java")("onEvent")(JSON.stringify(payload))()
 }
 
 export const openWhatsAppSupport = function (contactNumber) {
@@ -2284,6 +2278,16 @@ export const withinTimeRange = function (startTime) {
       } catch (err) {
         return false;
       }
+    }
+  }
+}
+
+export const timeValidity = function (time1) {
+  return function (time2) {
+    try {
+      return time2 > time1;
+    } catch (err) {
+      return false;
     }
   }
 }

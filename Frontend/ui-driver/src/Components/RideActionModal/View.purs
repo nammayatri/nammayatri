@@ -59,6 +59,7 @@ import Timers as ET
 import Types.App (defaultGlobalState)
 import Mobility.Prelude
 import Common.Types.Config as CTC
+import Resource.Constants as RC
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -809,33 +810,68 @@ rideTierAndCapacity push config =
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
-  , background Color.grey700 
+  , background Color.blue600 
   , gravity CENTER
-  , padding $ Padding 8 8 8 8
+  , padding $ Padding paddingLeft 4 4 4
   , margin $ MarginBottom 12
-  , cornerRadius 4.0
-  ][ textView $
+  , cornerRadius 18.0
+  ][ linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , cornerRadius 18.0
+      , background Color.blue800
+      , padding $ Padding 8 2 8 2
+      , gravity CENTER_VERTICAL
+      , visibility $ boolToVisibility $ Maybe.fromMaybe false config.acRide
+      ][ imageView
+          [ height $ V 16
+          , width $ V 16
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_ac_white"
+          ]
+        , textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text "AC"
+          , color Color.white900
+          , margin $ MarginLeft 5
+          , padding $ PaddingBottom 2
+          ] <> FontStyle.subHeading1 TypoGraphy
+      ]
+    , textView $
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
-      , text config.serviceTierAndAC
+      , text $ RC.serviceTierMapping config.serviceTierAndAC config.acRide
       , color Color.black700
+      , margin $ MarginHorizontal 6 6
+      , padding $ PaddingBottom 1
       ] <> FontStyle.body1 TypoGraphy
+    , linearLayout
+      [ width $ V 5
+      , height $ V 5
+      , background Color.black700
+      , cornerRadius 4.0
+      , margin $ MarginRight 6
+      , visibility $ boolToVisibility $ Maybe.isJust config.capacity
+      ][]
     , imageView
       [ height $ V 16
       , width $ V 16
       , imageWithFallback $ fetchImage FF_ASSET "ic_profile_active"
       , visibility $ boolToVisibility $ Maybe.isJust config.capacity
-      , margin $ MarginHorizontal 4 2
+      , alpha 0.9
+      , margin $ MarginRight 2
       ]
     , textView $
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , color Color.black700
+      , margin $ MarginRight 10
       ] <> FontStyle.body1 TypoGraphy
         <> case config.capacity of
             Maybe.Just cap -> [text $ show cap]
             Maybe.Nothing -> [visibility GONE]
   ] 
+  where paddingLeft = if config.acRide == Maybe.Just true then 4 else 10
 
 normalRideInfoView :: (Action -> Effect Unit) -> Config -> forall w. Array (PrestoDOM (Effect Unit) w)
 normalRideInfoView push config =
@@ -860,16 +896,26 @@ normalRideInfoView push config =
               ]
               []
           ]
-      , textView
-          $ [ text $ getString RIDE_TOLL_FARE_INCLUDES
-            , color Color.black650
-            , width MATCH_PARENT
-            , height WRAP_CONTENT
-            , margin $ MarginTop 12
-            , visibility $ boolToVisibility config.tollText
-            ]
-          <> FontStyle.body1 TypoGraphy
-      ]
+      , linearLayout[
+          height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , visibility $ boolToVisibility config.hasToll
+        , margin $ MarginTop 12
+        ][
+          imageView[
+            height $ V 20
+          , width $ V 20
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_blue_toll"
+          ]
+        , textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $ getString RIDE_TOLL_FARE_INCLUDES
+          , color Color.blue800
+          , margin $ MarginLeft 4
+          ] <> FontStyle.body1 TypoGraphy
+        ]
+      ] 
   ]
 
 separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w
@@ -1134,7 +1180,6 @@ getRideStartRemainingTimeTitle config =
       ST.Rental -> getVarString YOUR_RENTAL_RIDE_STARTS_IN time
       ST.Intercity -> getVarString YOUR_INTERCITY_RIDE_STARTS_IN time
       _ -> ""
-  
 
 showRideStartRemainingTime :: Config -> Boolean
 showRideStartRemainingTime config = ((config.rideType == ST.Rental || config.rideType == ST.Intercity) && (getCurrentUTC "") < (Maybe.fromMaybe (getCurrentUTC "") config.rideScheduledTime)) && config.startRideActive

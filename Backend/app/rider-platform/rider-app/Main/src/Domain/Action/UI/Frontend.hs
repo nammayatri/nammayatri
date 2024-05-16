@@ -27,13 +27,14 @@ import Domain.Action.UI.Quote
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as SRide
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
@@ -48,6 +49,7 @@ import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Notifications as Notify
+import TransactionLogs.Types
 
 data GetPersonFlowStatusRes = GetPersonFlowStatusRes
   { oldStatus :: Maybe DPFS.FlowStatus,
@@ -74,13 +76,13 @@ getPersonFlowStatus personId merchantId mIsPolling = do
   case personStatus of
     DPFS.SEARCHING _ _ -> expirePersonStatusIfNeeded personStatus Nothing
     DPFS.GOT_ESTIMATE _ _ -> expirePersonStatusIfNeeded personStatus Nothing
-    DPFS.WAITING_FOR_DRIVER_OFFERS estimateId _ -> do
+    DPFS.WAITING_FOR_DRIVER_OFFERS estimateId _ _ -> do
       estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
       findValueAddNP estimate.providerId personStatus
     DPFS.DRIVER_OFFERED_QUOTE estimateId _ -> do
       estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
       findValueAddNP estimate.providerId personStatus
-    DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ -> expirePersonStatusIfNeeded personStatus Nothing
+    DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ _ -> expirePersonStatusIfNeeded personStatus Nothing
     DPFS.RIDE_PICKUP {} -> handleRideTracking personId merchantId mIsPolling personStatus
     DPFS.RIDE_STARTED {} -> handleRideTracking personId merchantId mIsPolling personStatus
     DPFS.DRIVER_ARRIVED {} -> handleRideTracking personId merchantId mIsPolling personStatus
@@ -98,7 +100,7 @@ getPersonFlowStatus personId merchantId mIsPolling = do
           _ <- QPFS.updateStatus personId DPFS.IDLE
           return $ GetPersonFlowStatusRes (Just personStatus) DPFS.IDLE isValueAddNp
 
-notifyEvent :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], Esq.EsqDBReplicaFlow m r, MonadFlow m) => Id DP.Person -> NotifyEventReq -> m NotifyEventResp
+notifyEvent :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], Esq.EsqDBReplicaFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Id DP.Person -> NotifyEventReq -> m NotifyEventResp
 notifyEvent personId req = do
   _ <- case req.event of
     RATE_DRIVER_SKIPPED -> QPFS.updateStatus personId DPFS.IDLE

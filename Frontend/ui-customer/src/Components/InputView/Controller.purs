@@ -64,7 +64,7 @@ type ImageConfig =
 config :: InputViewConfig
 config = {
   backIcon : {
-    imageName : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/mobilitypaytm/user/ny_ic_chevron_left_white.png"
+    imageName : "ny_ic_chevron_left_white,https://assets.moving.tech/beckn/mobilitypaytm/user/ny_ic_chevron_left_white.png"
     , height : V 24
     , width : V 24
     , padding : PaddingTop 16 

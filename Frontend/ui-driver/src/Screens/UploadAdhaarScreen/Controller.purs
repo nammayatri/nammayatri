@@ -16,7 +16,7 @@
 module Screens.UploadAdhaarScreen.Controller where
 
 import Prelude (pure, (==), unit, ($), class Show, bind, discard)
-import PrestoDOM (Eval, continue, exit, continueWithCmd)
+import PrestoDOM (Eval, update, continue, exit, continueWithCmd)
 import Screens.Types (UploadAdhaarScreenState)
 import Components.RegistrationModal as RegistrationModalController
 import Components.PrimaryButton as PrimaryButton
@@ -83,7 +83,7 @@ eval (CallBackImageUpload image imageName imagePath) state = if(state.props.clic
                                             else if(state.props.clickedButtonType == "back") then continue $ state {data {imageBack = image}}
                                               else continue state
                                               
-eval _ state = continue state
+eval _ state = update state
 
 
 

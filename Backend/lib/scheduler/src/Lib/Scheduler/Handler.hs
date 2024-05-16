@@ -152,8 +152,9 @@ executeTask SchedulerHandle {..} (AnyJob job) = do
   let begTime = job.scheduledAt
   endTime <- getCurrentTime
   let diff = T.diffUTCTime endTime begTime
-  logDebug $ "diffTime in picking up the job : " <> show (nominalDiffTimeToSeconds diff)
-  fork "" $ addGenericLatency "Job_pickup" $ Milliseconds (div (fromEnum diff) 1000000000)
+      diffInMill = Milliseconds (div (fromEnum diff) 1000000000)
+  logDebug $ "diffTime in picking up the job : " <> show diffInMill
+  fork "" $ addGenericLatency "Job_pickup" $ diffInMill
   case findJobHandlerFunc job jobHandlers of
     Nothing -> failExecution jobType' "No handler function found for the job type = "
     Just handlerFunc_ -> do
@@ -178,6 +179,9 @@ executeTask SchedulerHandle {..} (AnyJob job) = do
 registerExecutionResult :: forall t. (JobProcessor t) => SchedulerHandle t -> AnyJob t -> ExecutionResult -> SchedulerM ()
 registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
   let jobType' = show (fromSing $ jobType jobInfo)
+      storedJobInfo = storeJobInfo jobInfo
+  when (storedJobType storedJobInfo == "SendSearchRequestToDriver") $
+    logDebug $ "Executed scheduled search entry: " <> show (toJSON (AnyJob job))
   logDebug $ "Current Job Id with Status : " <> show id <> " " <> show result
   case result of
     DuplicateExecution -> do
@@ -187,7 +191,7 @@ registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
       markAsComplete jobType' job.id
       fork "" $ incrementStreamCounter ("Executor_" <> show jobType')
     Terminate description -> do
-      logInfo $ "job terminated on try " <> show (currErrors + 1) <> "; reason: " <> description
+      logError $ "job terminated on try " <> show (currErrors + 1) <> "; with jobId: " <> show job.id <> "; reason: " <> description
       markAsFailed jobType' job.id
     ReSchedule reScheduledTime -> do
       logInfo $ "job rescheduled on time = " <> show reScheduledTime <> " jobType :" <> jobType'
@@ -196,10 +200,10 @@ registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
       let newErrorsCount = job.currErrors + 1
        in if newErrorsCount >= job.maxErrors
             then do
-              logError $ "retries amount exceeded, job failed after try " <> show newErrorsCount
+              logError $ "retries amount exceeded for jobId:" <> show job.id <> ", job failed after try " <> show newErrorsCount
               updateErrorCountAndFail jobType' job.id newErrorsCount
             else do
-              logInfo $ "try " <> show newErrorsCount <> " was not successful, trying again"
+              logError $ "try " <> show newErrorsCount <> " was not successful for jobId:" <> show job.id <> ", trying again"
               waitBeforeRetry <- asks (.waitBeforeRetry)
               now <- getCurrentTime
               reScheduleOnError jobType' j newErrorsCount $

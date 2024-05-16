@@ -22,7 +22,6 @@ module Domain.Action.Beckn.Cancel
   )
 where
 
-import qualified Data.HashMap.Strict as HM
 import Data.Maybe (listToMaybe)
 import Domain.Action.UI.Ride.CancelRide (driverDistanceToPickup)
 import qualified Domain.Types.Booking as SRB
@@ -31,9 +30,10 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.TransporterConfig as DTC
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchTry as ST
+import Environment
 import EulerHS.Prelude
 import Kernel.External.Maps
-import Kernel.Prelude (NominalDiffTime, roundToIntegral)
+import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -41,14 +41,14 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
-import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.Cancel
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
-import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.SearchTryLocker as CS
+import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as QM
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as QDI
@@ -60,13 +60,16 @@ import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
+import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
+import Utils.Common.Cac.KeyNameConstants
 
 data CancelReq = CancelReq
   { bookingId :: Id SRB.Booking,
-    cancelStatus :: Maybe Text
+    cancelStatus :: Maybe Text,
+    userReallocationEnabled :: Maybe Bool
   }
   deriving (Show)
 
@@ -76,24 +79,12 @@ newtype CancelSearchReq = CancelSearchReq
   deriving (Show)
 
 cancel ::
-  ( EsqDBFlow m r,
-    Esq.EsqDBReplicaFlow m r,
-    CacheFlow m r,
-    HasHttpClientOptions r c,
-    EncFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasLongDurationRetryCfg r c,
-    EventStreamFlow m r,
-    LT.HasLocationService m r,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
-    HasField "searchRequestExpirationSeconds" r NominalDiffTime,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
-  ) =>
   CancelReq ->
   DM.Merchant ->
   SRB.Booking ->
-  m ()
-cancel req merchant booking = do
+  Maybe ST.SearchTry ->
+  Flow Bool
+cancel req merchant booking mbActiveSearchTry = do
   CS.whenBookingCancellable booking.id $ do
     mbRide <- QRide.findActiveByRBId req.bookingId
     whenJust mbRide $ \ride -> do
@@ -120,7 +111,7 @@ cancel req merchant booking = do
         logDebug $ "RideCancelled Coin Event by customer distance to pickup" <> show disToPickup
         logDebug "RideCancelled Coin Event by customer"
         DC.driverCoinsEvent ride.driverId merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)
-        transporterConfig <- SCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+        transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
 
         whenJust booking.riderId (DP.addDriverToRiderCancelledList ride.driverId)
         when transporterConfig.canAddCancellationFee do
@@ -132,13 +123,18 @@ cancel req merchant booking = do
 
     logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
 
-    whenJust mbRide $ \ride ->
-      fork "cancelRide - Notify driver" $ do
-        driver <- QPers.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-        Notify.notifyOnCancel booking.merchantOperatingCityId booking driver.id driver.deviceToken bookingCR.source
-
-    mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
+    isReallocated <-
+      case mbRide of
+        Just ride -> do
+          driver <- QPers.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+          fork "cancelRide - Notify driver" $
+            Notify.notifyOnCancel booking.merchantOperatingCityId booking driver bookingCR.source
+          isValueAddNP <- CQVAN.isValueAddNP booking.bapId
+          vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+          reAllocateBookingIfPossible isValueAddNP (fromMaybe False req.userReallocationEnabled) merchant booking ride driver vehicle bookingCR
+        Nothing -> return False
     whenJust mbActiveSearchTry $ cancelSearch merchant.id
+    return isReallocated
   where
     buildBookingCancellationReason = do
       return $
@@ -185,14 +181,13 @@ cancelSearch ::
   ST.SearchTry ->
   m ()
 cancelSearch _merchantId searchTry = do
-  CS.whenSearchTryCancellable searchTry.id $ do
-    driverSearchReqs <- QSRD.findAllActiveBySRId searchTry.requestId
-    QST.cancelActiveTriesByRequestId searchTry.requestId
-    QSRD.setInactiveBySRId searchTry.requestId
-    QDQ.setInactiveBySRId searchTry.requestId
-    for_ driverSearchReqs $ \driverReq -> do
-      driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-      Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driverReq.driverId driver_.deviceToken driverReq.searchTryId
+  driverSearchReqs <- QSRD.findAllActiveBySRId searchTry.requestId
+  QST.cancelActiveTriesByRequestId searchTry.requestId
+  QSRD.setInactiveAndPulledByIds $ (.id) <$> driverSearchReqs
+  QDQ.setInactiveBySRId searchTry.requestId
+  for_ driverSearchReqs $ \driverReq -> do
+    driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
+    Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driver_ driverReq.searchTryId
 
 validateCancelSearchRequest ::
   ( CacheFlow m r,

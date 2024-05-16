@@ -168,6 +168,7 @@ library
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.EstimateRepetitionEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.NewMessageEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.QuoteRepetitionEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent
@@ -295,6 +296,7 @@ library
     , record-dot-preprocessor
     , record-hasfield
     , regex-applicative
+    , regex-posix
     , relude
     , resource-pool
     , resourcet

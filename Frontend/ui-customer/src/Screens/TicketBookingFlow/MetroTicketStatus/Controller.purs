@@ -16,7 +16,7 @@ module Screens.TicketBookingFlow.MetroTicketStatus.Controller where
 
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude 
-import PrestoDOM (Eval, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
+import PrestoDOM (Eval, update, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
 import Screens (ScreenName(..), getScreen)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types 
@@ -131,5 +131,5 @@ eval (CountDown seconds status timerID) state = do
     else do
       continue $ state { data { timerId = timerID } }
 
-eval _ state = continue state
+eval _ state = update state
 

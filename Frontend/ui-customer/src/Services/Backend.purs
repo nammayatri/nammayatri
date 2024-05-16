@@ -61,15 +61,18 @@ import MerchantConfig.Types (GeoCodeConfig)
 import Debug
 import Effect.Uncurried (runEffectFn9)
 import Engineering.Helpers.BackTrack (liftFlowBT)
+import SessionCache
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
     regToken <- loadS $ show REGISTERATION_TOKEN
     pure $ Headers $ [   Header "Content-Type" "application/json",
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                        Header "x-config-version" (getValueFromWindow "CONFIG_VERSION"),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
-                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS),
+                        Header "client-id" (getValueToLocalStore CUSTOMER_CLIENT_ID)
                     ] <> case regToken of
                         Nothing -> []
                         Just token -> [Header "token" token]
@@ -81,9 +84,11 @@ getHeaders' val isGzipCompressionEnabled = do
     regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
     lift $ lift $ pure $ Headers $ [   Header "Content-Type" "application/json",
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                        Header "x-config-version" (getValueToLocalStore CONFIG_VERSION),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
-                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS),
+                        Header "client-id" (getValueToLocalStore CUSTOMER_CLIENT_ID)
                     ] <> case regToken of
                         Nothing -> []
                         Just token -> [Header "token" token]
@@ -392,6 +397,15 @@ selectEstimateBT payload estimateId = do
         withAPIResultBT (EP.selectEstimate estimateId) identity errorHandler (lift $ lift $ callAPI headers (SelectEstimateReq estimateId payload))
     where
       errorHandler errorPayload = do
+            let errResp = errorPayload.response
+                codeMessage = decodeError errResp.errorMessage "errorCode"
+            if  errorPayload.code == 400 && codeMessage == "SEARCH_REQUEST_EXPIRED" then
+                pure $ toast (getString ESTIMATES_EXPIRY_ERROR)
+            else if errorPayload.code == 400 then
+                pure $ toast codeMessage
+            else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = SearchLocationModel}})
+            _ <- pure $ setValueToLocalStore LOCAL_STAGE "SearchLocationModel"
             BackT $ pure GoBack
 
 selectEstimate payload estimateId = do
@@ -400,11 +414,12 @@ selectEstimate payload estimateId = do
     where
         unwrapResponse (x) = x
 
-makeEstimateSelectReq :: Boolean -> Maybe Int -> DEstimateSelect
-makeEstimateSelectReq isAutoAssigned tipForDriver= DEstimateSelect {
+makeEstimateSelectReq :: Boolean -> Maybe Int -> Array String -> DEstimateSelect
+makeEstimateSelectReq isAutoAssigned tipForDriver otherSelectedEstimates = DEstimateSelect {
       "customerExtraFee": tipForDriver,
       "autoAssignEnabled": isAutoAssigned,
-      "autoAssignEnabledV2": isAutoAssigned
+      "autoAssignEnabledV2": isAutoAssigned,
+      "otherSelectedEstimates": otherSelectedEstimates 
     }
 
 ------------------------------------------------------------------------ SelectList Function ------------------------------------------------------------------------------------------
@@ -430,6 +445,13 @@ cancelRideBT payload bookingId = do
       errorHandler errorPayload = do
             BackT $ pure GoBack
 
+cancelRide :: CancelReq -> String -> Flow GlobalState (Either ErrorResponse CancelRes)
+cancelRide payload bookingId = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.cancelRide bookingId) unwrapResponse $ callAPI headers (CancelRequest payload bookingId)
+    where
+        unwrapResponse (x) = x
+
 makeCancelRequest :: HomeScreenState -> CancelReq
 makeCancelRequest state = CancelReq {
     "additionalInfo" : Just state.props.cancelDescription
@@ -450,13 +472,6 @@ callDriverBT rideId = do
 
 ------------------------------------------------------------------------ Feedback Function --------------------------------------------------------------------------------------------
 
-rideFeedbackBT :: FeedbackReq -> FlowBT String FeedbackRes
-rideFeedbackBT payload = do
-    headers <- getHeaders' "" false
-    withAPIResultBT (EP.feedback "") identity errorHandler (lift $ lift $ callAPI headers payload)
-    where
-      errorHandler errorPayload = do
-            BackT $ pure GoBack
 
 makeFeedBackReq :: Int -> String -> String -> Maybe Boolean -> FeedbackReq
 makeFeedBackReq rating rideId feedback wasOfferedAssistance = FeedbackReq
@@ -478,16 +493,19 @@ rideBookingBT bookingId = do
 
 rideBookingList limit offset onlyActive = do
         headers <- getHeaders "" true
-        withAPIResult (EP.rideBookingList limit offset onlyActive Nothing)  unwrapResponse $ callAPI headers (RideBookingListReq limit offset onlyActive Nothing)
+        withAPIResult (EP.rideBookingList limit offset onlyActive Nothing Nothing)  unwrapResponse $ callAPI headers (RideBookingListReq limit offset onlyActive Nothing Nothing)
     where
         unwrapResponse (x) = x
 
 
-rideBookingListWithStatus limit offset status = do
-        headers <- getHeaders "" true
-        withAPIResult (EP.rideBookingList limit offset "false" (Just status))  unwrapResponse $ callAPI headers (RideBookingListReq limit offset "false" (Just status))
-    where
-        unwrapResponse (x) = x
+rideBookingListWithStatus limit offset status maybeClientId = do
+    headers <- getHeaders "" true
+    withAPIResult (EP.rideBookingList limit offset "false" (Just status) maybeClientId) unwrapResponse $ callAPI headers (RideBookingListReq limit offset "false" (Just status) maybeClientId)
+  where
+    unwrapResponse (x) = x
+
+makeRideBookingListWithStatus :: String -> String -> String -> Maybe String -> RideBookingListReq
+makeRideBookingListWithStatus limit offset status maybeClientId = RideBookingListReq limit offset "false" (Just status) maybeClientId
 
 getProfileBT :: String -> FlowBT String GetProfileRes
 getProfileBT _  = do
@@ -924,13 +942,6 @@ makeSosStatus sosStatus comment= SosStatus {
 
 ------------------------------------------------------------------------ Ride Feedback ------------------------------------------------------------------------------------
 
-bookingFeedbackBT :: RideFeedbackReq -> FlowBT String RideFeedbackRes
-bookingFeedbackBT payload = do
-    headers <- getHeaders' "" false
-    withAPIResultBT (EP.bookingFeedback "") identity errorHandler (lift $ lift $ callAPI headers payload)
-    where
-      errorHandler errorPayload = do
-            BackT $ pure GoBack
 
 makeRideFeedBackReq :: String -> Array FeedbackAnswer -> RideFeedbackReq
 makeRideFeedBackReq id feedbackList = RideFeedbackReq

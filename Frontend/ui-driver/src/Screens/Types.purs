@@ -192,7 +192,9 @@ type AddVehicleDetailsScreenProps =  {
   multipleRCstatus :: StageStatus,
   menuOptions :: Boolean,
   confirmChangeVehicle :: Boolean,
-  contactSupportModal :: AnimType
+  contactSupportModal :: AnimType,
+  buttonIndex :: Maybe Int,
+  acModal :: Boolean
  }
 
 data ValidationStatus  =  Success | Failure | InProgress | None
@@ -798,10 +800,12 @@ type IndividualRideCardState =
     spLocTagVisibility :: Boolean,
     specialZonePickup :: Boolean,
     tripType :: TripType,
-    tollCharge :: Int,
+    tollCharge :: Number,
     rideType :: String,
     tripStartTime :: Maybe String,
-    tripEndTime :: Maybe String
+    tripEndTime :: Maybe String,
+    acRide :: Maybe Boolean,
+    vehicleServiceTier :: String
   }
 
 
@@ -958,6 +962,7 @@ type HomeScreenData =  {
   locationLastUpdatedTime :: String,
   totalRidesOfDay :: Int,
   totalEarningsOfDay :: Int,
+  earningPerKm :: Maybe Int,
   bonusEarned :: Int ,
   route :: Array Route,
   cancelRideConfirmationPopUp :: CancelRidePopUpData,
@@ -1025,8 +1030,8 @@ type EndRideData = {
     disability :: Maybe String,
     payerVpa :: String,
     specialZonePickup :: Maybe Boolean,
-    actualTollCharge :: Int,
-    estimatedTollCharge :: Int,
+    actualTollCharge :: Number,
+    estimatedTollCharge :: Number,
     capacity :: Maybe Int,
     serviceTier :: String
   }
@@ -1141,7 +1146,10 @@ type ActiveRide = {
   endOdometerReading :: Maybe Number,
   driverVehicle :: String,
   serviceTier :: String,
-  capacity :: Maybe Int
+  capacity :: Maybe Int,
+  hasToll :: Boolean,
+  estimatedTollCharge :: Maybe Number,
+  acRide :: Maybe Boolean
 }
 
 type HomeScreenProps =  {
@@ -1213,7 +1221,8 @@ type HomeScreenProps =  {
   odometerFileId :: Maybe String,
   odometerUploadAttempts :: Int,
   odometerImageUploading :: Boolean,
-  hasToll :: Boolean
+  showAcWorkingPopup :: Maybe Boolean,
+  acExplanationPopup :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
@@ -1341,11 +1350,13 @@ type TripDetailsScreenData =
     config :: AppConfig,
     goBackTo :: GoBackToScreen,
     specialZonePickup :: Boolean,
-    tollCharge :: Int,
+    tollCharge :: Number,
     rideType :: String,
     tripStartTime :: Maybe String,
     tripEndTime :: Maybe String,
-    vehicleModel :: String
+    vehicleModel :: String,
+    acRide :: Maybe Boolean,
+    vehicleServiceTier :: String
   }
 
 type TripDetailsScreenProps =
@@ -1444,12 +1455,13 @@ type ReportIssueChatScreenProps = {
 }
 
 type IssueInfo = {
-
     issueReportId :: String,
     status :: String,
     category :: String,
     createdAt :: String,
-    issueReportShortId :: Maybe String
+    issueReportShortId :: Maybe String,
+    optionLabel :: Maybe String,
+    rideId :: Maybe String
 }
 
 data IssueModalType = HELP_AND_SUPPORT_SCREEN_MODAL | ONGOING_ISSUES_MODAL | RESOLVED_ISSUES_MODAL | BACKPRESSED_MODAL
@@ -1850,7 +1862,10 @@ type BookingOptionsScreenData = {
   vehicleCapacity :: Int,
   downgradeOptions :: Array ChooseVehicle.Config,
   ridePreferences :: Array RidePreference,
-  defaultRidePreference :: RidePreference
+  defaultRidePreference :: RidePreference,
+  canSwitchToInterCity :: Boolean,
+  canSwitchToRental :: Boolean,
+  airConditioned :: Maybe API.AirConditionedTier
 }
 
 type RidePreference = {
@@ -1864,13 +1879,16 @@ type RidePreference = {
   seatingCapacity :: Maybe Int,
   serviceTierType :: API.ServiceTierType,
   shortDescription :: Maybe String,
-  vehicleRating :: Maybe Number
+  vehicleRating :: Maybe Number,
+  isUsageRestricted :: Boolean,
+  priority :: Int
 }
 
 type BookingOptionsScreenProps = {
   isBtnActive :: Boolean,
   downgraded :: Boolean,
-  canSwitchToRental :: Boolean
+  canSwitchToRental :: Boolean,
+  acExplanationPopup :: Boolean
 }
 
 data LeaderBoardType = Daily | Weekly
@@ -2313,7 +2331,7 @@ instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where stand
 instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
 instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
 
-data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup
+data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver
 
 derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
 instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow

@@ -100,6 +100,7 @@ window.getMerchantConfig = function () {
     "profileName": "#FFFFFF",
     "profileImage": "#012A72",
     "tipEnabledCities" : ["Bangalore", "Hyderabad"],
+    "tipDisplayDuration" : 30,
     "profileCompletion" : "#FCC32C",
     "feedbackBackground": "#2C2F3A",
     "confirmPickUpLocationBorder": "#E5E7EB",
@@ -246,7 +247,9 @@ window.getMerchantConfig = function () {
     , "enableGeocoder" : false
     , "metroTicketingConfig" : [
       { "cityName" : "kochi"
-      , "cityCode" : "std:0484"      
+      , "cityCode" : "std:0484"
+      , "customEndTime" : "23:59:59" 
+      , "customDates" : ["03/05/2024", "04/05/2024", "05/05/2024", "06/05/2024", "07/05/2024", "08/05/2024", "09/05/2024", "10/05/2024","11/05/2024"]    
       , "metroStationTtl" : 10080
       , "bookingStartTime" : "05:45:00"
       , "bookingEndTime" : "22:30:00"
@@ -256,7 +259,9 @@ window.getMerchantConfig = function () {
     }
       },
       { "cityName" : "chennai"
-      , "cityCode" : "std:040"  
+      , "cityCode" : "std:040" 
+      , "customEndTime" : "01:00:00" 
+      , "customDates" : ["23/04/2024","28/04/2024","01/05/2024","12/05/2024"] 
       , "metroStationTtl" : 10080
       , "bookingStartTime" : "04:30:00"
       , "bookingEndTime" : "22:30:00"
@@ -301,8 +306,11 @@ window.getMerchantConfig = function () {
         "autoRickshaw" : {
           "name" : "Auto Rickshaw",
           "image" : "ny_ic_single_estimate_auto_black,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_single_estimate_auto_black.png"
-        }
-
+        },
+        "bookAny" : {
+          "name" : "Book Any",
+          "image" : "ny_ic_auto_cab_black,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_auto_cab_black.png"
+        },
       }
     }
     , "feature" : {

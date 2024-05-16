@@ -57,6 +57,13 @@ let availabilityTimeWindowOption =
 
 let cacheConfig = { configsExpTime = +86400 }
 
+let cacConfig =
+      { host = "http://localhost:8080"
+      , interval = 10
+      , tenants = "dev"
+      , retryConnection = False
+      }
+
 in  { hedisCfg
     , hedisClusterCfg
     , hedisNonCriticalCfg = hedisCfg
@@ -79,4 +86,5 @@ in  { hedisCfg
             }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , cacConfig
     }

@@ -18,7 +18,7 @@ import qualified "rider-app" API.Dashboard.RideBooking.Confirm as BAP
 import qualified "rider-app" API.UI.Confirm as UC
 import qualified Dashboard.RiderPlatform.Customer as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "rider-app" Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified "rider-app" Domain.Types.MerchantPaymentMethod as DMPM
 import qualified "rider-app" Domain.Types.Person as DP
 import qualified "rider-app" Domain.Types.Quote as Quote
 import qualified Domain.Types.Transaction as DT

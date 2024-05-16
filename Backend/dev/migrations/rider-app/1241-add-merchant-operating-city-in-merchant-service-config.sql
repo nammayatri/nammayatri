@@ -1,5 +1,4 @@
 -------------- pls run the following in prod - already in master --------------
-Alter table atlas_app.merchant_service_config ADD COLUMN merchant_operating_city_id character varying(36);
 
 update atlas_app.merchant_service_config as msc
 set merchant_operating_city_id = moc.id

@@ -37,6 +37,7 @@ import qualified Kernel.External.Slack.Flow as SF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -44,6 +45,7 @@ import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
+import Kernel.Utils.Version
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.PublicTransport as PublicTransport
@@ -57,8 +59,9 @@ type API =
   "rideSearch"
     :> TokenAuth
     :> ReqBody '[JSON] DSearch.SearchReq
-    :> Servant.Header "x-bundle-version" Version
-    :> Servant.Header "x-client-version" Version
+    :> Header "x-bundle-version" Version
+    :> Header "x-client-version" Version
+    :> Header "x-config-version" Version
     :> Header "client-id" (Id DC.Client)
     :> Header "x-device" Text
     :> Post '[JSON] DSearch.SearchResp
@@ -66,16 +69,16 @@ type API =
 handler :: FlowServer API
 handler = search
 
-search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe (Id DC.Client) -> Maybe Text -> FlowHandler DSearch.SearchResp
-search (personId, _) req mbBundleVersion mbClientVersion mbClientId mbDevice = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe (Id DC.Client) -> Maybe Text -> FlowHandler DSearch.SearchResp
+search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
-  updateVersions personId mbBundleVersion mbClientVersion
-  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientId mbDevice
+  updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice
+  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice
   fork "search cabs" . withShortRetry $ do
     becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
     let generatedJson = encode becknTaxiReqV2
     logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
-    void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2
+    void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
   -- fork "search metro" . withShortRetry $ do
   --   becknMetroReq <- MetroACL.buildSearchReq dSearchRes
   --   CallBPP.searchMetro dSearchRes.gatewayUrl becknMetroReq
@@ -103,8 +106,8 @@ checkSearchRateLimit personId = do
 searchHitsCountKey :: Id Person.Person -> Text
 searchHitsCountKey personId = "BAP:Ride:search:" <> getId personId <> ":hitsCount"
 
-updateVersions :: (CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> Maybe Version -> Maybe Version -> m ()
-updateVersions personId mbBundleVersion mbClientVersion = do
+updateVersions :: (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Id Person.Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m ()
+updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
-  -- DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
-  void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
+  deploymentVersion <- asks (.version)
+  void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion

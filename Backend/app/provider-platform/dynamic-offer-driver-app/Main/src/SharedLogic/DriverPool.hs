@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module SharedLogic.DriverPool
   ( calculateDriverPool,
@@ -84,18 +85,18 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
-import SharedLogic.DriverPool.Config as Reexport
-import SharedLogic.DriverPool.Types as Reexport
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
+import Storage.Cac.DriverPoolConfig as Reexport
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
-import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as DIP
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.GetNearestDrivers as QPG
 import Tools.Maps as Maps
 import Tools.Metrics
+import Utils.Common.Cac.KeyNameConstants
 
 mkTotalQuotesKey :: Text -> Text
 mkTotalQuotesKey driverId = "driver-offer:DriverPool:Total-quotes:DriverId-" <> driverId
@@ -116,7 +117,7 @@ mkAvailableTimeKey :: Text -> Text
 mkAvailableTimeKey driverId = "driver-offer:DriverPool:Available-Time:DriverId-" <> driverId
 
 windowFromIntelligentPoolConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> (DIPC.DriverIntelligentPoolConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
-windowFromIntelligentPoolConfig merchantOpCityId windowKey = maybe defaultWindow windowKey <$> DIP.findByMerchantOpCityId merchantOpCityId Nothing Nothing
+windowFromIntelligentPoolConfig merchantOpCityId windowKey = maybe defaultWindow windowKey <$> CDIP.findByMerchantOpCityId merchantOpCityId Nothing
   where
     defaultWindow = SWC.SlidingWindowOptions 7 SWC.Days
 
@@ -401,7 +402,7 @@ updateDriverSpeedInRedis ::
   UTCTime ->
   m ()
 updateDriverSpeedInRedis merchantOpCityId driverId points timeStamp = Redis.withCrossAppRedis $ do
-  locationUpdateSampleTime <- maybe 3 (.locationUpdateSampleTime) <$> DIP.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId")
+  locationUpdateSampleTime <- maybe 3 (.locationUpdateSampleTime) <$> CDIP.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
   now <- getCurrentTime
   let driverLocationUpdatesKey = mkDriverLocationUpdatesKey merchantOpCityId driverId
   locationUpdatesList :: [(LatLong, UTCTime)] <-
@@ -423,7 +424,7 @@ getDriverAverageSpeed ::
   Id DP.Person ->
   m Double
 getDriverAverageSpeed merchantOpCityId driverId = Redis.withCrossAppRedis $ do
-  intelligentPoolConfig <- DIP.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId")
+  intelligentPoolConfig <- CDIP.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
   let minLocationUpdates = maybe 3 (.minLocationUpdates) intelligentPoolConfig
       defaultDriverSpeed = maybe 27.0 (.defaultDriverSpeed) intelligentPoolConfig
   let driverLocationUpdatesKey = mkDriverLocationUpdatesKey merchantOpCityId driverId
@@ -510,7 +511,8 @@ calculateGoHomeDriverPool (req@CalculateGoHomeDriverPoolReq {..}) merchantOpCity
             homeRadius = goHomeCfg.goHomeWayPointRadius,
             merchantId,
             driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
-            isRental
+            isRental,
+            isInterCity
           }
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
@@ -550,7 +552,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           return (goHomeReq, driver)
       )
       randomDriverPool
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   let convertedDriverPoolRes = map (\(ghr, driver) -> (ghr,driver,) $ makeDriverPoolRes driver) goHomeRequests
   driverGoHomePoolWithActualDistance <-
     case convertedDriverPoolRes of
@@ -595,7 +597,13 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           airConditioned = nearestGoHomeDrivers.airConditioned,
           lat = nearestGoHomeDrivers.lat,
           lon = nearestGoHomeDrivers.lon,
-          mode = nearestGoHomeDrivers.mode
+          mode = nearestGoHomeDrivers.mode,
+          clientSdkVersion = nearestGoHomeDrivers.clientSdkVersion,
+          clientBundleVersion = nearestGoHomeDrivers.clientBundleVersion,
+          clientConfigVersion = nearestGoHomeDrivers.clientConfigVersion,
+          clientDevice = nearestGoHomeDrivers.clientDevice,
+          backendConfigVersion = nearestGoHomeDrivers.backendConfigVersion,
+          backendAppVersion = nearestGoHomeDrivers.backendAppVersion
         }
 
     getRoutesForAllDrivers =
@@ -616,6 +624,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
       RouteInfo
         { duration = Nothing,
           distance = Nothing,
+          distanceWithUnit = Nothing,
           boundingBox = Nothing,
           snappedWaypoints = [],
           points = []
@@ -660,8 +669,9 @@ calculateDriverPool ::
   Bool ->
   Maybe PoolRadiusStep ->
   Bool ->
+  Bool ->
   m [DriverPoolResult]
-calculateDriverPool cityServiceTiers poolStage driverPoolCfg serviceTiers pickup merchantId onlyNotOnRide mRadiusStep isRental = do
+calculateDriverPool cityServiceTiers poolStage driverPoolCfg serviceTiers pickup merchantId onlyNotOnRide mRadiusStep isRental isInterCity = do
   let radius = getRadius mRadiusStep
   let coord = getCoordinates pickup
   now <- getCurrentTime
@@ -676,6 +686,7 @@ calculateDriverPool cityServiceTiers poolStage driverPoolCfg serviceTiers pickup
         onlyNotOnRide
         driverPoolCfg.driverPositionInfoExpiry
         isRental
+        isInterCity
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
@@ -718,10 +729,11 @@ calculateDriverPoolWithActualDist ::
   Bool ->
   Maybe PoolRadiusStep ->
   Bool ->
+  Bool ->
   m [DriverPoolWithActualDistResult]
-calculateDriverPoolWithActualDist poolCalculationStage poolType driverPoolCfg serviceTiers pickup merchantId merchantOpCityId onlyNotOnRide mRadiusStep isRental = do
+calculateDriverPoolWithActualDist poolCalculationStage poolType driverPoolCfg serviceTiers pickup merchantId merchantOpCityId onlyNotOnRide mRadiusStep isRental isInterCity = do
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
-  driverPool <- calculateDriverPool cityServiceTiers poolCalculationStage driverPoolCfg serviceTiers pickup merchantId onlyNotOnRide mRadiusStep isRental
+  driverPool <- calculateDriverPool cityServiceTiers poolCalculationStage driverPoolCfg serviceTiers pickup merchantId onlyNotOnRide mRadiusStep isRental isInterCity
   case driverPool of
     [] -> return []
     (a : pprox) -> do
@@ -772,8 +784,9 @@ calculateDriverPoolCurrentlyOnRide ::
   Id DM.Merchant ->
   Maybe PoolRadiusStep ->
   Bool ->
+  Bool ->
   m [DriverPoolResultCurrentlyOnRide]
-calculateDriverPoolCurrentlyOnRide cityServiceTiers poolStage driverPoolCfg serviceTiers pickup merchantId mRadiusStep isRental = do
+calculateDriverPoolCurrentlyOnRide cityServiceTiers poolStage driverPoolCfg serviceTiers pickup merchantId mRadiusStep isRental isInterCity = do
   let radius = getRadius mRadiusStep
   let coord = getCoordinates pickup
   now <- getCurrentTime
@@ -789,6 +802,7 @@ calculateDriverPoolCurrentlyOnRide cityServiceTiers poolStage driverPoolCfg serv
           driverPoolCfg.driverPositionInfoExpiry
           driverPoolCfg.radiusShrinkValueForDriversOnRide
           isRental
+          isInterCity
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
@@ -828,10 +842,11 @@ calculateDriverCurrentlyOnRideWithActualDist ::
   Id DMOC.MerchantOperatingCity ->
   Maybe PoolRadiusStep ->
   Bool ->
+  Bool ->
   m [DriverPoolWithActualDistResult]
-calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage poolType driverPoolCfg serviceTiers pickup merchantId merchantOpCityId mRadiusStep isRental = do
+calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage poolType driverPoolCfg serviceTiers pickup merchantId merchantOpCityId mRadiusStep isRental isInterCity = do
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
-  driverPool <- calculateDriverPoolCurrentlyOnRide cityServiceTiers poolCalculationStage driverPoolCfg serviceTiers pickup merchantId mRadiusStep isRental
+  driverPool <- calculateDriverPoolCurrentlyOnRide cityServiceTiers poolCalculationStage driverPoolCfg serviceTiers pickup merchantId mRadiusStep isRental isInterCity
   case driverPool of
     [] -> return []
     (a : pprox) -> do
@@ -858,7 +873,7 @@ calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage poolType drive
       let temp = DriverPoolResult {..}
       if distanceFromDriverToDestination < driverToDestinationDistanceThreshold
         then do
-          transporter <- CTC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+          transporter <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
           let defaultPopupDelay = fromMaybe 2 transporter.popupDelayToAddAsPenalty
           let time = driverPoolCfg.driverToDestinationDuration
           pure
@@ -909,7 +924,7 @@ computeActualDistance ::
   m (NonEmpty DriverPoolWithActualDistResult)
 computeActualDistance orgId merchantOpCityId pickup driverPoolResults = do
   let pickupLatLong = getCoordinates pickup
-  transporter <- CTC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  transporter <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   getDistanceResults <-
     Maps.getEstimatedPickupDistances orgId merchantOpCityId $
       Maps.GetDistancesReq
@@ -939,6 +954,7 @@ refactorRoutesResp goHomeCfg (nearestDriverRes, route, ghrId, driverGoHomePoolWi
     newRoute route' =
       RouteInfo
         { distance = route'.distance,
+          distanceWithUnit = route'.distanceWithUnit,
           duration = route'.duration,
           points = getStartPoint $ filterInitPoints (refactor [] route'.points),
           snappedWaypoints = route'.snappedWaypoints,

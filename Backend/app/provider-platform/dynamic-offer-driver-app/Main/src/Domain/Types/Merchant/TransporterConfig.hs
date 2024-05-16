@@ -21,6 +21,7 @@ import Domain.Types.Location (DummyLocationInfo)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.Vehicle as Vehicle
+import qualified Email.Types
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (Language)
@@ -40,7 +41,8 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm -- FIXME make datatype to [
     hatchback :: Kilometers,
     autorickshaw :: Kilometers,
     taxi :: Kilometers,
-    taxiplus :: Kilometers
+    taxiplus :: Kilometers,
+    bike :: Kilometers
   }
   deriving (Generic, Show, FromJSON, ToJSON, Read)
 
@@ -58,6 +60,8 @@ data TransporterConfigD u = TransporterConfig
     merchantOperatingCityId :: Id MerchantOperatingCity,
     pickupLocThreshold :: Meters,
     dropLocThreshold :: Meters,
+    editLocTimeThreshold :: Seconds,
+    editLocDriverPermissionNeeded :: Bool,
     rideTimeEstimatedThreshold :: Seconds,
     includeDriverCurrentlyOnRide :: Bool,
     defaultPopupDelay :: Seconds,
@@ -118,11 +122,11 @@ data TransporterConfigD u = TransporterConfig
     canSuvDowngradeToTaxi :: Bool,
     canSuvDowngradeToHatchback :: Bool,
     canSwitchToRental :: Bool,
+    canSwitchToInterCity :: Bool,
     rcLimit :: Int,
     automaticRCActivationCutOff :: Seconds,
     languagesToBeTranslated :: [Language],
     isAvoidToll :: Bool,
-    allowAutosOnTollRoute :: Bool,
     aadhaarImageResizeConfig :: Maybe AadhaarImageResizeConfig,
     enableFaceVerification :: Bool,
     specialZoneBookingOtpExpiry :: Int,
@@ -152,6 +156,7 @@ data TransporterConfigD u = TransporterConfig
     nightSafetyStartTime :: Seconds,
     nightSafetyEndTime :: Seconds,
     cancellationFee :: HighPrecMoney,
+    currency :: Currency,
     driverDistanceTravelledOnPickupThresholdOnCancel :: Meters,
     driverTimeSpentOnPickupThresholdOnCancel :: Seconds,
     cancellationFeeDisputeLimit :: Int,
@@ -170,17 +175,21 @@ data TransporterConfigD u = TransporterConfig
     notificationRetryTimeGap :: NominalDiffTime,
     driverAutoPayExecutionTimeFallBack :: NominalDiffTime,
     orderAndNotificationStatusCheckFallBackTime :: NominalDiffTime,
+    acStatusCheckGap :: Int,
     bookAnyVehicleDowngradeLevel :: Int,
     kaptureDisposition :: Text,
+    kaptureQueue :: Text,
     dummyFromLocation :: DummyLocationInfo,
     dummyToLocation :: DummyLocationInfo,
     scheduleRideBufferTime :: NominalDiffTime,
     fakeOtpMobileNumbers :: [Text],
+    fakeOtpEmails :: [Text],
     variantsToEnableForSubscription :: [Vehicle.Variant],
     considerDriversForSearch :: Bool,
     dlNumberVerification :: Maybe Bool,
     pastDaysRideCounter :: Int,
-    placeNameCacheExpiryDays :: Maybe Int
+    placeNameCacheExpiryDays :: Maybe Int,
+    emailOtpConfig :: Maybe Email.Types.EmailOTPConfig
   }
   deriving (Generic, Show)
 

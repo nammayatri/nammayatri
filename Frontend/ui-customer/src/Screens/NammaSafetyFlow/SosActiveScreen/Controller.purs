@@ -17,7 +17,7 @@ module Screens.NammaSafetyFlow.SosActiveScreen.Controller where
 import Data.Maybe (Maybe(..))
 import Log (trackAppBackPress, trackAppScreenRender)
 import Prelude (class Show, discard, pure, unit, void, ($), (==))
-import PrestoDOM (Eval, continue, continueWithCmd, exit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit)
 import Screens.Types (NammaSafetyScreenState)
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
@@ -104,4 +104,4 @@ eval (MarkRideAsSafe PrimaryButtonController.OnClick) state = exit $ UpdateAsSaf
 
 eval (SelectedCurrentLocation _ _ name) state = continue state { data { currentLocation = name } }
 
-eval _ state = continue state
+eval _ state = update state

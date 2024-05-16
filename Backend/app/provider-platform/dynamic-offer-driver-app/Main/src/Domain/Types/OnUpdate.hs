@@ -18,8 +18,12 @@ module Domain.Types.OnUpdate
   )
 where
 
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.Location as DL
+import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
 import SharedLogic.Beckn.Common as Reexport
@@ -31,9 +35,11 @@ data OnUpdateBuildReq
   | BookingCancelledBuildReq DBookingCancelledReq
   | DriverArrivedBuildReq DDriverArrivedReq
   | EstimateRepetitionBuildReq DEstimateRepetitionReq
+  | QuoteRepetitionBuildReq DQuoteRepetitionReq
   | NewMessageBuildReq DNewMessageReq
   | SafetyAlertBuildReq DSafetyAlertReq
   | StopArrivedBuildReq DStopArrivedBuildReq
+  | EditDestinationUpdate DEditDestinationUpdateReq
 
 newtype DStopArrivedBuildReq = DStopArrivedBuildReq
   { bookingDetails :: BookingDetails
@@ -42,6 +48,12 @@ newtype DStopArrivedBuildReq = DStopArrivedBuildReq
 data DEstimateRepetitionReq = DEstimateRepetitionReq
   { bookingDetails :: BookingDetails,
     estimateId :: Id DEst.Estimate,
+    cancellationSource :: SBCR.CancellationSource
+  }
+
+data DQuoteRepetitionReq = DQuoteRepetitionReq
+  { bookingDetails :: BookingDetails,
+    newBookingId :: Id DRB.Booking,
     cancellationSource :: SBCR.CancellationSource
   }
 
@@ -54,3 +66,14 @@ data DSafetyAlertReq = DSafetyAlertReq
   { bookingDetails :: BookingDetails,
     reason :: Text
   }
+
+data DEditDestinationUpdateReq = DEditDestinationUpdateReq
+  { bookingDetails :: BookingDetails,
+    bookingUpdateReqDetails :: DBUR.BookingUpdateRequest,
+    newDestination :: Maybe DL.Location,
+    currentLocation :: Maybe Maps.LatLong,
+    updateType :: UpdateType
+  }
+
+data UpdateType = SOFT_UPDATE | CONFIRM_UPDATE
+  deriving (Show)

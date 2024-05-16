@@ -60,6 +60,7 @@ import Types.ModifyScreenState (modifyScreenState)
 import Data.Boolean (otherwise)
 import Screens.Types as ST
 import Resource.Constants as RC
+import SessionCache
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
@@ -67,6 +68,7 @@ getHeaders dummy isGzipCompressionEnabled = do
     regToken <- loadS $ show REGISTERATION_TOKEN
     pure $ Headers $ [   Header "Content-Type" "application/json",
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                        Header "x-config-version" (getValueFromWindow "CONFIG_VERSION"),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
                         Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
@@ -82,6 +84,7 @@ getHeaders' dummy isGzipCompressionEnabled = do
     _ <- pure $ spy "import headers" regToken
     lift $ lift $ pure $ Headers $ [   Header "Content-Type" "application/json",
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                         Header "x-config-version" (getValueToLocalStore CONFIG_VERSION),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
                         Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
@@ -672,14 +675,15 @@ callDriverToDriverBT rcNo = do
   where
     errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
 
-makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> Maybe ST.VehicleCategory -> DriverRCReq
-makeDriverRCReq regNo imageId dateOfRegistration multipleRc category = DriverRCReq
+makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> Maybe ST.VehicleCategory -> Maybe Int -> DriverRCReq
+makeDriverRCReq regNo imageId dateOfRegistration multipleRc category airConditioned = DriverRCReq
     {
       "vehicleRegistrationCertNumber" : regNo,
       "operatingCity" : "BANGALORE",
       "imageId" : imageId,
       "dateOfRegistration" : dateOfRegistration,
-      "vehicleCategory" : mkCategory category
+      "vehicleCategory" : mkCategory category,
+      "airConditioned" : maybe Nothing (\ac -> Just (ac == 0)) airConditioned
     }
 
 mkCategory :: Maybe ST.VehicleCategory -> Maybe String
@@ -1459,6 +1463,12 @@ getSpecialLocationListBT req = do
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
+mkUpdateAirConditionWorkingStatus :: Boolean -> UpdateDriverVehicleServiceTierReq
+mkUpdateAirConditionWorkingStatus isAirConditionWorking = UpdateDriverVehicleServiceTierReq {
+    airConditioned : Just $ AirConditionedTier { isWorking : isAirConditionWorking, restrictionMessage: Nothing, usageRestrictionType: NoRestriction},
+    tiers : []
+}
+
 mkUpdateDriverVehiclesServiceTier :: ST.RidePreference -> UpdateDriverVehicleServiceTierReq
 mkUpdateDriverVehiclesServiceTier ridePreferences = 
     let tierArray = [
@@ -1473,10 +1483,13 @@ mkUpdateDriverVehiclesServiceTier ridePreferences =
                 seatingCapacity : Nothing,
                 serviceTierType : ridePreferences.serviceTierType,
                 shortDescription : Nothing,
-                vehicleRating : Nothing
+                vehicleRating : Nothing,
+                isUsageRestricted : Nothing,
+                priority : Nothing
             }
         ]
     in 
         UpdateDriverVehicleServiceTierReq {
-            tiers : tierArray
+            tiers : tierArray,
+            airConditioned : Nothing
         }

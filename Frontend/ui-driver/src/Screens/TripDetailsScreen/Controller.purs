@@ -18,7 +18,7 @@ module Screens.TripDetailsScreen.Controller where
 import Prelude (class Show, pure, unit, not, bind, ($), discard)
 import Screens.Types as ST
 import PrestoDOM.Types.Core (class Loggable)
-import PrestoDOM (Eval, exit, continue, continueWithCmd)
+import PrestoDOM (Eval, update, exit, continue, continueWithCmd)
 import Components.PrimaryButton as PrimaryButton
 import Components.GenericHeader as GenericHeader
 import Components.SourceToDestination as SourceToDestination
@@ -102,4 +102,4 @@ eval Copy state = continueWithCmd state [ do
   ]
 eval HelpAndSupport state = exit $ GoToHelpAndSupport
 
-eval _ state = continue state
+eval _ state = update state

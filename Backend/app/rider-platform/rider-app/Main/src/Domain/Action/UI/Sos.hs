@@ -9,10 +9,10 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Co
 import qualified Data.ByteString as BS
 import Data.Text as T
 import qualified Domain.Action.UI.FollowRide as DFR
+import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Action.UI.Profile as DP
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Sos as DSos
@@ -42,7 +42,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPDEN
+import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Sos as QSos
 import qualified Text.Read as Read
@@ -115,7 +115,7 @@ postSosCreate (mbPersonId, merchantId) req = do
   merchantConfig <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
-  sosId <- createTicketForNewSos person ride riderConfig trackLink req merchantConfig.kaptureDisposition
+  sosId <- createTicketForNewSos person ride riderConfig trackLink req merchantConfig.kaptureDisposition riderConfig.kaptureQueue
   message <-
     MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
       MessageBuilder.BuildSOSAlertMessageReq
@@ -125,7 +125,7 @@ postSosCreate (mbPersonId, merchantId) req = do
   when (req.isRideEnded /= Just True) $ do
     emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
     when (shouldSendSms person) $ do
-      void $ QPDEN.updateShareRideForAll personId (Just True)
+      void $ QPDEN.updateShareRideForAll personId True
       enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
       SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_TRIGGERED (Just message) True emergencyContacts.defaultEmergencyNumbers
   return $
@@ -149,8 +149,8 @@ enableFollowRideInSos emergencyContacts = do
     )
     emergencyContacts
 
-createTicketForNewSos :: Person.Person -> DRide.Ride -> DRC.RiderConfig -> Text -> SosReq -> Text -> Flow (Id DSos.Sos)
-createTicketForNewSos person ride riderConfig trackLink req kaptureDisposition = do
+createTicketForNewSos :: Person.Person -> DRide.Ride -> DRC.RiderConfig -> Text -> SosReq -> Text -> Text -> Flow (Id DSos.Sos)
+createTicketForNewSos person ride riderConfig trackLink req kaptureDisposition kaptureQueue = do
   sosRes <- CQSos.findByRideId ride.id
   case sosRes of
     Just sosDetails -> do
@@ -164,7 +164,7 @@ createTicketForNewSos person ride riderConfig trackLink req kaptureDisposition =
       ticketId <- do
         if riderConfig.enableSupportForSafety
           then do
-            ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink] rideInfo req.flow kaptureDisposition))
+            ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink] rideInfo req.flow kaptureDisposition kaptureQueue))
             case ticketResponse of
               Right ticketResponse' -> return (Just ticketResponse'.ticketId)
               Left _ -> return Nothing
@@ -224,10 +224,10 @@ postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
     Just True -> do
       SPDEN.notifyEmergencyContacts person (notificationBody person True) notificationTitle Notification.SOS_MOCK_DRILL_NOTIFY Nothing False emergencyContacts.defaultEmergencyNumbers
       when (fromMaybe False onRide) $ do
-        void $ QPDEN.updateShareRideForAll personId (Just True)
+        void $ QPDEN.updateShareRideForAll personId True
         enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
     _ -> do
-      when (not $ fromMaybe False person.hasCompletedMockSafetyDrill) $ QP.updateSafetyDrillStatus personId $ Just True
+      when (not $ fromMaybe False person.hasCompletedMockSafetyDrill) $ QP.updateSafetyDrillStatus (Just True) personId
       when (fromMaybe False onRide) $ do
         let mockEntity = DSos.SosMockDrill {personId, status = DSos.MockPending}
         Redis.setExp (CQSos.mockSosKey personId) mockEntity 13400
@@ -266,7 +266,7 @@ addSosVideo sosId personId SOSVideoUploadReq {..} = do
       let rideInfo = buildRideInfo ride person phoneNumber
           trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
       when riderConfig.enableSupportForSafety $
-        void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo DSos.SafetyFlow merchantConfig.kaptureDisposition))
+        void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo DSos.SafetyFlow merchantConfig.kaptureDisposition riderConfig.kaptureQueue))
       createMediaEntry Common.AddLinkAsMedia {url = fileUrl, fileType}
   where
     validateContentType = do
@@ -298,11 +298,14 @@ buildRideInfo :: DRide.Ride -> Person.Person -> Maybe Text -> Ticket.RideInfo
 buildRideInfo ride person phoneNumber =
   Ticket.RideInfo
     { rideShortId = ride.shortId.getShortId,
+      rideCity = show person.currentCity,
       customerName = Just $ SLP.getName person,
       customerPhoneNo = phoneNumber,
       driverName = Just ride.driverName,
       driverPhoneNo = Just ride.driverMobileNumber,
       vehicleNo = ride.vehicleNumber,
+      vehicleCategory = Just $ show ride.vehicleVariant,
+      vehicleServiceTier = show <$> ride.vehicleServiceTierType,
       status = show ride.status,
       rideCreatedAt = ride.createdAt,
       pickupLocation = castLocationAPIEntity ride.fromLocation,
@@ -332,8 +335,8 @@ callUpdateTicket person sosDetails mbComment = do
       pure APISuccess.Success
     Nothing -> pure APISuccess.Success
 
-mkTicket :: Person.Person -> Maybe Text -> [Text] -> Ticket.RideInfo -> DSos.SosType -> Text -> Ticket.CreateTicketReq
-mkTicket person phoneNumber mediaLinks info flow disposition = do
+mkTicket :: Person.Person -> Maybe Text -> [Text] -> Ticket.RideInfo -> DSos.SosType -> Text -> Text -> Ticket.CreateTicketReq
+mkTicket person phoneNumber mediaLinks info flow disposition queue = do
   Ticket.CreateTicketReq
     { category = "Code Red",
       subCategory = Just "SOS Alert (follow-back)",
@@ -345,7 +348,8 @@ mkTicket person phoneNumber mediaLinks info flow disposition = do
       personId = person.id.getId,
       classification = Ticket.CUSTOMER,
       rideDescription = Just info,
-      disposition
+      disposition,
+      queue
     }
   where
     issueDescription = case flow of

@@ -38,6 +38,7 @@ let schedulerConfig =
       , block = +10000
       , readCount = +1
       , kafkaProducerCfg = appCfg.kafkaProducerCfg
+      , cacConfig = appCfg.cacConfig
       }
 
 in  { appCfg =

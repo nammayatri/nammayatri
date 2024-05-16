@@ -36,6 +36,7 @@ import Environment
 import EulerHS.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
+import Kernel.Types.Version
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
@@ -48,6 +49,10 @@ type API =
            :> Get '[JSON] DProfile.ProfileRes
            :<|> TokenAuth
              :> ReqBody '[JSON] DProfile.UpdateProfileReq
+             :> Header "x-bundle-version" Version
+             :> Header "x-client-version" Version
+             :> Header "x-config-version" Version
+             :> Header "x-device" Text
              :> Post '[JSON] APISuccess.APISuccess
            :<|> "updateEmergencySettings"
              :> ( TokenAuth
@@ -78,8 +83,8 @@ handler =
 getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> FlowHandler DProfile.ProfileRes
 getPersonDetails (personId, merchantId) = withFlowHandlerAPI . DProfile.getPersonDetails (personId, merchantId)
 
-updatePerson :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileReq -> FlowHandler APISuccess.APISuccess
-updatePerson (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updatePerson personId
+updatePerson :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler APISuccess.APISuccess
+updatePerson (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientConfigVersion
 
 updateDefaultEmergencyNumbers :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileDefaultEmergencyNumbersReq -> FlowHandler DProfile.UpdateProfileDefaultEmergencyNumbersResp
 updateDefaultEmergencyNumbers (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updateDefaultEmergencyNumbers personId merchantId

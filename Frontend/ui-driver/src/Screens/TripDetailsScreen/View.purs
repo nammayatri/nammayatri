@@ -46,6 +46,7 @@ import JBridge as JB
 import Data.Number as NUM
 import Data.Int as INT
 import Helpers.Utils as HU
+import Resource.Constants as RC
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
@@ -180,7 +181,7 @@ tagView state config =
       , padding $ Padding 12 5 12 5
       , margin $ MarginRight 5
       ][  imageView
-          [ imageWithFallback $ fetchImage FF_ASSET item.image
+          [ imageWithFallback item.image
           , height $ V 16
           , width $ V 16
           ]
@@ -199,11 +200,11 @@ tagView state config =
 
 tagList :: ST.TripDetailsScreenState -> Array ST.Tag
 tagList state = [
-  {background : Colors.yellow200, image : "ny_ic_tip_icon", visibility : isJust state.data.customerExtraFee, text : "₹" <> (show (fromMaybe 0 state.data.customerExtraFee)) <> " Tip" , textColor : Color.black900},
-  {background : Colors.black200, image : "ny_ic_loc_black", visibility : state.data.gotoTagVisibility, text : getString GO_TO, textColor : Color.black900},
-  {background : Colors.purple100, image : "ny_ic_disability_purple", visibility : state.data.purpleTagVisibility, text : getString PURPLE_RIDE, textColor : Color.purple},
-  {background : Colors.blue100, image : "ny_ic_star", visibility : state.data.spLocTagVisibility, text : state.data.specialZoneText, textColor : Color.blue800},
-  {background : Colors.green100, image : "ny_ic_sp_zone_green", visibility : state.data.specialZonePickup, text : getString ZONE_PICKUP, textColor : Color.green900}
+  {background : Colors.yellow200, image : fetchImage FF_ASSET "ny_ic_tip_icon", visibility : isJust state.data.customerExtraFee, text : "₹" <> (show (fromMaybe 0 state.data.customerExtraFee)) <> " Tip" , textColor : Color.black900},
+  {background : Colors.black200, image : fetchImage FF_ASSET "ny_ic_loc_black", visibility : state.data.gotoTagVisibility, text : getString GO_TO, textColor : Color.black900},
+  {background : Colors.purple100, image : fetchImage FF_ASSET "ny_ic_disability_purple", visibility : state.data.purpleTagVisibility, text : getString PURPLE_RIDE, textColor : Color.purple},
+  {background : Colors.blue100, image : fetchImage FF_ASSET "ny_ic_star", visibility : state.data.spLocTagVisibility, text : state.data.specialZoneText, textColor : Color.blue800},
+  {background : Colors.green100, image : fetchImage COMMON_ASSET "ny_ic_sp_zone_green", visibility : state.data.specialZonePickup, text : getString ZONE_PICKUP, textColor : Color.green900}
 ]
 
 ---------------------- tripDetails ---------------------------
@@ -263,8 +264,8 @@ tripDetailsView state =
           ] <> FontStyle.body14 TypoGraphy
         , textView $
           [ text $ getString(PAID)<> "  " <> if state.data.paymentMode == ST.CASH then (getString BY_CASH) else (getString ONLINE_)
-          , color Color.greyDarker
-          ] <> FontStyle.body16 TypoGraphy
+          , color Color.black700
+          ] <> FontStyle.captions TypoGraphy
         ]
     ]
 
@@ -288,7 +289,8 @@ type TripDetailsRow = {
   leftAsset :: String,
   rightAsset :: String,
   leftVisibility :: Boolean,
-  rightVisibility :: Boolean
+  rightVisibility :: Boolean,
+  leftItemLeftAsset :: Maybe String
 }
 
 tripDataView ::  forall w . (Action -> Effect Unit) ->  ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
@@ -298,19 +300,21 @@ tripDataView push state =
   , width MATCH_PARENT
   , orientation VERTICAL
   , gravity CENTER_VERTICAL
-  ][  tripDetailsRow push {  keyLeft : getString RIDE_TYPE, valLeft : state.data.rideType, keyRight : (getString TRIP_ID), valRight : state.data.tripId, leftClick : NoAction, rightClick : Copy, leftAsset : "", rightAsset : "ny_ic_copy", leftVisibility : true, rightVisibility : true},
-      tripDetailsRow push {  keyLeft : getString DISTANCE, valLeft : (state.data.distance <> " km"), keyRight : getString TRIP_TIME, valRight : tripTime, leftClick : NoAction, rightClick : NoAction, leftAsset : "", rightAsset : "", leftVisibility : true, rightVisibility : true},
-      tripDetailsRow push {  keyLeft : getString EARNINGS_PER_KM, valLeft : earningPerKm, keyRight : (getString TOLL_INCLUDED), valRight : currency <> (show state.data.tollCharge), leftClick : NoAction, rightClick : NoAction, leftAsset : "", rightAsset : "", leftVisibility : true, rightVisibility : state.data.tollCharge /= 0}
+  ][  tripDetailsRow push {  keyLeft : getString RIDE_TYPE, valLeft : rideType, keyRight : (getString TRIP_ID), valRight : state.data.tripId, leftClick : NoAction, rightClick : Copy, leftAsset : "", rightAsset : "ny_ic_copy", leftVisibility : true, rightVisibility : true, leftItemLeftAsset : if state.data.acRide == Just true then Just "ny_ic_ac" else Nothing},
+      tripDetailsRow push {  keyLeft : getString DISTANCE, valLeft : (state.data.distance <> " km"), keyRight : getString RIDE_TIME, valRight : tripTime, leftClick : NoAction, rightClick : NoAction, leftAsset : "", rightAsset : "", leftVisibility : true, rightVisibility : true, leftItemLeftAsset : Nothing},
+      tripDetailsRow push {  keyLeft : getString EARNINGS_PER_KM, valLeft : earningPerKm, keyRight : (getString TOLL_INCLUDED), valRight : currency <> (show state.data.tollCharge), leftClick : NoAction, rightClick : NoAction, leftAsset : "", rightAsset : "", leftVisibility : true, rightVisibility : state.data.tollCharge /= 0.0, leftItemLeftAsset : Nothing}
   ]
   where 
     tripTime = case state.data.tripStartTime, state.data.tripEndTime of
                 Just startTime, Just endTime -> (show $ runFn2 JB.differenceBetweenTwoUTCInMinutes endTime startTime) <> " Min"
                 _, _ -> "NA"
     currency = getCurrency appConfig
+    acText = if state.data.acRide == Just true then "AC ∙ " else ""
+    rideType = acText <> RC.serviceTierMapping state.data.rideType state.data.acRide
     earningPerKm =
       let mbDist = NUM.fromString state.data.distance
       in case mbDist of
-          Just dist | dist > 0.0 -> currency <> HU.parseFloat ( INT.toNumber (state.data.totalAmount - state.data.tollCharge) / dist) 2
+          Just dist | dist > 1.0 -> currency <> HU.parseFloat ((INT.toNumber state.data.totalAmount - state.data.tollCharge) / dist) 2 <> "/km"
           _ -> "NA"
 
 tripDetailsRow :: forall w . (Action -> Effect Unit) -> TripDetailsRow -> PrestoDOM (Effect Unit) w
@@ -335,7 +339,15 @@ tripDetailsRow push tripDetailsRowItem =
             , width WRAP_CONTENT
             , orientation HORIZONTAL
             , onClick push $ const tripDetailsRowItem.leftClick
-            ][ textView $
+            , gravity CENTER_VERTICAL
+            ][  imageView $
+                [ height $ V 15
+                , width $ V 13
+                , margin $ MarginRight 5
+                ] <> case tripDetailsRowItem.leftItemLeftAsset of
+                        Just asset -> [imageWithFallback $ fetchImage FF_ASSET asset]
+                        Nothing -> [visibility GONE]
+              , textView $
                 [ text tripDetailsRowItem.valLeft
                 , width WRAP_CONTENT
                 , color Color.black900
@@ -487,8 +499,8 @@ getVehicleImage state =
     YATRI     -> case state.data.vehicleType of
                     "AUTO_RICKSHAW" -> fetchImage FF_ASSET "ny_ic_auto1"
                     _               -> fetchImage FF_ASSET "ic_vehicle_front"
-    YATRISATHI -> getVehicleVariantImage state.data.vehicleType
-    NAMMAYATRI -> getVehicleVariantImage state.data.vehicleType
+    YATRISATHI -> getVehicleVariantImage state.data.vehicleServiceTier
+    NAMMAYATRI -> getVehicleVariantImage state.data.vehicleServiceTier
     _           -> mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
   
   where

@@ -39,6 +39,7 @@ packages:
   test
   lib/producer
   lib/utils
+  lib/external
 
 -- ## 6 parallel jobs by default.
 --

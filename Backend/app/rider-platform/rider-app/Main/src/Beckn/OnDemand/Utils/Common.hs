@@ -32,7 +32,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, (%~))
-import Kernel.External.Maps as Maps
+import qualified Kernel.External.Maps as Maps
 import qualified Kernel.Prelude as KP
 import Kernel.Types.App
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
@@ -190,6 +190,7 @@ castVehicleVariant = \case
   VehVar.AUTO_RICKSHAW -> (show Enums.AUTO_RICKSHAW, "AUTO_RICKSHAW")
   VehVar.TAXI -> (show Enums.CAB, "TAXI")
   VehVar.TAXI_PLUS -> (show Enums.CAB, "TAXI_PLUS")
+  VehVar.BIKE -> (show Enums.BIKE, "BIKE")
 
 parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
 parseVehicleVariant mbCategory mbVariant =
@@ -200,6 +201,7 @@ parseVehicleVariant mbCategory mbVariant =
     (Just "AUTO_RICKSHAW", _) -> Just VehVar.AUTO_RICKSHAW
     (Just "CAB", Just "TAXI") -> Just VehVar.TAXI
     (Just "CAB", Just "TAXI_PLUS") -> Just VehVar.TAXI_PLUS
+    (Just "MOTORCYCLE", Just "BIKE") -> Just VehVar.BIKE
     _ -> Nothing
 
 castCancellationSourceV2 :: Text -> SBCR.CancellationSource
@@ -248,29 +250,30 @@ getContextBppUri context = do
 withTransactionIdLogTag :: (Log m) => Text -> m a -> m a
 withTransactionIdLogTag = withTransactionIdLogTag'
 
-mkStops' :: DLoc.Location -> Maybe DLoc.Location -> Maybe [Spec.Stop]
-mkStops' origin mDestination =
-  let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
-   in Just $
+mkStops' :: Maybe DLoc.Location -> Maybe DLoc.Location -> Maybe [Spec.Stop]
+mkStops' mbOrigin mDestination = do
+  let stops =
         catMaybes
-          [ Just $
-              Spec.Stop
-                { stopLocation =
-                    Just $
-                      Spec.Location
-                        { locationAddress = Just $ mkAddress origin.address,
-                          locationAreaCode = origin.address.areaCode,
-                          locationCity = Just $ Spec.City Nothing origin.address.city,
-                          locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                          locationGps = Utils.gpsToText originGps,
-                          locationState = Just $ Spec.State origin.address.state,
-                          locationId = Nothing,
-                          locationUpdatedAt = Nothing
-                        },
-                  stopType = Just $ show Enums.START,
-                  stopAuthorization = Nothing,
-                  stopTime = Nothing
-                },
+          [ mbOrigin >>= \origin -> do
+              let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
+              Just $
+                Spec.Stop
+                  { stopLocation =
+                      Just $
+                        Spec.Location
+                          { locationAddress = Just $ mkAddress origin.address,
+                            locationAreaCode = origin.address.areaCode,
+                            locationCity = Just $ Spec.City Nothing origin.address.city,
+                            locationCountry = Just $ Spec.Country Nothing origin.address.country,
+                            locationGps = Utils.gpsToText originGps,
+                            locationState = Just $ Spec.State origin.address.state,
+                            locationId = Nothing,
+                            locationUpdatedAt = Nothing
+                          },
+                    stopType = Just $ show Enums.START,
+                    stopAuthorization = Nothing,
+                    stopTime = Nothing
+                  },
             mDestination >>= \destination -> do
               let destinationGps = Gps.Gps {lat = destination.lat, lon = destination.lon}
               Just $
@@ -292,18 +295,30 @@ mkStops' origin mDestination =
                     stopTime = Nothing
                   }
           ]
+  if length stops == 0
+    then Nothing
+    else Just stops
 
-maskBillingNumber :: Text -> Text
-maskBillingNumber billingNumber = do
-  let startingDigitLen = 2
-  let trailingDigitLen = 2
-  let totalDigitLen = startingDigitLen + trailingDigitLen
-  if T.length billingNumber <= totalDigitLen
-    then billingNumber
-    else
-      T.take startingDigitLen billingNumber
-        <> T.replicate (T.length billingNumber - totalDigitLen) "*"
-        <> T.drop (T.length billingNumber - trailingDigitLen) billingNumber
+makeStop :: DLoc.Location -> Spec.Stop
+makeStop stop =
+  let gps = Gps.Gps {lat = stop.lat, lon = stop.lon}
+   in Spec.Stop
+        { stopLocation =
+            Just $
+              Spec.Location
+                { locationAddress = Just $ mkAddress stop.address,
+                  locationAreaCode = stop.address.areaCode,
+                  locationCity = Just $ Spec.City Nothing stop.address.city,
+                  locationCountry = Just $ Spec.Country Nothing stop.address.country,
+                  locationGps = Utils.gpsToText gps,
+                  locationState = Just $ Spec.State stop.address.state,
+                  locationId = Just stop.id.getId,
+                  locationUpdatedAt = Nothing
+                },
+          stopType = Just $ show Enums.INTERMEDIATE_STOP,
+          stopAuthorization = Nothing,
+          stopTime = Nothing
+        }
 
 mapVariantToVehicle :: VehVar.VehicleVariant -> VehicleCategory
 mapVariantToVehicle variant = do
@@ -313,6 +328,7 @@ mapVariantToVehicle variant = do
     VehVar.TAXI -> CAB
     VehVar.SUV -> CAB
     VehVar.TAXI_PLUS -> CAB
+    VehVar.BIKE -> MOTORCYCLE
     VehVar.AUTO_RICKSHAW -> AUTO_RICKSHAW
 
 getServiceTierType :: Spec.Item -> Maybe DVST.VehicleServiceTierType

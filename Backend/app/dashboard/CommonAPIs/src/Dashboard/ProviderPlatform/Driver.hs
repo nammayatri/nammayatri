@@ -29,7 +29,7 @@ import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Beckn.City as City
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Common (Centesimal, HighPrecMoney, MandatoryQueryParam, Money)
+import Kernel.Types.Common (Centesimal, HighPrecMoney, MandatoryQueryParam, Money, PriceAPIEntity)
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Types.Version
@@ -71,6 +71,8 @@ data DriverEndpoint
   | UpdateRCInvalidStatusEndPoint
   | UpdateVehicleVariantEndPoint
   | BulkReviewRCVariantEndPoint
+  | RemoveACUsageRestrictionEndpoint
+  | UpdateDriverTagEndPoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "DriverEndpoint"
@@ -259,11 +261,14 @@ data DriverOutstandingBalanceResp = DriverOutstandingBalanceResp
   { driverFeeId :: Id DriverOutstandingBalanceResp,
     driverId :: Id Driver,
     govtCharges :: Money,
+    govtChargesWithCurrency :: PriceAPIEntity,
     platformFee :: PlatformFee,
     numRides :: Int,
     payBy :: UTCTime,
     totalFee :: Money,
     totalEarnings :: Money,
+    totalFeeWithCurrency :: PriceAPIEntity,
+    totalEarningsWithCurrency :: PriceAPIEntity,
     startTime :: UTCTime,
     endTime :: UTCTime,
     status :: DriverFeeStatus
@@ -273,7 +278,10 @@ data DriverOutstandingBalanceResp = DriverOutstandingBalanceResp
 data PlatformFee = PlatformFee
   { fee :: HighPrecMoney,
     cgst :: HighPrecMoney,
-    sgst :: HighPrecMoney
+    sgst :: HighPrecMoney,
+    feeWithCurrency :: PriceAPIEntity,
+    cgstWithCurrency :: PriceAPIEntity,
+    sgstWithCurrency :: PriceAPIEntity
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
@@ -376,6 +384,25 @@ type DisableDriverAPI =
   Capture "driverId" (Id Driver)
     :> "disable"
     :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- remove driver ac restriction ----------------------------------------
+
+type UpdateACUsageRestrictionAPI =
+  Capture "driverId" (Id Driver)
+    :> "acRestriction"
+    :> "update"
+    :> ReqBody '[JSON] UpdateACUsageRestrictionReq
+    :> Post '[JSON] APISuccess
+
+newtype UpdateACUsageRestrictionReq = UpdateACUsageRestrictionReq
+  { isWorking :: Bool
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpdateACUsageRestrictionReq where
+  hideSecrets = identity
 
 ---------------------------------------------------------
 -- block driver with reason ----------------------------------------
@@ -485,6 +512,7 @@ data DriverInfoRes = DriverInfoRes
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
     canSwitchToRental :: Bool,
+    canSwitchToInterCity :: Bool,
     vehicleNumber :: Maybe Text,
     selectedServiceTiers :: [Text],
     driverLicenseDetails :: Maybe DriverLicenseAPIEntity,
@@ -496,7 +524,13 @@ data DriverInfoRes = DriverInfoRes
     rating :: Maybe Centesimal,
     availableMerchants :: [Text],
     merchantOperatingCity :: Maybe Context.City,
-    blockStateModifier :: Maybe Text
+    currentAcOffReportCount :: Int,
+    totalAcRestrictionUnblockCount :: Int,
+    lastACStatusCheckedAt :: Maybe UTCTime,
+    currentACStatus :: Bool,
+    blockedDueToRiderComplains :: Bool,
+    blockStateModifier :: Maybe Text,
+    driverTag :: Maybe [Text]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -699,6 +733,7 @@ data AddVehicleReq = AddVehicleReq
     energyType :: Maybe Text,
     model :: Text,
     make :: Text,
+    airConditioned :: Maybe Bool,
     driverName :: Text
   }
   deriving stock (Show, Generic)
@@ -810,19 +845,6 @@ data DriverMode
   | SILENT
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
   deriving (PrettyShow) via Showable DriverMode
-
-data FleetVehicleStatsListItem = FleetVehicleStatsListItem
-  { vehicleRegNo :: Text,
-    driverName :: Text,
-    status :: Maybe DriverMode,
-    vehicleType :: Variant,
-    totalRides :: Maybe Int,
-    earnings :: Maybe Money,
-    rating :: Maybe Centesimal,
-    ridesAssigned :: Maybe Int,
-    ridesCancelled :: Maybe Int
-  }
-  deriving (Generic, ToJSON, ToSchema, FromJSON)
 
 type FleetTotalEarningAPI =
   "fleet"
@@ -943,6 +965,7 @@ data SubscriptionDriverFeesAndInvoicesToUpdate = SubscriptionDriverFeesAndInvoic
   { driverFees :: Maybe [DriverFeeInfoToUpdate],
     invoices :: Maybe [InvoiceInfoToUpdate],
     mkDuesToAmount :: Maybe HighPrecMoney,
+    mkDuesToAmountWithCurrency :: Maybe PriceAPIEntity,
     subscribed :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
@@ -955,7 +978,10 @@ data DriverFeeInfoToUpdate = DriverFeeInfoToUpdate
     mkCleared :: Maybe Bool,
     platformFee :: Maybe HighPrecMoney,
     sgst :: Maybe HighPrecMoney,
-    cgst :: Maybe HighPrecMoney
+    cgst :: Maybe HighPrecMoney,
+    platformFeeWithCurrency :: Maybe PriceAPIEntity,
+    sgstWithCurrency :: Maybe PriceAPIEntity,
+    cgstWithCurrency :: Maybe PriceAPIEntity
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1168,4 +1194,20 @@ data ReviewRCVariantRes = ReviewRCVariantRes
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance HideSecrets [ReviewRCVariantReq] where
+  hideSecrets = identity
+
+----------------UPDATE DRIVER TAG---------------------------------------------
+type UpdateDriverTagAPI =
+  Capture "driverId" (Id Driver)
+    :> "updateDriverTag"
+    :> ReqBody '[JSON] UpdateDriverTagReq
+    :> Post '[JSON] APISuccess
+
+data UpdateDriverTagReq = UpdateDriverTagReq
+  { driverTag :: Text,
+    isAddingTag :: Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+instance HideSecrets UpdateDriverTagReq where
   hideSecrets = identity

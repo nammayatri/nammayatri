@@ -34,7 +34,7 @@ import qualified Beckn.ACL.Select as ACL
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Select as DSelect
-import Domain.Types.Booking.Type
+import Domain.Types.Booking
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
@@ -92,11 +92,11 @@ handler =
     :<|> cancelSearch
 
 select :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler DSelect.DSelectResultRes
-select (personId, _) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+select (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq
-    void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq
+    void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq merchantId
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
@@ -114,11 +114,11 @@ select (personId, _) estimateId req = withFlowHandlerAPI . withPersonIdLogTag pe
   pure DSelect.DSelectResultRes {selectTtl = ttlInInt}
 
 select2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler APISuccess
-select2 (personId, _) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+select2 (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select2 personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq
-    void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq
+    void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq merchantId
   pure Success
 
 selectList :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
@@ -128,7 +128,7 @@ selectResult :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estima
 selectResult (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect.selectResult
 
 cancelSearch :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
-cancelSearch (personId, _) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+cancelSearch (personId, merchantId) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   activeBooking <- B.runInReplica $ QRB.findBookingIdAssignedByEstimateId estimateId activeBookingStatus
   -- activeBooking <- QRB.findLatestByRiderIdAndStatus personId SRB.activeBookingStatus
   if isJust activeBooking
@@ -140,7 +140,7 @@ cancelSearch (personId, _) estimateId = withFlowHandlerAPI . withPersonIdLogTag 
       result <-
         try @_ @SomeException $
           when dCancelSearch.sendToBpp . void . withShortRetry $ do
-            CallBPP.cancelV2 dCancelSearch.providerUrl =<< CACL.buildCancelSearchReqV2 dCancelSearch
+            CallBPP.cancelV2 merchantId dCancelSearch.providerUrl =<< CACL.buildCancelSearchReqV2 dCancelSearch
       case result of
         Left err -> do
           logTagInfo "Failed to cancel" $ show err

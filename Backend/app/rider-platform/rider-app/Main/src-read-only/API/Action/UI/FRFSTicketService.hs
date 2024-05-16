@@ -130,10 +130,19 @@ type API =
       :> Get
            '[JSON]
            API.Types.UI.FRFSTicketService.FRFSCancelStatus
+      :<|> TokenAuth
+      :> "frfs"
+      :> "config"
+      :> MandatoryQueryParam
+           "city"
+           Kernel.Types.Beckn.Context.City
+      :> Get
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
   )
 
 handler :: Environment.FlowServer API
-handler = getFrfsStations :<|> postFrfsSearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus
+handler = getFrfsStations :<|> postFrfsSearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> getFrfsConfig
 
 getFrfsStations ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -234,3 +243,12 @@ getFrfsBookingCancelStatus ::
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSCancelStatus
   )
 getFrfsBookingCancelStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsBookingCancelStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getFrfsConfig ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Beckn.Context.City ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
+  )
+getFrfsConfig a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsConfig (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

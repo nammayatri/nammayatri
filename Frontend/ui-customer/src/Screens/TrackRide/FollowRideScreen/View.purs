@@ -31,7 +31,7 @@ import Effect (Effect)
 import Effect.Aff (Milliseconds(..), launchAff)
 import Effect.Uncurried (runEffectFn1, runEffectFn9)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, getValueFromIdMap, liftFlow, os, updatePushInIdMap, safeMarginTopWithDefault, screenWidth, safeMarginBottomWithDefault, safeMarginTop)
-import Helpers.Utils (FetchImageFrom(..), fetchImage, storeCallBackCustomer, makeNumber, getDefaultPixelSize, zoneLabelIcon)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, storeCallBackCustomer, makeNumber, getDefaultPixelSize)
 import JBridge (animateCamera, drawRoute, enableMyLocation, getExtendedPath, isCoordOnPath, removeAllPolylines, removeMarker, showMap, updateRoute, updateRouteConfig, startChatListenerService, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, clearChatMessages, getKeyInSharedPrefKeys, scrollOnResume, setMapPadding, getLayoutBounds, defaultMarkerConfig)
 import Mobility.Prelude (boolToVisibility)
 import Prelude
@@ -70,6 +70,7 @@ import Components.MessagingView.Common.View (messageNotificationView)
 import Components.MessagingView.Common.Types (MessageNotificationView)
 import Engineering.Helpers.LogEvent (logEventWithMultipleParams)
 import Foreign (unsafeToForeign)
+import Helpers.SpecialZoneAndHotSpots (zoneLabelIcon)
 
 
 screen :: FollowRideScreenState -> GlobalState -> Screen Action FollowRideScreenState ScreenOutput

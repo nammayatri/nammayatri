@@ -43,6 +43,7 @@ import Mobility.Prelude
 import Components.OptionsMenu as OptionsMenuConfig
 import Components.BottomDrawerList as BottomDrawerList
 import Data.Array as DA
+import Components.RequestInfoCard as RequestInfoCard
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -53,6 +54,7 @@ primaryButtonConfig state = let
     activate = (( rcMatch || (not state.data.cityConfig.uploadRCandDL)) && 
                 -- (state.data.dateOfRegistration /= Just "") && 
                 state.data.vehicle_registration_number /= "" &&
+                (state.data.vehicleCategory /= Just ST.CarCategory || isJust state.props.buttonIndex) &&
                 ((DS.length state.data.vehicle_registration_number >= 2) && ((DS.take 2 state.data.vehicle_registration_number) `DA.elem` state.data.rcNumberPrefixList)))
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfRegistration then getString CONFIRM 
@@ -211,3 +213,30 @@ bottomDrawerListConfig state = BottomDrawerList.config {
     {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.callSupport, identifier : "call"}
   ]
 }
+
+
+acModalConfig :: ST.AddVehicleDetailsScreenState -> RequestInfoCard.Config
+acModalConfig state =
+  RequestInfoCard.config
+    { title
+      { text = getString HOW_DOES_AC_CONDITION_AFFECT
+      }
+    , primaryText
+      { text = getString WE_WILL_USE_THIS_INFO
+      , padding = Padding 16 16 0 0
+      }
+    , secondaryText
+      { visibility = GONE
+      , padding = PaddingLeft 16
+      }
+    , imageConfig
+      { imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_car_ac_info"
+      , height = V 130
+      , width = V 130
+      , padding = Padding 0 4 1 0
+      }
+    , buttonConfig
+      { text = getString GOT_IT
+      , padding = PaddingVertical 16 20
+      }
+    }

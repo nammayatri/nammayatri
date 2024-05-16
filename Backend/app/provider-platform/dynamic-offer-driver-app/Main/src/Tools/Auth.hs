@@ -111,7 +111,7 @@ verifyPerson token = do
       return (personId, merchantId, merchantOperatingCityId)
 
 merchantIdFallback :: Id Merchant.Merchant -> Id Merchant.Merchant
-merchantIdFallback "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" = "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" --  "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" -> YATRI_PARTNER_MERCHANT_ID  , "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" -> NAMMA_YATRI_PARTNER_MERCHANT_ID
+merchantIdFallback "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" = "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" --  "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" -> YATRI_PARTNER_MERCHANT_ID  , "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" -> NAMMA_YATRI_PARTNER_MERCHANT_ID
 merchantIdFallback v = v
 
 authTokenCacheKey :: RegToken -> Text

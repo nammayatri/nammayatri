@@ -30,7 +30,7 @@ import Services.API
 import Data.Array (any, null, head, length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, isNothing, isJust, maybe', maybe)
 import Screens.HomeScreen.ScreenData (dummyRideBooking, initData) as HSD
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getSpecialTag)
+import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo)
 import Data.Lens ((^.))
 import Accessor
 import Screens.Types (Stage(..), SearchResultType(..), PopupType(..), FlowStatusData(..))
@@ -43,6 +43,7 @@ import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Common.Types.App as Common
+import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -67,13 +68,16 @@ checkRideStatus rideAssigned = do
                     , sourceAddress = getAddressFromBooking resp.fromLocation
                     , destinationAddress = getAddressFromBooking (resp.bookingDetails ^._contents^._toLocation)
                     , currentSearchResultType = if isQuotes then QUOTES else ESTIMATES
-                    , vehicleVariant = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._vehicleVariant},
+                    , vehicleVariant = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._vehicleVariant
+                    , startedAtUTC = fromMaybe "" resp.rideStartTime
+                    },
                   props
                     { currentStage = rideStatus
                     , rideRequestFlow = true
                     , bookingId = resp.id
                     , isPopUp = NoPopUp
                     , zoneType = getSpecialTag resp.specialLocationTag
+                    , showAcWorkingPopup = rideStatus == RideStarted
                   }
                 }
         setValueToLocalStore IS_SOS_ACTIVE $ show $ Just Common.Pending == resp.sosStatus
@@ -104,7 +108,7 @@ checkRideStatus rideAssigned = do
                 pure unit
       else if ((getValueToLocalStore RATING_SKIPPED) == "false") then do
         updateLocalStage HomeScreen
-        rideBookingListResponse <- lift $ lift $ Remote.rideBookingListWithStatus "1" "0" "COMPLETED"
+        rideBookingListResponse <- lift $ lift $ Remote.rideBookingListWithStatus "1" "0" "COMPLETED" Nothing
         case rideBookingListResponse of
           Right (RideBookingListRes listResp) -> do
             let (RideBookingRes resp) = fromMaybe HSD.dummyRideBooking $ head listResp.list
@@ -164,7 +168,8 @@ checkRideStatus rideAssigned = do
                           , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
                           , driverInfoCardState {
                             price = resp.estimatedTotalFare,
-                            rideId = currRideListItem.id
+                            rideId = currRideListItem.id,
+                            providerType = maybe Common.ONUS (\valueAdd -> if valueAdd then Common.ONUS else Common.OFFUS) resp.isValueAddNP
                           }
                           , ratingViewState { rideBookingRes = (RideBookingRes resp), issueFacedView = nightSafetyFlow}
                           , vehicleVariant = currRideListItem.vehicleVariant

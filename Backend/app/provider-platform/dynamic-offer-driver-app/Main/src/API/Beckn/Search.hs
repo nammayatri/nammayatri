@@ -38,6 +38,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.ValueAddNP as VNP
+import TransactionLogs.PushLogs
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -69,6 +70,8 @@ search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandle
 
     Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
       validatedSReq <- DSearch.validateRequest transporterId dSearchReq
+      fork "search received pushing ondc logs" do
+        void $ pushLogs "search" (toJSON reqV2) validatedSReq.merchant.id.getId
       let bppId = validatedSReq.merchant.subscriberId.getShortId
       bppUri <- Utils.mkBppUri transporterId.getId
       fork "search request processing" $
@@ -82,13 +85,13 @@ search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandle
           let dSearchRes = bool dSearchResWihoutQuotes dSearchResWithQuotes isValueAddNP
 
           when ((notNull dSearchRes.quotes && isValueAddNP) || null dSearchRes.quotes) $ do
-            onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapId bapUri (Just bppId) (Just bppUri) city country
+            onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapId bapUri (Just bppId) (Just bppUri) city country isValueAddNP
             let context' = onSearchReq.onSearchReqContext
             logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
             void $
-              Callback.withCallback dSearchRes.provider "SEARCH" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ do
+              Callback.withCallback dSearchRes.provider "on_search" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ do
                 pure onSearchReq
-    pure Ack
+  pure Ack
 
 searchLockKey :: Text -> Text -> Text
 searchLockKey id mId = "Driver:Search:MessageId-" <> id <> ":" <> mId

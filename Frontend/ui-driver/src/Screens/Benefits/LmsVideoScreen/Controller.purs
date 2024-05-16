@@ -17,7 +17,7 @@ module Screens.Benefits.LmsVideoScreen.Controller where
 
 import Prelude
 import Screens.Types as ST
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
@@ -32,7 +32,7 @@ import Engineering.Helpers.Commons (getNewIDWithTag, flowRunner)
 import Debug (spy)
 import Foreign.Generic (encodeJSON)
 import Foreign (Foreign)
-import DecodeUtil (decodeForeignObject)
+import DecodeUtil (decodeForeignObject, decodeForeignAny)
 import Effect.Aff (launchAff)
 import Types.App (defaultGlobalState)
 import Services.Backend as Remote
@@ -87,9 +87,9 @@ eval (OpenReelsView index videoStatus) state = do
 eval (UpdateVideoList res) state = let generatedData = buildLmsVideoeRes res in continue state {props {showShimmer = false, showError = null generatedData.pending && null generatedData.completed}, data {videosScreenData = buildLmsVideoeRes res}}
 
 eval (GetCurrentPosition label stringData reelData buttonData) state =
-  let currentReelVideoData = decodeForeignObject reelData defaultReelItem
+  let currentReelVideoData = decodeForeignAny reelData defaultReelItem
       videoId = maybe "" (\rData -> rData.id) currentReelVideoData
-      currentButtonConfig = decodeForeignObject buttonData RC.defaultReelButtonConfig
+      currentButtonConfig = decodeForeignAny buttonData RC.defaultReelButtonConfig
       shareMessageTitle = maybe Nothing (\rButtonData -> rButtonData.shareMessageTitle) currentButtonConfig
       shareText = maybe Nothing (\rButtonData -> rButtonData.shareText) currentButtonConfig
       shareLink = maybe Nothing (\rButtonData -> rButtonData.shareLink) currentButtonConfig
@@ -142,7 +142,7 @@ eval ErrorOccuredAction state = continue state {props{showError = true, showShim
 
 eval SelectLanguage state = exit $ GoToSelectLanguage state
 
-eval _ state = continue state
+eval _ state = update state
 
 defaultReelItem :: Maybe RC.ReelItem
 defaultReelItem = Nothing

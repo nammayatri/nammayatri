@@ -1,0 +1,38 @@
+imports:
+  Text: Data.Text
+  VehicleDetails: Domain.Types.VehicleDetails
+
+module: VehicleDetails
+
+types:
+  VehicleMakesResp:
+    makes: "[Text]"
+  VehicleModelsReq:
+    make: Text
+  VehicleModelsResp:
+    models: "[Text]"
+  VehicleDetailsReq:
+    make: Text
+    model: Text
+
+apis:
+  - GET:
+      endpoint: /vehicleMakes
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: VehicleMakesResp
+  - POST:
+      endpoint: /vehicleModels
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: VehicleModelsReq
+      response:
+        type: VehicleModelsResp
+  - POST:
+      endpoint: /vehicleDetails
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: VehicleDetailsReq
+      response:
+        type: VehicleDetails
+

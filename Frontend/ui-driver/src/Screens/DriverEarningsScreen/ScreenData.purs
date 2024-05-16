@@ -75,10 +75,12 @@ initData =
             specialZoneText : "",
             specialZonePickup : false,
             tripType : OneWay,
-            tollCharge : 0,
+            tollCharge : 0.0,
             rideType : "",
             tripStartTime : Nothing,
-            tripEndTime : Nothing
+            tripEndTime : Nothing,
+            acRide : Nothing,
+            vehicleServiceTier : ""
         }
       , logField : empty
       }

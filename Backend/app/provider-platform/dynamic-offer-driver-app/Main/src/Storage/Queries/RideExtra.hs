@@ -239,6 +239,15 @@ updateDriverDeviatedFromRoute rideId deviation = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateDriverDeviatedToTollRoute :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> Bool -> m ()
+updateDriverDeviatedToTollRoute rideId deviation = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.driverDeviatedToTollRoute $ Just deviation,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateStartTimeAndLoc :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> LatLong -> m ()
 updateStartTimeAndLoc rideId point = do
   now <- getCurrentTime
@@ -288,22 +297,24 @@ updateStatusByIds rideIds status = do
     ]
     [Se.Is BeamR.id (Se.In $ getId <$> rideIds)]
 
-updateDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMeters -> Int -> Int -> m ()
-updateDistance driverId distance googleSnapCalls osrmSnapsCalls = do
+updateDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMeters -> Int -> Int -> Maybe Int -> m ()
+updateDistance driverId distance googleSnapCalls osrmSnapsCalls selfTunedCount = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamR.traveledDistance distance,
       Se.Set BeamR.numberOfSnapToRoadCalls (Just googleSnapCalls),
       Se.Set BeamR.numberOfOsrmSnapToRoadCalls (Just osrmSnapsCalls),
+      Se.Set BeamR.numberOfSelfTuned selfTunedCount,
       Se.Set BeamR.updatedAt now
     ]
     [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
 
-updateTollCharges :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> m ()
-updateTollCharges driverId tollCharges = do
+updateTollChargesAndNames :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> [Text] -> m ()
+updateTollChargesAndNames driverId tollCharges tollNames = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamR.tollCharges (Just tollCharges),
+      Se.Set BeamR.tollNames (Just tollNames),
       Se.Set BeamR.updatedAt now
     ]
     [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
@@ -313,7 +324,8 @@ updateAll rideId ride = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamR.chargeableDistance ride.chargeableDistance,
-      Se.Set BeamR.fare ride.fare,
+      Se.Set BeamR.fare $ roundToIntegral <$> ride.fare,
+      Se.Set BeamR.fareAmount $ ride.fare,
       Se.Set BeamR.tripEndTime ride.tripEndTime,
       Se.Set BeamR.tripEndLat (ride.tripEndPos <&> (.lat)),
       Se.Set BeamR.tripEndLon (ride.tripEndPos <&> (.lon)),
@@ -368,10 +380,18 @@ data RideItem = RideItem
     rideDetails :: RideDetails,
     riderDetails :: RiderDetails,
     customerName :: Maybe Text,
-    fareDiff :: Maybe Money,
+    fareDiff :: Maybe Price,
     bookingStatus :: Common.BookingStatus,
     tripCategory :: DTC.TripCategory
   }
+
+instance Num (Maybe HighPrecMoney) where
+  (-) = liftA2 (-)
+  (+) = liftA2 (+)
+  (*) = liftA2 (*)
+  abs = fmap abs
+  signum = fmap signum
+  fromInteger = Just . fromInteger
 
 instance Num (Maybe Money) where
   (-) = liftA2 (-)
@@ -409,7 +429,7 @@ findAllRideItems ::
   Maybe (ShortId Ride) ->
   Maybe DbHash ->
   Maybe DbHash ->
-  Maybe Money ->
+  Maybe HighPrecMoney ->
   UTCTime ->
   Maybe UTCTime ->
   Maybe UTCTime ->
@@ -431,7 +451,15 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fareDiff_ -> B.sqlBool_ $ (ride.fare - B.just_ (B.floor_ booking.estimatedFare)) B.>. B.val_ (Just fareDiff_) B.||. (ride.fare - B.just_ (B.floor_ booking.estimatedFare)) B.<. B.val_ (Just fareDiff_)) mbFareDiff
+                    B.&&?. maybe
+                      (B.sqlBool_ $ B.val_ True)
+                      ( \fareDiff_ -> do
+                          -- is it correct? fare - estimatedFare > fareDiff_ || fare - estimatedFare < fareDiff_
+                          let oldCond = B.sqlBool_ $ (ride.fare - B.just_ (B.floor_ booking.estimatedFare)) B.>. B.val_ (Just $ roundToIntegral fareDiff_) B.||. (ride.fare - B.just_ (B.floor_ booking.estimatedFare)) B.<. B.val_ (Just $ roundToIntegral fareDiff_)
+                          let newCond = B.sqlBool_ $ (ride.fareAmount - B.just_ booking.estimatedFare) B.>. B.val_ (Just fareDiff_) B.||. (ride.fareAmount - B.just_ booking.estimatedFare) B.<. B.val_ (Just fareDiff_)
+                          B.bool_ newCond oldCond (B.isNothing_ ride.fareAmount)
+                      )
+                      mbFareDiff
               )
               do
                 booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
@@ -449,7 +477,9 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
       r <- catMaybes <$> mapM fromTType' rides
       rd <- catMaybes <$> mapM fromTType' rideDetails
       rdr <- catMaybes <$> mapM fromTType' riderDetails
-      pure $ zip7 (DR.shortId <$> r) (DR.createdAt <$> r) rd rdr b (liftA2 (-) (DR.fare <$> r) (Just . DBooking.estimatedFare <$> b)) (mkBookingStatus now <$> r)
+      -- TODO test
+      let fareDiffs = zipWith (\ride booking -> mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare) r b
+      pure $ zip7 (DR.shortId <$> r) (DR.createdAt <$> r) rd rdr b fareDiffs (mkBookingStatus now <$> r)
     Left err -> do
       logError $ "FAILED_TO_FETCH_RIDE_LIST" <> show err
       pure []

@@ -145,4 +145,9 @@ dummyIndividualCard = {
   , vehicleVariant : Nothing
   , merchantExoPhone : ""
   , serviceTierName : Nothing
+  , totalTime : ""
+  , vehicleModel : ""
+  , rideStartTimeUTC : ""
+  , providerName : ""
+  , providerType : ONUS
 }

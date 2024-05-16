@@ -25,13 +25,14 @@ import Foreign.Class (class Encode, encode)
 import Foreign.Object (Object, empty, insert, lookup)
 import Tracker (trackActionObject, trackScreenEnd, trackScreen, trackScreenEvent)
 import Tracker.Types (Action(..), Level(..), Screen(..)) as Tracker
-import Prelude (Unit, pure, unit, ($), (<$>), (<<<), (/=), (&&),bind, not, show)
+import Prelude (Unit, pure, unit, ($), (<$>), (<<<), (/=), (&&),bind, not, show, (<>))
 import Effect.Unsafe (unsafePerformEffect)
 import Control.Applicative
 
 foreign import log :: String -> Foreign -> Unit
 foreign import loggerEnabled :: Unit -> Boolean
 foreign import logDebug :: String -> String -> Foreign -> Unit
+foreign import getWindowKey :: String -> String
 
 rootLevelKey :: Object Foreign ->  Object Foreign
 rootLevelKey logField = do
@@ -115,8 +116,14 @@ logImpl level key value =
   if loggerEnabled unit then
     pure $ logDebug (show level) key (encode value)
   else
-    let key' = insert key (encode value) empty
-        value' = rootLevelKeyWithRefId empty  
+    let customer_id = getWindowKey "CUSTOMER_ID"
+        driver_id = getWindowKey "DRIVER_ID"
+        key' = insert key (encode value) empty
+        value' = if (customer_id /= "") then 
+                    insert "customer_id" (encode customer_id) empty
+                 else if (driver_id /= "") then
+                    insert "driver_id" (encode driver_id) empty
+                 else empty
         _ = unsafePerformEffect $ trackActionObject Tracker.User level ON_EVENT key' value'
     in pure unit
   
@@ -131,3 +138,6 @@ logInfo key value =
 logWarn :: forall f a. Applicative f => Encode a => String -> a -> f Unit
 logWarn key value =
   logImpl Tracker.Warning key value -- warnings will not be shown in kibana
+
+logStatus :: forall f a. Applicative f => Encode a => String -> a -> f Unit
+logStatus key = logImpl Tracker.Info ("flow_status_" <> key)

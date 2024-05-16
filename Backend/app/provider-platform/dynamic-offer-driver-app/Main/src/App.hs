@@ -33,6 +33,7 @@ import Kernel.Beam.Types (KafkaConn (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
 import Kernel.External.AadhaarVerification.Gridline.Config
+import Kernel.External.Tokenize (prepareHyperVergeHttpManager)
 import Kernel.External.Verification.Interface.Idfy
 import Kernel.External.Verification.InternalScripts.FaceVerification (prepareInternalScriptsHttpManager)
 import Kernel.External.Verification.SafetyPortal.Config (prepareSafetyPortalHttpManager)
@@ -59,25 +60,25 @@ import Network.Wai.Handler.Warp
   )
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
-import System.Environment (lookupEnv, setEnv)
+import System.Environment (lookupEnv)
 import "utils" Utils.Common.Events as UE
 
 createCAC :: AppCfg -> IO ()
 createCAC appCfg = do
-  cacStatus <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
+  cacStatus <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) (appCfg.cacConfig.tenant : appCfg.cacTenants)
   case cacStatus of
-    0 -> CM.startCACPolling appCfg.cacConfig.tenants
+    0 -> CM.startCACPolling appCfg.cacTenants
     _ -> do
       -- logError "CAC client failed to start"
       threadDelay 1000000
       B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
-  superPositionStatus <- CM.initSuperPositionClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
+  superPositionStatus <- CM.initSuperPositionClient appCfg.superPositionConfig.host (fromIntegral appCfg.superPositionConfig.interval) appCfg.superPositionConfig.tenants
   case superPositionStatus of
-    0 -> CM.runSuperPositionPolling appCfg.cacConfig.tenants
+    0 -> CM.runSuperPositionPolling appCfg.superPositionConfig.tenants
     _ -> do
       -- logError "CAC super position client failed to start"
       threadDelay 1000000
-      B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
+      B.bool (pure ()) (createCAC appCfg) appCfg.superPositionConfig.retryConnection
 
 runDynamicOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()
 runDynamicOfferDriverApp configModifier = do
@@ -122,8 +123,6 @@ runDynamicOfferDriverApp' appCfg = do
         L.setOption KBT.Tables kvConfigs
         if (length kvConfigs.useCAC > 0) || kvConfigs.useCACForFrontend
           then do
-            liftIO $ setEnv "CAC_HOST" appCfg.cacConfig.host
-            liftIO $ setEnv "CAC_INTERVAL" (show appCfg.cacConfig.interval)
             _ <- liftIO $ CC.forkIO $ createCAC appCfg
             logInfo "Starting App using configs from CAC."
           else logInfo "Starting App using configs from DB."
@@ -140,7 +139,8 @@ runDynamicOfferDriverApp' appCfg = do
                 Just (Just 20000, prepareIdfyHttpManager 20000),
                 Just (Just 10000, prepareInternalScriptsHttpManager 10000),
                 Just (Just 10000, prepareSafetyPortalHttpManager 10000),
-                Just (Just 150000, prepareGridlineHttpManager 150000)
+                Just (Just 150000, prepareGridlineHttpManager 150000),
+                Just (Just 10000, prepareHyperVergeHttpManager 10000)
               ]
 
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))

@@ -24,6 +24,7 @@ import qualified Domain.Types.Image as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Vehicle as Vehicle
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Environment
 import qualified EulerHS.Language as L
@@ -36,19 +37,22 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.Multipart
 import SharedLogic.DriverOnboarding
+import Storage.Cac.TransporterConfig
+import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
-import Storage.CachedQueries.Merchant.TransporterConfig
 import qualified Storage.Queries.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import Tools.Error
 import qualified Tools.Verification as Verification
+import Utils.Common.Cac.KeyNameConstants
 
 data ImageValidateRequest = ImageValidateRequest
   { image :: Text,
     imageType :: DVC.DocumentType,
-    rcNumber :: Maybe Text -- for PUC, Permit, Insurance and Fitness
+    rcNumber :: Maybe Text, -- for PUC, Permit, Insurance and Fitness
+    vehicleCategory :: Maybe Vehicle.Category
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -125,7 +129,7 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
 
   images <- Query.findRecentByPersonIdAndImageType personId imageType
   unless isDashboard $ do
-    transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let onboardingTryLimit = transporterConfig.onboardingTryLimit
     when (length images > onboardingTryLimit) $ do
       -- not needed now
@@ -139,11 +143,13 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
   Query.create imageEntity
 
   -- skipping validation for rc as validation not available in idfy
-  validationOutput <-
-    Verification.validateImage merchantId merchantOpCityId $
-      Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
-  when validationOutput.validationAvailable $ do
-    checkErrors imageEntity.id imageType validationOutput.detectedImage
+  docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe Vehicle.CAR vehicleCategory)
+  when (maybe True (.isImageValidationRequired) docConfigs) $ do
+    validationOutput <-
+      Verification.validateImage merchantId merchantOpCityId $
+        Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
+    when validationOutput.validationAvailable $ do
+      checkErrors imageEntity.id imageType validationOutput.detectedImage
   Query.updateToValid True imageEntity.id
   return $ ImageValidateResponse {imageId = imageEntity.id}
   where
@@ -173,7 +179,7 @@ validateImageFile ::
   Flow ImageValidateResponse
 validateImageFile isDashboard (personId, merchantId, merchantOpCityId) ImageValidateFileRequest {..} = do
   image' <- L.runIO $ base64Encode <$> BS.readFile image
-  validateImage isDashboard (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType rcNumber
+  validateImage isDashboard (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType rcNumber Nothing
 
 mkImage ::
   (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>

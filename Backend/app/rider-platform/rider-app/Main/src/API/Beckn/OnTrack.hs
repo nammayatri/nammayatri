@@ -25,6 +25,9 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.Booking as QRB
+import Tools.Error
+import TransactionLogs.PushLogs
 
 type API = OnTrack.OnTrackAPIV2
 
@@ -44,4 +47,7 @@ onTrack _ reqV2 = withFlowHandlerBecknAPI do
       validatedReq <- DOnTrack.validateRequest onTrackReq
       fork "on track processing" $
         DOnTrack.onTrack validatedReq
+      fork "on track received pushing ondc logs" do
+        booking <- QRB.findById validatedReq.ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BookingId:-" <> validatedReq.ride.bookingId.getId)
+        void $ pushLogs "on_track" (toJSON reqV2) booking.merchantId.getId
     pure Ack

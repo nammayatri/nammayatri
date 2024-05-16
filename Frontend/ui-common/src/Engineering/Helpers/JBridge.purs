@@ -82,7 +82,7 @@ foreign import fetchPackageName :: Unit -> Effect String
 foreign import exitLocateOnMap :: String -> Unit
 foreign import shareTextMessage :: String -> String -> Unit
 foreign import shareImageMessage :: String -> ShareImageConfig -> Unit
-foreign import showInAppNotification :: String -> String -> String -> String -> String -> String -> String -> String -> Int -> Effect Unit
+foreign import showInAppNotification :: InAppNotificationPayload -> Effect Unit
 foreign import enableMyLocation :: Boolean -> Unit
 foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean
 foreign import isBackgroundLocationEnabled :: Unit -> Effect Boolean
@@ -144,6 +144,7 @@ foreign import translateStringWithTimeout :: forall action. (action -> Effect Un
 
 foreign import isMockLocation :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import animateCamera :: Number -> Number -> Number -> String -> Effect Unit
+foreign import moveCameraWithoutAnimation :: Number -> Number -> Number -> String -> Effect Unit
 -- foreign import moveCamera :: Number -> Number -> Number -> Number -> Effect Unit
 foreign import minimizeApp    :: String -> Unit
 foreign import toast          :: String -> Unit
@@ -254,6 +255,7 @@ foreign import emitJOSEvent :: Fn3 String String Foreign Unit
 foreign import getLayoutBounds :: Fn1 String LayoutBound
 foreign import horizontalScrollToPos :: EffectFn3 String String Int Unit
 foreign import withinTimeRange :: String -> String -> String -> Boolean
+foreign import timeValidity :: String -> String -> Boolean
 foreign import isServiceRunning :: Fn1 String Boolean
 foreign import getChatMessages :: LazyCheck -> Array ChatComponent
 foreign import storeKeyBoardCallback :: forall action. EffectFn2 (action -> Effect Unit) (String -> action) Unit
@@ -461,6 +463,7 @@ type LocateOnMapConfig = {
   , locationName :: String
   , locateOnMapPadding :: LocateOnMapPadding
   , enableMapClickListener :: Boolean
+  , thresholdDistToSpot :: Int
 }
 
 locateOnMapConfig :: LocateOnMapConfig
@@ -488,6 +491,7 @@ locateOnMapConfig = {
   , locationName : ""
   , locateOnMapPadding : { left : 1.0, top : 1.0, right : 1.0, bottom : 1.0 }
   , enableMapClickListener : false
+  , thresholdDistToSpot : 3
 }
 
 type LocateOnMapPadding = {
@@ -542,6 +546,8 @@ type MapRouteConfig = {
   , isAnimation :: Boolean
   , polylineAnimationConfig :: PolylineAnimationConfig
   , autoZoom :: Boolean
+  , dashUnit :: Int
+  , gapUnit :: Int
 }
 
 type Coordinates = Array Paths
@@ -584,18 +590,55 @@ type UpdateRouteConfig = {
   , autoZoom :: Boolean
 }
 
+type InAppNotificationPayload = {
+  event :: String,
+  title :: String,
+  message :: String,
+  onTapAction :: String,
+  action1Text :: String,
+  action2Text :: String,
+  action1Image :: String,
+  action2Image :: String,
+  channelId :: String,
+  durationInMilliSeconds :: Int,
+  showLoader :: Boolean
+}
+
+inAppNotificationPayload :: InAppNotificationPayload
+inAppNotificationPayload = {
+  event : "in_app_notification",
+  title : "",
+  message : "",
+  onTapAction : "",
+  action1Text : "",
+  action2Text : "",
+  action1Image : "",
+  action2Image : "",
+  channelId : "channel",
+  durationInMilliSeconds : 5000,
+  showLoader : false
+}
+
 updateRouteConfig :: UpdateRouteConfig
 updateRouteConfig = {
     json : {points: []}
   , destMarker : ""
   , eta : ""
   , srcMarker : ""
-  , specialLocation : {
+  , specialLocation : mapRouteConfig
+  , zoomLevel : if (os == "IOS") then 19.0 else 17.0
+  , autoZoom : true
+}
+
+mapRouteConfig :: MapRouteConfig
+mapRouteConfig = {
       sourceSpecialTagIcon: "", 
       destSpecialTagIcon: "", 
       vehicleSizeTagIcon: 0, 
       isAnimation: false, 
       autoZoom : true,
+      dashUnit : 1,
+      gapUnit : 0,
       polylineAnimationConfig: {
         color: "", 
         draw: 0, 
@@ -603,9 +646,6 @@ updateRouteConfig = {
         delay: 0
       } 
   }
-  , zoomLevel : if (os == "IOS") then 19.0 else 17.0
-  , autoZoom : true
-}
 
 -- type Point = Array Number
 

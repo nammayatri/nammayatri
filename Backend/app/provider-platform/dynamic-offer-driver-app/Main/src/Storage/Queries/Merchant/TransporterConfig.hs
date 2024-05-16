@@ -64,6 +64,8 @@ update config = do
   updateOneWithKV
     [ Se.Set BeamTC.pickupLocThreshold config.pickupLocThreshold,
       Se.Set BeamTC.dropLocThreshold config.dropLocThreshold,
+      Se.Set BeamTC.editLocTimeThreshold config.editLocTimeThreshold,
+      Se.Set BeamTC.editLocDriverPermissionNeeded config.editLocDriverPermissionNeeded,
       Se.Set BeamTC.rideTimeEstimatedThreshold config.rideTimeEstimatedThreshold,
       Se.Set BeamTC.defaultPopupDelay config.defaultPopupDelay,
       Se.Set BeamTC.popupDelayToAddAsPenalty config.popupDelayToAddAsPenalty,
@@ -93,7 +95,8 @@ update config = do
       Se.Set BeamTC.orderAndNotificationStatusCheckTimeLimit (nominalDiffTimeToSeconds config.orderAndNotificationStatusCheckTimeLimit),
       Se.Set BeamTC.snapToRoadConfidenceThreshold config.snapToRoadConfidenceThreshold,
       Se.Set BeamTC.useWithSnapToRoadFallback config.useWithSnapToRoadFallback,
-      Se.Set BeamTC.updatedAt now
+      Se.Set BeamTC.updatedAt now,
+      Se.Set BeamTC.emailOtpConfig config.emailOtpConfig
     ]
     [Se.Is BeamTC.merchantOperatingCityId (Se.Eq $ getId config.merchantOperatingCityId)]
 
@@ -149,6 +152,8 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             canSuvDowngradeToHatchback = fromMaybe False canSuvDowngradeToHatchback,
             arrivedPickupThreshold = fromMaybe 100 arrivedPickupThreshold,
             variantsToEnableForSubscription = variantsToEnableForSubscription,
+            cancellationFee = cancellationFee,
+            currency = fromMaybe INR currency,
             ..
           }
     where
@@ -166,7 +171,9 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.pickupLocThreshold = pickupLocThreshold,
         BeamTC.dropLocThreshold = dropLocThreshold,
         BeamTC.rideTimeEstimatedThreshold = rideTimeEstimatedThreshold,
+        BeamTC.editLocTimeThreshold = editLocTimeThreshold,
         BeamTC.includeDriverCurrentlyOnRide = includeDriverCurrentlyOnRide,
+        BeamTC.editLocDriverPermissionNeeded = editLocDriverPermissionNeeded,
         BeamTC.defaultPopupDelay = defaultPopupDelay,
         BeamTC.popupDelayToAddAsPenalty = popupDelayToAddAsPenalty,
         BeamTC.thresholdCancellationScore = thresholdCancellationScore,
@@ -225,6 +232,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.canDowngradeToSedan = canDowngradeToSedan,
         BeamTC.canDowngradeToHatchback = canDowngradeToHatchback,
         BeamTC.canSwitchToRental = canSwitchToRental,
+        BeamTC.canSwitchToInterCity = canSwitchToInterCity,
         BeamTC.canDowngradeToTaxi = canDowngradeToTaxi,
         BeamTC.canSuvDowngradeToTaxi = canSuvDowngradeToTaxi,
         BeamTC.canSuvDowngradeToHatchback = Just canSuvDowngradeToHatchback,
@@ -232,7 +240,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.aadhaarImageResizeConfig = toJSON <$> aadhaarImageResizeConfig,
         BeamTC.enableFaceVerification = enableFaceVerification,
         BeamTC.isAvoidToll = isAvoidToll,
-        BeamTC.allowAutosOnTollRoute = allowAutosOnTollRoute,
         BeamTC.specialZoneBookingOtpExpiry = specialZoneBookingOtpExpiry,
         BeamTC.updateNotificationStatusBatchSize = updateNotificationStatusBatchSize,
         BeamTC.updateOrderStatusBatchSize = updateOrderStatusBatchSize,
@@ -261,6 +268,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.nightSafetyStartTime = nightSafetyStartTime,
         BeamTC.nightSafetyEndTime = nightSafetyEndTime,
         BeamTC.cancellationFee = cancellationFee,
+        BeamTC.currency = Just currency,
         BeamTC.driverDistanceTravelledOnPickupThresholdOnCancel = driverDistanceTravelledOnPickupThresholdOnCancel,
         BeamTC.driverTimeSpentOnPickupThresholdOnCancel = driverTimeSpentOnPickupThresholdOnCancel,
         BeamTC.driverDistanceToPickupThresholdOnCancel = driverDistanceToPickupThresholdOnCancel,
@@ -273,6 +281,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.notificationRetryTimeGap = nominalDiffTimeToSeconds notificationRetryTimeGap,
         BeamTC.driverAutoPayExecutionTimeFallBack = nominalDiffTimeToSeconds driverAutoPayExecutionTimeFallBack,
         BeamTC.orderAndNotificationStatusCheckFallBackTime = nominalDiffTimeToSeconds orderAndNotificationStatusCheckFallBackTime,
+        BeamTC.acStatusCheckGap = acStatusCheckGap,
         BeamTC.bookAnyVehicleDowngradeLevel = bookAnyVehicleDowngradeLevel,
         BeamTC.scheduleRideBufferTime = nominalDiffTimeToSeconds scheduleRideBufferTime,
         BeamTC.considerDriversForSearch = considerDriversForSearch,
@@ -283,11 +292,14 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.specialDrivers = specialDrivers,
         BeamTC.specialLocationTags = specialLocationTags,
         BeamTC.kaptureDisposition = kaptureDisposition,
+        BeamTC.kaptureQueue = kaptureQueue,
         BeamTC.fakeOtpMobileNumbers = fakeOtpMobileNumbers,
+        BeamTC.fakeOtpEmails = fakeOtpEmails,
         BeamTC.dummyFromLocation = Just $ toJSON dummyFromLocation,
         BeamTC.dummyToLocation = Just $ toJSON dummyToLocation,
         BeamTC.variantsToEnableForSubscription = variantsToEnableForSubscription,
         BeamTC.dlNumberVerification = dlNumberVerification,
         BeamTC.pastDaysRideCounter = pastDaysRideCounter,
-        BeamTC.placeNameCacheExpiryDays = placeNameCacheExpiryDays
+        BeamTC.placeNameCacheExpiryDays = placeNameCacheExpiryDays,
+        BeamTC.emailOtpConfig = emailOtpConfig
       }

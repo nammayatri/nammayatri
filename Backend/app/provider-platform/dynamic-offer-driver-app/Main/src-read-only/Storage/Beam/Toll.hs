@@ -14,16 +14,17 @@ import qualified Kernel.Utils.ComputeIntersection
 import Tools.Beam.UtilsTH
 
 data TollT f = TollT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    name :: (B.C f Kernel.Prelude.Text),
-    currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
-    price :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    tollEndGates :: (B.C f [Kernel.Utils.ComputeIntersection.LineSegment]),
-    tollStartGates :: (B.C f [Kernel.Utils.ComputeIntersection.LineSegment]),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    isAutoRickshawAllowed :: B.C f Kernel.Prelude.Bool,
+    name :: B.C f Kernel.Prelude.Text,
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    price :: B.C f Kernel.Types.Common.HighPrecMoney,
+    tollEndGates :: B.C f [Kernel.Utils.ComputeIntersection.LineSegment],
+    tollStartGates :: B.C f [Kernel.Utils.ComputeIntersection.LineSegment],
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +34,6 @@ instance B.Table TollT where
 
 type Toll = TollT Identity
 
-$(enableKVPG (''TollT) [('id)] [])
+$(enableKVPG ''TollT ['id] [])
 
-$(mkTableInstances (''TollT) "toll")
+$(mkTableInstances ''TollT "toll")

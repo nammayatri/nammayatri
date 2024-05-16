@@ -49,3 +49,20 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN selected_servic
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information DROP COLUMN selected_service_tiers;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ALTER COLUMN can_switch_to_rental DROP NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN can_switch_to_inter_city boolean default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN last_ac_status_checked_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN ac_usage_restriction_type text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN ac_restriction_lift_count integer NOT NULL default 0;

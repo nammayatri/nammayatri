@@ -91,32 +91,62 @@
                                         android:textColor="@color/white"
                                         android:textSize="12dp" />
                                 </LinearLayout>
+
                                 <LinearLayout
-                                    android:id="@+id/rideTypeTag"
                                     android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/ic_tip_tag"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:paddingHorizontal="3dp"
+                                    android:visibility="gone"
+                                    android:id="@+id/customerTipTag"
+                                    android:layout_marginEnd="10dp"
+                                    android:layout_height="wrap_content">
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:src="@drawable/ny_ic_tip_icon"
+                                        android:layout_marginLeft="8dp"/>
+                                    <TextView
+                                        android:id="@+id/tip_text"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="₹10 Tip"
+                                        android:lineHeight="20dp"
+                                        android:textColor="@color/Black900"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:id="@+id/rentalRideTypeTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="match_parent"
                                     android:layout_marginHorizontal="8dp"
-                                    android:background="@drawable/ic_ac_variant_tag"
+                                    android:background="@drawable/ic_rental_variant_tag"
                                     android:gravity="center_vertical"
                                     android:orientation="horizontal"
                                     android:paddingHorizontal="8dp"
                                     android:visibility="gone">
 
                                     <ImageView
-                                        android:id="@+id/rideTypeImage"
-                                        android:layout_width="16dp"
-                                        android:layout_height="16dp"
-                                        android:src="@drawable/ny_ic_snow" />
+                                        android:id="@+id/rentalRideTypeImage"
+                                        android:layout_width="17dp"
+                                        android:layout_height="17dp"
+                                        android:src="@drawable/ic_car_unfilled" />
 
                                     <TextView
-                                        android:id="@+id/rideTypeText"
+                                        android:id="@+id/rentalRideTypeText"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:elevation="1dp"
+                                        android:paddingVertical="6dp"
                                         android:fontFamily="@font/plus_jakartasans_semibold"
                                         android:lineHeight="20dp"
                                         android:paddingHorizontal="8dp"
-                                        android:paddingVertical="6dp"
                                         android:text="@string/rental"
                                         android:textColor="@color/white"
                                         android:textSize="12dp" />
@@ -135,9 +165,8 @@
 
                                     <ImageView
                                         android:id="@+id/intercityRideTypeImage"
-                                        android:layout_width="16dp"
-                                        android:layout_height="16dp"
-                                        android:layout_marginLeft="8dp"
+                                        android:layout_width="17dp"
+                                        android:layout_height="17dp"
                                         android:src="@drawable/intercity" />
 
                                     <TextView
@@ -145,132 +174,72 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:elevation="1dp"
+                                        android:paddingVertical="6dp"
                                         android:fontFamily="@font/plus_jakartasans_semibold"
                                         android:lineHeight="20dp"
                                         android:paddingHorizontal="8dp"
-                                        android:paddingVertical="6dp"
                                         android:text="@string/intercity"
                                         android:textColor="@color/white"
-                                        android:textSize="12dp" />
+                                        android:textSize="12dp"  />
                                 </LinearLayout>
-                                
 
                                 <LinearLayout
-                                    android:id="@+id/customerTipTag"
+                                    android:layout_width="wrap_content"
+                                    android:background="@drawable/ic_orange_tag"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:paddingHorizontal="3dp"
+                                    android:visibility="gone"
+                                    android:id="@+id/testRequestTag"
+                                    android:layout_marginEnd="10dp"
+                                    android:layout_height="wrap_content">
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:src="@drawable/ny_ic_test_request_icon_white"
+                                        android:layout_marginLeft="8dp"/>
+                                    <TextView
+                                        android:id="@+id/test_request_text"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="@string/test_request"
+                                        android:lineHeight="20dp"
+                                        android:textColor="@color/colorWhite"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:id="@+id/rideTypeTag"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginEnd="10dp"
-                                    android:background="@drawable/ic_tip_tag"
-                                    android:gravity="center_vertical"
-                                    android:orientation="horizontal"
-                                    android:paddingHorizontal="3dp"
-                                    android:visibility="gone">
-
-                                    <ImageView
-                                        android:layout_width="16dp"
-                                        android:layout_height="16dp"
-                                        android:layout_marginLeft="8dp"
-                                        android:src="@drawable/ny_ic_tip_icon" />
-
-                                    <TextView
-                                        android:id="@+id/tip_text"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:elevation="1dp"
-                                        android:fontFamily="@font/plus_jakartasans_semibold"
-                                        android:lineHeight="20dp"
-                                        android:paddingHorizontal="8dp"
-                                        android:paddingVertical="6dp"
-                                        android:text="₹10 Tip"
-                                        android:textColor="@color/Black900"
-                                        android:textSize="12dp" />
-                                </LinearLayout>
-
-                                <LinearLayout
-                                    android:layout_width="wrap_content"
-                                    android:background="@drawable/ic_orange_tag"
-                                    android:orientation="horizontal"
-                                    android:gravity="center_vertical"
-                                    android:paddingHorizontal="3dp"
-                                    android:visibility="gone"
-                                    android:id="@+id/testRequestTag"
-                                    android:layout_marginEnd="10dp"
-                                    android:layout_height="wrap_content">
-                                    <ImageView
-                                        android:layout_width="16dp"
-                                        android:layout_height="16dp"
-                                        android:src="@drawable/ny_ic_test_request_icon_white"
-                                        android:layout_marginLeft="8dp"/>
-                                    <TextView
-                                        android:id="@+id/test_request_text"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:elevation="1dp"
-                                        android:fontFamily="@font/plus_jakartasans_semibold"
-                                        android:paddingHorizontal="8dp"
-                                        android:paddingVertical="6dp"
-                                        android:text="@string/test_request"
-                                        android:lineHeight="20dp"
-                                        android:textColor="@color/colorWhite"
-                                        android:textSize="12dp" />
-                                </LinearLayout>
-
-                                <LinearLayout
-                                    android:layout_width="wrap_content"
-                                    android:background="@drawable/ic_orange_tag"
-                                    android:orientation="horizontal"
-                                    android:gravity="center_vertical"
-                                    android:paddingHorizontal="3dp"
-                                    android:visibility="gone"
-                                    android:id="@+id/testRequestTag"
-                                    android:layout_marginEnd="10dp"
-                                    android:layout_height="wrap_content">
-                                    <ImageView
-                                        android:layout_width="16dp"
-                                        android:layout_height="16dp"
-                                        android:src="@drawable/ny_ic_test_request_icon_white"
-                                        android:layout_marginLeft="8dp"/>
-                                    <TextView
-                                        android:id="@+id/test_request_text"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:elevation="1dp"
-                                        android:fontFamily="@font/plus_jakartasans_semibold"
-                                        android:paddingHorizontal="8dp"
-                                        android:paddingVertical="6dp"
-                                        android:text="@string/test_request"
-                                        android:lineHeight="20dp"
-                                        android:textColor="@color/colorWhite"
-                                        android:textSize="12dp" />
-                                </LinearLayout>
-
-                                <LinearLayout
-                                    android:id="@+id/rentalRideTypeTag" 
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="match_parent"
                                     android:layout_marginHorizontal="8dp"
-                                    android:background="@drawable/ic_rental_variant_tag"
+                                    android:background="@drawable/ic_ac_variant_tag"
                                     android:gravity="center_vertical"
                                     android:orientation="horizontal"
                                     android:paddingHorizontal="8dp"
                                     android:visibility="gone">
 
                                     <ImageView
-                                        android:id="@+id/rentalRideTypeImage"
+                                        android:id="@+id/rideTypeImage"
                                         android:layout_width="16dp"
                                         android:layout_height="16dp"
-                                        android:src="@drawable/ic_car_unfilled" />
-
+                                        android:src="@drawable/ny_ic_snow"/>
                                     <TextView
-                                        android:id="@+id/rentalRideTypeText"
+                                        android:id="@+id/rideTypeText"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:elevation="1dp"
+                                        android:paddingVertical="6dp"
                                         android:fontFamily="@font/plus_jakartasans_semibold"
                                         android:lineHeight="20dp"
                                         android:paddingHorizontal="8dp"
-                                        android:text="@string/rental"
-                                        android:textColor="@color/white" />
+                                        android:text="AC SUV"
+                                        android:textColor="@color/white"
+                                        android:textSize="12dp"/>
                                 </LinearLayout>
 
                                 <LinearLayout
@@ -370,8 +339,7 @@
 
                                     <LinearLayout
                                         android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        >
+                                        android:layout_height="wrap_content">
                                         <TextView
                                             android:id="@+id/distancePickUp"
                                             android:layout_width="wrap_content"
@@ -410,16 +378,13 @@
                                 <LinearLayout
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
+                                    android:orientation="vertical"
                                     android:gravity="right">
-
                                     <LinearLayout
                                         android:id="@+id/rideStartDateTimeTag"
                                         android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:orientation="vertical"
                                         android:visibility="gone"
-                                        android:layout_marginTop="8dp"
-                                        >
+                                        android:layout_height="wrap_content">
 
                                         <TextView
                                             android:id="@+id/rideStartDate"
@@ -440,6 +405,7 @@
                                             android:fontFamily="@font/plus_jakartasans_semibold"
                                             android:lineHeight="28dp"
                                             android:text="12:30 PM"
+                                            android:layout_marginLeft="5dp"
                                             android:textColor="@color/Black800"
                                             android:textFontWeight="600"
                                             android:textSize="18dp" />
@@ -449,19 +415,18 @@
                                         android:id="@+id/vcTierAndACView"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:layout_gravity="center"
-                                        android:visibility="gone"
                                         app:cardBackgroundColor="#1A0066FF"
                                         android:theme="@style/Theme.MaterialComponents.Light"
-                                        app:cardCornerRadius="10dp"
+                                        app:cardCornerRadius="28dp"
+                                        android:layout_marginTop="4dp"
                                         app:cardElevation="0dp"
-                                        app:contentPadding="10dp"
-                                        android:layout_marginVertical="10dp">
-
+                                        app:contentPaddingRight="10dp"
+                                        app:contentPadding="8dp">
 
                                         <LinearLayout
                                             android:layout_width="match_parent"
                                             android:layout_height="wrap_content"
+                                            android:gravity="center_vertical"
                                             android:orientation="horizontal">
 
                                             <LinearLayout
@@ -470,28 +435,41 @@
                                                 android:id="@+id/acNonAcView"
                                                 android:orientation="horizontal">
 
-                                                <TextView
-                                                    android:id="@+id/airConditioned"
+                                                <com.google.android.material.card.MaterialCardView
                                                     android:layout_width="wrap_content"
                                                     android:layout_height="wrap_content"
-                                                    android:textSize="16dp"
-                                                    android:layout_marginStart="5dp"
-                                                    android:gravity="center"
-                                                    android:textColor="@color/blue800"
-                                                    android:textFontWeight="600"
-                                                    android:fontFamily="@font/plus_jakartasans_semibold"
-                                                    android:text="AC"/>
-
-                                                <com.google.android.material.card.MaterialCardView
-                                                    android:id="@+id/zoneDot"
-                                                    android:layout_width="4dp"
-                                                    android:layout_height="4dp"
                                                     android:layout_gravity="center"
                                                     app:cardBackgroundColor="@color/blue800"
                                                     android:theme="@style/Theme.MaterialComponents.Light"
-                                                    app:cardCornerRadius="10dp"
+                                                    app:cardCornerRadius="28dp"
+                                                    app:contentPadding="5dp"
                                                     app:cardElevation="0dp"
-                                                    android:layout_marginLeft="5dp"/>
+                                                    android:layout_marginLeft="5dp">
+
+                                                    <LinearLayout
+                                                        android:layout_width="match_parent"
+                                                        android:layout_height="match_parent"
+                                                        android:gravity="center_vertical"
+                                                        android:orientation="horizontal">
+
+                                                        <ImageView
+                                                            android:layout_width="16dp"
+                                                            android:layout_height="16dp"
+                                                            android:src="@drawable/ny_ic_ac_white" />
+
+                                                        <TextView
+                                                            android:layout_width="wrap_content"
+                                                            android:layout_height="wrap_content"
+                                                            android:textSize="18dp"
+                                                            android:layout_marginStart="5dp"
+                                                            android:gravity="center"
+                                                            android:textColor="@color/white"
+                                                            android:textFontWeight="600"
+                                                            android:fontFamily="@font/dmsans_bold"
+                                                            android:text="AC"/>
+                                                    </LinearLayout>
+
+                                                </com.google.android.material.card.MaterialCardView>
 
 
                                             </LinearLayout>
@@ -506,6 +484,7 @@
                                                 android:gravity="center"
                                                 android:singleLine="false"
                                                 android:textFontWeight="600"
+                                                android:paddingBottom="2dp"
                                                 android:fontFamily="@font/plus_jakartasans_semibold"
                                                 android:text="Comfy"/>
                                         </LinearLayout>
@@ -627,8 +606,7 @@
                                         android:textStyle="bold"
                                         android:visibility="gone"
                                         />
-                                </LinearLayout>
-                                <LinearLayout
+                                    <LinearLayout
                                         android:id="@+id/rentalDurationDistanceTag"
                                         android:layout_width="match_parent"
                                         android:layout_height="wrap_content"
@@ -667,7 +645,9 @@
                                             android:textColor="#2C2F3A"
                                             android:textSize="16dp" />
 
+                                    </LinearLayout>
                                 </LinearLayout>
+
                                 <ImageView
                                     android:layout_width="40dp"
                                     android:layout_height="match_parent"
@@ -676,20 +656,42 @@
                                     android:src="@drawable/ic_metro_shape"/>
                             </LinearLayout>
 
-                            <TextView
-                                android:id="@+id/distanceToBeCovered"
+                            <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="85dp"
-                                android:background="@drawable/ic_roundcorner_overlay"
-                                android:elevation="1dp"
-                                android:fontFamily="@font/plus_jakartasans_semibold"
-                                android:paddingHorizontal="8dp"
-                                android:paddingVertical="6dp"
-                                android:text="12Km"
-                                android:lineHeight="20dp"
-                                android:textColor="#2C2F3A"
-                                android:textSize="16dp" />
+                                android:orientation="horizontal">
+                                <TextView
+                                    android:id="@+id/distanceToBeCovered"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="85dp"
+                                    android:background="@drawable/ic_roundcorner_overlay"
+                                    android:elevation="1dp"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="6dp"
+                                    android:text="12Km"
+                                    android:lineHeight="20dp"
+                                    android:textColor="#2C2F3A"
+                                    android:textSize="16dp" />
+
+                                <TextView
+                                    android:id="@+id/tollTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="85dp"
+                                    android:background="@drawable/ic_roundcorner_overlay"
+                                    android:elevation="1dp"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="6dp"
+                                    android:text="@string/toll_text"
+                                    android:lineHeight="20dp"
+                                    android:textColor="#2C2F3A"
+                                    android:textSize="16dp"
+                                    android:visibility="visible"/>
+                            </LinearLayout>
+
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -780,12 +782,14 @@
                                         android:layout_marginBottom="2dp"
                                         android:layout_weight="1"
                                         android:layerType="software"
+                                        android:visibility="visible"
                                         android:src="@drawable/dashed_line" />
 
                                     <com.google.android.material.card.MaterialCardView
                                         android:id="@+id/locationDestinationPinTag"
                                         android:layout_width="15dp"
                                         android:layout_height="15dp"
+                                        android:visibility="visible"
                                         android:layout_marginBottom="44dp"
                                         android:theme="@style/Theme.MaterialComponents.Light"
                                         app:cardCornerRadius="45dp"

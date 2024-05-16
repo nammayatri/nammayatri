@@ -22,13 +22,14 @@ import Prelude
 import Data.Array(singleton,catMaybes, any, sortWith, reverse, take, filter, (:), length, (!!), fromFoldable, toUnfoldable, snoc, cons, concat, null, head)
 import Data.Ord (comparing)
 import Screens.Types (LocationListItemState(..),SourceGeoHash, DestinationGeoHash,SuggestionsMap(..), Suggestions(..), Trip(..), LocationItemType(..), HomeScreenState(..), Address, LocationType(..))
-import Helpers.Utils(getDistanceBwCordinates, getDifferenceBetweenDates, parseSourceHashArray, toStringJSON, fetchImage, FetchImageFrom(..))
+import Helpers.Utils(getDistanceBwCordinates, getDifferenceBetweenDates, parseSourceHashArray, toStringJSON, fetchImage, FetchImageFrom(..), differenceOfLocationLists, checkPrediction, updateLocListWithDistance)
 import Data.Int(toNumber)
 import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..), getValueToLocalNativeStore)
 import MerchantConfig.Types (SuggestedDestinationAndTripsConfig)
 import Data.Function.Uncurried (runFn2, Fn3)
 import Data.Argonaut.Core
 import Data.Argonaut.Decode.Class as Decode
+import Data.Foldable (foldMap, maximumBy)
 import Data.Argonaut.Encode.Class as Encode
 import Data.Argonaut.Decode.Error
 import Data.Either (Either(..))
@@ -119,10 +120,11 @@ addOrUpdateSuggestedTrips ::
   Boolean ->
   SuggestionsMap ->
   SuggestedDestinationAndTripsConfig ->
+  Boolean ->
   SuggestionsMap
-addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config =
+addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config isBackFilling =
     if member sourceGeohash suggestionsMap
-    then update updateSuggestions sourceGeohash suggestionsMap
+    then update (\item -> updateSuggestions isBackFilling item) sourceGeohash suggestionsMap
     else insertSuggestionInMap 
           sourceGeohash 
           { destinationSuggestions:[],
@@ -137,24 +139,23 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config =
           suggestionsMap 
           config.geohashLimitForMap
     where
-      updateSuggestions :: Suggestions -> Maybe Suggestions
-      updateSuggestions suggestion = Just $ suggestion {tripSuggestions = updateTrips suggestion.tripSuggestions} 
+      updateSuggestions :: Boolean -> Suggestions -> Maybe Suggestions
+      updateSuggestions isBackFilling suggestion = Just $ suggestion {tripSuggestions = updateTrip suggestion.tripSuggestions isBackFilling} 
 
-      updateTrips ::  Array Trip -> Array Trip
-      updateTrips trips = updateTrip trips
-
-      updateTrip :: Array Trip -> Array Trip
-      updateTrip trips =
+      updateTrip :: Array Trip -> Boolean -> Array Trip
+      updateTrip trips isBackFilling =
         let
           updateExisting :: Trip -> Trip
           updateExisting existingTrip = do
             if (getDistanceBwCordinates trip.sourceLat trip.sourceLong existingTrip.sourceLat existingTrip.sourceLong) < config.tripDistanceThreshold
             && (getDistanceBwCordinates trip.destLat trip.destLong existingTrip.destLat existingTrip.destLong) < config.tripDistanceThreshold
-            && (existingTrip.serviceTierNameV2 == trip.serviceTierNameV2)
+            && (existingTrip.serviceTierNameV2 == trip.serviceTierNameV2 || isNothing existingTrip.serviceTierNameV2)
             then existingTrip
                   { frequencyCount = Just $ (fromMaybe 0 existingTrip.frequencyCount) +  1
                   , recencyDate = if isPastTrip then existingTrip.recencyDate else Just $ getCurrentUTC ""
                   , locationScore = Just $ calculateScore (toNumber ((fromMaybe 0 existingTrip.frequencyCount) +  1)) (getCurrentUTC "") config.frequencyWeight
+                  , serviceTierNameV2 = if isBackFilling || isJust existingTrip.serviceTierNameV2 then existingTrip.serviceTierNameV2 else trip.serviceTierNameV2
+                  , vehicleVariant = if isBackFilling || isJust existingTrip.serviceTierNameV2 then existingTrip.vehicleVariant else trip.vehicleVariant
                   }
             else existingTrip
                   { locationScore = Just $ calculateScore (toNumber (fromMaybe 0 existingTrip.frequencyCount)) (fromMaybe (getCurrentUTC "") existingTrip.recencyDate) config.frequencyWeight
@@ -162,7 +163,7 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config =
           updatedTrips = map updateExisting trips
           tripExists = any (\tripItem -> (getDistanceBwCordinates tripItem.sourceLat tripItem.sourceLong trip.sourceLat trip.sourceLong) < config.tripDistanceThreshold
             && (getDistanceBwCordinates tripItem.destLat tripItem.destLong trip.destLat trip.destLong) < config.tripDistanceThreshold && tripItem.serviceTierNameV2 == trip.serviceTierNameV2) updatedTrips
-          sortedTrips = sortTripsByScore updatedTrips
+          sortedTrips = sortTripsByScore $ updateVariantInfo updatedTrips
         in
           if tripExists
           then sortedTrips
@@ -285,7 +286,7 @@ rideListToTripsTransformer listRes =
              vehicleVariant : case (head ride.rideList) of
                                 Just rideEntity -> Just $ rideEntity^._vehicleVariant
                                 Nothing -> Nothing,
-             serviceTierNameV2 : ride.serviceTierName
+             serviceTierNameV2 : correctServiceTierName ride.serviceTierName
          }
 
 updateMapWithPastTrips :: Array Trip -> HomeScreenState -> SuggestionsMap
@@ -300,7 +301,7 @@ updateMapWithPastTrips trips state = foldl updateMap (getSuggestionsMapFromLocal
     updateMap :: SuggestionsMap -> Trip -> SuggestionsMap
     updateMap suggestionsMap trip =
       let geohash = encodeTripGeohash trip geohashPrecision
-      in addOrUpdateSuggestedTrips geohash trip true suggestionsMap config
+      in addOrUpdateSuggestedTrips geohash trip true suggestionsMap config true
 
 getLocationTitle :: String -> String
 getLocationTitle singleLineAddress = 
@@ -346,3 +347,119 @@ getLocationFromTrip locationType trip sourceLat sourceLong =
     , recencyDate : trip.recencyDate
     , locationScore : trip.locationScore
     }
+
+transformTrip :: Trip -> Trip 
+transformTrip trip = fixVariantForTrip $ trip { serviceTierNameV2 = correctServiceTierName trip.serviceTierNameV2 }
+
+correctServiceTierName :: Maybe String -> Maybe String
+correctServiceTierName serviceTierName = 
+  case serviceTierName of
+    Just "SUV" -> Just "SUV"
+    Just "SEDAN" -> Just "Sedan"
+    Just "AUTO_RICKSHAW" -> Just "Auto"
+    Just "HATCHBACK" -> Just "Hatchback"
+    _ -> serviceTierName
+
+removeDuplicateTrips :: Array Trip -> Int -> Array Trip
+removeDuplicateTrips trips precision = 
+  let 
+    grouped = DA.groupBy 
+      (\trip1 trip2 -> 
+        (getGeoHash trip1.destLat trip1.destLong precision) 
+        == 
+        (getGeoHash trip2.destLat trip2.destLong precision)
+        && trip1.serviceTierNameV2 == trip2.serviceTierNameV2
+      ) 
+      trips
+
+    maxScoreTrips = map 
+      (maximumBy (comparing (\trip -> trip.locationScore))) 
+      grouped
+  in 
+    catMaybes maxScoreTrips
+
+isPointWithinXDist :: Trip -> Number -> Number -> Number -> Boolean
+isPointWithinXDist item lat lon thresholdDist =
+  let sourceLat = if lat == 0.0 then fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT else lat
+      sourceLong = if lon == 0.0 then fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON else lon
+  in
+    getDistanceBwCordinates 
+      item.sourceLat 
+      item.sourceLong 
+      sourceLat
+      sourceLong
+      <= thresholdDist
+      
+locationEquality :: LocationListItemState -> LocationListItemState -> Boolean
+locationEquality a b = a.lat == b.lat && a.lon == b.lon
+
+
+getMapValuesArray :: forall k v. Map k v -> Array v
+getMapValuesArray = foldMap singleton
+
+getHelperLists savedLocationResp recentPredictionsObject state lat lon = 
+  let suggestionsConfig = state.data.config.suggestedTripsAndLocationConfig
+      homeWorkImages = [fetchImage FF_ASSET "ny_ic_home_blue", fetchImage FF_ASSET "ny_ic_work_blue"]
+      isHomeOrWorkImage = \listItem -> any (_ == listItem.prefixImageUrl) homeWorkImages
+      savedLocationWithHomeOrWorkTag = filter isHomeOrWorkImage savedLocationResp
+      recentlySearchedLocations = differenceOfLocationLists recentPredictionsObject.predictionArray savedLocationWithHomeOrWorkTag
+      savedLocationsWithOtherTag = filter (not <<< isHomeOrWorkImage) savedLocationResp
+      suggestionsMap = getSuggestionsMapFromLocal FunctionCall
+      currentGeoHash = getGeoHash lat lon suggestionsConfig.geohashPrecision
+      geohashNeighbors = DA.cons currentGeoHash $ geohashNeighbours currentGeoHash
+      currentGeoHashDestinations = fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations currentGeoHash suggestionsMap suggestionsConfig.geohashLimitForMap)
+      arrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).destinationSuggestions) geohashNeighbors)
+      tripArrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).tripSuggestions) geohashNeighbors)
+      sortedDestinationsList = DA.take 30 (DA.reverse (DA.sortWith (\d -> fromMaybe 0.0 d.locationScore) arrWithNeighbors))
+      suggestedDestinationsArr = differenceOfLocationLists sortedDestinationsList savedLocationWithHomeOrWorkTag
+
+      allValuesFromMap = concat $ map (\item -> item.tripSuggestions)(getMapValuesArray suggestionsMap)
+      sortedValues = DA.sortWith (\d -> fromMaybe 0.0 d.locationScore) allValuesFromMap
+      reversedValues = DA.reverse sortedValues
+      topValues = DA.take 30 reversedValues
+      topTripDestinatiions = map (\item -> getLocationFromTrip Destination item lat lon) topValues
+      
+      recentSearchesWithoutSuggested =  differenceOfLocationLists recentlySearchedLocations suggestedDestinationsArr
+      topTripDestinatiionsWoutSuggested = differenceOfLocationLists (differenceOfLocationLists topTripDestinatiions suggestedDestinationsArr) savedLocationWithHomeOrWorkTag
+      smartSuggestions = if null suggestedDestinationsArr then topTripDestinatiionsWoutSuggested else suggestedDestinationsArr
+      sugestedFinalList =  DA.nubByEq locationEquality $ smartSuggestions <> (DA.take (suggestionsConfig.locationsToBeStored - (length smartSuggestions)) recentSearchesWithoutSuggested)
+      
+
+      updateFavIcon = 
+        map (\item ->
+            item { postfixImageUrl =  
+                    if not (checkPrediction item savedLocationsWithOtherTag) 
+                      then fetchImage FF_ASSET "ny_ic_fav_red"
+                      else fetchImage FF_ASSET "ny_ic_fav" 
+                }
+            ) sugestedFinalList
+      suggestedDestinations = updateLocListWithDistance updateFavIcon lat lon true state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
+      sortedTripList =  
+          DA.take 30 
+            $ filter 
+                (\item -> isPointWithinXDist item lat lon state.data.config.suggestedTripsAndLocationConfig.tripWithinXDist) 
+            $ DA.reverse 
+                (DA.sortWith (\d -> fromMaybe 0.0 d.locationScore) tripArrWithNeighbors)
+        
+      trips = map (\item -> transformTrip item) sortedTripList
+  in {savedLocationsWithOtherTag, recentlySearchedLocations, suggestionsMap, trips, suggestedDestinations}
+
+updateVariantInfo :: Array Trip -> Array Trip
+updateVariantInfo trips = 
+  map fixVariantForTrip trips 
+
+fixVariantForTrip :: Trip -> Trip
+fixVariantForTrip trip = 
+  if (DA.notElem trip.serviceTierNameV2 [Just "Auto", Just "AUTO_RICKSHAW"]) && trip.vehicleVariant == Just "AUTO_RICKSHAW"
+    then trip {vehicleVariant = getVariant trip.serviceTierNameV2 trip.vehicleVariant}
+    else trip
+
+getVariant :: Maybe String -> Maybe String -> Maybe String
+getVariant serviceTier variant = 
+  case serviceTier of
+    Just "Auto" -> Just "AUTO_RICKSHAW"
+    Just "Sedan" -> Just "SEDAN"
+    Just "AC Mini" -> Just "HATCHBACK"
+    Just "XL Cab" -> Just "SUV"
+    Just "Non-AC Mini" -> Just "TAXI"
+    _ -> variant

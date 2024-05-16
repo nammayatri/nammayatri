@@ -18,19 +18,12 @@ module Domain.Types.FarePolicy.FarePolicySlabsDetails
   )
 where
 
-import Control.Lens.Combinators
-import Control.Lens.Fold
-import qualified Data.Aeson.Key as DAK
-import qualified Data.Aeson.KeyMap as DAKM
-import Data.Aeson.Lens
 import Data.Aeson.Types
 import qualified Data.List.NonEmpty as NE
 import Data.Ord
-import qualified Data.Text as Text
 import Domain.Types.Common
 import Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as Reexport
 import Kernel.Prelude
-import Kernel.Types.Cac
 import Kernel.Types.Common
 
 newtype FPSlabsDetailsD (s :: UsageSafety) = FPSlabsDetails
@@ -44,8 +37,10 @@ instance ToJSON (FPSlabsDetailsD 'Unsafe)
 
 instance FromJSON (FPSlabsDetailsD 'Unsafe)
 
+-- FIXME remove
 instance FromJSON (FPSlabsDetailsD 'Safe)
 
+-- FIXME remove
 instance ToJSON (FPSlabsDetailsD 'Safe)
 
 findFPSlabsDetailsSlabByDistance :: Meters -> NonEmpty (FPSlabsDetailsSlabD s) -> FPSlabsDetailsSlabD s
@@ -62,29 +57,3 @@ newtype FPSlabsDetailsAPIEntity = FPSlabsDetailsAPIEntity
   { slabs :: NonEmpty FPSlabsDetailsSlabAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-getFPSlabDetailsSlab :: MonadFlow m => String -> String -> m (Maybe FPSlabsDetails)
-getFPSlabDetailsSlab config key' = do
-  let k =
-        config
-          ^@.. _Value
-            . _Object
-            . reindexed
-              (dropPrefixFromConfig "farePolicySlabsDetailsSlab:")
-              ( itraversed
-                  . indices
-                    ( Text.isPrefixOf
-                        "farePolicySlabsDetailsSlab:"
-                        . DAK.toText
-                    )
-              )
-  fpsdsl <- jsonToFPSlabsDetailsSlab (DAKM.fromList k) key'
-  case NE.nonEmpty fpsdsl of
-    Just fpsdsl' -> pure $ Just (FPSlabsDetails fpsdsl')
-    Nothing -> pure Nothing
-
-makeFPSlabsDetailsAPIEntity :: FPSlabsDetails -> FPSlabsDetailsAPIEntity
-makeFPSlabsDetailsAPIEntity FPSlabsDetails {..} =
-  FPSlabsDetailsAPIEntity
-    { slabs = makeFPSlabsDetailsSlabAPIEntity <$> slabs
-    }

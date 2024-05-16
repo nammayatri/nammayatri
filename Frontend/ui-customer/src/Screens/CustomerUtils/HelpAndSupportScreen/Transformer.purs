@@ -29,7 +29,7 @@ import Helpers.Utils (toStringJSON, fetchImage, FetchImageFrom(..))
 import JBridge (showDialer, hideKeyboardOnNavigation,toast, differenceBetweenTwoUTC)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getKmMeter, fetchVehicleVariant)
 import Screens (ScreenName(..), getScreen)
@@ -105,10 +105,6 @@ myRideListTransform state listRes = filter (\item -> (item.data.status == "COMPL
       }
       }) listRes)
 
-
-dummyFareBreakUp :: FareBreakupAPIEntity
-dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}
-
 isEmailPresent :: LazyCheck -> Boolean
 isEmailPresent _ = not ( getValueToLocalStore USER_EMAIL == "__failed" || getValueToLocalStore USER_EMAIL == "(null)" )
 
@@ -131,6 +127,8 @@ getApiIssueList issueList = map (\(IssueReportCustomerListItem issue) -> issueIn
       , category : category'
       , createdAt : createdAt' 
       , issueReportShortId : issueReportShortId'
+      , optionLabel : issue.optionLabel
+      , rideId : issue.rideId
       }
     
     categoriesT :: String -> String

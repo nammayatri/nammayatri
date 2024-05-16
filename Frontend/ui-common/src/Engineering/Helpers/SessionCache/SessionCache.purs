@@ -1,7 +1,7 @@
 module SessionCache (module SessionCache , module ReExport)where
 
 import Prelude
-import DecodeUtil (decodeForeignObject, getAnyFromWindow, parseJSON, setAnyInWindow, stringifyJSON, getFromWindowString)
+import DecodeUtil (decodeForeignAny, getAnyFromWindow, parseJSON, setAnyInWindow, stringifyJSON, getFromWindowString)
 import Data.Maybe (Maybe(..))
 import JBridge (getKeyInSharedPrefKeys, setKeyInSharedPref)
 import Data.Function.Uncurried (runFn2, runFn3)
@@ -15,7 +15,7 @@ getSosAlarmStatus key = do
   case mbValue of
     Nothing -> 
       let objString = getKeyInSharedPrefKeys "SOS_ALARM_STATUS"
-          decodeObject = decodeForeignObject (parseJSON objString) []
+          decodeObject = decodeForeignAny (parseJSON objString) []
       in runFn2 setAnyInWindow key decodeObject
     Just value -> value
 

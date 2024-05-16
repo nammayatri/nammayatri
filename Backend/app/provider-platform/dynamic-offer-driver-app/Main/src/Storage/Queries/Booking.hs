@@ -119,6 +119,18 @@ updateRiderName bookingId riderName = do
   now <- getCurrentTime
   updateOneWithKV [Se.Set BeamB.riderName $ Just riderName, Se.Set BeamB.updatedAt now] [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
+updateMultipleById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => HighPrecMoney -> Maybe HighPrecMeters -> Maybe Meters -> Text -> Id Booking -> m ()
+updateMultipleById estimatedFare maxEstimatedDistance estimatedDistance fareParametersId bookingId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.estimatedFare estimatedFare,
+      Se.Set BeamB.maxEstimatedDistance maxEstimatedDistance,
+      Se.Set BeamB.estimatedDistance estimatedDistance,
+      Se.Set BeamB.fareParametersId fareParametersId,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
 updateSpecialZoneOtpCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Text -> m ()
 updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
   now <- getCurrentTime
@@ -169,7 +181,7 @@ cancelBookings bookingIds now =
     [Se.Set BeamB.status CANCELLED, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
 
-findFareForCancelledBookings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Booking] -> m Money
+findFareForCancelledBookings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Booking] -> m HighPrecMoney
 findFareForCancelledBookings bookingIds = findAllWithKV [Se.And [Se.Is BeamB.status $ Se.Eq CANCELLED, Se.Is BeamB.id $ Se.In $ getId <$> bookingIds]] <&> sum . map Domain.Types.Booking.estimatedFare
 
 findLastCancelledByRiderId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id RiderDetails -> m (Maybe Booking)
@@ -238,9 +250,7 @@ instance FromTType' BeamB.Booking Booking where
                 toLocation = tl,
                 vehicleServiceTier = vehicleVariant,
                 vehicleServiceTierName = fromMaybe (show vehicleVariant) vehicleServiceTierName,
-                vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
-                vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
-                estimatedFare = roundToIntegral estimatedFare,
+                currency = fromMaybe INR currency,
                 fareParams = fromJust fp, -- This fromJust is safe because of the check above.
                 paymentMethodId = Id <$> paymentMethodId,
                 stopLocationId = Id <$> stopLocationId,
@@ -287,17 +297,20 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
         BeamB.estimatedDistance = estimatedDistance,
         BeamB.maxEstimatedDistance = maxEstimatedDistance,
-        BeamB.estimatedFare = realToFrac estimatedFare,
+        BeamB.estimatedFare = estimatedFare,
+        BeamB.currency = Just currency,
         BeamB.estimatedDuration = estimatedDuration,
         BeamB.fareParametersId = getId fareParams.id,
         BeamB.paymentMethodId = getId <$> paymentMethodId,
         BeamB.paymentUrl = paymentUrl,
         BeamB.riderName = riderName,
+        BeamB.tollNames = tollNames,
         BeamB.createdAt = createdAt,
         BeamB.updatedAt = updatedAt,
         BeamB.distanceToPickup = realToFrac <$> distanceToPickup,
         BeamB.isScheduled = Just isScheduled,
-        BeamB.stopLocationId = getId <$> stopLocationId
+        BeamB.stopLocationId = getId <$> stopLocationId,
+        ..
       }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME

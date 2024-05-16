@@ -20,9 +20,13 @@ where
 
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
+import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.LmsModule as LmsModule
 import qualified API.Action.UI.Reels as Reels
+import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
+import qualified API.Action.UI.Tokenization as Tokenization
+import qualified API.Action.UI.VehicleDetails as VehicleDetails
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.CancellationReason as CancellationReason
@@ -93,6 +97,10 @@ type API =
            :<|> SpecialLocation.API
            :<|> Reels.API
            :<|> Cac.API
+           :<|> EditBooking.API
+           :<|> SocialLogin.API
+           :<|> VehicleDetails.API
+           :<|> Tokenization.API
        )
 
 handler :: FlowServer API
@@ -131,3 +139,7 @@ handler =
     :<|> SpecialLocation.handler
     :<|> Reels.handler
     :<|> Cac.handler
+    :<|> EditBooking.handler
+    :<|> SocialLogin.handler
+    :<|> VehicleDetails.handler
+    :<|> Tokenization.handler

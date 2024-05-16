@@ -119,6 +119,8 @@ dependencies:
   - base64-bytestring
   - pureMD5
   - lens-aeson
+  - http-client-tls
+  - http-conduit
 
 ghc-options:
   - -fwrite-ide-info
@@ -159,6 +161,7 @@ library:
     - payment
     - sessionizer-metrics
     - utils
+    - external
   extra-libraries:
     - cac_client
 

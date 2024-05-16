@@ -4,6 +4,7 @@
 
 module Domain.Types.TicketService where
 
+import Data.Aeson
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity

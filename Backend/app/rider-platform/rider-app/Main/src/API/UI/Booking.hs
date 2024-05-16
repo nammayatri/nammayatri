@@ -22,8 +22,8 @@ module API.UI.Booking
 where
 
 import qualified Domain.Action.UI.Booking as DBooking
-import Domain.Types.Booking (BookingAPIEntity)
 import qualified Domain.Types.Booking as SRB
+import Domain.Types.Booking.API (BookingAPIEntity)
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person

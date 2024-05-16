@@ -47,11 +47,13 @@ import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import Storage.CachedQueries.Merchant.TransporterConfig as QTC
+import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Notifications as Notify
+import Utils.Common.Cac.KeyNameConstants
 
 data StartRideReq = DriverReq DriverStartRideReq | DashboardReq DashboardStartRideReq
 
@@ -135,7 +137,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
     maybe
       (pure False)
       ( \_ -> do
-          transporterConfig <- QTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
+          transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
           pure $ transporterConfig.openMarketUnBlocked
       )
       driverInfo.merchantId
@@ -181,6 +183,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
     withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking updatedRide (Just point)
 
+  fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride
   pure APISuccess.Success
   where
     isValidRideStatus status = status == DRide.NEW

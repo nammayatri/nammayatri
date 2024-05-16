@@ -8,7 +8,7 @@ LocationMapping:
 
   types:
     LocationMappingTags:
-      enum: "BOOKING, SEARCH_REQUEST, RIDE"
+      enum: "BOOKING, SEARCH_REQUEST, RIDE, BOOKING_UPDATE_REQUEST"
 
   fields:
     id : Id LocationMapping

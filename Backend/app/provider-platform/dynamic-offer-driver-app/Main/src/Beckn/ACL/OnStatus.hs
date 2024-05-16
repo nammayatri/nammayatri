@@ -110,7 +110,7 @@ buildOnStatusMessage (DStatus.RideCompletedReq Common.DRideCompletedReq {..}) = 
               { id = booking.id.getId,
                 state = RideCompletedOS.orderState,
                 quote,
-                payment = Just $ Common.mkRideCompletedPayment paymentMethodInfo paymentUrl,
+                payment = Just $ Common.mkRideCompletedPayment ride.currency paymentMethodInfo paymentUrl,
                 fulfillment = fulfillment
               }
       }
@@ -159,9 +159,10 @@ buildOnStatusReqV2 ::
   DM.Merchant ->
   DRB.Booking ->
   DStatus.OnStatusBuildReq ->
+  Maybe Text ->
   m Spec.OnStatusReq
-buildOnStatusReqV2 merchant booking req = do
-  msgId <- generateGUID
+buildOnStatusReqV2 merchant booking req mbMessageId = do
+  msgId <- maybe generateGUID pure mbMessageId
   let bppId = getShortId $ merchant.subscriberId
       city = fromMaybe merchant.city booking.bapCity
       country = fromMaybe merchant.country booking.bapCountry

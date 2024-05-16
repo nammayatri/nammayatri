@@ -16,7 +16,7 @@
 module Screens.EditAadhaarDetailsScreen.Controller where
 
 import Prelude (class Show, bind, unit, pure, discard)
-import PrestoDOM (Eval, continue, exit)
+import PrestoDOM (Eval, update, continue, exit)
 import Screens.Types (EditAadhaarDetailsScreenState)
 import PrestoDOM.Types.Core (class Loggable)
 import Components.PrimaryButton.Controller as PrimaryButtonController
@@ -52,7 +52,7 @@ data Action = NoAction
 eval :: Action -> EditAadhaarDetailsScreenState -> Eval Action ScreenOutput EditAadhaarDetailsScreenState
 eval AfterRender state = continue state
 eval BackPressed state = exit GoBack
-eval _ state = continue state
+eval _ state = update state
 
 
 getTitleFromList :: ListOptions -> String

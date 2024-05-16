@@ -46,6 +46,8 @@ import Screens(ScreenName)
 import PrestoDOM.List
 import JBridge (Location)
 import Data.HashMap as DHM
+import Data.Map as DM
+import MerchantConfig.Types as MRC
 
 type Contacts = {
   name :: String,
@@ -366,7 +368,9 @@ type IssueInfo = {
     status :: String,
     category :: String,
     createdAt :: String,
-    issueReportShortId :: Maybe String
+    issueReportShortId :: Maybe String,
+    optionLabel :: Maybe String,
+    rideId :: Maybe String
 }
 
 -- ################################################ MyRidesScreenState ##################################################
@@ -452,6 +456,11 @@ type IndividualRideCardState =
   , optionsVisibility :: Boolean
   , merchantExoPhone :: String
   , serviceTierName :: Maybe String
+  , totalTime :: String
+  , vehicleModel :: String
+  , rideStartTimeUTC :: String
+  , providerName :: String
+  , providerType :: ProviderType
   }
 
 
@@ -483,7 +492,8 @@ type ItemState =
     rideEndTimeUTC :: PropValue,
     alpha :: PropValue,
     zoneVisibility :: PropValue,
-    variantImage :: PropValue
+    variantImage :: PropValue,
+    vehicleImgVisibility :: PropValue
   }
 
 -- ################################################ PermissionScreenState ##################################################
@@ -513,6 +523,7 @@ data Stage = HomeScreen
            | FindingQuotes
            | QuoteList
            | PreviousRating
+           | GoToConfirmLocation
            | ConfirmingLocation
            | DistanceOutsideLimits
            | ShortDistance
@@ -524,6 +535,7 @@ data Stage = HomeScreen
            | RetryFindingQuote
            | PickUpFarFromCurrentLocation
            | LoadMap
+           | ProviderSelection
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -612,7 +624,22 @@ type HomeScreenStateData =
   , followers :: Maybe (Array Followers)
   , vehicleVariant :: String
   , hotSpotInfo :: Array HotSpotData
+  , iopState :: InteroperabilityState
+  , currentCityConfig :: MRC.CityConfig
+  , otherSelectedEstimates :: Array String
+  , rateCardCache :: Maybe RateCard
   }
+
+type InteroperabilityState = {
+  timerId :: String,
+  timerVal :: String,
+  showMultiProvider :: Boolean,
+  providerPrefVisible :: Boolean,
+  providerSelectionStage :: Boolean,
+  showPrefButton :: Boolean,
+  providerPrefInfo :: Boolean,
+  hasTopProviderEstimate :: Boolean
+}
 
 type RentalsInfo = 
   {
@@ -640,6 +667,8 @@ type QuoteListItemState =
   , selectedQuote :: Maybe String
   , appConfig :: AppConfig
   , city :: City
+  , vehicleImage :: String
+  , serviceTierName :: Maybe String
   }
 
 
@@ -797,6 +826,11 @@ type HomeScreenStateProps =
   , repeatRideVariant :: String
   , hasToll :: Boolean
   , repeatRideServiceTierName :: Maybe String
+  , isSearchCancelled :: Boolean
+  , referralComponentProps :: ReferralComponentState
+  , showAcWorkingPopup :: Boolean
+  , repeateRideTimerStoped :: Boolean
+  , currentEstimateHeight :: Int
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -932,15 +966,18 @@ type RateCard =
   {
     baseFare :: Int,
     extraFare :: Array FareList,
-    pickUpCharges :: Int,
+    driverAdditions :: Array FareList,
+    fareInfoDescription :: Array String,
+    pickUpCharges :: Number,
     additionalFare :: Int,
-    nightShiftMultiplier :: Number,
-    nightCharges :: Boolean,
+    isNightShift :: Boolean,
+    nightChargeTill :: String,
+    nightChargeFrom :: String,
     currentRateCardType :: RateCardType,
     onFirstPage :: Boolean,
     vehicleVariant :: String,
     createdTime :: String,
-    tollCharge :: Int
+    tollCharge :: Number
   }
 
 type RateCardDetails = {
@@ -973,33 +1010,18 @@ type RecentlySearchedObject =
   }
 
 type ReferralScreenState =
-  {
-      referralCode :: String
+  {   referralCode :: String
     , btnActive :: Boolean
     , showThanks :: Boolean
     , isInvalidCode :: Boolean
     , isExpandReference :: Boolean
     , config :: AppConfig
     , logField :: Object Foreign
+    , referralType :: ReferralType
+    , showQRCodePopUp :: Boolean
+    , referralComponentProps :: ReferralComponentState
   }
 
-type EstimateInfo = {
-  additionalFare :: Int,
-  estimatedPrice :: Int, 
-  quoteList :: Array ChooseVehicle.Config,
-  defaultQuote :: ChooseVehicle.Config,
-  estimateId :: String,
-  estimatedVarient :: Array EstimateAPIEntity,
-  -- pickUpCharges :: Int,
-  -- -- nightShiftMultiplier :: Number,
-  -- -- nightCharges :: Boolean,
-  -- baseFare :: Int,
-  -- extraFare :: Int,
-  showRateCardIcon :: Boolean,
-  zoneType :: SpecialTags,
-  createdTime :: String,
-  hasToll :: Boolean
-}
 
 -- ################################## SelectLanguageScreenState ###############################
 
@@ -1152,6 +1174,10 @@ type DriverInfoCard =
   , destinationAddress :: Address
   , status :: String
   , serviceTierName :: Maybe String
+  , vehicleModel :: String
+  , vehicleColor :: String
+  , providerType :: ProviderType
+  , providerName :: String
   }
 
 type RatingCard =
@@ -2041,7 +2067,8 @@ type NammaSafetyScreenProps =  {
   showPastRidePopUp :: Boolean,
   checkPastRide :: Boolean,
   reportPastRide :: Boolean,
-  appName :: String
+  appName :: String,
+  isOffUs :: Boolean
 }
 data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED
 
@@ -2110,13 +2137,19 @@ instance eqEmAudioPlayStatus :: Eq EmAudioPlayStatus where eq = genericEq
 
 type ReferralStatusProp = {
   referralStatus :: ReferralStatus,
-  referralCode :: Maybe String
+  referralCode :: Maybe String,
+  showAddReferralPopup :: Boolean
 }
 
 data ReferralStatus = NO_REFERRAL | REFERRAL_APPLIED | REFERRAL_INVALID | REFERRAL_ALREADY_APPLIED
 
 derive instance genericReferralStatus :: Generic ReferralStatus _
 instance eqReferralStatus :: Eq ReferralStatus where eq = genericEq
+
+data ReferralType = GIVE_REFERRAL | GET_REFERRED
+
+derive instance genericReferralType :: Generic ReferralType _
+instance eqReferralType :: Eq ReferralType where eq = genericEq
 
 type MetroStation = {
   code :: String
@@ -2233,6 +2266,7 @@ type LocateOnMapProps = {
   , sourceGeoJson :: Maybe String
   , sourceGates :: Maybe (Array Location)
   , isSpecialPickUpGate :: Boolean
+  , cameraAnimatedToSource :: Boolean
 }
 
 data NavigationMode = WALK | DRIVE
@@ -2254,3 +2288,46 @@ data LocationSelectType = SEARCH | MAP | FAVOURITE | REPEAT_RIDE | RETRY_SEARCH 
 
 derive instance genericLocationSelectType :: Generic LocationSelectType _
 instance eqLocationSelectType :: Eq LocationSelectType where eq = genericEq
+
+type ReferralComponentState =
+  { stage :: ReferralStage
+  , referralCode :: Maybe String
+  , applyButtonActive :: Boolean
+  , showReferredUserInfoPopup :: Boolean
+  , showReferralProgramInfoPopup :: Boolean
+  , isInvalidCode :: Boolean
+  }
+
+data ReferralStage = ENTER_REFERRAL_CODE
+                   | INVALID_POPUP
+                   | APPLIED_POPUP
+                   | ALREADY_APPLIED_POPUP
+                   | NO_REFERRAL_STAGE
+
+derive instance genericReferralStage :: Generic ReferralStage _
+instance eqReferralStage :: Eq ReferralStage where eq = genericEq
+
+type SpecialLocationMap = DM.Map String SpecialLocationList
+
+type SpecialLocationList = {
+    geoJson :: String
+  , gates :: Array Location
+  , locationName :: String
+  , category :: String
+  , city :: String
+}
+
+type SpecialZoneTagConfig = {
+    icon :: String
+  , text :: String
+  , infoPopUpConfig :: Maybe SpecialZoneInfoPopUp
+  , backgroundColor :: String
+}
+
+type SpecialZoneInfoPopUp = {
+    title :: String
+  , primaryText :: String
+  , secondaryText :: String
+  , primaryButtonText :: String
+  , icon :: String
+}

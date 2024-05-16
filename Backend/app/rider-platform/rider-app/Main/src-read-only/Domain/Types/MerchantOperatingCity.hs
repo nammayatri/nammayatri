@@ -4,6 +4,7 @@
 
 module Domain.Types.MerchantOperatingCity where
 
+import Data.Aeson
 import qualified Domain.Types.Merchant
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context

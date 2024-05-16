@@ -38,8 +38,9 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
@@ -54,6 +55,7 @@ import Storage.Queries.VehicleRegistrationCertificate as QVRC
 import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
+import Utils.Common.Cac.KeyNameConstants
 
 initializeRide ::
   Id Merchant ->
@@ -78,7 +80,7 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
           Just otp -> pure otp
   ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
 
-  ride <- buildRide driver.id booking ghrId otpCode enableFrequentLocationUpdates mbClientId
+  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   rideDetails <- buildRideDetails ride driver vehicle
 
@@ -91,10 +93,10 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
 
-  Notify.notifyDriver booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver.id driver.deviceToken
+  Notify.notifyDriver booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken
 
   fork "DriverScoreEventHandler OnNewRideAssigned" $
-    DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId}
+    DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency}
 
   return (ride, rideDetails, vehicle)
   where
@@ -114,7 +116,10 @@ buildRideDetails ::
   DVeh.Vehicle ->
   Flow SRD.RideDetails
 buildRideDetails ride driver vehicle = do
+  now <- getCurrentTime
   vehicleRegCert <- QVRC.findLastVehicleRCWrapper vehicle.registrationNo
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityId ride.merchantOperatingCityId
+  let defaultServiceTierName = (.name) <$> find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
   return $
     SRD.RideDetails
       { id = ride.id,
@@ -126,15 +131,18 @@ buildRideDetails ride driver vehicle = do
         vehicleVariant = Just vehicle.variant,
         vehicleModel = Just vehicle.model,
         vehicleClass = Nothing,
-        fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId)
+        fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId),
+        defaultServiceTierName = defaultServiceTierName,
+        createdAt = Just now
       }
 
-buildRide :: Id Person -> DBooking.Booking -> Maybe (Id DGetHomeRequest.DriverGoHomeRequest) -> Text -> Maybe Bool -> Maybe (Id DC.Client) -> Flow DRide.Ride
-buildRide driverId booking ghrId otp enableFrequentLocationUpdates clientId = do
+buildRide :: DPerson.Person -> DBooking.Booking -> Maybe (Id DGetHomeRequest.DriverGoHomeRequest) -> Text -> Maybe Bool -> Maybe (Id DC.Client) -> Flow DRide.Ride
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   now <- getCurrentTime
-  transporterConfig <- TC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  deploymentVersion <- asks (.version)
+  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   trackingUrl <- buildTrackingUrl guid
   return
     DRide.Ride
@@ -146,11 +154,12 @@ buildRide driverId booking ghrId otp enableFrequentLocationUpdates clientId = do
         merchantId = Just booking.providerId,
         merchantOperatingCityId = booking.merchantOperatingCityId,
         status = DRide.NEW,
-        driverId = cast driverId,
+        driverId = cast driver.id,
         otp = otp,
         endOtp = Nothing,
         trackingUrl = trackingUrl,
         fare = Nothing,
+        currency = booking.currency,
         traveledDistance = 0,
         chargeableDistance = Nothing,
         driverArrivalTime = Nothing,
@@ -167,19 +176,30 @@ buildRide driverId booking ghrId otp enableFrequentLocationUpdates clientId = do
         distanceCalculationFailed = Nothing,
         createdAt = now,
         updatedAt = now,
+        driverDeviatedToTollRoute = Just False,
         driverDeviatedFromRoute = Just False,
         numberOfSnapToRoadCalls = Nothing,
         numberOfOsrmSnapToRoadCalls = Nothing,
+        numberOfSelfTuned = Nothing,
         numberOfDeviation = Nothing,
         tollCharges = Nothing,
+        tollNames = Nothing,
+        estimatedTollCharges = booking.fareParams.tollCharges,
+        estimatedTollNames = booking.tollNames,
         uiDistanceCalculationWithAccuracy = Nothing,
         uiDistanceCalculationWithoutAccuracy = Nothing,
-        isFreeRide = Just ((getId driverId) `elem` transporterConfig.specialDrivers),
+        isFreeRide = Just ((getId driver.id) `elem` transporterConfig.specialDrivers),
         driverGoHomeRequestId = ghrId,
         safetyAlertTriggered = False,
         enableFrequentLocationUpdates = enableFrequentLocationUpdates,
         vehicleServiceTierSeatingCapacity = booking.vehicleServiceTierSeatingCapacity,
-        vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned
+        vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned,
+        clientSdkVersion = driver.clientSdkVersion,
+        clientBundleVersion = driver.clientBundleVersion,
+        clientDevice = driver.clientDevice,
+        clientConfigVersion = driver.clientConfigVersion,
+        backendConfigVersion = driver.backendConfigVersion,
+        backendAppVersion = Just deploymentVersion.getDeploymentVersion
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl
@@ -192,7 +212,7 @@ buildTrackingUrl rideId = do
         baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
       }
 
-deactivateExistingQuotes :: Id DTMM.MerchantOperatingCity -> Id Merchant -> Id Person -> Id SearchTry -> Money -> Flow [SearchRequestForDriver]
+deactivateExistingQuotes :: Id DTMM.MerchantOperatingCity -> Id Merchant -> Id Person -> Id SearchTry -> Price -> Flow [SearchRequestForDriver]
 deactivateExistingQuotes merchantOpCityId merchantId quoteDriverId searchTryId estimatedFare = do
   driverSearchReqs <- QSRD.findAllActiveBySTId searchTryId
   QDQ.setInactiveBySTId searchTryId
@@ -200,19 +220,28 @@ deactivateExistingQuotes merchantOpCityId merchantId quoteDriverId searchTryId e
   pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare
   return driverSearchReqs
 
-pullExistingRideRequests :: Id DTMM.MerchantOperatingCity -> [SearchRequestForDriver] -> Id Merchant -> Id Person -> Money -> Flow ()
+pullExistingRideRequests :: Id DTMM.MerchantOperatingCity -> [SearchRequestForDriver] -> Id Merchant -> Id Person -> Price -> Flow ()
 pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare = do
   for_ driverSearchReqs $ \driverReq -> do
     let driverId = driverReq.driverId
     unless (driverId == quoteDriverId) $ do
       DP.decrementTotalQuotesCount merchantId merchantOpCityId (cast driverReq.driverId) driverReq.searchTryId
       DP.removeSearchReqIdFromMap merchantId driverId driverReq.searchTryId
-      void $ QSRD.updateDriverResponse driverReq.id SReqD.Pulled
+      void $ QSRD.updateDriverResponse driverReq.id SReqD.Pulled SReqD.Inactive
       driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      Notify.notifyDriverClearedFare merchantOpCityId driverId driverReq.searchTryId estimatedFare driver_.deviceToken
+      Notify.notifyDriverClearedFare merchantOpCityId driver_ driverReq.searchTryId estimatedFare
 
 searchRequestKey :: Text -> Text
 searchRequestKey sId = "Driver:Search:Request:" <> sId
 
 multipleRouteKey :: Text -> Text
 multipleRouteKey id = "multiple-routes-" <> id
+
+confirmLockKey :: Id DBooking.Booking -> Text
+confirmLockKey (Id id) = "Driver:Confirm:BookingId-" <> id
+
+bookingRequestKeySoftUpdate :: Text -> Text
+bookingRequestKeySoftUpdate bId = "Driver:Booking:Request:SoftUpdate" <> bId
+
+multipleRouteKeySoftUpdate :: Text -> Text
+multipleRouteKeySoftUpdate id = "multiple-routes-SoftUpdate-" <> id

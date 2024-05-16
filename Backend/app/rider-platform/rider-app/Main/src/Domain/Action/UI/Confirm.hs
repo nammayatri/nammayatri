@@ -21,11 +21,12 @@ where
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -37,12 +38,14 @@ import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Quote as QQuote
 import qualified Tools.Notifications as Notify
+import TransactionLogs.Types
 
 confirm ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     HasField "shortDurationRetryCfg" r RetryCfg,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "version" ::: DeploymentVersion],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CacheFlow m r,
     EventStreamFlow m r,
@@ -70,6 +73,7 @@ cancelBooking booking = do
   Notify.notifyOnBookingCancelled booking DBCR.ByApplication bppDetails
   where
     buildBookingCancellationReason bookingId = do
+      now <- getCurrentTime
       return $
         DBCR.BookingCancellationReason
           { bookingId = bookingId,
@@ -80,5 +84,7 @@ cancelBooking booking = do
             reasonStage = Nothing,
             additionalInfo = Nothing,
             driverCancellationLocation = Nothing,
-            driverDistToPickup = Nothing
+            driverDistToPickup = Nothing,
+            createdAt = now,
+            updatedAt = now
           }

@@ -126,7 +126,8 @@ instance FromTType' BeamRD.RiderDetails RiderDetails where
             otpCode = otpCode,
             nightSafetyChecks = nightSafetyChecks,
             cancellationDues = cancellationDues,
-            disputeChancesUsed = disputeChancesUsed
+            disputeChancesUsed = disputeChancesUsed,
+            currency = fromMaybe INR currency
           }
 
 instance ToTType' BeamRD.RiderDetails RiderDetails where
@@ -147,5 +148,6 @@ instance ToTType' BeamRD.RiderDetails RiderDetails where
         BeamRD.nightSafetyChecks = nightSafetyChecks,
         BeamRD.otpCode = otpCode,
         BeamRD.cancellationDues = cancellationDues,
+        BeamRD.currency = Just currency,
         BeamRD.disputeChancesUsed = disputeChancesUsed
       }

@@ -137,9 +137,9 @@ homeScreen = do
     SaveFavourite updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ SAVE_FAVOURITE updatedState)
-    GoToReferral updatedState -> do
+    GoToReferral referralType updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_REFERRAL)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_REFERRAL referralType)
     CallContact updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_CALL_EMERGENCY_CONTACT updatedState)
@@ -193,6 +193,8 @@ homeScreen = do
     GoToNammaSafety updatedState triggerSos showTestDrill -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_NAMMASAFETY updatedState triggerSos showTestDrill)
+    GoToSafetySettingScreen -> do
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_SAFETY_SETTING_SCREEN)
     SafetySupport updatedState isSafe -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ SAFETY_SUPPORT updatedState isSafe)
@@ -218,5 +220,14 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ REPEAT_SEARCH updatedState)
     ChangeVehicleVarient updatedState -> do
-      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ CHANGE_VEHICLE_VARIANT updatedState)
+    ExitToConfirmingLocationStage updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GOTO_CONFIRMING_LOCATION_STAGE updatedState)
+    UpdateReferralCode updatedState code -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ UPDATE_REFERRAL_CODE code)
+    GoToRideRelatedIssues updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_RELATED_ISSUES updatedState)

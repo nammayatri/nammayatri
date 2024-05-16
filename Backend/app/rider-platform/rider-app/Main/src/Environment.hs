@@ -41,6 +41,7 @@ import Kernel.Storage.Hedis as Redis
 import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
 import Kernel.Types.App
 import Kernel.Types.Cache
+import qualified Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common (Distance, HighPrecMeters, Seconds, highPrecMetersToDistance)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Error
@@ -67,14 +68,7 @@ import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import System.Environment as SE
 import Tools.Metrics
 import Tools.Streaming.Kafka
-
-data CacConfig = CacConfig
-  { host :: String,
-    interval :: Natural,
-    tenants :: [String],
-    retryConnection :: Bool
-  }
-  deriving (Generic, FromDhall)
+import TransactionLogs.Types
 
 data SuperPositionConfig = SuperPositionConfig
   { host :: String,
@@ -147,8 +141,11 @@ data AppCfg = AppCfg
     _version :: Text,
     hotSpotExpiry :: Seconds,
     collectRouteData :: Bool,
-    cacConfig :: CacConfig,
-    superPositionConfig :: SuperPositionConfig
+    cacConfig :: CF.CacConfig,
+    cacTenants :: [String],
+    superPositionConfig :: SuperPositionConfig,
+    ondcTokenMap :: M.Map KeyConfig TokenConfig,
+    iosValidateEnpoint :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -218,12 +215,15 @@ data AppEnv = AppEnv
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
     _version :: Text,
     hotSpotExpiry :: Seconds,
-    cacConfig :: CacConfig,
+    cacConfig :: CF.CacConfig,
+    cacTenants :: [String],
     superPositionConfig :: SuperPositionConfig,
     collectRouteData :: Bool,
     shouldLogRequestId :: Bool,
     requestId :: Maybe Text,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig,
+    iosValidateEnpoint :: Text
   }
   deriving (Generic)
 
@@ -260,6 +260,8 @@ buildAppEnv cfg@AppCfg {..} = do
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   serviceClickhouseEnv <- createConn riderClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
+  -- let tokenMap :: (M.Map Text (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
+  let ondcTokenHashMap = HM.fromList $ M.toList ondcTokenMap
   return AppEnv {minTripDistanceForReferralCfg = highPrecMetersToDistance <$> minTripDistanceForReferralCfg, ..}
 
 releaseAppEnv :: AppEnv -> IO ()
@@ -296,7 +298,7 @@ instance Registry Flow where
       then do
         Registry.checkBlacklisted isBlackListed mbSubscriber
       else do
-        Registry.checkWhitelisted isNotWhiteListed mbSubscriber
+        Registry.checkWhitelisted isNotWhiteListed req.merchant_id mbSubscriber
     where
       performLookup sub = do
         fetchFromDB sub.merchant_id >>= \registryUrl -> do
@@ -305,7 +307,7 @@ instance Registry Flow where
         merchant <- CM.findById (Id merchantId) >>= fromMaybeM (MerchantDoesNotExist merchantId)
         pure $ merchant.registryUrl
       isBlackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isJust
-      isNotWhiteListed subscriberId domain = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
+      isNotWhiteListed subscriberId domain merchantId = QWhiteList.findBySubscriberIdAndDomainAndMerchantId (ShortId subscriberId) domain (Id merchantId) <&> isNothing
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest

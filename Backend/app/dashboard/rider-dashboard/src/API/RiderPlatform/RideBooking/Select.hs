@@ -64,12 +64,12 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.SelectAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
-callSelect :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
-callSelect merchantShortId opCity apiTokenInfo personId estimateId = withFlowHandlerAPI' $ do
+callSelect :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler APISuccess
+callSelect merchantShortId opCity apiTokenInfo personId estimateId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.EstimatesEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId opCity (.rideBooking.select.rSelect) personId estimateId
+    Client.callRiderApp checkedMerchantId opCity (.rideBooking.select.rSelect) personId estimateId req
 
 callSelectList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
 callSelectList merchantShortId opCity apiTokenInfo personId estimateId = withFlowHandlerAPI' $ do

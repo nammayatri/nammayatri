@@ -222,7 +222,7 @@ shareOptionButtonConfig state = let
       , textStyle = Tags}
       , isPrefixImage = true
       , prefixImageConfig {
-          imageUrl = "ny_ic_share,https://assets.juspay.in/nammayatri/images/driver/ny_ic_share.png"
+          imageUrl = fetchImage COMMON_ASSET "ny_ic_share"
         , margin = MarginRight 8
         , padding = PaddingTop 4
       }

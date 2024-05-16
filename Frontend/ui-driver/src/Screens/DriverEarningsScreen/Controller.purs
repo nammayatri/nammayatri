@@ -44,7 +44,7 @@ import JBridge (pauseYoutubeVideo)
 import Language.Strings (getString)
 import Language.Types
 import Log
-import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit, continueWithCmd)
+import PrestoDOM (Eval, update, continue, exit, ScrollState(..), updateAndExit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resource.Constants (decodeAddress, rideTypeConstructor)
 import Screens (ScreenName(..), getScreen)
@@ -57,6 +57,7 @@ import Timers (clearTimerWithId)
 import Debug
 import Foreign (unsafeToForeign)
 import Resource.Constants as Const
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -227,7 +228,7 @@ eval (CoinTransactionResponseAction (CoinTransactionRes resp)) state = do
         , coinsEarnedPreviousDay = resp.coinsEarnedPreviousDay
         , coinsEarnedToday = resp.todayCoinSummary
         , coinHistoryItems = events
-        , coinsToUse = (state.data.coinBalance / state.data.config.coinsConfig.stepFunctionForCoinConversion) * state.data.config.coinsConfig.stepFunctionForCoinConversion
+        , coinsToUse = (resp.coinBalance / state.data.config.coinsConfig.stepFunctionForCoinConversion) * state.data.config.coinsConfig.stepFunctionForCoinConversion
         }
       , props { showShimmer = false, showCoinsEarnedAnim = coinDifference}
       }
@@ -426,10 +427,10 @@ eval (OpenFaqQuestion faqQuestion) state = do
 eval (OpenTripDetails index) state = do
   let 
       tripDetails = rideHistoryItemTransformer $ fromMaybe dummyRideHistoryItem (state.data.rideHistoryItems !! index)
-      updateState = state { data{selectedRideHistoryItem = tripDetails } }
-  updateAndExit updateState $ TripDetails updateState
+      update = state { data{selectedRideHistoryItem = tripDetails } }
+  updateAndExit update $ TripDetails update
 
-eval _ state = continue state
+eval _ state = update state
 
 mapSummaryListWithWeeklyEarnings :: Array RidesSummary -> Array ST.WeeklyEarning
 mapSummaryListWithWeeklyEarnings ridesSummaryList =
@@ -507,10 +508,12 @@ rideHistoryItemTransformer (RidesInfo ride) =
     specialZoneImage : specialLocationConfig.imageUrl,
     specialZoneText : specialLocationConfig.text,
     specialZonePickup : checkSpecialPickupZone ride.specialLocationTag,
-    tollCharge : fromMaybe 0 ride.tollCharges,
+    tollCharge : fromMaybe 0.0 ride.tollCharges,
     rideType : ride.vehicleServiceTierName,
     tripStartTime : ride.tripStartTime,
-    tripEndTime : ride.tripEndTime
+    tripEndTime : ride.tripEndTime,
+    acRide : ride.isVehicleAirConditioned,
+    vehicleServiceTier : ride.vehicleServiceTier
   }
 
 getDisabilityType :: Maybe String -> Maybe DisabilityType
@@ -536,7 +539,7 @@ earningHistoryItemsListTransformer list =
           , event: ""
           , tagImages: getTagImages (RidesInfo ride)
           , cash: 0.0
-          , vehicleVariant : ride.vehicleVariant
+          , vehicleVariant : ride.vehicleServiceTier
           }
       )
       list
@@ -547,11 +550,11 @@ getTagImages (RidesInfo ride) =
   let
     tag = getRequiredTag ride.specialLocationTag
     conditionsAndTags = 
-      [ {condition: isJust ride.customerExtraFee, tag: "ny_ic_tip_ride_tag"}
-      , {condition: isJust ride.disabilityTag, tag: "ny_ic_disability_tag"}
-      , {condition: isJust ride.specialLocationTag && isJust tag, tag: "ny_ic_star"}
-      , {condition: isJust ride.driverGoHomeRequestId, tag: "ny_ic_goto_home_tag"}
-      , {condition: checkSpecialPickupZone ride.specialLocationTag, tag: "ny_ic_sp_zone_green"}
+      [ {condition: isJust ride.customerExtraFee, tag: fetchImage FF_ASSET "ny_ic_tip_ride_tag"}
+      , {condition: isJust ride.disabilityTag, tag: fetchImage FF_ASSET "ny_ic_disability_tag"}
+      , {condition: isJust ride.specialLocationTag && isJust tag, tag: fetchImage FF_ASSET "ny_ic_star"}
+      , {condition: isJust ride.driverGoHomeRequestId, tag: fetchImage FF_ASSET "ny_ic_goto_home_tag"}
+      , {condition: checkSpecialPickupZone ride.specialLocationTag, tag: fetchImage COMMON_ASSET "ny_ic_sp_zone_green"}
       ]
   in
     DA.concatMap (\{condition, tag} -> if condition then [tag] else []) conditionsAndTags

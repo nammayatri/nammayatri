@@ -15,7 +15,7 @@
 
 module Screens.TripDetailsScreen.Controller where
 
-import Common.Types.App (CategoryListType)
+import Common.Types.App (CategoryListType, ProviderType(..))
 import Components.GenericHeader as GenericHeaderController
 import Components.PopUpModal as PopUpModalController
 import Components.PrimaryButton as PrimaryButtonController
@@ -27,8 +27,8 @@ import JBridge (hideKeyboardOnNavigation, copyToClipboard, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent, trackAppTextInput)
-import Prelude (class Show, pure, unit, not, bind, ($), (>), discard)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import Prelude (class Show, pure, unit, not, bind, ($), (>), discard, void, (==))
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (TripDetailsScreenState, TripDetailsGoBackType)
@@ -101,7 +101,10 @@ eval (PopUpModalAction (PopUpModalController.OnButton1Click)) state = continue s
 
 eval (PopUpModalAction (PopUpModalController.OnButton2Click)) state = exit $ ConnectWithDriver state{props{showConfirmationPopUp = false}}
 
-eval ViewInvoice state = exit $ GoToInvoice state
+eval ViewInvoice state = do
+    let onUsRide  = state.data.selectedItem.providerType == ONUS
+    void $ pure if onUsRide then unit else toast $ getString OTHER_PROVIDER_NO_RECEIPT 
+    if onUsRide then exit $ GoToInvoice state else continue state
 
 eval ReportIssue state =  do
     let updatedState = state { props { reportIssue = not state.props.reportIssue, showIssueOptions = true } }
@@ -129,4 +132,4 @@ eval AfterRender state = continue state {props {triggerUIUpdate = not state.prop
 
 eval ListExpandAinmationEnd state = continue state {props {showIssueOptions = false }}
 
-eval _ state = continue state
+eval _ state = update state

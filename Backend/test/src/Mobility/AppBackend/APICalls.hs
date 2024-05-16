@@ -22,12 +22,12 @@ import qualified "rider-app" API.UI.Registration as Reg
 import qualified "rider-app" API.UI.Select as AppSelect
 import qualified "rider-app" API.UI.Serviceability as AppServ
 import qualified "rider-app" Domain.Action.UI.Cancel as CancelAPI
-import qualified "rider-app" Domain.Types.Booking as AbeBooking
 import qualified "rider-app" Domain.Types.Booking as BRB
+import qualified "rider-app" Domain.Types.Booking.API as AbeBooking
 import qualified "rider-app" Domain.Types.CancellationReason as AbeCRC
 import qualified "rider-app" Domain.Types.Client as DC
 import qualified "rider-app" Domain.Types.Estimate as AbeEstimate
-import qualified "rider-app" Domain.Types.Merchant.MerchantPaymentMethod as AppMPM
+import qualified "rider-app" Domain.Types.MerchantPaymentMethod as AppMPM
 import qualified "rider-app" Domain.Types.Quote as AbeQuote
 import qualified "rider-app" Domain.Types.RegistrationToken as AppSRT
 import qualified "rider-app" Domain.Types.Ride as BRide
@@ -53,7 +53,7 @@ cancelRide = client (Proxy :: Proxy CancelAPI.CancelAPI)
 
 mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 mkAppCancelReq stage =
-  CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing
+  CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing Nothing
 
 appConfirmRide :: Text -> Id AbeQuote.Quote -> Maybe (Id AppMPM.MerchantPaymentMethod) -> ClientM ConfirmAPI.ConfirmRes
 appConfirmRide = client (Proxy :: Proxy ConfirmAPI.API)
@@ -87,8 +87,8 @@ destinationServiceability regToken = destination
   where
     _ :<|> destination = client (Proxy :: Proxy AppServ.API) regToken
 
-appAuth :: Reg.AuthReq -> Maybe Version -> Maybe Version -> ClientM Reg.AuthRes
-appSignatureAuth :: Maybe Version -> Maybe Version -> ClientM Reg.AuthRes
+appAuth :: Reg.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> ClientM Reg.AuthRes
+appSignatureAuth :: Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> ClientM Reg.AuthRes
 appVerify :: Id AppSRT.RegistrationToken -> Reg.AuthVerifyReq -> ClientM Reg.AuthVerifyRes
 appReInitiateLogin :: Id AppSRT.RegistrationToken -> ClientM Reg.ResendAuthRes
 logout :: RegToken -> ClientM APISuccess
@@ -102,8 +102,9 @@ appAuth
 mkAuthReq :: Reg.AuthReq
 mkAuthReq =
   Reg.AuthReq
-    { mobileNumber = "9000090000",
-      mobileCountryCode = "+91",
+    { mobileNumber = Just "9000090000",
+      mobileCountryCode = Just "+91",
+      identifierType = Nothing,
       merchantId = "FIXME",
       deviceToken = Nothing,
       notificationToken = Nothing,
@@ -128,7 +129,7 @@ mkAuthVerifyReq =
     }
 
 initiateAuth :: ClientM Reg.AuthRes
-initiateAuth = appAuth mkAuthReq (Just defaultVersion) (Just defaultVersion)
+initiateAuth = appAuth mkAuthReq (Just defaultVersion) (Just defaultVersion) Nothing Nothing
 
 verifyAuth :: Id AppSRT.RegistrationToken -> ClientM Reg.AuthVerifyRes
 verifyAuth tokenId = appVerify tokenId mkAuthVerifyReq

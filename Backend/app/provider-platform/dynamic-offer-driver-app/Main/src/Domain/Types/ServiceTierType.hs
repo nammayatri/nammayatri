@@ -18,6 +18,7 @@ module Domain.Types.ServiceTierType where
 import Data.Aeson
 import qualified EulerHS.Prelude
 import Kernel.Prelude
+import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data ServiceTierType
@@ -30,6 +31,8 @@ data ServiceTierType
   | SEDAN
   | TAXI
   | TAXI_PLUS
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
+  | BIKE
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierType)
+$(mkHttpInstancesForEnum ''ServiceTierType)

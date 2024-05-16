@@ -35,6 +35,7 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
+import qualified Kernel.Types.Common as Common (mkPrice)
 import Kernel.Types.Id (ShortId)
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator (mkFareParamsBreakups)
@@ -98,7 +99,7 @@ mkFulfillmentV2 dReq quote isValueAddNP = do
 
 mkPaymentV2 :: DBC.BecknConfig -> DM.Merchant -> DQuote.DriverQuote -> Spec.Payment
 mkPaymentV2 bppConfig merchant driverQuote = do
-  let mPrice = Just $ mkPriceFromMoney driverQuote.estimatedFare -- FIXME
+  let mPrice = Just $ Common.mkPrice (Just driverQuote.currency) driverQuote.estimatedFare
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
   mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
@@ -304,6 +305,7 @@ mkQuoteBreakupInner quote = do
         || breakup.quotationBreakupInnerTitle == Just (show Enums.TOTAL_FARE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
 
 mkQuotationPrice :: DQuote.DriverQuote -> Maybe Spec.Price
 mkQuotationPrice quote =

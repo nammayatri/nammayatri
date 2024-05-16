@@ -36,11 +36,13 @@ import Servant hiding (throwError)
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.FarePolicy as SFP
+import qualified SharedLogic.Ride as SRide
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Tools.Error
+import TransactionLogs.PushLogs
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -70,7 +72,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
     country <- Utils.getContextCountry context
     isValueAddNP <- CQVAN.isValueAddNP bapId
     dConfirmReq <- ACL.buildConfirmReqV2 reqV2 isValueAddNP
-    Redis.whenWithLockRedis (confirmLockKey dConfirmReq.bookingId.getId) 60 $ do
+    Redis.whenWithLockRedis (SRide.confirmLockKey dConfirmReq.bookingId) 60 $ do
       now <- getCurrentTime
       (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
       fork "confirm" $ do
@@ -99,14 +101,13 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
       let vehicleCategory = Utils.mapServiceTierToCategory dConfirmRes.booking.vehicleServiceTier
       becknConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+      fork "confirm received pushing ondc logs" do
+        void $ pushLogs "confirm" (toJSON reqV2) dConfirmRes.transporter.id.getId
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dConfirmRes.booking.quoteId
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId dConfirmRes.booking.vehicleServiceTier dConfirmRes.booking.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show dConfirmRes.booking.vehicleServiceTier))
       let pricing = Utils.convertBookingToPricing vehicleServiceTierItem dConfirmRes.booking
           onConfirmMessage = ACL.buildOnConfirmMessageV2 dConfirmRes pricing becknConfig mbFarePolicy
       void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage becknConfig
-
-confirmLockKey :: Text -> Text
-confirmLockKey id = "Driver:Confirm:BookingId-" <> id
 
 confirmProcessingLockKey :: Text -> Text
 confirmProcessingLockKey id = "Driver:Confirm:Processing:BookingId-" <> id

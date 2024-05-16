@@ -32,6 +32,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     merchantId :: B.C f (Maybe Text),
     merchantOperatingCityId :: B.C f (Maybe Text),
     baseFare :: B.C f (Maybe Money),
+    baseFareAmount :: B.C f (Maybe HighPrecMoney),
     startTime :: B.C f UTCTime,
     actualDistanceToPickup :: B.C f Meters,
     straightLineDistanceToPickup :: B.C f Meters,
@@ -49,6 +50,13 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     response :: B.C f (Maybe Domain.SearchRequestForDriverResponse),
     driverMinExtraFee :: B.C f (Maybe Money),
     driverMaxExtraFee :: B.C f (Maybe Money),
+    driverMinExtraFeeAmount :: B.C f (Maybe HighPrecMoney),
+    driverMaxExtraFeeAmount :: B.C f (Maybe HighPrecMoney),
+    driverStepFee :: B.C f (Maybe Money),
+    driverDefaultStepFee :: B.C f (Maybe Money),
+    driverStepFeeAmount :: B.C f (Maybe HighPrecMoney),
+    driverDefaultStepFeeAmount :: B.C f (Maybe HighPrecMoney),
+    currency :: B.C f (Maybe Currency),
     rideRequestPopupDelayDuration :: B.C f Seconds,
     isPartOfIntelligentPool :: B.C f Bool,
     pickupZone :: B.C f Bool,
@@ -62,7 +70,14 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     goHomeRequestId :: B.C f (Maybe Text),
     rideFrequencyScore :: B.C f (Maybe Double),
     customerCancellationDues :: B.C f (Maybe HighPrecMoney),
-    createdAt :: B.C f LocalTime
+    createdAt :: B.C f LocalTime,
+    clientSdkVersion :: B.C f (Maybe Text),
+    clientBundleVersion :: B.C f (Maybe Text),
+    clientConfigVersion :: B.C f (Maybe Text),
+    clientOsType :: B.C f (Maybe DeviceType),
+    clientOsVersion :: B.C f (Maybe Text),
+    backendConfigVersion :: B.C f (Maybe Text),
+    backendAppVersion :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

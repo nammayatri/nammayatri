@@ -1,5 +1,7 @@
 let cacheMap = {};
 
+window.cacheMap = cacheMap;
+
 export const getFromCache = function (key, nothing, just) {
   if (typeof cacheMap[key] !== "undefined") {
     return just(cacheMap[key]);
@@ -12,6 +14,10 @@ export const setInCache = function (key, value) {
   cacheMap[key] = value;
   return value;
 }
-export const clearCache = function () {
-  cacheMap = {};
+export const clearCache = function (key) {
+  if (key != "") {
+    delete cacheMap[key];
+  } else {
+    cacheMap = {};
+  }
 }

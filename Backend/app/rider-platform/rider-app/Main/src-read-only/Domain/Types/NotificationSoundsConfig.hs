@@ -4,6 +4,7 @@
 
 module Domain.Types.NotificationSoundsConfig where
 
+import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.External.Notification.Interface.Types

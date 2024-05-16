@@ -24,6 +24,7 @@ module Domain.Action.Dashboard.Merchant
     deleteSpecialLocation,
     upsertSpecialLocationGate,
     deleteSpecialLocationGate,
+    buildMerchantServiceConfig,
   )
 where
 
@@ -33,11 +34,11 @@ import qualified Data.Text as T
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Geometry as DGEO
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantMessage as DMM
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
-import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as DMSUC
+import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantServiceConfig as DMSC
+import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.RiderConfig as DRC
 import Environment
 import qualified Kernel.External.Maps as Maps
@@ -145,6 +146,23 @@ mkServiceUsageConfigRes DMSUC.MerchantServiceUsageConfig {..} =
     }
 
 ---------------------------------------------------------------------
+buildMerchantServiceConfig ::
+  MonadTime m =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DMSC.ServiceConfig ->
+  m DMSC.MerchantServiceConfig
+buildMerchantServiceConfig merchantId merchantOperatingCityId serviceConfig = do
+  now <- getCurrentTime
+  pure
+    DMSC.MerchantServiceConfig
+      { merchantId,
+        serviceConfig,
+        merchantOperatingCityId,
+        updatedAt = now,
+        createdAt = now
+      }
+
 mapsServiceConfigUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
@@ -157,7 +175,7 @@ mapsServiceConfigUpdate merchantShortId city req = do
   merchantOperatingCity <-
     CQMOC.findByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound ("merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city))
-  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id merchantOperatingCity.id serviceConfig
+  merchantServiceConfig <- buildMerchantServiceConfig merchant.id merchantOperatingCity.id serviceConfig
   _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id merchantOperatingCity.id serviceName
   logTagInfo "dashboard -> mapsServiceConfigUpdate : " (show merchant.id)
@@ -176,7 +194,7 @@ smsServiceConfigUpdate merchantShortId city req = do
       >>= fromMaybeM (MerchantOperatingCityNotFound ("merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city))
   let serviceName = DMSC.SmsService $ Common.getSmsServiceFromReq req
   serviceConfig <- DMSC.SmsServiceConfig <$> Common.buildSmsServiceConfig req
-  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id merchantOperatingCity.id serviceConfig
+  merchantServiceConfig <- buildMerchantServiceConfig merchant.id merchantOperatingCity.id serviceConfig
   _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id merchantOperatingCity.id serviceName
   logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchant.id)

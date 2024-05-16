@@ -4,6 +4,7 @@
 
 module Domain.Types.DriverLicense where
 
+import Data.Aeson
 import qualified Domain.Types.IdfyVerification
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
@@ -33,9 +34,9 @@ data DriverLicenseE e = DriverLicense
   }
   deriving (Generic)
 
-type DriverLicense = DriverLicenseE 'AsEncrypted
+type DriverLicense = DriverLicenseE ('AsEncrypted)
 
-type DecryptedDriverLicense = DriverLicenseE 'AsUnencrypted
+type DecryptedDriverLicense = DriverLicenseE ('AsUnencrypted)
 
 instance EncryptedItem DriverLicense where
   type Unencrypted DriverLicense = (DecryptedDriverLicense, HashSalt)

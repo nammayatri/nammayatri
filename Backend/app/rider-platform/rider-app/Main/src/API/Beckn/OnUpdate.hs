@@ -25,6 +25,9 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.Booking as QRB
+import Tools.Error
+import TransactionLogs.PushLogs
 
 type API = OnUpdate.OnUpdateAPIV2
 
@@ -48,7 +51,24 @@ onUpdate _ reqV2 = withFlowHandlerBecknAPI do
         fork "on update processing" $ do
           Redis.whenWithLockRedis (onUpdateProcessngLockKey messageId) 60 $
             DOnUpdate.onUpdate validatedOnUpdateReq
-    pure Ack
+        fork "on update received pushing ondc logs" do
+          booking <- case validatedOnUpdateReq of
+            DOnUpdate.OUValidatedRideAssignedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
+            DOnUpdate.OUValidatedRideStartedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
+            DOnUpdate.OUValidatedRideCompletedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
+            DOnUpdate.OUValidatedBookingCancelledReq req -> QRB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bppBookingId.getId)
+            DOnUpdate.OUValidatedBookingReallocationReq req -> return req.booking
+            DOnUpdate.OUValidatedDriverArrivedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
+            DOnUpdate.OUValidatedEstimateRepetitionReq req -> return req.booking
+            DOnUpdate.OUValidatedQuoteRepetitionReq req -> return req.booking
+            DOnUpdate.OUValidatedNewMessageReq req -> return req.booking
+            DOnUpdate.OUValidatedSafetyAlertReq req -> return req.booking
+            DOnUpdate.OUValidatedStopArrivedReq req -> return req.booking
+            DOnUpdate.OUValidatedFarePaidReq req -> return req.booking
+            DOnUpdate.OUValidatedEditDestSoftUpdateReq req -> return req.booking
+            DOnUpdate.OUValidatedEditDestConfirmUpdateReq req -> return req.booking
+          void $ pushLogs "on_update" (toJSON reqV2) booking.merchantId.getId
+  pure Ack
 
 onUpdateLockKey :: Text -> Text
 onUpdateLockKey id = "Customer:OnUpdate:MessageId-" <> id

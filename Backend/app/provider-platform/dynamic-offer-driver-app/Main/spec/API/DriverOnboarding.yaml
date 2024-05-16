@@ -3,8 +3,13 @@ imports:
   DocumentVerificationConfig: Domain.Types.DocumentVerificationConfig
   DocumentType: Domain.Types.DocumentVerificationConfig
   ServiceTierType: Domain.Types.ServiceTierType
+  AirConditionedRestrictionType: Domain.Types.DriverInformation
   APISuccess: Kernel.Types.APISuccess
   Centesimal: Kernel.Types.Common
+  PriceAPIEntity: Kernel.Types.Common
+  Money: Kernel.Types.Common
+  Driver: Domain.Types.Person
+  TripCategory: Domain.Types.Common
 
 module: DriverOnboardingV2
 types:
@@ -12,7 +17,6 @@ types:
     autos: Maybe [DocumentVerificationConfigAPIEntity]
     cabs: Maybe [DocumentVerificationConfigAPIEntity]
     bikes: Maybe [DocumentVerificationConfigAPIEntity]
-
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
     title: Text
@@ -25,12 +29,22 @@ types:
     checkExtraction: Bool
     checkExpiry: Bool
     rcNumberPrefixList: '[Text]'
-  DriverVehicleServiceTiers:
+  UpdateAirConditionUpdateRequest:
     recordType: NewType
+    isAirConditioned: Bool
+  DriverVehicleServiceTiers:
     tiers: [DriverVehicleServiceTier]
+    canSwitchToRental: Maybe Bool
+    canSwitchToInterCity: Maybe Bool
+    airConditioned: Maybe AirConditionedTier
+  AirConditionedTier:
+      isWorking: Bool
+      usageRestrictionType: AirConditionedRestrictionType
+      restrictionMessage: Maybe Text
   DriverVehicleServiceTier:
     serviceTierType: ServiceTierType
     name: Text
+    isUsageRestricted: Maybe Bool
     shortDescription: Maybe Text
     longDescription: Maybe Text
     seatingCapacity: Maybe Int
@@ -40,6 +54,23 @@ types:
     vehicleRating: Maybe Double
     isDefault: Bool
     isSelected: Bool
+    priority: Maybe Int
+  RateCardItem:
+    title: Text
+    price: Money
+    priceWithCurrency: PriceAPIEntity
+  SSNReq:
+    ssn: Text
+  FarePolicyHour:
+    enum: "Peak,NonPeak,Night"
+  RateCardResp:
+    serviceTierType: ServiceTierType
+    perKmRate: PriceAPIEntity
+    totalFare: PriceAPIEntity
+    perMinuteRate: Maybe PriceAPIEntity
+    tripCategory: TripCategory
+    farePolicyHour: FarePolicyHour
+    rateCardItems: [RateCardItem]
 
 apis:
   - GET:
@@ -50,6 +81,21 @@ apis:
       response:
         type: DocumentVerificationConfigList
   - GET:
+      endpoint: /driver/rateCard
+      query:
+        vehicleServiceTier: ServiceTierType
+        distance: Meters
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: '[RateCardResp]'
+  - POST:
+      endpoint: /driver/updateAirCondition
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: UpdateAirConditionUpdateRequest
+      response:
+        type: APISuccess
+  - GET:
       endpoint: /driver/vehicleServiceTiers
       auth: TokenAuth PROVIDER_TYPE
       response:
@@ -59,5 +105,12 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       request:
         type: DriverVehicleServiceTiers
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /driver/register/ssn
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: SSNReq
       response:
         type: APISuccess

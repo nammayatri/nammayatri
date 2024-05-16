@@ -19,13 +19,16 @@ import Common.Types.App
 import Screens.CustomerUtils.TripDetailsScreen.ComponentConfig
 
 import Animation as Anim
+import Animation as Anim
 import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
+import Components.ServiceTierCard.View as ServiceTierCard
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as DA
 import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Data.String as DS
+import Debug (spy)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
@@ -34,17 +37,15 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage, ge
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Mobility.Prelude (boolToVisibility)
+import Mobility.Prelude (boolToVisibility, capitalize)
 import Prelude ((<>), show)
 import Prelude (Unit, const, map, unit, ($), (&&), (/=), (<<<), (<=), (<>), (==), (/), not, (-), (||))
-import PrestoDOM (Accessiblity(..), FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, color, cornerRadius, disableClickFeedback, editText, fontStyle, frameLayout, gravity, height, hint, hintColor, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, multiLineEditText, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd)
+import PrestoDOM (Accessiblity(..), FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, color, cornerRadius, disableClickFeedback, editText, fontStyle, frameLayout, gravity, height, hint, hintColor, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, multiLineEditText, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha)
+import PrestoDOM.Animation as PrestoAnim
 import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (PaymentMode(..))
 import Screens.Types as ST
 import Styles.Colors as Color
-import Debug (spy)
-import PrestoDOM.Animation as PrestoAnim
-import Animation as Anim
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput
 screen initialState =
@@ -84,6 +85,31 @@ view push state =
     ]
   ]
 
+providerDetails :: forall w. ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+providerDetails state push =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , margin $ MarginVertical 16 16
+  , background Color.grey900
+  , gravity CENTER
+  , cornerRadius 14.0
+  , padding $ Padding 5 5 5 5
+  , visibility $ boolToVisibility $ state.data.selectedItem.providerType == OFFUS
+  ][  imageView
+        [ height $ V 20
+        , width $ V 20
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
+        , padding $ Padding 2 2 2 2
+        , margin $ MarginHorizontal 5 5
+        ]
+      , textView $
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text $ getString $ RIDE_FULFILLED_BY state.data.selectedItem.providerName
+        ] <> FontStyle.tags LanguageStyle
+  ]
+
 tripDetailsLayout :: forall w. ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 tripDetailsLayout state push =
   linearLayout
@@ -102,7 +128,9 @@ tripDetailsLayout state push =
           , margin $ MarginBottom 24
           ][ tripDetailsView state
            , separatorView
+           , providerDetails state push
            , tripIdView push state
+           , distanceAndTimeTaken state
            , SourceToDestination.view (push <<< SourceToDestinationActionController) (sourceToDestinationConfig state)
            , ratingAndInvoiceView state push
            ]
@@ -125,9 +153,9 @@ tripDetailsLayout state push =
 ---------------------- tripIdView ---------------------------
 tripIdView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
 tripIdView push state =
-  let rideType = case state.data.vehicleVariant of
-                    Just variant -> getVariantRideType (show variant)
-                    Nothing      -> getString AC_CAB
+  let rideType = ServiceTierCard.parseName $ fromMaybe "" state.data.selectedItem.serviceTierName 
+      hasAirConditioned = ServiceTierCard.showACDetails rideType Nothing
+      rideTypeWithAc = if hasAirConditioned && rideType /= "" then "AC • " <> rideType else rideType
   in
   linearLayout
   [ width MATCH_PARENT
@@ -137,7 +165,37 @@ tripIdView push state =
   ][  linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT
-      , width WRAP_CONTENT
+      , width $ V (EHC.screenWidth unit/ 2)
+      , visibility $ boolToVisibility $ isJust state.data.selectedItem.serviceTierName && rideType /= ""
+      ][  textView $
+          [ text $ getString RIDE_TYPE
+          , accessibilityHint $ "Ride Type :" <> rideType
+          , accessibility ENABLE
+          , color Color.black700
+          ] <> FontStyle.body1 LanguageStyle
+        , linearLayout
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , gravity CENTER_VERTICAL
+          ][ imageView
+              [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_ac"
+              , height $ V 18
+              , width $ V 18
+              , margin $ Margin 0 1 3 0
+              , visibility $ boolToVisibility hasAirConditioned
+              ]
+            , textView $
+              [ text rideTypeWithAc
+              , width WRAP_CONTENT
+              , color Color.black900
+              , accessibility DISABLE_DESCENDANT
+              ] <> FontStyle.paragraphText LanguageStyle
+          ]
+      ]
+    , linearLayout
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
+      , width $ V (EHC.screenWidth unit/ 2)
       , visibility if state.data.tripId == "" then GONE else VISIBLE
       ][  textView $
           [ text $ getString RIDE_ID
@@ -165,23 +223,49 @@ tripIdView push state =
               ]
           ]
       ]
-    , linearLayout
+   ]
+
+distanceAndTimeTaken :: forall w . ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
+distanceAndTimeTaken state =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , margin $ MarginBottom 16
+  , orientation HORIZONTAL
+  , visibility $ boolToVisibility $ state.data.selectedItem.status /= "CANCELLED"
+  ][  linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT
-      , width WRAP_CONTENT
-      -- , weight 1.0
-      , visibility if isJust state.data.vehicleVariant && (getMerchant FunctionCall) == YATRISATHI then VISIBLE else GONE
+      , width $ V (EHC.screenWidth unit/ 2)
+      , visibility $ boolToVisibility $ not $ DS.null state.data.selectedItem.baseDistance
       ][  textView $
-          [ text $ getString RIDE_TYPE
-          , accessibilityHint $ "Ride Type :" <> rideType
+          [ text $ getString TRIP_DISTANCE
+          , accessibilityHint $ "Trip Distance :" <> state.data.selectedItem.baseDistance
           , accessibility ENABLE
           , color Color.black700
           ] <> FontStyle.body1 LanguageStyle
         , textView $
-          [ text $ rideType
+          [ text state.data.selectedItem.baseDistance
           , width WRAP_CONTENT
           , color Color.black900
           , accessibility DISABLE_DESCENDANT
+          ] <> FontStyle.paragraphText LanguageStyle
+      ]
+    , linearLayout
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
+      , width $ V (EHC.screenWidth unit/ 2)
+      , visibility $ boolToVisibility $ not $ DS.null state.data.selectedItem.totalTime
+      ][  textView $
+          [ text $ getString TIME_TAKEN
+          , accessibilityHint $ "Time Taken :" <> state.data.selectedItem.totalTime
+          , accessibility ENABLE
+          , color Color.black700
+          ] <> FontStyle.body1 LanguageStyle
+        , textView $
+          [ text state.data.selectedItem.totalTime
+          , width WRAP_CONTENT
+          , color Color.black900
           ] <> FontStyle.paragraphText LanguageStyle
       ]
    ]
@@ -194,48 +278,31 @@ tripDetailsView state =
   , width MATCH_PARENT
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
-  ][   frameLayout
-          [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , orientation HORIZONTAL
-          ][  imageView
-              [ margin $ MarginLeft $ if isJust state.data.vehicleVariant then 24 else 0
-              , cornerRadius 18.0
-              -- , background Color.grey800
-              , width (V 36)
-              , height (V 36)
-              , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_profile_image"
-              ]
-            , imageView
-              [ imageWithFallback $ case state.data.vehicleVariant of
-                                      Just variant -> getVehicleVariantImage (show variant)
-                                      Nothing      -> fetchImage FF_ASSET "ic_vehicle_side" 
-              , width $ V 40
-              , visibility if (isJust state.data.vehicleVariant) then VISIBLE else GONE
-              , height $ V 40
-              ]
-            ]
+  ][   imageView
+        [ imageWithFallback $ case state.data.vehicleVariant of
+                                Just variant -> getVehicleVariantImage (show variant)
+                                Nothing      -> fetchImage FF_ASSET "ic_vehicle_side" 
+        , width $ V 40
+        , visibility if (isJust state.data.vehicleVariant) then VISIBLE else GONE
+        , height $ V 40
+        ]
 
     , linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , orientation VERTICAL
       , margin $ MarginLeft 10
-      ][  textView $
-          [ text state.data.driverName
-          , accessibilityHint $ "Driver : " <> state.data.driverName
-          , accessibility ENABLE
-          , color Color.darkCharcoal
-          ] <> FontStyle.body1 LanguageStyle
-        , linearLayout
+      ][  linearLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , orientation HORIZONTAL
           , gravity CENTER_VERTICAL
           ][  textView $
               [ text state.data.date
-              , color Color.greyShade
-              ] <> FontStyle.body16 LanguageStyle
+              , accessibilityHint $ "date : " <> state.data.date
+              , accessibility ENABLE
+              , color Color.darkCharcoal
+              ] <> FontStyle.body1 LanguageStyle
             , linearLayout
               [ height MATCH_PARENT
               , width WRAP_CONTENT
@@ -251,9 +318,15 @@ tripDetailsView state =
                ]
             , textView $
               [ text state.data.time
-              , color Color.greyShade
-              ] <> FontStyle.body16 LanguageStyle
+              , color Color.darkCharcoal
+              ] <> FontStyle.body1 LanguageStyle
             ]
+          , textView $
+            [ text $ capitalize $ DS.toLower state.data.selectedItem.vehicleModel
+            , accessibilityHint $ "date : " <> state.data.date
+            , accessibility ENABLE
+            , color Color.greyShade
+            ] <> FontStyle.body16 LanguageStyle
         ]
     , linearLayout
       [ height WRAP_CONTENT
@@ -327,6 +400,7 @@ invoiceView state push =
     , orientation HORIZONTAL
     , disableClickFeedback false
     , onClick push $ const ViewInvoice
+    , alpha if state.data.selectedItem.providerType == ONUS then 1.0 else 0.5
     , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
     ][ imageView [
           imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_invoice_sheet_icon"

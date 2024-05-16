@@ -40,7 +40,6 @@ window.getMerchantConfig = function () {
     "isChatEnabled": "true",
     "isGradient" : "false",
     "gradient": [],
-    "enableSingleEstimate": true,
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
     "estimateConfirmText": "Request a NammaYatri Ride",
@@ -222,7 +221,7 @@ window.getMerchantConfig = function () {
     , "enableGeocoder" : true
     , "estimateAndQuoteConfig" : 
       { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ]
-      , "variantOrder" : ["AUTO_RICKSHAW"]
+      , "variantOrder" : ["AUTO_RICKSHAW", "BOOK_ANY"]
       , "variantInfo" : {
         "hatchback" : {
           "name" : "Hatchback",
@@ -247,8 +246,11 @@ window.getMerchantConfig = function () {
         "autoRickshaw" : {
           "name" : "Auto Rickshaw",
           "image" : "ny_ic_single_estimate_auto,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_single_estimate_auto.png"
-        }
-
+        },
+        "bookAny" : {
+          "name" : "Book Any",
+          "image" : "ny_ic_auto_cab_yellow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_cab_yellow.png"
+        },
       }
       , "enableOnlyAuto" : true
       , "showNearByDrivers": false

@@ -22,6 +22,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified BecknV2.OnDemand.Utils.Payment as OUP
+import BecknV2.Utils
 import Control.Lens ((%~))
 import qualified Data.List as DL
 import qualified Data.Text as T
@@ -81,7 +82,7 @@ tfFulfillments res =
           fulfillmentCustomer = tfCustomer res,
           fulfillmentId = res.fulfillmentId,
           fulfillmentState = Nothing,
-          fulfillmentStops = Utils.mkStops' res.fromLocation res.mbToLocation,
+          fulfillmentStops = Utils.mkStops' (Just res.fromLocation) res.mbToLocation,
           fulfillmentTags = Nothing,
           fulfillmentType = Just $ mkFulfillmentType res.bookingDetails,
           fulfillmentVehicle = tfVehicle res
@@ -234,6 +235,6 @@ tfOrderBilling :: DOnInit.OnInitRes -> Maybe Spec.Billing
 tfOrderBilling res =
   Just $
     Spec.Billing
-      { billingPhone = Just $ Utils.maskBillingNumber res.riderPhoneNumber,
+      { billingPhone = Just $ maskNumber res.riderPhoneNumber,
         billingName = res.mbRiderName
       }

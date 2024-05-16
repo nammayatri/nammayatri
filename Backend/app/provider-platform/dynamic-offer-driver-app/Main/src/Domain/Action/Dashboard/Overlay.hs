@@ -34,9 +34,9 @@ import Kernel.Utils.Common
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Merchant.Overlay as SQMO
 import Tools.Error
 
@@ -56,7 +56,9 @@ data CreateOverlayReq = CreateOverlayReq
     contactSupportNumber :: Maybe Text,
     toastMessage :: Maybe Text,
     secondaryActions :: Maybe [Text],
+    actions2 :: Maybe [FCM.FCMActions],
     socialMediaLinks :: Maybe [FCM.FCMMediaLink],
+    secondaryActions2 :: Maybe [FCM.FCMActions],
     showPushNotification :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
@@ -93,6 +95,7 @@ createOverlay merchantShortId opCity req = do
           { id = guid,
             merchantId,
             merchantOperatingCityId = merchantOpCityId,
+            actions2 = fromMaybe [] actions2,
             ..
           }
 
@@ -183,6 +186,7 @@ overlayInfo merchantShortId opCity overlayReqKey udf1Req = do
           return
             CreateOverlayReq
               { contents = groupedContents,
+                actions2 = Just actions2,
                 ..
               }
 
@@ -210,7 +214,7 @@ scheduleOverlay merchantShortId opCity req@ScheduleOverlay {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   maxShards <- asks (.maxShards)
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let scheduledTime = UTCTime (utctDay now) (timeOfDayToTime req.scheduleTime)
   let jobScheduledTime =

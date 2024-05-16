@@ -41,7 +41,7 @@ import JBridge (cleverTapCustomEvent, metaLogEvent, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
-import PrestoDOM (Eval, ScrollState(..), continue, exit, updateAndExit)
+import PrestoDOM (Eval, update, ScrollState(..), continue, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resource.Constants (decodeAddress, tripDatesCount, rideTypeConstructor)
 import Screens (ScreenName(..), getScreen)
@@ -165,8 +165,8 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
 
 eval (IndividualRideCardAction (IndividualRideCardController.Select index)) state = do
   let filteredRideList = rideListFilter state.currentTab state.rideList
-      updateState = state { selectedItem = (fromMaybe dummyCard (filteredRideList !! index)) }
-  updateAndExit updateState $ GoToTripDetails updateState
+      update = state { selectedItem = (fromMaybe dummyCard (filteredRideList !! index)) }
+  updateAndExit update $ GoToTripDetails update
 
 eval Loader state = exit $ LoaderOutput state{loaderButtonVisibility = false}
 
@@ -203,7 +203,7 @@ eval (PaymentHistoryModelAC (PaymentHistoryModel.PaymentHistoryListItemAC (Payme
   let updatedData = map (\item -> if item.id == id then item{isSelected = not item.isSelected} else item) state.data.paymentHistory.paymentHistoryList
   continue state{data{paymentHistory { paymentHistoryList = updatedData}}}
 
-eval _ state = continue state
+eval _ state = update state
 
 rideHistoryListTransformer :: Array RidesInfo -> Array ItemState
 rideHistoryListTransformer list = (map (\(RidesInfo ride) ->
@@ -290,10 +290,12 @@ rideListResponseTransformer list =
         specialZoneText : specialLocationConfig.text,
         specialZonePickup : checkSpecialPickupZone ride.specialLocationTag,
         tripType : rideTypeConstructor ride.tripCategory,
-        tollCharge : fromMaybe 0 ride.tollCharges,
+        tollCharge : fromMaybe 0.0 ride.tollCharges,
         rideType : ride.vehicleServiceTierName,
         tripStartTime : ride.tripStartTime,
-        tripEndTime : ride.tripEndTime
+        tripEndTime : ride.tripEndTime,
+        acRide : ride.isVehicleAirConditioned,
+        vehicleServiceTier : ride.vehicleServiceTier
       }) list
 
 
@@ -333,8 +335,10 @@ dummyCard =  {
     specialZoneText : "",
     specialZonePickup : false,
     tripType : OneWay,
-    tollCharge : 0,
+    tollCharge : 0.0,
     rideType : "",
     tripStartTime : Nothing,
-    tripEndTime : Nothing
+    tripEndTime : Nothing,
+    acRide : Nothing,
+    vehicleServiceTier : ""
   }

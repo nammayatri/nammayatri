@@ -39,12 +39,15 @@ import Data.Digest.Pure.MD5 as MD5
 import qualified Data.HashMap.Strict as HM
 import Data.List (nubBy)
 import qualified Data.Text as T
+import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Action.UI.Registration as DR
-import Domain.Types.Booking.Type as DBooking
+import qualified Domain.Types.BecknConfig as BecknConfig
+import Domain.Types.Booking as DBooking
+import qualified Domain.Types.ClientPersonInfo as DCP
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
-import qualified Domain.Types.Person.PersonDisability as PersonDisability
+import qualified Domain.Types.PersonDefaultEmergencyNumber as DPDEN
+import qualified Domain.Types.PersonDisability as PersonDisability
 import Environment
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -56,6 +59,7 @@ import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Types.Predicate
@@ -65,6 +69,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import qualified Kernel.Utils.Text as TU
 import Kernel.Utils.Validation
+import Kernel.Utils.Version
 import SharedLogic.Cac
 import SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -73,10 +78,11 @@ import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.Disability as QD
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
-import qualified Storage.Queries.Person.PersonDisability as PDisability
+import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPersonDEN
+import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.PersonStats as QPS
 import Tools.Error
 
@@ -90,6 +96,9 @@ data ProfileRes = ProfileRes
     maskedDeviceToken :: Maybe Text,
     hasTakenRide :: Bool,
     hasTakenValidRide :: Bool,
+    hasTakenValidAutoRide :: Bool,
+    hasTakenValidCabRide :: Bool,
+    hasTakenValidBikeRide :: Bool,
     referralCode :: Maybe Text,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
     language :: Maybe Maps.Language,
@@ -179,38 +188,52 @@ getPersonDetails (personId, _) mbToss = do
   frntndfgs <- if useCACConfig then getFrontendConfigs person mbToss else return $ Just DAKM.empty
   let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
   isSafetyCenterDisabled_ <- SLP.checkSafetyCenterDisabled person
+  hasTakenValidRide <- QCP.findAllByPersonId personId
+  let hasTakenValidFirstCabRide = validRideCount hasTakenValidRide BecknConfig.CAB
+  let hasTakenValidFirstAutoRide = validRideCount hasTakenValidRide BecknConfig.AUTO_RICKSHAW
+  let hasTakenValidFirstBikeRide = validRideCount hasTakenValidRide BecknConfig.MOTORCYCLE
   newCustomerReferralCode <-
     if (isNothing person.customerReferralCode)
       then do
         newCustomerReferralCode <- DR.generateCustomerReferralCode
-        checkIfReferralCodeExists <- QPerson.findPersonByCustomerReferralCode newCustomerReferralCode
+        checkIfReferralCodeExists <- QPerson.findPersonByCustomerReferralCode (Just newCustomerReferralCode)
         if (isNothing checkIfReferralCodeExists)
           then do
             void $ QPerson.updateCustomerReferralCode personId newCustomerReferralCode
             pure $ Just newCustomerReferralCode
           else pure Nothing
       else pure person.customerReferralCode
-  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode =
+    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide =
       ProfileRes
         { maskedMobileNumber = maskText <$> mobileNumber,
           maskedDeviceToken = maskText <$> deviceToken,
           hasTakenRide = hasTakenValidRide,
           frontendConfigHash = md5DigestHash,
+          hasTakenValidAutoRide = hasTakenAutoRide,
+          hasTakenValidCabRide = hasTakenCabRide,
+          hasTakenValidBikeRide = hasTakenValidFirstBikeRide,
           isSafetyCenterDisabled = isSafetyCenterDisabled_,
           customerReferralCode = newCustomerReferralCode,
+          bundleVersion = clientBundleVersion,
+          clientVersion = clientSdkVersion,
           ..
         }
 
-updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
-updatePerson personId req = do
-  mPerson <- join <$> QPerson.findByEmail `mapM` req.email
+validRideCount :: [DCP.ClientPersonInfo] -> BecknConfig.VehicleCategory -> Bool
+validRideCount hasTakenValidRide vehicleCategory =
+  case find (\info -> info.vehicleCategory == Just vehicleCategory) hasTakenValidRide of
+    Just info -> info.rideCount == 1
+    Nothing -> False
+
+updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion]) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
+updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
+  mPerson <- join <$> QPerson.findByEmailAndMerchantId merchantId `mapM` req.email
   whenJust mPerson (\_ -> throwError PersonEmailExists)
   mbEncEmail <- encrypt `mapM` req.email
-
   refCode <- join <$> validateRefferalCode personId `mapM` req.referralCode
-
+  deploymentVersion <- asks (.version)
   void $
     QPerson.updatePersonalInfo
       personId
@@ -223,8 +246,11 @@ updatePerson personId req = do
       req.notificationToken
       req.language
       req.gender
-      req.clientVersion
-      req.bundleVersion
+      (mbClientVersion <|> req.clientVersion)
+      (mbBundleVersion <|> req.bundleVersion)
+      mbClientConfigVersion
+      (getDeviceFromText mbDevice)
+      deploymentVersion.getDeploymentVersion
   updateDisability req.hasDisability req.disability personId
 
 updateDisability :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Bool -> Maybe Disability -> Id Person.Person -> m APISuccess.APISuccess
@@ -232,12 +258,12 @@ updateDisability hasDisability mbDisability personId = do
   case (hasDisability, mbDisability) of
     (Nothing, _) -> logDebug "No Disability"
     (Just False, _) -> do
-      QPerson.updateHasDisability personId $ Just False
+      QPerson.updateHasDisability (Just False) personId
       PDisability.deleteByPersonId personId
     (Just True, Nothing) -> throwError $ InvalidRequest "Field disability can't be null if hasDisability is True"
     (Just True, Just selectedDisability) -> do
       customerDisability <- B.runInReplica $ PDisability.findByPersonId personId
-      QPerson.updateHasDisability personId $ Just True
+      QPerson.updateHasDisability (Just True) personId
       let disabilityId = getId $ selectedDisability.id
       disability <- runInReplica $ QD.findByDisabilityId disabilityId >>= fromMaybeM (DisabilityDoesNotExist disabilityId)
       let mbDescription = (selectedDisability.description) <|> (Just disability.description)
@@ -245,7 +271,7 @@ updateDisability hasDisability mbDisability personId = do
         newDisability <- makeDisability selectedDisability disability.tag mbDescription
         PDisability.create newDisability
       when (isJust customerDisability) $ do
-        PDisability.updateDisabilityByPersonId personId disabilityId disability.tag mbDescription
+        PDisability.updateDisabilityByPersonId disabilityId disability.tag mbDescription personId
       where
         makeDisability personDisability tag mbDescription = do
           now <- getCurrentTime
@@ -255,6 +281,7 @@ updateDisability hasDisability mbDisability personId = do
                 disabilityId = getId $ personDisability.id,
                 tag = tag,
                 description = mbDescription,
+                createdAt = now,
                 updatedAt = now
               }
   pure APISuccess.Success
@@ -267,11 +294,12 @@ validateRefferalCode personId refCode = do
   let isCustomerReferralCode = T.isPrefixOf "C" refCode
   if isCustomerReferralCode
     then do
+      logDebug $ "Came inside Customer Referral Code" <> show personId <> " " <> show refCode
       unless (TU.validateAlphaNumericWithLength refCode 6) (throwError $ InvalidRequest "Referral Code must have 6 digits and must be Alphanumeric")
-      referredByPerson <- QPerson.findPersonByCustomerReferralCode refCode >>= fromMaybeM (InvalidRequest "Invalid ReferralCode")
+      referredByPerson <- QPerson.findPersonByCustomerReferralCode (Just refCode) >>= fromMaybeM (InvalidRequest "Invalid ReferralCode")
       when (personId == referredByPerson.id) (throwError $ InvalidRequest "Cannot refer yourself")
-      stats <- QPS.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
-      void $ QPS.updateReferralCount (stats.referralCount + 1) personId
+      stats <- QPS.findByPersonId referredByPerson.id >>= fromMaybeM (PersonStatsNotFound personId.getId)
+      void $ QPS.updateReferralCount (stats.referralCount + 1) referredByPerson.id
       void $ QPerson.updateReferredByCustomer personId referredByPerson.id.getId
       return $ Just refCode
     else do

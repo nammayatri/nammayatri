@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fake_otp_emails text[] NOT NULL DEFAULT '{}';

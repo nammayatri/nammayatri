@@ -12,25 +12,11 @@ import qualified Kernel.Prelude
 import Servant
 import "lib-dashboard" Tools.Auth
 
-data MerchantUserList = MerchantUserList
-  { merchantUserList :: [Domain.Types.Person.PersonAPIEntity]
-  }
+data MerchantUserList = MerchantUserList {merchantUserList :: [Domain.Types.Person.PersonAPIEntity]} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data ResetPasswordReq = ResetPasswordReq {email :: Data.Text.Text, newPassword :: Data.Text.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data SetMerchantConfigReq = SetMerchantConfigReq {merchantShortId :: Data.Text.Text, webHookHeaders :: [Domain.Types.MerchantConfigs.WebHookHeaders], webhookUrl :: Data.Text.Text}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data ResetPasswordReq = ResetPasswordReq
-  { email :: Data.Text.Text,
-    newPassword :: Data.Text.Text
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
-
-data SetMerchantConfigReq = SetMerchantConfigReq
-  { merchantShortId :: Data.Text.Text,
-    webHookHeaders :: [Domain.Types.MerchantConfigs.WebHookHeaders],
-    webhookUrl :: Data.Text.Text
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
-
-data WebHookConfigPreferenceReq = WebHookConfigPreferenceReq
-  { preference :: Kernel.Prelude.Bool
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+data WebHookConfigPreferenceReq = WebHookConfigPreferenceReq {preference :: Kernel.Prelude.Bool} deriving (Generic, ToJSON, FromJSON, ToSchema)

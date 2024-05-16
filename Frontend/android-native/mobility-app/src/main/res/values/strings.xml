@@ -79,4 +79,5 @@
     <string name="now"> Now</string>
     <string name="rental"> Rental</string>
     <string name="intercity"> Intercity</string>
+    <string name="toll_text">Toll included</string>
 </resources>

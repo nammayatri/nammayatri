@@ -2,6 +2,7 @@
 set -e
 
 postman_env="Dev.postman_environment.json"
+commit_id=$(git rev-parse --short HEAD)
 
 runPreTest() {
   folder=$1
@@ -55,13 +56,40 @@ if [ ! -d "$directory" ]; then
   exit 1
 fi
 
+set +e
+test_counter=0
+test_pass_counter=0
+passed_tests=()
+failed_tests=()
 # Iterate over each folder in the specified directory
 for folder in "$directory"/*/; do
   echo "Running test case - $folder"
+  test_counter=$((test_counter+1))
 
-  runPreTest "$folder"
-  runNewman "$folder"
-  runPostTest "$folder"
+  runPreTest "$folder" && \
+  runNewman "$folder" && \
+  runPostTest "$folder" && \
+  test_pass_counter=$((test_pass_counter+1)) && \
+  passed_tests+=("$folder") || failed_tests+=("$folder")
+
 done
 
+echo
+echo
 echo "Tests completed."
+echo
+if [ ! $test_counter -eq $test_pass_counter ]; then
+  echo -e "$commit_id \033[31mTests failed: $test_pass_counter/$test_counter passed."
+  echo "Failed tests:"
+  for test in "${failed_tests[@]}"; do
+    echo "- $test"
+  done
+  echo -e "\033[00m";
+else
+  echo -e "$commit_id \033[32mTests $test_pass_counter/$test_counter passed."
+  echo "Passed tests:"
+  for test in "${passed_tests[@]}"; do
+    echo "- $test"
+  done
+  echo -e "\033[00m";
+fi

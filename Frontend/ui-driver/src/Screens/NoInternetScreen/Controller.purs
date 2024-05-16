@@ -18,7 +18,7 @@ module Screens.NoInternetScreen.Controller where
 import Prelude(class Show, bind, pure, unit, (==))
 import Screens.Types (NoInternetScreenState)
 import PrestoDOM.Types.Core (class Loggable)
-import PrestoDOM (Eval, continue, exit, continueWithCmd)
+import PrestoDOM (Eval, update, continue, exit, continueWithCmd)
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import JBridge (isInternetAvailable,requestLocation)
 import Screens(ScreenName(..), getScreen)
@@ -82,4 +82,4 @@ eval (PrimaryButtonActionController triggertype PrimaryButtonController.OnClick)
 
 eval Reload state = exit Refresh
 
-eval _ state = continue state
+eval _ state = update state

@@ -15,8 +15,8 @@
 module SharedLogic.SearchTryLocker
   ( whenSearchTryCancellable,
     isSearchTryCancelled,
-    markSearchTryAsAssigned,
     isBookingCancelled,
+    lockSearchTry,
     whenBookingCancellable,
     markBookingAssignmentInprogress,
     isBookingAssignmentInprogress,
@@ -28,8 +28,9 @@ import Domain.Types.Booking (Booking)
 import Domain.Types.SearchTry (SearchTry)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (CacheFlow, throwError)
 
 isSearchTryCancelled ::
   CacheFlow m r =>
@@ -38,12 +39,14 @@ isSearchTryCancelled ::
 isSearchTryCancelled searchTryId = do
   fromMaybe False <$> Hedis.get (mkCancelledKey searchTryId)
 
-isSearchTryAssigned ::
+lockSearchTry ::
   CacheFlow m r =>
   Id SearchTry ->
   m Bool
-isSearchTryAssigned searchTryId = do
-  fromMaybe False <$> Hedis.get (mkAssignedKey searchTryId)
+lockSearchTry searchTryId = do
+  k <- (<= 1) <$> Hedis.incr (mkCancelledKey' searchTryId)
+  Hedis.expire (mkCancelledKey' searchTryId) 60
+  return k
 
 whenSearchTryCancellable ::
   CacheFlow m r =>
@@ -51,24 +54,16 @@ whenSearchTryCancellable ::
   m () ->
   m ()
 whenSearchTryCancellable searchTryId actions = do
-  isSearchTryCancelled' <- isSearchTryCancelled searchTryId
-  isSearchTryAssigned' <- isSearchTryAssigned searchTryId
-  unless (isSearchTryCancelled' || isSearchTryAssigned') $ do
-    Hedis.setExp (mkCancelledKey searchTryId) True 120
-    actions
-
-markSearchTryAsAssigned ::
-  CacheFlow m r =>
-  Id SearchTry ->
-  m ()
-markSearchTryAsAssigned searchTryId = do
-  Hedis.setExp (mkAssignedKey searchTryId) True 120
+  gotLock <- lockSearchTry searchTryId
+  if gotLock
+    then actions
+    else throwError (InternalError "SEARCH_TRY_CANCELLED")
 
 mkCancelledKey :: Id SearchTry -> Text
 mkCancelledKey searchTryId = "SearchTry:Cancelled:SearchTryId-" <> searchTryId.getId
 
-mkAssignedKey :: Id SearchTry -> Text
-mkAssignedKey searchTryId = "SearchTry:Assigned:SearchTryId-" <> searchTryId.getId
+mkCancelledKey' :: Id SearchTry -> Text
+mkCancelledKey' searchTryId = "SearchTry:Counter:SearchTryId-" <> searchTryId.getId
 
 isBookingCancelled ::
   CacheFlow m r =>
@@ -87,14 +82,16 @@ isBookingAssignmentInprogress bookingId = do
 whenBookingCancellable ::
   CacheFlow m r =>
   Id Booking ->
-  m () ->
-  m ()
+  m a ->
+  m a
 whenBookingCancellable bookingId actions = do
   isBookingCancelled' <- isBookingCancelled bookingId
   isBookingAssignmentInprogress' <- isBookingAssignmentInprogress bookingId
-  unless (isBookingCancelled' || isBookingAssignmentInprogress') $ do
-    Hedis.setExp (mkBookingCancelledKey bookingId) True 120
-    actions
+  if (isBookingCancelled' || isBookingAssignmentInprogress')
+    then throwError (InternalError "BOOKING_CANCELLED")
+    else do
+      Hedis.setExp (mkBookingCancelledKey bookingId) True 120
+      actions
 
 markBookingAssignmentInprogress ::
   CacheFlow m r =>

@@ -26,8 +26,8 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&), (/), (*), (/=), (+), (<<<), unit)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, imageUrl, fontStyle, gravity, height, imageView, textFromHtml,imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, lineHeight,fontStyle, scrollView, maxLines, singleLine)
+import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&), (/), (*), (/=), (+), (<<<), unit, map, (-))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, imageUrl, fontStyle, gravity, height, imageView, textFromHtml,imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, lineHeight,fontStyle, scrollView, maxLines, singleLine, stroke, horizontalScrollView, relativeLayout)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
@@ -60,7 +60,7 @@ view push config =
      ][linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , background if config.nightCharges then Color.black900 else Color.blue600
+        , background if config.isNightShift then Color.black900 else Color.blue600
         , orientation HORIZONTAL
         , cornerRadii $ Corners 16.0 true true false false
         ][ 
@@ -69,8 +69,8 @@ view push config =
            , height WRAP_CONTENT
            , orientation VERTICAL
            , padding $ Padding 16 22 16 0
-           ][ commonTV push config.title (if config.nightCharges then Color.white900 else Color.black800) FontStyle.h1 LEFT 0 NoAction
-            , commonTV push config.description (if config.nightCharges then Color.black500 else Color.black700) FontStyle.tags LEFT 3 NoAction
+           ][ commonTV push config.title (if config.isNightShift then Color.white900 else Color.black800) FontStyle.h1 LEFT 0 NoAction
+            , commonTV push config.description (if config.isNightShift then Color.black500 else Color.black700) FontStyle.tags LEFT 3 NoAction
             ]
          , imageView
            [ width MATCH_PARENT
@@ -78,7 +78,7 @@ view push config =
            , imageWithFallback $ fetchImage FF_COMMON_ASSET $ 
               case config.currentRateCardType of
               PaymentFareBreakup -> ""
-              _ -> if config.nightCharges then "ny_ic_night" else "ny_ic_day"
+              _ -> if config.isNightShift then "ny_ic_night" else "ny_ic_day"
            ]  
          ]
       ,linearLayout
@@ -89,9 +89,7 @@ view push config =
           case config.currentRateCardType of 
             DefaultRateCard -> defaultRateCardView push config 
             DriverAddition -> driverAdditionView push config 
-            FareUpdate -> fareUpdateView push config
             PaymentFareBreakup -> paymentfareBreakup push config
-            WaitingCharges -> waitingChargesView push config
             TollOrParkingCharges -> tollOrParkingView push config
             _ -> defaultRateCardView push config 
         ]     
@@ -171,13 +169,20 @@ defaultRateCardView push config =
           , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_horizontal_dash"
           , margin $ Margin 20 20 20 12
           ]
-        , textView $
+        , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
-          , color Color.black700
-          , text config.applicableCharges
+          , orientation VERTICAL
           , padding $ PaddingHorizontal 20 20
-          ] <> FontStyle.paragraphText TypoGraphy
+          ](map (\item -> 
+              textView $
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , color Color.black700
+              , margin $ MarginTop 8
+              , text item
+              ] <> FontStyle.body3 LanguageStyle
+            ) config.fareInfoDescription)
         , textView $
           [ width MATCH_PARENT
           , height WRAP_CONTENT
@@ -284,15 +289,79 @@ driverAdditionView push config =
     , padding $ PaddingHorizontal 20 20
     ][ commonTV push (getStringByKey config "DRIVER_ADDITIONS_OPTIONAL") Color.black800 FontStyle.subHeading1 LEFT 20 NoAction
      , commonTV push (getStringByKey config "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC") Color.black650 FontStyle.body3 LEFT 12 NoAction
-     , commonTV push (getStringByKey config "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE") Color.black650 FontStyle.body3 LEFT 12 NoAction
-     , imageView
-        [ height $ V 110
-        , width MATCH_PARENT
-        , imageWithFallback config.driverAdditionsImage
-        , margin $ MarginTop 12
-        ] 
+     , horizontalScrollView 
+       [ width MATCH_PARENT
+       , height WRAP_CONTENT
+       ][ linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , margin $ MarginTop 12
+          , cornerRadius 8.0
+          ](DA.mapWithIndex (\index item -> 
+            linearLayout
+            ([ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , stroke $ "1," <> Color.grey900
+            , orientation VERTICAL
+            , gravity CENTER
+            ] <> showCornerRadii index)
+            [  relativeLayout 
+                ([ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , background Color.blue600
+                ] <> showCornerRadii index)
+                [ textView $
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , color Color.black700
+                    , padding $ Padding 6 12 6 12
+                    , text item.val
+                    , visibility INVISIBLE
+                    ] <> FontStyle.body3 LanguageStyle
+                  , textView $
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , color Color.black700
+                    , text item.key
+                    , padding $ Padding 6 12 6 12
+                    , gravity CENTER
+                    ] <> FontStyle.body3 LanguageStyle]
+              , linearLayout 
+                [ height $ V 1
+                , width MATCH_PARENT
+                , background Color.grey900
+                ][]
+              , relativeLayout 
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                ][ textView $
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , color Color.black700
+                    , text item.key
+                    , padding $ Padding 6 12 6 12
+                    , background Color.blue600
+                    , visibility INVISIBLE
+                    , gravity CENTER
+                    ] <> FontStyle.body3 LanguageStyle
+                  , textView $
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , color Color.black700
+                    , padding $ Padding 6 12 6 12
+                    , text item.val
+                    ] <> FontStyle.body3 LanguageStyle
+                ]
+              ]) config.driverAdditions)       
+        ]
+         
      , commonTV push (getStringByKey config "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE") Color.black650 FontStyle.body3 LEFT 12 NoAction
     ]
+    where showCornerRadii index = if index == 0 
+                                then [cornerRadii $ Corners 8.0 true false false true ]
+                              else if index == (DA.length config.driverAdditions - 1)
+                                then [cornerRadii $ Corners 8.0 false true true false]
+                              else []
 
 fareUpdateView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 fareUpdateView push config =
@@ -338,19 +407,6 @@ tollOrParkingView push config =
     commonTV push (getStringByKey config "PARKING_CHARGES") Color.black800 FontStyle.subHeading1 LEFT 8 NoAction,
     commonTV push (getStringByKey config "PARKING_CHARGES_DESC") Color.black800 FontStyle.body3 LEFT 8 NoAction
   ]
-
-
-waitingChargesView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
-waitingChargesView push config = 
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  , padding $ Padding 20 0 20 180
-  ][  commonTV push (getStringByKey config "WAITING_CHARGE") Color.black800 FontStyle.subHeading1 LEFT 8 NoAction
-    , commonTV push (getStringByKey config "WAITING_CHARGE_RATECARD_DESCRIPTION") Color.black650 FontStyle.body3 LEFT 12 NoAction
-  ]
-
 
 paymentfareBreakup :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 paymentfareBreakup push config = 

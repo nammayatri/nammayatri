@@ -29,7 +29,7 @@ deactivateRCForDriver ::
   (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
 deactivateRCForDriver isRcActive (Kernel.Types.Id.Id driverId) (Kernel.Types.Id.Id rcId) = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.isRcActive isRcActive] [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.rcId $ Se.Eq rcId]]
+  updateWithKV [Se.Set Beam.isRcActive isRcActive, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.rcId $ Se.Eq rcId]]
 
 deleteByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteByDriverId (Kernel.Types.Id.Id driverId) = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq driverId]

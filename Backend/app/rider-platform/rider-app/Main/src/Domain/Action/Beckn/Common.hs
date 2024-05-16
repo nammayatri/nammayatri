@@ -18,20 +18,28 @@ module Domain.Action.Beckn.Common where
 import qualified Data.HashMap.Strict as HM
 import Data.Time hiding (getCurrentTime)
 import Domain.Action.UI.HotSpot
+import qualified Domain.Types.BecknConfig as BecknConfig
+import qualified Domain.Types.Booking as BT
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
-import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
+import qualified Domain.Types.Client as DC
+import qualified Domain.Types.ClientPersonInfo as DPCI
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.HotSpot
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Beam.Functions
+import Kernel.Beam.Functions as B
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -44,6 +52,7 @@ import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
@@ -52,6 +61,7 @@ import Tools.Event
 import Tools.Maps (LatLong)
 import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
+import TransactionLogs.Types
 
 data BookingDetails = BookingDetails
   { bppBookingId :: Id DRB.BPPBooking,
@@ -183,13 +193,14 @@ data DFareBreakup = DFareBreakup
   }
 
 rideAssignedReqHandler ::
-  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+  ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
     CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r
@@ -218,11 +229,12 @@ rideAssignedReqHandler req = do
       Notify.notifyDriverBirthDay booking.riderId driverName
   withLongRetry $ CallBPP.callTrack booking ride
   where
-    buildRide :: MonadFlow m => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> m DRide.Ride
+    buildRide :: (MonadFlow m, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> m DRide.Ride
     buildRide mbMerchant booking BookingDetails {..} = do
       guid <- generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
+      deploymentVersion <- asks (.version)
       let fromLocation = booking.fromLocation
           toLocation = case booking.bookingDetails of
             DRB.OneWayDetails details -> Just details.toLocation
@@ -257,6 +269,12 @@ rideAssignedReqHandler req = do
             endOtp = Nothing,
             startOdometerReading = Nothing,
             endOdometerReading = Nothing,
+            clientBundleVersion = booking.clientBundleVersion,
+            clientSdkVersion = booking.clientSdkVersion,
+            clientDevice = booking.clientDevice,
+            clientConfigVersion = booking.clientConfigVersion,
+            backendConfigVersion = booking.backendConfigVersion,
+            backendAppVersion = Just deploymentVersion.getDeploymentVersion,
             ..
           }
 
@@ -305,6 +323,7 @@ rideCompletedReqHandler ::
     MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
+    ClickhouseFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
@@ -322,7 +341,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     case tripEndLocation of
       Just location -> frequencyUpdator booking.merchantId location Nothing TripEnd
       Nothing -> return ()
-  SMC.updateTotalRidesCounters booking.riderId
+  fork "updating total rides count" $ SMC.updateTotalRidesCounters booking.riderId
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
 
@@ -340,6 +359,15 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         case minTripDistanceForReferralCfg of
           Just distance -> updRide.chargeableDistance >= Just distance && not person.hasTakenValidRide
           Nothing -> True
+  fork "update first ride info" $ do
+    mbPersonFirstRideInfo <- QCP.findByPersonIdAndVehicleCategory booking.riderId $ Just (DVST.castServiceTierToCategory booking.vehicleServiceTierType)
+    case mbPersonFirstRideInfo of
+      Just personFirstRideInfo -> do
+        QCP.updateHasTakenValidRideCount (personFirstRideInfo.rideCount + 1) booking.riderId $ Just (DVST.castServiceTierToCategory booking.vehicleServiceTierType)
+      Nothing -> do
+        totalCount <- B.runInReplica $ QRB.findCountByRideIdStatusAndVehicleServiceTierType booking.riderId BT.COMPLETED (getListOfServiceTireTypes $ DVST.castServiceTierToCategory booking.vehicleServiceTierType)
+        personClientInfo <- buildPersonClientInfo booking.riderId booking.clientId booking.merchantOperatingCityId booking.merchantId (DVST.castServiceTierToCategory booking.vehicleServiceTierType) (totalCount + 1)
+        QCP.create personClientInfo
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
   when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId
@@ -377,8 +405,27 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
       pure
         DFareBreakup.FareBreakup
           { id = guid,
+            entityId = bookingId.getId,
+            entityType = DFareBreakup.BOOKING,
             ..
           }
+
+getListOfServiceTireTypes :: BecknConfig.VehicleCategory -> [DVST.VehicleServiceTierType]
+getListOfServiceTireTypes BecknConfig.CAB = [DVST.SEDAN, DVST.SUV, DVST.HATCHBACK, DVST.TAXI, DVST.TAXI_PLUS, DVST.ECO, DVST.COMFY, DVST.PREMIUM]
+getListOfServiceTireTypes BecknConfig.AUTO_RICKSHAW = [DVST.AUTO_RICKSHAW]
+getListOfServiceTireTypes BecknConfig.MOTORCYCLE = [DVST.BIKE]
+getListOfServiceTireTypes BecknConfig.METRO = []
+
+buildFareBreakupV2 :: MonadFlow m => Text -> DFareBreakup.FareBreakupEntityType -> DFareBreakup -> m DFareBreakup.FareBreakup
+buildFareBreakupV2 entityId entityType DFareBreakup {..} = do
+  guid <- generateGUID
+  pure
+    DFareBreakup.FareBreakup
+      { id = guid,
+        entityId,
+        entityType,
+        ..
+      }
 
 farePaidReqHandler :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => ValidatedFarePaidReq -> m ()
 farePaidReqHandler req = void $ QRB.updatePaymentStatus req.booking.id req.paymentStatus
@@ -407,6 +454,7 @@ bookingCancelledReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
     EsqDBFlow m r,
+    ClickhouseFlow m r,
     MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
@@ -420,7 +468,7 @@ bookingCancelledReqHandler ::
   m ()
 bookingCancelledReqHandler ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason:-" <> show cancellationSource)
-  let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
+  bookingCancellationReason <- mkBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   fork "incrementing fraud counters" $ do
     case mbRide of
@@ -449,23 +497,28 @@ bookingCancelledReqHandler ValidatedBookingCancelledReq {..} = do
   Notify.notifyOnBookingCancelled booking cancellationSource bppDetails
 
 mkBookingCancellationReason ::
+  (MonadFlow m) =>
   Id DRB.Booking ->
   Maybe (Id DRide.Ride) ->
   DBCR.CancellationSource ->
   Id DMerchant.Merchant ->
-  DBCR.BookingCancellationReason
-mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId =
-  DBCR.BookingCancellationReason
-    { bookingId = bookingId,
-      rideId = mbRideId,
-      merchantId = Just merchantId,
-      source = cancellationSource,
-      reasonCode = Nothing,
-      reasonStage = Nothing,
-      additionalInfo = Nothing,
-      driverCancellationLocation = Nothing,
-      driverDistToPickup = Nothing
-    }
+  m DBCR.BookingCancellationReason
+mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId = do
+  now <- getCurrentTime
+  return $
+    DBCR.BookingCancellationReason
+      { bookingId = bookingId,
+        rideId = mbRideId,
+        merchantId = Just merchantId,
+        source = cancellationSource,
+        reasonCode = Nothing,
+        reasonStage = Nothing,
+        additionalInfo = Nothing,
+        driverCancellationLocation = Nothing,
+        driverDistToPickup = Nothing,
+        createdAt = now,
+        updatedAt = now
+      }
 
 validateRideAssignedReq ::
   ( CacheFlow m r,
@@ -578,3 +631,20 @@ validateBookingCancelledReq BookingCancelledReq {..} = do
   where
     isBookingCancellable booking =
       booking.status `elem` [DRB.NEW, DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.TRIP_ASSIGNED]
+
+buildPersonClientInfo :: MonadFlow m => Id DPerson.Person -> Maybe (Id DC.Client) -> Id DMOC.MerchantOperatingCity -> Id DMerchant.Merchant -> BecknConfig.VehicleCategory -> Int -> m DPCI.ClientPersonInfo
+buildPersonClientInfo personId clientId cityId merchantId vehicleCategory rideCount = do
+  now <- getCurrentTime
+  id <- generateGUID
+  return
+    DPCI.ClientPersonInfo
+      { id = id,
+        personId = personId,
+        clientId = clientId,
+        merchantOperatingCityId = cityId,
+        merchantId = merchantId,
+        vehicleCategory = Just vehicleCategory,
+        rideCount = rideCount,
+        createdAt = now,
+        updatedAt = now
+      }

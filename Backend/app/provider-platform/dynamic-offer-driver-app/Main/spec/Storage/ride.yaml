@@ -15,10 +15,13 @@ imports:
   Client: Domain.Types.Client
   Double: Kernel.Prelude
   Int: Kernel.Prelude
+  Device : Kernel.Types.Version
+  DeviceType: Kernel.Types.Version
+  Version: Kernel.Types.Version
 
 Ride:
   tableName: ride
-  derives: "Generic,Show,Eq,ToJSON,FromJSON"
+  derives: "Generic,Show"
   types:
     RideEndedBy:
       enum: "Driver,Dashboard,CallBased,CronJob"
@@ -41,7 +44,8 @@ Ride:
     otp: Text
     endOtp: Maybe Text
     trackingUrl: BaseUrl
-    fare: Maybe Money
+    fare: Maybe HighPrecMoney
+    currency: Currency
     traveledDistance: HighPrecMeters
     chargeableDistance: Maybe Meters
     driverArrivalTime: Maybe UTCTime
@@ -58,20 +62,31 @@ Ride:
     endOdometerReading: Maybe OdometerReading
     createdAt: UTCTime
     updatedAt: UTCTime
+    driverDeviatedToTollRoute: Maybe Bool
     driverDeviatedFromRoute: Maybe Bool
     numberOfSnapToRoadCalls: Maybe Int
     numberOfOsrmSnapToRoadCalls: Maybe Int
+    numberOfSelfTuned: Maybe Int
     numberOfDeviation: Maybe Bool
     uiDistanceCalculationWithAccuracy: Maybe Int
     uiDistanceCalculationWithoutAccuracy: Maybe Int
     isFreeRide: Maybe Bool
+    estimatedTollCharges: Maybe HighPrecMoney
+    estimatedTollNames: Maybe [Text]
     tollCharges: Maybe HighPrecMoney
+    tollNames: Maybe [Text]
     driverGoHomeRequestId: Maybe (Id DriverGoHomeRequest)
     safetyAlertTriggered: Bool
     enableFrequentLocationUpdates: Maybe Bool
     vehicleServiceTierSeatingCapacity: Maybe Int
     vehicleServiceTierAirConditioned: Maybe Double
     rideEndedBy: Maybe RideEndedBy
+    clientSdkVersion: Maybe Version
+    clientBundleVersion: Maybe Version
+    clientConfigVersion: Maybe Version
+    backendConfigVersion: Maybe Version
+    backendAppVersion: Maybe Text
+    clientDevice: Maybe Device
 
   sqlType:
     id: character(36)
@@ -89,7 +104,6 @@ Ride:
     startOdometerReadingFileId: character varying(36)
     endOdometerReadingFileId: character varying(36)
 
-
   default:
     traveledDistance: '0'
     tripStartTime: 'CURRENT_TIMESTAMP'
@@ -99,6 +113,9 @@ Ride:
   beamFields:
     toLocation: {}
     fromLocation: {}
+    clientDevice:
+      clientOsType: Maybe DeviceType
+      clientOsVersion: Maybe Text
     tripStartPos:
       tripStartLat: Maybe Double
       tripStartLon: Maybe Double
@@ -111,6 +128,11 @@ Ride:
     endOdometerReading:
       endOdometerReadingValue: Maybe Centesimal
       endOdometerReadingFileId:  Maybe Text
+    fare:
+      fare: Maybe Money
+      fareAmount: Maybe HighPrecMoney
+    currency:
+      currency: Maybe Currency
 
   fromTType:
     toLocation: Storage.Queries.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
@@ -121,6 +143,13 @@ Ride:
     tripEndPos: Storage.Queries.Transformers.Ride.mkLatLong|I
     startOdometerReading: Storage.Queries.Transformers.Ride.mkOdometerReading|I
     endOdometerReading: Storage.Queries.Transformers.Ride.mkOdometerReading|I
+    clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
+    clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
+    clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
+    backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
+    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion)|E
+    fare: fmap (Kernel.Types.Common.mkAmountWithDefault fareAmount) fare|E
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
 
   toTType:
     trackingUrl: Kernel.Prelude.showBaseUrl|I
@@ -133,10 +162,23 @@ Ride:
     endOdometerReadingValue: Kernel.Prelude.fmap Domain.Types.Ride.value|I
     endOdometerReadingFileId: getEndOdometerReadingFileId
     merchantOperatingCityId: Kernel.Prelude.Just $ Kernel.Types.Id.getId|I
+    clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
+    clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
+    clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
+    backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
+    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
+    clientOsType:  (clientDevice <&> (.deviceType))|E
+    fare: Kernel.Prelude.fmap roundToIntegral|I
+    currency: Kernel.Prelude.Just|I
 
   beamType:
     trackingUrl: Text
     merchantOperatingCityId: Maybe Text
+    clientBundleVersion: Maybe Text
+    clientSdkVersion: Maybe Text
+    clientConfigVersion: Maybe Text
+    backendConfigVersion: Maybe Text
+    clientOsVersion: Maybe Text
 
   constraints:
     id: PrimaryKey

@@ -1,6 +1,7 @@
 module SharedLogic.Booking where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashMap.Strict as HMS
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant as DM
@@ -9,6 +10,7 @@ import qualified Domain.Types.Ride as SRide
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -22,6 +24,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
 import qualified Tools.Notifications as Notify
+import TransactionLogs.Types
 
 cancelBooking ::
   ( EsqDBFlow m r,
@@ -32,7 +35,9 @@ cancelBooking ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     LT.HasLocationService m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   Maybe DPerson.Person ->
@@ -64,7 +69,7 @@ cancelBooking booking mbDriver transporter = do
       Nothing -> throwError (PersonNotFound ride.driverId.getId)
       Just driver -> do
         fork "cancelRide - Notify driver" $ do
-          Notify.notifyOnCancel booking.merchantOperatingCityId booking driver.id driver.deviceToken bookingCancellationReason.source
+          Notify.notifyOnCancel booking.merchantOperatingCityId booking driver bookingCancellationReason.source
   where
     buildBookingCancellationReason bookingId driverId ride merchantId = do
       return $

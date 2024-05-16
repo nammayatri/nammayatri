@@ -25,7 +25,7 @@ import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as Quote
 import Environment
@@ -77,7 +77,7 @@ confirm (personId, _) quoteId mbPaymentMethodId =
     confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
     let ttlInInt = initTtl + confirmTtl + confirmBufferTtl
     handle (errHandler dConfirmRes.booking) $
-      void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq
+      void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq dConfirmRes.merchant.id
 
     return $
       ConfirmRes

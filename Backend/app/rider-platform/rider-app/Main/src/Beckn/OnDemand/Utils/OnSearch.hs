@@ -151,6 +151,26 @@ buildEstimateBreakUpItem currency tag = do
             }
       }
 
+buildTollChargesInfo :: Spec.Item -> Currency -> Maybe OnSearch.TollChargesInfo
+buildTollChargesInfo item currency = do
+  let itemTags = item.itemTags
+  tollCharges <- getTollCharges itemTags currency
+  tollNames <- getTollNames item
+  Just $
+    OnSearch.TollChargesInfo {..}
+
+getTollCharges :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getTollCharges tagGroup currency = do
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.TOLL_CHARGES tagGroup
+  tollCharges <- DecimalValue.valueFromString tagValue
+  Just $ decimalValueToPrice currency tollCharges
+
+getTollNames :: Spec.Item -> Maybe [Text]
+getTollNames item = do
+  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.TOLL_NAMES item.itemTags
+  parsedTagValue <- readMaybe tagValueStr :: Maybe [Text]
+  return parsedTagValue
+
 buildNightShiftInfo :: Spec.Item -> Currency -> Maybe OnSearch.NightShiftInfo
 buildNightShiftInfo item currency = do
   let itemTags = item.itemTags
@@ -251,11 +271,48 @@ makeLatLong provider vehicleVariant location = do
 
     parseLatLongHelper locId gps providerItems = do
       let providerItem = filter (\item -> maybe False (\locIds -> locId `elem` locIds) item.itemLocationIds) providerItems
-      currVehicleVariant <- maybe (pure Nothing) (fmap Just . getVehicleVariant provider) (listToMaybe providerItem)
-      if currVehicleVariant == Just vehicleVariant
+          vehicleVariants = traverse extractVehicleVariants providerItem
+      if maybe False (\vehVars -> Just vehicleVariant `elem` vehVars) (listToMaybe vehicleVariants)
         then Just <$> Common.parseLatLong gps
         else return Nothing
+
+    extractVehicleVariants item = do
+      fromMaybe
+        []
+        ( item.itemFulfillmentIds
+            >>= ( \itemfullfillment ->
+                    provider.providerFulfillments
+                      >>= ( \provFul ->
+                              Just (filterFulfillmentsByFulfillmentId provFul itemfullfillment)
+                          )
+                )
+        )
+
+    filterFulfillmentsByFulfillmentId providerFulfillments arrFullFIllment = do
+      let result = find (\fulf -> maybe False (`elem` arrFullFIllment) fulf.fulfillmentId) providerFulfillments
+      [ result
+          >>= ( \fulf ->
+                  fulf.fulfillmentVehicle
+                    >>= ( \fVehicle ->
+                            Common.parseVehicleVariant
+                              fVehicle.vehicleCategory
+                              (map T.toUpper (fVehicle.vehicleVariant))
+                        )
+              )
+        ]
 
 buildSpecialLocationTag :: MonadFlow m => Spec.Item -> m (Maybe Text)
 buildSpecialLocationTag item =
   return $ Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_TAG item.itemTags
+
+getIsCustomerPrefferedSearchRoute :: Spec.Item -> Maybe Bool
+getIsCustomerPrefferedSearchRoute item = do
+  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE item.itemTags
+  parsedTagValue <- readMaybe tagValueStr :: Maybe Bool
+  return parsedTagValue
+
+getIsBlockedRoute :: Spec.Item -> Maybe Bool
+getIsBlockedRoute item = do
+  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.IS_BLOCKED_SEARCH_ROUTE item.itemTags
+  parsedTagValue <- readMaybe tagValueStr :: Maybe Bool
+  return parsedTagValue

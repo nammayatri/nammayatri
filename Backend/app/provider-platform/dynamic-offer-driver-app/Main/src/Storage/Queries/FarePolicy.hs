@@ -54,7 +54,9 @@ update' farePolicy = do
       Se.Set BeamFP.maxAllowedTripDistance $ (.maxAllowedTripDistance) <$> farePolicy.allowedTripDistanceBounds,
       Se.Set BeamFP.minAllowedTripDistance $ (.minAllowedTripDistance) <$> farePolicy.allowedTripDistanceBounds,
       Se.Set BeamFP.govtCharges $ farePolicy.govtCharges,
-      Se.Set BeamFP.serviceCharge $ farePolicy.serviceCharge,
+      Se.Set BeamFP.serviceCharge $ roundToIntegral <$> farePolicy.serviceCharge,
+      Se.Set BeamFP.serviceChargeAmount $ farePolicy.serviceCharge,
+      Se.Set BeamFP.currency $ Just farePolicy.currency,
       Se.Set BeamFP.perMinuteRideExtraTimeCharge $ farePolicy.perMinuteRideExtraTimeCharge,
       Se.Set BeamFP.congestionChargeMultiplier $ farePolicy.congestionChargeMultiplier,
       Se.Set BeamFP.description $ farePolicy.description,
@@ -65,9 +67,12 @@ update' farePolicy = do
   case farePolicy.farePolicyDetails of
     ProgressiveDetails fPPD ->
       updateOneWithKV
-        [ Se.Set BeamFPPD.baseFare $ fPPD.baseFare,
+        [ Se.Set BeamFPPD.baseFare $ roundToIntegral fPPD.baseFare,
+          Se.Set BeamFPPD.baseFareAmount $ Just fPPD.baseFare,
           Se.Set BeamFPPD.baseDistance $ fPPD.baseDistance,
-          Se.Set BeamFPPD.deadKmFare $ fPPD.deadKmFare,
+          Se.Set BeamFPPD.deadKmFare $ roundToIntegral fPPD.deadKmFare,
+          Se.Set BeamFPPD.deadKmFareAmount $ Just fPPD.deadKmFare,
+          Se.Set BeamFPPD.currency $ Just fPPD.currency,
           Se.Set BeamFPPD.waitingCharge $ (.waitingCharge) <$> fPPD.waitingChargeInfo,
           Se.Set BeamFPPD.freeWatingTime $ (.freeWaitingTime) <$> fPPD.waitingChargeInfo,
           Se.Set BeamFPPD.nightShiftCharge $ fPPD.nightShiftCharge
@@ -95,9 +100,12 @@ update farePolicy = do
   case farePolicy.farePolicyDetails of
     ProgressiveDetails fPPD ->
       updateOneWithKV
-        [ Se.Set BeamFPPD.baseFare $ fPPD.baseFare,
+        [ Se.Set BeamFPPD.baseFare $ roundToIntegral fPPD.baseFare,
+          Se.Set BeamFPPD.baseFareAmount $ Just fPPD.baseFare,
+          Se.Set BeamFPPD.currency $ Just fPPD.currency,
           Se.Set BeamFPPD.baseDistance $ fPPD.baseDistance,
-          Se.Set BeamFPPD.deadKmFare $ fPPD.deadKmFare,
+          Se.Set BeamFPPD.deadKmFare $ roundToIntegral fPPD.deadKmFare,
+          Se.Set BeamFPPD.deadKmFareAmount $ Just fPPD.deadKmFare,
           Se.Set BeamFPPD.nightShiftCharge $ fPPD.nightShiftCharge
         ]
         [Se.Is BeamFPPD.farePolicyId (Se.Eq $ getId farePolicy.id)]
@@ -106,12 +114,18 @@ update farePolicy = do
       mapM_ (create'' farePolicy.id) slabs
     RentalDetails fPRD ->
       updateOneWithKV
-        [ Se.Set BeamFPRD.baseFare $ fPRD.baseFare,
-          Se.Set BeamFPRD.perHourCharge $ fPRD.perHourCharge,
-          Se.Set BeamFPRD.perExtraMinRate $ fPRD.perExtraMinRate,
-          Se.Set BeamFPRD.perExtraKmRate $ fPRD.perExtraKmRate,
+        [ Se.Set BeamFPRD.baseFare $ roundToIntegral fPRD.baseFare,
+          Se.Set BeamFPRD.baseFareAmount $ Just fPRD.baseFare,
+          Se.Set BeamFPRD.currency $ Just fPRD.currency,
+          Se.Set BeamFPRD.perHourCharge $ roundToIntegral fPRD.perHourCharge,
+          Se.Set BeamFPRD.perHourChargeAmount $ Just fPRD.perHourCharge,
+          Se.Set BeamFPRD.perExtraMinRate $ roundToIntegral fPRD.perExtraMinRate,
+          Se.Set BeamFPRD.perExtraMinRateAmount $ Just fPRD.perExtraMinRate,
+          Se.Set BeamFPRD.perExtraKmRate $ roundToIntegral fPRD.perExtraKmRate,
+          Se.Set BeamFPRD.perExtraKmRateAmount $ Just fPRD.perExtraKmRate,
           Se.Set BeamFPRD.includedKmPerHr $ fPRD.includedKmPerHr,
-          Se.Set BeamFPRD.plannedPerKmRate $ fPRD.plannedPerKmRate,
+          Se.Set BeamFPRD.plannedPerKmRate $ roundToIntegral fPRD.plannedPerKmRate,
+          Se.Set BeamFPRD.plannedPerKmRateAmount $ Just fPRD.plannedPerKmRate,
           Se.Set BeamFPRD.nightShiftCharge $ fPRD.nightShiftCharge
         ]
         [Se.Is BeamFPRD.farePolicyId (Se.Eq $ getId farePolicy.id)]
@@ -123,7 +137,10 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
   toTType' FarePolicy {..} = do
     BeamFP.FarePolicyT
       { BeamFP.id = getId id,
-        BeamFP.serviceCharge = serviceCharge,
+        BeamFP.serviceCharge = roundToIntegral <$> serviceCharge,
+        BeamFP.serviceChargeAmount = serviceCharge,
+        BeamFP.parkingCharge = parkingCharge,
+        BeamFP.currency = Just currency,
         BeamFP.nightShiftStart = (.nightShiftStart) <$> nightShiftBounds,
         BeamFP.nightShiftEnd = (.nightShiftEnd) <$> nightShiftBounds,
         BeamFP.maxAllowedTripDistance = (.maxAllowedTripDistance) <$> allowedTripDistanceBounds,
@@ -165,7 +182,9 @@ instance FromTType' BeamFP.FarePolicy Domain.FarePolicy where
           Just
             Domain.FarePolicy
               { id = Id id,
-                serviceCharge = serviceCharge,
+                serviceCharge = mkAmountWithDefault serviceChargeAmount <$> serviceCharge,
+                parkingCharge = parkingCharge,
+                currency = fromMaybe INR currency,
                 nightShiftBounds = DPM.NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
                 allowedTripDistanceBounds =
                   ((,) <$> minAllowedTripDistance <*> maxAllowedTripDistance) <&> \(minAllowedTripDistance', maxAllowedTripDistance') ->

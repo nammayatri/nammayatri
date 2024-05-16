@@ -38,6 +38,7 @@ data Action = OnButton1Click
             | OnSecondaryTextClick
             | YoutubeVideoStatus String
             | TipsViewActionController TipsView.Action
+            | OnCoverImageClick
 
 type Config = {
     primaryText :: TextConfig,
@@ -56,6 +57,7 @@ type Config = {
     optionButtonOrientation :: String,
     buttonLayoutMargin :: Margin,
     tipLayoutMargin :: Margin,
+    searchExpired :: Boolean,
     eTextConfig :: PrimaryEditTextController.Config,
     editTextVisibility :: Visibility,
     dismissPopupConfig :: DismissPopupConfig,
@@ -202,6 +204,7 @@ config = {
   , buttonLayoutMargin : (Margin 0 0 0 25)
   , editTextVisibility : GONE
   , tipLayoutMargin : (Margin 0 0 0 0)
+  , searchExpired : false
   , padding : (Padding 0 0 0 0)
   , topTitle : {
       text : ""

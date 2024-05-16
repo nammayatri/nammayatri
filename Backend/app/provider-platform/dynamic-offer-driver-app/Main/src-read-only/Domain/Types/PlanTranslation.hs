@@ -4,6 +4,7 @@
 
 module Domain.Types.PlanTranslation where
 
+import Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.Plan
 import qualified Kernel.External.Types

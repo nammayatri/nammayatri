@@ -268,6 +268,7 @@ data RegisterRCReq = RegisterRCReq
     imageId :: Id Image,
     operatingCity :: Text,
     dateOfRegistration :: Maybe UTCTime,
+    airConditioned :: Maybe Bool,
     multipleRC :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)

@@ -4,6 +4,7 @@
 
 module Domain.Types.Estimate where
 
+import Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy
@@ -16,16 +17,19 @@ import qualified Tools.Beam.UtilsTH
 
 data Estimate = Estimate
   { createdAt :: Kernel.Prelude.UTCTime,
-    driverPickUpCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.Money,
+    currency :: Kernel.Types.Common.Currency,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     fareParams :: Kernel.Prelude.Maybe Domain.Types.FareParameters.FareParameters,
     farePolicy :: Kernel.Prelude.Maybe Domain.Types.FarePolicy.FarePolicy,
     id :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,
+    isBlockedRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isCustomerPrefferedSearchRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
-    maxFare :: Kernel.Types.Common.Money,
-    minFare :: Kernel.Types.Common.Money,
+    maxFare :: Kernel.Types.Common.HighPrecMoney,
+    minFare :: Kernel.Types.Common.HighPrecMoney,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     tripCategory :: Domain.Types.Common.TripCategory,
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,

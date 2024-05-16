@@ -22,7 +22,7 @@ import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as DPerson
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -72,6 +72,8 @@ data QuoteInfo = QuoteInfo
     serviceTierName :: Maybe Text,
     serviceTierType :: Maybe DVST.VehicleServiceTierType,
     serviceTierShortDesc :: Maybe Text,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool,
     quoteValidTill :: UTCTime
   }
 
@@ -101,12 +103,11 @@ onSelect ::
 onSelect OnSelectValidatedReq {..} = do
   now <- getCurrentTime
   quotes <- traverse (buildSelectedQuote estimate providerInfo now searchRequest) quotesInfo
-  logPretty DEBUG "quotes" quotes
   forM_ quotes $ \quote -> do
     triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
   _ <- QQuote.createMany quotes
   _ <- QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
-  void $ QEstimate.updateStatus estimate.id DEstimate.GOT_DRIVER_QUOTE
+  void $ QEstimate.updateStatus DEstimate.GOT_DRIVER_QUOTE estimate.id
   QPFS.clearCache searchRequest.riderId
   if searchRequest.autoAssignEnabledV2 == Just True
     then do
@@ -118,8 +119,8 @@ onSelect OnSelectValidatedReq {..} = do
             let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quote = autoAssignQuote, paymentMethodId = searchRequest.selectedPaymentMethodId}
             dConfirmRes <- SConfirm.confirm dConfirmReq
             becknInitReq <- ACL.buildInitReqV2 dConfirmRes
-            handle (errHandler dConfirmRes.booking) $
-              void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq
+            handle (errHandler dConfirmRes.booking) $ do
+              void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq searchRequest.merchantId
         Nothing -> do
           bppDetails <- forM ((.providerId) <$> quotes) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
           Notify.notifyOnDriverOfferIncoming estimate.id quotes person bppDetails
@@ -165,12 +166,20 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             providerId = providerInfo.providerId,
             providerUrl = providerInfo.url,
             createdAt = now,
+            updatedAt = now,
             quoteDetails = DQuote.DriverOfferDetails driverOffer,
             requestId = estimate.requestId,
             itemId = estimate.itemId,
             validTill = quoteValidTill,
             estimatedTotalFare = estimatedFare,
             vehicleServiceTierType = fromMaybe (DVST.castVariantToServiceTier vehicleVariant) serviceTierType,
+            tollChargesInfo =
+              ((,) <$> (estimate.tollChargesInfo <&> (.tollCharges)) <*> (estimate.tollChargesInfo <&> (.tollNames)))
+                <&> \(tollCharges', tollNames') ->
+                  DQuote.TollChargesInfo
+                    { tollCharges = tollCharges',
+                      tollNames = tollNames'
+                    },
             ..
           }
   pure quote
@@ -191,6 +200,7 @@ buildDriverOffer estimateId DriverOfferQuoteDetails {..} searchRequest = do
         merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
         bppQuoteId = bppDriverQuoteId,
         status = DDriverOffer.ACTIVE,
+        createdAt = now,
         updatedAt = now,
         ..
       }

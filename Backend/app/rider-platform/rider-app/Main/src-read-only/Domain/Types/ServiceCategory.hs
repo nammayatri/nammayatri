@@ -4,6 +4,7 @@
 
 module Domain.Types.ServiceCategory where
 
+import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServicePeopleCategory

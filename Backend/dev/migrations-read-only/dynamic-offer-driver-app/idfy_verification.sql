@@ -42,3 +42,8 @@ ALTER TABLE atlas_driver_offer_bpp.idfy_verification ADD COLUMN vehicle_category
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.idfy_verification DROP COLUMN dashboard_passed_vehicle_variant;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.idfy_verification ADD COLUMN air_conditioned boolean ;

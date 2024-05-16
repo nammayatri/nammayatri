@@ -18,7 +18,7 @@ module RemoteConfig.Utils where
 import Common.RemoteConfig (fetchRemoteConfigString)
 
 import Prelude
-import DecodeUtil (decodeForeignObject, parseJSON)
+import DecodeUtil (decodeForeignAny, decodeForeignObject, parseJSON)
 import Foreign (Foreign)
 import Foreign.Index (readProp)
 import Data.Newtype (class Newtype)
@@ -45,7 +45,7 @@ subscriptionConfig key = do
 reelsData :: String -> Array ReelItem
 reelsData key = 
   let reelDataString = getReelsData $ fetchRemoteConfigString key
-  in decodeForeignObject reelDataString defaultReelsData
+  in decodeForeignAny reelDataString defaultReelsData
 
 defaultReelsData :: Array ReelItem
 defaultReelsData = []

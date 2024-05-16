@@ -45,11 +45,13 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Plan as DPlan
+import qualified Domain.Types.SearchTry as DTST
 import Environment
 import EulerHS.Prelude hiding (id, state)
 import Kernel.External.Maps (LatLong)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
+import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
@@ -89,6 +91,7 @@ type API =
                 )
            :<|> "nearbyRideRequest"
              :> ( TokenAuth
+                    :> QueryParam "searchTryId" (Id DTST.SearchTry)
                     :> Get '[JSON] DDriver.GetNearbySearchRequestsRes
                 )
            :<|> "searchRequest"
@@ -103,6 +106,10 @@ type API =
              :> Header "client-id" (Id DC.Client)
              :> "quote"
              :> "respond"
+             :> Header "x-bundle-version" Version
+             :> Header "x-client-version" Version
+             :> Header "x-config-version" Version
+             :> Header "x-device" Text
              :> ReqBody '[JSON] DDriver.DriverRespondReq
              :> Post '[JSON] APISuccess
            :<|> "profile"
@@ -110,6 +117,10 @@ type API =
                     :> QueryParam "toss" Int
                     :> Get '[JSON] DDriver.DriverInformationRes
                     :<|> TokenAuth
+                      :> Header "x-bundle-version" Version
+                      :> Header "x-client-version" Version
+                      :> Header "x-config-version" Version
+                      :> Header "x-device" Text
                       :> ReqBody '[JSON] DDriver.UpdateDriverReq
                       :> Post '[JSON] DDriver.UpdateDriverRes
                     :<|> "stats"
@@ -246,13 +257,14 @@ getHomeLocations = withFlowHandlerAPI . DDriver.getHomeLocations
 deleteHomeLocation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> FlowHandler APISuccess
 deleteHomeLocation (personId, driverId, merchantOpCityId) = withFlowHandlerAPI . DDriver.deleteHomeLocation (personId, driverId, merchantOpCityId)
 
-updateDriver :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.UpdateDriverReq -> FlowHandler DDriver.UpdateDriverRes
-updateDriver personId = withFlowHandlerAPI . DDriver.updateDriver personId
+updateDriver :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> DDriver.UpdateDriverReq -> FlowHandler DDriver.UpdateDriverRes
+updateDriver personId mbBundleVersion mbClientVersion mbConfigVersion mbDevice = withFlowHandlerAPI . DDriver.updateDriver personId mbBundleVersion mbClientVersion mbConfigVersion mbDevice
 
 getNearbySearchRequests ::
   (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe (Id DTST.SearchTry) ->
   FlowHandler DDriver.GetNearbySearchRequestsRes
-getNearbySearchRequests = withFlowHandlerAPI . DDriver.getNearbySearchRequests
+getNearbySearchRequests (personId, driverId, merchantOpCityId) searchTryId = withFlowHandlerAPI $ DDriver.getNearbySearchRequests (personId, driverId, merchantOpCityId) searchTryId
 
 offerQuote ::
   (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -264,9 +276,13 @@ offerQuote (personId, driverId, merchantOpCityId) clientId = withFlowHandlerAPI 
 respondQuote ::
   (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe (Id DC.Client) ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
   DDriver.DriverRespondReq ->
   FlowHandler APISuccess
-respondQuote (personId, driverId, merchantOpCityId) clientId = withFlowHandlerAPI . DDriver.respondQuote (personId, driverId, merchantOpCityId) clientId
+respondQuote (personId, driverId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbDevice = withFlowHandlerAPI . DDriver.respondQuote (personId, driverId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbDevice
 
 getStats :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> FlowHandler DDriver.DriverStatsRes
 getStats day = withFlowHandlerAPI . DDriver.getStats day

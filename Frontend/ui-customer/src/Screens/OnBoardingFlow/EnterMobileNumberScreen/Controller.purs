@@ -38,7 +38,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, bind, pure, unit, show, ($), (&&), (-), (<=), (==), (>), (||), discard, void, when, not)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, LetterSpacing(..))
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit, LetterSpacing(..))
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (EnterMobileNumberScreenState)
@@ -241,7 +241,7 @@ eval (SetPhoneNumber number )state = continue state {props { editTextVal = numbe
 eval ContinueCommand state = exit $ GoToOTP state{data{timer = 30, timerID = ""},props = state.props{btnActiveOTP = false, resendEnable = false}}
 eval AfterRender state = continue state
 
-eval _ state = continue state
+eval _ state = update state
 
 isValidPrefixMobileNumber :: MVR.MobileNumberValidatorResp -> Boolean 
 isValidPrefixMobileNumber resp = (resp == MVR.ValidPrefix || resp == MVR.Valid)

@@ -31,6 +31,7 @@ import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.App
 import Kernel.Types.Cache
+import qualified Kernel.Types.CacheFlow as KTC
 import Kernel.Types.Common (HighPrecMeters, Seconds)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Flow (FlowR)
@@ -57,14 +58,7 @@ import Storage.CachedQueries.RegistryMapFallback as CRM
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import System.Environment (lookupEnv)
 import Tools.Metrics
-
-data CacConfig = CacConfig
-  { host :: String,
-    interval :: Natural,
-    tenants :: [String],
-    retryConnection :: Bool
-  }
-  deriving (Generic, FromDhall)
+import TransactionLogs.Types
 
 data SuperPositionConfig = SuperPositionConfig
   { host :: String,
@@ -143,9 +137,13 @@ data AppCfg = AppCfg
     incomingAPIResponseTimeout :: Int,
     internalEndPointMap :: M.Map BaseUrl BaseUrl,
     _version :: Text,
-    cacConfig :: CacConfig,
+    cacConfig :: KTC.CacConfig,
+    cacTenants :: [String],
     superPositionConfig :: SuperPositionConfig,
-    maxStraightLineRectificationThreshold :: HighPrecMeters
+    maxStraightLineRectificationThreshold :: HighPrecMeters,
+    singleBatchProcessingTempDelay :: NominalDiffTime,
+    ondcTokenMap :: M.Map KeyConfig TokenConfig,
+    iosValidateEnpoint :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -223,12 +221,16 @@ data AppEnv = AppEnv
     incomingAPIResponseTimeout :: Int,
     internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
     _version :: Text,
-    cacConfig :: CacConfig,
+    cacConfig :: KTC.CacConfig,
+    cacTenants :: [String],
     superPositionConfig :: SuperPositionConfig,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
-    maxStraightLineRectificationThreshold :: HighPrecMeters
+    maxStraightLineRectificationThreshold :: HighPrecMeters,
+    singleBatchProcessingTempDelay :: NominalDiffTime,
+    ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig,
+    iosValidateEnpoint :: Text
   }
   deriving (Generic)
 
@@ -271,6 +273,8 @@ buildAppEnv cfg@AppCfg {..} = do
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
   let internalEndPointHashMap = HMS.fromList $ M.toList internalEndPointMap
+  -- let tokenMap :: (M.Map KeyConfig (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
+  let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
   return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()
@@ -297,7 +301,7 @@ instance Registry Flow where
       then do
         Registry.checkBlacklisted isBlackListed mbSubscriber
       else do
-        Registry.checkWhitelisted isNotWhiteListed mbSubscriber
+        Registry.checkWhitelisted isNotWhiteListed req.merchant_id mbSubscriber
     where
       performLookup sub =
         fetchFromDB sub.subscriber_id sub.unique_key_id sub.merchant_id >>>= \registryUrl ->
@@ -311,7 +315,7 @@ instance Registry Flow where
               mbMerchant <- CM.findById (Id merchantId)
               pure ((\merchant -> Just merchant.registryUrl) =<< mbMerchant)
       isBlackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isJust
-      isNotWhiteListed subscriberId domain = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
+      isNotWhiteListed subscriberId domain _merchantId = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
 
 cacheRegistryKey :: Text
 cacheRegistryKey = "dynamic-offer-driver-app:registry:"

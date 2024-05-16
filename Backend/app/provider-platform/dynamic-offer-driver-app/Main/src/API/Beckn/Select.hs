@@ -29,6 +29,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import TransactionLogs.PushLogs
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -54,6 +55,8 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
       fork "select request processing" $ do
         Redis.whenWithLockRedis (selectProcessingLockKey dSelectReq.messageId) 60 $
           DSelect.handler merchant dSelectReq searchRequest estimates
+      fork "select received pushing ondc logs" do
+        void $ pushLogs "select" (toJSON reqV2) merchant.id.getId
     pure Ack
 
 selectLockKey :: Text -> Text

@@ -36,7 +36,6 @@ import Components.RideActionModal as RideActionModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
 import PaymentPage (consumeBP)
-import Components.StatsModel as StatsModel
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
@@ -93,6 +92,7 @@ import CarouselHolder as CarouselHolder
 import PrestoDOM.List
 import Mobility.Prelude
 import Resource.Constants as RC
+import Data.Function.Uncurried (runFn3)
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -218,8 +218,12 @@ screen initialState (GlobalState globalState) =
                                   _ <- JB.startChatListenerService
                                   _ <- pure $ JB.scrollOnResume push ScrollToBottom
                                   push InitializeChat
-
-                                _ <- launchAff $ flowRunner defaultGlobalState $ launchMaps push TriggerMaps
+                                
+                                -- Launching the Google Map with playing the audio 
+                                pushPlayAudioAndLaunchMap <- runEffectFn1 EHC.getValueFromIdMap "PlayAudioAndLaunchMap"
+                                when pushPlayAudioAndLaunchMap.shouldPush $ do 
+                                  void $ pure $ runFn2  EHC.updatePushInIdMap "PlayAudioAndLaunchMap" false
+                                  void $ launchAff $ flowRunner defaultGlobalState $ playAudioAndLaunchMap push TriggerMaps OnAudioCompleted (fromMaybe false initialState.data.activeRide.acRide) initialState.data.activeRide.requestedVehicleVariant
                                 
                                 if (initialState.data.activeRide.tripType == ST.Rental && getValueToLocalStore RENTAL_RIDE_STATUS_POLLING == "False")
                                   then do
@@ -321,6 +325,7 @@ view push state =
       , if (state.props.showChatBlockerPopUp || state.data.paymentState.showBlockingPopup) then blockerPopUpView push state else dummyTextView
       , if state.props.currentStage == RideCompleted then RideCompletedCard.view (getRideCompletedConfig state) (push <<< RideCompletedAC) else dummyTextView -- 
       , if state.props.showRideRating then RatingCard.view (push <<< RatingCardAC) (getRatingCardConfig state) else dummyTextView
+      , if state.props.showAcWorkingPopup == Just true then isAcWorkingPopupView push state else dummyTextView
   ]
   where 
     showPopups = (DA.any (_ == true )
@@ -329,8 +334,10 @@ view push state =
         state.data.driverGotoState.goToInfo,
         state.data.driverGotoState.confirmGotoCancel,
         state.props.accountBlockedPopup,
-        state.props.vehicleNSPopup && not state.props.rcDeactivePopup
+        state.props.vehicleNSPopup && not state.props.rcDeactivePopup,
+        state.props.acExplanationPopup && not onRide && (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.CarCategory
       ])
+    onRide = DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted]
     showEnterOdometerReadingModalView = state.data.activeRide.tripType == ST.Rental && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
 
 blockerPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -408,12 +415,46 @@ driverMapsHeaderView push state =
               ] $ [addAadhaarOrOTPView state push]
                 <> [specialPickupZone push state]
                 <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (state.props.driverStatusSet == ST.Offline) true --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
+                <> if state.data.linkedVehicleCategory /= "AUTO_RICKSHAW" && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [bookingPreferenceNavView push state] else []
             ]
         ]
         , bottomNavBar push state
   ]
   where
     getCarouselView visible bottomMargin = maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || visible then [] else [bannersCarousal item bottomMargin state push]) state.data.bannerData.bannerItem
+
+bookingPreferenceNavView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+bookingPreferenceNavView push state =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , gravity CENTER_VERTICAL
+  , padding $ Padding 12 12 12 12
+  , margin $ Margin 16 0 16 16
+  , onClick push $ const BookingOptions
+  , background Color.white900
+  , rippleColor Color.rippleShade
+  , cornerRadius 8.0
+  ][
+    imageView
+    [ imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_preferences_filter"
+    , height $ V 20
+    , width $ V 20
+    , margin $ MarginRight 8
+    ],
+    textView
+     $ [ text $ getString BOOKING_OPTIONS
+      , color Color.black900
+      , weight 1.0
+      , textSize FontSize.a_16
+      , fontStyle $ FontStyle.semiBold LanguageStyle
+      ]
+    , imageView
+      [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_arrow_right"
+      , height $ V 18
+      , width $ V 18
+      ]
+  ]
 
 specialPickupZone :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 specialPickupZone push state = 
@@ -459,7 +500,7 @@ specialPickupZone push state =
               [ height $ V 30
               , width $ V 30
               , padding $ PaddingHorizontal 10 5
-              , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_questionmark_white"
+              , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_questionmark_white"
               ]
             , textView
               $ [ height MATCH_PARENT
@@ -472,7 +513,7 @@ specialPickupZone push state =
             ] 
       ]
     , imageView
-      [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_location_unserviceable_green"
+      [ imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_location_unserviceable_green"
       , height $ V 64
       , width $ V 92
       ]  
@@ -554,6 +595,7 @@ locationUpdateView push state =
   , gravity CENTER
   , stroke $ "1,"<> Color.grey900
   , rippleColor Color.rippleShade
+  , onClick push $ const RetryTimeUpdate
   ][ updateButtonIconAndText push state
    , locationLastUpdatedTextAndTimeView push state
   ]
@@ -758,6 +800,7 @@ offlineView push state =
                                  else if state.data.paymentState.driverBlocked then GO_ONLINE_PROMPT_SUBSCRIBE
                                  else GO_ONLINE_PROMPT
               ] <> FontStyle.paragraphText TypoGraphy
+              -- , if state.data.linkedVehicleCategory /= "AUTO_RICKSHAW" && state.props.driverStatusSet == ST.Offline then bookingPreferenceNavView push state else dummyTextView
             ]
         ]
     , linearLayout
@@ -958,9 +1001,7 @@ statsModel push state =
     , visibility $ boolToVisibility showStatsModel
     , gravity CENTER
     , padding $ Padding 16 2 16 6
-    ][  if not (state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins) then
-          StatsModel.view (push <<< StatsModelAction) (statsModelConfig state cityConfig.showEarningSection)
-        else linearLayout
+    ][  linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , gravity CENTER_VERTICAL
@@ -1001,6 +1042,7 @@ statsModel push state =
            , height WRAP_CONTENT
            , gravity CENTER_VERTICAL
            , margin $ MarginLeft 15
+           , visibility $ boolToVisibility coinsEnabled
            ][ linearLayout
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
@@ -1036,6 +1078,7 @@ statsModel push state =
     ]
     where 
       showStatsModel = not ((DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) && not state.props.isStatsModelExpanded)
+      coinsEnabled = state.data.config.feature.enableYatriCoins && state.data.cityConfig.enableYatriCoins
 
 expandedStatsModel :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 expandedStatsModel push state =
@@ -1050,7 +1093,7 @@ expandedStatsModel push state =
   , margin $ MarginHorizontal 16 16
   , background Color.white900
   , stroke $ "1,"<> Color.grey900
-  , visibility $ boolToVisibility (state.props.isStatsModelExpanded && state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins) 
+  , visibility $ boolToVisibility state.props.isStatsModelExpanded 
   , clickable true
   ][ linearLayout
       [ width MATCH_PARENT
@@ -1072,15 +1115,16 @@ expandedStatsModel push state =
       , height WRAP_CONTENT
       , margin $ MarginTop 10
       , gravity CENTER_VERTICAL
-      ][ commonTV push (getString TRIP_EARNINGS) Color.black700 FontStyle.body3 LEFT 0 NoAction true true
-        , commonTV push ("₹" <> formatCurrencyWithCommas (show (state.data.totalEarningsOfDay - state.data.bonusEarned))) Color.black800 FontStyle.subHeading1 RIGHT 0 NoAction false state.data.driverStats
+      ][ commonTV push (getString TRIPS) Color.black700 FontStyle.body3 LEFT 0 NoAction true true
+        , commonTV push (show state.data.totalRidesOfDay) Color.black800 FontStyle.subHeading1 RIGHT 0 NoAction false state.data.driverStats
       ]
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , gravity CENTER_VERTICAL
       , margin $ MarginTop 10
-      ][ commonTV push (getString BONUS_EARNED) Color.black700 FontStyle.body3 LEFT 0 NoAction false true
+      , visibility $ boolToVisibility $ isJust state.data.earningPerKm
+      ][ commonTV push (getString EARNINGS_PER_KM) Color.black700 FontStyle.body3 LEFT 0 NoAction false true
         , imageView 
           [ width $ V 12
           , height $ V 12
@@ -1088,18 +1132,20 @@ expandedStatsModel push state =
           , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_info_grey"
           , onClick push $ const $ ToggleBonusPopup
           ]
-        , commonTV push ("₹" <> formatCurrencyWithCommas (show state.data.bonusEarned)) Color.green900 FontStyle.subHeading1 RIGHT 0 NoAction true state.data.driverStats
+        , commonTV push ("₹" <> earningPerKm <> "/km") Color.black800 FontStyle.subHeading1 RIGHT 0 NoAction true state.data.driverStats
       ]
     , separatorView 10
-    , linearLayout
+    , textView $
       [ width MATCH_PARENT
       , height WRAP_CONTENT
+      , text $ getString VIEW_MORE
+      , color Color.blue900
+      , gravity CENTER
+      , onClick push $ const $ GoToEarningsScreen false
       , margin $ MarginTop 10
-      , gravity CENTER_VERTICAL
-      ][ commonTV push (show state.data.totalRidesOfDay <> " " <> getString TRIPS) Color.black700 FontStyle.tags LEFT 0 NoAction true state.data.driverStats
-        , commonTV push (getString VIEW_MORE) Color.blue900 FontStyle.body3 RIGHT 0 (GoToEarningsScreen false) false true
-      ]
+      ] <> FontStyle.body3 TypoGraphy
   ]
+  where earningPerKm = show $ fromMaybe 0 state.data.earningPerKm
 
 commonTV :: forall w .  (Action -> Effect Unit) -> String -> String -> (LazyCheck -> forall properties. (Array (Prop properties))) -> Gravity -> Int -> Action -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
 commonTV push text' color' theme gravity' marginTop action useWeight visible = 
@@ -1741,10 +1787,6 @@ updateButtonIconAndText push state =
   , margin $ MarginTop 1
   , orientation HORIZONTAL
   , visibility if not state.props.rideActionModal && state.props.statusOnline then VISIBLE else GONE
-  , onClick (\action -> do
-        _<- push action
-        pure unit
-        ) (const RetryTimeUpdate)
   ]
   [ PrestoAnim.animationSet [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshAnimation)]
     $ imageView
@@ -1864,6 +1906,7 @@ popupModals push state =
           ST.AccountBlocked -> accountBlockedPopup state
           ST.VehicleNotSupported -> vehicleNotSupportedPopup state
           ST.BgLocationPopup -> bgLocPopup state
+          ST.TopAcDriver -> topAcDriverPopUpConfig state
       ]
   where 
   
@@ -1873,6 +1916,7 @@ popupModals push state =
       else if state.props.accountBlockedPopup then ST.AccountBlocked
       else if state.props.vehicleNSPopup then ST.VehicleNotSupported
       else if state.props.bgLocationPopup then ST.BgLocationPopup
+      else if state.props.acExplanationPopup then ST.TopAcDriver
       else ST.KnowMore
 
     clickAction popupType = case popupType of
@@ -1882,6 +1926,7 @@ popupModals push state =
           ST.AccountBlocked -> AccountBlockedAC
           ST.VehicleNotSupported -> VehicleNotSupportedAC
           ST.BgLocationPopup -> BgLocationPopupAC
+          ST.TopAcDriver -> ACExpController
 
 enableCurrentLocation :: HomeScreenState -> Boolean
 enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true
@@ -2005,13 +2050,22 @@ getDriverStatusResult index driverStatus currentStatus= case (getValueToLocalSto
                   _ -> if (driverStatus == currentStatus) then ACTIVE
                        else DEFAULT
 
-launchMaps :: forall action. (action -> Effect Unit) ->  action -> Flow GlobalState Unit
-launchMaps push action = do
-  void $ delay $ Milliseconds 2000.0
-  if (getValueToLocalStore TRIGGER_MAPS == "true") then
-    doAff do liftEffect $ push $ action
-    else pure unit
+playAudioAndLaunchMap :: forall action. (action -> Effect Unit) ->  action -> (String -> action) -> Boolean -> Maybe String -> Flow GlobalState Unit
+playAudioAndLaunchMap push action audioCompleted acRide requestedVehicleVariant = do
+  let 
+    driverLocation = DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+
+  if (driverLocation == "bangalore" && isJust requestedVehicleVariant && (not $ requestedVehicleVariant == Just "AUTO_RICKSHAW") && (getValueToLocalStore TRIGGER_MAPS) == "true" ) then  do
+    let 
+      language = "kn"
+      audioFolder = if acRide  then "ac_background" else "non_ac_background" 
+      audioUrl = "https://assets.moving.tech/beckn/audios/" <> audioFolder <> "/" <> language <> ".mp3"
+    void $ pure $ runFn3 JB.startAudioPlayer audioUrl push audioCompleted
+  else do  
+    void $ delay $ Milliseconds 2000.0
+    if (getValueToLocalStore TRIGGER_MAPS == "true") then liftFlow $ push $ action  else pure unit
   pure unit
+
 
 checkBgLocation :: forall action. (action -> Effect Unit) ->  action -> HomeScreenState -> Boolean -> Flow GlobalState Unit
 checkBgLocation push action state bgLocPopupShown = do
@@ -2025,3 +2079,10 @@ computeListItem :: (Action -> Effect Unit) -> Flow GlobalState Unit
 computeListItem push = do
   bannerItem <- preComputeListItem $ BannerCarousel.view push (BannerCarousel.config BannerCarousal)
   void $ EHC.liftFlow $ push (SetBannerItem bannerItem)
+
+isAcWorkingPopupView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+isAcWorkingPopupView push state =
+  linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    ][ PopUpModal.view (push <<< IsAcWorkingPopUpAction) (isAcWorkingPopupConfig state) ]

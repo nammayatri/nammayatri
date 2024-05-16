@@ -58,6 +58,7 @@ type API =
            :<|> DriverActivityAPI
            :<|> EnableDriverAPI
            :<|> DisableDriverAPI
+           :<|> UpdateACUsageRestrictionAPI
            :<|> BlockDriverWithReasonAPI
            :<|> BlockDriverAPI
            :<|> BlockReasonListAPI
@@ -110,6 +111,7 @@ type API =
            :<|> UpdateRCInvalidStatusAPI
            :<|> UpdateVehicleVariantAPI
            :<|> BulkReviewRCVariantAPI
+           :<|> UpdateDriverTagAPI
        )
 
 type DriverDocumentsInfoAPI =
@@ -159,6 +161,10 @@ type EnableDriverAPI =
 type DisableDriverAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DISABLE
     :> Common.DisableDriverAPI
+
+type UpdateACUsageRestrictionAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'REMOVE_AC_USAGE_RESTRICTION
+    :> Common.UpdateACUsageRestrictionAPI
 
 type BlockDriverWithReasonAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'BLOCK_WITH_REASON
@@ -352,6 +358,10 @@ type BulkReviewRCVariantAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'BULK_REVIEW_RC_VARIANT
     :> Common.BulkReviewRCVariantAPI
 
+type UpdateDriverTagAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UPDATE_DRIVER_TAG
+    :> Common.UpdateDriverTagAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   driverDocuments merchantId city
@@ -362,6 +372,7 @@ handler merchantId city =
     :<|> driverActivity merchantId city
     :<|> enableDriver merchantId city
     :<|> disableDriver merchantId city
+    :<|> updateACUsageRestriction merchantId city
     :<|> blockDriverWithReason merchantId city
     :<|> blockDriver merchantId city
     :<|> blockReasonList merchantId city
@@ -414,6 +425,7 @@ handler merchantId city =
     :<|> updateRCInvalidStatus merchantId city
     :<|> updateVehicleVariant merchantId city
     :<|> bulkReviewRCVariant merchantId city
+    :<|> updateDriverTag merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -510,6 +522,13 @@ disableDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI'
   transaction <- buildManagementServerTransaction Common.DisableDriverEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.disableDriver) driverId
+
+updateACUsageRestriction :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateACUsageRestrictionReq -> FlowHandler APISuccess
+updateACUsageRestriction merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildManagementServerTransaction Common.RemoveACUsageRestrictionEndpoint apiTokenInfo driverId (Just req)
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.updateACUsageRestriction) driverId req
 
 blockDriverWithReason :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.BlockDriverWithReasonReq -> FlowHandler APISuccess
 blockDriverWithReason merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do
@@ -850,3 +869,11 @@ bulkReviewRCVariant merchantShortId opCity apiTokenInfo req =
     transaction <- buildTransaction Common.BulkReviewRCVariantEndPoint apiTokenInfo Nothing (Just req)
     T.withTransactionStoring transaction $
       Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.bulkReviewRCVariant) req
+
+updateDriverTag :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateDriverTagReq -> FlowHandler APISuccess
+updateDriverTag merchantShortId opCity apiTokenInfo driverId req =
+  withFlowHandlerAPI' $ do
+    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+    transaction <- buildTransaction Common.UpdateDriverTagEndPoint apiTokenInfo (Just driverId) (Just req)
+    T.withTransactionStoring transaction $
+      Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.updateDriverTag) driverId req

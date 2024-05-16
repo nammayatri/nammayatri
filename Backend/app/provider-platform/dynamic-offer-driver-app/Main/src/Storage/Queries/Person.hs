@@ -45,6 +45,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common hiding (Value)
+import Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -79,6 +80,9 @@ create = createWithKV
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Person)
 findById (Id personId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq personId]
+
+findByEmail :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> m (Maybe Person)
+findByEmail email = findOneWithKV [Se.Is BeamP.email $ Se.Eq email]
 
 findAllDriversWithInfoAndVehicle ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -391,22 +395,35 @@ updatePersonRec (Id personId) person = do
       Se.Set BeamP.merchantId $ getId person.merchantId,
       Se.Set BeamP.description $ person.description,
       Se.Set BeamP.updatedAt now,
-      Se.Set BeamP.clientVersion (versionToText <$> person.clientVersion),
-      Se.Set BeamP.bundleVersion (versionToText <$> person.bundleVersion)
+      Se.Set BeamP.clientSdkVersion (versionToText <$> person.clientSdkVersion),
+      Se.Set BeamP.clientBundleVersion (versionToText <$> person.clientBundleVersion),
+      Se.Set BeamP.clientConfigVersion (versionToText <$> person.clientConfigVersion),
+      Se.Set BeamP.clientOsVersion (deviceVersion <$> person.clientDevice),
+      Se.Set BeamP.clientOsType (deviceType <$> person.clientDevice),
+      Se.Set BeamP.backendConfigVersion (versionToText <$> person.backendConfigVersion),
+      Se.Set BeamP.backendAppVersion (person.backendAppVersion)
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updatePersonVersions :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Person -> Maybe Version -> Maybe Version -> m ()
-updatePersonVersions person mbBundleVersion mbClientVersion =
+updatePersonVersions :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> m ()
+updatePersonVersions person mbBundleVersion mbClientVersion mbConfigVersion mbDevice' mbBackendApp = do
+  let mbDevice = getDeviceFromText mbDevice'
   when
-    ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
+    ((isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice' || isJust mbConfigVersion) && (person.clientBundleVersion /= mbBundleVersion || person.clientSdkVersion /= mbClientVersion || person.clientConfigVersion /= mbConfigVersion || person.clientDevice /= mbDevice || person.backendAppVersion /= mbBackendApp))
     do
       now <- getCurrentTime
-      let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
-          mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
+      let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.clientBundleVersion)
+          mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientSdkVersion)
+          mbConfigVersionText = versionToText <$> (mbConfigVersion <|> person.clientConfigVersion)
+          mbOsVersion = deviceVersion <$> (mbDevice <|> person.clientDevice)
+          mbOsType = deviceType <$> (mbDevice <|> person.clientDevice)
       updateOneWithKV
-        [ Se.Set BeamP.clientVersion mbClientVersionText,
-          Se.Set BeamP.bundleVersion mbBundleVersionText,
+        [ Se.Set BeamP.clientSdkVersion mbClientVersionText,
+          Se.Set BeamP.clientBundleVersion mbBundleVersionText,
+          Se.Set BeamP.clientConfigVersion mbConfigVersionText,
+          Se.Set BeamP.clientOsVersion mbOsVersion,
+          Se.Set BeamP.clientOsType mbOsType,
+          Se.Set BeamP.backendAppVersion mbBackendApp,
           Se.Set BeamP.updatedAt now
         ]
         [Se.Is BeamP.id (Se.Eq $ getId person.id)]
@@ -429,11 +446,13 @@ updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updateMobileNumberAndCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Person -> m ()
-updateMobileNumberAndCode person = do
+updatePersonDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Person -> m ()
+updatePersonDetails person = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
+    [ Se.Set BeamP.firstName $ person.firstName,
+      Se.Set BeamP.lastName $ person.lastName,
+      Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
       Se.Set BeamP.mobileNumberEncrypted $ person.mobileNumber <&> unEncrypted . (.encrypted),
       Se.Set BeamP.mobileNumberHash $ person.mobileNumber <&> (.hash),
       Se.Set BeamP.unencryptedMobileNumber $ person.unencryptedMobileNumber,
@@ -496,3 +515,6 @@ updateUsedCoins (Id driverId) usedCoinValue = updateWithKV [Se.Set BeamP.usedCoi
 
 updateMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id DMOC.MerchantOperatingCity -> m ()
 updateMerchantOperatingCityId (Id driverId) (Id opCityId) = updateWithKV [Se.Set BeamP.merchantOperatingCityId (Just opCityId)] [Se.Is BeamP.id $ Se.Eq driverId]
+
+updateTag :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> [Text] -> m ()
+updateTag (Id driverId) tags = updateOneWithKV [Se.Set BeamP.driverTag $ Just tags] [Se.Is BeamP.id $ Se.Eq driverId]

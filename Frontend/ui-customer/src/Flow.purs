@@ -20,7 +20,7 @@ import Engineering.Helpers.LogEvent
 import Screens.TicketBookingFlow.TicketBooking.Transformer
 import Services.API
 import Common.Resources.Constants (zoomLevel)
-import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate)
+import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate, ProviderType(..))
 import Common.Types.App as Common
 import Components.ChatView.Controller (makeChatComponent')
 import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
@@ -61,12 +61,12 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding)
+import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, timeValidity, removeMarker)
 import JBridge as JB
-import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, zoneLabelIcon, transformGeoJsonFeature, getCityFromString, getMetroConfigFromAppConfig)
+import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getCityFromString, getMetroConfigFromAppConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
-import Log (logInfo)
+import Log (logInfo, logStatus)
 import MerchantConfig.Types (AppConfig(..), MetroConfig(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils as MU
@@ -77,7 +77,7 @@ import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, vo
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField)
 import Helpers.Pooling(delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
-import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId)
+import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, dummyPrice)
 import Screens (getScreen)
 import Screens.AccountSetUpScreen.ScreenData as AccountSetUpScreenData
 import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
@@ -96,7 +96,7 @@ import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getSpecialTag, getTripFromRideHistory, getZoneType, getFormattedContacts, transformHotSpotInfo, filterHotSpots, mapSpecialZoneGates)
+import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getTripFromRideHistory, getFormattedContacts)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
@@ -187,7 +187,6 @@ import Services.Config(getNumbersToWhiteList)
 import SessionCache(getValueFromWindow, setValueInWindow)
 import LocalStorage.Cache (clearCache)
 import DecodeUtil (getAnyFromWindow)
-import Data.Foldable (foldMap)
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.FollowRideScreen.Controller (deleteDismisedMockDrills)
 import Data.Map as Map
@@ -195,10 +194,16 @@ import Foreign.Object (lookup)
 import Screens.RideSelectionScreen.Transformer (myRideListTransformer)
 import Services.FlowCache as FlowCache
 import Data.HashMap as DHM
+import Helpers.API as HelpersAPI
+import Helpers.Referral (applyReferralCode)
+import Helpers.SpecialZoneAndHotSpots
+import Components.ChooseVehicle.Controller as ChooseVehicle
+import Screens.HelpAndSupportScreen.Transformer (getUpdatedIssueList, getApiIssueList)
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
   liftFlowBT $ markPerformance "BASE_APP_FLOW"
+  checkVersion
   baseAppStorage -- TODO:: Restructure the files and names
   baseAppLogs
   liftFlowBT $ runEffectFn1 resetIdMap ""
@@ -284,7 +289,8 @@ toggleSplash =
       liftFlowBT $ terminateUI $ Just "SplashScreen"
 
 currentFlowStatus :: FlowBT String Unit
-currentFlowStatus = do  
+currentFlowStatus = do
+  logField_ <- lift $ lift $ getLogFields
   liftFlowBT $ markPerformance "CURRENT_FLOW_STATUS"
   void $ lift $ lift $ toggleLoader false
   liftFlowBT $ markPerformance "VERIFY_PROFILE_CALL_API"
@@ -293,9 +299,13 @@ currentFlowStatus = do
   flowStatus <- Remote.flowStatusBT "LazyCheck"
   liftFlowBT $ markPerformance "RIDE_LIST_CALL_API"
   case flowStatus ^. _currentStatus of
-    WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
-    DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
+    WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId (flowStatus ^. _isValueAddNP) currentStatus.otherSelectedEstimates false
+    DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId (flowStatus ^. _isValueAddNP) (Just []) true
+    WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> goToConfirmRide currentStatus.bookingId currentStatus.fareProductType
     RIDE_ASSIGNED _                         -> checkRideStatus true
+    PENDING_RATING _                        -> do
+                                                firstRideCompletedEvent ""
+                                                checkRideStatus false 
     _                                       -> checkRideStatus false
   liftFlowBT $ markPerformance "HIDE_LOADER_FLOW"
   hideLoaderFlow
@@ -306,6 +316,8 @@ currentFlowStatus = do
     verifyProfile dummy = do
       liftFlowBT $ markPerformance "VERIFY_PROFILE"
       response <- Remote.getProfileBT ""
+      config <- getAppConfigFlowBT appConfig
+
       updateVersion (response ^. _clientVersion) (response ^. _bundleVersion)
       updateFirebaseToken (response ^. _maskedDeviceToken) getUpdateToken
       updateLanguageAndReferralCode $ response ^. _language
@@ -353,7 +365,7 @@ currentFlowStatus = do
         requiredData = initialData { deviceToken = Just token }
       in
         void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
-    
+
     updateLanguageAndReferralCode :: Maybe String -> FlowBT String Unit
     updateLanguageAndReferralCode language = do
       config <- getAppConfigFlowBT appConfig
@@ -363,28 +375,23 @@ currentFlowStatus = do
                               "NOT_REFERRED_NOT_TAKEN_RIDE" -> getReferralCode (getValueToLocalStore REFERRER_URL)
                               _                             -> Nothing
                           else Nothing
+
       if isNothing language || (getKeyByLanguage (fromMaybe "ENGLISH" language) /= (getLanguageLocale languageKey)) || isJust referralCode then do
-        let UpdateProfileReq updateProfileConfig = Remote.mkUpdateProfileRequest FunctionCall
-        if isJust referralCode && referralStatus == "NOT_REFERRED_NOT_TAKEN_RIDE" then do
-          let updateProfileReq = UpdateProfileReq updateProfileConfig{ referralCode = referralCode }
-          res <- lift $ lift $ Remote.updateProfile updateProfileReq
-          case res of
-            Right response -> do
-              setValueToLocalStore REFERRAL_STATUS "REFERRED_NOT_TAKEN_RIDE"  
-              setValueToLocalStore REFERRER_URL ""
-              void $ pure $ cleverTapCustomEvent "ny_user_referral_code_applied"
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{ referral{ referralStatus = REFERRAL_APPLIED }, isReferred = true } })
-            Left err -> do
-              if ((err.code == 500 && (decodeError err.response.errorMessage "errorCode") == "BPP_INTERNAL_API_ERROR")) then do
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ referral{ referralStatus = REFERRAL_INVALID } } })
-                setValueToLocalStore REFERRER_URL ""
-                void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq updateProfileConfig)
-              else pure unit
-        else void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq updateProfileConfig)
+        case referralCode of
+          Just code | referralStatus == "NOT_REFERRED_NOT_TAKEN_RIDE" -> do
+            referralAppliedStatus <- applyReferralCode code
+            case referralAppliedStatus of
+              REFERRAL_APPLIED -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{ referral{ referralStatus = REFERRAL_APPLIED }, isReferred = true } })
+              REFERRAL_INVALID -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ referral{ referralStatus = REFERRAL_INVALID } } })
+              _ -> pure unit
+          _ -> do
+            let UpdateProfileReq updateProfileConfig = Remote.mkUpdateProfileRequest FunctionCall
+            void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq updateProfileConfig)
       else pure unit
 
-    goToFindingQuotesStage :: String -> Boolean -> FlowBT String Unit
-    goToFindingQuotesStage estimateId driverOfferedQuote = do
+    goToFindingQuotesStage :: String -> Maybe Boolean -> Maybe (Array String) -> Boolean -> FlowBT String Unit
+    goToFindingQuotesStage estimateId mbIsValueAddNP otherSelectedEstimates driverOfferedQuote = do
+      let providerType = maybe Common.ONUS (\valueAdd -> if valueAdd then Common.ONUS else Common.OFFUS) mbIsValueAddNP -- This defines whether quote selected was ours or not after kill and relaunch
       removeChatService ""
       if any (_ == (getValueToLocalStore FINDING_QUOTES_START_TIME)) ["__failed", ""] then do
         updateFlowStatus SEARCH_CANCELLED
@@ -423,10 +430,25 @@ currentFlowStatus = do
                 , data { source = flowStatusData.source.place
                        , destination = flowStatusData.destination.place
                        , sourceAddress = flowStatusData.sourceAddress
-                       , destinationAddress = flowStatusData.destinationAddress }
+                       , otherSelectedEstimates = fromMaybe [] otherSelectedEstimates
+                       , destinationAddress = flowStatusData.destinationAddress
+                       , selectedEstimatesObject{
+                          vehicleVariant = getValueToLocalStore SELECTED_VARIANT
+                        , providerType = providerType
+                        }
+                    }
                 })
             Nothing -> updateFlowStatus SEARCH_CANCELLED
         else updateFlowStatus SEARCH_CANCELLED
+
+    goToConfirmRide :: String -> Maybe String -> FlowBT String Unit
+    goToConfirmRide bookingId fareProductType = do
+      if any (_ == fareProductType) [Just "ONE_WAY_SPECIAL_ZONE", Nothing] then
+        checkRideStatus false
+      else do
+        updateLocalStage ConfirmingRide
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp}})
+        homeScreenFlow
 
 enterMobileNumberScreenFlow :: FlowBT String Unit
 enterMobileNumberScreenFlow = do
@@ -535,7 +557,7 @@ accountSetUpScreenFlow = do
           setValueToLocalStore USER_NAME state.data.name
           void $ liftFlowBT $ setCleverTapUserData "Name" (getValueToLocalStore USER_NAME)
           case gender of
-            Just value -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just value}}, props{isBanner = false}})
+            Just value -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just value}}, props{isBanner = false, referral{ showAddReferralPopup = false }}})
             Nothing    -> pure unit
           void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_onboarded"
           void $ pure $ metaLogEvent "ny_user_onboarded"
@@ -573,8 +595,18 @@ homeScreenFlow = do
   -- TODO: HANDLE LOCATION LIST INITIALLY
   void $ pure $ firebaseUserID (getValueToLocalStore CUSTOMER_ID)
   void $ lift $ lift $ toggleLoader false
-  let _ = runFn2 EHC.updatePushInIdMap "bannerCarousel" true
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }})
+  let 
+    _ = runFn2 EHC.updatePushInIdMap "bannerCarousel" true
+    currentCityConfig = getCityConfig currentState.homeScreen.data.config.cityConfig $ getValueToLocalStore CUSTOMER_LOCATION
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{
+    props{
+      hasTakenRide = getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE"
+    , isReferred = getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE"
+    }
+  , data {
+      currentCityConfig = currentCityConfig
+    }
+  })
   liftFlowBT $ handleUpdatedTerms $ getString STR.TERMS_AND_CONDITIONS_UPDATED
   flow <- UI.homeScreen
   void $ lift $ lift $ fork $ Remote.pushSDKEvents
@@ -617,7 +649,7 @@ homeScreenFlow = do
                                                                                                       {key : "Estimate Fare (₹)", value : unsafeToForeign (state.data.suggestedAmount + state.data.rateCard.additionalFare)},
                                                                                                       {key : "Customer tip (₹)", value : unsafeToForeign state.props.customerTip.tipForDriver},
                                                                                                       {key : "Estimated Ride Distance" , value : unsafeToForeign state.data.rideDistance},
-                                                                                                      {key : "Night Ride", value : unsafeToForeign state.data.rateCard.nightCharges}]
+                                                                                                      {key : "Night Ride", value : unsafeToForeign state.data.rateCard.isNightShift}]
       if (not (isLocalStageOn QuoteList)) then do
         void $ pure $ firebaseLogEvent "ny_user_cancel_and_retry_request_quotes"
         cancelEstimate state.props.estimateId
@@ -638,19 +670,29 @@ homeScreenFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindEstimateAndSearch, searchAfterEstimate = false } })
       else do
         void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
-        response <- lift $ lift $ Remote.selectEstimate (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing)) (state.props.estimateId)
+        response <- lift $ lift $ Remote.selectEstimate (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates) (state.props.estimateId)
         case response of
           Right res -> do
-            updateLocalStage FindingQuotes
+            void $ pure $ setValueToLocalStore LOCAL_STAGE (show FindingQuotes)
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } })
+            let tipViewData = if state.props.customerTip.isTipSelected then state.props.tipViewProps{ stage = TIP_ADDED_TO_SEARCH } else HomeScreenData.initData.props.tipViewProps
+            logInfo "retry_finding_quotes" ( "selectedEstimate Current Stage: " <> (show state.props.currentStage) <> " LOCAL_STAGE: " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id :" <> state.props.estimateId )
+            void $ pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
+            void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = 0.0 , scaleType="CENTER_CROP"}
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { customerTip = if homeScreen.props.customerTip.isTipSelected then homeScreen.props.customerTip else HomeScreenData.initData.props.customerTip{enableTips = homeScreen.props.customerTip.enableTips } , tipViewProps = tipViewData, findingQuotesProgress = 0.0 }})
+            homeScreenFlow
           Left err -> do
             void $ pure $ firebaseLogEvent "ny_user_estimate_expired"
             updateLocalStage FindEstimateAndSearch
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindEstimateAndSearch, searchAfterEstimate = true } })
-        let tipViewData = if state.props.customerTip.isTipSelected then state.props.tipViewProps else HomeScreenData.initData.props.tipViewProps
-        void $ pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { customerTip = if homeScreen.props.customerTip.isTipSelected then homeScreen.props.customerTip else HomeScreenData.initData.props.customerTip{enableTips = homeScreen.props.customerTip.enableTips } , tipViewProps = tipViewData, findingQuotesProgress = 0.0 }})
-      homeScreenFlow
+            let errResp = err.response
+                codeMessage = decodeError errResp.errorMessage "errorCode"
+            if ( err.code == 400 && codeMessage == "SEARCH_REQUEST_EXPIRED") then do
+                void $ pure $ toast (getString STR.ESTIMATES_EXPIRY_ERROR)
+            else do
+                void $ pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = SearchLocationModel}})
+            currentFlowStatus
     LOCATION_SELECTED item addToRecents-> do
         void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
         void $ lift $ lift $ toggleLoader true
@@ -675,7 +717,7 @@ homeScreenFlow = do
               _          -> pure unit
         updateSourceLocation ""
         (GlobalState updatedState) <- getState
-        let bothLocationChangedState = updatedState.homeScreen
+        let bothLocationChangedState = updatedState.homeScreen{ props{ hotSpot{ selectedSpot = Nothing, centroidPoint = Nothing } } }
         (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq bothLocationChangedState.props.sourceLat bothLocationChangedState.props.sourceLong)
         let srcServiceable = sourceServiceabilityResp.serviceable
         let (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
@@ -687,7 +729,20 @@ homeScreenFlow = do
         let destServiceable = destServiceabilityResp.serviceable
         setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
         let geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = geoJson, nearByPickUpPoints=pickUpPoints},props{city = getCityNameFromCode sourceServiceabilityResp.city , isSpecialZone =  (srcSpecialLocation.geoJson) /= Nothing, confirmLocationCategory = if length pickUpPoints > 0 then (getZoneType srcSpecialLocation.category) else NOZONE, findingQuotesProgress = 0.0, locateOnMapProps{ sourceLocationName = Just srcSpecialLocation.locationName, sourceGates = Just $ pickUpPoints }}})
+            isHotSpot = null srcSpecialLocation.gatesInfo && not (null pickUpPoints)
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{ data{ polygonCoordinates = geoJson
+                                                                                              , nearByPickUpPoints=pickUpPoints}
+                                                                                        , props { defaultPickUpPoint = ""
+                                                                                                , city = getCityNameFromCode sourceServiceabilityResp.city 
+                                                                                                , isSpecialZone =  (srcSpecialLocation.geoJson) /= Nothing
+                                                                                                , confirmLocationCategory = if length pickUpPoints > 0 then (getZoneType srcSpecialLocation.category) else NOZONE
+                                                                                                , findingQuotesProgress = 0.0
+                                                                                                , locateOnMapProps{ sourceLocationName = Just srcSpecialLocation.locationName
+                                                                                                                  , sourceGates = Just $ pickUpPoints }
+                                                                                                , hotSpot{ centroidPoint = if isHotSpot then
+                                                                                                                            Just { lat : bothLocationChangedState.props.sourceLat, lng : bothLocationChangedState.props.sourceLong }
+                                                                                                                           else Nothing }
+                                                                                        }})
         when (addToRecents) $ do
           addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
           fetchAndModifyLocationLists bothLocationChangedState.data.savedLocations
@@ -790,23 +845,35 @@ homeScreenFlow = do
       homeScreenFlow
     GET_QUOTES state -> do
           setValueToLocalStore AUTO_SELECTING "false"
-          setValueToLocalStore LOCAL_STAGE (show FindingQuotes)
           setValueToLocalStore FINDING_QUOTES_POLLING "false"
           setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
           liftFlowBT $ logEvent logField_ "ny_user_request_quotes"
           liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_request_quote" $ [ {key : "Request Type", value : unsafeToForeign if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then "Auto Assign" else "Manual Assign"},
                                                                                                           {key : "Estimate Fare (₹)", value : unsafeToForeign (state.data.suggestedAmount + state.data.rateCard.additionalFare)},
                                                                                                           {key : "Estimated Ride Distance" , value : unsafeToForeign state.data.rideDistance},
-                                                                                                          {key : "Night Ride", value : unsafeToForeign state.data.rateCard.nightCharges}]
+                                                                                                          {key : "Night Ride", value : unsafeToForeign state.data.rateCard.isNightShift}]
           if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then do
             void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_auto_confirm"
             pure unit
           else do
             pure unit
           void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
-          void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing)) (state.props.estimateId)
-          homeScreenFlow
+          let topProvider = filter (\quotes -> quotes.providerType == ONUS && quotes.serviceTierName /= Just "Book Any") state.data.specialZoneQuoteList
+              mbSpecialZoneQuoteList = fromMaybe ChooseVehicle.config (head topProvider)
+              valid = timeValidity (getCurrentUTC "") mbSpecialZoneQuoteList.validTill
+          if valid then do
+            setValueToLocalStore LOCAL_STAGE $ show FindingQuotes
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = FindingQuotes}})
+            void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates) (state.props.estimateId)
+            logStatus "finding_quotes" ("estimateId : " <> state.props.estimateId)
+            homeScreenFlow
+          else do
+            void $ pure $ toast $ getString STR.ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN
+            findEstimates state
+
     SELECT_ESTIMATE state -> do
+        logStatus "setting_price" ""
+        void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
         updateLocalStage SettingPrice
         let sourceSpecialTagIcon = zoneLabelIcon state.props.zoneType.sourceTag
             destSpecialTagIcon = zoneLabelIcon state.props.zoneType.destinationTag
@@ -814,7 +881,10 @@ homeScreenFlow = do
             destMarker = (Remote.normalRoute "").destMarker
         case state.props.routeEndPoints of
           Just points -> do
-            let sourceMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = srcMarker, primaryText = points.source.place, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = sourceSpecialTagIcon, position{ lat = points.source.lat, lng = points.source.lng } }
+            let sourceAddress = if state.props.isSpecialZone && not (DS.null state.props.defaultPickUpPoint)
+                                  then state.props.defaultPickUpPoint
+                                  else state.data.source
+                sourceMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = srcMarker, primaryText = sourceAddress, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = sourceSpecialTagIcon, position{ lat = points.source.lat, lng = points.source.lng } }
                 destMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = destMarker, primaryText = points.destination.place, labelImage = destSpecialTagIcon, position{ lat = points.destination.lat, lng = points.destination.lng } }
             lift $ lift $ liftFlow $ updateMarker sourceMarkerConfig
             lift $ lift $ liftFlow $ updateMarker destMarkerConfig
@@ -827,6 +897,7 @@ homeScreenFlow = do
     CONFIRM_RIDE state -> do
           void $ pure $ enableMyLocation false
           let selectedQuote = if state.props.isSpecialZone && state.data.currentSearchResultType == QUOTES then state.data.specialZoneSelectedQuote else state.props.selectedQuote
+          logStatus "confirming_quote" selectedQuote
           if isJust selectedQuote then do
             updateLocalStage ConfirmingRide
             response  <- lift $ lift $ Remote.rideConfirm (fromMaybe "" selectedQuote)
@@ -871,21 +942,28 @@ homeScreenFlow = do
             lift $ lift $ triggerRideStatusEvent "DRIVER_ASSIGNMENT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
             homeScreenFlow
     CANCEL_RIDE_REQUEST state -> do
-      void $ pure $ currentPosition ""
-      void $ updateLocalStage HomeScreen
-      liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_rider_cancellation" $ [ {key : "Reason code", value : unsafeToForeign state.props.cancelReasonCode},
-                                                                                                      {key : "Additional info", value : unsafeToForeign state.props.cancelDescription},
-                                                                                                      {key : "Pickup", value : unsafeToForeign state.data.driverInfoCardState.source},
-                                                                                                      {key : "Estimated Ride Distance" , value : unsafeToForeign state.data.rideDistance},
-                                                                                                      {key : "Night Ride", value : unsafeToForeign state.data.rateCard.nightCharges}]
-      void $ Remote.cancelRideBT (Remote.makeCancelRequest state) (state.props.bookingId)
-      lift $ lift $ triggerRideStatusEvent "CANCELLED_PRODUCT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
-      void $ pure $ clearTimerWithId <$> state.props.waitingTimeTimerIds
-      liftFlowBT $ logEvent logField_ "ny_user_ride_cancelled_by_user"
-      liftFlowBT $ logEvent logField_ $ "ny_user_cancellation_reason: " <> state.props.cancelReasonCode
-      removeChatService ""
-      updateUserInfoToState state
-      homeScreenFlow
+      response <- lift $ lift $ Remote.cancelRide (Remote.makeCancelRequest state) (state.props.bookingId)
+      case response of
+        Right _ -> do
+          void $ pure $ currentPosition ""
+          void $ updateLocalStage HomeScreen
+          liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_rider_cancellation" $ [ {key : "Reason code", value : unsafeToForeign state.props.cancelReasonCode},
+                                                                                                          {key : "Additional info", value : unsafeToForeign state.props.cancelDescription},
+                                                                                                          {key : "Pickup", value : unsafeToForeign state.data.driverInfoCardState.source},
+                                                                                                          {key : "Estimated Ride Distance" , value : unsafeToForeign state.data.rideDistance},
+                                                                                                          {key : "Night Ride", value : unsafeToForeign state.data.rateCard.isNightShift},
+                                                                                                          {key : "BookingId", value : unsafeToForeign state.props.bookingId}]
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{autoScroll = false, isCancelRide = false,currentStage = HomeScreen, rideRequestFlow = false, isSearchLocation = NoView }})
+          lift $ lift $ triggerRideStatusEvent "CANCELLED_PRODUCT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
+          void $ pure $ clearTimerWithId <$> state.props.waitingTimeTimerIds
+          liftFlowBT $ logEvent logField_ "ny_user_ride_cancelled_by_user"
+          liftFlowBT $ logEvent logField_ $ "ny_user_cancellation_reason: " <> state.props.cancelReasonCode
+          removeChatService ""
+          updateUserInfoToState state
+          homeScreenFlow
+        Left err -> do
+          void $ pure $ toast $ getString STR.UNABLE_TO_CANCEL_RIDE
+          homeScreenFlow
     FCM_NOTIFICATION notification state-> do
         let rideID = state.data.driverInfoCardState.rideId
             srcLat = state.data.driverInfoCardState.sourceLat
@@ -902,7 +980,8 @@ homeScreenFlow = do
             setValueToLocalStore TRACKING_ENABLED "True"
             pure unit
         case notification of
-            "TRIP_STARTED"        -> do -- OTP ENTERED
+            "TRIP_STARTED"        -> do -- OTP ENTERED'
+                                      logStatus "trip_started_notification" ("bookingId : " <> state.props.bookingId)
                                       checkRideStatus true
                                       (GlobalState updatedState) <- getState
                                       let homeScreenState = updatedState.homeScreen
@@ -933,19 +1012,16 @@ homeScreenFlow = do
                                                         }
                                             currentSourceGeohash = runFn3 encodeGeohash srcLat srcLon state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
                                             currentMap = getSuggestionsMapFromLocal FunctionCall
-                                            updatedMap = addOrUpdateSuggestedTrips currentSourceGeohash currTrip false currentMap state.data.config.suggestedTripsAndLocationConfig
+                                            updatedMap = addOrUpdateSuggestedTrips currentSourceGeohash currTrip false currentMap state.data.config.suggestedTripsAndLocationConfig false
                                         void $ pure $ setSuggestionsMap updatedMap
-                                        modifyScreenState $ HomeScreenStateType (\homeScreen -> newState{data{suggestionsData{suggestionsMap = getSuggestionsMapFromLocal FunctionCall }}})
+                                        modifyScreenState $ HomeScreenStateType (\homeScreen -> newState{data{suggestionsData{suggestionsMap = getSuggestionsMapFromLocal FunctionCall }}, props{showAcWorkingPopup = true}})
                                         lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
                                       removeChatService ""
                                       homeScreenFlow
             "TRIP_FINISHED"       -> do -- TRIP FINISHED
+                                      logStatus "trip_finished_notification" ("bookingId : " <> state.props.bookingId)
                                       void $ pure $ JB.exitLocateOnMap ""
-                                      if (getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "false") then do
-                                        void $ pure $ metaLogEvent "ny_user_first_ride_completed"
-                                        (GetProfileRes response) <- Remote.getProfileBT ""
-                                        setValueToLocalStore HAS_TAKEN_FIRST_RIDE ( show response.hasTakenRide)
-                                        else pure unit
+                                      firstRideCompletedEvent ""
                                       let sourceSpecialTagIcon = zoneLabelIcon state.props.zoneType.sourceTag
                                           destSpecialTagIcon = zoneLabelIcon state.props.zoneType.destinationTag
                                       void $ pure $ metaLogEvent "ny_user_ride_completed"
@@ -992,6 +1068,7 @@ homeScreenFlow = do
                                         homeScreenFlow
                                         else homeScreenFlow
             "CANCELLED_PRODUCT"   -> do -- REMOVE POLYLINES
+                                      logStatus "ride_cancelled_notification" ("bookingId : " <> state.props.bookingId)
                                       void $ pure $ JB.exitLocateOnMap ""
                                       void $ pure $ removeAllPolylines ""
                                       void $ updateLocalStage HomeScreen
@@ -1008,19 +1085,22 @@ homeScreenFlow = do
                                         modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DISABLED})
                                         permissionScreenFlow
                                       else homeScreenFlow
-            "DRIVER_ASSIGNMENT"   -> if (not (isLocalStageOn RideAccepted || isLocalStageOn RideStarted )) then do
-                                        setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
-                                        void $ liftFlowBT $ logEvent logField_ "ny_fs_driver_assignment"
-                                        lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
-                                        checkRideStatus true
-                                        homeScreenFlow
-                                     else homeScreenFlow
+            "DRIVER_ASSIGNMENT"   -> do
+                                      logStatus "ride_assigned_notification" ("bookingId : " <> state.props.bookingId)
+                                      if (not (isLocalStageOn RideAccepted || isLocalStageOn RideStarted )) then do
+                                         setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
+                                         void $ liftFlowBT $ logEvent logField_ "ny_fs_driver_assignment"
+                                         lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
+                                         checkRideStatus true
+                                         homeScreenFlow
+                                      else homeScreenFlow
             "REALLOCATE_PRODUCT"  -> do
+                                      logStatus "ride_reallocated_notification" ("estimateId : " <> state.props.estimateId)
                                       void $ pure $ JB.exitLocateOnMap ""
                                       void $ pure $ removeAllPolylines ""
                                       removeChatService ""
                                       setValueToLocalStore PICKUP_DISTANCE "0"
-                                      (GlobalState updatedState) <- getState
+                                      (GlobalState updatedState) <- getState 
                                       let homeScreenState = updatedState.homeScreen{data { quoteListModelState = [] }, props { isBanner = state.props.isBanner, currentStage = ReAllocated, estimateId = updatedState.homeScreen.props.estimateId, reAllocation { showPopUp = true }, tipViewProps { isVisible = updatedState.homeScreen.props.tipViewProps.activeIndex >= 0 }, selectedQuote = Nothing, isCancelRide = false, cancelSearchCallDriver = false}}
                                       let updatedState = case (getTipViewData "LazyCheck") of
                                                           Just (TipViewData tipView) -> homeScreenState{ props{ tipViewProps{ stage = tipView.stage , activeIndex = tipView.activeIndex , isVisible = tipView.activeIndex >= 0 } } }
@@ -1037,9 +1117,11 @@ homeScreenFlow = do
             _
               | any (_ == notification) [ "SOS_MOCK_DRILL", "SOS_MOCK_DRILL_NOTIFY" ] -> do
               updateFollower true false $ Just notification
-            "SOS_TRIGGERED" -> 
+            "SOS_TRIGGERED" -> do
+              logStatus "sos_triggered_notification" ""
               updateFollower true false Nothing
             "SAFETY_ALERT_DEVIATION" -> do
+              logStatus "safety_alert_deviation_notification" ""
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetyAlertType = Just ST.DEVIATION } })
               homeScreenFlow
             _                     -> homeScreenFlow
@@ -1052,6 +1134,7 @@ homeScreenFlow = do
       void $ pure $ deleteValueFromLocalStore CUSTOMER_ID
       void $ pure $ deleteValueFromLocalStore CONTACTS
       void $ pure $ deleteValueFromLocalStore USER_EMAIL
+      void $ pure $ deleteValueFromLocalStore CUSTOMER_FIRST_RIDE
       void $ pure $ factoryResetApp ""
       void $ pure $ clearCache ""
       void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_logout"
@@ -1061,8 +1144,8 @@ homeScreenFlow = do
       enterMobileNumberScreenFlow -- Removed choose langauge screen
     SUBMIT_RATING state -> do
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_ride_give_feedback" $ [{key : "Rating", value : unsafeToForeign state.data.ratingViewState.selectedRating}]
-      void $ Remote.bookingFeedbackBT (Remote.makeRideFeedBackReq (state.data.rideRatingState.rideId) (state.data.rideRatingState.feedbackList))
-      void $ Remote.rideFeedbackBT (getfeedbackReq state)
+      void $ lift $ lift $ fork $ HelpersAPI.callApi $ Remote.makeRideFeedBackReq state.data.rideRatingState.rideId state.data.rideRatingState.feedbackList
+      void $ lift $ lift $ fork $ HelpersAPI.callApi $ getfeedbackReq state
       void $ updateLocalStage HomeScreen
       let finalAmount = if state.data.finalAmount == 0 then state.data.rideRatingState.finalAmount else state.data.finalAmount
       let bookingId = if state.props.bookingId == "" then state.data.rideRatingState.bookingId else state.props.bookingId
@@ -1216,7 +1299,9 @@ homeScreenFlow = do
           (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
           cityName = getCityNameFromCode sourceServiceabilityResp.city
           pickUpPoints = mapSpecialZoneGates srcSpecialLocation.gatesInfo
-          gateAddress = fromMaybe HomeScreenData.dummyLocation (head pickUpPoints)
+          gateAddress = if DS.null state.props.defaultPickUpPoint
+                          then HomeScreenData.dummyLocation
+                          else fromMaybe HomeScreenData.dummyLocation (Arr.find (\pickupPoint -> pickupPoint.place == state.props.defaultPickUpPoint) pickUpPoints)
       setValueToLocalStore CUSTOMER_LOCATION $ show cityName
       checkForSpecialZoneAndHotSpots state (ServiceabilityRes sourceServiceabilityResp) lat lon
       let cachedLat = (if state.props.isSource == Just true then state.props.locateOnMapLocation.sourceLat else state.props.locateOnMapLocation.destinationLat)
@@ -1239,7 +1324,7 @@ homeScreenFlow = do
             })
       (GlobalState globalState) <- getState
       let state = globalState.homeScreen
-      if isMoreThan20Meters || cachedLocation == "" then do
+      if isMoreThan20Meters || cachedLocation == "" || (state.props.isSource == Just true && isJust gateAddress.address) then do
         fullAddress <- getPlaceName lat lon gateAddress true
         case fullAddress of 
           Just (PlaceName placeDetails) -> do
@@ -1283,7 +1368,9 @@ homeScreenFlow = do
           (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
           pickUpPoints = mapSpecialZoneGates srcSpecialLocation.gatesInfo
           cityName = getCityNameFromCode sourceServiceabilityResp.city
-          geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
+          gateAddress = if DS.null state.props.defaultPickUpPoint
+                          then HomeScreenData.dummyLocation
+                          else fromMaybe HomeScreenData.dummyLocation (Arr.find (\pickupPoint -> pickupPoint.place == state.props.defaultPickUpPoint) pickUpPoints)
       setValueToLocalStore CUSTOMER_LOCATION $ show cityName
       checkForSpecialZoneAndHotSpots state (ServiceabilityRes sourceServiceabilityResp) lat lon
       let distanceBetweenLatLong = getDistanceBwCordinates lat lon state.props.locateOnMapLocation.sourceLat state.props.locateOnMapLocation.sourceLng
@@ -1297,8 +1384,7 @@ homeScreenFlow = do
             city = cityName
             }
           })
-      if isMoreThan20Meters then do
-        let gateAddress = fromMaybe HomeScreenData.dummyLocation (head pickUpPoints)
+      if isMoreThan20Meters || isJust gateAddress.address then do
         fullAddress <- getPlaceName lat lon gateAddress true
         case fullAddress of
           Just (PlaceName address) -> do
@@ -1464,7 +1550,10 @@ homeScreenFlow = do
       let updatedRecents = getUpdatedLocationList state.data.recentSearchs.predictionArray  state.data.saveFavouriteCard.selectedItem.placeId
       modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{locationList = updatedLocationList, recentSearchs{predictionArray = updatedRecents},savedLocations = (AddNewAddress.getSavedLocations savedLocationResp.list)}})
       homeScreenFlow
-    GO_TO_REFERRAL -> referralScreenFlow
+    GO_TO_REFERRAL referralType -> do
+      let referralCode = getValueToLocalStore CUSTOMER_REFERRAL_CODE
+      modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { referralType = referralType, referralCode = if any (_ == referralCode) ["__failed", ""] then "" else referralCode })
+      referralScreenFlow
     ON_CALL state callType exophoneNumber -> do
       (OnCallRes res) <- Remote.onCallBT (Remote.makeOnCallReq state.data.driverInfoCardState.rideId (show callType) exophoneNumber)
       homeScreenFlow
@@ -1551,6 +1640,9 @@ homeScreenFlow = do
           modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props{reportPastRide = isRideCompleted}, data{lastRideDetails = if isRideCompleted then Arr.head $ myRideListTransformer true [state.data.ratingViewState.rideBookingRes] else Nothing}})
           activateSafetyScreenFlow
         false -> safetySettingsFlow
+    GO_TO_SAFETY_SETTING_SCREEN -> do
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props{isOffUs = true } })
+      safetySettingsFlow
     SAFETY_SUPPORT state isSafe -> do
       res <- lift $ lift $ Remote.sendSafetySupport $ Remote.makeAskSupportRequest state.props.bookingId isSafe $ "User need help - Ride on different route"
       case res of
@@ -1602,7 +1694,54 @@ homeScreenFlow = do
       safetyEducationFlow
     REPEAT_SEARCH state -> do
       cancelEstimate state.props.estimateId
-      findEstimates state
+      let topProvider = filter (\quotes -> quotes.providerType == ONUS && quotes.serviceTierName /= Just "Book Any") state.data.specialZoneQuoteList
+          mbSpecialZoneQuoteList = fromMaybe ChooseVehicle.config (head topProvider)
+          valid = timeValidity (getCurrentUTC "") mbSpecialZoneQuoteList.validTill
+
+      if (valid) then do
+        updateLocalStage SettingPrice
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{currentStage = SettingPrice}})
+        homeScreenFlow
+        else do
+          findEstimates state
+      
+    GOTO_CONFIRMING_LOCATION_STAGE finalState -> do
+      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = finalState.props.sourceLat, lon = finalState.props.sourceLong, geoJson = finalState.data.polygonCoordinates, points = finalState.data.nearByPickUpPoints, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" finalState.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon finalState.props.confirmLocationCategory }}
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true, locateOnMapLocation{sourceLat = finalState.props.sourceLat, sourceLng = finalState.props.sourceLong, source = finalState.data.source, sourceAddress = finalState.data.sourceAddress }, locateOnMapProps{ cameraAnimatedToSource = false } }})
+      void $ pure $ updateLocalStage ConfirmingLocation
+      void $ lift $ lift $ toggleLoader false
+      homeScreenFlow
+    UPDATE_REFERRAL_CODE referralCode -> do
+      referralAppliedStatus <- applyReferralCode referralCode
+      case referralAppliedStatus of
+        REFERRAL_APPLIED -> do
+          void $ pure $ hideKeyboardOnNavigation true
+          _ <- UI.successScreen "" ""
+          modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { showThanks = true, referralComponentProps{ stage = ST.APPLIED_POPUP } })
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{isReferred = true, referralComponentProps{ stage = NO_REFERRAL_STAGE }, referral{ referralStatus = NO_REFERRAL, showAddReferralPopup = false }} })
+        REFERRAL_INVALID -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props{ referralComponentProps{ isInvalidCode = true } } })
+        _ -> pure unit
+      homeScreenFlow
+    GO_TO_RIDE_RELATED_ISSUES state -> do
+      let rideId = state.data.driverInfoCardState.rideId
+          language = fetchLanguage $ getLanguageLocale languageKey 
+      void $ lift $ lift $ toggleLoader true
+      categoryId <- fetchParticularIssueCategory "RIDE_RELATED"
+      case categoryId of
+        Just categoryId -> do
+          (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language categoryId "" ""
+          let getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj { option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) getOptionsRes.options
+              messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500*(index + 1))) getOptionsRes.messages
+              chats' = map (\(Message currMessage) -> Chat {chatId : currMessage.id, 
+                                                            chatType : "IssueMessage", 
+                                                            timestamp : (getCurrentUTC "")} )getOptionsRes.messages
+          void $ lift $ lift $ toggleLoader false
+          modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data {entryPoint = ReportIssueChatScreenData.HomeScreenEntry, chats = chats', tripId = Just rideId, categoryName = "Ride Related Issue", categoryId = categoryId, options = getOptionsRes', chatConfig { messages = messages' },  selectedRide = Nothing } } )
+          flowRouter IssueReportChatScreenFlow
+        Nothing -> do
+          void $ lift $ lift $ toggleLoader false
+          void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+          homeScreenFlow
     _ -> homeScreenFlow
 
 findEstimates :: HomeScreenState -> FlowBT String Unit
@@ -1630,12 +1769,18 @@ findEstimates updatedState = do
   let currentTime = (convertUTCtoISC (getCurrentUTC "") "h:mm:ss A")
       currentDate =  getCurrentDate ""
       markers = Remote.normalRoute ""
-      srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker, primaryText = state.data.source, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = zoneLabelIcon state.props.zoneType.sourceTag}
+      sourceAddress = if state.props.isSpecialZone && not (DS.null state.props.defaultPickUpPoint)
+                        then state.props.defaultPickUpPoint
+                        else state.data.source
+      srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker, primaryText = sourceAddress, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = zoneLabelIcon state.props.zoneType.sourceTag}
       destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = state.data.destination, labelImage = zoneLabelIcon state.props.zoneType.destinationTag }
   void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show updatedState.props.sourceLat) <> " long: " <> (show updatedState.props.sourceLong))},
                                       {key : "Latest Search", value : (unsafeToForeign $ currentDate <> " " <> currentTime)}]
-  (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress state.props.rideSearchProps.sourceManuallyMoved state.props.rideSearchProps.destManuallyMoved state.props.rideSearchProps.sessionId state.props.isSpecialZone)
+  let rideSearchReq = Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress state.props.rideSearchProps.sourceManuallyMoved state.props.rideSearchProps.destManuallyMoved state.props.rideSearchProps.sessionId state.props.isSpecialZone
+  (SearchRes rideSearchRes) <- Remote.rideSearchBT rideSearchReq
+  void $ pure $ setValueToLocalStore STARTED_ESTIMATE_SEARCH "FALSE"
   routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong srcMarkerConfig destMarkerConfig "NORMAL" rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
+  logStatus "ride_search" rideSearchRes
   void $ pure $ deleteValueFromLocalStore TIP_VIEW_DATA
   case rideSearchRes.routeInfo of
     Just (Route response) -> do
@@ -1654,7 +1799,7 @@ findEstimates updatedState = do
       --   updateLocalStage DistanceOutsideLimits
       --   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation, findingQuotesProgress = 0.0, isShorterTrip = false}})
       --   homeScreenFlow
-      if ( (response.distance < 500  || isDistMoreThanThreshold )&& Arr.all (_ == false ) [ isLocalStageOn PickUpFarFromCurrentLocation , isLocalStageOn ShortDistance]) then do 
+      if ( (response.distance < 500  || isDistMoreThanThreshold )&& Arr.all (_ == false )  [ isLocalStageOn PickUpFarFromCurrentLocation , isLocalStageOn ShortDistance]) && not state.props.isSearchCancelled then do 
           let currentStage = if isDistMoreThanThreshold then PickUpFarFromCurrentLocation else ShortDistance
           updateLocalStage currentStage
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = currentStage ,rideRequestFlow = true, isSearchLocation = SearchLocation, distance = response.distance, isShorterTrip = response.distance < 500, findingQuotesProgress = 0.0}})
@@ -1670,7 +1815,7 @@ findEstimates updatedState = do
                                                   , destLabelIcon : Just $ zoneLabelIcon state.props.zoneType.destinationTag
                                                   , sourceGeoJson : if DS.null state.data.polygonCoordinates then Nothing else Just $ state.data.polygonCoordinates 
                                                   , sourceGates : if null state.data.nearByPickUpPoints then Nothing else Just $ state.data.nearByPickUpPoints })
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, selectedQuote = Nothing, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, findingQuotesProgress = 0.0}, data{nearByDrivers = Nothing, quoteListModelState = []}})
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, selectedQuote = Nothing, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, findingQuotesProgress = 0.0}, data{nearByDrivers = Nothing}})
   updateLocalStage FindingEstimate
   homeScreenFlow
 
@@ -1791,19 +1936,16 @@ rideSearchFlow flowType = do
           pure $ removeAllPolylines ""
           liftFlowBT $ setMapPadding 0 0 0 0
           if finalState.data.source == (getString STR.CURRENT_LOCATION) then void $ pure $ currentPosition "" else pure unit
-          if os == "IOS" && finalState.props.currentStage == HomeScreen then 
-            pure unit 
-          else 
-            liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = finalState.props.sourceLat, lon = finalState.props.sourceLong, geoJson = finalState.data.polygonCoordinates, points = finalState.data.nearByPickUpPoints, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" finalState.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon finalState.props.confirmLocationCategory }}
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true, locateOnMapLocation{sourceLat = finalState.props.sourceLat, sourceLng = finalState.props.sourceLong, source = finalState.data.source, sourceAddress = finalState.data.sourceAddress}}})
-          void $ pure $ updateLocalStage ConfirmingLocation
-          void $ lift $ lift $ toggleLoader false
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = GoToConfirmLocation}})
+          void $ pure $ updateLocalStage GoToConfirmLocation
         true -> do
           let currentTime = (convertUTCtoISC (getCurrentUTC "") "h:mm:ss A")
               currentDate =  getCurrentDate ""
           void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show finalState.props.sourceLat) <> " long: " <> (show finalState.props.sourceLong))},
                                               {key : "Latest Search", value : unsafeToForeign (currentDate <> " " <> currentTime)}]
-          (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress finalState.props.rideSearchProps.sourceManuallyMoved finalState.props.rideSearchProps.destManuallyMoved finalState.props.rideSearchProps.sessionId finalState.props.isSpecialZone)
+          let rideSearchReq = Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress finalState.props.rideSearchProps.sourceManuallyMoved finalState.props.rideSearchProps.destManuallyMoved finalState.props.rideSearchProps.sessionId finalState.props.isSpecialZone
+          (SearchRes rideSearchRes) <- Remote.rideSearchBT rideSearchReq
+          void $ pure $ setValueToLocalStore STARTED_ESTIMATE_SEARCH "FALSE"
           void $ pure $ deleteValueFromLocalStore TIP_VIEW_DATA
           void $ liftFlowBT $ setFlowStatusData 
             ( FlowStatusData 
@@ -1948,8 +2090,15 @@ tripDetailsScreenFlow = do
       tripDetailsScreenFlow 
     GO_TO_ISSUE_CHAT_SCREEN updatedState selectedCategory -> do
       let language = fetchLanguage $ getLanguageLocale languageKey
+      currentIssueList <- if selectedCategory.categoryAction == "RIDE_RELATED" 
+                              then do
+                                (FetchIssueListResp issueListResponse) <- Remote.fetchIssueListBT language
+                                let issues = getApiIssueList issueListResponse.issues
+                                pure $ getUpdatedIssueList ["OPEN", "PENDING", "RESOLVED", "REOPENED"] issues 
+                              else pure []
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" ""
-      let options' = mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) getOptionsRes.options
+      let filteredOptions = UI.transformIssueOptions getOptionsRes.options (Just updatedState.data.selectedItem) currentIssueList
+          options' = mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) filteredOptions
           messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))getOptionsRes.messages
           chats' = map (\(Message currMessage) -> Chat {
                       chatId : currMessage.id,
@@ -1958,7 +2107,7 @@ tripDetailsScreenFlow = do
                     }) getOptionsRes.messages
           categoryName = getTitle selectedCategory.categoryAction
           merchantExoPhone' = if updatedState.data.selectedItem.merchantExoPhone == "" then Nothing else Just updatedState.data.selectedItem.merchantExoPhone
-      modifyScreenState $ ReportIssueChatScreenStateType (\ reportIssueChatState -> reportIssueChatState { data { merchantExoPhone = merchantExoPhone',  selectedRide = Just updatedState.data.selectedItem, entryPoint = ReportIssueChatScreenData.TripDetailsScreenEntry, chats = chats', categoryName = categoryName, categoryId = selectedCategory.categoryId, options = options', chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{messages = messages'} }})
+      modifyScreenState $ ReportIssueChatScreenStateType (\ reportIssueChatState -> reportIssueChatState { data { merchantExoPhone = merchantExoPhone',  selectedRide = Just updatedState.data.selectedItem, entryPoint = ReportIssueChatScreenData.TripDetailsScreenEntry, chats = chats', categoryName = categoryName, categoryId = selectedCategory.categoryId, options = options', chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{messages = messages'}, tripId = Just updatedState.data.selectedItem.rideId }})
       flowRouter IssueReportChatScreenFlow
 
 
@@ -2268,7 +2417,7 @@ savedLocationFlow = do
       addNewAddressScreenFlow "edit Location"
 
     GO_BACK_FROM_SAVED_LOCATION -> do
-      void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
+      void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag if os == "IOS" then "CustomerHomeScreenMap" else "CustomerHomeScreen")
       homeScreenFlow
   pure unit
 
@@ -2335,7 +2484,7 @@ addNewAddressScreenFlow input = do
                                                           }
                                                         } )
         when (not state.props.fromHome) $ do
-          void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
+          void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag if os == "IOS" then "CustomerHomeScreenMap" else "CustomerHomeScreen")
         homeScreenFlow
       else savedLocationFlow
 
@@ -2345,7 +2494,9 @@ addNewAddressScreenFlow input = do
           (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
           pickUpPoints =  mapSpecialZoneGates srcSpecialLocation.gatesInfo
           geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
-          gateAddress = (fromMaybe HomeScreenData.dummyLocation ((filter( \ (item) -> (item.place == state.props.defaultPickUpPoint)) pickUpPoints) !! 0))
+          gateAddress = if DS.null state.props.defaultPickUpPoint
+                          then HomeScreenData.dummyLocation
+                          else fromMaybe HomeScreenData.dummyLocation (Arr.find (\pickupPoint -> pickupPoint.place == state.props.defaultPickUpPoint) pickUpPoints)
       if not (DS.null geoJson) && not (null pickUpPoints) && (geoJson /= state.data.polygonCoordinates || pickUpPoints /= state.data.nearByPickUpPoints) then do
         modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> addNewAddressScreen{  data { polygonCoordinates = geoJson
                                                                                                              , nearByPickUpPoints = pickUpPoints
@@ -2454,39 +2605,22 @@ addNewAddressScreenFlow input = do
 
 referralScreenFlow :: FlowBT String Unit
 referralScreenFlow = do
+  modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { referralCode = getValueToLocalStore CUSTOMER_REFERRAL_CODE })
   flow <- UI.referralScreen
   case flow of
     UPDATE_REFERRAL referralCode -> do
-      let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
-          requiredData = initialData{referralCode = (Just referralCode)}
-      res <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
-      case res of
-        Right response -> do
-          modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { showThanks = true })
-          setValueToLocalStore REFERRAL_STATUS "REFERRED_NOT_TAKEN_RIDE"
+      referralAppliedStatus <- applyReferralCode referralCode
+      case referralAppliedStatus of
+        REFERRAL_APPLIED -> do
+          modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { showThanks = true, referralComponentProps{ stage = ST.APPLIED_POPUP } })
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{isReferred = true} })
-        Left err -> do
-          if ((err.code == 500 && (decodeError err.response.errorMessage "errorCode") == "BPP_INTERNAL_API_ERROR")) then
-            modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { isInvalidCode = true })
-          else do
-            void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-            pure unit
+        REFERRAL_INVALID -> modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { isInvalidCode = true, referralComponentProps{ isInvalidCode = true } })
+        _ -> pure unit
       referralScreenFlow
     BACK_TO_HOME -> do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreen.initData)
       void $ lift $ lift $ liftFlow $ adjustViewWithKeyboard "true"
       homeScreenFlow
-
-drawDottedRoute :: HomeScreenState -> FlowBT String Unit
-drawDottedRoute state = do
-  void $ pure $ removeAllPolylines ""
-  let srcMarkerConfig = defaultMarkerConfig{ pointerIcon = "ny_ic_auto_map" }
-      destMarkerConfig = defaultMarkerConfig{ pointerIcon = if state.props.currentStage == RideAccepted then "src_marker" else "dest_marker" }
-      srcLat = state.data.driverInfoCardState.driverLat
-      srcLng = state.data.driverInfoCardState.driverLng
-      destLat = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
-      destLng = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
-  void $ liftFlowBT $ runEffectFn9 drawRoute (Remote.walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
 
 isForLostAndFound :: Boolean
 isForLostAndFound = true
@@ -2544,108 +2678,29 @@ fetchAndModifyLocationLists savedLocationResp = do
     let state = currentState.homeScreen
         suggestionsConfig = state.data.config.suggestedTripsAndLocationConfig
     recentPredictionsObject <- lift $ lift $ getObjFromLocal currentState.homeScreen
-    let {savedLocationsWithOtherTag, recents, suggestionsMap, tripArrWithNeighbors, updateFavIcon} = getHelperLists savedLocationResp recentPredictionsObject currentState.homeScreen
-        sortedTripList =  
-          Arr.take 30 
-            $ filter 
-                (\item -> isPointWithinXDist item state state.data.config.suggestedTripsAndLocationConfig.tripWithinXDist) 
-            $ Arr.reverse 
-                (Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) tripArrWithNeighbors)
-        
-        updatedLocationList = updateLocListWithDistance updateFavIcon state.props.sourceLat state.props.sourceLong true state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
-    
+    let 
+      { savedLocationsWithOtherTag
+      , recentlySearchedLocations
+      , suggestionsMap
+      , trips
+      , suggestedDestinations
+      } = getHelperLists savedLocationResp recentPredictionsObject currentState.homeScreen state.props.sourceLat state.props.sourceLong
     updateSavedLocations savedLocationResp 
-    modifyScreenState $ GlobalPropsType (\globalProps -> globalProps{cachedSearches = updatedLocationList , recentSearches = recents, savedLocations = savedLocationResp})
-    modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{data{locationList = updatedLocationList}})
+    modifyScreenState $ GlobalPropsType (\globalProps -> globalProps{cachedSearches = suggestedDestinations , recentSearches = recentlySearchedLocations, savedLocations = savedLocationResp})
+    modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{data{locationList = suggestedDestinations}})
     modifyScreenState $ 
       HomeScreenStateType 
         (\homeScreen -> 
           homeScreen
             { data
               { savedLocations = savedLocationResp
-              , recentSearchs {predictionArray = recents}
-              , locationList = updatedLocationList
-              , destinationSuggestions = updatedLocationList
+              , recentSearchs {predictionArray = recentlySearchedLocations}
+              , locationList = suggestedDestinations
+              , destinationSuggestions = suggestedDestinations
               , suggestionsData{suggestionsMap = suggestionsMap}
-              , tripSuggestions = removeDuplicateTrips sortedTripList suggestionsConfig.destinationGeohashPrecision
+              , tripSuggestions = removeDuplicateTrips trips suggestionsConfig.destinationGeohashPrecision
               }
             })
-    where
-
-      removeDuplicateTrips :: Array Trip -> Int -> Array Trip
-      removeDuplicateTrips trips precision = 
-        let 
-          grouped = groupBy 
-            (\trip1 trip2 -> 
-              (getGeoHash trip1.destLat trip1.destLong precision) 
-              == 
-              (getGeoHash trip2.destLat trip2.destLong precision)
-              && trip1.serviceTierNameV2 == trip2.serviceTierNameV2
-            ) 
-            trips
-
-          maxScoreTrips = map 
-            (maximumBy (comparing (\trip -> trip.locationScore))) 
-            grouped
-        in 
-          catMaybes maxScoreTrips
-
-      isPointWithinXDist :: Trip -> HomeScreenState -> Number -> Boolean
-      isPointWithinXDist item state thresholdDist =
-        let sourceLat = if state.props.sourceLat == 0.0 then fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT else state.props.sourceLat
-            sourceLong = if state.props.sourceLong == 0.0 then fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON else state.props.sourceLong
-        in
-          getDistanceBwCordinates 
-            item.sourceLat 
-            item.sourceLong 
-            sourceLat
-            sourceLong
-            <= thresholdDist
-      
-      locationEquality :: LocationListItemState -> LocationListItemState -> Boolean
-      locationEquality a b = a.lat == b.lat && a.lon == b.lon
-
-
-      getMapValuesArray :: forall k v. Map.Map k v -> Array v
-      getMapValuesArray = foldMap singleton
-
-      getHelperLists savedLocationLists recentPredictionsObject state = 
-        let suggestionsConfig = state.data.config.suggestedTripsAndLocationConfig
-            homeWorkImages = [fetchImage FF_ASSET "ny_ic_home_blue", fetchImage FF_ASSET "ny_ic_work_blue"]
-            isHomeOrWorkImage = \listItem -> any (_ == listItem.prefixImageUrl) homeWorkImages
-            savedLocationWithHomeOrWorkTag = filter isHomeOrWorkImage savedLocationResp
-            recents = differenceOfLocationLists recentPredictionsObject.predictionArray savedLocationWithHomeOrWorkTag
-            savedLocationsWithOtherTag = filter (not <<< isHomeOrWorkImage) savedLocationResp
-            suggestionsMap = getSuggestionsMapFromLocal FunctionCall
-            currentGeoHash = getGeoHash state.props.sourceLat state.props.sourceLong suggestionsConfig.geohashPrecision
-            geohashNeighbors = Arr.cons currentGeoHash $ geohashNeighbours currentGeoHash
-            currentGeoHashDestinations = fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations currentGeoHash suggestionsMap suggestionsConfig.geohashLimitForMap)
-            arrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).destinationSuggestions) geohashNeighbors)
-            tripArrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).tripSuggestions) geohashNeighbors)
-            sortedDestinationsList = Arr.take 30 (Arr.reverse (Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) arrWithNeighbors))
-            suggestedDestinationsArr = differenceOfLocationLists sortedDestinationsList savedLocationWithHomeOrWorkTag
-
-            allValuesFromMap = concat $ map (\item -> item.tripSuggestions)(getMapValuesArray suggestionsMap)
-            sortedValues = Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) allValuesFromMap
-            reversedValues = Arr.reverse sortedValues
-            topValues = Arr.take 30 reversedValues
-            topTripDestinatiions = map (\item -> getLocationFromTrip Destination item state.props.sourceLat state.props.sourceLong) topValues
-            
-            recentSearchesWithoutSuggested =  differenceOfLocationLists recents suggestedDestinationsArr
-            topTripDestinatiionsWoutSuggested = differenceOfLocationLists (differenceOfLocationLists topTripDestinatiions suggestedDestinationsArr) savedLocationWithHomeOrWorkTag
-            smartSuggestions = if null suggestedDestinationsArr then topTripDestinatiionsWoutSuggested else suggestedDestinationsArr
-            sugestedFinalList =  nubByEq locationEquality $ smartSuggestions <> (Arr.take (suggestionsConfig.locationsToBeStored - (length smartSuggestions)) recentSearchesWithoutSuggested)
-            
-
-            updateFavIcon = 
-              map (\item ->
-                  item { postfixImageUrl =  
-                          if not (checkPrediction item savedLocationsWithOtherTag) 
-                            then fetchImage FF_ASSET "ny_ic_fav_red"
-                            else fetchImage FF_ASSET "ny_ic_fav" 
-                      }
-                  ) sugestedFinalList
-        in {savedLocationsWithOtherTag, recents, suggestionsMap, tripArrWithNeighbors, updateFavIcon}
 
 
 addLocToCurrLoc :: Number -> Number -> String -> FlowBT String Unit
@@ -2726,8 +2781,7 @@ updateFlowStatus eventType = do
           let errResp = err.response
               codeMessage = decodeError errResp.errorMessage "errorCode"
           when ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_EXISTS") $ do
-            void $ pure $ toast $ getString STR.IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_
-            checkRideStatus false
+            currentFlowStatus
 
 getTicketBookings :: Array TicketBookingItem -> Array TicketBookingItem -> TicketBookings
 getTicketBookings bookedRes pendingRes = {
@@ -2756,28 +2810,16 @@ cancelEstimate bookingId = do
                 else do
                   void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_cancel_waiting_for_quotes"
                   pure unit
-            "BookingAlreadyCreated" -> do
-              void $ pure $ toast $ getString STR.IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_
-              void $ liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_booking_exists_right"
-              checkRideStatus true
-              (GlobalState updatedState) <- getState
-              let homeScreenState = updatedState.homeScreen
-              let updatedState = homeScreenState{ props{ tipViewProps = HomeScreenData.initData.props.tipViewProps } }
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState)
-              void $ pure $ setTipViewData (TipViewData { stage : DEFAULT , activeIndex :  -1 , isVisible : false })
-              homeScreenFlow
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isSearchCancelled = true}})
             _ -> do
-              void $ pure $ toast $ getString STR.CANCELLATION_UNSUCCESSFULL_PLEASE_TRY_AGAIN
-              void $ liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_failed_right"
-              homeScreenFlow
+              void $ liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_booking_exists_right"
+              currentFlowStatus
         Left err -> do
           let errResp = err.response
               codeMessage = decodeError errResp.errorMessage "errorCode"
           if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_EXISTS") then do
-            void $ pure $ toast $ getString STR.IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_
             void $ liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_booking_exists_left"
-            checkRideStatus true
-            homeScreenFlow
+            currentFlowStatus
           else do
             void $ pure $ toast $ getString STR.CANCELLATION_UNSUCCESSFULL_PLEASE_TRY_AGAIN
             void $ liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_failed_left"
@@ -2891,15 +2933,18 @@ rideCompletedDetails (RideBookingRes resp) = do
       finalAmount =  getFinalAmount (RideBookingRes resp)
       timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
       nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
+      actualTollCharge = maybe dummyPrice (\obj ->  obj^._amountWithCurrency) $ Arr.find (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.fareBreakup)
 
   [ {key : "Estimate ride distance (km)", value : unsafeToForeign (fromMaybe 0 contents.estimatedDistance/1000)},
           {key : "Actual ride distance (km)", value : unsafeToForeign ((fromMaybe 0 ride.chargeableRideDistance)/1000)},
           {key : "Difference between estimated and actual ride distance (km)" , value : unsafeToForeign (differenceOfDistance/1000)},
-          {key : "Total Estimated fare (₹)",value : unsafeToForeign (resp.estimatedFare)},
-          {key : "Total Actual fare (₹)",value : unsafeToForeign (finalAmount)},
-          {key : "Difference between estimated and actual fares (₹)",value : unsafeToForeign (resp.estimatedFare - finalAmount)},
-          {key : "Driver pickup charges (₹)",value : unsafeToForeign "10"},
-          {key : "Night ride",value : unsafeToForeign nightChargesVal}]
+          {key : "Total Estimated fare (₹)", value : unsafeToForeign (resp.estimatedFare)},
+          {key : "Total Actual fare (₹)", value : unsafeToForeign (finalAmount)},
+          {key : "Difference between estimated and actual fares (₹)", value : unsafeToForeign (resp.estimatedFare - finalAmount)},
+          {key : "Driver pickup charges (₹)", value : unsafeToForeign "10"},
+          {key : "Night ride", value : unsafeToForeign nightChargesVal},
+          {key : "Actual Toll Charges", value : unsafeToForeign actualTollCharge.amount},
+          {key : "Has Toll", value : unsafeToForeign (maybe false (\charge -> charge.amount /= 0.0) (Just actualTollCharge))}]
 
 personStatsData :: PersonStatsRes -> GetProfileRes -> Array ClevertapEventParams
 personStatsData (PersonStatsRes resp) (GetProfileRes response) = [{key : "First ride taken" , value : unsafeToForeign if response.hasTakenRide then "true" else "false"},
@@ -3746,7 +3791,6 @@ predictionClickedFlow prediction state = do
         modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{data{ srcLoc = src, destLoc = dest , srcCode = srcCode, destCode = destCode}, props {isButtonActive = true}})
         metroTicketBookingFlow
       else do
-        void $ pure $ spy "else do" state
         if state.props.focussedTextField == Just SearchLocPickup then 
           void $ pure $ showKeyboard (getNewIDWithTag (show SearchLocPickup))
           else do
@@ -4001,7 +4045,7 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
       pickUpPoints = mapSpecialZoneGates srcSpecialLocation.gatesInfo
       geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
       zoneType = getZoneType srcSpecialLocation.category
-      canUpdateHotSpots = maybe true (\point -> (getDistanceBwCordinates lat lon point.lat point.lng) * 1000.0 > 150.0) state.props.hotSpot.centroidPoint
+      canUpdateHotSpots = maybe true (\point -> (getDistanceBwCordinates lat lon point.lat point.lng) * 1000.0 > state.data.config.mapConfig.locateOnMapConfig.hotSpotConfig.updateHotSpotOutSideRange) state.props.hotSpot.centroidPoint
       locationName = srcSpecialLocation.locationName
 
   if not (DS.null geoJson) && not (null pickUpPoints) then do
@@ -4011,7 +4055,8 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
                                                                         , props { city = getCityNameFromCode serviceabilityResp.city
                                                                                 , isSpecialZone =  not (DS.null geoJson) 
                                                                                 , confirmLocationCategory = zoneType
-                                                                                , hotSpot{ centroidPoint = Nothing } }})
+                                                                                , hotSpot{ centroidPoint = Nothing }
+                                                                                , locateOnMapProps{ sourceLocationName = Just locationName } }})
       void $ pure $ removeAllPolylines ""
       liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat
                                                               , lon = lon
@@ -4033,6 +4078,40 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
                                                                                 , defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (points!!0)).place
                                                                                 , confirmLocationCategory = zoneType
                                                                                 , hotSpot{ centroidPoint = Just { lat : lat, lng : lon } } }})
-      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, points = points, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
+      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { points = points, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
     else pure unit
   else pure unit
+
+firstRideCompletedEvent :: String -> FlowBT String Unit
+firstRideCompletedEvent str = do
+  logField_ <- lift $ lift $ getLogFields
+  let appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+      eventPrefix = case appName of
+                  "Mana Yatri" -> "my_"
+                  "Yatri" -> "y_"
+                  "Namma Yatri" -> "ny_"
+                  _ -> fromMaybe "" $ (DS.split (DS.Pattern " ") appName) !! 0
+      firstRideEventCheck = getValueToLocalStore CUSTOMER_FIRST_RIDE
+  if firstRideEventCheck == "false" then do
+    let clientId = getValueToLocalStore CUSTOMER_CLIENT_ID
+    rideBookingListResponse <- lift $ lift $ HelpersAPI.callApi $ Remote.makeRideBookingListWithStatus "2" "0" "COMPLETED" (Just clientId)
+    case rideBookingListResponse of
+      Right (RideBookingListRes  listResp) -> do
+        let arraySize = Arr.length listResp.list
+        if (arraySize == 1) then do
+          void $ liftFlowBT $ logEvent logField_ $ eventPrefix <> "user_first_ride_completed"
+          setValueToLocalStore CUSTOMER_FIRST_RIDE "true"
+        else if arraySize > 1 then do
+          setValueToLocalStore CUSTOMER_FIRST_RIDE "true"
+        else setValueToLocalStore CUSTOMER_FIRST_RIDE "false"
+      Left (err) -> pure unit
+  else pure unit
+
+fetchParticularIssueCategory :: String -> FlowBT String (Maybe String)
+fetchParticularIssueCategory categoryLabel = do
+  let language = fetchLanguage $ getLanguageLocale languageKey
+  (GetCategoriesRes response) <- Remote.getCategoriesBT language
+  let category = Arr.find (\(Category item) -> item.label == categoryLabel) response.categories
+  case category of
+    Just (Category item) -> pure $ Just item.issueCategoryId
+    Nothing -> pure Nothing

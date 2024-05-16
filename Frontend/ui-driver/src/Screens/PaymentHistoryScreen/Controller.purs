@@ -27,7 +27,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import Prelude (class Show, bind, compare, map, not, pure, show, unit, ($), (/=), (<>), (==), (-), (<), (&&), (<$>))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.PaymentHistoryScreen.Transformer (getAutoPayPaymentStatus, getInvoiceStatus)
 import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem)
@@ -97,7 +97,7 @@ eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = upd
 
 eval LoadMore state = exit $ LoadMoreItems state
 
-eval _ state = continue state
+eval _ state = update state
 
 getAllTransactions :: SA.HistoryEntityV2Resp -> PaymentHistoryScreenState -> Eval Action ScreenOutput PaymentHistoryScreenState
 getAllTransactions (SA.HistoryEntityV2Resp response) state = do

@@ -11,23 +11,36 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Version
 import Tools.Beam.UtilsTH
 
 data RideT f = RideT
-  { bookingId :: B.C f Kernel.Prelude.Text,
+  { backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    bookingId :: B.C f Kernel.Prelude.Text,
     chargeableDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
+    clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientOsType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType),
+    clientOsVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     distanceCalculationFailed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     driverArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverDeviatedFromRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    driverDeviatedToTollRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     driverGoHomeRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverId :: B.C f Kernel.Prelude.Text,
     enableFrequentLocationUpdates :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     endOdometerReadingFileId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     endOdometerReadingValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     endOtp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    estimatedTollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    estimatedTollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     fare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
+    fareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     fareParametersId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     isFreeRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -35,6 +48,7 @@ data RideT f = RideT
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     numberOfDeviation :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     numberOfOsrmSnapToRoadCalls :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    numberOfSelfTuned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     numberOfSnapToRoadCalls :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     otp :: B.C f Kernel.Prelude.Text,
     pickupDropOutsideOfThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -45,6 +59,7 @@ data RideT f = RideT
     startOdometerReadingValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     status :: B.C f Domain.Types.Ride.RideStatus,
     tollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     trackingUrl :: B.C f Kernel.Prelude.Text,
     traveledDistance :: B.C f Kernel.Types.Common.HighPrecMeters,
     tripEndLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),

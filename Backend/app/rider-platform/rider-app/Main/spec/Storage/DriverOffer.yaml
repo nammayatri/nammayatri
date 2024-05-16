@@ -1,0 +1,80 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Centesimal: Kernel.Types.Common
+  Estimate: Domain.Types.Estimate
+  Distance: Kernel.Types.Common
+
+DriverOffer:
+  tableName: driver_offer
+  types:
+    DriverOfferStatus:
+      enum: "ACTIVE, INACTIVE"
+
+    BPPQuote: {}
+
+  fields:
+    id : Id DriverOffer
+    estimateId : Id Estimate
+    merchantId : Maybe (Id Merchant)
+    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
+    driverName : Text
+    durationToPickup : Maybe Int
+    distanceToPickup : Maybe Distance
+    validTill : UTCTime
+    bppQuoteId : Text
+    rating : Maybe Centesimal
+    status : DriverOfferStatus
+    createdAt: UTCTime
+    updatedAt : UTCTime
+
+  beamType:
+    createdAt: Maybe UTCTime
+
+  beamFields:
+    distanceToPickup:
+      distanceToPickup: Maybe HighPrecMeters
+      distanceUnit: Maybe DistanceUnit
+      distanceToPickupValue: Maybe HighPrecDistance
+
+  fromTType:
+    createdAt: Kernel.Prelude.fromMaybe updatedAt|I
+    distanceToPickup: Kernel.Types.Common.mkDistanceWithDefault distanceUnit distanceToPickupValue <$> distanceToPickup|E
+
+
+  toTType:
+    createdAt: Kernel.Prelude.Just|I
+    distanceToPickup: (Kernel.Types.Common.distanceToHighPrecMeters <$> distanceToPickup)|E
+    distanceToPickupValue: (Kernel.Types.Common.distanceToHighPrecDistance (distanceToPickup <&> (.unit)) <$> distanceToPickup)|E
+    distanceUnit: (distanceToPickup <&> (.unit))|E
+
+  constraints:
+    id: PrimaryKey
+    bppQuoteId: SecondaryKey
+    estimateId: SecondaryKey
+
+  sqlType:
+    driverName: character varying(255)
+    distanceToPickup: double precision
+    rating: double precision
+    bppQuoteId: character(36)
+    status: character varying(255)
+
+  default:
+    status: "'ACTIVE'"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByBPPQuoteId:
+      kvFunction: findAllWithKV
+      where: bppQuoteId
+
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [updatedAt, status]
+      where: estimateId
+
+

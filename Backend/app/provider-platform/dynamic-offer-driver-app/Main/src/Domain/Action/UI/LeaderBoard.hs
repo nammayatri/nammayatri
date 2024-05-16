@@ -21,11 +21,13 @@ import Data.Time hiding (getCurrentTime)
 import Data.Time.Calendar ()
 import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
+import qualified Domain.Types.LeaderBoardConfigs as LConfig
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.LeaderBoardConfig as LConfig
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.Person as SP
+import GHC.Float (double2Int)
+import GHC.Num.Integer (integerFromInt)
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -36,6 +38,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
 import Kernel.Utils.Error
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchantOpCity
 import qualified Storage.Queries.Person as QPerson
 
 data DriversInfo = DriversInfo
@@ -59,17 +62,34 @@ getDailyDriverLeaderBoard ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r) =>
   (Id Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Day ->
+  Maybe Bool ->
   m LeaderBoardRes
-getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) day = do
+getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) day fillData = do
   now <- getCurrentTime
   let currentDate = RideEndInt.getCurrentDate now
   let dateDiff = diffDays currentDate day
   dailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY merchantOpCityId >>= fromMaybeM (InternalError "Leaderboard configs not present")
   unless dailyLeaderBoardConfig.isEnabled . throwError $ InvalidRequest "Leaderboard Not Available"
+
+  fork "Backfill leaderboard data" $ do
+    let backFillInRedis = fromMaybe False fillData
+    when backFillInRedis $ do
+      leaderboardBackfillLock :: Maybe Bool <- Redis.safeGet makeLeaderboardBackfillKeyLock
+      case leaderboardBackfillLock of
+        Just True -> pure ()
+        _ -> do
+          Redis.setExp makeLeaderboardBackfillKeyLock True 86400
+          startDailyBackFill merchantId merchantOpCityId day
+          let (_, currDayIndex) = sundayStartWeek day
+          let weekStartDate = addDays (fromIntegral (- currDayIndex)) day
+          let weekEndDate = addDays (fromIntegral (6 - currDayIndex)) day
+          startWeeklyBackFill merchantId merchantOpCityId weekStartDate weekEndDate
+
+  let useCityBasedLeaderboard = dailyLeaderBoardConfig.useOperatingCityBasedLeaderBoard
   let numberOfSets = fromIntegral dailyLeaderBoardConfig.numberOfSets
   when (dateDiff > numberOfSets - 1 || dateDiff < 0) $
     throwError $ InvalidRequest "Date outside Range"
-  driversWithScoresMap :: [(Text, Double)] <- concat <$> Redis.withNonCriticalRedis (Redis.get $ RideEndInt.makeCachedDailyDriverLeaderBoardKey merchantId day)
+  driversWithScoresMap :: [(Text, Double)] <- concat <$> Redis.withNonCriticalRedis (Redis.get $ RideEndInt.makeCachedDailyDriverLeaderBoardKey dailyLeaderBoardConfig.useOperatingCityBasedLeaderBoard merchantId merchantOpCityId day)
   let driverIds = map (Id . fst) driversWithScoresMap
   driverDetailsMap :: HM.HashMap Text (Text, Gender) <- HM.fromList . map (\driver -> (driver.id.getId, (fromMaybe "Driver" $ getPersonFullName driver, driver.gender))) <$> B.runInReplica (QPerson.getDriversByIdIn driverIds)
   (drivers', isCurrentDriverInTop) <-
@@ -92,16 +112,16 @@ getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) day = do
       )
       ([], False)
       (zip driversWithScoresMap [1, 2 ..])
-  totalEligibleDrivers <- Redis.withNonCriticalRedis $ Redis.zCard (RideEndInt.makeDailyDriverLeaderBoardKey merchantId day)
+  totalEligibleDrivers <- Redis.withNonCriticalRedis $ Redis.zCard (RideEndInt.makeDailyDriverLeaderBoardKey useCityBasedLeaderboard merchantId merchantOpCityId day)
   if not isCurrentDriverInTop && dateDiff == 0
     then do
       person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-      mbCurrPersonRank <- Redis.withNonCriticalRedis $ Redis.zRevRank (RideEndInt.makeDailyDriverLeaderBoardKey merchantId day) personId.getId
-      mbCurrDriverZscore <- Redis.withNonCriticalRedis $ Redis.zScore (RideEndInt.makeDailyDriverLeaderBoardKey merchantId day) personId.getId
+      mbCurrPersonRank <- Redis.withNonCriticalRedis $ Redis.zRevRank (RideEndInt.makeDailyDriverLeaderBoardKey useCityBasedLeaderboard merchantId merchantOpCityId day) personId.getId
+      mbCurrDriverZscore <- Redis.withNonCriticalRedis $ Redis.zScore (RideEndInt.makeDailyDriverLeaderBoardKey useCityBasedLeaderboard merchantId merchantOpCityId day) personId.getId
       let currentDriverScore = fromMaybe 0 mbCurrDriverZscore
       currPersonRank <-
         case mbCurrPersonRank of
-          Nothing -> Redis.withNonCriticalRedis $ Redis.zCard (RideEndInt.makeDailyDriverLeaderBoardKey merchantId day)
+          Nothing -> Redis.withNonCriticalRedis $ Redis.zCard (RideEndInt.makeDailyDriverLeaderBoardKey useCityBasedLeaderboard merchantId merchantOpCityId day)
           Just rank -> pure rank
       let (currPersonTotalRides, currPersonTotalDistance) = RideEndInt.getRidesAndDistancefromZscore currentDriverScore dailyLeaderBoardConfig.zScoreBase
       currPersonFullName <- getPersonFullName person & fromMaybeM (PersonFieldNotPresent "firstName")
@@ -135,7 +155,8 @@ getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toD
     throwError $ InvalidRequest "Week outside Range"
   when (diffDays toDate fromDate /= 6 || reqDayIndex /= 0) $
     throwError $ InvalidRequest "Invalid Input"
-  driversWithScoresMap :: [(Text, Double)] <- concat <$> Redis.withNonCriticalRedis (Redis.get $ RideEndInt.makeCachedWeeklyDriverLeaderBoardKey merchantId fromDate toDate)
+  let useCityBasedLeaderboard = weeklyLeaderBoardConfig.useOperatingCityBasedLeaderBoard
+  driversWithScoresMap :: [(Text, Double)] <- concat <$> Redis.withNonCriticalRedis (Redis.get $ RideEndInt.makeCachedWeeklyDriverLeaderBoardKey useCityBasedLeaderboard merchantId merchantOpCityId fromDate toDate)
   let driverIds = map (Id . fst) driversWithScoresMap
   driverDetailsMap <- HM.fromList . map (\driver -> (driver.id.getId, (fromMaybe "Driver" $ getPersonFullName driver, driver.gender))) <$> B.runInReplica (QPerson.getDriversByIdIn driverIds)
   (drivers', isCurrentDriverInTop) <-
@@ -158,19 +179,94 @@ getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toD
       )
       ([], False)
       (zip driversWithScoresMap [1, 2 ..])
-  totalEligibleDrivers <- Redis.withNonCriticalRedis $ Redis.zCard (RideEndInt.makeWeeklyDriverLeaderBoardKey merchantId fromDate toDate)
+  totalEligibleDrivers <- Redis.withNonCriticalRedis $ Redis.zCard (RideEndInt.makeWeeklyDriverLeaderBoardKey useCityBasedLeaderboard merchantId merchantOpCityId fromDate toDate)
   if not isCurrentDriverInTop && weekDiff == 0
     then do
       person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-      mbCurrPersonRank <- Redis.withNonCriticalRedis $ Redis.zRevRank (RideEndInt.makeWeeklyDriverLeaderBoardKey merchantId fromDate toDate) personId.getId
-      mbCurrDriverZscore <- Redis.withNonCriticalRedis $ Redis.zScore (RideEndInt.makeWeeklyDriverLeaderBoardKey merchantId fromDate toDate) personId.getId
+      mbCurrPersonRank <- Redis.withNonCriticalRedis $ Redis.zRevRank (RideEndInt.makeWeeklyDriverLeaderBoardKey useCityBasedLeaderboard merchantId merchantOpCityId fromDate toDate) personId.getId
+      mbCurrDriverZscore <- Redis.withNonCriticalRedis $ Redis.zScore (RideEndInt.makeWeeklyDriverLeaderBoardKey useCityBasedLeaderboard merchantId merchantOpCityId fromDate toDate) personId.getId
       let currDriverZscore = fromMaybe 0 mbCurrDriverZscore
       currPersonRank <-
         case mbCurrPersonRank of
-          Nothing -> Redis.withNonCriticalRedis $ Redis.zCard (RideEndInt.makeWeeklyDriverLeaderBoardKey merchantId fromDate toDate)
+          Nothing -> Redis.withNonCriticalRedis $ Redis.zCard (RideEndInt.makeWeeklyDriverLeaderBoardKey useCityBasedLeaderboard merchantId merchantOpCityId fromDate toDate)
           Just rank -> pure rank
       let (currPersonTotalRides, currPersonTotalDistance) = RideEndInt.getRidesAndDistancefromZscore currDriverZscore weeklyLeaderBoardConfig.zScoreBase
       currPersonFullName <- getPersonFullName person & fromMaybeM (PersonFieldNotPresent "firstName")
       let currDriverInfo = DriversInfo (currPersonRank + 1) currPersonFullName currPersonTotalRides currPersonTotalDistance True (Just person.gender)
       return $ LeaderBoardRes (currDriverInfo : drivers') (Just now) (fromIntegral totalEligibleDrivers)
     else return $ LeaderBoardRes drivers' (Just now) (fromIntegral totalEligibleDrivers)
+
+splitIntoBatches :: Int -> [a] -> [[a]]
+splitIntoBatches _ [] = []
+splitIntoBatches batchSize xs =
+  let (batch, rest) = splitAt batchSize xs
+   in batch : splitIntoBatches batchSize rest
+
+startDailyBackFill :: (Esq.EsqDBFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Day -> m ()
+startDailyBackFill merchantId merchantOpCityId day = do
+  oldDriverScoresMap :: [(Text, Double)] <- Redis.zrevrangeWithscores (RideEndInt.makeDailyDriverLeaderBoardKey (Just False) merchantId merchantOpCityId day) 0 3000000
+  let oldDriverScoreMapBatchList = splitIntoBatches 10 oldDriverScoresMap
+  backfillData oldDriverScoreMapBatchList
+  merchantsOpCities <- QMerchantOpCity.findAllByMerchantId merchantId
+  updateDailyCachedLeaderBoard merchantsOpCities
+  where
+    backfillData [] = pure ()
+    backfillData (driverBatch : remaining) = do
+      let driverIds = map (Id . fst) driverBatch
+      let driverScores = map snd driverBatch
+      driverIdToCityMapping <- HM.fromList . map (\driver -> (driver.id, driver.merchantOperatingCityId)) <$> B.runInReplica (QPerson.getDriversByIdIn driverIds)
+      fillData driverIds driverScores driverIdToCityMapping
+      backfillData remaining
+    fillData [] _ _ = pure ()
+    fillData _ [] _ = pure ()
+    fillData (driverId : remain) (score : restScr) driverIdToCityMapping = do
+      let opcityid = HM.lookup driverId driverIdToCityMapping
+      case opcityid of
+        Just cityId -> do
+          Redis.zAddExp (RideEndInt.makeDailyDriverLeaderBoardKey (Just True) merchantId cityId day) driverId.getId (integerFromInt $ double2Int score) 86400
+          fillData remain restScr driverIdToCityMapping
+        Nothing -> fillData remain restScr driverIdToCityMapping
+    updateDailyCachedLeaderBoard [] = pure ()
+    updateDailyCachedLeaderBoard (currCity : cities) = do
+      let cityId = currCity.id
+      currConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY cityId >>= fromMaybeM (InternalError "Leaderboard configs not present")
+      let limit = integerFromInt currConfig.leaderBoardLengthLimit
+      driversListWithScores <- Redis.zrevrangeWithscores (RideEndInt.makeDailyDriverLeaderBoardKey (Just True) merchantId cityId day) 0 (limit -1)
+      Redis.setExp (RideEndInt.makeCachedDailyDriverLeaderBoardKey (Just True) merchantId cityId day) driversListWithScores (currConfig.leaderBoardExpiry.getSeconds * currConfig.numberOfSets)
+      updateDailyCachedLeaderBoard cities
+
+startWeeklyBackFill :: (Esq.EsqDBFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Day -> Day -> m ()
+startWeeklyBackFill merchantId merchantOpCityId weekStartDate weekEndDate = do
+  oldDriverScoresMap :: [(Text, Double)] <- Redis.zrevrangeWithscores (RideEndInt.makeWeeklyDriverLeaderBoardKey (Just False) merchantId merchantOpCityId weekStartDate weekEndDate) 0 3000000
+  let oldDriverScoreMapBatchList = splitIntoBatches 10 oldDriverScoresMap
+  backfillData oldDriverScoreMapBatchList
+  merchantsOpCities <- QMerchantOpCity.findAllByMerchantId merchantId
+  updateDailyCachedLeaderBoard merchantsOpCities
+  where
+    backfillData [] = pure ()
+    backfillData (driverBatch : remaining) = do
+      let driverIds = map (Id . fst) driverBatch
+      let driverScores = map snd driverBatch
+      driverIdToCityMapping <- HM.fromList . map (\driver -> (driver.id, driver.merchantOperatingCityId)) <$> B.runInReplica (QPerson.getDriversByIdIn driverIds)
+      fillData driverIds driverScores driverIdToCityMapping
+      backfillData remaining
+    fillData [] _ _ = pure ()
+    fillData _ [] _ = pure ()
+    fillData (driverId : remain) (score : restScr) driverIdToCityMapping = do
+      let opcityid = HM.lookup driverId driverIdToCityMapping
+      case opcityid of
+        Just cityId -> do
+          Redis.zAddExp (RideEndInt.makeWeeklyDriverLeaderBoardKey (Just True) merchantId cityId weekStartDate weekEndDate) driverId.getId (integerFromInt $ double2Int score) 86400
+          fillData remain restScr driverIdToCityMapping
+        Nothing -> fillData remain restScr driverIdToCityMapping
+    updateDailyCachedLeaderBoard [] = pure ()
+    updateDailyCachedLeaderBoard (currCity : cities) = do
+      let cityId = currCity.id
+      currConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY cityId >>= fromMaybeM (InternalError "Leaderboard configs not present")
+      let limit = integerFromInt currConfig.leaderBoardLengthLimit
+      driversListWithScores <- Redis.zrevrangeWithscores (RideEndInt.makeWeeklyDriverLeaderBoardKey (Just True) merchantId cityId weekStartDate weekEndDate) 0 (limit -1)
+      Redis.setExp (RideEndInt.makeCachedWeeklyDriverLeaderBoardKey (Just True) merchantId cityId weekStartDate weekEndDate) driversListWithScores (currConfig.leaderBoardExpiry.getSeconds * currConfig.numberOfSets)
+      updateDailyCachedLeaderBoard cities
+
+makeLeaderboardBackfillKeyLock :: Text
+makeLeaderboardBackfillKeyLock = "Driver_leaderboard_backfill_key_lock"

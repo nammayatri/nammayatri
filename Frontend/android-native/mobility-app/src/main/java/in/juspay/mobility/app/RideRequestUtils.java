@@ -513,21 +513,15 @@ public class RideRequestUtils {
     }
 
     public static VariantConfig getVariantConfig(String myVariant, Context context) throws JSONException {
-        String city = getCityWithFallback(context);
-        String allCitiesVariant = remoteConfigs.getString("variant_config");
-        JSONObject allCitiesVariantOb = new JSONObject(allCitiesVariant);
-        
-        if (allCitiesVariantOb.has(city)){
-            JSONObject myCityVariantConfig = allCitiesVariantOb.getJSONObject(city);
-             if (myCityVariantConfig.has(myVariant)){
-                 JSONObject myVariantConfig = myCityVariantConfig.getJSONObject(myVariant);
-                 String text = myVariantConfig.optString("text", "");
-                 String textColor = myVariantConfig.optString("textColor", "");
-                 String background = myVariantConfig.optString("background", "");
-                 String icon = myVariantConfig.optString("icon", "");
-                 boolean visible = myVariantConfig.optBoolean("visible", false);
-                 return new VariantConfig(text, textColor, background, icon, visible);
-             }
+        JSONObject myCityVariantConfig = currentCityObject("variant_config", context);
+        if (myCityVariantConfig.has(myVariant)){
+            JSONObject myVariantConfig = myCityVariantConfig.getJSONObject(myVariant);
+            String text = myVariantConfig.optString("text", "");
+            String textColor = myVariantConfig.optString("textColor", "");
+            String background = myVariantConfig.optString("background", "");
+            String icon = myVariantConfig.optString("icon", "");
+            boolean visible = myVariantConfig.optBoolean("visible", false);
+            return new VariantConfig(text, textColor, background, icon, visible);
         }
         return new VariantConfig("","","","",false);
     }
@@ -551,7 +545,7 @@ public class RideRequestUtils {
     public static boolean handleVariant(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context){
         String vehicleVariant = model.getRequestedVehicleVariant();
         try {
-            VariantConfig variantConfig = RideRequestUtils.getVariantConfig(vehicleVariant, context);
+            VariantConfig variantConfig = getVariantConfig(vehicleVariant, context);
             holder.rideTypeTag.setBackground(getGradientDrawable(variantConfig.getBackground(), context));
             holder.rideTypeText.setText(variantConfig.getText());
             holder.rideTypeImage.setVisibility(variantConfig.getIcon().isEmpty() ? View.GONE : View.VISIBLE);
@@ -570,14 +564,13 @@ public class RideRequestUtils {
         return df.format(val);
     }
 
-    public static void updateTierAndAC(SheetAdapter.SheetViewHolder holder, SheetModel model) {
+    public static void updateTierAndAC(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
         boolean showTier = model.getVehicleServiceTier() != null;
         int acRide = model.isAirConditioned();
-        boolean showAC = acRide == 1 || acRide == 0;
+        boolean showAC = acRide == 1 && showAcConfig(context);
         holder.vcTierAndACView.setVisibility((showTier || showAC) ? View.VISIBLE : View.GONE);
-        holder.vehicleServiceTier.setText(model.getVehicleServiceTier() != null ? model.getVehicleServiceTier() : "");
+        holder.vehicleServiceTier.setText(model.getVehicleServiceTier() != null ? getSTMapping (model.getVehicleServiceTier(), context) : "");
         holder.vehicleServiceTier.setVisibility(showTier ? View.VISIBLE : View.GONE);
-        holder.airConditioned.setText(acRide == 1?"AC":"Non-AC");
         holder.acNonAcView.setVisibility( showAC ? View.VISIBLE : View.GONE);
     }
 
@@ -641,18 +634,13 @@ public class RideRequestUtils {
         boolean showPickupCharges = false;
         boolean hideZeroPickupCharges = true;
         int pickUpCharges = model.getDriverPickUpCharges();
-        String city = getCityWithFallback(context);
-        String allCitiesConfig = remoteConfigs.getString("views_config");
         try {
-            JSONObject allCitiesConfigOb = new JSONObject(allCitiesConfig);
-            if (allCitiesConfigOb.has(city)){
-                JSONObject currentCityConfig = allCitiesConfigOb.getJSONObject(city);
-                if (currentCityConfig.has("show_pickup_charges")){
-                    showPickupCharges = currentCityConfig.getBoolean("show_pickup_charges");
-                }
-                if (currentCityConfig.has("hide_zero_pickup_charges")){
-                    hideZeroPickupCharges = currentCityConfig.getBoolean("hide_zero_pickup_charges");
-                }
+            JSONObject currentCityConfig = currentCityObject("views_config", context);
+            if (currentCityConfig.has("show_pickup_charges")){
+                showPickupCharges = currentCityConfig.getBoolean("show_pickup_charges");
+            }
+            if (currentCityConfig.has("hide_zero_pickup_charges")){
+                hideZeroPickupCharges = currentCityConfig.getBoolean("hide_zero_pickup_charges");
             }
         }catch (JSONException e){
             firebaseLogEventWithParams("exception_in_update_extra_charges", "exception", String.valueOf(e), context);
@@ -666,5 +654,42 @@ public class RideRequestUtils {
             holder.textIncludesCharges.setVisibility(View.GONE);
             holder.rateViewDot.setVisibility(View.GONE);
         }
+    }
+
+    private static boolean showAcConfig(Context context) {
+        JSONObject myCityOb = currentCityObject("service_tier_mapping", context);
+        if (myCityOb.has("ac_tag")){
+            return myCityOb.optBoolean("ac_tag", true);
+        }
+        return true;
+    }
+
+    public static String getSTMapping (String serviceTier, Context context) {
+        JSONObject myCityOb = currentCityObject("service_tier_mapping", context);
+        try {
+            if (myCityOb.has("mapping")){
+                JSONObject mappingOb = myCityOb.getJSONObject("mapping");
+                if(mappingOb.has(serviceTier)){
+                    return mappingOb.getString(serviceTier);
+                }
+            }
+        }catch (Exception e){
+            firebaseLogEventWithParams("exception_in_get_st_mapping", "exception", String.valueOf(e), context);
+        }
+        return serviceTier;
+    }
+
+    public static JSONObject currentCityObject (String keyName, Context context){
+        String city = getCityWithFallback(context);
+        String allCities = remoteConfigs.getString(keyName);
+        try {
+            JSONObject allCitiesOb = new JSONObject(allCities);
+            if (allCitiesOb.has(city)) {
+                return allCitiesOb.getJSONObject(city);
+            }
+        }catch (Exception e){
+            firebaseLogEventWithParams("exception_in_get_current_city_ob", "exception", String.valueOf(e), context);
+        }
+        return new JSONObject();
     }
 }

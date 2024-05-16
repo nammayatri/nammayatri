@@ -115,6 +115,7 @@ disputeCancellationDues apiKey internalUrl merchantId phoneNumber countryCode me
 
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
   { customerCancellationDues :: HighPrecMoney,
+    customerCancellationDuesWithCurrency :: Maybe PriceAPIEntity,
     disputeChancesUsed :: Int,
     canBlockCustomer :: Maybe Bool
   }
@@ -164,6 +165,7 @@ data CustomerCancellationDuesSyncReq = CustomerCancellationDuesSyncReq
   { customerMobileNumber :: Text,
     customerMobileCountryCode :: Text,
     cancellationCharges :: Maybe HighPrecMoney,
+    cancellationChargesWithCurrency :: Maybe PriceAPIEntity,
     disputeChancesUsed :: Maybe Int,
     paymentMadeToDriver :: Bool
   }
@@ -186,10 +188,37 @@ customerCancellationDuesSync ::
   Text ->
   Text ->
   Maybe HighPrecMoney ->
+  Maybe PriceAPIEntity ->
   Maybe Int ->
   Bool ->
   Context.City ->
   m APISuccess
-customerCancellationDuesSync apiKey internalUrl merchantId phoneNumber countryCode cancellationCharges disputeChancesUsed paymentMadeToDriver merchantCity = do
+customerCancellationDuesSync apiKey internalUrl merchantId phoneNumber countryCode cancellationCharges cancellationChargesWithCurrency disputeChancesUsed paymentMadeToDriver merchantCity = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (customerCancellationDuesSyncClient merchantId merchantCity (Just apiKey) (CustomerCancellationDuesSyncReq phoneNumber countryCode cancellationCharges disputeChancesUsed paymentMadeToDriver)) "CustomerCancellationDuesSync" customerCancellationDuesSyncApi
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (customerCancellationDuesSyncClient merchantId merchantCity (Just apiKey) (CustomerCancellationDuesSyncReq phoneNumber countryCode cancellationCharges cancellationChargesWithCurrency disputeChancesUsed paymentMadeToDriver)) "CustomerCancellationDuesSync" customerCancellationDuesSyncApi
+
+type ReportACIssueAPI =
+  "internal"
+    :> Capture "rideId" Text
+    :> "reportACIssue"
+    :> Header "token" Text
+    :> Post '[JSON] APISuccess
+
+reportACIssueClient :: Text -> Maybe Text -> EulerClient APISuccess
+reportACIssueClient = client reportACIssueApi
+
+reportACIssueApi :: Proxy ReportACIssueAPI
+reportACIssueApi = Proxy
+
+reportACIssue ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m APISuccess
+reportACIssue apiKey internalUrl bppRideId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (reportACIssueClient bppRideId (Just apiKey)) "ReportACIssue" reportACIssueApi

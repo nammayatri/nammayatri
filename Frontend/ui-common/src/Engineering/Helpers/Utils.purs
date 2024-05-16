@@ -57,6 +57,8 @@ import JBridge (toast, setKeyInSharedPref)
 import Language.Strings (getString)
 import Language.Types
 import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Data.Int as DI
+import Data.Number.Format (fixed, toStringWith)
 
 -- Common Utils
 foreign import reboot :: Effect Unit
@@ -404,3 +406,14 @@ getFlexBoxCompatibleVersion _ =
         YATRISATHI -> "0.1.7"
         YATRI -> "2.2.2"
         _ -> "0.0.0"
+
+getFixedTwoDecimals :: Number -> String
+getFixedTwoDecimals amount = case (DI.fromNumber amount) of
+                                Just value -> show value
+                                Nothing ->  toStringWith (fixed 2) amount
+
+formatNumber :: Number -> Maybe Int -> String
+formatNumber amount decimalPlaces = case (DI.fromNumber amount),decimalPlaces  of
+                                      (Just value), _ -> show value
+                                      Nothing, Just decimalPlace -> toStringWith (fixed decimalPlace) amount
+                                      _,_ -> show amount

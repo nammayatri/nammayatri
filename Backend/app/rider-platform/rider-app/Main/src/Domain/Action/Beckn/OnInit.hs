@@ -86,7 +86,7 @@ onInit req = do
   riderPhoneNumber <-
     if isValueAddNP
       then decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
-      else pure booking.primaryExophone
+      else pure $ prependZero booking.primaryExophone
   let bppBookingId = booking.bppBookingId
   city <-
     CQMOC.findById booking.merchantOperatingCityId
@@ -127,3 +127,6 @@ onInit req = do
             ..
           }
   pure (onInitRes, booking)
+  where
+    prependZero :: Text -> Text
+    prependZero str = "0" <> str

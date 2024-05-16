@@ -99,6 +99,12 @@ data KeyStore
   | METRO_PAYMENT_SDK_POLLING
   | MOCK_SOS_FOR_RIDES
   | CUSTOMER_REFERRAL_CODE
+  | CUSTOMER_CLIENT_ID
+  | CUSTOMER_FIRST_RIDE
+  | HAS_TOLL_CHARGES -- @TODO: Remove this key after toll charges are coming from backend
+  | AC_POPUP_SHOWN_FOR_RIDE
+  | STARTED_ESTIMATE_SEARCH
+  | RATE_CARD_INFO
 
 derive instance genericKeyStore :: Generic KeyStore _
 

@@ -118,53 +118,57 @@ tipInfoView push state =
 
 androidTipsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 androidTipsView push state =
-  flexBoxLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , margin $ MarginTop 16
-    , justifyContent JUSTIFY_CENTER
-    , flexDirection ROW
-    , flexWrap WRAP
-    , alignItems ALIGN_BASELINE
-    , visibility $ boolToVisibility $ state.enableTips && state.isVisible
-    ]
-    ( mapWithIndex
-        ( \index item ->
-            linearLayout
-              [ height WRAP_CONTENT
-              , width $ V ((screenWidth unit / 3) - 30)
-              , margin $ Margin 0 (if index > 2 then 8 else 0) (if (index + 1) `mod` 3 == 0 then 0 else 8) 0
-              , cornerRadius 8.0
-              , stroke $ "1," <> (if (state.activeIndex == index) then Color.blue800 else Color.grey900)
-              , accessibility ENABLE
-              , padding $ if index == 0 then Padding 5 10 5 10 else Padding 20 10 20 10
-              , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.customerTipArrayWithValues !! index)) <> " Tip" <> (if (state.activeIndex == index) then " Selected" else " : Button")
-              , onClick push $ const $ TipBtnClick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))
-              , clickable true
-              , background $ if state.activeIndex == index then Color.blue600 else Color.white900
-              , gravity CENTER
-              ]
-              [ textView
-                  $ [ text $ item
-                    , color $ Color.black800
-                    , gravity CENTER
-                    ]
-                  <> FontStyle.body6 LanguageStyle
-              ]
-        )
-        state.customerTipArray
-    )
+  let tipArraySize = length state.customerTipArray
+  in
+    flexBoxLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , margin $ MarginTop 16
+      , justifyContent JUSTIFY_EVENLY
+      , flexDirection ROW
+      , flexWrap WRAP
+      , alignItems ALIGN_BASELINE
+      , visibility $ boolToVisibility $ state.enableTips && state.isVisible
+      ]
+      ( mapWithIndex
+          ( \index item ->
+              linearLayout
+                ([ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , visibility $ boolToVisibility $ (index == 0 && state.searchExpired) || index /= 0
+                , cornerRadius 8.0
+                , stroke $ "1," <> (if (state.activeIndex == index) then Color.blue800 else Color.grey900)
+                , accessibility ENABLE
+                , padding $ if index == 0 then Padding 5 10 5 10 else Padding 8 10 8 10
+                , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.customerTipArrayWithValues !! index)) <> " Tip" <> (if (state.activeIndex == index) then " Selected" else " : Button")
+                , onClick push $ const $ TipBtnClick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))
+                , clickable true
+                , background $ if state.activeIndex == index then Color.blue600 else Color.white900
+                , gravity CENTER
+                ] <> if index == tipArraySize - 1 then [] else [margin $ MarginRight 8])
+                [ textView
+                    $ [ text $ item
+                      , color $ Color.black800
+                      , singleLine true
+                      , gravity CENTER
+                      ]
+                    <> FontStyle.body6 LanguageStyle
+                ]
+          )
+          state.customerTipArray
+      )
 
 iOSTipsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 iOSTipsView push state =
   let
-    tipValuesArr = splitIntoEqualParts 3 state.customerTipArray
+    tipValuesArr = splitIntoEqualParts 4 state.customerTipArray
   in
     linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , margin $ MarginTop 16
       , orientation VERTICAL
+      , background Color.grey800
       , visibility $ boolToVisibility $ state.enableTips && state.isVisible
       ]
       ( mapWithIndex
@@ -184,12 +188,13 @@ iOSTipsView push state =
                         in
                           linearLayout
                             [ height WRAP_CONTENT
-                            , width $ V ((screenWidth unit / 3) - 30)
+                            , width WRAP_CONTENT
                             , margin $ tipsMargin itemIndex listIndex listItem
+                            , visibility $ boolToVisibility $ (index == 0 && state.searchExpired) || index /= 0
                             , cornerRadius 8.0
                             , stroke $ "1," <> (if (state.activeIndex == index) then Color.blue800 else Color.grey900)
                             , accessibility ENABLE
-                            , padding $ if index == 0 then Padding 5 10 5 10 else Padding 20 10 20 10
+                            , padding $ if index == 0 then Padding 5 10 5 10 else Padding 8 10 8 10
                             , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.customerTipArrayWithValues !! index)) <> " : Button"
                             , onClick push $ const $ TipBtnClick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))
                             , clickable $ true
@@ -199,6 +204,7 @@ iOSTipsView push state =
                             [ textView
                                 $ [ text $ item
                                   , color $ Color.black800
+                                  , singleLine true
                                   , gravity CENTER
                                   ]
                                 <> FontStyle.body6 LanguageStyle
@@ -211,4 +217,4 @@ iOSTipsView push state =
       )
   where
   tipsMargin :: Int -> Int -> Array String -> Margin
-  tipsMargin index listIndex listItem = Margin 0 (if listIndex > 0 then 8 else 0) (if (index + 1) == (length listItem) then 0 else 8) 0
+  tipsMargin index listIndex listItem = Margin 0 (if listIndex > 0 then 12 else 0) (if (index + 1) == (length listItem) then 0 else 12) 0

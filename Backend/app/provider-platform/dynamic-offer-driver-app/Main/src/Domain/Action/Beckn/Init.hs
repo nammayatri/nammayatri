@@ -124,7 +124,8 @@ handler merchantId req validatedReq = do
         EsqDBFlow m r,
         HasField "vehicleServiceTier" q DVST.ServiceTierType,
         HasField "distance" q (Maybe Meters),
-        HasField "estimatedFare" q Money,
+        HasField "estimatedFare" q HighPrecMoney,
+        HasField "currency" q Currency,
         HasField "fareParams" q DFP.FareParameters,
         HasField "specialLocationTag" q (Maybe Text)
       ) =>
@@ -141,6 +142,7 @@ handler merchantId req validatedReq = do
       id <- Id <$> generateGUID
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation
+          isTollApplicableForServiceTier = DTC.isTollApplicable driverQuote.vehicleServiceTier
       exophone <- findRandomExophone searchRequest.merchantOperatingCityId
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
       pure
@@ -164,6 +166,7 @@ handler merchantId req validatedReq = do
             createdAt = now,
             updatedAt = now,
             estimatedFare = driverQuote.estimatedFare,
+            currency = driverQuote.currency,
             riderName = Nothing,
             estimatedDuration = searchRequest.estimatedDuration,
             fareParams = driverQuote.fareParams,
@@ -176,6 +179,7 @@ handler merchantId req validatedReq = do
             distanceToPickup = distanceToPickup,
             stopLocationId = (.id) <$> toLocation,
             startTime = searchRequest.startTime,
+            tollNames = if isTollApplicableForServiceTier then searchRequest.tollNames else Nothing,
             ..
           }
 

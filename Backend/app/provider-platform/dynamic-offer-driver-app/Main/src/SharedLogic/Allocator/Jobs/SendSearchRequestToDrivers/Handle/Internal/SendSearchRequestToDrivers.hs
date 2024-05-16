@@ -31,6 +31,7 @@ import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics (DeploymentVersion (..))
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -39,14 +40,15 @@ import qualified Lib.DriverScore.Types as DST
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
 import qualified SharedLogic.DriverPool as SDP
 import SharedLogic.GoogleTranslate
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
+import Utils.Common.Cac.KeyNameConstants
 
 type LanguageDictionary = M.Map Maps.Language DSR.SearchRequest
 
@@ -57,7 +59,7 @@ sendSearchRequestToDrivers ::
     TranslateFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int, "version" ::: DeploymentVersion]
   ) =>
   [SDP.TripQuoteDetail] ->
   DSR.SearchRequest ->
@@ -92,7 +94,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
-    transporterConfig <- SCT.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just searchReq.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+    transporterConfig <- SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
     let needTranslation = language `elem` transporterConfig.languagesToBeTranslated
     let translatedSearchReq =
           if needTranslation
@@ -100,10 +102,11 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
             else searchReq
     isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
     tripQuoteDetail <- HashMap.lookup dPoolRes.driverPoolResult.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dPoolRes.driverPoolResult.serviceTier)
-    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds (SDP.castServiceTierToVariant tripQuoteDetail.vehicleServiceTier) needTranslation isValueAddNP tripQuoteDetail.driverPickUpCharge
+    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP tripQuoteDetail.driverPickUpCharge
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
     notificationData <- Notify.buildSendSearchRequestNotificationData sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData Notify.EmptyDynamicParam
-    Notify.sendSearchRequestToDriverNotification searchReq.providerId searchReq.merchantOperatingCityId notificationData
+    let fallBackCity = Notify.getNewMerchantOpCityId sReqFD.clientSdkVersion sReqFD.merchantOperatingCityId
+    Notify.sendSearchRequestToDriverNotification searchReq.providerId fallBackCity notificationData
   where
     getSearchRequestValidTill = do
       now <- getCurrentTime
@@ -112,6 +115,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
     buildSearchRequestForDriver ::
       ( MonadFlow m,
         Redis.HedisFlow m r,
+        HasFlowEnv m r '["version" ::: DeploymentVersion],
         EsqDBFlow m r,
         CacheFlow m r
       ) =>
@@ -121,11 +125,13 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
       SDP.DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
     buildSearchRequestForDriver tripQuoteDetailsHashMap batchNumber defaultValidTill dpwRes = do
+      let currency = searchTry.currency
       guid <- generateGUID
       now <- getCurrentTime
       let dpRes = dpwRes.driverPoolResult
       tripQuoteDetail <- HashMap.lookup dpRes.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dpRes.serviceTier)
       parallelSearchRequestCount <- Just <$> SDP.getValidSearchRequestCount searchReq.providerId dpRes.driverId now
+      deploymentVersion <- asks (.version)
       let searchRequestForDriver =
             SearchRequestForDriver
               { id = guid,
@@ -151,8 +157,11 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 response = Nothing,
                 driverMinExtraFee = tripQuoteDetail.driverMinFee,
                 driverMaxExtraFee = tripQuoteDetail.driverMaxFee,
+                driverStepFee = tripQuoteDetail.driverStepFee,
+                driverDefaultStepFee = tripQuoteDetail.driverDefaultStepFee,
                 rideRequestPopupDelayDuration = dpwRes.intelligentScores.rideRequestPopupDelayDuration,
                 baseFare = Just tripQuoteDetail.baseFare,
+                currency,
                 isPartOfIntelligentPool = dpwRes.isPartOfIntelligentPool,
                 acceptanceRatio = dpwRes.intelligentScores.acceptanceRatio,
                 cancellationRatio = dpwRes.intelligentScores.cancellationRatio,
@@ -164,6 +173,12 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 goHomeRequestId = dpwRes.goHomeReqId,
                 rideFrequencyScore = dpwRes.intelligentScores.rideFrequency,
                 customerCancellationDues = fromMaybe 0 searchReq.customerCancellationDues,
+                clientSdkVersion = dpwRes.driverPoolResult.clientSdkVersion,
+                clientBundleVersion = dpwRes.driverPoolResult.clientBundleVersion,
+                clientConfigVersion = dpwRes.driverPoolResult.clientConfigVersion,
+                clientDevice = dpwRes.driverPoolResult.clientDevice,
+                backendConfigVersion = dpwRes.driverPoolResult.backendConfigVersion,
+                backendAppVersion = Just deploymentVersion.getDeploymentVersion,
                 ..
               }
       pure searchRequestForDriver
@@ -214,6 +229,7 @@ translateSearchReq DSR.SearchRequest {..} language = do
 addLanguageToDictionary ::
   ( TranslateFlow m r,
     CacheFlow m r,
+    EncFlow m r,
     EsqDBFlow m r
   ) =>
   DSR.SearchRequest ->
@@ -222,7 +238,7 @@ addLanguageToDictionary ::
   m LanguageDictionary
 addLanguageToDictionary searchReq dict dPoolRes = do
   let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
-  transporterConfig <- SCT.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just searchReq.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
   if language `elem` transporterConfig.languagesToBeTranslated
     then
       if isJust $ M.lookup language dict

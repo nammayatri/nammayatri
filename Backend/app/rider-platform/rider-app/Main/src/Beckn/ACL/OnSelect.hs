@@ -110,6 +110,8 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
             discount = Nothing,
             serviceTierName = serviceTierName,
             quoteValidTill = validTill,
+            isCustomerPrefferedSearchRoute = Nothing,
+            isBlockedRoute = Nothing,
             ..
           }
   where

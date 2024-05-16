@@ -70,6 +70,7 @@ library
       API.Internal.DriverInactiveFCM
       API.Internal.DriverReferee
       API.Internal.FeedbackForm
+      API.Internal.ReportACIssue
       API.UI
       API.UI.Call
       API.UI.CallEvent
@@ -160,9 +161,11 @@ library
       Domain.Action.Internal.DriverInactiveFCM
       Domain.Action.Internal.DriverReferee
       Domain.Action.Internal.FeedbackForm
+      Domain.Action.Internal.ReportACIssue
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
+      Domain.Action.UI.CallStatus
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.City
       Domain.Action.UI.Driver
@@ -177,6 +180,7 @@ library
       Domain.Action.UI.DriverOnboardingV2
       Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
+      Domain.Action.UI.EditBooking
       Domain.Action.UI.ExotelEndRide
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
@@ -202,32 +206,28 @@ library
       Domain.Action.UI.RideSummary
       Domain.Action.UI.Route
       Domain.Action.UI.SafetyWebhook
+      Domain.Action.UI.SocialLogin
       Domain.Action.UI.SpecialLocation
+      Domain.Action.UI.Tokenization
       Domain.Action.UI.Transporter
+      Domain.Action.UI.VehicleDetails
       Domain.Action.UI.Whatsapp
       Domain.Types.Beckn.Status
-      Domain.Types.BlackListOrg
       Domain.Types.Booking
       Domain.Types.Booking.BookingLocation
-      Domain.Types.BookingCancellationReason
-      Domain.Types.BusinessEvent
       Domain.Types.Cac
       Domain.Types.CacType
-      Domain.Types.CallStatus
-      Domain.Types.CancellationCharges
       Domain.Types.City
       Domain.Types.Coins.CoinHistory
       Domain.Types.Coins.CoinsConfig
-      Domain.Types.Coins.PurchaseHistory
       Domain.Types.Common
       Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
       Domain.Types.Driver.GoHomeFeature.DriverHomeLocation
-      Domain.Types.DriverBlockReason
-      Domain.Types.DriverFee
       Domain.Types.DriverLocation
       Domain.Types.DriverPlan
       Domain.Types.DriverQuote
       Domain.Types.DriverStats
+      Domain.Types.Extra.DriverFee
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
       Domain.Types.FarePolicy.DriverExtraFeeBounds
@@ -246,7 +246,6 @@ library
       Domain.Types.Invoice
       Domain.Types.KioskLocation
       Domain.Types.KioskLocationTranslation
-      Domain.Types.LeaderBoardConfig
       Domain.Types.LmsEnumTypes
       Domain.Types.Location
       Domain.Types.LocationMapping
@@ -254,7 +253,6 @@ library
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
       Domain.Types.Merchant.DriverIntelligentPoolConfig
-      Domain.Types.Merchant.LeaderBoardConfig
       Domain.Types.Merchant.MerchantMessage
       Domain.Types.Merchant.MerchantOperatingCity
       Domain.Types.Merchant.MerchantPaymentMethod
@@ -282,7 +280,6 @@ library
       Domain.Types.SearchTry
       Domain.Types.ServiceTierType
       Domain.Types.UtilsTH
-      Domain.Types.WhiteListOrg
       Environment
       Lib.DriverCoins.Coins
       Lib.DriverCoins.Types
@@ -307,10 +304,12 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
       SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
       SharedLogic.Beckn.Common
+      SharedLogic.BlockedRouteDetector
       SharedLogic.Booking
       SharedLogic.Cac
       SharedLogic.CallBAP
       SharedLogic.CallBAPInternal
+      SharedLogic.Cancel
       SharedLogic.DeleteDriver
       SharedLogic.DriverFee
       SharedLogic.DriverOnboarding
@@ -318,6 +317,7 @@ library
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.Types
       SharedLogic.EventTracking
+      SharedLogic.External.LocationTrackingService.API.DriverLocation
       SharedLogic.External.LocationTrackingService.API.DriversLocation
       SharedLogic.External.LocationTrackingService.API.EndRide
       SharedLogic.External.LocationTrackingService.API.NearBy
@@ -341,22 +341,15 @@ library
       SharedLogic.SearchTryLocker
       SharedLogic.SyncRide
       SharedLogic.TollsDetector
+      SharedLogic.VehicleServiceTier
       Storage.Beam.BecknRequest
-      Storage.Beam.BlackListOrg
       Storage.Beam.Booking
       Storage.Beam.Booking.BookingLocation
-      Storage.Beam.BookingCancellationReason
-      Storage.Beam.BusinessEvent
-      Storage.Beam.CallStatus
-      Storage.Beam.CancellationCharges
       Storage.Beam.Coins.CoinHistory
       Storage.Beam.Coins.CoinsConfig
-      Storage.Beam.Coins.PurchaseHistory
       Storage.Beam.Common
       Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation
-      Storage.Beam.DriverBlockReason
-      Storage.Beam.DriverFee
       Storage.Beam.DriverPlan
       Storage.Beam.DriverQuote
       Storage.Beam.DriverStats
@@ -371,7 +364,6 @@ library
       Storage.Beam.FarePolicy.FarePolicyRentalDetails
       Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
       Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab
-      Storage.Beam.FarePolicyCACTypes
       Storage.Beam.FareProduct
       Storage.Beam.Feedback.Feedback
       Storage.Beam.Feedback.FeedbackBadge
@@ -392,7 +384,6 @@ library
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
       Storage.Beam.Merchant.DriverIntelligentPoolConfig
-      Storage.Beam.Merchant.LeaderBoardConfig
       Storage.Beam.Merchant.MerchantMessage
       Storage.Beam.Merchant.MerchantOperatingCity
       Storage.Beam.Merchant.MerchantPaymentMethod
@@ -417,10 +408,21 @@ library
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchTry
       Storage.Beam.SystemConfigs
-      Storage.Beam.WhiteListOrg
+      Storage.Cac.DriverIntelligentPoolConfig
+      Storage.Cac.DriverPoolConfig
+      Storage.Cac.FarePolicy
+      Storage.Cac.FarePolicy.DriverExtraFeeBounds
+      Storage.Cac.FarePolicy.FarePolicyProgressiveDetails
+      Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Storage.Cac.FarePolicy.FarePolicyRentalDetails
+      Storage.Cac.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
+      Storage.Cac.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+      Storage.Cac.GoHomeConfig
+      Storage.Cac.TransporterConfig
       Storage.CachedQueries.BapMetadata
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
+      Storage.CachedQueries.BlockedRoute
       Storage.CachedQueries.DocumentVerificationConfig
       Storage.CachedQueries.Driver.DriverImage
       Storage.CachedQueries.Driver.GoHomeRequest
@@ -453,30 +455,28 @@ library
       Storage.CachedQueries.SubscriptionConfig
       Storage.CachedQueries.Toll
       Storage.CachedQueries.ValueAddNP
+      Storage.CachedQueries.VehicleDetails
       Storage.CachedQueries.VehicleServiceTier
       Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.DriverEdaKafka
       Storage.Clickhouse.DriverFee
       Storage.Clickhouse.Ride
       Storage.Clickhouse.RideDetails
-      Storage.Queries.BlackListOrg
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
       Storage.Queries.Booking.Internal
-      Storage.Queries.BookingCancellationReason
-      Storage.Queries.BusinessEvent
-      Storage.Queries.CallStatus
-      Storage.Queries.CancellationCharges
+      Storage.Queries.BookingCancellationReasonExtra
+      Storage.Queries.BusinessEventExtra
+      Storage.Queries.CallStatusExtra
       Storage.Queries.Coins.CoinHistory
       Storage.Queries.Coins.CoinsConfig
-      Storage.Queries.Coins.PurchaseHistory
       Storage.Queries.DailyStatsExtra
       Storage.Queries.DocumentVerificationConfigExtra
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
       Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation
-      Storage.Queries.DriverBlockReason
-      Storage.Queries.DriverFee
+      Storage.Queries.DriverBlockReasonExtra
+      Storage.Queries.DriverFeeExtra
       Storage.Queries.DriverInformation.Internal
       Storage.Queries.DriverInformationExtra
       Storage.Queries.DriverLicenseExtra
@@ -517,7 +517,6 @@ library
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant
       Storage.Queries.Merchant.DriverIntelligentPoolConfig
-      Storage.Queries.Merchant.LeaderBoardConfig
       Storage.Queries.Merchant.MerchantMessage
       Storage.Queries.Merchant.MerchantOperatingCity
       Storage.Queries.Merchant.MerchantPaymentMethod
@@ -535,6 +534,7 @@ library
       Storage.Queries.Person.GetNearestGoHomeDrivers
       Storage.Queries.Person.Internal
       Storage.Queries.Plan
+      Storage.Queries.PurchaseHistoryExtra
       Storage.Queries.Quote
       Storage.Queries.RatingExtra
       Storage.Queries.RegistrationToken
@@ -549,14 +549,16 @@ library
       Storage.Queries.Status
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.DocumentVerificationConfig
+      Storage.Queries.Transformers.DriverFee
       Storage.Queries.Transformers.QuestionInformation
       Storage.Queries.Transformers.ReelsData
       Storage.Queries.Transformers.Ride
       Storage.Queries.TranslationsExtra
       Storage.Queries.Vehicle.Internal
+      Storage.Queries.VehicleDetailsExtra
       Storage.Queries.VehicleExtra
       Storage.Queries.VehicleRegistrationCertificateExtra
-      Storage.Queries.WhiteListOrg
+      Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Beam.UtilsTH
@@ -579,32 +581,51 @@ library
       Tools.Whatsapp
       API.Action.UI.Cac
       API.Action.UI.DriverOnboardingV2
+      API.Action.UI.EditBooking
       API.Action.UI.LmsModule
       API.Action.UI.Reels
+      API.Action.UI.SocialLogin
       API.Action.UI.SpecialLocation
+      API.Action.UI.Tokenization
+      API.Action.UI.VehicleDetails
       API.Types.UI.DriverOnboardingV2
+      API.Types.UI.EditBooking
       API.Types.UI.LmsModule
       API.Types.UI.Reels
+      API.Types.UI.SocialLogin
+      API.Types.UI.Tokenization
+      API.Types.UI.VehicleDetails
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
       Domain.Types.AadhaarVerification
       Domain.Types.BapMetadata
       Domain.Types.BecknConfig
+      Domain.Types.BlackListOrg
+      Domain.Types.BlockedRoute
+      Domain.Types.BookingCancellationReason
+      Domain.Types.BookingUpdateRequest
+      Domain.Types.BusinessEvent
+      Domain.Types.CallStatus
+      Domain.Types.CancellationCharges
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.DailyStats
       Domain.Types.DocumentVerificationConfig
+      Domain.Types.DriverBlockReason
+      Domain.Types.DriverFee
       Domain.Types.DriverInformation
       Domain.Types.DriverLicense
       Domain.Types.DriverModuleCompletion
       Domain.Types.DriverPoolConfig
       Domain.Types.DriverRCAssociation
       Domain.Types.DriverReferral
+      Domain.Types.DriverSSN
       Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.IdfyVerification
       Domain.Types.Image
       Domain.Types.InterCityTravelCities
+      Domain.Types.LeaderBoardConfigs
       Domain.Types.LmsModule
       Domain.Types.LmsModuleTranslation
       Domain.Types.LmsModuleVideoInformation
@@ -613,6 +634,7 @@ library
       Domain.Types.MetaData
       Domain.Types.ModuleCompletionInformation
       Domain.Types.PlanTranslation
+      Domain.Types.PurchaseHistory
       Domain.Types.QuestionInformation
       Domain.Types.QuestionModuleMapping
       Domain.Types.Rating
@@ -623,6 +645,7 @@ library
       Domain.Types.Translations
       Domain.Types.ValueAddNP
       Domain.Types.Vehicle
+      Domain.Types.VehicleDetails
       Domain.Types.VehicleFitnessCertificate
       Domain.Types.VehicleInsurance
       Domain.Types.VehiclePermit
@@ -630,26 +653,38 @@ library
       Domain.Types.VehicleRegistrationCertificate
       Domain.Types.VehicleServiceTier
       Domain.Types.Volunteer
+      Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
       Storage.Beam.AadhaarVerification
       Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
+      Storage.Beam.BlackListOrg
+      Storage.Beam.BlockedRoute
+      Storage.Beam.BookingCancellationReason
+      Storage.Beam.BookingUpdateRequest
+      Storage.Beam.BusinessEvent
+      Storage.Beam.CallStatus
+      Storage.Beam.CancellationCharges
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.DailyStats
       Storage.Beam.DocumentVerificationConfig
+      Storage.Beam.DriverBlockReason
+      Storage.Beam.DriverFee
       Storage.Beam.DriverInformation
       Storage.Beam.DriverLicense
       Storage.Beam.DriverModuleCompletion
       Storage.Beam.DriverPoolConfig
       Storage.Beam.DriverRCAssociation
       Storage.Beam.DriverReferral
+      Storage.Beam.DriverSSN
       Storage.Beam.Estimate
       Storage.Beam.Exophone
       Storage.Beam.IdfyVerification
       Storage.Beam.Image
       Storage.Beam.InterCityTravelCities
+      Storage.Beam.LeaderBoardConfigs
       Storage.Beam.LmsModule
       Storage.Beam.LmsModuleTranslation
       Storage.Beam.LmsModuleVideoInformation
@@ -658,6 +693,7 @@ library
       Storage.Beam.MetaData
       Storage.Beam.ModuleCompletionInformation
       Storage.Beam.PlanTranslation
+      Storage.Beam.PurchaseHistory
       Storage.Beam.QuestionInformation
       Storage.Beam.QuestionModuleMapping
       Storage.Beam.Rating
@@ -668,6 +704,7 @@ library
       Storage.Beam.Translations
       Storage.Beam.ValueAddNP
       Storage.Beam.Vehicle
+      Storage.Beam.VehicleDetails
       Storage.Beam.VehicleFitnessCertificate
       Storage.Beam.VehicleInsurance
       Storage.Beam.VehiclePermit
@@ -675,26 +712,38 @@ library
       Storage.Beam.VehicleRegistrationCertificate
       Storage.Beam.VehicleServiceTier
       Storage.Beam.Volunteer
+      Storage.Beam.WhiteListOrg
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
       Storage.Queries.AadhaarVerification
       Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig
+      Storage.Queries.BlackListOrg
+      Storage.Queries.BlockedRoute
+      Storage.Queries.BookingCancellationReason
+      Storage.Queries.BookingUpdateRequest
+      Storage.Queries.BusinessEvent
+      Storage.Queries.CallStatus
+      Storage.Queries.CancellationCharges
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.DailyStats
       Storage.Queries.DocumentVerificationConfig
+      Storage.Queries.DriverBlockReason
+      Storage.Queries.DriverFee
       Storage.Queries.DriverInformation
       Storage.Queries.DriverLicense
       Storage.Queries.DriverModuleCompletion
       Storage.Queries.DriverPoolConfig
       Storage.Queries.DriverRCAssociation
       Storage.Queries.DriverReferral
+      Storage.Queries.DriverSSN
       Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.IdfyVerification
       Storage.Queries.Image
       Storage.Queries.InterCityTravelCities
+      Storage.Queries.LeaderBoardConfigs
       Storage.Queries.LmsModule
       Storage.Queries.LmsModuleTranslation
       Storage.Queries.LmsModuleVideoInformation
@@ -702,22 +751,31 @@ library
       Storage.Queries.MerchantState
       Storage.Queries.MetaData
       Storage.Queries.ModuleCompletionInformation
+      Storage.Queries.OrphanInstances.BookingCancellationReason
+      Storage.Queries.OrphanInstances.BusinessEvent
+      Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.DailyStats
       Storage.Queries.OrphanInstances.DocumentVerificationConfig
+      Storage.Queries.OrphanInstances.DriverBlockReason
+      Storage.Queries.OrphanInstances.DriverFee
       Storage.Queries.OrphanInstances.DriverInformation
       Storage.Queries.OrphanInstances.DriverLicense
       Storage.Queries.OrphanInstances.DriverRCAssociation
       Storage.Queries.OrphanInstances.DriverReferral
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.Image
+      Storage.Queries.OrphanInstances.PurchaseHistory
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.Vehicle
+      Storage.Queries.OrphanInstances.VehicleDetails
       Storage.Queries.OrphanInstances.VehicleRegistrationCertificate
       Storage.Queries.OrphanInstances.Volunteer
+      Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.PlanTranslation
+      Storage.Queries.PurchaseHistory
       Storage.Queries.QuestionInformation
       Storage.Queries.QuestionModuleMapping
       Storage.Queries.Rating
@@ -728,6 +786,7 @@ library
       Storage.Queries.Translations
       Storage.Queries.ValueAddNP
       Storage.Queries.Vehicle
+      Storage.Queries.VehicleDetails
       Storage.Queries.VehicleFitnessCertificate
       Storage.Queries.VehicleInsurance
       Storage.Queries.VehiclePermit
@@ -735,6 +794,7 @@ library
       Storage.Queries.VehicleRegistrationCertificate
       Storage.Queries.VehicleServiceTier
       Storage.Queries.Volunteer
+      Storage.Queries.WhiteListOrg
   other-modules:
       Paths_dynamic_offer_driver_app
   hs-source-dirs:
@@ -799,12 +859,15 @@ library
     , esqueleto
     , euler-hs
     , exceptions
+    , external
     , extra
     , generic-lens
     , geohash ==1.0.1
     , haskell-cac
     , hspec
     , http-client
+    , http-client-tls
+    , http-conduit
     , http-types
     , lens
     , lens-aeson
@@ -924,6 +987,8 @@ executable dynamic-offer-driver-app-exe
     , haskell-cac
     , hspec
     , http-client
+    , http-client-tls
+    , http-conduit
     , http-types
     , lens
     , lens-aeson

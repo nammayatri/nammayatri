@@ -21,6 +21,8 @@ import Data.Maybe (Maybe)
 import Screens.Types (TipViewProps, QuoteListItemState(..), City(..))
 import MerchantConfig.Types (AppConfig)
 import Components.TipsView as TipsView
+import Components.ChooseVehicle.Controller as CVC
+import Components.ProviderModel as PM
 
 data Action = GoBack
             | NoAction
@@ -33,6 +35,8 @@ data Action = GoBack
             | HidePopUp
             | ChangeTip
             | TipsViewActionController TipsView.Action
+            | ProviderModelAC PM.Action
+            | CancelTimer
 
 type QuoteListModelState = {
      source :: String
@@ -50,4 +54,10 @@ type QuoteListModelState = {
   , city :: City
   , customerTipArray :: Array String
   , customerTipArrayWithValues :: Array Int
+  , providerSelectionStage :: Boolean
+  , quoteList :: Array CVC.Config
+  , selectProviderTimer :: String
+  , selectedEstimatesObject :: CVC.Config
+  , showAnim :: Boolean
+  , animEndTime :: Int
 }

@@ -37,6 +37,13 @@ findByRCIdAndFleetOwnerId ::
   (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate))
 findByRCIdAndFleetOwnerId (Kernel.Types.Id.Id id) fleetOwnerId = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id, Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]]
 
+updateAirConditioned ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
+updateAirConditioned airConditioned (Kernel.Types.Id.Id id) = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.airConditioned airConditioned, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+
 updateFleetOwnerId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
@@ -69,10 +76,12 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.vehicleCapacity vehicleCapacity,
       Se.Set Beam.vehicleClass vehicleClass,
       Se.Set Beam.vehicleColor vehicleColor,
+      Se.Set Beam.vehicleDoors vehicleDoors,
       Se.Set Beam.vehicleEnergyType vehicleEnergyType,
       Se.Set Beam.vehicleManufacturer vehicleManufacturer,
       Se.Set Beam.vehicleModel vehicleModel,
       Se.Set Beam.vehicleRating vehicleRating,
+      Se.Set Beam.vehicleSeatBelts vehicleSeatBelts,
       Se.Set Beam.vehicleVariant vehicleVariant,
       Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),

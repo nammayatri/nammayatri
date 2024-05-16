@@ -34,12 +34,11 @@ import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), negate, void)
-import PrestoDOM (Eval, ScrollState(..), continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, ScrollState(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getKmMeter, fetchVehicleVariant)
 import Resources.Localizable.EN (getEN)
 import Screens (ScreenName(..), getScreen)
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getSpecialTag)
 import Screens.Types (AnimationState(..), Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..))
 import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..))
 import Storage (isLocalStageOn)
@@ -168,7 +167,7 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
 
 eval Refresh state = updateAndExit state{props{ receivedResponse = false, loaderButtonVisibility = false }} $  RefreshScreen state
 
-eval _ state = continue state
+eval _ state = update state
 
 getTitle :: String -> String
 getTitle category  = 

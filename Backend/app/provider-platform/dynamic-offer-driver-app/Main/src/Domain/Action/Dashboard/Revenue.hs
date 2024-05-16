@@ -31,8 +31,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, fromMaybeM, throwError)
 import Kernel.Utils.Time
 import SharedLogic.Merchant
+import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Clickhouse.DriverFee as CHDriverFee
 import Storage.Queries.Volunteer (findAllByPlace)
 import Tools.Error
@@ -41,7 +41,7 @@ getAllDriverFeeHistory :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime -
 getAllDriverFeeHistory merchantShortId opCity mbFrom mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
@@ -61,7 +61,7 @@ getCollectionHistory :: ShortId DM.Merchant -> Context.City -> Maybe Text -> May
 getCollectionHistory merchantShortId opCity volunteerId place mbFrom mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let defaultFrom = UTCTime (utctDay now) 0
       from_ = fromMaybe defaultFrom mbFrom

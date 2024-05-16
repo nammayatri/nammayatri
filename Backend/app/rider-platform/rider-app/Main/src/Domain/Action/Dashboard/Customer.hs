@@ -26,7 +26,7 @@ where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Common
 import qualified Domain.Action.UI.Cancel as DCancel
-import qualified Domain.Types.Booking.Type as DRB
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
@@ -46,6 +46,7 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import qualified Storage.Clickhouse.Sos as CHSos
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SavedReqLocation as QSRL
@@ -130,11 +131,14 @@ customerInfo merchantShortId opCity customerId = do
   unless (merchant.id == merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
 
   numberOfRides <- fromMaybe 0 <$> runInReplica (QP.fetchRidesCount personId)
+  sos <- CHSos.findAllByPersonId personId
+  let totalSosCount = length sos
   pure $
     Common.CustomerInfoRes
       { numberOfRides,
         falseSafetyAlarmCount = customer.falseSafetyAlarmCount,
-        safetyCenterDisabledOnDate = customer.safetyCenterDisabledOnDate
+        safetyCenterDisabledOnDate = customer.safetyCenterDisabledOnDate,
+        ..
       }
 
 ---------------------------------------------------------------------
@@ -179,7 +183,7 @@ customerCancellationDuesSync merchantShortId customerId req = do
   let personId = cast @Common.Customer @DP.Person customerId
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mobNum <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-  void $ CallBPPInternal.customerCancellationDuesSync merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobNum (fromMaybe "+91" person.mobileCountryCode) req.cancellationCharges req.disputeChancesUsed req.paymentMadeToDriver person.currentCity
+  void $ CallBPPInternal.customerCancellationDuesSync merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobNum (fromMaybe "+91" person.mobileCountryCode) req.cancellationCharges req.cancellationChargesWithCurrency req.disputeChancesUsed req.paymentMadeToDriver person.currentCity
   return Success
 
 getCancellationDuesDetails ::
@@ -192,6 +196,7 @@ getCancellationDuesDetails merchantShortId personId = do
   return $
     Common.CancellationDuesDetailsRes
       { cancellationDues = res.cancellationDues,
+        cancellationDuesWithCurrency = res.cancellationDuesWithCurrency,
         disputeChancesUsed = res.disputeChancesUsed,
         canBlockCustomer = res.canBlockCustomer
       }
