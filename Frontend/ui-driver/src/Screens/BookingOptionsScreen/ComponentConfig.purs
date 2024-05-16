@@ -27,17 +27,21 @@ import Prelude
 import Components.PopUpModal as PopUpModal
 import Screens.Types as ST
 import Helpers.Utils as HU
+import Data.Function.Uncurried (runFn3)
+import DecodeUtil (getAnyFromWindow)
+import Data.Maybe (Maybe(..), fromMaybe)
 
 
 topAcDriverPopUpConfig :: ST.BookingOptionsScreenState -> PopUpModal.Config
 topAcDriverPopUpConfig state = let 
+  appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
   config' = PopUpModal.config
     { gravity = CENTER,
       margin = MarginHorizontal 24 24 ,
       buttonLayoutMargin = Margin 16 0 16 20 ,
       optionButtonOrientation = "VERTICAL",
       primaryText {
-        text = getString TOP_AC_DRIVER,
+        text = getString $ TOP_AC_DRIVER appName,
         margin = Margin 18 24 18 24
     },
       secondaryText { visibility = GONE },

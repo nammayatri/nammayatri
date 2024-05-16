@@ -3,6 +3,7 @@ module Screens.BookingOptionsScreen.ScreenData where
 import Screens.Types (BookingOptionsScreenState, RidePreference)
 import Services.API as API
 import Data.Maybe (Maybe(..))
+import ConfigProvider (getAppConfig, appConfig)
 
 initData :: BookingOptionsScreenState
 initData =
@@ -17,6 +18,7 @@ initData =
       , canSwitchToRental: false
       , canSwitchToInterCity: false
       , airConditioned: Nothing
+      , config: getAppConfig appConfig
       }
   , props:
       { isBtnActive: false

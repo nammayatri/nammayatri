@@ -1379,14 +1379,12 @@ getEN stringKey =
         SET_THE_AC_ON_TO_ENABLE name -> "Set the AC on to enable " <> name
         VARIANTS_ARE_SWITCHED -> "Your preferred AC variants are enabled again"
         NON_AC_ARE_SWITCHED -> "Non-AC mini is enabled by default"
-        TOP_AC_DRIVER -> "See how to be a top AC driver on Namma Yatri"
         NETWORK_ERROR -> "Network Error"
         SERVER_ERROR -> "Server Error"
         UNKNOWN_ERROR -> "Unknown Error"
         CONNECTION_REFUSED -> "Connection Refused"
         TIMEOUT -> "Timeout"
         ALL_ELIGIBLE_VARIANTS_ARE_CHOSEN_PLEASE_CHECK -> "All eligible variants are chosen. Please check"
-        TOP_AC_DRIVER -> "See how to be a top AC driver on Namma Yatri"
         RIDE_MORE_AND_EARN_COINS -> "Ride more and earn coins"
         TAKE_MORE_RIDES_TO_EARN_MORE_COINS_AND_CONVERT_IT_TO_SUBSCRIPTION_DISCOUNTS -> "Coins can be used to get subscription fee discounts"
         CHECK_YATRI_COINS -> "Check Yatri Coins"
@@ -1407,3 +1405,4 @@ getEN stringKey =
         PLEASE_COLLECT_SEPARATELY -> "Please collect it separately from customer <b>only if a toll was crossed</b>"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "Toll charges may be applicable"        
         YOU_ARE_ALL_SET_TO_TAKE_RIDES -> "You're all set to take rides on Namma Yatri"
+        TOP_AC_DRIVER appName -> "See how to be a top AC driver on " <> appName
