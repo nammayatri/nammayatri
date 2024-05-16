@@ -65,4 +65,6 @@
     <string name="rental"> রেন্টাল </string>
     <string name="intercity"> ইন্টারসিটি </string>
     <string name="toll_text">টোল অন্তর্ভুক্ত</string>
+    <string name="new_distance">নতুন দূরত্ব :</string>
+    <string name="new_fare">নতুন ভাড়া :</string>
 </resources>

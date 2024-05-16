@@ -154,7 +154,8 @@ function refreshFlow(){
   const currentDate = new Date();
   const diff = Math.abs(previousDateObject - currentDate) / 1000;
   const token = window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN");
-  if ((diff > refreshThreshold) && (token != "__failed")){
+  const shouldRefresh = window.JBridge.getKeysInSharedPref("CALL_REFRESH");
+  if (((diff > refreshThreshold) && (token != "__failed")) || shouldRefresh == "true") {
     if(window.storeCallBackMessageUpdated){
       window.__PROXY_FN[window.storeCallBackMessageUpdated] = undefined;
     }
@@ -162,6 +163,7 @@ function refreshFlow(){
       JBridge.removeCallBackOpenChatScreen();
     }
     window.chatMessages = undefined;
+    window.JBridge.setKeysInSharedPrefs("CALL_REFRESH", "false");
     purescript.onConnectivityEvent("REFRESH")();
   }
 }

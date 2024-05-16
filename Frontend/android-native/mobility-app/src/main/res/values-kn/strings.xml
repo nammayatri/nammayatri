@@ -70,4 +70,6 @@
     <string name="you_are_near_a_special_pickup_zone">ನೀವು ವಿಶೇಷ \n ಪಿಕಪ್ ವಲಯದ ಹತ್ತಿರದಲ್ಲಿದ್ದೀರಿ</string>
     <string name="zone_pickup">ಪಿಕಪ್ ಜೋನ್</string>
     <string name="toll_text">ಟೋಲ್ ಒಳಗೊಂಡಿದೆ</string>
+    <string name="new_distance">ಹೊಸ ಮಾರ್ಗ :</string>
+    <string name="new_fare">ಹೊಸ ದರ :</string>
 </resources>

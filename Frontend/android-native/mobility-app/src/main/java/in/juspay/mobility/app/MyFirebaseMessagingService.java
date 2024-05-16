@@ -212,10 +212,20 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             }
                             break;
                         case NotificationTypes.DRIVER_NOTIFY:
+                        case NotificationTypes.DRIVER_NOTIFY_LOCATION_UPDATE:
                             if (remoteMessage.getData().containsKey("driver_notification_payload")) {
                                 String driverNotification = remoteMessage.getData().get("driver_notification_payload");
                                 if (driverNotification != null){
                                     JSONObject driverNotificationJsonObject = new JSONObject(driverNotification);
+                                    if (notificationType.equals(NotificationTypes.DRIVER_NOTIFY_LOCATION_UPDATE)) {
+                                        if (remoteMessage.getData().containsKey("entity_data")) {
+                                            String entityPayload = remoteMessage.getData().get("entity_data");
+                                            if (entityPayload != null){
+                                                JSONObject updateLocDetails = new JSONObject(entityPayload);
+                                                driverNotificationJsonObject.put("updateLocDetails", updateLocDetails);
+                                            }
+                                        }
+                                    }
                                     showOverlayMessage(driverNotificationJsonObject);
                                     if (driverNotificationJsonObject.has("showPushNotification") && !driverNotificationJsonObject.isNull("showPushNotification") ? driverNotificationJsonObject.getBoolean("showPushNotification") : false) {
                                        NotificationUtils.showNotification(this, title, body, payload, null);
@@ -683,6 +693,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         public static final String CALL_API = "CALL_API";
         public static final String CHAT_MESSAGE = "CHAT_MESSAGE";
         public static final String DRIVER_NOTIFY = "DRIVER_NOTIFY";
+        public static final String DRIVER_NOTIFY_LOCATION_UPDATE = "DRIVER_NOTIFY_LOCATION_UPDATE";
         public static final String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
         public static final String PAYMENT_OVERDUE = "PAYMENT_OVERDUE";
         public static final String PAYMENT_PENDING = "PAYMENT_PENDING";
