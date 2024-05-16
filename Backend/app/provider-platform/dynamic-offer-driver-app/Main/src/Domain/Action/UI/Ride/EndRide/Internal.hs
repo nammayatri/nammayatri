@@ -220,7 +220,7 @@ updateLeaderboardZScore merchantId merchantOpCityId ride = do
       when leaderBoardConfig.isEnabled $ do
         let rideDate = getCurrentDate currentTime
             (fromDate, toDate) = calculateFromDateToDate leaderBoardType rideDate
-            leaderBoardKey = makeDriverLeaderBoardKey leaderBoardType False leaderBoardConfig.useOperatingCityBasedLeaderBoard merchantId merchantOpCityId fromDate toDate
+            leaderBoardKey = makeDriverLeaderBoardKey leaderBoardType False merchantOpCityId fromDate toDate
         driverZscore <- Hedis.zScore leaderBoardKey $ ride.driverId.getId
         updateDriverZscore ride rideDate fromDate toDate driverZscore ride.chargeableDistance merchantId merchantOpCityId leaderBoardConfig
 
@@ -239,12 +239,11 @@ updateLeaderboardZScore merchantId merchantOpCityId ride = do
            in (monthStartDate, monthEndDate)
 
 updateDriverZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Day -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> Id DMOC.MerchantOperatingCity -> LConfig.LeaderBoardConfigs -> m ()
-updateDriverZscore ride rideDate fromDate toDate driverZscore rideChargeableDistance merchantId merchantOpCityId leaderBoardConfig = do
+updateDriverZscore ride rideDate fromDate toDate driverZscore rideChargeableDistance _ merchantOpCityId leaderBoardConfig = do
   (LocalTime _ localTime) <- utcToLocalTime timeZoneIST <$> getCurrentTime
-  let useCityBasedLeaderboard = leaderBoardConfig.useOperatingCityBasedLeaderBoard
-      leaderBoardExpiry = calculateLeaderBoardExpiry - secondsFromTimeOfDay localTime
-      driverLeaderBoardKey = makeDriverLeaderBoardKey leaderBoardConfig.leaderBoardType False useCityBasedLeaderboard merchantId merchantOpCityId fromDate toDate
-      cachedDriverLeaderBoardKey = makeDriverLeaderBoardKey leaderBoardConfig.leaderBoardType True useCityBasedLeaderboard merchantId merchantOpCityId fromDate toDate
+  let leaderBoardExpiry = calculateLeaderBoardExpiry - secondsFromTimeOfDay localTime
+      driverLeaderBoardKey = makeDriverLeaderBoardKey leaderBoardConfig.leaderBoardType False merchantOpCityId fromDate toDate
+      cachedDriverLeaderBoardKey = makeDriverLeaderBoardKey leaderBoardConfig.leaderBoardType True merchantOpCityId fromDate toDate
   Hedis.zAddExp driverLeaderBoardKey ride.driverId.getId calculateCurrentZscore leaderBoardExpiry.getSeconds
   let limit = integerFromInt leaderBoardConfig.leaderBoardLengthLimit
   driversListWithScores' <- Hedis.zrevrangeWithscores driverLeaderBoardKey 0 (limit - 1)
@@ -279,50 +278,34 @@ updateDriverZscore ride rideDate fromDate toDate driverZscore rideChargeableDist
         LConfig.MONTHLY -> Seconds $ integerToInt $ diffDays (getEndDateMonth rideDate leaderBoardConfig.numberOfSets) fromDate * 86400
         _ -> Seconds $ leaderBoardConfig.leaderBoardExpiry.getSeconds * leaderBoardConfig.numberOfSets
 
-makeDriverLeaderBoardKey :: LConfig.LeaderBoardType -> Bool -> Maybe Bool -> Id Merchant -> Id DMOC.MerchantOperatingCity -> Day -> Day -> Text
-makeDriverLeaderBoardKey leaderBoardType isCached useOperatingCityBasedLeaderBoard merchantId merchantOpCityId fromDate toDate =
+makeDriverLeaderBoardKey :: LConfig.LeaderBoardType -> Bool -> Id DMOC.MerchantOperatingCity -> Day -> Day -> Text
+makeDriverLeaderBoardKey leaderBoardType isCached merchantOpCityId fromDate toDate =
   case leaderBoardType of
     LConfig.DAILY -> if isCached then makeCachedDailyDriverLeaderBoardKey else makeDailyDriverLeaderBoardKey
     LConfig.WEEKLY -> if isCached then makeCachedWeeklyDriverLeaderBoardKey else makeWeeklyDriverLeaderBoardKey
     LConfig.MONTHLY -> if isCached then makeCachedMonthlyDriverLeaderBoardKey else makeMonthlyDriverLeaderBoardKey
   where
     makeCachedDailyDriverLeaderBoardKey :: Text
-    makeCachedDailyDriverLeaderBoardKey =
-      case useOperatingCityBasedLeaderBoard of
-        Just True -> "DDLBCK:" <> merchantOpCityId.getId <> ":" <> show fromDate
-        _ -> "DDLBCK:" <> merchantId.getId <> ":" <> show fromDate
+    makeCachedDailyDriverLeaderBoardKey = "DDLBCK:" <> merchantOpCityId.getId <> ":" <> show fromDate
 
     makeDailyDriverLeaderBoardKey :: Text
-    makeDailyDriverLeaderBoardKey =
-      case useOperatingCityBasedLeaderBoard of
-        Just True -> "DDLBK:" <> merchantOpCityId.getId <> ":" <> show fromDate
-        _ -> "DDLBK:" <> merchantId.getId <> ":" <> show fromDate
+    makeDailyDriverLeaderBoardKey = "DDLBK:" <> merchantOpCityId.getId <> ":" <> show fromDate
 
     makeCachedWeeklyDriverLeaderBoardKey :: Text
-    makeCachedWeeklyDriverLeaderBoardKey =
-      case useOperatingCityBasedLeaderBoard of
-        Just True -> "DWLBCK:" <> merchantOpCityId.getId <> ":" <> show fromDate <> ":" <> show toDate
-        _ -> "DWLBCK:" <> merchantId.getId <> ":" <> show fromDate <> ":" <> show toDate
+    makeCachedWeeklyDriverLeaderBoardKey = "DWLBCK:" <> merchantOpCityId.getId <> ":" <> show fromDate <> ":" <> show toDate
 
     makeWeeklyDriverLeaderBoardKey :: Text
-    makeWeeklyDriverLeaderBoardKey =
-      case useOperatingCityBasedLeaderBoard of
-        Just True -> "DWLBK:" <> merchantOpCityId.getId <> ":" <> show fromDate <> ":" <> show toDate
-        _ -> "DWLBK:" <> merchantId.getId <> ":" <> show fromDate <> ":" <> show toDate
+    makeWeeklyDriverLeaderBoardKey = "DWLBK:" <> merchantOpCityId.getId <> ":" <> show fromDate <> ":" <> show toDate
 
     makeMonthlyDriverLeaderBoardKey :: Text
     makeMonthlyDriverLeaderBoardKey =
       let month = getMonth fromDate
-       in case useOperatingCityBasedLeaderBoard of
-            Just True -> "DMLBK:" <> merchantOpCityId.getId <> ":" <> show month
-            _ -> "DMLBK:" <> merchantId.getId <> ":" <> show month
+       in "DMLBK:" <> merchantOpCityId.getId <> ":" <> show month
 
     makeCachedMonthlyDriverLeaderBoardKey :: Text
     makeCachedMonthlyDriverLeaderBoardKey =
       let month = getMonth fromDate
-       in case useOperatingCityBasedLeaderBoard of
-            Just True -> "DMLBCK:" <> merchantOpCityId.getId <> ":" <> show month
-            _ -> "DMLBCK:" <> merchantId.getId <> ":" <> show month
+       in "DMLBCK:" <> merchantOpCityId.getId <> ":" <> show month
 
 getRidesAndDistancefromZscore :: Double -> Int -> (Int, Meters)
 getRidesAndDistancefromZscore dzscore dailyZscoreBase =

@@ -18,7 +18,6 @@ type API =
     :> ( TokenAuth
            :> "daily"
            :> MandatoryQueryParam "date" Day
-           :> QueryParam "fillData" Bool
            :> Get '[JSON] DLeaderBoard.LeaderBoardRes
            :<|> TokenAuth
            :> "weekly"
@@ -37,8 +36,8 @@ handler =
     :<|> getWeeklyDriverLeaderBoard
     :<|> getMonthlyDriverLeaderBoard
 
-getDailyDriverLeaderBoard :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Maybe Bool -> FlowHandler DLeaderBoard.LeaderBoardRes
-getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) date fillData = withFlowHandlerAPI $ DLeaderBoard.getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) date fillData
+getDailyDriverLeaderBoard :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> FlowHandler DLeaderBoard.LeaderBoardRes
+getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) date = withFlowHandlerAPI $ DLeaderBoard.getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) date
 
 getWeeklyDriverLeaderBoard :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> FlowHandler DLeaderBoard.LeaderBoardRes
 getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toDate = withFlowHandlerAPI $ DLeaderBoard.getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toDate
