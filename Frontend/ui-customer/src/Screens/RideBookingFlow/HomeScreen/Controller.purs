@@ -2670,7 +2670,7 @@ eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = 
     ]
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.NoAction config))) state = do
   let height = (runFn1 getLayoutBounds $ getNewIDWithTag config.id).height
-      updatedState = state{props{defaultPickUpPoint = "", currentEstimateHeight = height, selectedEstimateHeight = if config.vehicleVariant == "BOOK_ANY" then state.props.selectedEstimateHeight else height}}
+      updatedState = state{props{defaultPickUpPoint = "", currentEstimateHeight = if config.vehicleVariant == "BOOK_ANY" then height else state.props.currentEstimateHeight, selectedEstimateHeight = if config.vehicleVariant /= "BOOK_ANY" then height else state.props.selectedEstimateHeight}}
   continue updatedState
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ServicesOnClick config item))) state = do
@@ -2718,7 +2718,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".BookNow") "true"
-      (Tuple estimateId otherSelectedEstimates) = spy "Praveen" $ getEstimateId state.data.specialZoneQuoteList state.data.selectedEstimatesObject 
+      (Tuple estimateId otherSelectedEstimates) = getEstimateId state.data.specialZoneQuoteList state.data.selectedEstimatesObject 
   _ <- pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
   void $ pure $ setValueToLocalStore SELECTED_VARIANT (state.data.selectedEstimatesObject.vehicleVariant)
   void $ pure $ cacheRateCard state
