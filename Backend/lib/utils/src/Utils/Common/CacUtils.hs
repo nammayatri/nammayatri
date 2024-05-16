@@ -20,6 +20,7 @@ module Utils.Common.CacUtils
 where
 
 import qualified Client.Main as CM
+import qualified Control.Concurrent as CC
 import Data.Aeson
 import qualified Data.Bifunctor as DBF
 import Data.Text as Text
@@ -85,12 +86,19 @@ getConfigFromCACStrictCommon toss context cpf = do
   cacConfig <- asks (.cacConfig)
   getConfigFromCac context cacConfig.tenant toss cpf
 
+runPolling :: String -> IO ()
+runPolling tenant = do
+  _ <- CM.startCACPolling [tenant]
+  _ <- CM.runSuperPositionPolling [tenant]
+  pure ()
+
 createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, FromJSON b, ToJSON b, HasSchemaName BeamSC.SystemConfigsT) => Int -> [(CacContext, Value)] -> CacPrefix -> m (Maybe b)
 createThroughConfigHelper toss context cpf = do
   cacConfig <- asks (.cacConfig)
   config' <- KSQS.findById $ Text.pack cacConfig.tenant
-  config <- maybe (throwError $ InternalError "config not found for transporterConfig in db") pure config'
+  config <- maybe (throwError $ InternalError ("config not found for" <> getTableName cpf <> " in db")) pure config'
   _ <- initializeCACThroughConfig CM.createClientFromConfig config cacConfig.tenant cacConfig.host (fromIntegral cacConfig.interval)
+  _ <- liftIO . CC.forkIO $ runPolling cacConfig.tenant
   getConfigFromCACStrictCommon toss context cpf
 
 getConfigFromCACCommon ::
@@ -148,14 +156,16 @@ getConfigFromCacOrDB ::
   CacPrefix ->
   m (Maybe a)
 getConfigFromCacOrDB cachedConfig context stickyKey fromCacTyp cpf = do
-  systemConfigs <- L.getOption KBT.Tables
+  systemConfigs' <- L.getOption KBT.Tables
+  systemConfigs <- maybe (KSQS.findById "kv_configs" >>= pure . decodeFromText' @Tables) (pure . Just) systemConfigs'
   let useCACConfig = maybe [] (.useCAC) systemConfigs
   maybe
     ( do
         if getTableName cpf `GL.elem` useCACConfig
           then do
             config <-
-              getConfigFromCACCommon context stickyKey fromCacTyp cpf `safeCatch` \(_ :: SomeException) -> do
+              getConfigFromCACCommon context stickyKey fromCacTyp cpf `safeCatch` \(err :: SomeException) -> do
+                logError $ "CAC failed us: " <> show err
                 incrementSystemConfigsFailedCounter $ getCacMetricErrorFromDB cpf
                 pure Nothing
             when (isJust config) do
