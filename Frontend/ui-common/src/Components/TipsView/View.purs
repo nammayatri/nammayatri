@@ -168,7 +168,6 @@ iOSTipsView push state =
       , width MATCH_PARENT
       , margin $ MarginTop 16
       , orientation VERTICAL
-      , background Color.grey800
       , visibility $ boolToVisibility $ state.enableTips && state.isVisible
       ]
       ( mapWithIndex
