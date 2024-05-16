@@ -35,6 +35,8 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverStats as SQD
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonExtra as QP
+import qualified Storage.Queries.DriverStats as SQD
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as SQR
