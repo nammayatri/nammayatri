@@ -1001,6 +1001,15 @@ export const saveAudioFile = function (source) {
   }
 }
 
+export const isAccessibilityEnabled = function (str) {
+  if (window.__OS == "IOS") {
+    return (window.JBridge.isAccessibilityEnabled && (window.JBridge.isAccessibilityEnabled() == "1"))
+  } else if (window.JBridge.isAccessibilityEnabled) {
+    return window.JBridge.isAccessibilityEnabled();
+  }
+  return false;
+}
+
 
 export const differenceBetweenTwoUTC = function (date1, date2) {
   const diffInSeconds = Math.round((new Date(date1) - new Date(date2)) / 1000);

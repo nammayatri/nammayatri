@@ -26,8 +26,10 @@ import Common.Types.App (LazyCheck(..))
 import Components.SeparatorView.View as SeparatorView
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import Constants (defaultSeparatorCount, getSeparatorFactor)
+import Data.Array ((!!), length)
 import Data.Maybe (Maybe(..), isNothing, fromMaybe)
 import Data.Function.Uncurried (runFn1)
+import Data.String as DS
 import JBridge (getLayoutBounds)
 import Mobility.Prelude (boolToVisibility)
 
@@ -63,6 +65,10 @@ view push config =
 
 sourceLayout :: forall w. Config -> PrestoDOM (Effect Unit) w
 sourceLayout config =
+  let dateAndAddress = addressAndDate config.sourceTextConfig.text
+      address = dateAndAddress.address
+      date = dateAndAddress.date
+  in
   linearLayout
     [ orientation HORIZONTAL
     , height WRAP_CONTENT
@@ -81,7 +87,7 @@ sourceLayout config =
         , width MATCH_PARENT
         , orientation VERTICAL
         , accessibility ENABLE
-        , accessibilityHint $ "PickUp Location Is " <> config.sourceTextConfig.text
+        , accessibilityHint $ (if date /= "" then "Ride started at : " <> date <> " from " else "") <> "PickUp Location : " <> address
         , gravity CENTER_VERTICAL
         ] <> case config.id of
           Just layoutId -> [id $ getNewIDWithTag $ "source_layout_" <> layoutId]
@@ -117,10 +123,19 @@ sourceLayout config =
           ]
       ]
     
-
+addressAndDate :: String -> {address :: String, date :: String}
+addressAndDate text = do
+  let dateAndAddress = DS.split(DS.Pattern ("\n")) text
+      address = if length dateAndAddress > 1 then fromMaybe "" (dateAndAddress !! 1) else fromMaybe "" (dateAndAddress !! 0)
+      date = if length dateAndAddress > 1 then fromMaybe "" (dateAndAddress !! 0) else ""
+  {address: address, date: date}
 
 destinationLayout :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 destinationLayout config push =
+  let dateAndAddress = addressAndDate config.destinationTextConfig.text
+      address = dateAndAddress.address
+      date = dateAndAddress.date
+  in
   linearLayout
   [ orientation HORIZONTAL
   , height WRAP_CONTENT
@@ -143,7 +158,7 @@ destinationLayout config push =
       , width MATCH_PARENT
       , orientation VERTICAL
       , gravity CENTER_VERTICAL
-      , accessibilityHint $ "Drop Location is : " <> config.destinationTextConfig.text
+      , accessibilityHint $ (if date /= "" then "Trip ended at : " <> date <> " on " else "") <> "Drop Location : " <> address
       , accessibility ENABLE
       ][  textView $
           [ text config.destinationTextConfig.text

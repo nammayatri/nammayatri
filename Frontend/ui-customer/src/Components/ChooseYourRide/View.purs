@@ -449,6 +449,7 @@ chooseYourRideView push config =
             , textSize FontSize.a_14
             , text tagConfig.text
             , color Color.white900
+            , accessibility DISABLE
             ]
           , imageView
             [ width (V 18)
@@ -494,6 +495,7 @@ chooseYourRideView push config =
                 , gravity CENTER_HORIZONTAL
                 , height WRAP_CONTENT
                 , width MATCH_PARENT
+                , accessibility ENABLE
                 ] <> FontStyle.h1 TypoGraphy)
                 , estimatedTimeAndDistanceView push config
                 , textView $
@@ -542,6 +544,7 @@ estimatedTimeAndDistanceView push config =
         , width WRAP_CONTENT
         , text config.rideDistance
         , color Color.black650
+        , accessibilityHint $  "Estimated distance is : " <> config.rideDistance
         ]
         <> FontStyle.paragraphText TypoGraphy
     , linearLayout
@@ -557,6 +560,7 @@ estimatedTimeAndDistanceView push config =
         , width WRAP_CONTENT
         , text config.rideDuration
         , color Color.black650
+        , accessibilityHint $ "Estimated time is : " <> config.rideDuration
         ]
         <> FontStyle.paragraphText TypoGraphy
     ]
@@ -738,7 +742,7 @@ primaryButtonRequestRideConfig config id' = PrimaryButton.config
   { textConfig
     { text = title
     , color = Color.yellow900
-    , accessibilityHint = "Confirm And Book Button"
+    , accessibilityHint = "Confirm Button to Proceed With " <> name
     }
   , id = id'
   , background = Color.black900

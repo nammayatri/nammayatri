@@ -39,7 +39,7 @@ import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), Gravity(.
 startNSOnboardingButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
 startNSOnboardingButtonConfig state =
   PrimaryButton.config
-    { textConfig { text = getString START_SETUP }
+    { textConfig { text = getString START_SETUP, accessibilityHint = "Start Setup Button" }
     , visibility = boolToVisibility $ not state.data.hasCompletedSafetySetup
     , margin = Margin 16 0 16 24
     , id = "ScreenStartOnboardingButton"
@@ -51,6 +51,7 @@ continueNextStepButtonConfig state =
   PrimaryButton.config
     { textConfig
       { text = text'
+      , accessibilityHint = text' <> " Button"
       }
     , margin = Margin 16 0 16 24
     , id = "SetupScreenContinueNextStepButton"
@@ -70,6 +71,7 @@ cancelSOSBtnConfig state =
     { textConfig
       { text = getString MARK_RIDE_AS_SAFE
       , color = Color.white900
+      , accessibilityHint = "Mark ride as safe button"
       }
     , id = "CancelSosButton"
     , margin = MarginTop 10
@@ -103,6 +105,7 @@ goToDrillButtonConfig state =
   PrimaryButton.config
     { textConfig
       { text = getString TEST_SAFETY_DRILL
+      , accessibilityHint = "Test Safety Drill Button"
       }
     , margin = Margin 16 0 16 24
     , id = "SafetyScreenGoToDrillButton"
@@ -176,6 +179,7 @@ startTestDrillButtonConfig state =
     { textConfig
       { text = getString START_TEST_DRILL
       , color = Color.black900
+      , accessibilityHint = "Start Test Drill : Button"
       }
     , margin = MarginVertical 48 24
     , background = Color.white900
@@ -197,6 +201,7 @@ shareTripPopupBtnConfig state =
   PrimaryButton.config
     { textConfig
       { text = getString SAVE
+      , accessibilityHint = "Save : Button"
       }
     , margin = MarginVertical 20 20
     , id = "SafetyScreenShareTripPopupButton"

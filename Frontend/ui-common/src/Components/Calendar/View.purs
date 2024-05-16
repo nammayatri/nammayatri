@@ -206,7 +206,7 @@ monthYearPicker push config =
       ]
   ]
 
-  where incrementMonthFlag = (config.selectedTimeSpan.intMonth <= config.futureLimit.intMonth && config.selectedTimeSpan.year == config.pastLimit.year) ||  config.selectedTimeSpan.year < config.futureLimit.year
+  where incrementMonthFlag = (config.selectedTimeSpan.intMonth < config.futureLimit.intMonth && config.selectedTimeSpan.year == config.futureLimit.year) || config.selectedTimeSpan.year < config.futureLimit.year
         incrementRes = EHU.incrementCalendarMonth config.selectedTimeSpan config.startDate config.endDate
         decrementMonthFlag = (config.selectedTimeSpan.intMonth >= config.pastLimit.intMonth &&  config.selectedTimeSpan.year == config.pastLimit.year) || (config.selectedTimeSpan.year > config.pastLimit.year)
         decrementRes = EHU.decrementCalendarMonth config.selectedTimeSpan config.startDate config.endDate

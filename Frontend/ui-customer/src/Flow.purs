@@ -5633,10 +5633,11 @@ fcmHandler notification state = do
         lift $ lift $ triggerRideStatusEvent notification (Just finalAmount) (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
         setValueToLocalStore PICKUP_DISTANCE "0"
         liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_ride_completed" (rideCompletedDetails (RideBookingRes resp))
-        let 
-          hasAccessibilityIssue' = resp.hasDisability == Just true
-          hasSafetyIssue' = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime
-          hasTollIssue' = getValueToLocalStore HAS_TOLL_CHARGES == "true"
+        let
+          isDeviceAccessibilityEnabled =  JB.isAccessibilityEnabled ""
+          hasAccessibilityIssue' = resp.hasDisability == Just true || isDeviceAccessibilityEnabled
+          hasSafetyIssue' = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime && not isDeviceAccessibilityEnabled
+          hasTollIssue' = getValueToLocalStore HAS_TOLL_CHARGES == "true" && not isDeviceAccessibilityEnabled
         modifyScreenState
           $ HomeScreenStateType
               ( \homeScreen ->

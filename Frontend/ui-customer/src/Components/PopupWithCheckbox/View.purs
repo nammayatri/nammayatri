@@ -27,7 +27,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude as MP
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textView, visibility, weight, width, accessibility, accessibilityHint, Accessiblity(..))
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.Types (NewContacts)
 import Styles.Colors as Color
@@ -69,6 +69,7 @@ view push state =
                 , height $ V 20
                 , width $ V 20
                 , onClick push $ const DismissPopup
+                , accessibilityHint "close popup"
                 ]
             ]
         , linearLayout
@@ -132,6 +133,8 @@ optionView push index contact optionText isSelected =
     , gravity CENTER_VERTICAL
     , padding $ Padding 16 6 16 6
     , onClick push $ const $ ToggleSelect index
+    , accessibility ENABLE
+    , accessibilityHint $ optionText <> " Checkbox" <> if isSelected then " : Selected" else " : Un selected"
     ]
     [ imageView
         [ imageWithFallback $ fetchImage FF_ASSET $ if isSelected then "ny_ic_checkbox_selected" else "ny_ic_checkbox_unselected"

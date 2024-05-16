@@ -10,7 +10,7 @@ module Screens.NammaSafetyFlow.SosActiveScreen.View where
 
 import Animation (screenAnimationFadeInOut)
 import Prelude (Unit, const, discard, not, pure, unit, void, ($), (&&), (<<<), (<>), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentBottom, alpha, background, color, cornerRadius, gravity, height, id, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, relativeLayout, rippleColor, scrollView, stroke, text, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentBottom, alpha, background, color, cornerRadius, gravity, height, id, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, relativeLayout, rippleColor, scrollView, stroke, text, textView, visibility, weight, width, accessibilityHint)
 import Screens.NammaSafetyFlow.ComponentConfig (cancelSOSBtnConfig)
 import Screens.NammaSafetyFlow.Components.HelperViews (layoutWithWeight, safetyPartnerView, separatorView)
 import Common.Types.App (LazyCheck(..))
@@ -249,6 +249,7 @@ emergencyContactsView state push =
                       , padding $ Padding 8 8 8 8
                       , onClick push $ const $ CallContact index
                       , rippleColor Color.rippleShade
+                      , accessibilityHint "Call Button"
                       ]
                       [ imageView
                           [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_call_white_unfilled"
@@ -271,6 +272,7 @@ callPoliceView state push text' =
       , padding $ PaddingVertical 12 12
       , cornerRadius 8.0
       , background Color.redOpacity20
+      , accessibilityHint "Call Police Button"
       ]
         <> if state.props.showTestDrill then [ alpha 0.6 ] else [ rippleColor Color.rippleShade, onClick push $ const $ if state.props.showCallPolice then CallPolice else ShowPoliceView ]
     )

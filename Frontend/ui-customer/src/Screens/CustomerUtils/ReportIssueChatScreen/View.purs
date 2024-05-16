@@ -46,7 +46,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
 import Prelude (Unit, bind, const, discard, not, pure, show, unit, void, when, ($), (-), (<<<), (<>), (==), (>), (||))
-import PrestoDOM (Margin(..), background, frameLayout, imageView, linearLayout, relativeLayout, textView, rippleColor)
+import PrestoDOM (Margin(..), background, frameLayout, imageView, linearLayout, relativeLayout, textView, rippleColor, accessibility, Accessiblity(..), accessibilityHint)
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
 import PrestoDOM.Properties (adjustViewWithKeyboard, alignParentBottom, alpha, background, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, imageWithFallback, layoutGravity, lineHeight, margin, maxWidth, orientation, padding, position, stroke, text, textSize, visibility, weight, width, id)
 import PrestoDOM.Types.Core (Corners(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Position(..), PrestoDOM, Screen, Visibility(..))
@@ -162,6 +162,8 @@ headerLayout state push =
             , padding $ Padding 7 7 7 7
             , rippleColor Color.rippleShade
             , cornerRadius 20.0
+            , accessibility ENABLE
+            , accessibilityHint "Back : Button"
             ]
         , textView
             $ [ width WRAP_CONTENT

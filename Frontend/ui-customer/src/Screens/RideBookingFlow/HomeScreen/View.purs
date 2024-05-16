@@ -114,7 +114,7 @@ import Helpers.Pooling (delay)
 import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getConfirmLocationCategory)
 import Helpers.Utils (decodeBookingTimeList, getRouteMarkers, TrackingType(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage)
-import JBridge ( animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, differenceBetweenTwoUTCInMinutes, differenceBetweenTwoUTC, mkRouteConfig)
+import JBridge ( animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, differenceBetweenTwoUTCInMinutes, differenceBetweenTwoUTC, isAccessibilityEnabled, mkRouteConfig)
 import JBridge as JB
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -287,9 +287,10 @@ screen initialState =
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
 
                 let isRepeatRideVariantAvailable =  (isNothing initialState.props.repeatRideServiceTierName) || (checkRecentRideVariant initialState)
-                if (initialState.props.isRepeatRide && isRepeatRideVariantAvailable && initialState.data.iopState.hasTopProviderEstimate )then
+                if (initialState.props.isRepeatRide && isRepeatRideVariantAvailable && initialState.data.iopState.hasTopProviderEstimate )then do
+                  let isVoiceOverRunning = isAccessibilityEnabled ""
                   -- check if already timer is running for repeat ride
-                  when (DS.null initialState.props.repeatRideTimerId && initialState.props.repeateRideTimerStoped == false) $  startTimer initialState.data.config.suggestedTripsAndLocationConfig.repeatRideTime "repeatRide" "1" push RepeatRideCountDown 
+                  when (DS.null initialState.props.repeatRideTimerId && initialState.props.repeateRideTimerStoped == false && not isVoiceOverRunning) $  startTimer initialState.data.config.suggestedTripsAndLocationConfig.repeatRideTime "repeatRide" "1" push RepeatRideCountDown 
                 else if (initialState.props.isRepeatRide && not isRepeatRideVariantAvailable) then do 
                     void $ pure $ toast $ getString LAST_CHOSEN_VARIANT_NOT_AVAILABLE
                 else pure unit
@@ -1103,14 +1104,15 @@ sosView push state =
       , width WRAP_CONTENT
       , gravity CENTER
       , visibility vis
+      , accessibilityHint $ "Safety Center Button"
+      , accessibility ENABLE
       ]
       [ imageView
           [ imageWithFallback $ fetchImage FF_ASSET if onUsRide then "ny_ic_sos" else "ny_ic_sos_related"
           , height $ V 24
           , width $ V 24
           , margin $ MarginRight 8
-          , accessibilityHint $ "S O S Button, Select to view S O S options"
-          , accessibility ENABLE
+          , accessibility DISABLE
           , onClick push $ const OpenEmergencyHelp
           -- , clickable onUsRide -- need to remove once @Kavyashree's changes are megred
           ]
@@ -1118,6 +1120,7 @@ sosView push state =
           $ [ text $ getString SAFETY_CENTER
             , color if onUsRide then Color.blue900 else Color.black800
             , margin $ MarginBottom 1
+            , accessibility DISABLE
             ]
           <> FontStyle.body6 TypoGraphy
       ]
@@ -1672,6 +1675,7 @@ estimatedFareView push state =
           , textSize FontSize.a_14
           , text tagConfig.text
           , color Color.white900
+          , accessibility DISABLE
           ]
         , imageView
           [ width (V 18)
@@ -1725,11 +1729,6 @@ estimateHeaderView push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , gravity CENTER_HORIZONTAL
-    , accessibility ENABLE
-    , accessibilityHint $ "PickUp Location Is : " 
-                         <> state.data.source 
-                         <> " . And Destination Location Is : "  
-                         <> state.data.destination
     ]
     [ textView $
         [ text$ getString CONFIRM_YOUR_RIDE
@@ -1737,6 +1736,7 @@ estimateHeaderView push state =
         , gravity CENTER_HORIZONTAL
         , height WRAP_CONTENT
         , width MATCH_PARENT
+        , accessibility ENABLE
         ] 
         <> FontStyle.h1 TypoGraphy
     , estimatedTimeDistanceView push state
@@ -1765,6 +1765,8 @@ estimatedTimeDistanceView push state =
     , height WRAP_CONTENT
     , gravity CENTER
     , margin $ MarginTop 4
+    , accessibility ENABLE
+    , accessibilityHint $ "Estimated distance is : " <> state.data.rideDistance <> "and Estimated time is : " <> state.data.rideDuration
     ]
     [ createTextView state.data.rideDistance
     , linearLayout
@@ -2192,6 +2194,7 @@ confirmPickUpLocationView push state =
                 , textSize FontSize.a_14
                 , text tagConfig.text
                 , color Color.white900
+                , accessibility DISABLE
                 ]
               , imageView
                 [ width (V 18)
@@ -3001,11 +3004,13 @@ editButtontView push state =
   , cornerRadius if (os == "IOS") then 15.0 else 20.0
   , padding (Padding 10 6 10 6)
   , margin $ MarginLeft 10 
+  , accessibilityHint "Edit Pickup Location : Button"
   ][ textView 
       $
       [ text (getString EDIT)
       , color Color.black800
       , gravity CENTER_VERTICAL
+      , accessibility DISABLE
       ]  
       <> FontStyle.body1 TypoGraphy
   ]
@@ -3464,10 +3469,13 @@ pickupLocationView push state =
                 , background Color.lightGreyBlue1
                 , shadow $ getShadowFromConfig state.data.config.homeScreen.whereToButton.shadow
                 , cornerRadius $ 8.0 
+                , accessibility ENABLE
+                , accessibilityHint "Where to : Button"
                 ][  imageView 
                     [ height $ V 20 
                     , width $ V 20 
                     , margin $ MarginRight 8
+                    , accessibility DISABLE
                     , imageWithFallback $ fetchImage FF_ASSET "ny_ic_curved_arrow"
                     ]
                   , textView $
@@ -3475,6 +3483,7 @@ pickupLocationView push state =
                     , width WRAP_CONTENT
                     , text $ getString WHERE_TO
                     , color Color.yellow900
+                    , accessibility DISABLE
                     ] <> FontStyle.subHeading1 TypoGraphy
                   ]
                 ]
@@ -3637,7 +3646,7 @@ suggestionsView push state =
         , accessibilityHint 
           if isTripSuggestionsEmpty 
           then "Suggested Destinations" 
-          else "Recent Rides"
+          else "One Click Bookings"
         ] <> FontStyle.subHeading1 TypoGraphy
       ]
   , textView $
@@ -3776,6 +3785,7 @@ suggestedDestinationCard push state index suggestion =
     , gravity CENTER_VERTICAL
     , cornerRadius 16.0
     , onClick push $ const (SuggestedDestinationClicked suggestion)
+    , accessibilityHint $ "Trip to" <> suggestion.title <> suggestion.subTitle 
     , rippleColor Color.rippleShade
     ][ linearLayout
         [ height $ V 26
@@ -3851,6 +3861,7 @@ repeatRideCard push state index trip =
     , gravity CENTER_VERTICAL
     , cornerRadii $ Corners 16.0 true true true true
     , onClick push $ const (RepeatRide index trip)
+    , accessibilityHint $ (if vehicleVariant /= "" && isJust trip.serviceTierNameV2 then vehicleVariant else "") <>" : trip to " <> getTripTitle trip.destination <> getTripSubTitle trip.destination 
     , rippleColor Color.rippleShade
     ][ frameLayout
         [ height $ imageLayoutHeight
@@ -4367,6 +4378,7 @@ preferenceView push state =
                   , cornerRadius 24.0
                   , clickable true
                   , visibility $ boolToVisibility if isProviderPrefView then providerPrefVisibility else bookingPrefVisibility
+                  , accessibilityHint "Booking Preferences : Button"
                   , onClick push $ const ShowPref
                   , rippleColor Color.rippleShade
                   ]

@@ -696,6 +696,7 @@ driverInfoView push state =
                   , accessibilityHint "Metro Ride"
                   , text tagConfig.text
                   , color Color.white900
+                  , accessibility DISABLE
                   ]
                 , imageView
                   [ width (V 18)
@@ -905,7 +906,7 @@ contactView push state =
         ][ linearLayout
             [ width (V (((screenWidth unit)/3 * 2)-27))
             , height WRAP_CONTENT
-            , accessibilityHint $ "Ride Status : " <> if eta /= "--" then (state.data.driverName <> " is " <> eta <> " Away") else if state.data.waitingTime == "--" then (state.data.driverName <> " is on the way") else (state.data.driverName <> " is waiting for you.") 
+            , accessibilityHint $ getAccessibilityHintText
             , accessibility ENABLE
             ][  textView $
                 [ text $ driverPickUpStatusText state eta
@@ -924,7 +925,17 @@ contactView push state =
       , textView [weight 1.0, visibility $ boolToVisibility $ state.props.zoneType /= SPECIAL_PICKUP]
       , chatButtonView push state
     ]
-    where eta = secondsToHms (fromMaybe 0 state.data.eta)
+    where 
+      eta = secondsToHms $ fromMaybe 0 state.data.eta
+      distance = if state.data.distance < 1000 then show state.data.distance <> " meters" else fromMetersToKm state.data.distance
+      getAccessibilityHintText = "Ride Status : " <> 
+        if distance /= "0 meters" 
+          then if eta /= "--" 
+                then state.data.driverName <> " is " <> distance <> " Away and is arriving in " <> eta
+                else if state.data.waitingTime /= "--" 
+                      then state.data.driverName <> " is waiting for you."
+                      else state.data.driverName <> " is " <> distance <> "away"
+          else state.data.driverName <> " is waiting for you."
 
 chatButtonView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 chatButtonView push state = 

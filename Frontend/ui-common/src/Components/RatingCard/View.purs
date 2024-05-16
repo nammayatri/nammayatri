@@ -21,7 +21,7 @@ import Components.RatingCard.Controller (Action(..), RatingCardConfig, FeedbackI
 import Components.SourceToDestination as SourceToDestination
 import Data.Array (mapWithIndex, (!!), any, elem, find, head, filter, length)
 import Data.Maybe (fromMaybe)
-import Data.String (split, Pattern(..))
+import Data.String (split, Pattern(..), null)
 import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, os)
 import Font.Size as FontSize
@@ -178,9 +178,11 @@ editTextView state push =
       , color Color.black 
       , hint state.feedbackPlaceHolder
       , weight 1.0
+      , accessibilityHint $ if not $ null state.data.feedback then state.data.feedback else state.feedbackPlaceHolder
       , pattern "[^\n]*,255"
       , singleLine false 
       , onChange push FeedbackChanged 
+      , text state.data.feedback
       ] <> FontStyle.body3 LanguageStyle
 
   ]

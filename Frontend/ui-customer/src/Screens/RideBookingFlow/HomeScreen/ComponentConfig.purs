@@ -238,13 +238,13 @@ skipButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 skipButtonConfig state =
   let
     isRentalRide = state.data.fareProductType == FPT.RENTAL
-
+    accessibilityOption = fromMaybe {issueType: Accessibility, selectedYes: Nothing} ((DA.filter(\x -> x.issueType == Accessibility) state.data.rideCompletedData.issueReportData.customerResponse) DA.!! 0)
     config = PrimaryButton.config
     primaryButtonConfig' =
       config
         { textConfig
           { text = getString DONE
-          , accessibilityHint = "Done : Button"
+          , accessibilityHint = if clickale then "Proceed Button with : "  <> (if accessibilityOption.selectedYes == Just true then "Yes" else "No") <> " option selected" else "Done Button : InActive"
           , color = state.data.config.primaryTextColor
           }
         , background = state.data.config.primaryBackground
@@ -1174,6 +1174,7 @@ ratingCardViewState state =
         { textConfig
           { text = getString SUBMIT_FEEDBACK
           , color = state.data.config.primaryTextColor
+          , accessibilityHint = "Submit Feedback Button" 
           }
         , background = state.data.config.primaryBackground
         , margin = MarginHorizontal 16 16
@@ -1186,7 +1187,7 @@ ratingCardViewState state =
         }
   , showProfileImg: true
   , title: getRateYourRideString (getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName
-  , feedbackPlaceHolder: getString ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US
+  , feedbackPlaceHolder : if not $ DS.null state.data.rideRatingState.feedback then "" else getString ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US
   , showFeedbackPill: true
   , overallFeedbackArray: [ (getString TERRIBLE_EXPERIENCE), (getString POOR_EXPERIENCE), (getString NEEDS_IMPROVEMENT), (getString ALMOST_PERFECT), (getString AMAZING) ]
   , accessibility: ENABLE
