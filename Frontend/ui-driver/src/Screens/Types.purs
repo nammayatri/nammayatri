@@ -1888,7 +1888,8 @@ type BookingOptionsScreenProps = {
   isBtnActive :: Boolean,
   downgraded :: Boolean,
   canSwitchToRental :: Boolean,
-  acExplanationPopup :: Boolean
+  acExplanationPopup :: Boolean,
+  fromDeepLink :: Boolean
 }
 
 data LeaderBoardType = Daily | Weekly

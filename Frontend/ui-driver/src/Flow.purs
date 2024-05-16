@@ -540,6 +540,7 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
             "pref" -> do
                 globalState <- getState
                 void $ getDriverInfoDataFromCache globalState false
+                modifyScreenState $ BookingOptionsScreenType (\bookingOptions ->  bookingOptions{ props{ fromDeepLink = true } })
                 bookingOptionsFlow
             _ -> pure unit
         Nothing -> pure unit
@@ -1639,6 +1640,7 @@ bookingOptionsFlow = do
     CHANGE_RIDE_PREFERENCE state service -> do
       void $ HelpersAPI.callApiBT $ Remote.mkUpdateDriverVehiclesServiceTier service
       bookingOptionsFlow
+    HOME_SCREEN_FROM_BOOKING_PREFS -> handleDeepLinksFlow Nothing Nothing Nothing
     SELECT_CAB state toggleDowngrade -> do
       void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
       void $ lift $ lift $ toggleLoader true
