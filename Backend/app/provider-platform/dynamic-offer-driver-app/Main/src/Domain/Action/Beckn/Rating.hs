@@ -15,7 +15,7 @@
 module Domain.Action.Beckn.Rating where
 
 import Data.List.Extra ((!?))
-import Data.Maybe (listToMaybe)
+import Data.Maybe (fromJust, listToMaybe)
 import qualified Domain.Types.Booking as DBooking
 import Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
@@ -32,15 +32,19 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.DriverStats as SQD
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RiderDetails as SQR
 import Tools.Error
 
 data DRatingReq = DRatingReq
   { bookingId :: Id DBooking.Booking,
     ratingValue :: Int,
-    feedbackDetails :: [Maybe Text]
+    feedbackDetails :: [Maybe Text],
+    shouldFavDriver :: Maybe Bool,
+    riderId :: Maybe Text
   }
 
 handler :: Id Merchant -> DRatingReq -> DRide.Ride -> Flow ()
@@ -56,6 +60,15 @@ handler merchantId req ride = do
         _ -> Nothing
       issueId = fromMaybe Nothing (req.feedbackDetails !? 2)
       isSafe = Just $ isNothing issueId
+  when (isJust req.shouldFavDriver && isJust req.riderId) $ do
+    SQR.updateFavDriverList (fromJust req.riderId) ride.driverId
+    SQD.incFavRiders ride.driverId
+  -- case req.shouldFavDriver of
+  --   Just True -> do
+  --     SQR.updateFavDriverList (fromJust req.riderId) ride.driverId
+  --     QP.incFavRiders ride.driverId
+  --   _ -> pure ()
+
   _ <- case rating of
     Nothing -> do
       logTagInfo "FeedbackAPI" $

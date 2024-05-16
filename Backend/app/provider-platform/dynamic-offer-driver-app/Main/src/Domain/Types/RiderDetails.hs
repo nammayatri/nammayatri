@@ -40,7 +40,8 @@ data RiderDetailsE e = RiderDetails
     disputeChancesUsed :: Int,
     merchantId :: Id Merchant,
     otpCode :: Maybe Text,
-    nightSafetyChecks :: Bool
+    nightSafetyChecks :: Bool,
+    favDriverList :: [Text]
   }
   deriving (Generic)
 

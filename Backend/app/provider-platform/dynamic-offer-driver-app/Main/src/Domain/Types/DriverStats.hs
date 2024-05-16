@@ -33,6 +33,7 @@ data DriverStats = DriverStats
     coinCovertedToCashLeft :: HighPrecMoney,
     totalCoinsConvertedCash :: HighPrecMoney,
     currency :: Currency,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    favRiderCount :: Int
   }
   deriving (Generic)

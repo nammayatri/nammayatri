@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN fav_rider_count Int DEFAULT '0';

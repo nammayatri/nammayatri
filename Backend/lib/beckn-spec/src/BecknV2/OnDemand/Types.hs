@@ -1633,7 +1633,9 @@ data Rating = Rating
     ratingRatingCategory :: Maybe Text,
     -- | Rating value given to the object. This can be a single value or can also contain an inequality operator like gt, gte, lt, lte. This can also contain an inequality expression containing logical operators like && and ||.
     ratingValue :: Maybe Text,
-    ratingFeedbackForm :: Maybe [FeedbackForm]
+    ratingFeedbackForm :: Maybe [FeedbackForm],
+    shouldFavDriver :: Maybe Bool,
+    riderId :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data, Read)
 

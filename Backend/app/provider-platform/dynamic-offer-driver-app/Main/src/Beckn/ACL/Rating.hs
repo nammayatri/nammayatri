@@ -46,12 +46,16 @@ buildRatingReqV2 subscriber req = do
   bookingId <- rating.ratingId & fromMaybeM (InvalidRequest "Missing ratingId")
   ratingValueText <- rating.ratingValue & fromMaybeM (InvalidRequest "Missing ratingValue")
   let mbRatingValue = readMaybe $ T.unpack ratingValueText
+      shouldFavDriver = rating.shouldFavDriver
+      riderId = rating.riderId
   ratingValue <- mbRatingValue & fromMaybeM (InvalidRequest "Invalid ratingValue")
   pure
     DRating.DRatingReq
       { bookingId = Id bookingId,
         ratingValue = ratingValue,
-        feedbackDetails = tfFeedbackDetails rating
+        feedbackDetails = tfFeedbackDetails rating,
+        shouldFavDriver = shouldFavDriver,
+        riderId = riderId
       }
 
 tfFeedbackDetails :: Spec.Rating -> [Maybe Text]

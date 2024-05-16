@@ -38,7 +38,8 @@ data RiderDetailsT f = RiderDetailsT
     disputeChancesUsed :: B.C f Int,
     nightSafetyChecks :: B.C f Bool,
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    favDriverList :: B.C f [Text]
   }
   deriving (Generic, B.Beamable)
 

@@ -23,6 +23,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
@@ -107,6 +108,15 @@ updateDisputeChancesUsedAndCancellationDues riderId disputeChancesUsed dues = do
     ]
     [Se.Is BeamRD.id (Se.Eq riderId.getId)]
 
+updateFavDriverList :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Person -> m ()
+updateFavDriverList riderId driverId = do
+  riderDetail <- findById (Id riderId) >>= fromMaybeM (InternalError "Couldn't find kv_configs table for kafka consumer")
+  let favDriverList = riderDetail.favDriverList
+      newFavDriverList = favDriverList <> [driverId.getId]
+  updateOneWithKV
+    [Se.Set BeamRD.favDriverList newFavDriverList]
+    [Se.Is BeamRD.id (Se.Eq riderId)]
+
 instance FromTType' BeamRD.RiderDetails RiderDetails where
   fromTType' BeamRD.RiderDetailsT {..} = do
     pure $
@@ -127,7 +137,8 @@ instance FromTType' BeamRD.RiderDetails RiderDetails where
             nightSafetyChecks = nightSafetyChecks,
             cancellationDues = cancellationDues,
             disputeChancesUsed = disputeChancesUsed,
-            currency = fromMaybe INR currency
+            currency = fromMaybe INR currency,
+            favDriverList = favDriverList
           }
 
 instance ToTType' BeamRD.RiderDetails RiderDetails where
@@ -149,5 +160,6 @@ instance ToTType' BeamRD.RiderDetails RiderDetails where
         BeamRD.otpCode = otpCode,
         BeamRD.cancellationDues = cancellationDues,
         BeamRD.currency = Just currency,
-        BeamRD.disputeChancesUsed = disputeChancesUsed
+        BeamRD.disputeChancesUsed = disputeChancesUsed,
+        BeamRD.favDriverList = favDriverList
       }

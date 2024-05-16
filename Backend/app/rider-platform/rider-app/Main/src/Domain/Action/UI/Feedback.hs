@@ -22,6 +22,7 @@ where
 import qualified Domain.Action.Internal.Rating as DRating
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.Person as Person
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -45,6 +46,8 @@ data FeedbackReq = FeedbackReq
     rating :: Int,
     feedbackDetails :: Maybe Text,
     nightSafety :: Maybe Bool,
+    shouldFavDriver :: Maybe Bool,
+    riderId :: Maybe (Id Person),
     wasOfferedAssistance :: Maybe Bool
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
@@ -61,13 +64,15 @@ data FeedbackRes = FeedbackRes
     city :: Context.City,
     issueId :: Maybe Text,
     vehicleVariant :: DVeh.VehicleVariant,
-    vehicleServiceTierType :: DVST.VehicleServiceTierType
+    vehicleServiceTierType :: DVST.VehicleServiceTierType,
+    shouldFavDriver :: Maybe Bool,
+    riderId :: Maybe (Id Person)
   }
 
 feedback :: FeedbackReq -> App.Flow FeedbackRes
 feedback request = do
   let ratingValue = request.rating
-  unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
+  unless (ratingValue `elem` [0, 5]) $ throwError InvalidRatingValue
   let rideId = request.rideId
       feedbackDetails = request.feedbackDetails
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
@@ -97,6 +102,8 @@ feedback request = do
         issueId = issueId',
         vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType,
         vehicleServiceTierType = booking.vehicleServiceTierType,
+        shouldFavDriver = request.shouldFavDriver,
+        riderId = request.riderId,
         ..
       }
   where

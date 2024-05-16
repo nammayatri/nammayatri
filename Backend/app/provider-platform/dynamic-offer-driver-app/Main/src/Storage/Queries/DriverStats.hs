@@ -17,10 +17,14 @@ module Storage.Queries.DriverStats where
 
 import Control.Applicative (liftA2)
 import Domain.Types.DriverStats as Domain
-import Domain.Types.Person (Driver)
+-- import Domain.Types.Person (Driver)
+
+import Domain.Types.Person as Person
 import GHC.Float (double2Int, int2Double)
 import Kernel.Beam.Functions
 import Kernel.Prelude
+-- import qualified Storage.Beam.Person as BeamP
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
@@ -47,7 +51,8 @@ createInitialDriverStats currency driverId = do
             coinCovertedToCashLeft = 0.0,
             totalCoinsConvertedCash = 0.0,
             currency,
-            updatedAt = now
+            updatedAt = now,
+            favRiderCount = 0
           }
   createWithKV dStats
 
@@ -64,6 +69,12 @@ updateIdleTimes driverIds = do
     [ Se.Set BeamDS.idleSince now
     ]
     [Se.Is BeamDS.driverId (Se.In (getId <$> driverIds))]
+
+incFavRiders :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
+incFavRiders (Id driverId) = do
+  driver <- findById (Id driverId) >>= fromMaybeM (InternalError ("Driver not found with id:" <> driverId))
+  let newFavRiderCount = driver.favRiderCount + 1
+  updateOneWithKV [Se.Set BeamDS.favRiderCount newFavRiderCount] [Se.Is BeamDS.driverId $ Se.Eq driverId]
 
 fetchAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [DriverStats]
 fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
@@ -153,7 +164,8 @@ instance FromTType' BeamDS.DriverStats DriverStats where
             coinCovertedToCashLeft = fromMaybe 0 coinCovertedToCashLeft,
             totalCoinsConvertedCash = fromMaybe 0 totalCoinsConvertedCash,
             currency = fromMaybe INR currency,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            favRiderCount = favRiderCount
           }
 
 instance ToTType' BeamDS.DriverStats DriverStats where
@@ -175,7 +187,8 @@ instance ToTType' BeamDS.DriverStats DriverStats where
         BeamDS.earningsMissedAmount = Just earningsMissed,
         BeamDS.coinCovertedToCashLeft = Just coinCovertedToCashLeft,
         BeamDS.totalCoinsConvertedCash = Just totalCoinsConvertedCash,
-        BeamDS.updatedAt = updatedAt
+        BeamDS.updatedAt = updatedAt,
+        BeamDS.favRiderCount = favRiderCount
       }
 
 incrementTotalEarningsAndBonusEarnedAndLateNightTrip :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> HighPrecMoney -> HighPrecMoney -> Int -> m ()
