@@ -23,6 +23,7 @@ initData =
       , downgraded: false
       , canSwitchToRental: false
       , acExplanationPopup: false
+      , fromDeepLink : false
       }
   }
 

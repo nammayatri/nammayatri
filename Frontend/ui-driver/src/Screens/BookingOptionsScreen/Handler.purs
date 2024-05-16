@@ -21,4 +21,8 @@ bookingOptions = do
     ToggleACAvailability updatedState toogleVal -> do
       modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ UPDATE_AC_AVAILABILITY updatedState toogleVal)
-    GoBack -> App.BackT $ pure App.GoBack
+    GoBack state -> do
+      modifyScreenState $ BookingOptionsScreenType (\_ -> state{props{ fromDeepLink = false }})
+      if state.props.fromDeepLink
+        then App.BackT $ App.NoBack <$> pure HOME_SCREEN_FROM_BOOKING_PREFS
+        else App.BackT $ pure App.GoBack

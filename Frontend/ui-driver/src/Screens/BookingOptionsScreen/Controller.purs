@@ -39,14 +39,14 @@ data Action
   | OpenLink String
 
 data ScreenOutput
-  = GoBack
+  = GoBack BookingOptionsScreenState
   | ChangeRidePreference BookingOptionsScreenState RidePreference
   | ToggleACAvailability BookingOptionsScreenState Boolean
 
 eval :: Action -> BookingOptionsScreenState -> Eval Action ScreenOutput BookingOptionsScreenState
 eval BackPressed state = 
   if state.props.acExplanationPopup then continue state { props { acExplanationPopup = false } }
-  else exit GoBack
+  else exit $ GoBack state
 
 eval (ToggleRidePreference service) state = 
   if service.isUsageRestricted then do
