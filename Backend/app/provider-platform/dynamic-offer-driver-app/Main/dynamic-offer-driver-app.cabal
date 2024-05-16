@@ -490,6 +490,7 @@ library
       Storage.Queries.DriverQuote.Internal
       Storage.Queries.DriverRCAssociationExtra
       Storage.Queries.DriverReferralExtra
+      Storage.Queries.DriverSSNExtra
       Storage.Queries.DriverStats
       Storage.Queries.ExophoneExtra
       Storage.Queries.FareParameters
@@ -781,6 +782,7 @@ library
       Storage.Queries.OrphanInstances.DriverPanCard
       Storage.Queries.OrphanInstances.DriverRCAssociation
       Storage.Queries.OrphanInstances.DriverReferral
+      Storage.Queries.OrphanInstances.DriverSSN
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.FleetRCAssociation
       Storage.Queries.OrphanInstances.Image
