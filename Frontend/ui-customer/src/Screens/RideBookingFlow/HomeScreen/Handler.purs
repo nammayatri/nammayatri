@@ -92,9 +92,6 @@ homeScreen = do
     NotificationHandler notification updatedState ->  do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ FCM_NOTIFICATION notification updatedState)
-    Reload updatedState -> do
-      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-      App.BackT $ App.NoBack <$> (pure $ RELOAD_SCREEN)
     ReloadScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ RELOAD_SCREEN)
@@ -212,25 +209,6 @@ homeScreen = do
     StayInHomeScreenSO state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
       App.BackT $ App.NoBack <$> (pure $ STAY_IN_HOME_SCREEN)
-      App.BackT $ App.BackPoint <$> (pure $ GO_TO_MY_METRO_TICKETS)
-    GoToSafetyEducation updatedState -> do
-      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ GO_TO_SAFETY_EDUCATION)
-    RepeatSearch updatedState -> do
-      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-      App.BackT $ App.NoBack <$> (pure $ REPEAT_SEARCH updatedState)
-    ChangeVehicleVarient updatedState -> do
-      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ CHANGE_VEHICLE_VARIANT updatedState)
-    ExitToConfirmingLocationStage updatedState -> do
-      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ GOTO_CONFIRMING_LOCATION_STAGE updatedState)
-    UpdateReferralCode updatedState code -> do
-      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ UPDATE_REFERRAL_CODE code)
-    GoToRideRelatedIssues updatedState -> do
-      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_RELATED_ISSUES updatedState)
     SelectEstimateAndQuotes updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ SELECT_ESTIMATE_AND_QUOTES updatedState)

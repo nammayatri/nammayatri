@@ -1014,3 +1014,6 @@ getFR stringKey =
         RENTAL_POLICY_DESC_1 -> "Vous pouvez toujours consulter votre tarif sur l'écran suivant avant de confirmer la réservation."
         RENTALS_INTERCITY_AVAILABLE -> "Locations et voyages interurbains, désormais disponibles sur Yatri Sathi"
         CHECK_IT_OUT -> "Vérifiez-le"
+        AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "La climatisation n'est pas disponible pour ce trajet"
+        AC_NOT_WORKING_DESC -> "Annulation car je veux un trajet avec climatisation"
+        ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "Les estimations sont expirées. Récupération à nouveau, veuillez patienter un moment et vérifier à nouveau"

@@ -43,7 +43,7 @@ import Components.LocationTagBarV2 as LocationTagBar
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except (runExcept)
-import Data.Array ((!!), sortBy)
+import Data.Array ((!!), sortBy, mapWithIndex)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Int (toNumber)
@@ -805,7 +805,7 @@ isMockLocationConfig state =
 
 waitTimeInfoCardConfig :: ST.HomeScreenState -> RequestInfoCard.Config
 waitTimeInfoCardConfig state = let
-  waitTimeConfig = textConfig $ state.data.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails && state.data.rideType == RideType.NORMAL_RIDE
+  waitTimeConfig = textConfig $ (isQuotes state.data.currentSearchResultType) && state.data.rideType == RideType.NORMAL_RIDE
   config = RequestInfoCard.config
   requestInfoCardConfig' = config{
     title {
@@ -842,7 +842,7 @@ waitTimeInfoCardConfig state = let
   }
   in requestInfoCardConfig'
   where textConfig :: Boolean -> {title :: STR, primaryText :: STR, secondaryText :: STR}
-        textConfig isQuotes = if isQuotes then {title : OTP_EXPIRE_TIMER, primaryText : SHOWS_FOR_HOW_LONG_YOUR_OTP_, secondaryText : IF_YOUR_OTP_EXPIRES_}
+        textConfig hasQuotes = if hasQuotes then {title : OTP_EXPIRE_TIMER, primaryText : SHOWS_FOR_HOW_LONG_YOUR_OTP_, secondaryText : IF_YOUR_OTP_EXPIRES_}
                               else {title : WAIT_TIMER, primaryText : HOW_LONG_DRIVER_WAITED_FOR_PICKUP, secondaryText : YOU_WILL_PAY_FOR_EVERY_MINUTE}
 
 rateCardConfig :: ST.HomeScreenState -> RateCard.Config
@@ -1038,10 +1038,10 @@ messagingViewConfig state = let
 
 getDefaultPeekHeight :: ST.HomeScreenState -> Int
 getDefaultPeekHeight state = do
-  let isQuotes = state.data.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails && state.data.rideType == RideType.NORMAL_RIDE
+  let isQuotesOtherThanOTPFlow = (isQuotes state.data.currentSearchResultType) && state.data.rideType == RideType.NORMAL_RIDE
       height = case state.props.currentStage == ST.RideAccepted of 
-                  true -> if isQuotes then 234 else 321
-                  false -> if isQuotes then 334 else 283
+                  true -> if isQuotesOtherThanOTPFlow then 234 else 321
+                  false -> if isQuotesOtherThanOTPFlow then 334 else 283
   height + if state.data.config.driverInfoConfig.footerVisibility then 44 else 0
 
 metersToKm :: Int -> Boolean -> String
@@ -1178,9 +1178,8 @@ searchLocationModelViewState state = let
       in EHC.convertUTCtoISC startTime formatSTR
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
-quoteListModelViewState state = let vehicleVariant = case (getSelectedEstimatesObject "Lazy") of
-                                                        Nothing -> state.data.selectedEstimatesObject.vehicleVariant
-                                                        Just obj -> obj.vehicleVariant
+quoteListModelViewState state = let vehicleVariant = state.data.selectedEstimatesObject.vehicleVariant
+                                    tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
                                 in
                                 { source: state.data.source
                                 , destination: state.data.destination
@@ -1771,12 +1770,6 @@ safetyIssueOptions forceEnglish =
 setSelectedEstimatesObject :: Encode ChooseVehicle.Config => ChooseVehicle.Config -> Effect Unit
 setSelectedEstimatesObject object = void $ pure $ setValueToLocalStore ESTIMATE_DATA (encodeJSON object)
 
-getSelectedEstimatesObject :: String -> Maybe ChooseVehicle.Config
-getSelectedEstimatesObject dummy =
-  case runExcept (decodeJSON (getValueToLocalStore ESTIMATE_DATA) :: _ ChooseVehicle.Config) of
-    Right res -> Just res
-    Left err -> Nothing
-
 getChatSuggestions :: ST.HomeScreenState -> Array String
 getChatSuggestions state = do 
   let didDriverMessage = HU.didDriverMessage FunctionCall
@@ -1975,3 +1968,65 @@ intercityInSpecialZonePopupConfig state = let
     }
   }
   in popUpConfig'
+
+type TipConfig = {
+  customerTipArray :: Array String,
+  customerTipArrayWithValues :: Array Int
+} 
+
+getTipConfig :: String -> TipConfig
+getTipConfig variant = do
+  let city = HU.getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  case city of 
+    Bangalore -> bangaloreConfig variant
+    Hyderabad -> hyderabadConfig variant
+    _ -> defaultTipConfig variant
+
+mkTipConfig :: Array Int -> TipConfig
+mkTipConfig customerTipArrayWithValues = {
+  customerTipArray: getTips customerTipArrayWithValues,
+  customerTipArrayWithValues: customerTipArrayWithValues
+}
+
+getTips :: Array Int -> Array String
+getTips arr = mapWithIndex (\index item -> if item == 0 then (getString NO_TIP) 
+                                           else "₹" <> show item <> " " <> fromMaybe "🤩" (emoji !! index)) arr
+  where
+    emoji = [(getString NO_TIP), "🙂", "😀", "😃", "😁", "🤩"]
+
+bangaloreConfig :: String -> TipConfig
+bangaloreConfig variant = 
+  case variant of
+    "SEDAN" -> mkTipConfig []
+    "SUV" -> mkTipConfig []
+    "HATCHBACK" -> mkTipConfig []
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    "TAXI" -> mkTipConfig []
+    "TAXI_PLUS" -> mkTipConfig []
+    _ -> mkTipConfig []
+
+hyderabadConfig :: String -> TipConfig
+hyderabadConfig variant = 
+  case variant of
+    "SEDAN" -> mkTipConfig []
+    "SUV" -> mkTipConfig []
+    "HATCHBACK" -> mkTipConfig []
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    "TAXI" -> mkTipConfig []
+    "TAXI_PLUS" -> mkTipConfig []
+    _ -> mkTipConfig []
+
+defaultTipConfig :: String -> TipConfig
+defaultTipConfig variant = 
+  case variant of
+    "SEDAN" -> mkTipConfig []
+    "SUV" -> mkTipConfig []
+    "HATCHBACK" -> mkTipConfig []
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    "TAXI" -> mkTipConfig []
+    "TAXI_PLUS" -> mkTipConfig []
+    _ -> mkTipConfig []
+
+isQuotes :: SearchResultType -> Boolean
+isQuotes (QUOTES _) = true
+isQuotes _ = false

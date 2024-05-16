@@ -231,15 +231,6 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_RIDE_SEARCH_FLOW 
                         | CONFIRM_RENTAL_RIDE
                         | STAY_IN_HOME_SCREEN
-                        | GO_TO_MY_METRO_TICKETS
-                        | GO_TO_METRO_BOOKING HomeScreenState
-                        | GO_TO_SAFETY_EDUCATION
-                        | REPEAT_SEARCH HomeScreenState
-                        | CHANGE_VEHICLE_VARIANT HomeScreenState
-                        | GOTO_CONFIRMING_LOCATION_STAGE HomeScreenState
-                        | UPDATE_REFERRAL_CODE String
-                        | GO_TO_SAFETY_SETTING_SCREEN
-                        | GO_TO_RIDE_RELATED_ISSUES HomeScreenState
                         | SELECT_ESTIMATE_AND_QUOTES HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState

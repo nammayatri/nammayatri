@@ -35,11 +35,11 @@ import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Data.Lens ((^.))
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Accessor
-import Screens.Types (Stage(..), SearchResultType(..), PopupType(..), FlowStatusData(..), TipViewData(..))
+import Screens.Types (Stage(..), PopupType(..), FlowStatusData(..), TipViewData(..))
 import Engineering.Helpers.Commons (liftFlow, convertUTCtoISC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
-import Helpers.Utils (getCurrentDate, getCityNameFromCode)
+import Helpers.Utils (getCurrentDate, getCityNameFromCode, getFareProductType)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromBooking)
 import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON)
@@ -63,23 +63,22 @@ checkRideStatus rideAssigned = do
             fareProductType = ((resp.bookingDetails) ^. _fareProductType)
             otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
             rideScheduledAt = if bookingStatus == "CONFIRMED" then fromMaybe "" resp.rideScheduledTime else ""
-            searchResultType = if (fareProductType == "OneWaySpecialZoneAPIDetails" || otpCode /= Nothing) then QUOTES 
-                                else if fareProductType == "INTER_CITY" then INTERCITY
-                                else if (fareProductType == "RENTAL") then RENTALS 
-                                else ESTIMATES
+            searchResultType =  if (fareProductType == "OneWaySpecialZoneAPIDetails" || otpCode /= Nothing) then Common.QUOTES Common.OneWaySpecialZoneAPIDetails
+                                else if fareProductType == "INTER_CITY" then Common.QUOTES Common.INTER_CITY
+                                else if (fareProductType == "RENTAL") then Common.QUOTES Common.RENTAL
+                                else Common.ESTIMATES
             dropLocation = if (fareProductType == "RENTAL") then _stopLocation else _toLocation
             stopLocationDetails = (resp.bookingDetails ^._contents^._stopLocation)
             newState = 
               state
                 { data
-                    { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) (searchResultType == QUOTES)
+                    { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) (searchResultType /= Common.ESTIMATES)
                     , finalAmount = fromMaybe 0 $ (fromMaybe dummyRideAPIEntity (head resp.rideList) )^. _computedPrice
                     , sourceAddress = getAddressFromBooking resp.fromLocation
-                    , destinationAddress = getAddressFromBooking (resp.bookingDetails ^._contents^._toLocation)
-                    , currentSearchResultType = if isQuotes then Common.QUOTES Common.OneWaySpecialZoneAPIDetails else Common.ESTIMATES
+                    , destinationAddress = getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.dropLocation))
+                    , currentSearchResultType = searchResultType
                     , rideType = 
-                        if fareProductType == "RENTAL" 
-                          then RideType.RENTAL_RIDE 
+                        if fareProductType == "RENTAL" then RideType.RENTAL_RIDE 
                         else if fareProductType == "INTER_CITY" then RideType.INTERCITY
                         else RideType.NORMAL_RIDE
                     , vehicleVariant = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._vehicleVariant

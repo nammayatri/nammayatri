@@ -55,7 +55,7 @@ driverDetailsView config uid =
   , padding $ PaddingHorizontal 16 16
   , width MATCH_PARENT
   , id $ getNewIDWithTag uid
-  , margin $ Margin 16 (if config.searchType == QUOTES OneWaySpecialZoneAPIDetails then 12 else 0) 16 (if config.enablePaddingBottom then safeMarginBottom else 0)
+  , margin $ Margin 16 (if config.searchType == QUOTES OneWaySpecialZoneAPIDetails then 12 else 0) 16 0
   , background Color.white900
   , cornerRadius 8.0
   , visibility $  boolToVisibility $ if config.searchType == QUOTES OneWaySpecialZoneAPIDetails then config.rideStarted else true

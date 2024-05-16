@@ -1012,3 +1012,6 @@ getHI stringKey =
         RENTAL_POLICY_DESC_1 -> "आप बुकिंग की पुष्टि करने से पहले अगली स्क्रीन पर अभी भी अपने किराए की समीक्षा कर सकते हैं।"
         RENTALS_INTERCITY_AVAILABLE -> "रेंटल और इंटरसिटी ट्रिप, अब Yatri साथी पर उपलब्ध"
         CHECK_IT_OUT -> "इसे चेक करें"
+        AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "इस राइड पर एसी उपलब्ध नहीं है"
+        AC_NOT_WORKING_DESC -> "एसी काम नहीं कर रहा / ड्राइवर ने ऑन करने से मना कर दिया"
+        ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "अनुमान समाप्त हो गया है। फिर से ले रहे हैं, कृपया कुछ क्षण"

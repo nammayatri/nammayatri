@@ -15,7 +15,6 @@
 
 module Screens.RentalBookingFlow.RentalScreen.ScreenData where
 
-import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe(Maybe(..))
 import PrestoDOM (Margin(..))
 import Screens.Types (RentalScreenState, RentalScreenStage(..))

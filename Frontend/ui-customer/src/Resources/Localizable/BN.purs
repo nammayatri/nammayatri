@@ -1012,3 +1012,6 @@ getBN stringKey =
         RENTAL_POLICY_DESC_1 -> "বুকিং নিশ্চিত করার আগে আপনি এখনও পরবর্তী স্ক্রিনে আপনার ভাড়া পর্যালোচনা করতে পারেন।"
         RENTALS_INTERCITY_AVAILABLE -> "রেন্টাল এবং অন্তহণ্ড ট্রিপ, এখন Yatri Sathi-তে উপলব্ধ"
         CHECK_IT_OUT -> "এটি চেক করুন"
+        AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "এই রাইডে এসি উপলব্ধ নয়"
+        AC_NOT_WORKING_DESC -> "এসি কাজ করছে না / চালক অন করতে অসমর্থ"
+        ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "অনুমান মেয়াদ শেষ হয়েছে। আবার তথ্য নিতে, দয়া করে"

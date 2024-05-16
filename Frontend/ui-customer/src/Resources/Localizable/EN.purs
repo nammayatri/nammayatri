@@ -1011,3 +1011,6 @@ getEN stringKey =
         RENTAL_POLICY_DESC_1 -> "You can still review your fare on the next screen before confirming the booking."
         RENTALS_INTERCITY_AVAILABLE -> "Rentals and Intercity trips, now on Yatri Sathi"
         CHECK_IT_OUT -> "Check it out"
+        AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "AC is not available on this ride"
+        AC_NOT_WORKING_DESC -> "AC not working/Driver refused to switch on"
+        ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "Estimates has been expired. Fetching again, Please wait a moment and check again."

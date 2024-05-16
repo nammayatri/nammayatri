@@ -3,7 +3,7 @@ module Components.DriverInfoCard.Common.Types where
 import Prelude
 
 import MerchantConfig.Types (AppConfig)
-import Screens.Types (City, SearchResultType)
+import Screens.Types (City)
 import Data.Maybe (Maybe(..))
 import Common.Types.App 
 

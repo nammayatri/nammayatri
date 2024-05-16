@@ -2446,3 +2446,13 @@ export const getFromUTC = (timestamp) => (val) => {
       return date.getUTCDate();
   }
 }
+
+export const timeValidity = function (time1) {
+  return function (time2) {
+    try {
+      return time2 > time1;
+    } catch (err) {
+      return false;
+    }
+  }
+}

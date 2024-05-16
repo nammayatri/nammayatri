@@ -481,6 +481,8 @@ data SearchResultType = QUOTES FareProductType | ESTIMATES
 derive instance genericSearchResultType :: Generic SearchResultType _
 instance eqSearchResultType :: Eq SearchResultType where eq = genericEq
 instance showSearchResultType :: Show SearchResultType where show = genericShow
+instance encodeSearchResultType :: Encode SearchResultType where encode = defaultEncode
+instance decodeSearchResultType :: Decode SearchResultType where decode = defaultDecode
 
 data FareProductType =  ONE_WAY
                       | INTER_CITY
@@ -491,3 +493,5 @@ data FareProductType =  ONE_WAY
 derive instance genericFareProductType :: Generic FareProductType _
 instance showFareProductType :: Show FareProductType where show = genericShow
 instance eqFareProductType :: Eq FareProductType where eq = genericEq
+instance encodeFareProductType :: Encode FareProductType where encode = defaultEnumEncode
+instance decodeFareProductType :: Decode FareProductType where decode = defaultEnumDecode
