@@ -22,6 +22,7 @@ import qualified Domain.Types.Vehicle as Vehicle
 import qualified Email.Types
 import Kernel.External.Types (Language)
 import Kernel.Prelude
+import Kernel.Types.Beckn.City (City)
 import Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
@@ -161,7 +162,8 @@ data TransporterConfigT f = TransporterConfigT
     dlNumberVerification :: B.C f (Maybe Bool),
     pastDaysRideCounter :: B.C f Int,
     placeNameCacheExpiryDays :: B.C f (Maybe Int),
-    emailOtpConfig :: B.C f (Maybe Email.Types.EmailOTPConfig)
+    emailOtpConfig :: B.C f (Maybe Email.Types.EmailOTPConfig),
+    crossTravelCities :: B.C f [City]
   }
   deriving (Generic, B.Beamable)
 
