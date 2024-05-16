@@ -32,7 +32,7 @@ data BusinessEvent = BusinessEvent
     bookingId :: Maybe (Id Booking),
     whenPoolWasComputed :: Maybe WhenPoolWasComputed,
     vehicleVariant :: Maybe Variant,
-    distance :: Maybe Meters,
+    distance :: Maybe Distance,
     duration :: Maybe Seconds,
     rideId :: Maybe (Id Ride)
   }

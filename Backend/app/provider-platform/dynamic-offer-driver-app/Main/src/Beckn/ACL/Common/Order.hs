@@ -49,6 +49,7 @@ import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
 import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Common
 import Kernel.Utils.Common
 import SharedLogic.Beckn.Common as Common
@@ -143,10 +144,10 @@ mkFulfillment mbDriver ride booking mbVehicle mbImage tags personTags isDriverBi
 
 buildDistanceTagGroup :: MonadFlow m => DRide.Ride -> m [Tags.TagGroup]
 buildDistanceTagGroup ride = do
-  chargeableDistance :: HighPrecMeters <-
-    realToFrac <$> ride.chargeableDistance
+  chargeableDistance :: Distance <-
+    ride.chargeableDistance
       & fromMaybeM (InternalError "Ride chargeable distance is not present.")
-  let traveledDistance :: HighPrecMeters = ride.traveledDistance
+  let traveledDistance :: Distance = ride.traveledDistance
       endOdometerValue = (.value) <$> ride.endOdometerReading
   pure
     [ Tags.TagGroup
@@ -154,12 +155,20 @@ buildDistanceTagGroup ride = do
           code = "ride_distance_details",
           name = "Ride Distance Details",
           list =
-            [ Tags.Tag (Just False) (Just "chargeable_distance") (Just "Chargeable Distance") (Just $ show chargeableDistance),
-              Tags.Tag (Just False) (Just "traveled_distance") (Just "Traveled Distance") (Just $ show traveledDistance)
+            [ Tags.Tag (Just False) (Just "chargeable_distance") (Just "Chargeable Distance") (Just $ showDistanceAsMeters chargeableDistance),
+              Tags.Tag (Just False) (Just "traveled_distance") (Just "Traveled Distance") (Just $ showDistanceAsMeters traveledDistance)
             ]
               <> [Tags.Tag (Just False) (Just "end_odometer_reading") (Just "End Odometer Reading") (show <$> endOdometerValue) | isJust endOdometerValue]
         }
     ]
+
+-- TODO move to kernel
+highPrecDistanceToText :: HighPrecDistance -> Text
+highPrecDistanceToText = DecimalValue.valueToString . DecimalValue.DecimalValue . getHighPrecDistance
+
+-- TODO move to kernel
+showDistanceAsMeters :: Distance -> Text
+showDistanceAsMeters = highPrecDistanceToText . (.value) . convertToMeters
 
 mkOdometerTagGroup :: Maybe Centesimal -> [Tags.TagGroup]
 mkOdometerTagGroup startOdometerReading =

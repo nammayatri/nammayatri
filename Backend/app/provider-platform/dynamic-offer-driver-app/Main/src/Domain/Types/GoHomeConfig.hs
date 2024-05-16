@@ -14,37 +14,38 @@
 
 module Domain.Types.GoHomeConfig where
 
-import Data.Aeson
+-- import Data.Aeson
 import Data.Text as Text
 import Data.Time (UTCTime)
 import Domain.Types.Merchant
 import Domain.Types.Merchant.MerchantOperatingCity
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude as KP
-import Kernel.Types.Common (Meters, Seconds)
+import Kernel.Types.Common (Distance, Seconds)
 import Kernel.Types.Id
 
 --------------------------------------------------------------------------------------
 
 data Subscriber
 
+-- FIXME fix CAC types parsing
 data GoHomeConfig = GoHomeConfig
   { merchantId :: Id Merchant,
     merchantOperatingCityId :: Id MerchantOperatingCity,
     enableGoHome :: Bool,
     startCnt :: Int,
-    destRadiusMeters :: Int,
+    destRadius :: Distance,
     activeTime :: Int,
     updateHomeLocationAfterSec :: Int,
     cancellationCnt :: Int,
     numHomeLocations :: Int,
-    goHomeFromLocationRadius :: Meters,
-    goHomeWayPointRadius :: Meters,
+    goHomeFromLocationRadius :: Distance,
+    goHomeWayPointRadius :: Distance,
     numDriversForDirCheck :: Int,
     goHomeBatchDelay :: Seconds,
-    ignoreWaypointsTill :: Meters,
-    addStartWaypointAt :: Meters,
-    newLocAllowedRadius :: Meters,
+    ignoreWaypointsTill :: Distance,
+    addStartWaypointAt :: Distance,
+    newLocAllowedRadius :: Distance,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

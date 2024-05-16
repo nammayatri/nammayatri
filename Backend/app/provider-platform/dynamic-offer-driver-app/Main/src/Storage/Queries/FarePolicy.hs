@@ -48,11 +48,14 @@ findById (Id farePolicyId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq farePolicyId
 update' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FarePolicy -> m ()
 update' farePolicy = do
   now <- getCurrentTime
+  let distanceUnit = farePolicy.allowedTripDistanceBounds <&> (.maxAllowedTripDistance.unit) -- should be the same for all fields
   updateOneWithKV
     [ Se.Set BeamFP.nightShiftStart $ (.nightShiftStart) <$> farePolicy.nightShiftBounds,
       Se.Set BeamFP.nightShiftEnd $ (.nightShiftEnd) <$> farePolicy.nightShiftBounds,
-      Se.Set BeamFP.maxAllowedTripDistance $ (.maxAllowedTripDistance) <$> farePolicy.allowedTripDistanceBounds,
-      Se.Set BeamFP.minAllowedTripDistance $ (.minAllowedTripDistance) <$> farePolicy.allowedTripDistanceBounds,
+      Se.Set BeamFP.maxAllowedTripDistance $ distanceToMeters . (.maxAllowedTripDistance) <$> farePolicy.allowedTripDistanceBounds,
+      Se.Set BeamFP.minAllowedTripDistance $ distanceToMeters . (.minAllowedTripDistance) <$> farePolicy.allowedTripDistanceBounds,
+      Se.Set BeamFP.maxAllowedTripDistanceValue $ distanceToHighPrecDistance distanceUnit . (.maxAllowedTripDistance) <$> farePolicy.allowedTripDistanceBounds,
+      Se.Set BeamFP.minAllowedTripDistanceValue $ distanceToHighPrecDistance distanceUnit . (.minAllowedTripDistance) <$> farePolicy.allowedTripDistanceBounds,
       Se.Set BeamFP.govtCharges $ farePolicy.govtCharges,
       Se.Set BeamFP.serviceCharge $ farePolicy.serviceCharge,
       Se.Set BeamFP.perMinuteRideExtraTimeCharge $ farePolicy.perMinuteRideExtraTimeCharge,
@@ -63,10 +66,12 @@ update' farePolicy = do
     [Se.Is BeamFP.id (Se.Eq $ getId farePolicy.id)]
 
   case farePolicy.farePolicyDetails of
-    ProgressiveDetails fPPD ->
+    ProgressiveDetails fPPD -> do
+      -- let distanceUnit = Just fPPD.baseDistance.unit -- should be the same for all fields
       updateOneWithKV
         [ Se.Set BeamFPPD.baseFare $ fPPD.baseFare,
-          Se.Set BeamFPPD.baseDistance $ fPPD.baseDistance,
+          Se.Set BeamFPPD.baseDistance $ distanceToMeters fPPD.baseDistance,
+          Se.Set BeamFPPD.baseDistanceValue $ Just $ distanceToHighPrecDistance distanceUnit fPPD.baseDistance,
           Se.Set BeamFPPD.deadKmFare $ fPPD.deadKmFare,
           Se.Set BeamFPPD.waitingCharge $ (.waitingCharge) <$> fPPD.waitingChargeInfo,
           Se.Set BeamFPPD.freeWatingTime $ (.freeWaitingTime) <$> fPPD.waitingChargeInfo,
@@ -93,10 +98,12 @@ update farePolicy = do
     Nothing -> pure ()
 
   case farePolicy.farePolicyDetails of
-    ProgressiveDetails fPPD ->
+    ProgressiveDetails fPPD -> do
+      let distanceUnit = Just fPPD.baseDistance.unit -- should be the same for all fields
       updateOneWithKV
         [ Se.Set BeamFPPD.baseFare $ fPPD.baseFare,
-          Se.Set BeamFPPD.baseDistance $ fPPD.baseDistance,
+          Se.Set BeamFPPD.baseDistance $ distanceToMeters fPPD.baseDistance,
+          Se.Set BeamFPPD.baseDistanceValue $ Just $ distanceToHighPrecDistance distanceUnit fPPD.baseDistance,
           Se.Set BeamFPPD.deadKmFare $ fPPD.deadKmFare,
           Se.Set BeamFPPD.nightShiftCharge $ fPPD.nightShiftCharge
         ]
@@ -121,14 +128,18 @@ update farePolicy = do
 
 instance ToTType' BeamFP.FarePolicy FarePolicy where
   toTType' FarePolicy {..} = do
+    let distanceUnit = allowedTripDistanceBounds <&> (.maxAllowedTripDistance.unit) -- should be the same for all fields
     BeamFP.FarePolicyT
       { BeamFP.id = getId id,
         BeamFP.serviceCharge = serviceCharge,
         BeamFP.parkingCharge = parkingCharge,
         BeamFP.nightShiftStart = (.nightShiftStart) <$> nightShiftBounds,
         BeamFP.nightShiftEnd = (.nightShiftEnd) <$> nightShiftBounds,
-        BeamFP.maxAllowedTripDistance = (.maxAllowedTripDistance) <$> allowedTripDistanceBounds,
-        BeamFP.minAllowedTripDistance = (.minAllowedTripDistance) <$> allowedTripDistanceBounds,
+        BeamFP.maxAllowedTripDistance = distanceToMeters . (.maxAllowedTripDistance) <$> allowedTripDistanceBounds,
+        BeamFP.minAllowedTripDistance = distanceToMeters . (.minAllowedTripDistance) <$> allowedTripDistanceBounds,
+        BeamFP.maxAllowedTripDistanceValue = distanceToHighPrecDistance distanceUnit . (.maxAllowedTripDistance) <$> allowedTripDistanceBounds,
+        BeamFP.minAllowedTripDistanceValue = distanceToHighPrecDistance distanceUnit . (.minAllowedTripDistance) <$> allowedTripDistanceBounds,
+        BeamFP.distanceUnit = distanceUnit,
         BeamFP.govtCharges = govtCharges,
         BeamFP.perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,
         BeamFP.congestionChargeMultiplier = congestionChargeMultiplier,
@@ -171,9 +182,9 @@ instance FromTType' BeamFP.FarePolicy Domain.FarePolicy where
                 nightShiftBounds = DPM.NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
                 allowedTripDistanceBounds =
                   ((,) <$> minAllowedTripDistance <*> maxAllowedTripDistance) <&> \(minAllowedTripDistance', maxAllowedTripDistance') ->
-                    DPM.AllowedTripDistanceBounds
-                      { minAllowedTripDistance = minAllowedTripDistance',
-                        maxAllowedTripDistance = maxAllowedTripDistance'
+                    Domain.AllowedTripDistanceBounds
+                      { minAllowedTripDistance = mkDistanceWithDefaultMeters distanceUnit minAllowedTripDistanceValue minAllowedTripDistance',
+                        maxAllowedTripDistance = mkDistanceWithDefaultMeters distanceUnit maxAllowedTripDistanceValue maxAllowedTripDistance'
                       },
                 govtCharges = govtCharges,
                 driverExtraFeeBounds = nonEmpty fDEFB,

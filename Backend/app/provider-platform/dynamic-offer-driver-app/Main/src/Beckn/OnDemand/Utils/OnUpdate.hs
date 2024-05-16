@@ -32,6 +32,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id, (%~))
+import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Common hiding (mkPrice)
 import Kernel.Utils.Common hiding (mkPrice)
 import SharedLogic.FareCalculator as Fare
@@ -145,10 +146,10 @@ mkPaymentParams _paymentMethodInfo _paymentUrl merchant bppConfig booking = do
 
 mkDistanceTagGroup :: MonadFlow m => DRide.Ride -> m (Maybe [Spec.TagGroup])
 mkDistanceTagGroup ride = do
-  chargeableDistance :: HighPrecMeters <-
-    realToFrac <$> ride.chargeableDistance
+  chargeableDistance :: Distance <-
+    ride.chargeableDistance
       & fromMaybeM (InternalError "Ride chargeable distance is not present in OnUpdateBuildReq ride.")
-  let traveledDistance :: HighPrecMeters = ride.traveledDistance
+  let traveledDistance :: Distance = ride.traveledDistance
   let endOdometerReading :: Maybe Centesimal = (.value) <$> ride.endOdometerReading
   pure $
     Just
@@ -180,7 +181,7 @@ mkDistanceTagGroup ride = do
                     descriptorShortDesc = Nothing
                   },
             tagDisplay = Just False,
-            tagValue = Just $ show chargeableDistance
+            tagValue = Just $ showDistanceAsMeters chargeableDistance
           }
 
     traveledDistanceSingleton traveledDistance =
@@ -194,7 +195,7 @@ mkDistanceTagGroup ride = do
                     descriptorShortDesc = Nothing
                   },
             tagDisplay = Just False,
-            tagValue = Just $ show traveledDistance
+            tagValue = Just $ showDistanceAsMeters traveledDistance
           }
 
     endOdometerSingleton endOdometerReading =
@@ -210,6 +211,14 @@ mkDistanceTagGroup ride = do
             tagDisplay = Just False,
             tagValue = show <$> endOdometerReading
           }
+
+-- TODO move to kernel
+highPrecDistanceToText :: HighPrecDistance -> Text
+highPrecDistanceToText = DecimalValue.valueToString . DecimalValue.DecimalValue . getHighPrecDistance
+
+-- TODO move to kernel
+showDistanceAsMeters :: Distance -> Text
+showDistanceAsMeters = highPrecDistanceToText . (.value) . convertToMeters
 
 mkPreviousCancellationReasonsTags :: SBCR.CancellationSource -> Maybe [Spec.TagGroup]
 mkPreviousCancellationReasonsTags cancellationSource =

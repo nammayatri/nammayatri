@@ -33,3 +33,16 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN area text NOT NULL default 'Default';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN trip_distance_value text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN threshold_to_ignore_actual_distance_threshold_value text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN radius_step_size_value text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN radius_shrink_value_for_drivers_on_ride_value text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN min_radius_of_search_value text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN max_radius_of_search_value text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN driver_to_destination_distance_threshold_value text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN distance_unit text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN actual_distance_threshold_value text ;

@@ -17,6 +17,7 @@ import Kernel.Utils.Common
 data RouteInfo = RouteInfo
   { duration :: Maybe Seconds,
     distance :: Maybe Meters,
+    distanceWithUnit :: Maybe Distance,
     points :: Maybe [LatLong]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

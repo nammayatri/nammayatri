@@ -10,6 +10,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -36,7 +37,9 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
   updateWithKV
     [ Se.Set Beam.createdAt createdAt,
       Se.Set Beam.driverPickUpCharge driverPickUpCharge,
-      Se.Set Beam.estimatedDistance estimatedDistance,
+      Se.Set Beam.distanceUnit (Kernel.Prelude.fmap (.unit) estimatedDistance),
+      Se.Set Beam.estimatedDistance (Kernel.Prelude.fmap Kernel.Types.Common.distanceToMeters estimatedDistance),
+      Se.Set Beam.estimatedDistanceValue (Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance (Kernel.Prelude.fmap (.unit) estimatedDistance)) estimatedDistance),
       Se.Set Beam.fareParamsId ((Kernel.Types.Id.getId . (.id) <$>) fareParams),
       Se.Set Beam.farePolicyId ((Kernel.Types.Id.getId . (.id) <$>) farePolicy),
       Se.Set Beam.isScheduled (Kernel.Prelude.Just isScheduled),
@@ -60,7 +63,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Domain.Types.Estimate.Estimate
           { createdAt = createdAt,
             driverPickUpCharge = driverPickUpCharge,
-            estimatedDistance = estimatedDistance,
+            estimatedDistance = Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit estimatedDistanceValue <$> estimatedDistance,
             fareParams = fareParams',
             farePolicy = farePolicy',
             id = Kernel.Types.Id.Id id,
@@ -80,7 +83,9 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
     Beam.EstimateT
       { Beam.createdAt = createdAt,
         Beam.driverPickUpCharge = driverPickUpCharge,
-        Beam.estimatedDistance = estimatedDistance,
+        Beam.distanceUnit = Kernel.Prelude.fmap (.unit) estimatedDistance,
+        Beam.estimatedDistance = Kernel.Prelude.fmap Kernel.Types.Common.distanceToMeters estimatedDistance,
+        Beam.estimatedDistanceValue = Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance (Kernel.Prelude.fmap (.unit) estimatedDistance)) estimatedDistance,
         Beam.fareParamsId = (Kernel.Types.Id.getId . (.id) <$>) fareParams,
         Beam.farePolicyId = (Kernel.Types.Id.getId . (.id) <$>) farePolicy,
         Beam.id = Kernel.Types.Id.getId id,

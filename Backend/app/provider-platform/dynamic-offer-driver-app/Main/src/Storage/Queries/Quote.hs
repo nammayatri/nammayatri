@@ -57,11 +57,13 @@ instance FromTType' BeamQSZ.QuoteSpecialZone Quote where
             createdAt = T.localTimeToUTC T.utc createdAt,
             updatedAt = T.localTimeToUTC T.utc updatedAt,
             validTill = T.localTimeToUTC T.utc validTill,
+            distance = mkDistanceWithDefaultMeters distanceUnit distanceValue <$> distance,
             ..
           }
 
 instance ToTType' BeamQSZ.QuoteSpecialZone Quote where
   toTType' Quote {..} = do
+    let distanceUnit = distance <&> (.unit) -- should be the same for all fields
     BeamQSZ.QuoteSpecialZoneT
       { BeamQSZ.id = getId id,
         BeamQSZ.searchRequestId = getId searchRequestId,
@@ -73,7 +75,9 @@ instance ToTType' BeamQSZ.QuoteSpecialZone Quote where
         BeamQSZ.driverMinFee = driverMinFee,
         BeamQSZ.driverMaxFee = driverMaxFee,
         BeamQSZ.driverPickUpCharge = driverPickUpCharge,
-        BeamQSZ.distance = distance,
+        BeamQSZ.distance = distanceToMeters <$> distance,
+        BeamQSZ.distanceValue = distanceToHighPrecDistance distanceUnit <$> distance,
+        BeamQSZ.distanceUnit = distanceUnit,
         BeamQSZ.createdAt = T.utcToLocalTime T.utc createdAt,
         BeamQSZ.updatedAt = T.utcToLocalTime T.utc updatedAt,
         BeamQSZ.validTill = T.utcToLocalTime T.utc validTill,

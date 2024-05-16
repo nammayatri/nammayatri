@@ -33,17 +33,20 @@ instance FromTType' BeamFPRD.FareParametersRentalDetails Domain.FullFareParamete
           Domain.FParamsRentalDetails
             { timeBasedFare = timeBasedFare,
               distBasedFare = distBasedFare,
-              extraDistance = fromMaybe 0 extraDistance,
+              extraDistance = mkDistanceWithDefaultMeters distanceUnit extraDistanceValue $ fromMaybe 0 extraDistance,
               extraDuration = fromMaybe 0 extraDuration
             }
         )
 
 instance ToTType' FareParametersRentalDetails Domain.FullFareParametersRentalDetails where
-  toTType' (KTI.Id fareParametersId, fParamsRentalDetails) =
+  toTType' (KTI.Id fareParametersId, fParamsRentalDetails) = do
+    let distanceUnit = Just (Domain.extraDistance fParamsRentalDetails).unit -- should be the same for all fields
     FareParametersRentalDetailsT
       { fareParametersId = fareParametersId,
         timeBasedFare = Domain.timeBasedFare fParamsRentalDetails,
         distBasedFare = Domain.distBasedFare fParamsRentalDetails,
-        extraDistance = Just $ Domain.extraDistance fParamsRentalDetails,
+        extraDistanceValue = Just $ distanceToHighPrecDistance distanceUnit $ Domain.extraDistance fParamsRentalDetails,
+        extraDistance = Just $ distanceToMeters $ Domain.extraDistance fParamsRentalDetails,
+        distanceUnit,
         extraDuration = Just $ Domain.extraDuration fParamsRentalDetails
       }

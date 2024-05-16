@@ -17,34 +17,43 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import Tools.Beam.UtilsTH
 
 data DriverPoolConfigT f = DriverPoolConfigT
-  { actualDistanceThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
-    area :: B.C f Lib.Types.SpecialLocation.Area,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    distanceBasedBatchSplit :: B.C f [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.BatchSplitByPickupDistance],
-    driverBatchSize :: B.C f Kernel.Prelude.Int,
-    driverPositionInfoExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
-    driverQuoteLimit :: B.C f Kernel.Prelude.Int,
-    driverRequestCountLimit :: B.C f Kernel.Prelude.Int,
-    driverToDestinationDistanceThreshold :: B.C f Kernel.Types.Common.Meters,
-    driverToDestinationDuration :: B.C f Kernel.Types.Common.Seconds,
-    id :: B.C f Kernel.Prelude.Text,
-    maxDriverQuotesRequired :: B.C f Kernel.Prelude.Int,
-    maxNumberOfBatches :: B.C f Kernel.Prelude.Int,
-    maxParallelSearchRequests :: B.C f Kernel.Prelude.Int,
-    maxRadiusOfSearch :: B.C f Kernel.Types.Common.Meters,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    minRadiusOfSearch :: B.C f Kernel.Types.Common.Meters,
-    poolSortingType :: B.C f SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.PoolSortingType,
-    radiusShrinkValueForDriversOnRide :: B.C f Kernel.Types.Common.Meters,
-    radiusStepSize :: B.C f Kernel.Types.Common.Meters,
-    scheduleTryTimes :: B.C f [Kernel.Prelude.Int],
-    singleBatchProcessTime :: B.C f Kernel.Types.Common.Seconds,
-    thresholdToIgnoreActualDistanceThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
-    tripCategory :: B.C f Kernel.Prelude.Text,
-    tripDistance :: B.C f Kernel.Types.Common.Meters,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType)
+  { actualDistanceThreshold :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters)),
+    actualDistanceThresholdValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance)),
+    area :: (B.C f Lib.Types.SpecialLocation.Area),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    distanceBasedBatchSplit :: (B.C f [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.BatchSplitByPickupDistance]),
+    driverBatchSize :: (B.C f Kernel.Prelude.Int),
+    driverPositionInfoExpiry :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds)),
+    driverQuoteLimit :: (B.C f Kernel.Prelude.Int),
+    driverRequestCountLimit :: (B.C f Kernel.Prelude.Int),
+    driverToDestinationDistanceThreshold :: (B.C f Kernel.Types.Common.Meters),
+    driverToDestinationDistanceThresholdValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance)),
+    driverToDestinationDuration :: (B.C f Kernel.Types.Common.Seconds),
+    id :: (B.C f Kernel.Prelude.Text),
+    maxDriverQuotesRequired :: (B.C f Kernel.Prelude.Int),
+    maxNumberOfBatches :: (B.C f Kernel.Prelude.Int),
+    maxParallelSearchRequests :: (B.C f Kernel.Prelude.Int),
+    maxRadiusOfSearch :: (B.C f Kernel.Types.Common.Meters),
+    maxRadiusOfSearchValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance)),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    minRadiusOfSearch :: (B.C f Kernel.Types.Common.Meters),
+    minRadiusOfSearchValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance)),
+    poolSortingType :: (B.C f SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.PoolSortingType),
+    radiusShrinkValueForDriversOnRide :: (B.C f Kernel.Types.Common.Meters),
+    radiusShrinkValueForDriversOnRideValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance)),
+    radiusStepSize :: (B.C f Kernel.Types.Common.Meters),
+    radiusStepSizeValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance)),
+    scheduleTryTimes :: (B.C f [Kernel.Prelude.Int]),
+    singleBatchProcessTime :: (B.C f Kernel.Types.Common.Seconds),
+    thresholdToIgnoreActualDistanceThreshold :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters)),
+    thresholdToIgnoreActualDistanceThresholdValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance)),
+    tripCategory :: (B.C f Kernel.Prelude.Text),
+    distanceUnit :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit)),
+    tripDistance :: (B.C f Kernel.Types.Common.Meters),
+    tripDistanceValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance)),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    vehicleVariant :: (B.C f (Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType))
   }
   deriving (Generic, B.Beamable)
 
@@ -54,8 +63,8 @@ instance B.Table DriverPoolConfigT where
 
 type DriverPoolConfig = DriverPoolConfigT Identity
 
-$(enableKVPG ''DriverPoolConfigT ['id] [])
+$(enableKVPG (''DriverPoolConfigT) [('id)] [])
 
-$(mkTableInstances ''DriverPoolConfigT "driver_pool_config")
+$(mkTableInstances (''DriverPoolConfigT) "driver_pool_config")
 
-$(Domain.Types.UtilsTH.mkCacParseInstance ''DriverPoolConfigT)
+$(Domain.Types.UtilsTH.mkCacParseInstance (''DriverPoolConfigT))

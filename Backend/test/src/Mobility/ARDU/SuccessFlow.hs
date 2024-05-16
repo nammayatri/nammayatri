@@ -20,7 +20,7 @@ import Data.Maybe (fromJust)
 import EulerHS.Prelude
 import HSpec
 import Kernel.Prelude (roundToIntegral)
-import Kernel.Types.Common (HighPrecMeters, Meters)
+import Kernel.Types.Common (HighPrecMeters, Meters, distanceToHighPrecMeters, distanceToMeters)
 import qualified Mobility.ARDU.APICalls as API
 import Mobility.ARDU.Fixtures
 import qualified Mobility.ARDU.Utils as Utils
@@ -95,8 +95,8 @@ successFlowWithLocationUpdatesHandler eps distance chargeableDistance updates lo
   Utils.endRide arduDriver1 destination tRide bBookingId
 
   tRide' <- Utils.getBPPRideById tRide.id
-  tRide'.traveledDistance `shouldSatisfy` equalsEps (realToFrac eps) distance
-  tRide'.chargeableDistance `shouldSatisfy` (equalsEps (roundToIntegral eps) chargeableDistance . fromJust)
+  distanceToHighPrecMeters tRide'.traveledDistance `shouldSatisfy` equalsEps (realToFrac eps) distance
+  (distanceToMeters <$> tRide'.chargeableDistance) `shouldSatisfy` (equalsEps (roundToIntegral eps) chargeableDistance . fromJust)
 
 -- Leave feedback
 -- not yet implemented

@@ -110,11 +110,13 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
             startTime = startTime_,
             isScheduled = fromMaybe False isScheduled,
             validTill = validTill_,
+            estimatedDistance = mkDistanceWithDefaultMeters distanceUnit estimatedDistanceValue <$> estimatedDistance,
             ..
           }
 
 instance ToTType' BeamSR.SearchRequest SearchRequest where
-  toTType' SearchRequest {..} =
+  toTType' SearchRequest {..} = do
+    let distanceUnit = estimatedDistance <&> (.unit) -- should be the same for all fields
     BeamSR.SearchRequestT
       { BeamSR.id = getId id,
         BeamSR.transactionId = transactionId,
@@ -128,7 +130,9 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.bapUri = showBaseUrl bapUri,
         BeamSR.bapCity = bapCity,
         BeamSR.bapCountry = bapCountry,
-        BeamSR.estimatedDistance = estimatedDistance,
+        BeamSR.estimatedDistance = distanceToMeters <$> estimatedDistance,
+        BeamSR.estimatedDistanceValue = distanceToHighPrecDistance distanceUnit <$> estimatedDistance,
+        BeamSR.distanceUnit = distanceUnit,
         BeamSR.estimatedDuration = estimatedDuration,
         BeamSR.customerLanguage = customerLanguage,
         BeamSR.disabilityTag = disabilityTag,

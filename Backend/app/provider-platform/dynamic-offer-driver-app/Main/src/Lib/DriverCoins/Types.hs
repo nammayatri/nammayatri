@@ -21,7 +21,7 @@ module Lib.DriverCoins.Types
 where
 
 import Kernel.Prelude
-import Kernel.Types.Common (Meters)
+import Kernel.Types.Common (Distance)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data DriverCoinsFunctionType
@@ -39,16 +39,26 @@ data DriverCoinsFunctionType
   | BulkUploadFunctionV2 CoinMessage
   deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
 
+-- data DriverCoinsEventType
+--   = Rating {ratingValue :: Int, chargeableDistance :: Maybe Meters}
+--   | EndRide {isDisabled :: Bool, chargeableDistance_ :: Meters}
+--   | Cancellation {rideStartTime :: UTCTime, intialDisToPickup :: Maybe Meters, cancellationDisToPickup :: Maybe Meters}
+--   | DriverToCustomerReferral {chargeableDistance :: Maybe Meters}
+--   | CustomerToDriverReferral
+--   | LeaderBoard
+--   | Training
+--   | BulkUploadEvent
+--   deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
+
 data DriverCoinsEventType
-  = Rating {ratingValue :: Int, chargeableDistance :: Maybe Meters}
-  | EndRide {isDisabled :: Bool, chargeableDistance_ :: Meters}
-  | Cancellation {rideStartTime :: UTCTime, intialDisToPickup :: Maybe Meters, cancellationDisToPickup :: Maybe Meters}
-  | DriverToCustomerReferral {chargeableDistance :: Maybe Meters}
+  = Rating {ratingValue :: Int, chargeableDistance :: Maybe Distance}
+  | EndRide {isDisabled :: Bool, chargeableDistance_ :: Distance}
+  | Cancellation {rideStartTime :: UTCTime, intialDisToPickup :: Maybe Distance, cancellationDisToPickup :: Maybe Distance}
+  | DriverToCustomerReferral {chargeableDistance :: Maybe Distance}
   | CustomerToDriverReferral
   | LeaderBoard
   | Training
   | BulkUploadEvent
-  deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
 
 data CoinMessage
   = CoinAdded
@@ -58,6 +68,6 @@ data CoinMessage
 
 $(mkBeamInstancesForEnum ''CoinMessage)
 
-$(mkBeamInstancesForEnum ''DriverCoinsEventType)
+-- $(mkBeamInstancesForEnum ''DriverCoinsEventType)
 
 $(mkBeamInstancesForEnum ''DriverCoinsFunctionType)

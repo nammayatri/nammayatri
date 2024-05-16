@@ -122,7 +122,9 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
       JC.createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
         SendSearchRequestToDriverJobData
           { searchTryId = searchTry.id,
-            estimatedRideDistance = searchReq.estimatedDistance
+            estimatedRideDistance1 = distanceToMeters <$> searchReq.estimatedDistance,
+            estimatedRideDistanceValue = distanceToHighPrecDistance (searchReq.estimatedDistance <&> (.unit)) <$> searchReq.estimatedDistance,
+            distanceUnit = searchReq.estimatedDistance <&> (.unit)
           }
 
     createNewSearchTry = do

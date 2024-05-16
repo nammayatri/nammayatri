@@ -7,6 +7,7 @@ import qualified Domain.Types.DailyStats
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -21,7 +22,7 @@ instance FromTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
             id = id,
             merchantLocalDate = merchantLocalDate,
             numRides = numRides,
-            totalDistance = totalDistance,
+            totalDistance = Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit totalDistanceValue totalDistance,
             totalEarnings = totalEarnings,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -34,7 +35,9 @@ instance ToTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
         Beam.id = id,
         Beam.merchantLocalDate = merchantLocalDate,
         Beam.numRides = numRides,
-        Beam.totalDistance = totalDistance,
+        Beam.distanceUnit = Just $ (.unit) totalDistance,
+        Beam.totalDistance = Kernel.Types.Common.distanceToMeters totalDistance,
+        Beam.totalDistanceValue = (Just . Kernel.Types.Common.distanceToHighPrecDistance (Just $ (.unit) totalDistance)) totalDistance,
         Beam.totalEarnings = totalEarnings,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

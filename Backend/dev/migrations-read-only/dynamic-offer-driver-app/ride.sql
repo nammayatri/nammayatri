@@ -70,3 +70,16 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN client_config_version text ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN client_bundle_version text ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN backend_config_version text ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN backend_app_version text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN traveled_distance_value text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN distance_unit text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN chargeable_distance_value text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ALTER COLUMN traveled_distance_value SET DEFAULT 0.0;

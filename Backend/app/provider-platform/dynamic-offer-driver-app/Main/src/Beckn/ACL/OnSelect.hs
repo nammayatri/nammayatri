@@ -35,6 +35,7 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Id (ShortId)
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator (mkFareParamsBreakups)
@@ -233,7 +234,8 @@ mkGeneralInfoTag quote isValueAddNP =
                     descriptorName = Just "Distance To Nearest Driver In Meters",
                     descriptorShortDesc = Nothing
                   },
-            tagValue = Just $ show quote.distanceToPickup.getMeters
+            -- TODO is it backward compatible with old bap?
+            tagValue = Just $ showDistanceAsMeters quote.distanceToPickup
           }
       ]
     etaToNearestDriverTag =
@@ -264,6 +266,14 @@ mkGeneralInfoTag quote isValueAddNP =
               tagValue = quote.specialLocationTag
             }
         ]
+
+-- TODO move to kernel
+highPrecDistanceToText :: HighPrecDistance -> Text
+highPrecDistanceToText = DecimalValue.valueToString . DecimalValue.DecimalValue . getHighPrecDistance
+
+-- TODO move to kernel
+showDistanceAsMeters :: Distance -> Text
+showDistanceAsMeters = highPrecDistanceToText . (.value) . convertToMeters
 
 mkQuoteV2 :: DQuote.DriverQuote -> UTCTime -> Spec.Quotation
 mkQuoteV2 quote now = do

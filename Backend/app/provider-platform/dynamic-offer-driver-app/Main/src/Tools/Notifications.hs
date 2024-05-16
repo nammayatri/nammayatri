@@ -37,6 +37,7 @@ import qualified Kernel.External.Notification.FCM.Flow as FCM
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude hiding (unwords)
+import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -89,12 +90,19 @@ notifyOnNewSearchRequestAvailable merchantOpCityId personId mbDeviceToken entity
           [ "A new ride for",
             showTimeIst entityData.startTime,
             "is available",
-            show entityData.distanceToPickup.getMeters,
-            "meters away from you. Estimated base fare is",
-            show entityData.baseFare <> " INR, estimated distance is",
-            show $ entityData.distance,
-            "meters"
+            distanceToText entityData.distanceToPickupWithUnit,
+            "away from you. Estimated base fare is",
+            show entityData.baseFare <> " INR, estimated distance is", -- FIXME fix currency
+            maybe "unknown" distanceToText entityData.distanceWithUnit
           ]
+
+-- TODO move to kernel
+unitsToText :: DistanceUnit -> Text
+unitsToText = (<> "s") . T.toLower . show
+
+-- TODO move to kernel
+distanceToText :: Distance -> Text
+distanceToText distance = highPrecDistanceToText distance.value <> " " <> unitsToText distance.unit
 
 -- | Send FCM "cancel" notification to driver
 notifyOnCancel ::
@@ -734,12 +742,15 @@ buildSendSearchRequestNotificationData driverId mbDeviceToken entityData dynamic
           [ "A new ride for",
             cs $ showTimeIst entityData.startTime,
             "is available",
-            show entityData.distanceToPickup.getMeters,
-            "meters away from you. Estimated base fare is",
-            show entityData.baseFare <> " INR, estimated distance is",
-            show $ entityData.distance,
-            "meters"
+            distanceToText entityData.distanceToPickupWithUnit,
+            "away from you. Estimated base fare is",
+            show entityData.baseFare <> " INR, estimated distance is", -- FIXME currency
+            maybe "unknown" distanceToText entityData.distanceWithUnit
           ]
+
+-- TODO move to kernel
+highPrecDistanceToText :: HighPrecDistance -> Text
+highPrecDistanceToText = DecimalValue.valueToString . DecimalValue.DecimalValue . getHighPrecDistance
 
 sendSearchRequestToDriverNotification ::
   ( ServiceFlow m r,

@@ -27,7 +27,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
-import EulerHS.Prelude (whenNothingM_)
+import EulerHS.Prelude (whenNothingM_, (<|>))
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -245,7 +245,9 @@ instance FromTType' BeamB.Booking Booking where
                 paymentMethodId = Id <$> paymentMethodId,
                 stopLocationId = Id <$> stopLocationId,
                 isScheduled = fromMaybe False isScheduled,
-                distanceToPickup = roundToIntegral <$> distanceToPickup,
+                distanceToPickup = mkDistanceWithDefault distanceUnit distanceToPickupValue <$> distanceToPickup,
+                estimatedDistance = mkDistanceWithDefaultMeters distanceUnit estimatedDistanceValue <$> estimatedDistance,
+                maxEstimatedDistance = mkDistanceWithDefault distanceUnit maxEstimatedDistanceValue <$> maxEstimatedDistance,
                 ..
               }
       else do
@@ -254,6 +256,7 @@ instance FromTType' BeamB.Booking Booking where
 
 instance ToTType' BeamB.Booking Booking where
   toTType' Booking {..} = do
+    let distanceUnit = (estimatedDistance <|> maxEstimatedDistance <|> distanceToPickup) <&> (.unit) -- should be the same for all fields
     -- This booking type is just for backward compatibility (We don't have it in Domain Type)
     let bookingType = case tripCategory of
           DTC.OneWay DTC.OneWayRideOtp -> SpecialZoneBooking
@@ -285,8 +288,10 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.vehicleServiceTierName = Just vehicleServiceTierName,
         BeamB.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         BeamB.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
-        BeamB.estimatedDistance = estimatedDistance,
-        BeamB.maxEstimatedDistance = maxEstimatedDistance,
+        BeamB.estimatedDistance = distanceToMeters <$> estimatedDistance,
+        BeamB.maxEstimatedDistance = distanceToHighPrecMeters <$> maxEstimatedDistance,
+        BeamB.estimatedDistanceValue = distanceToHighPrecDistance distanceUnit <$> estimatedDistance,
+        BeamB.maxEstimatedDistanceValue = distanceToHighPrecDistance distanceUnit <$> maxEstimatedDistance,
         BeamB.estimatedFare = realToFrac estimatedFare,
         BeamB.estimatedDuration = estimatedDuration,
         BeamB.fareParametersId = getId fareParams.id,
@@ -295,7 +300,8 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.riderName = riderName,
         BeamB.createdAt = createdAt,
         BeamB.updatedAt = updatedAt,
-        BeamB.distanceToPickup = realToFrac <$> distanceToPickup,
+        BeamB.distanceToPickup = distanceToHighPrecMeters <$> distanceToPickup,
+        BeamB.distanceToPickupValue = distanceToHighPrecDistance distanceUnit <$> distanceToPickup,
         BeamB.isScheduled = Just isScheduled,
         BeamB.stopLocationId = getId <$> stopLocationId,
         ..

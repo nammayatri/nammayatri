@@ -15,3 +15,9 @@ ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD PRIMARY KEY ( id, driver_id);
 
 ALTER TABLE atlas_driver_offer_bpp.daily_stats DROP CONSTRAINT daily_stats_pkey;
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN total_distance_value text ;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN distance_unit text ;

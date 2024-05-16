@@ -28,7 +28,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id (Id, cast)
-import Kernel.Utils.Common (CacheFlow, Forkable (fork), MonadGuid (generateGUIDText), Money (Money), fromMaybeM, getCurrentTime, getLocalCurrentTime, getMoney, highPrecMetersToMeters, logDebug)
+import Kernel.Utils.Common (CacheFlow, Distance (..), Forkable (fork), MonadGuid (generateGUIDText), Money (Money), fromMaybeM, getCurrentTime, getLocalCurrentTime, getMoney, logDebug)
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTCQ
@@ -61,7 +61,7 @@ eventPayloadHandler merchantOpCityId DST.OnNewRideAssigned {..} = do
   mbDriverStats <- B.runInReplica $ DSQ.findById (cast driverId)
   -- mbDriverStats <- DSQ.findById (cast driverId)
   void $ case mbDriverStats of
-    Just driverStats -> incrementOrSetTotaRides driverId driverStats
+    Just driverStats -> incrementOrSetTotalRides driverId driverStats
     Nothing -> createDriverStat driverId
   DP.incrementTotalRidesCount merchantOpCityId driverId
 eventPayloadHandler merchantOpCityId DST.OnNewSearchRequestForDrivers {..} =
@@ -143,7 +143,7 @@ updateDailyStats driverId merchantOpCityId ride = do
                 driverId = driverId,
                 totalEarnings = fromMaybe 0 ride.fare,
                 numRides = 1,
-                totalDistance = fromMaybe 0 ride.chargeableDistance,
+                totalDistance = fromMaybe (Distance 0.0 ride.traveledDistance.unit) ride.chargeableDistance,
                 merchantLocalDate = utctDay localTime,
                 createdAt = now,
                 updatedAt = now
@@ -179,7 +179,7 @@ createDriverStat driverId = do
             bonusEarned = Money (driverSelectedFare + customerExtraFee + length farePramIds * 10),
             lateNightTrips = lateNightTripsCount,
             earningsMissed = missedEarnings,
-            totalDistance = highPrecMetersToMeters . sum $ map (.traveledDistance) allRides,
+            totalDistance = sum $ map (.traveledDistance) allRides,
             ridesCancelled = Just cancelledRidesCount,
             totalRidesAssigned = Just $ length allRides,
             coinCovertedToCashLeft = 0.0,
@@ -189,8 +189,8 @@ createDriverStat driverId = do
   _ <- DSQ.create driverStat
   pure driverStat
 
-incrementOrSetTotaRides :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> DS.DriverStats -> m DS.DriverStats
-incrementOrSetTotaRides driverId driverStats = do
+incrementOrSetTotalRides :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> DS.DriverStats -> m DS.DriverStats
+incrementOrSetTotalRides driverId driverStats = do
   incrementTotaRidesBy <-
     maybe
       ( do

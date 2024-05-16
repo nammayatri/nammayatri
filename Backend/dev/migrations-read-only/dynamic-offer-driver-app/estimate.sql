@@ -23,3 +23,10 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ALTER COLUMN trip_category DROP NOT 
 ALTER TABLE atlas_driver_offer_bpp.estimate ALTER COLUMN is_scheduled DROP NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN vehicle_service_tier_name text ;
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN driver_pick_up_charge integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN estimated_distance_value text ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN distance_unit text ;

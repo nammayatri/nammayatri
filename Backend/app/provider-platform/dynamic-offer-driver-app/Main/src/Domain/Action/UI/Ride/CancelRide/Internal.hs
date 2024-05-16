@@ -89,7 +89,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason = do
         now <- getCurrentTime
         let isSearchTryValid = searchTry.validTill > now
         transporterConfig <- QMTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-        let arrivedPickupThreshold = highPrecMetersToMeters transporterConfig.arrivedPickupThreshold
+        let arrivedPickupThreshold = transporterConfig.arrivedPickupThreshold
         let driverHasNotArrived = isNothing ride.driverArrivalTime || maybe True (> arrivedPickupThreshold) bookingCReason.driverDistToPickup
         let isRepeatSearch =
               searchTry.searchRepeatCounter < searchRepeatLimit

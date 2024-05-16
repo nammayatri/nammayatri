@@ -34,6 +34,8 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
     driverPickUpCharge :: B.C f (Maybe Common.Money),
     tripCategory :: B.C f (Maybe DTC.TripCategory),
     distance :: B.C f (Maybe Common.Meters),
+    distanceValue :: B.C f (Maybe Common.HighPrecDistance),
+    distanceUnit :: B.C f (Maybe Common.DistanceUnit),
     validTill :: B.C f LocalTime,
     estimatedFare :: B.C f Common.Money,
     specialLocationTag :: B.C f (Maybe Text),

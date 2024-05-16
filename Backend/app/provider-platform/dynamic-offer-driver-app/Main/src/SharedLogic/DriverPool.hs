@@ -571,18 +571,18 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
   let driversOnWayToHome =
         filter
           ( \(_, driverRoute, _, _) ->
-              any (\wp -> highPrecMetersToMeters (distanceBetweenInMeters (getCoordinates toLocation) wp) <= goHomeCfg.goHomeWayPointRadius) driverRoute.points
+              any (\wp -> highPrecMetersToDistance (distanceBetweenInMeters (getCoordinates toLocation) wp) <= goHomeCfg.goHomeWayPointRadius) driverRoute.points
           )
           driversRoutes
   let goHomeDriverIdsToDest = map (\(driver, _, _, _) -> driver.driverId) driversOnWayToHome
   let goHomeDriverIdsNotToDest = map (\(_, driver, _) -> driver.driverId) $ filter (\(_, driver, _) -> driver.driverId `notElem` goHomeDriverIdsToDest) driverGoHomePoolWithActualDistance
   let goHomeDriverPoolWithActualDist = makeDriverPoolWithActualDistResult transporterConfig <$> driversOnWayToHome
-  return $ (take driverPoolCfg.driverBatchSize goHomeDriverPoolWithActualDist, goHomeDriverIdsNotToDest)
+  return (take driverPoolCfg.driverBatchSize goHomeDriverPoolWithActualDist, goHomeDriverIdsNotToDest)
   where
-    filterFunc threshold estDist distanceToPickup =
+    filterFunc threshold estDist (distanceToPickup :: Distance) =
       case driverPoolCfg.thresholdToIgnoreActualDistanceThreshold of
-        Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (getMeters estDist.actualDistanceToPickup <= fromIntegral threshold)
-        Nothing -> getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
+        Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (estDist.actualDistanceToPickup <= threshold)
+        Nothing -> estDist.actualDistanceToPickup <= threshold
 
     makeDriverPoolRes nearestGoHomeDrivers =
       DriverPoolResult
@@ -700,7 +700,8 @@ calculateDriverPool cityServiceTiers poolStage driverPoolCfg serviceTiers pickup
         Just radiusStep -> do
           let minRadius = driverPoolCfg.minRadiusOfSearch
           let radiusStepSize = driverPoolCfg.radiusStepSize
-          min (minRadius + radiusStepSize * radiusStep) maxRadius
+          let radiusStep' = modifyDistanceValue (\radiusStepSize' -> HighPrecDistance $ radiusStepSize'.getHighPrecDistance * toRational radiusStep.getMeters) radiusStepSize
+          min (minRadius + radiusStep') maxRadius
         Nothing -> maxRadius
     makeDriverPoolResult :: QP.NearestDriversResult -> DriverPoolResult
     makeDriverPoolResult QP.NearestDriversResult {..} = do
@@ -762,8 +763,8 @@ calculateDriverPoolWithActualDist poolCalculationStage poolType driverPoolCfg se
 
     filterFunc threshold estDist distanceToPickup =
       case driverPoolCfg.thresholdToIgnoreActualDistanceThreshold of
-        Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (getMeters estDist.actualDistanceToPickup <= fromIntegral threshold)
-        Nothing -> getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
+        Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (estDist.actualDistanceToPickup <= threshold)
+        Nothing -> estDist.actualDistanceToPickup <= threshold
 
 calculateDriverPoolCurrentlyOnRide ::
   ( EncFlow m r,
@@ -814,7 +815,8 @@ calculateDriverPoolCurrentlyOnRide cityServiceTiers poolStage driverPoolCfg serv
         Just radiusStep -> do
           let minRadius = driverPoolCfg.minRadiusOfSearch
           let radiusStepSize = driverPoolCfg.radiusStepSize
-          min (minRadius + radiusStepSize * radiusStep) maxRadius
+          let radiusStep' = modifyDistanceValue (\radiusStepSize' -> HighPrecDistance $ radiusStepSize'.getHighPrecDistance * toRational radiusStep.getMeters) radiusStepSize
+          min (minRadius + radiusStepSize * radiusStep') maxRadius
         Nothing -> maxRadius
     makeDriverPoolResult :: QP.NearestDriversResultCurrentlyOnRide -> DriverPoolResultCurrentlyOnRide
     makeDriverPoolResult QP.NearestDriversResultCurrentlyOnRide {..} =
@@ -861,7 +863,7 @@ calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage poolType drive
       logDebug $ "secondly filtered driver pool result currently on ride" <> show filtDriverPoolWithActualDist
       return filtDriverPoolWithActualDist
   where
-    filterFunc threshold estDist = getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
+    filterFunc threshold estDist = estDist.actualDistanceToPickup <= threshold
     driverResultFromDestinationLocation DriverPoolResultCurrentlyOnRide {..} =
       DriverPoolResult
         { lat = destinationLat,
@@ -937,7 +939,7 @@ computeActualDistance orgId merchantOpCityId pickup driverPoolResults = do
     mkDriverPoolWithActualDistResult defaultPopupDelay distDur = do
       DriverPoolWithActualDistResult
         { driverPoolResult = distDur.origin,
-          actualDistanceToPickup = distDur.distance,
+          actualDistanceToPickup = metersToDistance distDur.distance,
           actualDurationToPickup = distDur.duration,
           intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing defaultPopupDelay,
           isPartOfIntelligentPool = False,
@@ -960,15 +962,15 @@ refactorRoutesResp goHomeCfg (nearestDriverRes, route, ghrId, driverGoHomePoolWi
           boundingBox = route'.boundingBox
         }
 
-    filterInitPoints (x1 : x2 : xs) = if highPrecMetersToMeters (distanceBetweenInMeters x1 x2) <= goHomeCfg.ignoreWaypointsTill then filterInitPoints (x1 : xs) else x1 : x2 : xs
+    filterInitPoints (x1 : x2 : xs) = if highPrecMetersToDistance (distanceBetweenInMeters x1 x2) <= goHomeCfg.ignoreWaypointsTill then filterInitPoints (x1 : xs) else x1 : x2 : xs
     filterInitPoints [x] = [x]
     filterInitPoints [] = []
 
-    getStartPoint (x1 : x2 : xs) = getPointInBetween x1 x2 (fromIntegral (getMeters goHomeCfg.addStartWaypointAt) / 111000) : x2 : xs -- 1 degree = 111 Km
+    getStartPoint (x1 : x2 : xs) = getPointInBetween x1 x2 (fromIntegral (getMeters $ distanceToMeters goHomeCfg.addStartWaypointAt) / 111000) : x2 : xs -- 1 degree = 111 Km
     getStartPoint [x] = [x]
     getStartPoint [] = []
 
-    refactor acc (p1 : p2 : ps) = if highPrecMetersToMeters (distanceBetweenInMeters p1 p2) > goHomeCfg.goHomeWayPointRadius then refactor (p1 : acc) (getPointInBetween p1 p2 (fromIntegral (goHomeCfg.goHomeWayPointRadius.getMeters) / 111000) : p2 : ps) else refactor (p1 : acc) (p2 : ps)
+    refactor acc (p1 : p2 : ps) = if highPrecMetersToDistance (distanceBetweenInMeters p1 p2) > goHomeCfg.goHomeWayPointRadius then refactor (p1 : acc) (getPointInBetween p1 p2 (fromIntegral (getMeters $ distanceToMeters goHomeCfg.goHomeWayPointRadius) / 111000) : p2 : ps) else refactor (p1 : acc) (p2 : ps)
     refactor acc [p1] = reverse (p1 : acc)
     refactor _ [] = []
 

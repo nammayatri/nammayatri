@@ -31,13 +31,15 @@ findByDriverIdAndDate (Kernel.Types.Id.Id driverId) merchantLocalDate = do findO
 
 updateByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Common.Money -> Kernel.Prelude.Int -> Kernel.Types.Common.Meters -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m ())
+  (Kernel.Types.Common.Money -> Kernel.Prelude.Int -> Kernel.Types.Common.Distance -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m ())
 updateByDriverId totalEarnings numRides totalDistance (Kernel.Types.Id.Id driverId) merchantLocalDate = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.totalEarnings totalEarnings,
       Se.Set Beam.numRides numRides,
-      Se.Set Beam.totalDistance totalDistance,
+      Se.Set Beam.distanceUnit (Just $ (.unit) totalDistance),
+      Se.Set Beam.totalDistance (Kernel.Types.Common.distanceToMeters totalDistance),
+      Se.Set Beam.totalDistanceValue ((Just . Kernel.Types.Common.distanceToHighPrecDistance (Just $ (.unit) totalDistance)) totalDistance),
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
@@ -52,7 +54,9 @@ updateByPrimaryKey (Domain.Types.DailyStats.DailyStats {..}) = do
     [ Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.merchantLocalDate merchantLocalDate,
       Se.Set Beam.numRides numRides,
-      Se.Set Beam.totalDistance totalDistance,
+      Se.Set Beam.distanceUnit (Just $ (.unit) totalDistance),
+      Se.Set Beam.totalDistance (Kernel.Types.Common.distanceToMeters totalDistance),
+      Se.Set Beam.totalDistanceValue ((Just . Kernel.Types.Common.distanceToHighPrecDistance (Just $ (.unit) totalDistance)) totalDistance),
       Se.Set Beam.totalEarnings totalEarnings,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now

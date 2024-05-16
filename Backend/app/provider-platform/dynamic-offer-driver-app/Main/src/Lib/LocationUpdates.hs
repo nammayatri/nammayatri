@@ -89,8 +89,8 @@ updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = 
       logInfo $ "Safety alert and deviation already triggered for rideId: " <> getId rideId
       return True
     else do
-      let routeDeviationThreshold = transportConfig.routeDeviationThreshold
-          nightSafetyRouteDeviationThreshold = transportConfig.nightSafetyRouteDeviationThreshold
+      let routeDeviationThreshold = distanceToMeters transportConfig.routeDeviationThreshold
+          nightSafetyRouteDeviationThreshold = distanceToMeters transportConfig.nightSafetyRouteDeviationThreshold
           key = multipleRouteKey booking.transactionId
           oldKey = multipleRouteKey rideId.getId
           shouldPerformSafetyCheck = safetyCheckEnabled && not safetyAlertAlreadyTriggered

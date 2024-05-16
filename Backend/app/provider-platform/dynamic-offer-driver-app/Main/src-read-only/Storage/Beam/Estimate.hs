@@ -17,7 +17,9 @@ import Tools.Beam.UtilsTH
 data EstimateT f = EstimateT
   { createdAt :: B.C f Kernel.Prelude.UTCTime,
     driverPickUpCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
+    estimatedDistanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     fareParamsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     farePolicyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,

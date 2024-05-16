@@ -42,10 +42,10 @@ findAllByMerchantOpCityId id =
     Just a -> return a
     Nothing -> cacheDriverPoolConfigs id /=<< Queries.findAllByMerchantOpCityId Nothing Nothing id
 
-findByMerchantOpCityIdAndTripDistance :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> m (Maybe DriverPoolConfig)
+findByMerchantOpCityIdAndTripDistance :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Distance -> m (Maybe DriverPoolConfig)
 findByMerchantOpCityIdAndTripDistance merchantOpCityId tripDistance = find (\config -> config.tripDistance == tripDistance) <$> findAllByMerchantOpCityId merchantOpCityId
 
-findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> Maybe DVST.ServiceTierType -> Text -> SL.Area -> m (Maybe DriverPoolConfig)
+findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Distance -> Maybe DVST.ServiceTierType -> Text -> SL.Area -> m (Maybe DriverPoolConfig)
 findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId tripDistance serviceTier tripCategory area = find (\config -> config.tripDistance == tripDistance && config.vehicleVariant == serviceTier && config.tripCategory == tripCategory && config.area == area) <$> findAllByMerchantOpCityId merchantOpCityId
 
 cacheDriverPoolConfigs :: (CacheFlow m r) => Id MerchantOperatingCity -> [DriverPoolConfig] -> m ()

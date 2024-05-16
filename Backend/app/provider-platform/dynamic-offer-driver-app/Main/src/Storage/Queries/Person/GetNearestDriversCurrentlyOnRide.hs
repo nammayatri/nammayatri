@@ -41,8 +41,8 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
     airConditioned :: Maybe Double,
     destinationLat :: Double,
     destinationLon :: Double,
-    distanceToDriver :: Meters,
-    distanceFromDriverToDestination :: Meters,
+    distanceToDriver :: Distance,
+    distanceFromDriverToDestination :: Distance,
     mode :: Maybe DriverInfo.DriverMode,
     clientSdkVersion :: Maybe Version,
     clientBundleVersion :: Maybe Version,
@@ -58,10 +58,10 @@ getNearestDriversCurrentlyOnRide ::
   [DVST.VehicleServiceTier] ->
   [ServiceTierType] ->
   LatLong ->
-  Meters ->
+  Distance ->
   Id Merchant ->
   Maybe Seconds ->
-  Meters ->
+  Distance ->
   Bool ->
   Bool ->
   m [NearestDriversResultCurrentlyOnRide]
@@ -75,7 +75,7 @@ getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong ra
   bookingInfo <- Int.getBookingInfo driverQuote
   bookingLocation <- QL.getBookingLocs (mapMaybe (\b -> (.id) <$> b.toLocation) bookingInfo)
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> " Dquotes:- " <> show (length driverQuote) <> " BInfos:- " <> show (length bookingInfo) <> " BLocs:- " <> show (length bookingLocation)
-  let res = linkArrayListForOnRide driverQuote bookingInfo bookingLocation driverLocs driverInfos vehicles drivers (fromIntegral onRideRadius :: Double)
+  let res = linkArrayListForOnRide driverQuote bookingInfo bookingLocation driverLocs driverInfos vehicles drivers onRideRadius
   logDebug $ "GetNearestDriversCurrentlyOnRide Result:- " <> show (length res)
   return res
   where
@@ -99,8 +99,8 @@ getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong ra
       person <- HashMap.lookup driverId' personHashMap
       let driverLocationPoint = LatLong {lat = location.lat, lon = location.lon}
           destinationPoint = LatLong {lat = bookingLocation.lat, lon = bookingLocation.lon}
-          distanceFromDriverToDestination = realToFrac $ distanceBetweenInMeters driverLocationPoint destinationPoint
-          distanceFromDestinationToPickup = realToFrac $ distanceBetweenInMeters fromLocLatLong destinationPoint
+          distanceFromDriverToDestination = highPrecMetersToDistance $ distanceBetweenInMeters driverLocationPoint destinationPoint
+          distanceFromDestinationToPickup = highPrecMetersToDistance $ distanceBetweenInMeters fromLocLatLong destinationPoint
           onRideRadiusValidity = (distanceFromDriverToDestination + distanceFromDestinationToPickup) < onRideRadius
 
       -- ideally should be there inside the vehicle.selectedServiceTiers but still to make sure we have a default service tier for the driver
@@ -130,4 +130,27 @@ getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong ra
       where
         mkDriverResult mbDefaultServiceTierForDriver person info location bookingLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
-          Just $ NearestDriversResultCurrentlyOnRide (cast person.id) person.deviceToken person.language info.onRide location.lat location.lon vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.airConditioned bookingLocation.lat bookingLocation.lon (roundToIntegral $ distanceFromDriverToDestination + distanceFromDestinationToPickup) (roundToIntegral distanceFromDriverToDestination) info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice person.backendConfigVersion person.backendAppVersion
+          Just $
+            NearestDriversResultCurrentlyOnRide
+              { driverId = cast person.id,
+                driverDeviceToken = person.deviceToken,
+                language = person.language,
+                onRide = info.onRide,
+                lat = location.lat,
+                lon = location.lon,
+                variant = vehicle.variant,
+                serviceTier = serviceTier,
+                serviceTierDowngradeLevel = maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver,
+                airConditioned = serviceTierInfo.airConditioned,
+                destinationLat = bookingLocation.lat,
+                destinationLon = bookingLocation.lon,
+                distanceToDriver = distanceFromDriverToDestination + distanceFromDestinationToPickup,
+                distanceFromDriverToDestination,
+                mode = info.mode,
+                clientSdkVersion = person.clientSdkVersion,
+                clientBundleVersion = person.clientBundleVersion,
+                clientConfigVersion = person.clientConfigVersion,
+                clientDevice = person.clientDevice,
+                backendConfigVersion = person.backendConfigVersion,
+                backendAppVersion = person.backendAppVersion
+              }

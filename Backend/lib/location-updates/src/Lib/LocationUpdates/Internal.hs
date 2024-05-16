@@ -63,7 +63,7 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     interpolatePointsAndCalculateDistanceAndToll :: Maybe MapsServiceConfig -> Id person -> [LatLong] -> m (HighPrecMeters, [LatLong], [MapsService], Bool, Maybe HighPrecMoney),
     wrapDistanceCalculation :: Id person -> m () -> m (),
     isDistanceCalculationFailed :: Id person -> m Bool,
-    updateDistance :: Id person -> HighPrecMeters -> Int -> Int -> m (),
+    updateDistance :: Id person -> Distance -> Int -> Int -> m (),
     updateTollCharges :: Id person -> HighPrecMoney -> m (),
     updateRouteDeviation :: Id person -> [LatLong] -> m Bool,
     getTravelledDistanceAndTollCharges :: Id person -> Meters -> Maybe HighPrecMoney -> m (Meters, Maybe HighPrecMoney),
@@ -159,11 +159,11 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
           currSnapToRoadState <- processSnapToRoadCall
           mbTollCharges :: Maybe HighPrecMoney <- Redis.safeGet (onRideTollChargesKey driverId)
           whenJust mbTollCharges $ \tollCharges -> updateTollCharges driverId tollCharges
-          updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls
+          updateDistance driverId (highPrecMetersToDistance currSnapToRoadState.distanceTravelled) currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls
         else do
           (distanceToBeUpdated, tollCharges) <- getTravelledDistanceAndTollCharges driverId estDist estTollCharges
           whenJust tollCharges $ \tollCharges' -> updateTollCharges driverId tollCharges'
-          updateDistance driverId (metersToHighPrecMeters distanceToBeUpdated) 0 0
+          updateDistance driverId (metersToDistance distanceToBeUpdated) 0 0
     else do
       isAtLeastBatchPlusOne <- atLeastBatchPlusOne
       when (snapToRoadCallCondition && isAtLeastBatchPlusOne) $ do
@@ -190,7 +190,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
       prevSnapToRoadState :: SnapToRoadState <- (Redis.safeGet $ onRideSnapToRoadStateKey driverId) >>= pure . fromMaybe (SnapToRoadState 0 0 0)
       (currSnapToRoadState, snapToRoadCallFailed) <- recalcDistanceBatches' prevSnapToRoadState False
       when snapToRoadCallFailed $ do
-        updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls
+        updateDistance driverId (highPrecMetersToDistance currSnapToRoadState.distanceTravelled) currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls
         throwError $ InternalError $ "Snap to road call failed for driverId =" <> driverId.getId
       return currSnapToRoadState
 
@@ -232,7 +232,7 @@ mkRideInterpolationHandler ::
     HasFlowEnv m r '["osrmMatchThreshold" ::: HighPrecMeters]
   ) =>
   Bool ->
-  (Id person -> HighPrecMeters -> Int -> Int -> m ()) ->
+  (Id person -> Distance -> Int -> Int -> m ()) ->
   (Id person -> HighPrecMoney -> m ()) ->
   (Id person -> [LatLong] -> m Bool) ->
   (Maybe (Id person) -> RoutePoints -> m (Maybe HighPrecMoney)) ->

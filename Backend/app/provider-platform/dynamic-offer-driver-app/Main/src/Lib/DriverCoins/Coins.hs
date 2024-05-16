@@ -102,7 +102,7 @@ calculateCoins eventType driverId merchantId merchantOpCityId eventFunction mbex
     DCT.Cancellation {..} -> handleCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPickup cancellationDisToPickup eventFunction mbexpirationTime numCoins transporterConfig
     _ -> pure 0
 
-handleRating :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Int -> Maybe Meters -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> m Int
+handleRating :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Int -> Maybe Distance -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> m Int
 handleRating driverId merchantId merchantOpCityId ratingValue chargeableDistance eventFunction mbexpirationTime numCoins _ = do
   logDebug $ "Driver Coins Handle Rating Event Triggered - " <> show eventFunction
   case eventFunction of
@@ -120,7 +120,7 @@ handleRating driverId merchantId merchantOpCityId ratingValue chargeableDistance
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins
     _ -> pure 0
 
-handleEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Meters -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> m Int
+handleEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Distance -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> m Int
 handleEndRide driverId merchantId merchantOpCityId isDisabled chargeableDistance_ eventFunction mbexpirationTime numCoins _ = do
   logDebug $ "Driver Coins Handle EndRide Event Triggered - " <> show eventFunction
   validRideTaken <- checkHasTakenValidRide (Just chargeableDistance_)
@@ -145,7 +145,7 @@ handleEndRide driverId merchantId merchantOpCityId isDisabled chargeableDistance
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins
     _ -> pure 0
 
-handleDriverReferral :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> m Int
+handleDriverReferral :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Distance -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> m Int
 handleDriverReferral driverId merchantId merchantOpCityId chargeableDistance eventFunction mbexpirationTime numCoins _ = do
   logDebug $ "Driver Coins Handle Referral Event Triggered - " <> show eventFunction
   case eventFunction of
@@ -156,7 +156,7 @@ handleDriverReferral driverId merchantId merchantOpCityId chargeableDistance eve
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins
     _ -> pure 0
 
-handleCancellation :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe Meters -> Maybe Meters -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> m Int
+handleCancellation :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe Distance -> Maybe Distance -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> m Int
 handleCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPickup cancellationDisToPickup eventFunction mbexpirationTime numCoins transporterConfig = do
   logDebug $ "Driver Coins Handle Cancellation Event Triggered - " <> show eventFunction
   now <- getCurrentTime
@@ -244,12 +244,12 @@ sendCoinsNotification merchantOpCityId driverId coinsValue =
         Nothing -> logDebug "Could not find Translations."
     replaceCoinsValue = T.replace "{#coinsValue#}" (T.pack $ show coinsValue)
 
-checkHasTakenValidRide :: (MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)) => Maybe Meters -> m Bool
+checkHasTakenValidRide :: (MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)) => Maybe Distance -> m Bool
 checkHasTakenValidRide chargeableDistance = do
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   pure $ case minTripDistanceForReferralCfg of
     Just distance ->
-      case fmap metersToHighPrecMeters chargeableDistance of
+      case fmap distanceToHighPrecMeters chargeableDistance of
         Just meters -> meters >= distance
         Nothing -> False
     Nothing -> False

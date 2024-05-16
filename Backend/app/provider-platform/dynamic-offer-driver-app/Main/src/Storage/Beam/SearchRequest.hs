@@ -39,6 +39,8 @@ data SearchRequestT f = SearchRequestT
     bapCity :: B.C f (Maybe Context.City),
     bapCountry :: B.C f (Maybe Context.Country),
     estimatedDistance :: B.C f (Maybe Meters),
+    estimatedDistanceValue :: B.C f (Maybe HighPrecDistance),
+    distanceUnit :: B.C f (Maybe DistanceUnit),
     estimatedDuration :: B.C f (Maybe Seconds),
     customerLanguage :: B.C f (Maybe Maps.Language),
     driverDefaultExtraFee :: B.C f (Maybe Money),

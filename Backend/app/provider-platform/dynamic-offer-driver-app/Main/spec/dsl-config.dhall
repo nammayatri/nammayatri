@@ -56,6 +56,9 @@ let defaultTypeImportMapper =
       , { _1 = "Kilometers", _2 = "Kernel.Types.Common" }
       , { _1 = "HighPrecMoney", _2 = "Kernel.Types.Common" }
       , { _1 = "Seconds", _2 = "Kernel.Types.Common" }
+      , { _1 = "Distance", _2 = "Kernel.Types.Common" }
+      , { _1 = "HighPrecDistance", _2 = "Kernel.Types.Common" }
+      , { _1 = "DistanceUnit", _2 = "Kernel.Types.Common" }
       ]
 
 let extraDefaultFields =

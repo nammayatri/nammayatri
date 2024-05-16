@@ -50,16 +50,19 @@ instance FromTType' BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection 
       Just
         ( KTI.Id farePolicyId,
           DFP.FPProgressiveDetailsPerExtraKmRateSection
-            { startDistance = startDistance,
+            { startDistance = mkDistanceWithDefaultMeters distanceUnit startDistanceValue startDistance,
               perExtraKmRate = perExtraKmRate
             }
         )
 
 instance ToTType' BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection where
-  toTType' (KTI.Id farePolicyId, DFP.FPProgressiveDetailsPerExtraKmRateSection {..}) =
+  toTType' (KTI.Id farePolicyId, DFP.FPProgressiveDetailsPerExtraKmRateSection {..}) = do
+    let distanceUnit = Just startDistance.unit -- should be the same for all fields
     BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSectionT
       { -- id = id,
         farePolicyId = farePolicyId,
-        startDistance = startDistance,
+        startDistance = distanceToMeters startDistance,
+        startDistanceValue = Just $ distanceToHighPrecDistance distanceUnit startDistance,
+        distanceUnit,
         perExtraKmRate = perExtraKmRate
       }

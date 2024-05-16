@@ -54,6 +54,7 @@ instance FromTType' BeamMOC.MerchantOperatingCity MerchantOperatingCity where
             merchantId = Id merchantId,
             merchantShortId = ShortId merchantShortId,
             location = LatLong lat lon,
+            distanceUnit = fromMaybe Meter distanceUnit,
             ..
           }
 
@@ -69,5 +70,6 @@ instance ToTType' BeamMOC.MerchantOperatingCity MerchantOperatingCity where
         BeamMOC.lat = location.lat,
         BeamMOC.lon = location.lon,
         BeamMOC.supportNumber = supportNumber,
-        BeamMOC.language = language
+        BeamMOC.language = language,
+        BeamMOC.distanceUnit = Just distanceUnit
       }

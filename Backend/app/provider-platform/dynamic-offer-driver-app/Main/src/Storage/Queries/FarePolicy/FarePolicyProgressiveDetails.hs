@@ -38,7 +38,7 @@ instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyP
       Just
         ( KTI.Id farePolicyId,
           Domain.FPProgressiveDetails
-            { baseDistance = baseDistance,
+            { baseDistance = mkDistanceWithDefaultMeters distanceUnit baseDistanceValue baseDistance,
               baseFare = baseFare,
               perExtraKmRateSections = snd <$> fPPDP,
               deadKmFare = deadKmFare,
@@ -53,10 +53,13 @@ instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyP
         )
 
 instance ToTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyProgressiveDetails where
-  toTType' (KTI.Id farePolicyId, Domain.FPProgressiveDetails {..}) =
+  toTType' (KTI.Id farePolicyId, Domain.FPProgressiveDetails {..}) = do
+    let distanceUnit = Just baseDistance.unit -- should be the same for all fields
     BeamFPPD.FarePolicyProgressiveDetailsT
       { farePolicyId = farePolicyId,
-        baseDistance = baseDistance,
+        baseDistance = distanceToMeters baseDistance,
+        baseDistanceValue = Just $ distanceToHighPrecDistance distanceUnit baseDistance,
+        distanceUnit,
         baseFare = baseFare,
         freeWatingTime = (.freeWaitingTime) <$> waitingChargeInfo,
         deadKmFare = deadKmFare,

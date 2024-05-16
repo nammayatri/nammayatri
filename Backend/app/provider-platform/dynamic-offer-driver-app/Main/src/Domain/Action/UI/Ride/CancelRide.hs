@@ -58,7 +58,7 @@ data ServiceHandle m = ServiceHandle
     findById :: Id DP.Person -> m (Maybe DP.Person),
     cancelRide :: Id DRide.Ride -> DRide.RideEndedBy -> DBCR.BookingCancellationReason -> m (),
     findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
-    pickUpDistance :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> LatLong -> m Meters
+    pickUpDistance :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> LatLong -> m Distance
   }
 
 cancelRideHandle :: ServiceHandle Flow
@@ -169,9 +169,9 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
           disToPickup <- forM mbLocation $ \location -> do
             pickUpDistance booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation)
           -- Temporary for debug issue with huge values
-          let disToPickupThreshold = 1000000 --1000km can be max valid distance
-          updatedDisToPickup :: Maybe Meters <- case disToPickup of
-            Just dis -> if abs (toInteger dis) > disToPickupThreshold then logWarning ("Invalid disToPickup received:" <> show disToPickup) >> return Nothing else return (Just dis)
+          let disToPickupThreshold = Distance 1000000 Meter --1000km can be max valid distance
+          updatedDisToPickup :: Maybe Distance <- case disToPickup of
+            Just dis -> if abs dis > disToPickupThreshold then logWarning ("Invalid disToPickup received:" <> show disToPickup) >> return Nothing else return (Just dis)
             Nothing -> return Nothing
 
           let currentDriverLocation = getCoordinates <$> mbLocation
@@ -214,7 +214,7 @@ driverDistanceToPickup ::
   Id DMOC.MerchantOperatingCity ->
   tripStartPos ->
   tripEndPos ->
-  m Meters
+  m Distance
 driverDistanceToPickup merchantId merchantOpCityId tripStartPos tripEndPos = do
   distRes <-
     Maps.getDistanceForCancelRide merchantId merchantOpCityId $
@@ -223,4 +223,4 @@ driverDistanceToPickup merchantId merchantOpCityId tripStartPos tripEndPos = do
           destination = tripEndPos,
           travelMode = Just Maps.CAR
         }
-  return $ distRes.distance
+  return $ metersToDistance distRes.distance

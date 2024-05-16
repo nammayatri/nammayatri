@@ -28,6 +28,7 @@ import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as BeamDEFB
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFP.FullDriverExtraFeeBounds -> m ()
 create = createWithKV
 
+-- FIXME distance
 findByFarePolicyIdAndStartDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DFP.FarePolicy -> Meters -> m (Maybe DFP.FullDriverExtraFeeBounds)
 findByFarePolicyIdAndStartDistance (Id farePolicyId) startDistance = findAllWithKV [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]] <&> listToMaybe
 
@@ -49,18 +50,21 @@ instance FromTType' BeamDEFB.DriverExtraFeeBounds DFP.FullDriverExtraFeeBounds w
       Just
         ( KTI.Id farePolicyId,
           DFP.DriverExtraFeeBounds
-            { startDistance = startDistance,
+            { startDistance = mkDistanceWithDefaultMeters distanceUnit startDistanceValue startDistance,
               minFee = minFee,
               maxFee = maxFee
             }
         )
 
 instance ToTType' BeamDEFB.DriverExtraFeeBounds DFP.FullDriverExtraFeeBounds where
-  toTType' (KTI.Id farePolicyId, DFP.DriverExtraFeeBounds {..}) =
+  toTType' (KTI.Id farePolicyId, DFP.DriverExtraFeeBounds {..}) = do
+    let distanceUnit = Just startDistance.unit -- should be the same for all fields
     BeamDEFB.DriverExtraFeeBoundsT
       { id = Nothing,
         farePolicyId = farePolicyId,
-        startDistance = startDistance,
+        startDistance = distanceToMeters startDistance,
+        startDistanceValue = Just $ distanceToHighPrecDistance distanceUnit startDistance,
+        distanceUnit,
         minFee = minFee,
         maxFee = maxFee
       }

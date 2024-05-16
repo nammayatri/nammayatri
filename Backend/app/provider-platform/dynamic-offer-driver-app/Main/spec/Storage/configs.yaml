@@ -15,11 +15,11 @@ DriverPoolConfig:
     id: Id DriverPoolConfig
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    minRadiusOfSearch: Meters
-    maxRadiusOfSearch: Meters
-    radiusStepSize: Meters
+    minRadiusOfSearch: Distance
+    maxRadiusOfSearch: Distance
+    radiusStepSize: Distance
     driverPositionInfoExpiry: Maybe Seconds
-    actualDistanceThreshold: Maybe Meters
+    actualDistanceThreshold: Maybe Distance
     maxDriverQuotesRequired: Int
     driverQuoteLimit: Int
     driverRequestCountLimit: Int
@@ -29,9 +29,9 @@ DriverPoolConfig:
     maxParallelSearchRequests: Int
     poolSortingType: PoolSortingType
     singleBatchProcessTime: Seconds
-    tripDistance: Meters
-    radiusShrinkValueForDriversOnRide: Meters
-    driverToDestinationDistanceThreshold: Meters
+    tripDistance: Distance
+    radiusShrinkValueForDriversOnRide: Distance
+    driverToDestinationDistanceThreshold: Distance
     driverToDestinationDuration: Seconds
     scheduleTryTimes: "[Int]"
     area: Area
@@ -39,7 +39,64 @@ DriverPoolConfig:
     updatedAt: UTCTime
     vehicleVariant: Maybe ServiceTierType|NoRelation
     tripCategory: Text
-    thresholdToIgnoreActualDistanceThreshold: Maybe Meters
+    thresholdToIgnoreActualDistanceThreshold: Maybe Distance
+
+  beamFields:
+    minRadiusOfSearch:
+      minRadiusOfSearch: Meters
+      minRadiusOfSearchValue: Maybe HighPrecDistance
+    maxRadiusOfSearch:
+      maxRadiusOfSearch: Meters
+      maxRadiusOfSearchValue: Maybe HighPrecDistance
+    radiusStepSize:
+      radiusStepSize: Meters
+      radiusStepSizeValue: Maybe HighPrecDistance
+    actualDistanceThreshold:
+      actualDistanceThreshold: Maybe Meters
+      actualDistanceThresholdValue: Maybe HighPrecDistance
+    tripDistance:
+      tripDistance: Meters
+      tripDistanceValue: Maybe HighPrecDistance
+      distanceUnit: Maybe DistanceUnit
+    radiusShrinkValueForDriversOnRide:
+      radiusShrinkValueForDriversOnRide: Meters
+      radiusShrinkValueForDriversOnRideValue: Maybe HighPrecDistance
+    driverToDestinationDistanceThreshold:
+      driverToDestinationDistanceThreshold: Meters
+      driverToDestinationDistanceThresholdValue: Maybe HighPrecDistance
+    thresholdToIgnoreActualDistanceThreshold:
+      thresholdToIgnoreActualDistanceThreshold: Maybe Meters
+      thresholdToIgnoreActualDistanceThresholdValue: Maybe HighPrecDistance
+
+  fromTType:
+    minRadiusOfSearch: Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit minRadiusOfSearchValue minRadiusOfSearch|E
+    maxRadiusOfSearch: Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit maxRadiusOfSearchValue maxRadiusOfSearch|E
+    radiusStepSize: Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit radiusStepSizeValue radiusStepSize|E
+    actualDistanceThreshold: Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit actualDistanceThresholdValue <$> actualDistanceThreshold|E
+    tripDistance: Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit tripDistanceValue tripDistance|E
+    radiusShrinkValueForDriversOnRide: Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit radiusShrinkValueForDriversOnRideValue radiusShrinkValueForDriversOnRide|E
+    driverToDestinationDistanceThreshold: Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit driverToDestinationDistanceThresholdValue driverToDestinationDistanceThreshold|E
+    thresholdToIgnoreActualDistanceThreshold: Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit thresholdToIgnoreActualDistanceThresholdValue <$> thresholdToIgnoreActualDistanceThreshold|E
+
+  # unit should be the same for all fields
+  toTType:
+    minRadiusOfSearch: Kernel.Types.Common.distanceToMeters|I
+    minRadiusOfSearchValue: Kernel.Prelude.Just $ Kernel.Types.Common.distanceToHighPrecDistance (Kernel.Prelude.Just $ (.unit) tripDistance)|I
+    maxRadiusOfSearch: Kernel.Types.Common.distanceToMeters|I
+    maxRadiusOfSearchValue: Kernel.Prelude.Just $ Kernel.Types.Common.distanceToHighPrecDistance (Kernel.Prelude.Just $ (.unit) tripDistance)|I
+    radiusStepSize: Kernel.Types.Common.distanceToMeters|I
+    radiusStepSizeValue: Kernel.Prelude.Just $ Kernel.Types.Common.distanceToHighPrecDistance (Kernel.Prelude.Just $ (.unit) tripDistance)|I
+    actualDistanceThreshold: Kernel.Prelude.fmap Kernel.Types.Common.distanceToMeters|I
+    actualDistanceThresholdValue: Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance (Kernel.Prelude.Just $ (.unit) tripDistance))|I
+    tripDistance: Kernel.Types.Common.distanceToMeters|I
+    tripDistanceValue: Kernel.Prelude.Just $ Kernel.Types.Common.distanceToHighPrecDistance (Kernel.Prelude.Just $ (.unit) tripDistance)|I
+    distanceUnit: Kernel.Prelude.Just $ (.unit) tripDistance|E
+    radiusShrinkValueForDriversOnRide: Kernel.Types.Common.distanceToMeters|I
+    radiusShrinkValueForDriversOnRideValue: Kernel.Prelude.Just $ Kernel.Types.Common.distanceToHighPrecDistance (Kernel.Prelude.Just $ (.unit) tripDistance)|I
+    driverToDestinationDistanceThreshold: Kernel.Types.Common.distanceToMeters|I
+    driverToDestinationDistanceThresholdValue: Kernel.Prelude.Just $ Kernel.Types.Common.distanceToHighPrecDistance (Kernel.Prelude.Just $ (.unit) tripDistance)|I
+    thresholdToIgnoreActualDistanceThreshold: Kernel.Prelude.fmap Kernel.Types.Common.distanceToMeters|I
+    thresholdToIgnoreActualDistanceThresholdValue: Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance (Kernel.Prelude.Just $ (.unit) tripDistance))|I
 
   beamInstance:
     - MakeTableInstances

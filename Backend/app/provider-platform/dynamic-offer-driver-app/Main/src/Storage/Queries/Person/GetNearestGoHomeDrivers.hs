@@ -31,8 +31,8 @@ data NearestGoHomeDriversReq = NearestGoHomeDriversReq
   { cityServiceTiers :: [DVST.VehicleServiceTier],
     serviceTiers :: [ServiceTierType],
     fromLocation :: LatLong,
-    nearestRadius :: Meters,
-    homeRadius :: Meters,
+    nearestRadius :: Distance,
+    homeRadius :: Distance,
     merchantId :: Id Merchant,
     driverPositionInfoExpiry :: Maybe Seconds,
     isRental :: Bool,
@@ -44,7 +44,7 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
     driverDeviceToken :: Maybe FCM.FCMRecipientToken,
     language :: Maybe Maps.Language,
     onRide :: Bool,
-    distanceToDriver :: Meters,
+    distanceToDriver :: Distance,
     variant :: DV.Variant,
     serviceTier :: DVST.ServiceTierType,
     serviceTierDowngradeLevel :: Int,
@@ -87,7 +87,7 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
       person <- HashMap.lookup driverId' personHashMap
       vehicle <- HashMap.lookup driverId' vehicleHashMap
       info <- HashMap.lookup driverId' driverInfoHashMap
-      let dist = (realToFrac $ distanceBetweenInMeters fromLocation $ LatLong {lat = location.lat, lon = location.lon}) :: Double
+      let dist = (highPrecMetersToDistance $ distanceBetweenInMeters fromLocation $ LatLong {lat = location.lat, lon = location.lon}) :: Distance
       -- ideally should be there inside the vehicle.selectedServiceTiers but still to make sure we have a default service tier for the driver
       let cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
       let mbDefaultServiceTierForDriver = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
@@ -112,4 +112,24 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
       where
         mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
-          Just $ NearestGoHomeDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.airConditioned location.lat location.lon info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice person.backendConfigVersion person.backendAppVersion
+          Just $
+            NearestGoHomeDriversResult
+              { driverId = cast person.id,
+                driverDeviceToken = person.deviceToken,
+                language = person.language,
+                onRide = info.onRide,
+                distanceToDriver = dist,
+                variant = vehicle.variant,
+                serviceTier = serviceTier,
+                serviceTierDowngradeLevel = maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver,
+                airConditioned = serviceTierInfo.airConditioned,
+                lat = location.lat,
+                lon = location.lon,
+                mode = info.mode,
+                clientSdkVersion = person.clientSdkVersion,
+                clientBundleVersion = person.clientBundleVersion,
+                clientConfigVersion = person.clientConfigVersion,
+                clientDevice = person.clientDevice,
+                backendConfigVersion = person.backendConfigVersion,
+                backendAppVersion = person.backendAppVersion
+              }

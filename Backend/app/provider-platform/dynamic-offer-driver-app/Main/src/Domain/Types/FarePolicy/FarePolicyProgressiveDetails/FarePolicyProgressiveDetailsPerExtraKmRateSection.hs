@@ -19,8 +19,9 @@ import Domain.Types.Common
 import Kernel.Prelude
 import Kernel.Types.Common
 
+-- FIXME CAC parsing
 data FPProgressiveDetailsPerExtraKmRateSectionD (s :: UsageSafety) = FPProgressiveDetailsPerExtraKmRateSection
-  { startDistance :: Meters,
+  { startDistance :: Distance,
     perExtraKmRate :: HighPrecMoney
   }
   deriving (Generic, Show, Eq, ToSchema)
@@ -48,5 +49,6 @@ data FPProgressiveDetailsPerExtraKmRateSectionAPIEntity = FPProgressiveDetailsPe
 makeFPProgressiveDetailsPerExtraKmRateSectionAPIEntity :: FPProgressiveDetailsPerExtraKmRateSection -> FPProgressiveDetailsPerExtraKmRateSectionAPIEntity
 makeFPProgressiveDetailsPerExtraKmRateSectionAPIEntity FPProgressiveDetailsPerExtraKmRateSection {..} =
   FPProgressiveDetailsPerExtraKmRateSectionAPIEntity
-    { ..
+    { startDistance = distanceToMeters startDistance,
+      ..
     }

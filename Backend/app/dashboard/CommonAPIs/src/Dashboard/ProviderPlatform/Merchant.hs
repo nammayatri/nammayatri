@@ -114,7 +114,7 @@ type MerchantCommonConfigAPI =
     :> Get '[JSON] MerchantCommonConfigRes
 
 data MerchantCommonConfigRes = MerchantCommonConfigRes
-  { pickupLocThreshold :: Meters,
+  { pickupLocThreshold :: Meters, -- FIXME fix all dashboard apis
     dropLocThreshold :: Meters,
     rideTimeEstimatedThreshold :: Seconds,
     includeDriverCurrentlyOnRide :: Bool,
@@ -272,7 +272,7 @@ type DriverPoolConfigUpdateAPI =
     :> Post '[JSON] APISuccess
 
 data DriverPoolConfigUpdateReq = DriverPoolConfigUpdateReq
-  { minRadiusOfSearch :: Maybe (MandatoryValue Meters),
+  { minRadiusOfSearch :: Maybe (MandatoryValue Meters), -- TODO Distance
     maxRadiusOfSearch :: Maybe (MandatoryValue Meters),
     radiusStepSize :: Maybe (MandatoryValue Meters),
     driverPositionInfoExpiry :: Maybe (OptionalValue Seconds),
@@ -673,7 +673,7 @@ type UpdateFarePolicy =
 data UpdateFarePolicyReq = UpdateFarePolicyReq
   { serviceCharge :: Maybe Money,
     nightShiftBounds :: Maybe NightShiftBounds,
-    allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
+    allowedTripDistanceBounds :: Maybe AllowedTripDistanceBoundsAPIEntity,
     govtCharges :: Maybe Double,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     congestionChargeMultiplier :: Maybe Centesimal,
@@ -712,9 +712,11 @@ data NightShiftBounds = NightShiftBounds
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
-data AllowedTripDistanceBounds = AllowedTripDistanceBounds
+data AllowedTripDistanceBoundsAPIEntity = AllowedTripDistanceBoundsAPIEntity
   { maxAllowedTripDistance :: Meters,
-    minAllowedTripDistance :: Meters
+    minAllowedTripDistance :: Meters,
+    maxAllowedTripDistanceWithUnit :: Maybe Distance,
+    minAllowedTripDistanceWithUnit :: Maybe Distance
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 

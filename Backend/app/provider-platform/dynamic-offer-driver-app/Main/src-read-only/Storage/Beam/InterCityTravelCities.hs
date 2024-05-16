@@ -13,13 +13,13 @@ import qualified Kernel.Types.Beckn.Context
 import Tools.Beam.UtilsTH
 
 data InterCityTravelCitiesT f = InterCityTravelCitiesT
-  { cityName :: B.C f Kernel.Prelude.Text,
-    lat :: B.C f Kernel.Prelude.Double,
-    lng :: B.C f Kernel.Prelude.Double,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    state :: B.C f Kernel.Types.Beckn.Context.IndianState,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { cityName :: (B.C f Kernel.Prelude.Text),
+    lat :: (B.C f Kernel.Prelude.Double),
+    lng :: (B.C f Kernel.Prelude.Double),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    state :: (B.C f Kernel.Types.Beckn.Context.IndianState),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table InterCityTravelCitiesT where
 
 type InterCityTravelCities = InterCityTravelCitiesT Identity
 
-$(enableKVPG ''InterCityTravelCitiesT ['cityName, 'merchantId] [])
+$(enableKVPG (''InterCityTravelCitiesT) [('cityName), ('merchantId)] [])
 
-$(mkTableInstances ''InterCityTravelCitiesT "inter_city_travel_cities")
+$(mkTableInstances (''InterCityTravelCitiesT) "inter_city_travel_cities")

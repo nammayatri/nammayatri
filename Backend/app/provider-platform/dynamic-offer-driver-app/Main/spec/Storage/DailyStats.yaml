@@ -15,8 +15,23 @@ DailyStats:
     driverId : Id Person
     totalEarnings : Money
     numRides : Int
-    totalDistance : Meters
+    totalDistance : Distance
     merchantLocalDate : Day
+
+  beamFields:
+    totalDistance :
+      totalDistance : Meters
+      totalDistanceValue : Maybe HighPrecDistance
+      distanceUnit : Maybe DistanceUnit
+
+  fromTType:
+    totalDistance: Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit totalDistanceValue totalDistance|E
+
+  # distanceUnit should be the same for all fields
+  toTType:
+    totalDistance: Kernel.Types.Common.distanceToMeters|I
+    totalDistanceValue: Just . Kernel.Types.Common.distanceToHighPrecDistance (Just $ (.unit) totalDistance)|I
+    distanceUnit: Just $ (.unit) totalDistance|E
 
   constraints:
     id: PrimaryKey

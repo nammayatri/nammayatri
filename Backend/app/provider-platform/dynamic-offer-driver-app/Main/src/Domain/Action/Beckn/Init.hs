@@ -57,7 +57,7 @@ data InitReq = InitReq
     bapUri :: BaseUrl,
     bapCity :: Context.City,
     bapCountry :: Context.Country,
-    maxEstimatedDistance :: Maybe HighPrecMeters,
+    maxEstimatedDistance :: Maybe Distance,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     bppSubscriberId :: Maybe Text,
     riderPhoneNumber :: Text,
@@ -123,7 +123,7 @@ handler merchantId req validatedReq = do
       ( CacheFlow m r,
         EsqDBFlow m r,
         HasField "vehicleServiceTier" q DVST.ServiceTierType,
-        HasField "distance" q (Maybe Meters),
+        HasField "distance" q (Maybe Distance),
         HasField "estimatedFare" q Money,
         HasField "fareParams" q DFP.FareParameters,
         HasField "specialLocationTag" q (Maybe Text)
@@ -135,7 +135,7 @@ handler merchantId req validatedReq = do
       UTCTime ->
       Maybe (Id DMPM.MerchantPaymentMethod) ->
       Maybe Text ->
-      Maybe Meters ->
+      Maybe Distance ->
       m DRB.Booking
     buildBooking searchRequest driverQuote quoteId tripCategory now mbPaymentMethodId paymentUrl distanceToPickup = do
       id <- Id <$> generateGUID

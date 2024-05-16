@@ -25,6 +25,8 @@ import Tools.Beam.UtilsTH
 data FarePolicyProgressiveDetailsT f = FarePolicyProgressiveDetailsT
   { farePolicyId :: B.C f Text,
     baseDistance :: B.C f Meters,
+    baseDistanceValue :: B.C f (Maybe HighPrecDistance),
+    distanceUnit :: B.C f (Maybe DistanceUnit),
     baseFare :: B.C f Money,
     deadKmFare :: B.C f Money,
     waitingCharge :: B.C f (Maybe DPM.WaitingCharge),

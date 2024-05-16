@@ -29,6 +29,7 @@ import qualified Storage.Queries.DailyStats as SQDS
 data DriverRideSummaryResp = DriverRideSummaryResp
   { earnings :: Money,
     rideDistance :: Meters,
+    rideDistanceWithUnit :: Distance,
     rideDate :: Day,
     noOfRides :: Int
   }
@@ -51,7 +52,8 @@ mkRideSummaryList =
     ( \x ->
         DriverRideSummaryResp
           { earnings = x.totalEarnings,
-            rideDistance = x.totalDistance,
+            rideDistance = distanceToMeters x.totalDistance,
+            rideDistanceWithUnit = x.totalDistance,
             rideDate = x.merchantLocalDate,
             noOfRides = x.numRides
           }

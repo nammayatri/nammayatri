@@ -514,7 +514,7 @@ activateGoHomeFeature (driverId, _merchantId, merchantOpCityId) driverHomeLocati
   driverHomeLocation <- QDHL.findById driverHomeLocationId >>= fromMaybeM (DriverHomeLocationDoesNotExist driverHomeLocationId.getId)
   when (driverHomeLocation.driverId /= driverId) $ throwError DriverHomeLocationDoesNotBelongToDriver
   let homePos = LatLong {lat = driverHomeLocation.lat, lon = driverHomeLocation.lon}
-  unless (distanceBetweenInMeters homePos currPos > fromIntegral goHomeConfig.destRadiusMeters) $ throwError DriverCloseToHomeLocation
+  unless (distanceBetweenInMeters homePos currPos > distanceToHighPrecMeters goHomeConfig.destRadius) $ throwError DriverCloseToHomeLocation
   dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantOpCityId (Just goHomeConfig)
   whenM (fmap ((dghInfo.status == Just DDGR.ACTIVE) ||) (isJust <$> QDGR.findActive driverId)) $ throwError DriverGoHomeRequestAlreadyActive
   unless (dghInfo.cnt > 0) $ throwError DriverGoHomeRequestDailyUsageLimitReached
@@ -548,7 +548,7 @@ addHomeLocation (driverId, merchantId, merchantOpCityId) req = do
   unlessM (rideServiceable merchant.geofencingConfig QGeometry.someGeometriesContain req.position Nothing) $ throwError DriverHomeLocationOutsideServiceArea
   oldHomeLocations <- QDHL.findAllByDriverId driverId
   unless (length oldHomeLocations < cfg.numHomeLocations) $ throwError DriverHomeLocationLimitReached
-  when (any (\homeLocation -> highPrecMetersToMeters (distanceBetweenInMeters req.position (LatLong {lat = homeLocation.lat, lon = homeLocation.lon})) <= cfg.newLocAllowedRadius) oldHomeLocations) $ throwError NewLocationTooCloseToPreviousHomeLocation
+  when (any (\homeLocation -> (distanceBetweenInMeters req.position (LatLong {lat = homeLocation.lat, lon = homeLocation.lon})) <= distanceToHighPrecMeters cfg.newLocAllowedRadius) oldHomeLocations) $ throwError NewLocationTooCloseToPreviousHomeLocation
   QDHL.create =<< buildDriverHomeLocation driverId req
   pure APISuccess.Success
 
@@ -580,7 +580,7 @@ updateHomeLocation (driverId, merchantId, merchantOpCityId) homeLocationId req =
   unlessM (rideServiceable merchant.geofencingConfig QGeometry.someGeometriesContain req.position Nothing) $ throwError DriverHomeLocationOutsideServiceArea
   oldHomeLocation <- QDHL.findById homeLocationId >>= fromMaybeM (DriverHomeLocationDoesNotExist (T.pack "The given driver home location ID is invalid"))
   oldHomeLocations <- QDHL.findAllByDriverId driverId
-  when (any (\homeLocation -> highPrecMetersToMeters (distanceBetweenInMeters req.position (LatLong {lat = homeLocation.lat, lon = homeLocation.lon})) <= goHomeConfig.newLocAllowedRadius) oldHomeLocations) $ throwError NewLocationTooCloseToPreviousHomeLocation
+  when (any (\homeLocation -> distanceBetweenInMeters req.position (LatLong {lat = homeLocation.lat, lon = homeLocation.lon}) <= distanceToHighPrecMeters goHomeConfig.newLocAllowedRadius) oldHomeLocations) $ throwError NewLocationTooCloseToPreviousHomeLocation
   currTime <- getCurrentTime
   when (diffUTCTime currTime oldHomeLocation.updatedAt < fromIntegral goHomeConfig.updateHomeLocationAfterSec) $ throwError DriverHomeLocationUpdateBeforeTime
   QDHL.updateHomeLocationById homeLocationId buildDriverHomeLocationUpdate
@@ -1041,7 +1041,7 @@ getStats (driverId, _, merchantOpCityId) date = do
   fareParameters <- (runInReplica . QFP.findAllIn) fareParamId
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
   let totalEarningsOfDay = sum (mapMaybe (.fare) rides)
-      totalDistanceTravelledInKilometers = sum (mapMaybe (.chargeableDistance) rides) `div` 1000
+      totalDistanceTravelledInKilometers = distanceToMeters (sum (mapMaybe (.chargeableDistance) rides)) `div` 1000
       totalEarningOfDayExcludingTollCharges = totalEarningsOfDay - (round $ sum (mapMaybe (.tollCharges) rides) :: Money)
   return $
     DriverStatsRes

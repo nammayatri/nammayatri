@@ -116,8 +116,8 @@ instance FromTType' BeamDQ.DriverQuote DriverQuote where
             status = status,
             vehicleVariant = vehicleVariant,
             vehicleServiceTier = fromMaybe (castVariantToServiceTier vehicleVariant) vehicleServiceTier,
-            distance = distance,
-            distanceToPickup = distanceToPickup,
+            distance = mkDistanceWithDefaultMeters distanceUnit distanceValue <$> distance,
+            distanceToPickup = mkDistanceWithDefaultMeters distanceUnit distanceToPickupValue distanceToPickup,
             durationToPickup = durationToPickup,
             createdAt = T.localTimeToUTC T.utc createdAt,
             updatedAt = T.localTimeToUTC T.utc updatedAt,
@@ -137,6 +137,7 @@ instance FromTType' BeamDQ.DriverQuote DriverQuote where
 
 instance ToTType' BeamDQ.DriverQuote DriverQuote where
   toTType' DriverQuote {..} = do
+    let distanceUnit = Just distanceToPickup.unit -- should be the same for all fields
     BeamDQ.DriverQuoteT
       { BeamDQ.id = getId id,
         BeamDQ.requestId = getId requestId,
@@ -151,8 +152,10 @@ instance ToTType' BeamDQ.DriverQuote DriverQuote where
         BeamDQ.status = status,
         BeamDQ.vehicleVariant = vehicleVariant,
         BeamDQ.vehicleServiceTier = Just vehicleServiceTier,
-        BeamDQ.distance = distance,
-        BeamDQ.distanceToPickup = distanceToPickup,
+        BeamDQ.distance = distanceToMeters <$> distance,
+        BeamDQ.distanceValue = distanceToHighPrecDistance distanceUnit <$> distance,
+        BeamDQ.distanceToPickup = distanceToMeters distanceToPickup,
+        BeamDQ.distanceToPickupValue = Just $ distanceToHighPrecDistance distanceUnit distanceToPickup,
         BeamDQ.durationToPickup = durationToPickup,
         BeamDQ.createdAt = T.utcToLocalTime T.utc createdAt,
         BeamDQ.updatedAt = T.utcToLocalTime T.utc updatedAt,

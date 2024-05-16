@@ -138,11 +138,14 @@ instance FromTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
             clientConfigVersion = clientConfigVersion',
             backendConfigVersion = backendConfigVersion',
             clientDevice = clientDevice',
+            actualDistanceToPickup = mkDistanceWithDefaultMeters distanceUnit actualDistanceToPickupValue actualDistanceToPickup,
+            straightLineDistanceToPickup = mkDistanceWithDefaultMeters distanceUnit straightLineDistanceToPickupValue straightLineDistanceToPickup,
             ..
           }
 
 instance ToTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
   toTType' SearchRequestForDriver {..} = do
+    let distanceUnit = Just actualDistanceToPickup.unit -- should be the same for all fields
     BeamSRFD.SearchRequestForDriverT
       { BeamSRFD.id = getId id,
         BeamSRFD.requestId = getId requestId,
@@ -154,8 +157,10 @@ instance ToTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
         BeamSRFD.startTime = startTime,
         BeamSRFD.searchRequestValidTill = T.utcToLocalTime T.utc searchRequestValidTill,
         BeamSRFD.driverId = getId driverId,
-        BeamSRFD.actualDistanceToPickup = actualDistanceToPickup,
-        BeamSRFD.straightLineDistanceToPickup = straightLineDistanceToPickup,
+        BeamSRFD.actualDistanceToPickup = distanceToMeters actualDistanceToPickup,
+        BeamSRFD.actualDistanceToPickupValue = Just $ distanceToHighPrecDistance distanceUnit actualDistanceToPickup,
+        BeamSRFD.straightLineDistanceToPickup = distanceToMeters straightLineDistanceToPickup,
+        BeamSRFD.straightLineDistanceToPickupValue = Just $ distanceToHighPrecDistance distanceUnit straightLineDistanceToPickup,
         BeamSRFD.durationToPickup = durationToPickup,
         BeamSRFD.vehicleVariant = vehicleVariant,
         BeamSRFD.vehicleServiceTier = Just vehicleServiceTier,

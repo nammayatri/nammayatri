@@ -159,7 +159,7 @@ pureFareSum fareParams = do
 
 data CalculateFareParametersParams = CalculateFareParametersParams
   { farePolicy :: FullFarePolicy,
-    actualDistance :: Maybe Meters,
+    actualDistance :: Maybe Distance,
     rideTime :: UTCTime,
     waitingTime :: Maybe Minutes,
     actualRideDuration :: Maybe Seconds,
@@ -170,7 +170,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     customerCancellationDues :: Maybe HighPrecMoney,
     estimatedRideDuration :: Maybe Seconds,
     nightShiftOverlapChecking :: Bool,
-    estimatedDistance :: Maybe Meters,
+    estimatedDistance :: Maybe Distance,
     timeDiffFromUtc :: Maybe Seconds,
     tollCharges :: Maybe HighPrecMoney
   }
@@ -248,9 +248,9 @@ calculateFareParameters params = do
           extraMins = max 0 (actualDuration - estimatedDuration) `div` 60
           fareByTime = Money $ extraMins * perExtraMinRate.getMoney
 
-      let estimatedDistance = (.getMeters) <$> params.estimatedDistance
+      let estimatedDistance = (.getMeters) . distanceToMeters <$> params.estimatedDistance
           estimatedDistanceInKm = max (estimatedDurationInHr * includedKmPerHr.getKilometers) (fromMaybe 0 estimatedDistance `div` 1000)
-          actualDistance = (.getMeters) <$> params.actualDistance
+          actualDistance = (.getMeters) . distanceToMeters <$> params.actualDistance
           actualDistanceInKm = fromMaybe estimatedDistanceInKm actualDistance `div` 1000
           extraDist = max 0 (actualDistanceInKm - estimatedDistanceInKm)
           distanceBuffer = DFP.findFPRentalDetailsByDuration actualRideDurationInHr distanceBuffers
@@ -266,7 +266,7 @@ calculateFareParameters params = do
           DFParams.FParamsRentalDetails
             { timeBasedFare = fareByTime,
               distBasedFare = fareByDist,
-              extraDistance = Meters $ extraDist * 1000,
+              extraDistance = metersToDistance $ Meters $ extraDist * 1000,
               extraDuration = Seconds $ extraMins * 60
             }
         )
@@ -285,18 +285,18 @@ calculateFareParameters params = do
               ..
             }
         )
-    processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections (extraDistance :: Meters) = do
+    processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections (extraDistance :: Distance) = do
       let sortedPerExtraKmFareSections = NE.sortBy (comparing (.startDistance)) perExtraKmRateSections
       processFPProgressiveDetailsPerExtraKmFare' sortedPerExtraKmFareSections extraDistance
       where
         processFPProgressiveDetailsPerExtraKmFare' _ 0 = 0 :: Money
-        processFPProgressiveDetailsPerExtraKmFare' sortedPerExtraKmFareSectionsLeft (extraDistanceLeft :: Meters) =
+        processFPProgressiveDetailsPerExtraKmFare' sortedPerExtraKmFareSectionsLeft (extraDistanceLeft :: Distance) =
           case sortedPerExtraKmFareSectionsLeft of
-            aSection :| [] -> roundToIntegral $ fromIntegral @_ @Float extraDistanceLeft * getPerExtraMRate aSection.perExtraKmRate
+            aSection :| [] -> roundToIntegral $ fromIntegral @_ @Float (distanceToMeters extraDistanceLeft) * getPerExtraMRate aSection.perExtraKmRate
             aSection :| bSection : leftSections -> do
               let sectionDistance = bSection.startDistance - aSection.startDistance
                   extraDistanceWithinSection = min sectionDistance extraDistanceLeft
-              roundToIntegral (fromIntegral @_ @Float extraDistanceWithinSection * getPerExtraMRate aSection.perExtraKmRate)
+              roundToIntegral (fromIntegral @_ @Float (distanceToMeters extraDistanceWithinSection) * getPerExtraMRate aSection.perExtraKmRate)
                 + processFPProgressiveDetailsPerExtraKmFare' (bSection :| leftSections) (extraDistanceLeft - extraDistanceWithinSection)
         getPerExtraMRate perExtraKmRate = realToFrac @_ @Float perExtraKmRate / 1000
 
@@ -346,7 +346,7 @@ calculateFareParameters params = do
               cgst = Just . HighPrecMoney . toRational $ platformFeeInfo'.cgst * realToFrac baseFee,
               sgst = Just . HighPrecMoney . toRational $ platformFeeInfo'.sgst * realToFrac baseFee
             }
-    calculateExtraTimeFare :: Meters -> Maybe HighPrecMoney -> Maybe Seconds -> ServiceTierType -> AvgSpeedOfVechilePerKm -> Maybe Money
+    calculateExtraTimeFare :: Distance -> Maybe HighPrecMoney -> Maybe Seconds -> ServiceTierType -> AvgSpeedOfVechilePerKm -> Maybe Money
     calculateExtraTimeFare distance perMinuteRideExtraTimeCharge actualRideDuration serviceTier avgSpeedOfVehicle = do
       let actualRideDurationInMinutes = secondsToMinutes <$> actualRideDuration
       let avgSpeedOfVehicle' = realToFrac @_ @Double case serviceTier of
@@ -362,7 +362,7 @@ calculateFareParameters params = do
             PREMIUM -> avgSpeedOfVehicle.sedan.getKilometers
       if avgSpeedOfVehicle' > 0
         then do
-          let distanceInKilometer = realToFrac @_ @Double distance.getMeters / 1000
+          let distanceInKilometer = realToFrac @_ @Double (distanceToMeters distance).getMeters / 1000
           let perMinuteRideExtraTimeCharge' = realToFrac @_ @Double (fromMaybe 0 perMinuteRideExtraTimeCharge).getHighPrecMoney
           let estimatedTimeTakeInMinutes :: Int = round $ (distanceInKilometer / avgSpeedOfVehicle') * 60
           let rideDurationDifference = realToFrac @_ @Double <$> (\actualRideDurationInMinutes' -> actualRideDurationInMinutes' - estimatedTimeTakeInMinutes) <$> (actualRideDurationInMinutes <&> getMinutes)

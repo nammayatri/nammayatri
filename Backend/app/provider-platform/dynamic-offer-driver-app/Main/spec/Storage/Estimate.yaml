@@ -22,7 +22,7 @@ Estimate:
       tripCategory: TripCategory
       minFare: Money
       maxFare: Money
-      estimatedDistance: Maybe Meters
+      estimatedDistance: Maybe Distance
       fareParams: Maybe FareParameters|WithIdCreate
       farePolicy: Maybe FarePolicy|NoRelation
       specialLocationTag: Maybe Text
@@ -39,6 +39,10 @@ Estimate:
       farePolicy:
         farePolicyId: Maybe Text
       vehicleServiceTier: "vehicleVariant"
+      estimatedDistance:
+        estimatedDistance : Maybe Meters
+        estimatedDistanceValue : Maybe HighPrecDistance
+        distanceUnit : Maybe DistanceUnit
 
     sqlType:
       farePolicyId: character varying(36)
@@ -52,13 +56,17 @@ Estimate:
       isScheduled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
       tripCategory: Kernel.Prelude.fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer)|I
       farePolicy: maybe (pure Nothing) ((Storage.CachedQueries.FarePolicy.findById Nothing Nothing) . Kernel.Types.Id.Id)|IM
+      estimatedDistance: Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit estimatedDistanceValue <$> estimatedDistance|E
 
-
+    # distanceUnit should be the same for all fields
     toTType:
       updatedAt: Kernel.Prelude.Just|I
       isScheduled: Kernel.Prelude.Just|I
       tripCategory: Kernel.Prelude.Just|I
       farePolicyId: (Kernel.Types.Id.getId . (.id) <$>)
+      estimatedDistance: Kernel.Prelude.fmap Kernel.Types.Common.distanceToMeters|I
+      estimatedDistanceValue: Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance (Kernel.Prelude.fmap (.unit) estimatedDistance))|I
+      distanceUnit: Kernel.Prelude.fmap (.unit) estimatedDistance|E
 
     queries:
       findById:

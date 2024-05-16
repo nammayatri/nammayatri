@@ -17,7 +17,7 @@ data DailyStats = DailyStats
     id :: Data.Text.Text,
     merchantLocalDate :: Data.Time.Calendar.Day,
     numRides :: Kernel.Prelude.Int,
-    totalDistance :: Kernel.Types.Common.Meters,
+    totalDistance :: Kernel.Types.Common.Distance,
     totalEarnings :: Kernel.Types.Common.Money,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

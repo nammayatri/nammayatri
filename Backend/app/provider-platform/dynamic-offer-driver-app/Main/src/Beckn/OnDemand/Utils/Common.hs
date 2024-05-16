@@ -53,9 +53,9 @@ import qualified Domain.Types.Vehicle as Variant
 import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id, state, view, (%~), (^?))
 import qualified EulerHS.Prelude as Prelude
-import GHC.Float (double2Int)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common hiding (mkPrice)
 import Kernel.Utils.Common hiding (mkPrice)
@@ -75,10 +75,10 @@ data Pricing = Pricing
     tripCategory :: DTC.TripCategory,
     fareParams :: Maybe Params.FareParameters,
     farePolicy :: Maybe Policy.FarePolicy,
-    estimatedDistance :: Maybe Meters,
+    estimatedDistance :: Maybe Distance,
     specialLocationTag :: Maybe Text,
     fulfillmentType :: Text,
-    distanceToNearestDriver :: Maybe Meters
+    distanceToNearestDriver :: Maybe Distance
   }
 
 data RateCardBreakupItem = RateCardBreakupItem
@@ -834,7 +834,7 @@ mkQuotationBreakup booking =
 
 type MerchantShortId = Text
 
-tfItems :: DBooking.Booking -> MerchantShortId -> Maybe Meters -> Maybe FarePolicyD.FarePolicy -> Maybe Text -> Maybe [Spec.Item]
+tfItems :: DBooking.Booking -> MerchantShortId -> Maybe Distance -> Maybe FarePolicyD.FarePolicy -> Maybe Text -> Maybe [Spec.Item]
 tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
   Just
     [ Spec.Item
@@ -973,10 +973,19 @@ mkGeneralInfoTagGroup pricing
                       descriptorName = Just "Distance To Nearest Driver Meter",
                       descriptorShortDesc = Nothing
                     },
-              tagValue = show . double2Int . realToFrac <$> distanceToNearestDriver
+              -- TODO is it backward compatible with old bap?
+              tagValue = showDistanceAsMeters <$> distanceToNearestDriver
             }
 
-mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.TagGroup]
+-- TODO move to kernel
+highPrecDistanceToText :: HighPrecDistance -> Text
+highPrecDistanceToText = DecimalValue.valueToString . DecimalValue.DecimalValue . getHighPrecDistance
+
+-- TODO move to kernel
+showDistanceAsMeters :: Distance -> Text
+showDistanceAsMeters = highPrecDistanceToText . (.value) . convertToMeters
+
+mkRateCardTag :: Maybe Distance -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.TagGroup]
 mkRateCardTag estimatedDistance tollCharges farePolicy = do
   let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance tollCharges) farePolicy
       farePolicyBreakupsTags = buildRateCardTags <$> farePolicyBreakups

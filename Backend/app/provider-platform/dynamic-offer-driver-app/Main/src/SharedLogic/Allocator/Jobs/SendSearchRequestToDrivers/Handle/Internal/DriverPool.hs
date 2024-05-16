@@ -385,9 +385,9 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
             ([], [])
 
         isAtMaxRadiusStep radiusStep = do
-          let minRadiusOfSearch = fromIntegral @_ @Double driverPoolCfg.minRadiusOfSearch
-          let maxRadiusOfSearch = fromIntegral @_ @Double driverPoolCfg.maxRadiusOfSearch
-          let radiusStepSize = fromIntegral @_ @Double driverPoolCfg.radiusStepSize
+          let minRadiusOfSearch = fromIntegral @_ @Double $ distanceToMeters driverPoolCfg.minRadiusOfSearch
+          let maxRadiusOfSearch = fromIntegral @_ @Double $ distanceToMeters driverPoolCfg.maxRadiusOfSearch
+          let radiusStepSize = fromIntegral @_ @Double $ distanceToMeters driverPoolCfg.radiusStepSize
           let maxRadiusStep = ceiling $ (maxRadiusOfSearch - minRadiusOfSearch) / radiusStepSize
           maxRadiusStep <= radiusStep
         -- util function
@@ -504,7 +504,7 @@ fetchScore ::
     EsqDBFlow m r
   ) =>
   Id MerchantOperatingCity ->
-  [(Id Driver, Meters)] ->
+  [(Id Driver, Distance)] ->
   [Id Driver] ->
   DriverIntelligentPoolConfig ->
   DriverPoolConfig ->
@@ -528,7 +528,7 @@ fetchScore merchantOpCityId driverActualDistanceList driverIds intelligentPoolCo
       averageSpeeds <- getRatios (getDriverAverageSpeed merchantOpCityId . cast) driverIds
       getSpeedScore (intelligentPoolConfig.driverSpeedWeightage) averageSpeeds
     ActualPickupDistance | intelligentPoolConfig.actualPickupDistanceWeightage /= 0 -> do
-      pure $ map (bimap (.getId) ((* (fromIntegral intelligentPoolConfig.actualPickupDistanceWeightage)) . fromIntegral . flip div (fromMaybe (Meters 1) (driverPoolCfg.actualDistanceThreshold)))) driverActualDistanceList
+      pure $ map (bimap (.getId) ((* (fromIntegral intelligentPoolConfig.actualPickupDistanceWeightage)) . fromIntegral . flip div (fromMaybe (Meters 1) (distanceToMeters <$> driverPoolCfg.actualDistanceThreshold)) . distanceToMeters)) driverActualDistanceList
     RideFrequency | intelligentPoolConfig.numRidesWeightage /= 0 -> do
       driverIdAndNumRides <- mapM (getTotalRidesCount merchantOpCityId) driverIds <&> zip (getId <$> driverIds)
       logDebug $ "Intelligent pool :- [(DriverId, numRides)] - " <> show driverIdAndNumRides

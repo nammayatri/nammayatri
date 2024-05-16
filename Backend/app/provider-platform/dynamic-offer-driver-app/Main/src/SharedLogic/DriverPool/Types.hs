@@ -74,7 +74,7 @@ data DriverPoolResult = DriverPoolResult
   { driverId :: Id Driver,
     language :: Maybe Maps.Language,
     driverDeviceToken :: Maybe FCM.FCMRecipientToken,
-    distanceToPickup :: Meters,
+    distanceToPickup :: Distance,
     -- durationToPickup :: Seconds,
     variant :: Vehicle.Variant,
     serviceTier :: DVST.ServiceTierType,
@@ -104,8 +104,8 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     lon :: Double,
     destinationLat :: Double,
     destinationLon :: Double,
-    distanceToPickup :: Meters,
-    distanceFromDriverToDestination :: Meters,
+    distanceToPickup :: Distance,
+    distanceFromDriverToDestination :: Distance,
     mode :: Maybe DI.DriverMode,
     clientSdkVersion :: Maybe Version,
     clientBundleVersion :: Maybe Version,
@@ -118,7 +118,7 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
 
 data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
   { driverPoolResult :: DriverPoolResult,
-    actualDistanceToPickup :: Meters,
+    actualDistanceToPickup :: Distance,
     actualDurationToPickup :: Seconds,
     keepHiddenForSeconds :: Seconds,
     intelligentScores :: IntelligentScores,

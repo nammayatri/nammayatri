@@ -9,8 +9,10 @@ import Domain.Types.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 
+-- TODO check cac types
 data FarePolicyProgressiveDetailsPerExtraKmRateSection = FarePolicyProgressiveDetailsPerExtraKmRateSection
   { startDistance :: Meters,
+    startDistanceValue :: Maybe HighPrecDistance,
     perExtraKmRate :: HighPrecMoney
   }
   deriving (Generic, FromJSON, ToJSON)
@@ -23,6 +25,8 @@ data FarePolicyRentalDetailsDistanceBuffers = FarePolicyRentalDetailsDistanceBuf
 
 data FarePolicySlabsDetailsSlab = FarePolicySlabsDetailsSlab
   { startDistance :: Meters,
+    startDistanceValue :: Maybe HighPrecDistance,
+    distanceUnit :: Maybe DistanceUnit,
     baseFare :: Money,
     platformFeeCharge :: Maybe Domain.PlatformFeeCharge,
     platformFeeCgst :: Maybe Double,

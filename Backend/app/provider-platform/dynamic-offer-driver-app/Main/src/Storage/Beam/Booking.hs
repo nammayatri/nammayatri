@@ -52,7 +52,9 @@ data BookingT f = BookingT
     vehicleServiceTierSeatingCapacity :: B.C f (Maybe Int),
     vehicleServiceTierAirConditioned :: B.C f (Maybe Double),
     estimatedDistance :: B.C f (Maybe Meters),
+    estimatedDistanceValue :: B.C f (Maybe HighPrecDistance),
     maxEstimatedDistance :: B.C f (Maybe HighPrecMeters),
+    maxEstimatedDistanceValue :: B.C f (Maybe HighPrecDistance),
     estimatedFare :: B.C f HighPrecMoney,
     estimatedDuration :: B.C f (Maybe Seconds),
     fareParametersId :: B.C f Text,
@@ -63,6 +65,8 @@ data BookingT f = BookingT
     updatedAt :: B.C f UTCTime,
     stopLocationId :: B.C f (Maybe Text),
     distanceToPickup :: B.C f (Maybe HighPrecMeters),
+    distanceToPickupValue :: B.C f (Maybe HighPrecDistance),
+    distanceUnit :: B.C f (Maybe DistanceUnit),
     isScheduled :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)

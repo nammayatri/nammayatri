@@ -48,7 +48,7 @@ instance FromJSON (FPSlabsDetailsD 'Safe)
 
 instance ToJSON (FPSlabsDetailsD 'Safe)
 
-findFPSlabsDetailsSlabByDistance :: Meters -> NonEmpty (FPSlabsDetailsSlabD s) -> FPSlabsDetailsSlabD s
+findFPSlabsDetailsSlabByDistance :: Distance -> NonEmpty (FPSlabsDetailsSlabD s) -> FPSlabsDetailsSlabD s
 findFPSlabsDetailsSlabByDistance dist slabList = do
   case NE.filter (\slab -> slab.startDistance <= dist) $ NE.sortBy (comparing (.startDistance)) slabList of
     [] -> error $ "Slab for dist = " <> show dist <> " not found. Non-emptiness supposed to be guaranteed by app logic."

@@ -27,7 +27,7 @@ data DriverStats = DriverStats
     bonusEarned :: Money,
     lateNightTrips :: Int,
     earningsMissed :: Money,
-    totalDistance :: Meters,
+    totalDistance :: Distance,
     ridesCancelled :: Maybe Int,
     totalRidesAssigned :: Maybe Int,
     coinCovertedToCashLeft :: HighPrecMoney,

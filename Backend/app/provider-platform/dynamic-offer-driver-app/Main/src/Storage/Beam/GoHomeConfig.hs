@@ -18,7 +18,7 @@ module Storage.Beam.GoHomeConfig where
 import qualified Database.Beam as B
 import Domain.Types.UtilsTH
 import Kernel.Prelude
-import Kernel.Types.Common (Meters)
+import Kernel.Types.Common (DistanceUnit, HighPrecDistance, Meters)
 import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
 
 data GoHomeConfigT f = GoHomeConfigT
@@ -27,17 +27,24 @@ data GoHomeConfigT f = GoHomeConfigT
     enableGoHome :: B.C f Bool,
     startCnt :: B.C f Int,
     destRadiusMeters :: B.C f Int,
+    destRadiusValue :: B.C f (Maybe HighPrecDistance),
     activeTime :: B.C f Int,
     updateHomeLocationAfterSec :: B.C f Int,
     cancellationCnt :: B.C f Int,
     numHomeLocations :: B.C f Int,
     goHomeFromLocationRadius :: B.C f Meters,
     goHomeWayPointRadius :: B.C f Meters,
+    goHomeFromLocationRadiusValue :: B.C f (Maybe HighPrecDistance),
+    goHomeWayPointRadiusValue :: B.C f (Maybe HighPrecDistance),
+    distanceUnit :: B.C f (Maybe DistanceUnit),
     numDriversForDirCheck :: B.C f Int,
     goHomeBatchDelay :: B.C f Int,
     ignoreWaypointsTill :: B.C f Int,
     addStartWaypointAt :: B.C f Int,
     newLocAllowedRadius :: B.C f Int,
+    ignoreWaypointsTillValue :: B.C f (Maybe HighPrecDistance),
+    addStartWaypointAtValue :: B.C f (Maybe HighPrecDistance),
+    newLocAllowedRadiusValue :: B.C f (Maybe HighPrecDistance),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

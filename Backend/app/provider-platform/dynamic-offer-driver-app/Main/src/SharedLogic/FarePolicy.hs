@@ -111,7 +111,7 @@ getAllFarePoliciesProduct merchantId merchantOpCityId fromlocaton mbToLocation t
         specialLocationTag = allFareProducts.specialLocationTag
       }
 
-mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> FarePolicyD.FarePolicy -> [breakupItem]
+mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Distance -> Maybe HighPrecMoney -> FarePolicyD.FarePolicy -> [breakupItem]
 mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy = do
   let distance = fromMaybe 0 mbDistance -- TODO: Fix Later
       driverExtraFeeBounds = FarePolicyD.findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
@@ -212,7 +212,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
             mkBreakupItem perExtraKmFareCaption (mkValue $ show (round section.perExtraKmRate :: Money))
           perExtraKmFareItems = mkPerExtraKmFareItem <$> (toList perExtraKmFareSections)
 
-          perExtraKmStepFareItems = mkPerExtraKmStepFareItem [] (toList perExtraKmFareSections) det.baseDistance.getMeters
+          perExtraKmStepFareItems = mkPerExtraKmStepFareItem [] (toList perExtraKmFareSections) det.baseDistance
 
           baseDistanceCaption = show Tags.BASE_DISTANCE
           baseDistanceBreakup = mkBreakupItem baseDistanceCaption (mkValue $ show det.baseDistance)
@@ -232,14 +232,14 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
       where
         mkPerExtraKmStepFareItem perExtraKmStepFareItems [] _ = perExtraKmStepFareItems
         mkPerExtraKmStepFareItem perExtraKmStepFareItems [s1] baseDistance = do
-          let startDistance = s1.startDistance.getMeters + baseDistance
-              perExtraKmStepFareCaption = show $ Tags.EXTRA_PER_KM_STEP_FARE startDistance Nothing
+          let startDistance = distanceToMeters $ s1.startDistance + baseDistance
+              perExtraKmStepFareCaption = show $ Tags.EXTRA_PER_KM_STEP_FARE startDistance.getMeters Nothing
               perExtraKmStepFareItem = mkBreakupItem perExtraKmStepFareCaption (mkValue $ show (round s1.perExtraKmRate :: Money))
           perExtraKmStepFareItems <> [perExtraKmStepFareItem]
         mkPerExtraKmStepFareItem perExtraKmStepFareItems (s1 : s2 : ss) baseDistance = do
-          let startDistance = s1.startDistance.getMeters + baseDistance
-              endDistance = s2.startDistance.getMeters + baseDistance
-              perExtraKmStepFareCaption = show $ Tags.EXTRA_PER_KM_STEP_FARE startDistance (Just endDistance)
+          let startDistance = distanceToMeters $ s1.startDistance + baseDistance
+              endDistance = distanceToMeters $ s2.startDistance + baseDistance
+              perExtraKmStepFareCaption = show $ Tags.EXTRA_PER_KM_STEP_FARE startDistance.getMeters (Just endDistance.getMeters)
               perExtraKmStepFareItem = mkBreakupItem perExtraKmStepFareCaption (mkValue $ show (round s1.perExtraKmRate :: Money))
           mkPerExtraKmStepFareItem (perExtraKmStepFareItems <> [perExtraKmStepFareItem]) (s2 : ss) baseDistance
 
@@ -326,22 +326,24 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
 
       catMaybes [mbNightShiftChargePercentageItem, mbConstantNightShiftChargeItem]
 
+    distanceToMetersInt = (.getMeters) . distanceToMeters
+
     mkDriverExtraFeeBoundsMinFeeItem driverExtraFeeBoundsMinFeeItems [] _ = driverExtraFeeBoundsMinFeeItems
     mkDriverExtraFeeBoundsMinFeeItem driverExtraFeeBoundsMinFeeItems [_] startDistance = do
-      let driverExtraFeeBoundMinFeeCaption = show $ Tags.DRIVER_EXTRA_FEE_BOUNDS_STEP_MIN_FEE startDistance Nothing
+      let driverExtraFeeBoundMinFeeCaption = show $ Tags.DRIVER_EXTRA_FEE_BOUNDS_STEP_MIN_FEE (distanceToMetersInt startDistance) Nothing
           driverExtraFeeBoundMinFeeItem = mkBreakupItem driverExtraFeeBoundMinFeeCaption (mkValue $ show startDistance)
       driverExtraFeeBoundsMinFeeItems <> [driverExtraFeeBoundMinFeeItem]
     mkDriverExtraFeeBoundsMinFeeItem driverExtraFeeBoundsMinFeeItems (s1 : s2 : ss) startDistance = do
-      let driverExtraFeeBoundMinFeeCaption = show $ Tags.DRIVER_EXTRA_FEE_BOUNDS_STEP_MIN_FEE startDistance (Just s2.startDistance.getMeters)
+      let driverExtraFeeBoundMinFeeCaption = show $ Tags.DRIVER_EXTRA_FEE_BOUNDS_STEP_MIN_FEE (distanceToMetersInt startDistance) (Just $ distanceToMetersInt s2.startDistance)
           driverExtraFeeBoundMinFeeItem = mkBreakupItem driverExtraFeeBoundMinFeeCaption (mkValue $ show s1.minFee.getMoney)
-      mkDriverExtraFeeBoundsMinFeeItem (driverExtraFeeBoundsMinFeeItems <> [driverExtraFeeBoundMinFeeItem]) (s2 : ss) s2.startDistance.getMeters
+      mkDriverExtraFeeBoundsMinFeeItem (driverExtraFeeBoundsMinFeeItems <> [driverExtraFeeBoundMinFeeItem]) (s2 : ss) s2.startDistance
 
     mkDriverExtraFeeBoundsMaxFeeItem driverExtraFeeBoundsMaxFeeItems [] _ = driverExtraFeeBoundsMaxFeeItems
     mkDriverExtraFeeBoundsMaxFeeItem driverExtraFeeBoundsMaxFeeItems [_] startDistance = do
-      let driverExtraFeeBoundMaxFeeCaption = show $ Tags.DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE startDistance Nothing
+      let driverExtraFeeBoundMaxFeeCaption = show $ Tags.DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE (distanceToMetersInt startDistance) Nothing
           driverExtraFeeBoundMaxFeeItem = mkBreakupItem driverExtraFeeBoundMaxFeeCaption (mkValue $ show startDistance)
       driverExtraFeeBoundsMaxFeeItems <> [driverExtraFeeBoundMaxFeeItem]
     mkDriverExtraFeeBoundsMaxFeeItem driverExtraFeeBoundsMaxFeeItems (s1 : s2 : ss) startDistance = do
-      let driverExtraFeeBoundMaxFeeCaption = show $ Tags.DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE startDistance (Just s2.startDistance.getMeters)
+      let driverExtraFeeBoundMaxFeeCaption = show $ Tags.DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE (distanceToMetersInt startDistance) (Just $ distanceToMetersInt s2.startDistance)
           driverExtraFeeBoundMaxFeeItem = mkBreakupItem driverExtraFeeBoundMaxFeeCaption (mkValue $ show s1.maxFee.getMoney)
-      mkDriverExtraFeeBoundsMaxFeeItem (driverExtraFeeBoundsMaxFeeItems <> [driverExtraFeeBoundMaxFeeItem]) (s2 : ss) s2.startDistance.getMeters
+      mkDriverExtraFeeBoundsMaxFeeItem (driverExtraFeeBoundsMaxFeeItems <> [driverExtraFeeBoundMaxFeeItem]) (s2 : ss) s2.startDistance

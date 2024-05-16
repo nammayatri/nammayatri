@@ -30,8 +30,8 @@ getDriverLocsWithCond ::
   Id Merchant ->
   Maybe Seconds ->
   LatLong ->
-  Meters ->
+  Distance ->
   m [DriverLocation]
-getDriverLocsWithCond merchantId _mbDriverPositionInfoExpiry LatLong {..} radiusMeters = do
-  locations <- LF.nearBy lat lon Nothing Nothing radiusMeters.getMeters merchantId
+getDriverLocsWithCond merchantId _mbDriverPositionInfoExpiry LatLong {..} radius = do
+  locations <- LF.nearBy lat lon Nothing Nothing ((.getMeters) $ distanceToMeters radius) merchantId
   return $ DL.nubBy (\x y -> x.driverId == y.driverId) locations

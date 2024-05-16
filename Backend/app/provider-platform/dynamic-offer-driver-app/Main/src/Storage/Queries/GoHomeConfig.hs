@@ -42,25 +42,34 @@ instance FromTType' BeamGHC.GoHomeConfig GoHomeConfig where
         GoHomeConfig
           { merchantId = Id merchantId,
             merchantOperatingCityId = Id merchantOperatingCityId,
-            goHomeFromLocationRadius = goHomeFromLocationRadius,
-            goHomeWayPointRadius = goHomeWayPointRadius,
+            goHomeFromLocationRadius = mkDistanceWithDefaultMeters distanceUnit goHomeFromLocationRadiusValue goHomeFromLocationRadius,
+            goHomeWayPointRadius = mkDistanceWithDefaultMeters distanceUnit goHomeWayPointRadiusValue goHomeWayPointRadius,
             goHomeBatchDelay = Seconds goHomeBatchDelay,
-            ignoreWaypointsTill = Meters ignoreWaypointsTill,
-            addStartWaypointAt = Meters addStartWaypointAt,
-            newLocAllowedRadius = Meters newLocAllowedRadius,
+            ignoreWaypointsTill = mkDistanceWithDefaultMeters distanceUnit ignoreWaypointsTillValue $ Meters ignoreWaypointsTill,
+            addStartWaypointAt = mkDistanceWithDefaultMeters distanceUnit addStartWaypointAtValue $ Meters addStartWaypointAt,
+            newLocAllowedRadius = mkDistanceWithDefaultMeters distanceUnit newLocAllowedRadiusValue $ Meters newLocAllowedRadius,
+            destRadius = mkDistanceWithDefaultMeters distanceUnit destRadiusValue $ Meters destRadiusMeters,
             ..
           }
 
 instance ToTType' BeamGHC.GoHomeConfig GoHomeConfig where
   toTType' GoHomeConfig {..} = do
+    let distanceUnit = Just destRadius.unit -- should be the same for all fields
     BeamGHC.GoHomeConfigT
       { BeamGHC.merchantId = getId merchantId,
         BeamGHC.merchantOperatingCityId = getId merchantOperatingCityId,
-        BeamGHC.goHomeFromLocationRadius = goHomeFromLocationRadius,
-        BeamGHC.goHomeWayPointRadius = goHomeWayPointRadius,
+        BeamGHC.goHomeFromLocationRadius = distanceToMeters goHomeFromLocationRadius,
+        BeamGHC.goHomeWayPointRadius = distanceToMeters goHomeWayPointRadius,
+        BeamGHC.goHomeFromLocationRadiusValue = Just $ distanceToHighPrecDistance distanceUnit goHomeFromLocationRadius,
+        BeamGHC.goHomeWayPointRadiusValue = Just $ distanceToHighPrecDistance distanceUnit goHomeWayPointRadius,
         BeamGHC.goHomeBatchDelay = getSeconds goHomeBatchDelay,
-        BeamGHC.ignoreWaypointsTill = getMeters ignoreWaypointsTill,
-        BeamGHC.addStartWaypointAt = getMeters addStartWaypointAt,
-        BeamGHC.newLocAllowedRadius = getMeters newLocAllowedRadius,
+        BeamGHC.ignoreWaypointsTill = getMeters $ distanceToMeters ignoreWaypointsTill,
+        BeamGHC.addStartWaypointAt = getMeters $ distanceToMeters addStartWaypointAt,
+        BeamGHC.newLocAllowedRadius = getMeters $ distanceToMeters newLocAllowedRadius,
+        BeamGHC.ignoreWaypointsTillValue = Just $ distanceToHighPrecDistance distanceUnit ignoreWaypointsTill,
+        BeamGHC.addStartWaypointAtValue = Just $ distanceToHighPrecDistance distanceUnit addStartWaypointAt,
+        BeamGHC.newLocAllowedRadiusValue = Just $ distanceToHighPrecDistance distanceUnit newLocAllowedRadius,
+        BeamGHC.destRadiusMeters = getMeters $ distanceToMeters destRadius,
+        BeamGHC.destRadiusValue = Just $ distanceToHighPrecDistance distanceUnit destRadius,
         ..
       }

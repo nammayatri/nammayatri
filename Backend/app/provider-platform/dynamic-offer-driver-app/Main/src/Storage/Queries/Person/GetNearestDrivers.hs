@@ -26,7 +26,7 @@ data NearestDriversResult = NearestDriversResult
     driverDeviceToken :: Maybe FCM.FCMRecipientToken,
     language :: Maybe Maps.Language,
     onRide :: Bool,
-    distanceToDriver :: Meters,
+    distanceToDriver :: Distance,
     variant :: DV.Variant,
     serviceTier :: DVST.ServiceTierType,
     serviceTierDowngradeLevel :: Int,
@@ -48,7 +48,7 @@ getNearestDrivers ::
   [DVST.VehicleServiceTier] ->
   [ServiceTierType] ->
   LatLong ->
-  Meters ->
+  Distance ->
   Id Merchant ->
   Bool ->
   Maybe Seconds ->
@@ -76,7 +76,7 @@ getNearestDrivers cityServiceTiers serviceTiers fromLocLatLong radiusMeters merc
       person <- HashMap.lookup driverId' personHashMap
       vehicle <- HashMap.lookup driverId' vehicleHashMap
       info <- HashMap.lookup driverId' driverInfoHashMap
-      let dist = (realToFrac $ distanceBetweenInMeters fromLocLatLong $ LatLong {lat = location.lat, lon = location.lon}) :: Double
+      let dist = (highPrecMetersToDistance $ distanceBetweenInMeters fromLocLatLong $ LatLong {lat = location.lat, lon = location.lon}) :: Distance
       -- ideally should be there inside the vehicle.selectedServiceTiers but still to make sure we have a default service tier for the driver
       let cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
       let mbDefaultServiceTierForDriver = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
@@ -101,4 +101,4 @@ getNearestDrivers cityServiceTiers serviceTiers fromLocLatLong radiusMeters merc
       where
         mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
-          Just $ NearestDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.airConditioned location.lat location.lon info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice person.backendConfigVersion person.backendAppVersion
+          Just $ NearestDriversResult (cast person.id) person.deviceToken person.language info.onRide dist vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.airConditioned location.lat location.lon info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice person.backendConfigVersion person.backendAppVersion

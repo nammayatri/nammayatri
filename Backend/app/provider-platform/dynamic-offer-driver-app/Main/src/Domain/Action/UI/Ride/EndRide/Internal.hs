@@ -188,7 +188,7 @@ sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId = do
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   let shouldUpdateRideComplete =
         case minTripDistanceForReferralCfg of
-          Just distance -> (metersToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenValidRide)) mbRiderDetails
+          Just distance -> (distanceToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenValidRide)) mbRiderDetails
           Nothing -> True
   when shouldUpdateRideComplete $
     fork "REFERRAL_ACTIVATED FCM to Driver" $ do
@@ -201,7 +201,7 @@ sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId = do
             driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
             sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver.id driver.deviceToken
             logDebug "Driver Referral Coin Event"
-            fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id merchantId merchantOpCityId (DCT.DriverToCustomerReferral ride.chargeableDistance)
+            fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id merchantId merchantOpCityId (DCT.DriverToCustomerReferral $ ride.chargeableDistance)
           Nothing -> pure ()
 
 updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Ride.Ride -> m ()
@@ -217,7 +217,7 @@ updateLeaderboardZScore merchantId merchantOpCityId ride = do
     driverWeeklyZscore <- Hedis.zScore (makeWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate) $ ride.driverId.getId
     updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverWeeklyZscore ride.chargeableDistance merchantId merchantOpCityId
 
-updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Maybe Double -> Maybe Distance -> Id Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 updateDriverDailyZscore ride rideDate driverZscore chargeableDistance merchantId merchantOpCityId = do
   mbdDailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY merchantOpCityId
   whenJust mbdDailyLeaderBoardConfig $ \dailyLeaderBoardConfig -> do
@@ -226,18 +226,18 @@ updateDriverDailyZscore ride rideDate driverZscore chargeableDistance merchantId
       let lbExpiry = dailyLeaderBoardConfig.leaderBoardExpiry - secondsFromTimeOfDay localTime
       let currZscore =
             case driverZscore of
-              Nothing -> dailyLeaderBoardConfig.zScoreBase + getMeters (fromMaybe 0 chargeableDistance)
+              Nothing -> dailyLeaderBoardConfig.zScoreBase + getMeters (fromMaybe 0 $ distanceToMeters <$> chargeableDistance)
               Just zscore -> do
                 let (prevTotalRides, prevTotalDistance) = getRidesAndDistancefromZscore zscore dailyLeaderBoardConfig.zScoreBase
                 let currTotalRides = prevTotalRides + 1
-                let currTotalDist = prevTotalDistance + fromMaybe 0 chargeableDistance
+                let currTotalDist = prevTotalDistance + fromMaybe 0 (distanceToMeters <$> chargeableDistance)
                 currTotalRides * dailyLeaderBoardConfig.zScoreBase + getMeters currTotalDist
       Hedis.zAddExp (makeDailyDriverLeaderBoardKey merchantId rideDate) ride.driverId.getId (fromIntegral currZscore) lbExpiry.getSeconds
       let limit = dailyLeaderBoardConfig.leaderBoardLengthLimit
       driversListWithScores' <- Hedis.zrevrangeWithscores (makeDailyDriverLeaderBoardKey merchantId rideDate) 0 (limit -1)
       Hedis.setExp (makeCachedDailyDriverLeaderBoardKey merchantId rideDate) driversListWithScores' (dailyLeaderBoardConfig.leaderBoardExpiry.getSeconds * dailyLeaderBoardConfig.numberOfSets)
 
-updateDriverWeeklyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Day -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+updateDriverWeeklyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Day -> Day -> Maybe Double -> Maybe Distance -> Id Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverZscore rideChargeableDistance merchantId merchantOpCityId = do
   mbWeeklyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY merchantOpCityId
   whenJust mbWeeklyLeaderBoardConfig $ \weeklyLeaderBoardConfig -> do
@@ -247,11 +247,11 @@ updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverZscore ri
       let lbExpiry = weeklyLeaderBoardConfig.leaderBoardExpiry - Seconds ((currDayIndex + 1) * 86400) + (Seconds 86400 - secondsFromTimeOfDay localTime) -- Calculated as (total_Seconds_in_week - Week_Day_Index * 86400 + Seconds_Remaining_In_This_Week
       let currZscore =
             case driverZscore of
-              Nothing -> weeklyLeaderBoardConfig.zScoreBase + getMeters (fromMaybe 0 rideChargeableDistance)
+              Nothing -> weeklyLeaderBoardConfig.zScoreBase + getMeters (fromMaybe 0 $ distanceToMeters <$> rideChargeableDistance)
               Just zscore -> do
                 let (prevTotalRides, prevTotalDistance) = getRidesAndDistancefromZscore zscore weeklyLeaderBoardConfig.zScoreBase
                 let currTotalRides = prevTotalRides + 1
-                let currTotalDist = prevTotalDistance + fromMaybe 0 rideChargeableDistance
+                let currTotalDist = prevTotalDistance + fromMaybe 0 (distanceToMeters <$> rideChargeableDistance)
                 currTotalRides * weeklyLeaderBoardConfig.zScoreBase + getMeters currTotalDist
       Hedis.zAddExp (makeWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate) ride.driverId.getId (fromIntegral currZscore) (lbExpiry.getSeconds)
       let limit = weeklyLeaderBoardConfig.leaderBoardLengthLimit
@@ -298,8 +298,8 @@ getRouteAndDistanceBetweenPoints ::
   LatLong ->
   LatLong ->
   [LatLong] ->
-  Meters ->
-  m ([LatLong], Meters)
+  Distance ->
+  m ([LatLong], Distance)
 getRouteAndDistanceBetweenPoints merchantId merchantOpCityId origin destination interpolatedPoints estimatedDistance = do
   -- somehow interpolated points pushed to redis in reversed order, so we need to reverse it back
   let pickedWaypoints = origin :| (pickWaypoints interpolatedPoints <> [destination])
@@ -313,10 +313,14 @@ getRouteAndDistanceBetweenPoints merchantId merchantOpCityId origin destination 
         }
   let mbShortestRoute = getRouteInfoWithShortestDuration routeResponse
       routePoints = maybe [] (.points) mbShortestRoute
-      distance = maybe estimatedDistance (\route -> fromMaybe estimatedDistance route.distance) mbShortestRoute
+      distance = maybe estimatedDistance (\route -> maybe estimatedDistance (convertMetersToDistance estimatedDistance.unit) route.distance) mbShortestRoute
   -- Next error is impossible, because we never receive empty list from directions api
   --mbShortestRouteDistance & fromMaybeM (InvalidRequest "Couldn't calculate route distance")
   return (routePoints, distance)
+
+-- TODO move to kernel
+convertMetersToDistance :: DistanceUnit -> Meters -> Distance
+convertMetersToDistance distanceUnit = convertFromMeters distanceUnit . (.value) . metersToDistance
 
 -- TODO reuse code from rider-app
 getRouteInfoWithShortestDuration :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo

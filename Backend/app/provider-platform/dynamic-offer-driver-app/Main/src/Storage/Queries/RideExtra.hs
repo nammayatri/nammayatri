@@ -288,11 +288,13 @@ updateStatusByIds rideIds status = do
     ]
     [Se.Is BeamR.id (Se.In $ getId <$> rideIds)]
 
-updateDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMeters -> Int -> Int -> m ()
+updateDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Distance -> Int -> Int -> m ()
 updateDistance driverId distance googleSnapCalls osrmSnapsCalls = do
+  let distanceUnit = Just distance.unit -- should be the same for all fields
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set BeamR.traveledDistance distance,
+    [ Se.Set BeamR.traveledDistance $ distanceToHighPrecMeters distance,
+      Se.Set BeamR.traveledDistanceValue $ Just $ distanceToHighPrecDistance distanceUnit distance,
       Se.Set BeamR.numberOfSnapToRoadCalls (Just googleSnapCalls),
       Se.Set BeamR.numberOfOsrmSnapToRoadCalls (Just osrmSnapsCalls),
       Se.Set BeamR.updatedAt now
@@ -310,9 +312,11 @@ updateTollCharges driverId tollCharges = do
 
 updateAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> Ride -> m ()
 updateAll rideId ride = do
+  let distanceUnit = Just ride.traveledDistance.unit -- should be the same for all fields
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set BeamR.chargeableDistance ride.chargeableDistance,
+    [ Se.Set BeamR.chargeableDistance $ distanceToMeters <$> ride.chargeableDistance,
+      Se.Set BeamR.chargeableDistanceValue $ distanceToHighPrecDistance distanceUnit <$> ride.chargeableDistance,
       Se.Set BeamR.fare ride.fare,
       Se.Set BeamR.tripEndTime ride.tripEndTime,
       Se.Set BeamR.tripEndLat (ride.tripEndPos <&> (.lat)),

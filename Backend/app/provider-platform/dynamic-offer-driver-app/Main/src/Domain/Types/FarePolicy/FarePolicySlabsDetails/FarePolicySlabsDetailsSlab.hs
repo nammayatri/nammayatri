@@ -31,9 +31,9 @@ import Kernel.Utils.Logging
 import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 
 -- import Data.Maybe
-
+-- FIXME CAC parsing
 data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
-  { startDistance :: Meters,
+  { startDistance :: Distance,
     baseFare :: Money,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
     platformFeeInfo :: Maybe PlatformFeeInfo,
@@ -99,6 +99,7 @@ jsonToFPSlabsDetailsSlab config key' = do
 
 data FPSlabsDetailsSlabAPIEntity = FPSlabsDetailsSlabAPIEntity
   { startDistance :: Meters,
+    startDistanceWithUnit :: Distance,
     baseFare :: Money,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
     platformFeeInfo :: Maybe PlatformFeeInfo,
@@ -109,7 +110,9 @@ data FPSlabsDetailsSlabAPIEntity = FPSlabsDetailsSlabAPIEntity
 makeFPSlabsDetailsSlabAPIEntity :: FPSlabsDetailsSlab -> FPSlabsDetailsSlabAPIEntity
 makeFPSlabsDetailsSlabAPIEntity FPSlabsDetailsSlab {..} =
   FPSlabsDetailsSlabAPIEntity
-    { ..
+    { startDistance = distanceToMeters startDistance,
+      startDistanceWithUnit = startDistance,
+      ..
     }
 
 $(mkBeamInstancesForJSON ''PlatformFeeCharge)

@@ -38,7 +38,7 @@ data Quote = Quote
     tripCategory :: DTC.TripCategory,
     validTill :: UTCTime,
     estimatedFare :: Money,
-    distance :: Maybe Meters,
+    distance :: Maybe Distance,
     specialLocationTag :: Maybe Text,
     fareParams :: Params.FareParameters,
     farePolicy :: Maybe Policy.FarePolicy,

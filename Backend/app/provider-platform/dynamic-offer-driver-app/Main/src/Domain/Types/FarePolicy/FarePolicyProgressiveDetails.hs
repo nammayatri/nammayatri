@@ -38,7 +38,7 @@ import Kernel.Utils.Logging
 
 data FPProgressiveDetailsD (s :: UsageSafety) = FPProgressiveDetails
   { baseFare :: Money,
-    baseDistance :: Meters,
+    baseDistance :: Distance,
     perExtraKmRateSections :: NonEmpty (FPProgressiveDetailsPerExtraKmRateSectionD s),
     deadKmFare :: Money,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
@@ -63,6 +63,7 @@ instance ToJSON (FPProgressiveDetailsD 'Safe)
 data FPProgressiveDetailsAPIEntity = FPProgressiveDetailsAPIEntity
   { baseFare :: Money,
     baseDistance :: Meters,
+    baseDistanceWithUnit :: Distance,
     perExtraKmRateSections :: NonEmpty FPProgressiveDetailsPerExtraKmRateSectionAPIEntity,
     deadKmFare :: Money,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
@@ -114,5 +115,7 @@ makeFPProgressiveDetailsAPIEntity :: FPProgressiveDetails -> FPProgressiveDetail
 makeFPProgressiveDetailsAPIEntity FPProgressiveDetails {..} =
   FPProgressiveDetailsAPIEntity
     { perExtraKmRateSections = makeFPProgressiveDetailsPerExtraKmRateSectionAPIEntity <$> perExtraKmRateSections,
+      baseDistance = distanceToMeters baseDistance,
+      baseDistanceWithUnit = baseDistance,
       ..
     }

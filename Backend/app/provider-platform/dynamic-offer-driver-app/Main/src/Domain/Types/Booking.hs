@@ -70,8 +70,8 @@ data Booking = Booking
     vehicleServiceTierName :: Text,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
-    estimatedDistance :: Maybe Meters,
-    maxEstimatedDistance :: Maybe HighPrecMeters,
+    estimatedDistance :: Maybe Distance,
+    maxEstimatedDistance :: Maybe Distance,
     estimatedFare :: Money,
     estimatedDuration :: Maybe Seconds,
     fareParams :: FareParameters,
@@ -81,7 +81,7 @@ data Booking = Booking
     updatedAt :: UTCTime,
     paymentUrl :: Maybe Text,
     stopLocationId :: Maybe (Id DLoc.Location),
-    distanceToPickup :: Maybe Meters,
+    distanceToPickup :: Maybe Distance,
     isScheduled :: Bool
   }
   deriving (Generic)

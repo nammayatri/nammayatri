@@ -25,6 +25,8 @@ data DriverExtraFeeBoundsT f = DriverExtraFeeBoundsT
   { id :: B.C f (Maybe Int),
     farePolicyId :: B.C f Text,
     startDistance :: B.C f Meters,
+    startDistanceValue :: B.C f (Maybe HighPrecDistance),
+    distanceUnit :: B.C f (Maybe DistanceUnit),
     minFee :: B.C f Money,
     maxFee :: B.C f Money
   }

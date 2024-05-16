@@ -46,7 +46,7 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     serviceCharge :: Maybe Money,
     parkingCharge :: Maybe HighPrecMoney,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
-    allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
+    allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     congestionChargeMultiplier :: Maybe Centesimal,
@@ -56,6 +56,19 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     updatedAt :: UTCTime
   }
   deriving (Generic, Show)
+
+data AllowedTripDistanceBounds = AllowedTripDistanceBounds
+  { maxAllowedTripDistance :: Distance,
+    minAllowedTripDistance :: Distance
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON)
+
+mkAllowedTripDistanceBounds :: DPM.AllowedTripDistanceBoundsAPIEntity -> AllowedTripDistanceBounds
+mkAllowedTripDistanceBounds DPM.AllowedTripDistanceBoundsAPIEntity {..} =
+  AllowedTripDistanceBounds
+    { maxAllowedTripDistance = fromMaybe (metersToDistance maxAllowedTripDistance) maxAllowedTripDistanceWithUnit,
+      minAllowedTripDistance = fromMaybe (metersToDistance minAllowedTripDistance) minAllowedTripDistanceWithUnit
+    }
 
 jsonToDriverExtraFeeBounds :: String -> String -> Maybe (NonEmpty DriverExtraFeeBounds)
 jsonToDriverExtraFeeBounds config key' =
@@ -87,7 +100,7 @@ farePolicyMiddleWare configMap config key' = do
       minAllowedTripDistance = DAKM.lookup "minAllowedTripDistance" configMap >>= fromJSONHelper
       dEFB = jsonToDriverExtraFeeBounds config key'
       nightShiftBounds = DPM.NightShiftBounds <$> nightShiftStart <*> nightShiftEnd
-      allowedTripDistanceBounds = DPM.AllowedTripDistanceBounds <$> maxAllowedTripDistance <*> minAllowedTripDistance
+      allowedTripDistanceBounds = AllowedTripDistanceBounds <$> maxAllowedTripDistance <*> minAllowedTripDistance
       configMap' = KP.foldr DAKM.delete configMap ["nightShiftStart", "nightShiftEnd", "maxAllowedTripDistance", "minAllowedTripDistance"]
   configMap'' <- case DAKM.lookup "farePolicyType" configMap' of
     Just (String "Progressive") -> do
@@ -161,7 +174,7 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     serviceCharge :: Maybe Money,
     parkingCharge :: Maybe HighPrecMoney,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
-    allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
+    allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     congestionChargeMultiplier :: Maybe Centesimal,
@@ -190,7 +203,18 @@ type FullFarePolicyRentalDetails = (Id FarePolicy, FPRentalDetails)
 
 farePolicyToFullFarePolicy :: Id Merchant -> DVST.ServiceTierType -> DTC.TripCategory -> FarePolicy -> FullFarePolicy
 farePolicyToFullFarePolicy merchantId vehicleServiceTier tripCategory FarePolicy {..} =
-  FullFarePolicy {..}
+  FullFarePolicy
+    { ..
+    }
+
+mkAllowedTripDistanceBoundsAPIEntity :: AllowedTripDistanceBounds -> DPM.AllowedTripDistanceBoundsAPIEntity
+mkAllowedTripDistanceBoundsAPIEntity AllowedTripDistanceBounds {..} =
+  DPM.AllowedTripDistanceBoundsAPIEntity
+    { maxAllowedTripDistance = distanceToMeters maxAllowedTripDistance,
+      minAllowedTripDistance = distanceToMeters minAllowedTripDistance,
+      maxAllowedTripDistanceWithUnit = Just maxAllowedTripDistance,
+      minAllowedTripDistanceWithUnit = Just minAllowedTripDistance
+    }
 
 fullFarePolicyToFarePolicy :: FullFarePolicy -> FarePolicy
 fullFarePolicyToFarePolicy FullFarePolicy {..} =

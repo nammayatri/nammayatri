@@ -17,7 +17,7 @@ import qualified Tools.Beam.UtilsTH
 data Estimate = Estimate
   { createdAt :: Kernel.Prelude.UTCTime,
     driverPickUpCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.Money,
-    estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     fareParams :: Kernel.Prelude.Maybe Domain.Types.FareParameters.FareParameters,
     farePolicy :: Kernel.Prelude.Maybe Domain.Types.FarePolicy.FarePolicy,
     id :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,

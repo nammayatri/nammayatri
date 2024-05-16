@@ -34,7 +34,7 @@ logBusinessEvent ::
   Maybe (Id Booking) ->
   Maybe WhenPoolWasComputed ->
   Maybe Variant ->
-  Maybe Meters ->
+  Maybe Distance ->
   Maybe Seconds ->
   Maybe (Id Ride) ->
   m ()
@@ -104,13 +104,14 @@ instance FromTType' BeamBE.BusinessEvent BusinessEvent where
             bookingId = Id <$> bookingId,
             whenPoolWasComputed = whenPoolWasComputed,
             vehicleVariant = vehicleVariant,
-            distance = Meters <$> distance,
+            distance = mkDistanceWithDefaultMeters distanceUnit distanceValue . Meters <$> distance,
             duration = Seconds <$> distance,
             rideId = Id <$> rideId
           }
 
 instance ToTType' BeamBE.BusinessEvent BusinessEvent where
   toTType' BusinessEvent {..} = do
+    let distanceUnit = distance <&> (.unit) -- should be the same for all fields
     BeamBE.BusinessEventT
       { BeamBE.id = getId id,
         BeamBE.driverId = getId <$> driverId,
@@ -119,7 +120,9 @@ instance ToTType' BeamBE.BusinessEvent BusinessEvent where
         BeamBE.bookingId = getId <$> bookingId,
         BeamBE.whenPoolWasComputed = whenPoolWasComputed,
         BeamBE.vehicleVariant = vehicleVariant,
-        BeamBE.distance = getMeters <$> distance,
+        BeamBE.distance = getMeters . distanceToMeters <$> distance,
+        BeamBE.distanceValue = distanceToHighPrecDistance distanceUnit <$> distance,
+        BeamBE.distanceUnit = distanceUnit,
         BeamBE.duration = getSeconds <$> duration,
         BeamBE.rideId = getId <$> rideId
       }

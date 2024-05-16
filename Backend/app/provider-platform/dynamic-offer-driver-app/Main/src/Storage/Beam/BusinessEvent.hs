@@ -19,6 +19,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.BusinessEvent as Domain
 import Domain.Types.Vehicle (Variant)
 import Kernel.Prelude
+import Kernel.Types.Common (DistanceUnit, HighPrecDistance)
 import Tools.Beam.UtilsTH
 
 data BusinessEventT f = BusinessEventT
@@ -30,6 +31,8 @@ data BusinessEventT f = BusinessEventT
     whenPoolWasComputed :: B.C f (Maybe Domain.WhenPoolWasComputed),
     vehicleVariant :: B.C f (Maybe Variant),
     distance :: B.C f (Maybe Int),
+    distanceValue :: B.C f (Maybe HighPrecDistance),
+    distanceUnit :: B.C f (Maybe DistanceUnit),
     duration :: B.C f (Maybe Int),
     rideId :: B.C f (Maybe Text)
   }

@@ -258,9 +258,9 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         estimatedDuration = booking.estimatedDuration,
         actualDuration = roundToIntegral <$> (diffUTCTime <$> ride.tripEndTime <*> ride.tripStartTime),
         estimatedBaseFare = estimatedBaseFare,
-        estimatedDistance = booking.estimatedDistance,
+        estimatedDistance = distanceToMeters <$> booking.estimatedDistance,
         driverSelectedFare = fromMaybe 0 fareParams.driverSelectedFare,
-        actualRideDistance = ride.traveledDistance,
+        actualRideDistance = distanceToHighPrecMeters ride.traveledDistance,
         createdAt = ride.createdAt,
         updatedAt = ride.updatedAt,
         riderName = booking.riderName,
@@ -269,7 +269,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         tripEndTime = ride.tripEndTime,
         specialLocationTag = booking.specialLocationTag,
         rideRating = rideRating <&> (.ratingValue),
-        chargeableDistance = ride.chargeableDistance,
+        chargeableDistance = distanceToMeters <$> ride.chargeableDistance,
         exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
         customerExtraFee = fareParams.customerExtraFee,
         bapName = bapMetadata <&> (.name),
@@ -325,7 +325,7 @@ arrivedAtPickup rideId req = do
   let pickupLoc = getCoordinates booking.fromLocation
   let distance = distanceBetweenInMeters req pickupLoc
   transporterConfig <- QMTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  unless (distance < transporterConfig.arrivedPickupThreshold) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
+  unless (distance < distanceToHighPrecMeters transporterConfig.arrivedPickupThreshold) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
   unless (isJust ride.driverArrivalTime) $ do
     now <- getCurrentTime
     QRide.updateArrival rideId now
@@ -383,7 +383,7 @@ arrivedAtStop rideId pt = do
       let curPt = LatLong stopLoc.lat stopLoc.lon
           distance = distanceBetweenInMeters pt curPt
       transporterConfig <- QMTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-      unless (distance < fromMaybe 500 transporterConfig.arrivedStopThreshold) $ throwError $ InvalidRequest ("Driver is not at stop location for ride " <> ride.id.getId)
+      unless (distance < maybe 500 distanceToHighPrecMeters transporterConfig.arrivedStopThreshold) $ throwError $ InvalidRequest ("Driver is not at stop location for ride " <> ride.id.getId)
       QBooking.updateStopArrival booking.id
       BP.sendStopArrivalUpdateToBAP booking ride driver vehicle
       pure Success

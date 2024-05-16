@@ -45,8 +45,8 @@ Ride:
     endOtp: Maybe Text
     trackingUrl: BaseUrl
     fare: Maybe Money
-    traveledDistance: HighPrecMeters
-    chargeableDistance: Maybe Meters
+    traveledDistance: Distance
+    chargeableDistance: Maybe Distance
     driverArrivalTime: Maybe UTCTime
     tripStartTime: Maybe UTCTime
     tripEndTime: Maybe UTCTime
@@ -101,6 +101,7 @@ Ride:
 
   default:
     traveledDistance: '0'
+    traveledDistanceValue: '0.0'
     tripStartTime: 'CURRENT_TIMESTAMP'
     tripEndTime: 'CURRENT_TIMESTAMP'
     safetyAlertTriggered: 'false'
@@ -123,6 +124,13 @@ Ride:
     endOdometerReading:
       endOdometerReadingValue: Maybe Centesimal
       endOdometerReadingFileId:  Maybe Text
+    chargeableDistance:
+      chargeableDistanceValue: Maybe HighPrecDistance
+      chargeableDistance: Maybe Meters
+    traveledDistance:
+      traveledDistanceValue: Maybe HighPrecDistance
+      traveledDistance: HighPrecMeters
+      distanceUnit: Maybe DistanceUnit
 
   fromTType:
     toLocation: Storage.Queries.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
@@ -138,7 +146,10 @@ Ride:
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
     clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion)|E
+    chargeableDistance: Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit chargeableDistanceValue <$> chargeableDistance|E
+    traveledDistance: Kernel.Types.Common.mkDistanceWithDefault distanceUnit traveledDistanceValue traveledDistance|E
 
+  # distanceUnit should be the same for all fields
   toTType:
     trackingUrl: Kernel.Prelude.showBaseUrl|I
     tripStartLat: Kernel.Prelude.fmap (.lat)|I
@@ -156,6 +167,11 @@ Ride:
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
     clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
     clientOsType:  (clientDevice <&> (.deviceType))|E
+    chargeableDistance: Kernel.Prelude.fmap Kernel.Types.Common.distanceToMeters|I
+    chargeableDistanceValue: Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance (Just $ (.unit) traveledDistance))|I
+    distanceUnit: Just $ (.unit) traveledDistance|E
+    traveledDistance: Kernel.Types.Common.distanceToHighPrecMeters|I
+    traveledDistanceValue: Just . Kernel.Types.Common.distanceToHighPrecDistance (Just $ (.unit) traveledDistance)|I
 
   beamType:
     trackingUrl: Text

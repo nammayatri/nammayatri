@@ -65,8 +65,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     driverId :: Id Person,
-    actualDistanceToPickup :: Meters,
-    straightLineDistanceToPickup :: Meters,
+    actualDistanceToPickup :: Distance,
+    straightLineDistanceToPickup :: Distance,
     durationToPickup :: Seconds,
     vehicleVariant :: Variant.Variant,
     vehicleServiceTier :: DVST.ServiceTierType,
@@ -110,6 +110,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     distanceToPickup :: Meters,
+    distanceToPickupWithUnit :: Distance,
     durationToPickup :: Seconds,
     baseFare :: Money,
     customerExtraFee :: Maybe Money,
@@ -118,6 +119,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     newFromLocation :: DLoc.Location,
     newToLocation :: Maybe DLoc.Location, -- we need to show all requests or last one ?
     distance :: Maybe Meters,
+    distanceWithUnit :: Maybe Distance,
     duration :: Maybe Seconds,
     tripCategory :: DTC.TripCategory,
     driverLatLong :: LatLong,
@@ -150,7 +152,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       bapLogo = bapMetadata <&> (.logoUrl),
       startTime = nearbyReq.startTime,
       searchRequestValidTill = nearbyReq.searchRequestValidTill,
-      distanceToPickup = nearbyReq.actualDistanceToPickup,
+      distanceToPickup = distanceToMeters nearbyReq.actualDistanceToPickup,
+      distanceToPickupWithUnit = nearbyReq.actualDistanceToPickup,
       durationToPickup = nearbyReq.durationToPickup,
       baseFare = fromMaybe searchTry.baseFare nearbyReq.baseFare, -- short term, later remove searchTry.baseFare
       customerExtraFee = searchTry.customerExtraFee,
@@ -158,7 +161,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       toLocation = convertDomainType <$> searchRequest.toLocation,
       newFromLocation = searchRequest.fromLocation,
       newToLocation = searchRequest.toLocation,
-      distance = searchRequest.estimatedDistance,
+      distance = distanceToMeters <$> searchRequest.estimatedDistance,
+      distanceWithUnit = searchRequest.estimatedDistance,
       driverLatLong =
         LatLong
           { lat = fromMaybe 0.0 nearbyReq.lat,

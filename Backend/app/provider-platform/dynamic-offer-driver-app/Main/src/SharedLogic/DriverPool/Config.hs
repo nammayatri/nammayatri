@@ -61,7 +61,7 @@ data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
 getSearchDriverPoolConfig ::
   (CacheFlow m r, EsqDBFlow m r) =>
   Id MerchantOperatingCity ->
-  Maybe Meters ->
+  Maybe Distance ->
   SL.Area ->
   m DriverPoolConfig
 getSearchDriverPoolConfig merchantOpCityId mbDist area = do
@@ -75,7 +75,7 @@ getDriverPoolConfigFromDB ::
   Maybe DVST.ServiceTierType ->
   String ->
   SL.Area ->
-  Maybe Meters ->
+  Maybe Distance ->
   m DriverPoolConfig
 getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist = do
   let distance = fromMaybe 0 mbDist
@@ -171,19 +171,20 @@ doubleToInt :: Double -> Int
 doubleToInt = floor
 
 -- TODO :: Need To Handle `area` Properly In CAC
-getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe DVST.ServiceTierType -> String -> Meters -> Maybe Text -> Maybe Text -> m DriverPoolConfig
+-- FIXME handle CAC Distance properly
+getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe DVST.ServiceTierType -> String -> Distance -> Maybe Text -> Maybe Text -> m DriverPoolConfig
 getConfigFromInMemory id mbvst tripCategory dist srId idName = do
   tenant <- liftIO $ Se.lookupEnv "TENANT"
-  let roundeDist = doubleToInt (fromIntegral (dist.getMeters) / 1000)
-  dpc <- L.getOption (DTC.DriverPoolConfig id.getId (show mbvst) tripCategory roundeDist)
+  let roundedDist = doubleToInt (fromIntegral ((.getMeters) $ distanceToMeters dist) / 1000)
+  dpc <- L.getOption (DTC.DriverPoolConfig id.getId (show mbvst) tripCategory roundedDist)
   isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "atlas_driver_offer_bpp_v2" tenant)
-  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId id)), (pack "tripCategory", DA.String (Text.pack tripCategory)), (pack "tripDistance", DA.Number (fromIntegral (getMeters dist)))] <> [("vehicleVariant", DA.String (Text.pack (show (fromJust mbvst)))) | isJust mbvst])
+  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId id)), (pack "tripCategory", DA.String (Text.pack tripCategory)), (pack "tripDistance", DA.Number (fromIntegral (getMeters $ distanceToMeters dist)))] <> [("vehicleVariant", DA.String (Text.pack (show (fromJust mbvst)))) | isJust mbvst])
   cfg <-
     bool
       ( maybe
           ( getDriverPoolConfigFromCAC dpcCond Nothing Nothing
               >>= ( \config -> do
-                      L.setOption (DTC.DriverPoolConfig id.getId (show mbvst) tripCategory roundeDist) config
+                      L.setOption (DTC.DriverPoolConfig id.getId (show mbvst) tripCategory roundedDist) config
                       pure config
                   )
           )
@@ -192,7 +193,7 @@ getConfigFromInMemory id mbvst tripCategory dist srId idName = do
               if isUpdateReq
                 then do
                   config <- getDriverPoolConfigFromCAC dpcCond Nothing Nothing
-                  L.setOption (DTC.DriverPoolConfig id.getId (show mbvst) tripCategory roundeDist) config
+                  L.setOption (DTC.DriverPoolConfig id.getId (show mbvst) tripCategory roundedDist) config
                   pure config
                 else do
                   logDebug $ "Getting driverPoolConfig from CAC InMemory for merchatOperatingCity:" <> getId id <> " for tripCategory " <> Text.pack tripCategory <> " and serviceTier " <> show mbvst <> " dist" <> show dist
@@ -206,13 +207,13 @@ getConfigFromInMemory id mbvst tripCategory dist srId idName = do
     then pure cfg
     else do
       logDebug $ "Did not find driverPoolConfig for tripCategory " <> Text.pack tripCategory <> " and serviceTier " <> show mbvst <> " merchantOperatingCityid" <> show id
-      dpcCond' <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId id)), (pack "tripCategory", DA.String "All"), (pack "tripDistance", DA.Number (fromIntegral (getMeters dist)))] <> [("vehicleVariant", DA.String (Text.pack (show (fromJust mbvst)))) | isJust mbvst])
+      dpcCond' <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId id)), (pack "tripCategory", DA.String "All"), (pack "tripDistance", DA.Number (fromIntegral (getMeters $ distanceToMeters dist)))] <> [("vehicleVariant", DA.String (Text.pack (show (fromJust mbvst)))) | isJust mbvst])
       cfg' <- getDriverPoolConfigFromCAC dpcCond' srId idName
       if cfg'.vehicleVariant == mbvst
         then pure cfg'
         else do
           logDebug $ "Did not find driverPoolConfig for tripCategory ALL" <> " and serviceTier " <> show mbvst <> " merchantOperatingCityid" <> show id
-          dpcCond'' <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id)), (pack "tripCategory", DA.String "All"), (pack "tripDistance", DA.Number (fromIntegral (getMeters dist)))]
+          dpcCond'' <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id)), (pack "tripCategory", DA.String "All"), (pack "tripDistance", DA.Number (fromIntegral (getMeters $ distanceToMeters dist)))]
           getDriverPoolConfigFromCAC dpcCond'' srId idName
 
 getDriverPoolConfigHelper ::
@@ -220,7 +221,7 @@ getDriverPoolConfigHelper ::
   Id MerchantOperatingCity ->
   Maybe DVST.ServiceTierType ->
   String ->
-  Maybe Meters ->
+  Maybe Distance ->
   SL.Area ->
   Maybe Text ->
   Maybe Text ->
@@ -242,7 +243,7 @@ getDriverPoolConfig ::
   DVST.ServiceTierType ->
   DTC.TripCategory ->
   SL.Area ->
-  Maybe Meters ->
+  Maybe Distance ->
   Maybe Text ->
   Maybe Text ->
   m DriverPoolConfig
@@ -251,11 +252,11 @@ getDriverPoolConfig merchantOpCityId serviceTier tripCategory area tripDistance 
   logDebug $ "driverPoolConfig we recieved for merchantOpCityId:" <> getId merchantOpCityId <> " and serviceTier:" <> show serviceTier <> " and tripCategory:" <> show tripCategory <> " and tripDistance:" <> show tripDistance <> " is:" <> show config
   pure config
 
-filterByDistAndDvehAndArea :: Maybe DVST.ServiceTierType -> Text -> Meters -> SL.Area -> DriverPoolConfig -> Bool
+filterByDistAndDvehAndArea :: Maybe DVST.ServiceTierType -> Text -> Distance -> SL.Area -> DriverPoolConfig -> Bool
 filterByDistAndDvehAndArea serviceTier tripCategory dist area cfg =
   dist >= cfg.tripDistance && cfg.vehicleVariant == serviceTier && cfg.tripCategory == tripCategory && cfg.area == area
 
-findDriverPoolConfig :: (EsqDBFlow m r) => [DriverPoolConfig] -> Maybe DVST.ServiceTierType -> Text -> Meters -> SL.Area -> m DriverPoolConfig
+findDriverPoolConfig :: (EsqDBFlow m r) => [DriverPoolConfig] -> Maybe DVST.ServiceTierType -> Text -> Distance -> SL.Area -> m DriverPoolConfig
 findDriverPoolConfig configs serviceTier tripCategory dist area = do
   find (filterByDistAndDvehAndArea serviceTier tripCategory dist area) configs
     <|> find (filterByDistAndDvehAndArea serviceTier tripCategory dist SL.Default) configs

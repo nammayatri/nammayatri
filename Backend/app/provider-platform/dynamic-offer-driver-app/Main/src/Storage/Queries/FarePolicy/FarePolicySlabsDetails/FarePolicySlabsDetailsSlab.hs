@@ -47,7 +47,7 @@ instance FromTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicyS
       Just
         ( KTI.Id farePolicyId,
           DFP.FPSlabsDetailsSlab
-            { startDistance = startDistance,
+            { startDistance = mkDistanceWithDefaultMeters distanceUnit startDistanceValue startDistance,
               baseFare = baseFare,
               waitingChargeInfo =
                 ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
@@ -67,11 +67,14 @@ instance FromTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicyS
         )
 
 instance ToTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicySlabsDetailsSlab where
-  toTType' (KTI.Id farePolicyId, DFP.FPSlabsDetailsSlab {..}) =
+  toTType' (KTI.Id farePolicyId, DFP.FPSlabsDetailsSlab {..}) = do
+    let distanceUnit = Just startDistance.unit -- should be the same for all fields
     BeamFPSS.FarePolicySlabsDetailsSlabT
       { id = Nothing,
         farePolicyId = farePolicyId,
-        startDistance = startDistance,
+        startDistance = distanceToMeters startDistance,
+        startDistanceValue = Just $ distanceToHighPrecDistance distanceUnit startDistance,
+        distanceUnit,
         baseFare = baseFare,
         platformFeeCharge = DFP.platformFeeCharge <$> platformFeeInfo,
         platformFeeCgst = DFP.cgst <$> platformFeeInfo,

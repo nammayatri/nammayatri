@@ -49,7 +49,7 @@ data SearchRequest = SearchRequest
     tollCharges :: Maybe HighPrecMoney,
     isReallocationEnabled :: Maybe Bool,
     toLocation :: Maybe DLoc.Location,
-    estimatedDistance :: Maybe Meters,
+    estimatedDistance :: Maybe Distance,
     estimatedDuration :: Maybe Seconds,
     validTill :: UTCTime,
     isScheduled :: Bool,

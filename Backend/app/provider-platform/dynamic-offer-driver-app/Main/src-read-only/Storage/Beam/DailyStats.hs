@@ -19,7 +19,9 @@ data DailyStatsT f = DailyStatsT
     id :: B.C f Data.Text.Text,
     merchantLocalDate :: B.C f Data.Time.Calendar.Day,
     numRides :: B.C f Kernel.Prelude.Int,
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     totalDistance :: B.C f Kernel.Types.Common.Meters,
+    totalDistanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     totalEarnings :: B.C f Kernel.Types.Common.Money,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

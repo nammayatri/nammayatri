@@ -294,10 +294,10 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         actualDriverArrivalTime = ride.driverArrivalTime,
         rideStartTime = ride.tripStartTime,
         rideEndTime = ride.tripEndTime,
-        rideDistanceEstimated = booking.estimatedDistance,
-        rideDistanceActual = roundToIntegral ride.traveledDistance,
-        chargeableDistance = ride.chargeableDistance,
-        maxEstimatedDistance = highPrecMetersToMeters <$> booking.maxEstimatedDistance,
+        rideDistanceEstimated = distanceToMeters <$> booking.estimatedDistance,
+        rideDistanceActual = distanceToMeters ride.traveledDistance,
+        chargeableDistance = distanceToMeters <$> ride.chargeableDistance,
+        maxEstimatedDistance = distanceToMeters <$> booking.maxEstimatedDistance,
         estimatedRideDuration = secondsToMinutes <$> booking.estimatedDuration,
         estimatedFare = booking.estimatedFare,
         actualFare = ride.fare,
@@ -553,4 +553,9 @@ buildFareParametersDetails = makeFareParam
 makeFareParam :: DFP.FareParametersDetails -> Common.FareParametersDetails
 makeFareParam (DFP.ProgressiveDetails DFP.FParamsProgressiveDetails {..}) = Common.ProgressiveDetails Common.FParamsProgressiveDetails {..}
 makeFareParam (DFP.SlabDetails DFP.FParamsSlabDetails {..}) = Common.SlabDetails Common.FParamsSlabDetails {..}
-makeFareParam (DFP.RentalDetails DFP.FParamsRentalDetails {..}) = Common.RentalDetails Common.FParamsRentalDetails {..}
+makeFareParam (DFP.RentalDetails DFP.FParamsRentalDetails {..}) =
+  Common.RentalDetails
+    Common.FParamsRentalDetails
+      { extraDistance = distanceToMeters extraDistance,
+        ..
+      }

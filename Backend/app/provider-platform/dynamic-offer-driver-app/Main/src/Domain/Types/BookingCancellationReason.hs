@@ -35,7 +35,7 @@ data BookingCancellationReason = BookingCancellationReason
     reasonCode :: Maybe CancellationReasonCode,
     additionalInfo :: Maybe Text,
     driverCancellationLocation :: Maybe LatLong,
-    driverDistToPickup :: Maybe Meters
+    driverDistToPickup :: Maybe Distance
   }
   deriving (Generic)
 

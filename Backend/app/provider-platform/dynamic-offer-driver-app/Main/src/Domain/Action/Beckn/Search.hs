@@ -107,7 +107,8 @@ data ValidatedDSearchReq = ValidatedDSearchReq
     possibleTripOption :: DTC.TripOption,
     bapCity :: Context.City,
     merchantOpCityId :: Id DMOC.MerchantOperatingCity,
-    merchant :: DM.Merchant
+    merchant :: DM.Merchant,
+    distanceUnit :: DistanceUnit
   }
 
 data DSearchRes = DSearchRes
@@ -124,14 +125,18 @@ data DSearchRes = DSearchRes
 
 data NearestDriverInfo = NearestDriverInfo
   { locationId :: Text,
-    distanceToNearestDriver :: Meters,
+    distanceToNearestDriver :: Distance,
     driverLatLongs :: NonEmpty LatLong
   }
   deriving (Generic, Show)
 
-getDistanceAndDuration :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> LatLong -> Maybe Meters -> Maybe Seconds -> Flow (Meters, Seconds)
-getDistanceAndDuration _ _ _ _ (Just distance) (Just duration) = return (distance, duration)
-getDistanceAndDuration merchantId merchantOpCityId fromLocation toLocation _ _ = do
+-- TODO move to kernel
+convertMetersToDistance :: DistanceUnit -> Meters -> Distance
+convertMetersToDistance distanceUnit = convertFromMeters distanceUnit . (.value) . metersToDistance
+
+getDistanceAndDuration :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> LatLong -> Maybe Meters -> Maybe Seconds -> DistanceUnit -> Flow (Distance, Seconds)
+getDistanceAndDuration _ _ _ _ (Just distance) (Just duration) distanceUnit = return (convertMetersToDistance distanceUnit distance, duration)
+getDistanceAndDuration merchantId merchantOpCityId fromLocation toLocation _ _ distanceUnit = do
   response <-
     Maps.getDistance merchantId merchantOpCityId $
       Maps.GetDistanceReq
@@ -139,7 +144,8 @@ getDistanceAndDuration merchantId merchantOpCityId fromLocation toLocation _ _ =
           destination = toLocation,
           travelMode = Just Maps.CAR
         }
-  return (response.distance, response.duration)
+  -- FIXME use distance unit from merchantOperationCity table instead of Meter
+  return (convertMetersToDistance distanceUnit response.distance, response.duration)
 
 handler :: ValidatedDSearchReq -> DSearchReq -> Flow DSearchRes
 handler ValidatedDSearchReq {..} sReq = do
@@ -151,9 +157,9 @@ handler ValidatedDSearchReq {..} sReq = do
   (mbSetRouteInfo, mbToLocation, mbDistance, mbDuration, mbTollCharges) <-
     case sReq.dropLocation of
       Just dropLoc -> do
-        (estimatedDistance, estimatedDuration) <- getDistanceAndDuration merchant.id merchantOpCityId sReq.pickupLocation dropLoc sReq.routeDistance sReq.routeDuration
+        (estimatedDistance, estimatedDuration) <- getDistanceAndDuration merchant.id merchantOpCityId sReq.pickupLocation dropLoc sReq.routeDistance sReq.routeDuration distanceUnit
         logDebug $ "distance: " <> show estimatedDistance
-        let routeInfo = RouteInfo {distance = Just estimatedDistance, duration = Just estimatedDuration, points = sReq.routePoints}
+        let routeInfo = RouteInfo {distance = Just $ distanceToMeters estimatedDistance, distanceWithUnit = Just estimatedDistance, duration = Just estimatedDuration, points = sReq.routePoints}
         toLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.dropAddrress sReq.customerLanguage dropLoc
         let setRouteInfo transactionId =
               ( do
@@ -166,7 +172,7 @@ handler ValidatedDSearchReq {..} sReq = do
               )
         mbTollCharges <- join <$> mapM (getTollChargesOnRoute merchantOpCityId Nothing) sReq.routePoints
         return (Just setRouteInfo, Just toLocation, Just estimatedDistance, Just estimatedDuration, mbTollCharges)
-      _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration, Nothing) -- estimate distance and durations by user
+      _ -> return (Nothing, Nothing, convertMetersToDistance distanceUnit <$> sReq.routeDistance, sReq.routeDuration, Nothing) -- estimate distance and durations by user
   allFarePoliciesProduct <- combineFarePoliciesProducts <$> ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.pickupLocation sReq.dropLocation (Just sReq.transactionId) (Just "transactionId")) `mapM` possibleTripOption.tripCategories)
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbTollCharges allFarePoliciesProduct.farePolicies
 
@@ -249,7 +255,7 @@ handler ValidatedDSearchReq {..} sReq = do
           _ -> True
           where
             checkLimits det =
-              let distInKm = distance.getMeters `div` 1000
+              let distInKm = (distanceToMeters distance).getMeters `div` 1000
                   timeInHr = duration.getSeconds `div` 3600
                   includedKm = (timeInHr * det.includedKmPerHr.getKilometers)
                   maxAllowed = min (min det.maxAdditionalKmsLimit.getKilometers includedKm) (det.totalAdditionalKmsLimit.getKilometers - includedKm)
@@ -298,7 +304,7 @@ addNearestDriverInfo merchantOpCityId (Just driverPool) estdOrQuotes = do
               nearestDriverInfo = NearestDriverInfo {..}
           return (input, vehicleServiceTierItem, Just nearestDriverInfo)
 
-selectDriversAndMatchFarePolicies :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> SL.Area -> [DFP.FullFarePolicy] -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
+selectDriversAndMatchFarePolicies :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Distance -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> SL.Area -> [DFP.FullFarePolicy] -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
 selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig isScheduled area farePolicies = do
   driverPoolCfg <- getSearchDriverPoolConfig merchantOpCityId mbDistance area
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
@@ -339,7 +345,7 @@ buildSearchRequest ::
   Id DMOC.MerchantOperatingCity ->
   DLoc.Location ->
   Maybe DLoc.Location ->
-  Maybe Meters ->
+  Maybe Distance ->
   Maybe Seconds ->
   Maybe Text ->
   SL.Area ->
@@ -381,7 +387,7 @@ buildQuote ::
   Id DM.Merchant ->
   UTCTime ->
   Bool ->
-  Maybe Meters ->
+  Maybe Distance ->
   Maybe Seconds ->
   Maybe Text ->
   Maybe HighPrecMoney ->
@@ -443,7 +449,7 @@ buildEstimate ::
   Id DSR.SearchRequest ->
   UTCTime ->
   Bool ->
-  Maybe Meters ->
+  Maybe Distance ->
   Maybe Text ->
   Maybe HighPrecMoney ->
   Bool ->
@@ -518,10 +524,12 @@ validateRequest merchantId sReq = do
               else throwError (RideNotServiceableInState $ show destinationCityState.state)
       Nothing -> pure False
   let bapCity = nearestOperatingCity.city
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just bapCity)
+  merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
+  let (distanceUnit, merchantOpCityId) = (merchantOpCity.distanceUnit, merchantOpCity.id)
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just sReq.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   now <- getCurrentTime
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity
+
   return ValidatedDSearchReq {..}
 
 getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> DTC.TripOption

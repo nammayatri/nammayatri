@@ -73,16 +73,18 @@ findById (Id driverId) = findOneWithKV [Se.Is BeamDS.driverId $ Se.Eq driverId]
 deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m ()
 deleteById (Id driverId) = deleteWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]
 
-findTotalRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Int, Meters)
-findTotalRides (Id driverId) = maybe (pure (0, 0)) (pure . (Domain.totalRides &&& Domain.totalDistance)) =<< findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]
+findTotalRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Int, Distance)
+findTotalRides (Id driverId) = maybe (pure (0, Distance 0.0 Meter)) (pure . (Domain.totalRides &&& Domain.totalDistance)) =<< findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]
 
-incrementTotalRidesAndTotalDist :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Meters -> m ()
+incrementTotalRidesAndTotalDist :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Distance -> m ()
 incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
   now <- getCurrentTime
-  findTotalRides (Id driverId') >>= \(rides, distance) ->
+  findTotalRides (Id driverId') >>= \(rides, distance) -> do
+    let distanceUnit = Just distance.unit -- should be the same for all fields
     updateOneWithKV
-      [ Se.Set (\BeamDS.DriverStatsT {..} -> totalRides) (rides + 1),
-        Se.Set BeamDS.totalDistance $ (\(Meters m) -> int2Double m) (rideDist + distance),
+      [ Se.Set (\BeamDS.DriverStatsT {totalRides} -> totalRides) (rides + 1),
+        Se.Set BeamDS.totalDistance $ (\(Meters m) -> int2Double m) $ distanceToMeters $ rideDist + distance,
+        Se.Set BeamDS.totalDistanceValue $ Just $ distanceToHighPrecDistance distanceUnit (rideDist + distance),
         Se.Set BeamDS.updatedAt now
       ]
       [Se.Is BeamDS.driverId (Se.Eq driverId')]
@@ -140,7 +142,7 @@ instance FromTType' BeamDS.DriverStats DriverStats where
           { driverId = Id driverId,
             idleSince = idleSince,
             totalRides = totalRides,
-            totalDistance = Meters $ double2Int totalDistance,
+            totalDistance = mkDistanceWithDefaultMeters distanceUnit totalDistanceValue $ Meters $ double2Int totalDistance,
             ridesCancelled = ridesCancelled,
             totalRidesAssigned = totalRidesAssigned,
             totalEarnings = totalEarnings,
@@ -154,11 +156,14 @@ instance FromTType' BeamDS.DriverStats DriverStats where
 
 instance ToTType' BeamDS.DriverStats DriverStats where
   toTType' DriverStats {..} = do
+    let distanceUnit = Just totalDistance.unit -- should be the same for all fields
     BeamDS.DriverStatsT
       { BeamDS.driverId = getId driverId,
         BeamDS.idleSince = idleSince,
         BeamDS.totalRides = totalRides,
-        BeamDS.totalDistance = (\(Meters m) -> int2Double m) totalDistance,
+        BeamDS.totalDistance = (\(Meters m) -> int2Double m) $ distanceToMeters totalDistance,
+        BeamDS.totalDistanceValue = Just $ distanceToHighPrecDistance distanceUnit totalDistance,
+        BeamDS.distanceUnit = distanceUnit,
         BeamDS.ridesCancelled = ridesCancelled,
         BeamDS.totalRidesAssigned = totalRidesAssigned,
         BeamDS.totalEarnings = totalEarnings,

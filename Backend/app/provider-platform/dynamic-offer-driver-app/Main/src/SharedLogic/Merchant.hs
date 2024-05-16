@@ -21,7 +21,16 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as CQM
 import Tools.Error
 
+-- import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+-- import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+
 findMerchantByShortId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => ShortId DM.Merchant -> m DM.Merchant
 findMerchantByShortId merchantShortId = do
   CQM.findByShortId merchantShortId
     >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+
+-- getMerchantOpCity ?
+-- getDistanceUnitByMerchantOpCity :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DistanceUnit
+-- getDistanceUnitByMerchantOpCity merchantOpCityId = do
+--   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+--   pure merchantOperatingCity.distanceUnit
