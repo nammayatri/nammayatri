@@ -86,6 +86,16 @@ findByMobileNumber mobileNumber mobileCountryCode = do
   mobileDbHash <- getDbHash mobileNumber
   findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq mobileDbHash, Se.Is BeamP.mobileCountryCode $ Se.Eq mobileCountryCode]]
 
+updatePersonVerifiedStatus :: BeamFlow m r => Id Person -> Bool -> m ()
+updatePersonVerifiedStatus personId verified = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.verified $ Just verified,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
+
 findAllWithLimitOffset ::
   BeamFlow m r =>
   Maybe Text ->

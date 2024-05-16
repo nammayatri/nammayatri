@@ -22,6 +22,7 @@ import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverRCAssociation
+import qualified Domain.Types.FleetRCAssociation as FRCA
 import Domain.Types.IdfyVerification
 import qualified Domain.Types.IdfyVerification as DIV
 import qualified Domain.Types.Image as Domain
@@ -195,6 +196,23 @@ makeRCAssociation merchantId merchantOperatingCityId driverId rcId end = do
         consent = True,
         consentTimestamp = now,
         isRcActive = False,
+        merchantId = Just merchantId,
+        merchantOperatingCityId = Just merchantOperatingCityId,
+        createdAt = now,
+        updatedAt = now
+      }
+
+makeFleetRCAssociation :: (MonadFlow m) => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person -> Id VehicleRegistrationCertificate -> Maybe UTCTime -> m FRCA.FleetRCAssociation
+makeFleetRCAssociation merchantId merchantOperatingCityId fleetOwnerId rcId end = do
+  id <- generateGUID
+  now <- getCurrentTime
+  return $
+    FRCA.FleetRCAssociation
+      { id,
+        rcId,
+        fleetOwnerId,
+        associatedOn = now,
+        associatedTill = end,
         merchantId = Just merchantId,
         merchantOperatingCityId = Just merchantOperatingCityId,
         createdAt = now,

@@ -7,10 +7,12 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Common
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DriverInformation
+import qualified Domain.Types.Image
 import qualified Domain.Types.ServiceTierType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
@@ -40,6 +42,14 @@ data DocumentVerificationConfigList = DocumentVerificationConfigList
   { autos :: Kernel.Prelude.Maybe [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity],
     bikes :: Kernel.Prelude.Maybe [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity],
     cabs :: Kernel.Prelude.Maybe [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data DriverPanReq = DriverPanReq
+  { consent :: Kernel.Prelude.Bool,
+    imageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
+    imageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
+    panNumber :: Kernel.Prelude.Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

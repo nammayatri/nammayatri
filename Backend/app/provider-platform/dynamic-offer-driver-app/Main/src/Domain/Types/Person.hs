@@ -38,6 +38,7 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 data Role
   = DRIVER
   | ADMIN
+  | FLEET_OWNER
   deriving stock (Show, Eq, Read, Ord, Enum, Bounded, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 

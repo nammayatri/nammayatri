@@ -41,6 +41,7 @@ import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverRCAssociation as QDRCA
+import qualified Storage.Queries.FleetRCAssociationExtra as FRCA
 import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
@@ -121,14 +122,20 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
       then case rcNumber of
         Just rcNo -> do
           rc <- QRC.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
-          mbAssoc <- QDRCA.findLatestByRCIdAndDriverId rc.id personId
-          when (isNothing mbAssoc) $ throwError RCNotLinked
-          return $ Just rc.id
+          case person.role of
+            Person.FLEET_OWNER -> do
+              fleetAssoc <- FRCA.findLatestByRCIdAndFleetOwnerId rc.id personId
+              when (isNothing fleetAssoc) $ throwError RCNotLinkedWithFleet
+              return $ Just rc.id
+            _ -> do
+              mbAssoc <- QDRCA.findLatestByRCIdAndDriverId rc.id personId
+              when (isNothing mbAssoc) $ throwError RCNotLinked
+              return $ Just rc.id
         Nothing -> throwError $ RCMandatory (show imageType)
       else return Nothing
 
-  images <- Query.findRecentByPersonIdAndImageType personId imageType
   unless isDashboard $ do
+    images <- Query.findRecentByPersonIdAndImageType personId imageType
     transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let onboardingTryLimit = transporterConfig.onboardingTryLimit
     when (length images > onboardingTryLimit) $ do

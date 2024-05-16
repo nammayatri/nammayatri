@@ -308,12 +308,13 @@ registerFleetOwner ::
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]
   ) =>
   FleetRegisterReq ->
+  Maybe Text ->
   m APISuccess
-registerFleetOwner req = do
+registerFleetOwner req mbPersonId = do
   runRequestValidation validateFleetOwner req
   unlessM (isNothing <$> QP.findByMobileNumber req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
   fleetOwnerRole <- QRole.findByDashboardAccessType (getFleetRole req.fleetType) >>= fromMaybeM (RoleDoesNotExist "FLEET_OWNER")
-  fleetOwner <- buildFleetOwner req fleetOwnerRole.id fleetOwnerRole.dashboardAccessType
+  fleetOwner <- buildFleetOwner req mbPersonId fleetOwnerRole.id fleetOwnerRole.dashboardAccessType
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
@@ -329,9 +330,11 @@ registerFleetOwner req = do
       Just NORMAL_FLEET -> FLEET_OWNER
       Nothing -> FLEET_OWNER
 
-buildFleetOwner :: (EncFlow m r) => FleetRegisterReq -> Id DRole.Role -> DRole.DashboardAccessType -> m PT.Person
-buildFleetOwner req roleId dashboardAccessType = do
-  pid <- generateGUID
+buildFleetOwner :: (EncFlow m r) => FleetRegisterReq -> Maybe Text -> Id DRole.Role -> DRole.DashboardAccessType -> m PT.Person
+buildFleetOwner req mbPersonId roleId dashboardAccessType = do
+  pid <- case mbPersonId of
+    Just personId -> return $ Id personId
+    Nothing -> generateGUID
   now <- getCurrentTime
   mobileNumber <- encrypt req.mobileNumber
   return
@@ -346,7 +349,8 @@ buildFleetOwner req roleId dashboardAccessType = do
         passwordHash = Nothing,
         dashboardAccessType = Just dashboardAccessType,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        verified = Nothing
       }
 
 validateFleetOwner :: Validate FleetRegisterReq

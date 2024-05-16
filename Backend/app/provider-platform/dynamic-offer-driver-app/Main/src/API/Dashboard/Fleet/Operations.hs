@@ -15,6 +15,7 @@
 module API.Dashboard.Fleet.Operations where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
 import qualified Domain.Action.Dashboard.Driver as DDriver
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -29,6 +30,7 @@ import Storage.Beam.SystemConfigs ()
 type API =
   "driver"
     :> ( AddVehicleForFleetAPI
+           :<|> RegisterRCForFleetWithoutDriverAPI
            :<|> GetAllVehicleForFleetAPI
            :<|> GetAllDriverForFleetAPI
            :<|> FleetUnlinkVehicleAPI
@@ -54,6 +56,16 @@ type AddVehicleForFleetAPI =
     :> "fleet"
     :> "addVehicle"
     :> ReqBody '[JSON] Common.AddVehicleReq
+    :> Post '[JSON] APISuccess
+
+------ Register RC without Driver so  here  we are passing the fleet owner Id as DriverId  api----
+
+type RegisterRCForFleetWithoutDriverAPI =
+  Capture "fleetOwnerId" Text
+    :> "fleet"
+    :> "addRC"
+    :> "withoutDriver"
+    :> ReqBody '[JSON] Common.RegisterRCReq
     :> Post '[JSON] APISuccess
 
 -- --- add vehicle for driver api so here  we are passing the fleet owner api----
@@ -161,6 +173,7 @@ type GetFleetVehicleAssociationAPI =
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city =
   addVehicleForFleet merchantId city
+    :<|> registerRCForFleetWithoutDriver merchantId city
     :<|> getAllVehicleForFleet merchantId city
     :<|> getAllDriverForFleet merchantId city
     :<|> fleetUnlinkVehicle merchantId city
@@ -176,6 +189,9 @@ handler merchantId city =
 
 addVehicleForFleet :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Text -> Common.AddVehicleReq -> FlowHandler APISuccess
 addVehicleForFleet merchantShortId opCity phoneNo mbMobileCountryCode fleetOwnerId = withFlowHandlerAPI . DDriver.addVehicleForFleet merchantShortId opCity phoneNo mbMobileCountryCode fleetOwnerId
+
+registerRCForFleetWithoutDriver :: ShortId DM.Merchant -> Context.City -> Text -> Common.RegisterRCReq -> FlowHandler APISuccess
+registerRCForFleetWithoutDriver merchantShortId opCity fleetOwnerId = withFlowHandlerAPI . DDriver.registerRCForFleetWithoutDriver merchantShortId opCity fleetOwnerId
 
 getAllVehicleForFleet :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> FlowHandler Common.ListVehicleRes
 getAllVehicleForFleet merchantShortId opCity fleetOwnerId mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getAllVehicleForFleet merchantShortId opCity fleetOwnerId mbLimit mbOffset

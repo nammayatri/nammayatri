@@ -84,6 +84,7 @@ updateFleetDriverActiveStatus fleetOwnerId driverId isActive = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamFDVA.isActive isActive,
+      Se.Set BeamFDVA.associatedTill $ Just now,
       Se.Set BeamFDVA.updatedAt now
     ]
     [Se.And [Se.Is BeamFDVA.driverId (Se.Eq driverId.getId), Se.Is BeamFDVA.fleetOwnerId (Se.Eq fleetOwnerId)]]
@@ -91,6 +92,13 @@ updateFleetDriverActiveStatus fleetOwnerId driverId isActive = do
 deleteByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 deleteByDriverId driverId = do
   deleteWithKV [Se.Is BeamFDVA.driverId $ Se.Eq driverId.getId]
+
+endFleetDriverAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Person -> m ()
+endFleetDriverAssociation fleetOwnerId (Id driverId) = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set BeamFDVA.associatedTill $ Just now, Se.Set BeamFDVA.isActive False]
+    [Se.And [Se.Is BeamFDVA.fleetOwnerId (Se.Eq fleetOwnerId), Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now), Se.Is BeamFDVA.driverId (Se.Eq driverId)]]
 
 instance FromTType' BeamFDVA.FleetDriverAssociation FleetDriverAssociation where
   fromTType' BeamFDVA.FleetDriverAssociationT {..} = do
@@ -109,6 +117,8 @@ instance ToTType' BeamFDVA.FleetDriverAssociation FleetDriverAssociation where
         BeamFDVA.driverId = getId driverId,
         BeamFDVA.fleetOwnerId = fleetOwnerId,
         BeamFDVA.isActive = isActive,
+        BeamFDVA.associatedOn = associatedOn,
+        BeamFDVA.associatedTill = associatedTill,
         BeamFDVA.createdAt = createdAt,
         BeamFDVA.updatedAt = updatedAt
       }
