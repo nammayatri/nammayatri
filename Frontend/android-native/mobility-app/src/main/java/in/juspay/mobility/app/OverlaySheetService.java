@@ -446,7 +446,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             holder.sourcePinCode.setVisibility(View.VISIBLE);
         } else if (remoteConfigs.hasKey("enable_pincode") && remoteConfigs.getBoolean("enable_pincode")) {
             new Thread(() -> {
-                String pincode = getPincodeFromRR(model.getSrcLat(), model.getSrcLng());
+                String pincode = RideRequestUtils.getPinCodeFromRR(model.getSrcLat(), model.getSrcLng(), OverlaySheetService.this);
                 mainLooper.post(() -> {
                     if (holder != null && holder.sourcePinCode != null) {
                         if (pincode != null) {
@@ -465,7 +465,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             holder.destinationPinCode.setVisibility(View.VISIBLE);
         } else if (remoteConfigs.hasKey("enable_pincode") && remoteConfigs.getBoolean("enable_pincode")) {
             new Thread(() -> {
-                String pincode = getPincodeFromRR(model.getDestLat(), model.getDestLng());
+                String pincode = RideRequestUtils.getPinCodeFromRR(model.getDestLat(), model.getDestLng(), OverlaySheetService.this);
                 mainLooper.post(() -> {
                     if (holder != null && holder.sourcePinCode != null) {
                         if (pincode != null) {
@@ -486,33 +486,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         handler.post(() -> {
             Toast.makeText(getApplicationContext(), getString(R.string.test_request_successful), Toast.LENGTH_SHORT).show();
         });
-    }
-    private String getPincodeFromRR(double latitude, double longitude) {
-        try {
-            Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
-            List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
-            if ( geocoder.isPresent() && addresses != null && addresses.size() > 0) {
-                Address address = addresses.get(0);
-                return matchRegex(address.getAddressLine(0), "\\b\\d{6}\\b");
-            } else {
-                return null;
-            }
-        } catch (Exception e) {
-            Exception exception = new Exception("Error in FetchingPinCode " + e);
-            FirebaseCrashlytics.getInstance().recordException(exception);
-            e.printStackTrace();
-            return null;
-        }
-    };
-
-    private static String matchRegex(String input, String regexPattern) {
-        Pattern pattern = Pattern.compile(regexPattern);
-        Matcher matcher = pattern.matcher(input);
-        if (matcher.find()) {
-            return matcher.group();
-        } else {
-            return null;
-        }
     }
 
     private void removeCard(int position) {
