@@ -9,7 +9,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime, throwError)
+import Kernel.Utils.Common (KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime, throwError)
 
 getConfigJSON :: Domain.Types.DocumentVerificationConfig.SupportedVehicleClasses -> Data.Aeson.Value
 getConfigJSON = \case

@@ -21,13 +21,13 @@ import Storage.Queries.OrphanInstances.Disability
 disabilityTranslationToDisability :: DisabilityTranslation -> Disability
 disabilityTranslationToDisability DisabilityTranslation {..} = Disability {id = Id (getId disabilityId), tag = disabilityTag, description = translation}
 
-findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Disability]
+findAll :: KvDbFlow m r => m [Disability]
 findAll = map disabilityTranslationToDisability <$> findAllWithKV [Se.Is BeamDT.disabilityId $ Se.Not $ Se.Eq ""]
 
-findByDisabilityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Disability)
+findByDisabilityId :: KvDbFlow m r => Text -> m (Maybe Disability)
 findByDisabilityId disabilityId = findOneWithKV [Se.Is BeamD.id $ Se.Eq disabilityId]
 
-findAllByLanguage :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Language -> m [Disability]
+findAllByLanguage :: KvDbFlow m r => Language -> m [Disability]
 findAllByLanguage language = do
   let langString = show language
   map disabilityTranslationToDisability <$> findAllWithDb [Se.Is BeamDT.language $ Se.Eq langString]

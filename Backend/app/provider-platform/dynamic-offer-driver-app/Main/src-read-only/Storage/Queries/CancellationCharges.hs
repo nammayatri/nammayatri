@@ -12,22 +12,20 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationCharges as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.CancellationCharges.CancellationCharges -> m ())
+create :: KvDbFlow m r => (Domain.Types.CancellationCharges.CancellationCharges -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.CancellationCharges.CancellationCharges] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.CancellationCharges.CancellationCharges] -> m ())
 createMany = traverse_ create
 
-findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.CancellationCharges.CancellationCharges -> m (Maybe Domain.Types.CancellationCharges.CancellationCharges))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.CancellationCharges.CancellationCharges -> m (Maybe Domain.Types.CancellationCharges.CancellationCharges))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.CancellationCharges.CancellationCharges -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.CancellationCharges.CancellationCharges -> m ())
 updateByPrimaryKey (Domain.Types.CancellationCharges.CancellationCharges {..}) = do
   updateWithKV
     [ Se.Set Beam.cancellationCharges cancellationCharges,

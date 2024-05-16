@@ -25,7 +25,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.FRFSConfig as Queries
 
-findByMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.FRFSConfig.FRFSConfig))
+findByMerchantOperatingCityId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.FRFSConfig.FRFSConfig))
 findByMerchantOperatingCityId merchantOperatingCityId = do
   Hedis.safeGet (makeIdKey merchantOperatingCityId) >>= \case
     Just a -> return $ Just a

@@ -10,21 +10,21 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FeedbackForm as Beam
 import Storage.Queries.FeedbackFormExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FeedbackForm.FeedbackForm -> m ())
+create :: KvDbFlow m r => (Domain.Types.FeedbackForm.FeedbackForm -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FeedbackForm.FeedbackForm] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.FeedbackForm.FeedbackForm] -> m ())
 createMany = traverse_ create
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FeedbackForm.FeedbackFormItem -> m (Maybe Domain.Types.FeedbackForm.FeedbackForm))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.FeedbackForm.FeedbackFormItem -> m (Maybe Domain.Types.FeedbackForm.FeedbackForm))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FeedbackForm.FeedbackForm -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.FeedbackForm.FeedbackForm -> m ())
 updateByPrimaryKey (Domain.Types.FeedbackForm.FeedbackForm {..}) = do
   updateWithKV
     [ Se.Set Beam.answer answer,

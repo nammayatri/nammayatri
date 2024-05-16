@@ -26,7 +26,7 @@ import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDet
 import Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab ()
 import Utils.Common.CacUtils
 
-getFarePolicySlabsDetailsSlabFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [BeamFPSS.FullFarePolicySlabsDetailsSlab]
+getFarePolicySlabsDetailsSlabFromCAC :: KvDbFlow m r => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [BeamFPSS.FullFarePolicySlabsDetailsSlab]
 getFarePolicySlabsDetailsSlabFromCAC context tenant id toss = do
   res :: (Maybe [BeamFPSS.FarePolicySlabsDetailsSlab]) <- getConfigListFromCac context tenant toss FarePolicySlabsDetailsSlab (Text.unpack id.getId)
   let config = mapM fromCacType (fromMaybe [] res)

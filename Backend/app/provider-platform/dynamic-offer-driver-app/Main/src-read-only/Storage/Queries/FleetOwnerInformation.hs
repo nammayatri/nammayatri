@@ -12,32 +12,30 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FleetOwnerInformation as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FleetOwnerInformation.FleetOwnerInformation -> m ())
+create :: KvDbFlow m r => (Domain.Types.FleetOwnerInformation.FleetOwnerInformation -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FleetOwnerInformation.FleetOwnerInformation] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.FleetOwnerInformation.FleetOwnerInformation] -> m ())
 createMany = traverse_ create
 
-updateFleetOwnerGstNumberAndEnabledStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateFleetOwnerGstNumberAndEnabledStatus :: KvDbFlow m r => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateFleetOwnerGstNumberAndEnabledStatus gstNumber enabled (Kernel.Types.Id.Id fleetOwnerPersonId) = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.gstNumber gstNumber, Se.Set Beam.enabled enabled, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq fleetOwnerPersonId]
 
-updateFleetOwnerVerifiedStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateFleetOwnerVerifiedStatus :: KvDbFlow m r => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateFleetOwnerVerifiedStatus verified (Kernel.Types.Id.Id fleetOwnerPersonId) = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.verified verified, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq fleetOwnerPersonId]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.FleetOwnerInformation.FleetOwnerInformation))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.FleetOwnerInformation.FleetOwnerInformation))
 findByPrimaryKey (Kernel.Types.Id.Id fleetOwnerPersonId) = do findOneWithKV [Se.And [Se.Is Beam.fleetOwnerPersonId $ Se.Eq fleetOwnerPersonId]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FleetOwnerInformation.FleetOwnerInformation -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.FleetOwnerInformation.FleetOwnerInformation -> m ())
 updateByPrimaryKey (Domain.Types.FleetOwnerInformation.FleetOwnerInformation {..}) = do
   _now <- getCurrentTime
   updateWithKV

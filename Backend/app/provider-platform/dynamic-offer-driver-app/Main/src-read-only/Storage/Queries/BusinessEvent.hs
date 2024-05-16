@@ -11,21 +11,21 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BusinessEvent as Beam
 import Storage.Queries.BusinessEventExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BusinessEvent.BusinessEvent -> m ())
+create :: KvDbFlow m r => (Domain.Types.BusinessEvent.BusinessEvent -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BusinessEvent.BusinessEvent] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.BusinessEvent.BusinessEvent] -> m ())
 createMany = traverse_ create
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BusinessEvent.BusinessEvent -> m (Maybe Domain.Types.BusinessEvent.BusinessEvent))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.BusinessEvent.BusinessEvent -> m (Maybe Domain.Types.BusinessEvent.BusinessEvent))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BusinessEvent.BusinessEvent -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.BusinessEvent.BusinessEvent -> m ())
 updateByPrimaryKey (Domain.Types.BusinessEvent.BusinessEvent {..}) = do
   updateWithKV
     [ Se.Set Beam.bookingId (Kernel.Types.Id.getId <$> bookingId),

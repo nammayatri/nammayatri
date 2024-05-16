@@ -10,26 +10,24 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FleetRCAssociation as Beam
 import Storage.Queries.FleetRCAssociationExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FleetRCAssociation.FleetRCAssociation -> m ())
+create :: KvDbFlow m r => (Domain.Types.FleetRCAssociation.FleetRCAssociation -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FleetRCAssociation.FleetRCAssociation] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.FleetRCAssociation.FleetRCAssociation] -> m ())
 createMany = traverse_ create
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FleetRCAssociation.FleetRCAssociation -> m (Maybe Domain.Types.FleetRCAssociation.FleetRCAssociation))
+findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.FleetRCAssociation.FleetRCAssociation -> m (Maybe Domain.Types.FleetRCAssociation.FleetRCAssociation))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FleetRCAssociation.FleetRCAssociation -> m (Maybe Domain.Types.FleetRCAssociation.FleetRCAssociation))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.FleetRCAssociation.FleetRCAssociation -> m (Maybe Domain.Types.FleetRCAssociation.FleetRCAssociation))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FleetRCAssociation.FleetRCAssociation -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.FleetRCAssociation.FleetRCAssociation -> m ())
 updateByPrimaryKey (Domain.Types.FleetRCAssociation.FleetRCAssociation {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -25,10 +25,9 @@ import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Beam.Functions as KBF
 import Kernel.Prelude
 import Kernel.Types.Cac
-import Kernel.Types.CacheFlow (CacheFlow)
-import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.Common (KvDbFlow)
 import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging
 import qualified Storage.Beam.GoHomeConfig as BeamGHC
@@ -37,20 +36,20 @@ import qualified Storage.CachedQueries.GoHomeConfig as GHC
 import qualified Storage.Queries.GoHomeConfig as Queries
 import qualified Utils.Common.CacUtils as CCU
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => GoHomeConfig -> m ()
+create :: KvDbFlow m r => GoHomeConfig -> m ()
 create = Queries.create
 
-getConfigsFromMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe GoHomeConfig)
+getConfigsFromMemory :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe GoHomeConfig)
 getConfigsFromMemory id = do
   isExpired <- DTC.updateConfig DTC.LastUpdatedGoHomeConfig
   getConfigFromMemoryCommon (DTC.GoHomeConfig id.getId) isExpired CM.isExperimentsRunning
 
-setConfigInMemory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe GoHomeConfig -> m (Maybe GoHomeConfig)
+setConfigInMemory :: KvDbFlow m r => Id MerchantOperatingCity -> Maybe GoHomeConfig -> m (Maybe GoHomeConfig)
 setConfigInMemory id config = do
   isExp <- DTC.inMemConfigUpdateTime DTC.LastUpdatedGoHomeConfig
   CCU.setConfigInMemoryCommon (DTC.GoHomeConfig id.getId) isExp config
 
-findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe CCU.CacKey -> m GoHomeConfig
+findByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> Maybe CCU.CacKey -> m GoHomeConfig
 findByMerchantOpCityId id stickyId = do
   let context = [(CCU.MerchantOperatingCityId, DA.toJSON id.getId)]
   inMemConfig <- getConfigsFromMemory id

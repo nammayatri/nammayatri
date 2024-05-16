@@ -15,7 +15,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCT
 import qualified Storage.Beam.Common as BeamCommon
@@ -29,9 +29,6 @@ create cs = do
   case callS of
     Nothing -> createWithKV cs
     Just _ -> pure ()
-
-findById :: KvDbFlow m r => Id CallStatus -> m (Maybe CallStatus)
-findById (Id callStatusId) = findOneWithKV [Se.Is BeamCT.id $ Se.Eq callStatusId]
 
 findByCallSid :: KvDbFlow m r => Text -> m (Maybe CallStatus)
 findByCallSid callSid = findOneWithKV [Se.Is BeamCT.callId $ Se.Eq callSid]

@@ -13,25 +13,25 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BlockedRoute as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BlockedRoute.BlockedRoute -> m ())
+create :: KvDbFlow m r => (Domain.Types.BlockedRoute.BlockedRoute -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BlockedRoute.BlockedRoute] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.BlockedRoute.BlockedRoute] -> m ())
 createMany = traverse_ create
 
 findAllBlockedRoutesByMerchantOperatingCity ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> m [Domain.Types.BlockedRoute.BlockedRoute])
 findAllBlockedRoutesByMerchantOperatingCity merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BlockedRoute.BlockedRoute -> m (Maybe Domain.Types.BlockedRoute.BlockedRoute))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.BlockedRoute.BlockedRoute -> m (Maybe Domain.Types.BlockedRoute.BlockedRoute))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BlockedRoute.BlockedRoute -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.BlockedRoute.BlockedRoute -> m ())
 updateByPrimaryKey (Domain.Types.BlockedRoute.BlockedRoute {..}) = do
   _now <- getCurrentTime
   updateWithKV

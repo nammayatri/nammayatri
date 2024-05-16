@@ -80,18 +80,6 @@ newtype CancelSearchReq = CancelSearchReq
   deriving (Show)
 
 cancel ::
-  ( KvDbFlow m r,
-    Esq.EsqDBReplicaFlow m r,
-    HasHttpClientOptions r c,
-    EncFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasLongDurationRetryCfg r c,
-    EventStreamFlow m r,
-    LT.HasLocationService m r,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
-    HasField "searchRequestExpirationSeconds" r NominalDiffTime,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
-  ) =>
   CancelReq ->
   DM.Merchant ->
   SRB.Booking ->

@@ -31,7 +31,7 @@ import Kernel.Types.Cac
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (KvDbFlow)
 import Kernel.Utils.Error
 import Kernel.Utils.Logging
 import qualified Lib.Types.SpecialLocation as SL
@@ -44,7 +44,7 @@ import Storage.Queries.DriverPoolConfig ()
 import Utils.Common.CacUtils as CCU
 
 getSearchDriverPoolConfig ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id MerchantOperatingCity ->
   Maybe Meters ->
   SL.Area ->
@@ -55,7 +55,7 @@ getSearchDriverPoolConfig merchantOpCityId mbDist area = do
   getdriverPoolConfigCond merchantOpCityId serviceTier tripCategory mbDist area Nothing
 
 getDriverPoolConfigFromCAC ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id MerchantOperatingCity ->
   Maybe DVST.ServiceTierType ->
   String ->
@@ -84,7 +84,7 @@ doubleToInt :: Double -> Int
 doubleToInt = floor
 
 getdriverPoolConfigCond ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id MerchantOperatingCity ->
   Maybe DVST.ServiceTierType ->
   String ->
@@ -103,7 +103,7 @@ getdriverPoolConfigCond merchantOpCityId serviceTier tripCategory dist' area sti
 
 -- TODO :: Need To Handle `area` Properly In CAC
 getConfigFromInMemory ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id MerchantOperatingCity ->
   Maybe DVST.ServiceTierType ->
   String ->
@@ -115,7 +115,7 @@ getConfigFromInMemory id mbvst tripCategory dist = do
   getConfigFromMemoryCommon (DTC.DriverPoolConfig id.getId (show mbvst) tripCategory roundeDist) isExpired CM.isExperimentsRunning
 
 setConfigInMemory ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id MerchantOperatingCity ->
   Maybe DVST.ServiceTierType ->
   String ->
@@ -128,7 +128,7 @@ setConfigInMemory id mbvst tripCategory dist config = do
   CCU.setConfigInMemoryCommon (DTC.DriverPoolConfig id.getId (show mbvst) tripCategory roundeDist) isExp config
 
 getDriverPoolConfig ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id MerchantOperatingCity ->
   DVST.ServiceTierType ->
   DTC.TripCategory ->
@@ -146,23 +146,23 @@ getDriverPoolConfig merchantOpCityId serviceTier tripCategory area tripDistance 
 
 ----------------------------------------------- Cached Queries Can't be handled by cac ------------------------------------------
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverPoolConfig -> m ()
+create :: KvDbFlow m r => DriverPoolConfig -> m ()
 create = CDP.create
 
-findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [DriverPoolConfig]
+findAllByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m [DriverPoolConfig]
 findAllByMerchantOpCityId = CDP.findAllByMerchantOpCityId
 
-findByMerchantOpCityIdAndTripDistance :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> m (Maybe DriverPoolConfig)
+findByMerchantOpCityIdAndTripDistance :: KvDbFlow m r => Id MerchantOperatingCity -> Meters -> m (Maybe DriverPoolConfig)
 findByMerchantOpCityIdAndTripDistance = CDP.findByMerchantOpCityIdAndTripDistance
 
-findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> Maybe DVST.ServiceTierType -> Text -> SL.Area -> m (Maybe DriverPoolConfig)
+findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh :: KvDbFlow m r => Id MerchantOperatingCity -> Meters -> Maybe DVST.ServiceTierType -> Text -> SL.Area -> m (Maybe DriverPoolConfig)
 findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh = CDP.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh
 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache = CDP.clearCache
 
-update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverPoolConfig -> m ()
+update :: KvDbFlow m r => DriverPoolConfig -> m ()
 update = CDP.update
 
 instance FromCacType SBMDPC.DriverPoolConfig DriverPoolConfig where

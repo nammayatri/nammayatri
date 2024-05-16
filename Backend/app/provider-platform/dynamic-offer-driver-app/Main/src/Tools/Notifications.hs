@@ -641,9 +641,7 @@ sendOverlay merchantOpCityId person req@FCM.FCMOverlayReq {..} = do
     body = FCMNotificationBody $ fromMaybe "Description" description
 
 sendUpdateLocOverlay ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
   FCM.FCMOverlayReq ->
@@ -815,9 +813,7 @@ notifyStopModification person entityData = do
           ]
 
 notifyOnRideStarted ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   DRide.Ride ->
   m ()
 notifyOnRideStarted ride = do

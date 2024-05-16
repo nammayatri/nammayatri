@@ -12,23 +12,21 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.LeaderBoardConfigs as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs -> m ())
+create :: KvDbFlow m r => (Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs] -> m ())
 createMany = traverse_ create
 
-findAllByMerchantOpCityId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs])
+findAllByMerchantOpCityId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs])
 findAllByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
 findLeaderBoardConfigbyType ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Domain.Types.LeaderBoardConfigs.LeaderBoardType -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs))
 findLeaderBoardConfigbyType leaderBoardType (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findOneWithKV
@@ -38,12 +36,10 @@ findLeaderBoardConfigbyType leaderBoardType (Kernel.Types.Id.Id merchantOperatin
         ]
     ]
 
-findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs -> m (Maybe Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs -> m (Maybe Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs -> m ())
 updateByPrimaryKey (Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs {..}) = do
   _now <- getCurrentTime
   updateWithKV

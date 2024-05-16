@@ -20,7 +20,6 @@ import qualified Client.Main as CM
 import qualified Data.Aeson as DA
 import qualified Domain.Types.Cac as DTC
 import Domain.Types.FarePolicy as Domain
-import Kernel.Beam.Functions (FromCacType (..))
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import Kernel.Types.Cac
@@ -36,20 +35,20 @@ import qualified Storage.CachedQueries.FarePolicy as SCQF
 import Storage.Queries.FarePolicy (FarePolicyHandler (..), fromTTypeFarePolicy)
 import Utils.Common.CacUtils as CCU
 
-fromCacTypeCustom :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ([(CacContext, Value)], String, Id FarePolicy, Int) -> BeamFP.FarePolicy -> m (Maybe FarePolicy)
+fromCacTypeCustom :: KvDbFlow m r => ([(CacContext, Value)], String, Id FarePolicy, Int) -> BeamFP.FarePolicy -> m (Maybe FarePolicy)
 fromCacTypeCustom (context, tenant, id', toss) fp = fromCacType (fp, context, tenant, id', toss)
 
-getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
+getConfigFromInMemory :: KvDbFlow m r => Id FarePolicy -> m (Maybe FarePolicy)
 getConfigFromInMemory id = do
   isExp <- DTC.updateConfig DTC.LastUpdatedFarePolicy
   getConfigFromMemoryCommon (DTC.FarePolicy id.getId) isExp CM.isExperimentsRunning
 
-setConfigInMemory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> Maybe FarePolicy -> m (Maybe FarePolicy)
+setConfigInMemory :: KvDbFlow m r => Id FarePolicy -> Maybe FarePolicy -> m (Maybe FarePolicy)
 setConfigInMemory id config = do
   isExp <- DTC.inMemConfigUpdateTime DTC.LastUpdatedFarePolicy
   CCU.setConfigInMemoryCommon (DTC.FarePolicy id.getId) isExp config
 
-findById :: (CacheFlow m r, EsqDBFlow m r) => Maybe CacKey -> Id FarePolicy -> m (Maybe FarePolicy)
+findById :: KvDbFlow m r => Maybe CacKey -> Id FarePolicy -> m (Maybe FarePolicy)
 findById stickeyKey id = do
   let context = [(FarePolicyId, DA.toJSON id.getId)]
   inMemConfig <- getConfigFromInMemory id
@@ -70,17 +69,17 @@ clearCache = SCQF.clearCache
 clearCacheById :: HedisFlow m r => Id FarePolicy -> m ()
 clearCacheById = SCQF.clearCacheById
 
-update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
+update :: KvDbFlow m r => FarePolicy -> m ()
 update = SCQF.update
 
-update' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
+update' :: KvDbFlow m r => FarePolicy -> m ()
 update' = SCQF.update'
 
 instance FromCacType (BeamFP.FarePolicy, [(CacContext, Value)], String, Id FarePolicy, Int) Domain.FarePolicy where
   fromCacType farePolicyCac@(farePolicyT, _, _, _, _) = fromTTypeFarePolicy (mkCacFarePolicyHandler farePolicyCac) farePolicyT
 
 mkCacFarePolicyHandler ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   (BeamFP.FarePolicy, [(CacContext, Value)], String, Id FarePolicy, Int) ->
   FarePolicyHandler m
 mkCacFarePolicyHandler (_farePolicy, context, tenant, id', toss) =

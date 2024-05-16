@@ -13,47 +13,47 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as Beam
 import Storage.Queries.DriverFeeExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverFee.DriverFee -> m ())
+create :: KvDbFlow m r => (Domain.Types.DriverFee.DriverFee -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverFee.DriverFee] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.DriverFee.DriverFee] -> m ())
 createMany = traverse_ create
 
-updateAmountPaidByCoins :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
+updateAmountPaidByCoins :: KvDbFlow m r => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
 updateAmountPaidByCoins amountPaidByCoin (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.amountPaidByCoin amountPaidByCoin, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
 updateAutopayPaymentStageById ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Maybe Domain.Types.DriverFee.AutopayPaymentStage -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
 updateAutopayPaymentStageById autopayPaymentStage stageUpdatedAt (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.autopayPaymentStage autopayPaymentStage, Se.Set Beam.stageUpdatedAt stageUpdatedAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-updateBillNumberById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
+updateBillNumberById :: KvDbFlow m r => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
 updateBillNumberById billNumber (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.billNumber billNumber, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-updateFeeType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverFee.FeeType -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
+updateFeeType :: KvDbFlow m r => (Domain.Types.DriverFee.FeeType -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
 updateFeeType feeType (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.feeType feeType, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-updateFeeWithoutDiscount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
+updateFeeWithoutDiscount :: KvDbFlow m r => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
 updateFeeWithoutDiscount feeWithoutDiscount (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.feeWithoutDiscount feeWithoutDiscount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-updateNotificationRetryCountById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
+updateNotificationRetryCountById :: KvDbFlow m r => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
 updateNotificationRetryCountById notificationRetryCount (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.notificationRetryCount notificationRetryCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
 updateOfferAndPlanDetails ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Plan.Plan) -> Kernel.Prelude.Maybe Domain.Types.Plan.PaymentMode -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
 updateOfferAndPlanDetails offerId planOfferTitle planId planMode (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
@@ -66,18 +66,18 @@ updateOfferAndPlanDetails offerId planOfferTitle planId planMode (Kernel.Types.I
     ]
     [Se.Is Beam.id $ Se.Eq id]
 
-updateOfferId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
+updateOfferId :: KvDbFlow m r => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
 updateOfferId offerId (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.offerId offerId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-updateRetryCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
+updateRetryCount :: KvDbFlow m r => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
 updateRetryCount schedulerTryCount (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.schedulerTryCount schedulerTryCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m (Maybe Domain.Types.DriverFee.DriverFee))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m (Maybe Domain.Types.DriverFee.DriverFee))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverFee.DriverFee -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.DriverFee.DriverFee -> m ())
 updateByPrimaryKey (Domain.Types.DriverFee.DriverFee {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -50,3 +50,6 @@ pushTxnLogsAPI config req = do
 
 instance ToJSON NoContent where
   toJSON _ = A.Null
+
+instance FromJSON NoContent where
+  parseJSON _ = pure NoContent

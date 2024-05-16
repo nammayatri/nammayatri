@@ -11,7 +11,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as BeamCR
 import Storage.Queries.OrphanInstances.CancellationReason

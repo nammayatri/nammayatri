@@ -23,7 +23,7 @@ import Kernel.Utils.Common
 import qualified Storage.Queries.VehicleDetails as QVehicleDetails
 import qualified Storage.Queries.VehicleDetailsExtra as QVehicleDetailsExtra
 
-findAllVehicleDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [VehicleDetails]
+findAllVehicleDetails :: KvDbFlow m r => m [VehicleDetails]
 findAllVehicleDetails = do
   Hedis.safeGet makeVehicleDetailsKey >>= \case
     Just a -> return a
@@ -39,7 +39,7 @@ cacheVehicleDetails vehicleDetails = do
 makeVehicleDetailsKey :: Text
 makeVehicleDetailsKey = "CachedQueries:ValueAddNP:VehicleDetails"
 
-findByMake :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m ([Domain.Types.VehicleDetails.VehicleDetails]))
+findByMake :: KvDbFlow m r => (Data.Text.Text -> m ([Domain.Types.VehicleDetails.VehicleDetails]))
 findByMake make = do
   Hedis.safeGet (makeVehicleDetailsMakeKey make) >>= \case
     Just a -> return a
@@ -55,7 +55,7 @@ cacheVehicleDetailsMake make vehicleDetails = do
 makeVehicleDetailsMakeKey :: Text -> Text
 makeVehicleDetailsMakeKey make = "CachedQueries:ValueAddNP:VehicleDetails:Make-" <> make
 
-findByMakeAndModel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> Data.Text.Text -> m (Maybe Domain.Types.VehicleDetails.VehicleDetails))
+findByMakeAndModel :: KvDbFlow m r => (Data.Text.Text -> Data.Text.Text -> m (Maybe Domain.Types.VehicleDetails.VehicleDetails))
 findByMakeAndModel make model = do
   Hedis.safeGet (makeVehicleDetailsMakeModelKey make model) >>= \case
     Just a -> return a

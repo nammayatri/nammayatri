@@ -93,7 +93,7 @@ deleteByDriverId :: KvDbFlow m r => Id Person -> m ()
 deleteByDriverId driverId = do
   deleteWithKV [Se.Is BeamFDVA.driverId $ Se.Eq driverId.getId]
 
-endFleetDriverAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Person -> m ()
+endFleetDriverAssociation :: KvDbFlow m r => Text -> Id Person -> m ()
 endFleetDriverAssociation fleetOwnerId (Id driverId) = do
   now <- getCurrentTime
   updateWithKV

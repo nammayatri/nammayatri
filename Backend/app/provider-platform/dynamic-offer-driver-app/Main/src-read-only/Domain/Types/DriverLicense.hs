@@ -34,9 +34,9 @@ data DriverLicenseE e = DriverLicense
   }
   deriving (Generic)
 
-type DriverLicense = DriverLicenseE ('AsEncrypted)
+type DriverLicense = DriverLicenseE 'AsEncrypted
 
-type DecryptedDriverLicense = DriverLicenseE ('AsUnencrypted)
+type DecryptedDriverLicense = DriverLicenseE 'AsUnencrypted
 
 instance EncryptedItem DriverLicense where
   type Unencrypted DriverLicense = (DecryptedDriverLicense, HashSalt)

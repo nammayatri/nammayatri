@@ -344,7 +344,7 @@ buildPerson ::
     EncFlow m r,
     DB.EsqDBReplicaFlow m r,
     KvDbFlow m r,
-    Redis.HedisFlow m r,
+    Redis.HedisFlow m r
   ) =>
   AuthReq ->
   SP.IdentifierType ->

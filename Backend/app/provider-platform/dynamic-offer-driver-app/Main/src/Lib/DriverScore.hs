@@ -28,7 +28,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id (Id, cast)
-import Kernel.Utils.Common (CacheFlow, Currency, KvDbFlow,Forkable (fork), HighPrecMoney, MonadGuid (generateGUIDText), fromMaybeM, getCurrentTime, getLocalCurrentTime, highPrecMetersToMeters, logDebug)
+import Kernel.Utils.Common (Currency, Forkable (fork), HighPrecMoney, KvDbFlow, MonadGuid (generateGUIDText), fromMaybeM, getCurrentTime, getLocalCurrentTime, highPrecMetersToMeters, logDebug)
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
 import qualified Storage.Cac.TransporterConfig as SCTC

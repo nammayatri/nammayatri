@@ -89,7 +89,7 @@ castRideById rideId _ = do
     castRide ride =
       Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast ride.merchantOperatingCityId) ride.createdAt Nothing
 
-castMOCityById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.MerchantOperatingCity -> m (Maybe Common.MerchantOperatingCity)
+castMOCityById :: (KvDbFlow m r, EsqDBReplicaFlow m r) => Id Common.MerchantOperatingCity -> m (Maybe Common.MerchantOperatingCity)
 castMOCityById moCityId = do
   moCity <- CQMOC.findById (cast moCityId)
   return $ fmap castMOCity moCity
@@ -157,7 +157,7 @@ castCreateTicket merchantId merchantOpCityId = TT.createTicket (cast merchantId)
 castUpdateTicket :: (EncFlow m r, KvDbFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp
 castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
 
-buildMerchantConfig :: KvDbFlow m r, HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal] => Id Common.Merchant -> Id Common.MerchantOperatingCity -> Id Common.Person -> m Common.MerchantConfig
+buildMerchantConfig :: (KvDbFlow m r, HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal]) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> Id Common.Person -> m Common.MerchantConfig
 buildMerchantConfig _merchantId merchantOpCityId personId = do
   transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   appBackendBapInternal <- asks (.appBackendBapInternal)

@@ -33,17 +33,17 @@ import Storage.CachedQueries.Merchant.TransporterConfig as CMTC
 import Storage.Queries.Merchant.TransporterConfig ()
 import qualified Utils.Common.CacUtils as CCU
 
-getConfigFromMemory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
+getConfigFromMemory :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
 getConfigFromMemory id = do
   isExp <- DTC.updateConfig DTC.LastUpdatedTransporterConfig
   getConfigFromMemoryCommon (DTC.TransporterConfig id.getId) isExp CM.isExperimentsRunning
 
-setConfigInMemory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe TransporterConfig -> m (Maybe TransporterConfig)
+setConfigInMemory :: KvDbFlow m r => Id MerchantOperatingCity -> Maybe TransporterConfig -> m (Maybe TransporterConfig)
 setConfigInMemory id config = do
   isExp <- DTC.inMemConfigUpdateTime DTC.LastUpdatedTransporterConfig
   CCU.setConfigInMemoryCommon (DTC.TransporterConfig id.getId) isExp config
 
-findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe CCU.CacKey -> m (Maybe TransporterConfig)
+findByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> Maybe CCU.CacKey -> m (Maybe TransporterConfig)
 findByMerchantOpCityId id mbstickId = do
   inMemConfig <- getConfigFromMemory id
   let context = [(CCU.MerchantOperatingCityId, toJSON id.getId)]
@@ -57,20 +57,20 @@ findByMerchantOpCityId id mbstickId = do
 
 --------------------------------------------------------- Things can't be handled by cac --------------------------------------------------
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m ()
+create :: KvDbFlow m r => TransporterConfig -> m ()
 create = CMTC.create
 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache = CMTC.clearCache
 
-updateFCMConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> BaseUrl -> Text -> m ()
+updateFCMConfig :: KvDbFlow m r => Id MerchantOperatingCity -> BaseUrl -> Text -> m ()
 updateFCMConfig = CMTC.updateFCMConfig
 
-updateReferralLinkPassword :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> m ()
+updateReferralLinkPassword :: KvDbFlow m r => Id MerchantOperatingCity -> Text -> m ()
 updateReferralLinkPassword = CMTC.updateReferralLinkPassword
 
-update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m ()
+update :: KvDbFlow m r => TransporterConfig -> m ()
 update = CMTC.update
 
 instance KBF.FromCacType SBMT.TransporterConfig TransporterConfig where

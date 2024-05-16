@@ -10,21 +10,21 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverBlockReason as Beam
 import Storage.Queries.DriverBlockReasonExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverBlockReason.DriverBlockReason -> m ())
+create :: KvDbFlow m r => (Domain.Types.DriverBlockReason.DriverBlockReason -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverBlockReason.DriverBlockReason] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.DriverBlockReason.DriverBlockReason] -> m ())
 createMany = traverse_ create
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverBlockReason.DriverBlockReason -> m (Maybe Domain.Types.DriverBlockReason.DriverBlockReason))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.DriverBlockReason.DriverBlockReason -> m (Maybe Domain.Types.DriverBlockReason.DriverBlockReason))
 findByPrimaryKey (Kernel.Types.Id.Id reasonCode) = do findOneWithKV [Se.And [Se.Is Beam.reasonCode $ Se.Eq reasonCode]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverBlockReason.DriverBlockReason -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.DriverBlockReason.DriverBlockReason -> m ())
 updateByPrimaryKey (Domain.Types.DriverBlockReason.DriverBlockReason {..}) = do
   _now <- getCurrentTime
   updateWithKV

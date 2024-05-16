@@ -9,7 +9,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (MonadFlow, fromMaybeM, getCurrentTime)
 
 getCreatedAt :: MonadFlow m => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> m (Kernel.Prelude.UTCTime))
 getCreatedAt createdAt = do

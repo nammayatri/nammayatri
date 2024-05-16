@@ -38,17 +38,17 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as CMDP
 import Utils.Common.CacUtils as CCU
 
-getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
+getConfigFromInMemory :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
 getConfigFromInMemory id = do
   isExp <- DTC.updateConfig DTC.LastUpdatedDriverPoolConfig
   getConfigFromMemoryCommon (DTC.DriverIntelligentPoolConfig id.getId) isExp CM.isExperimentsRunning
 
-setConfigInMemory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe DriverIntelligentPoolConfig -> m (Maybe DriverIntelligentPoolConfig)
+setConfigInMemory :: KvDbFlow m r => Id MerchantOperatingCity -> Maybe DriverIntelligentPoolConfig -> m (Maybe DriverIntelligentPoolConfig)
 setConfigInMemory id config = do
   isExp <- DTC.inMemConfigUpdateTime DTC.LastUpdatedDriverIntelligentPoolConfig
   CCU.setConfigInMemoryCommon (DTC.DriverIntelligentPoolConfig id.getId) isExp config
 
-findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe CacKey -> m (Maybe DriverIntelligentPoolConfig)
+findByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> Maybe CacKey -> m (Maybe DriverIntelligentPoolConfig)
 findByMerchantOpCityId id stickeyKey = do
   let context = [(CCU.MerchantOperatingCityId, DA.toJSON id.getId)]
   inMemConfig <- getConfigFromInMemory id
@@ -61,14 +61,14 @@ findByMerchantOpCityId id stickeyKey = do
   setConfigInMemory id config
 
 ---------------------------------------------------------cached queries for dashboard---------------------------------------------------------
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverIntelligentPoolConfig -> m ()
+create :: KvDbFlow m r => DriverIntelligentPoolConfig -> m ()
 create = CMDP.create
 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache = CMDP.clearCache
 
-update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverIntelligentPoolConfig -> m ()
+update :: KvDbFlow m r => DriverIntelligentPoolConfig -> m ()
 update = CMDP.update
 
 instance FromCacType SBMDIPC.DriverIntelligentPoolConfig DriverIntelligentPoolConfig where

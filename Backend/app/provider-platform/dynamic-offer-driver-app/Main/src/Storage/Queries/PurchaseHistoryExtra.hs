@@ -10,14 +10,14 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.PurchaseHistory as BeamDC
 import Storage.Queries.OrphanInstances.PurchaseHistory
 
 -- Extra code goes here --
 
-getPurchasedHistory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> Maybe Integer -> Maybe Integer -> m [PurchaseHistory]
+getPurchasedHistory :: KvDbFlow m r => Id SP.Person -> Maybe Integer -> Maybe Integer -> m [PurchaseHistory]
 getPurchasedHistory (Id driverId) mbLimit mbOffset = do
   let limitVal = maybe 10 fromInteger mbLimit
       offsetVal = maybe 0 fromInteger mbOffset
@@ -27,5 +27,5 @@ getPurchasedHistory (Id driverId) mbLimit mbOffset = do
     (Just limitVal)
     (Just offsetVal)
 
-createPurchaseHistory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => PurchaseHistory -> m ()
+createPurchaseHistory :: KvDbFlow m r => PurchaseHistory -> m ()
 createPurchaseHistory = createWithKV

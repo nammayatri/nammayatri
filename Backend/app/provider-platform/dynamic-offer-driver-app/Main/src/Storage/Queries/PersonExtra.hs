@@ -81,7 +81,7 @@ updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
 findAdminsByMerchantId :: KvDbFlow m r => Id Merchant -> m [Person]
 findAdminsByMerchantId (Id merchantId) = findAllWithDb [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.ADMIN]]
 
-findByEmail :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> m (Maybe Person)
+findByEmail :: KvDbFlow m r => Maybe Text -> m (Maybe Person)
 findByEmail email = findOneWithKV [Se.Is BeamP.email $ Se.Eq email]
 
 findAllDriversWithInfoAndVehicle ::
@@ -528,7 +528,7 @@ updateUsedCoins (Id driverId) usedCoinValue = updateWithKV [Se.Set BeamP.usedCoi
 updateMerchantOperatingCityId :: KvDbFlow m r => Id Person -> Id DMOC.MerchantOperatingCity -> m ()
 updateMerchantOperatingCityId (Id driverId) (Id opCityId) = updateWithKV [Se.Set BeamP.merchantOperatingCityId (Just opCityId)] [Se.Is BeamP.id $ Se.Eq driverId]
 
-updateTag :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> [Text] -> m ()
+updateTag :: KvDbFlow m r => Id Person -> [Text] -> m ()
 updateTag (Id driverId) tags = updateOneWithKV [Se.Set BeamP.driverTag $ Just tags] [Se.Is BeamP.id $ Se.Eq driverId]
 
 updateMobileNumberAndCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Person -> m ()

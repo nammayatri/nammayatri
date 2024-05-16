@@ -29,7 +29,9 @@ createMany = traverse_ create
 findByDriverIdAndDate :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m (Maybe Domain.Types.DailyStats.DailyStats))
 findByDriverIdAndDate (Kernel.Types.Id.Id driverId) merchantLocalDate = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
 
-updateByDriverId :: KvDbFlow m r => (Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Int -> Kernel.Types.Common.Meters -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m ())
+updateByDriverId ::
+  KvDbFlow m r =>
+  (Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Int -> Kernel.Types.Common.Meters -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m ())
 updateByDriverId totalEarnings numRides totalDistance (Kernel.Types.Id.Id driverId) merchantLocalDate = do
   _now <- getCurrentTime
   updateOneWithKV

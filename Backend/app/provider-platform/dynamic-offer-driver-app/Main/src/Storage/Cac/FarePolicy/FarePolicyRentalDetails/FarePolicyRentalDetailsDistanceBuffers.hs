@@ -20,7 +20,7 @@ import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRenta
 import Storage.Queries.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers ()
 import Utils.Common.CacUtils
 
-findFarePolicyRentalDetailsDistanceBuffersFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [BeamFPRDDB.FullFarePolicyRentalDetailsDistanceBuffers]
+findFarePolicyRentalDetailsDistanceBuffersFromCAC :: KvDbFlow m r => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [BeamFPRDDB.FullFarePolicyRentalDetailsDistanceBuffers]
 findFarePolicyRentalDetailsDistanceBuffersFromCAC context tenant id toss = do
   res :: (Maybe [BeamFPRDDB.FarePolicyRentalDetailsDistanceBuffers]) <- getConfigListFromCac context tenant toss FarePolicyRentalDetailsDistanceBuffers (Text.unpack id.getId)
   let config = mapM fromCacType (fromMaybe [] res)

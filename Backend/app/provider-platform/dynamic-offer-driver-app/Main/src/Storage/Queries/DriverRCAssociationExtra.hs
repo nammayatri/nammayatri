@@ -36,7 +36,7 @@ findAllByDriverId driverId = do
   return $ linkDriversRC rcAssocs regCerts
 
 findAllActiveAssociationByRCId ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id VehicleRegistrationCertificate ->
   m [DriverRCAssociation]
 findAllActiveAssociationByRCId (Id rcId) = do

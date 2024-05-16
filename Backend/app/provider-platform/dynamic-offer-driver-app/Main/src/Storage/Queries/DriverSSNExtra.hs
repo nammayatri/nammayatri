@@ -11,14 +11,14 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverSSN as Beam
 import Storage.Queries.OrphanInstances.DriverSSN
 
 -- Extra code goes here --
 
-upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => (Domain.Types.DriverSSN.DriverSSN -> m ())
+upsert :: KvDbFlow m r => (Domain.Types.DriverSSN.DriverSSN -> m ())
 upsert driverSsn@(Domain.Types.DriverSSN.DriverSSN {..}) = do
   res <- findOneWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
   if isJust res

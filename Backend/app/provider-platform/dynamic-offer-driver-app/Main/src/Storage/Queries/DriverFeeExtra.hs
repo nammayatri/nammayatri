@@ -795,7 +795,7 @@ updateAllExecutionPendingToManualOverdueByDriverIdForServiceName driverId servic
         ]
     ]
 
-updateBadDebtDateAllDriverFeeIds :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> [Id DriverFee] -> TransporterConfig -> m ()
+updateBadDebtDateAllDriverFeeIds :: KvDbFlow m r => Id Merchant -> [Id DriverFee] -> TransporterConfig -> m ()
 updateBadDebtDateAllDriverFeeIds merchantId driverFeeIds transporterConfig = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let lastDayOfPreviousMonth = getLastDayOfMonth now

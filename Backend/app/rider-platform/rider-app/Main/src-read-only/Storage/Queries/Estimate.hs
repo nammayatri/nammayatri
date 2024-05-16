@@ -29,12 +29,10 @@ findByBPPEstimateId (Kernel.Types.Id.Id bppEstimateId) = do findOneWithKV [Se.Is
 findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findBySRIdAndStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.Estimate.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m (Maybe Domain.Types.Estimate.Estimate))
+findBySRIdAndStatus :: KvDbFlow m r => (Domain.Types.Estimate.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m (Maybe Domain.Types.Estimate.Estimate))
 findBySRIdAndStatus status (Kernel.Types.Id.Id requestId) = do findOneWithKV [Se.And [Se.Is Beam.status $ Se.Eq status, Se.Is Beam.requestId $ Se.Eq requestId]]
 
-updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Estimate.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
+updateStatus :: KvDbFlow m r => (Domain.Types.Estimate.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
 updateStatus status (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.updatedAt _now, Se.Set Beam.status status] [Se.Is Beam.id $ Se.Eq id]
 
 updateStatusByRequestId :: KvDbFlow m r => (Domain.Types.Estimate.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())

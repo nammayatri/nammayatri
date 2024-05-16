@@ -11,21 +11,21 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.PurchaseHistory as Beam
 import Storage.Queries.PurchaseHistoryExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PurchaseHistory.PurchaseHistory -> m ())
+create :: KvDbFlow m r => (Domain.Types.PurchaseHistory.PurchaseHistory -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PurchaseHistory.PurchaseHistory] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.PurchaseHistory.PurchaseHistory] -> m ())
 createMany = traverse_ create
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PurchaseHistory.PurchaseHistory -> m (Maybe Domain.Types.PurchaseHistory.PurchaseHistory))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.PurchaseHistory.PurchaseHistory -> m (Maybe Domain.Types.PurchaseHistory.PurchaseHistory))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PurchaseHistory.PurchaseHistory -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.PurchaseHistory.PurchaseHistory -> m ())
 updateByPrimaryKey (Domain.Types.PurchaseHistory.PurchaseHistory {..}) = do
   _now <- getCurrentTime
   updateWithKV

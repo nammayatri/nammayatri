@@ -164,7 +164,7 @@ data FarePolicyHandler m = FarePolicyHandler
   }
 
 mkBeamFarePolicyHandler ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   BeamFP.FarePolicy ->
   FarePolicyHandler m
 mkBeamFarePolicyHandler BeamFP.FarePolicyT {..} =
@@ -176,7 +176,7 @@ mkBeamFarePolicyHandler BeamFP.FarePolicyT {..} =
     }
 
 fromTTypeFarePolicy ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   FarePolicyHandler m ->
   BeamFP.FarePolicy ->
   m (Maybe Domain.FarePolicy)

@@ -41,7 +41,7 @@ import qualified Storage.Queries.Merchant.TransporterConfig as Queries
 create :: KvDbFlow m r => TransporterConfig -> m ()
 create = Queries.create
 
-getTransporterConfigFromDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
+getTransporterConfigFromDB :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
 getTransporterConfigFromDB id = do
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a

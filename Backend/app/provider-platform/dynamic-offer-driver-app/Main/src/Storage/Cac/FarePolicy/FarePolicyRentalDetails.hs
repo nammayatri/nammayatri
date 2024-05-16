@@ -21,7 +21,7 @@ import qualified Storage.Cac.FarePolicy.FarePolicyRentalDetails.FarePolicyRental
 import Storage.Queries.FarePolicy.FarePolicyRentalDetails (fromTTypeFarePolicyRentalDetails)
 import Utils.Common.CacUtils
 
-findFarePolicyRentalDetailsFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id Domain.FarePolicy -> Int -> m (Maybe Domain.FullFarePolicyRentalDetails)
+findFarePolicyRentalDetailsFromCAC :: KvDbFlow m r => [(CacContext, Value)] -> String -> Id Domain.FarePolicy -> Int -> m (Maybe Domain.FullFarePolicyRentalDetails)
 findFarePolicyRentalDetailsFromCAC context tenant id toss = do
   res :: (Maybe BeamFPRD.FarePolicyRentalDetails) <- getConfigFromCac context tenant toss FarePolicyRentalDetails
   case res of

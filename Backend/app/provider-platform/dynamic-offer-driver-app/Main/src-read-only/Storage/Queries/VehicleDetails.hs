@@ -11,30 +11,30 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.VehicleDetails as Beam
 import Storage.Queries.VehicleDetailsExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleDetails.VehicleDetails -> m ())
+create :: KvDbFlow m r => (Domain.Types.VehicleDetails.VehicleDetails -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VehicleDetails.VehicleDetails] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.VehicleDetails.VehicleDetails] -> m ())
 createMany = traverse_ create
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleDetails.VehicleDetails -> m (Maybe Domain.Types.VehicleDetails.VehicleDetails))
+findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.VehicleDetails.VehicleDetails -> m (Maybe Domain.Types.VehicleDetails.VehicleDetails))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByMake :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m [Domain.Types.VehicleDetails.VehicleDetails])
+findByMake :: KvDbFlow m r => (Data.Text.Text -> m [Domain.Types.VehicleDetails.VehicleDetails])
 findByMake make = do findAllWithKV [Se.Is Beam.make $ Se.Eq make]
 
-findByMakeAndModel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> Data.Text.Text -> m (Maybe Domain.Types.VehicleDetails.VehicleDetails))
+findByMakeAndModel :: KvDbFlow m r => (Data.Text.Text -> Data.Text.Text -> m (Maybe Domain.Types.VehicleDetails.VehicleDetails))
 findByMakeAndModel make model = do findOneWithKV [Se.And [Se.Is Beam.make $ Se.Eq make, Se.Is Beam.model $ Se.Eq model]]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleDetails.VehicleDetails -> m (Maybe Domain.Types.VehicleDetails.VehicleDetails))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.VehicleDetails.VehicleDetails -> m (Maybe Domain.Types.VehicleDetails.VehicleDetails))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleDetails.VehicleDetails -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.VehicleDetails.VehicleDetails -> m ())
 updateByPrimaryKey (Domain.Types.VehicleDetails.VehicleDetails {..}) = do
   updateWithKV
     [ Se.Set Beam.acAvailable acAvailable,

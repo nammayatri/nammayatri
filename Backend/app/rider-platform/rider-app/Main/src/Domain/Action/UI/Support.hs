@@ -160,7 +160,7 @@ buildDBIssue (Id customerId) SendIssueReq {..} = do
         updatedAt = time
       }
 
-mkTicket :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DIssue.Issue -> Person.Person -> Maybe Text -> Text -> Text -> m Ticket.CreateTicketReq
+mkTicket :: KvDbFlow m r => DIssue.Issue -> Person.Person -> Maybe Text -> Text -> Text -> m Ticket.CreateTicketReq
 mkTicket issue person phoneNumber disposition queue = do
   rideDesc <- mkRideInfo Nothing person Nothing
   pure $

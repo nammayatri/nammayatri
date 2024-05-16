@@ -52,7 +52,6 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto hiding (count, isNothing, on)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error

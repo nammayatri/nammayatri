@@ -27,7 +27,7 @@ import qualified Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyP
 import Storage.Queries.FarePolicy.FarePolicyProgressiveDetails (fromTTypeFarePolicyProgressiveDetails)
 import Utils.Common.CacUtils
 
-getFPProgressiveDetailsFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m (Maybe DFP.FullFarePolicyProgressiveDetails)
+getFPProgressiveDetailsFromCAC :: KvDbFlow m r => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m (Maybe DFP.FullFarePolicyProgressiveDetails)
 getFPProgressiveDetailsFromCAC context tenant id toss = do
   res :: (Maybe BeamFPPD.FarePolicyProgressiveDetails) <- getConfigFromCac context tenant toss FarePolicyProgressiveDetails
   case res of

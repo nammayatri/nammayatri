@@ -12,7 +12,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 
 valueToJsonData :: (Kernel.Prelude.Maybe Data.Aeson.Value -> Domain.Types.MerchantMessage.MerchantMessageDefaultDataJSON)
 valueToJsonData jsonData = fromMaybe def (valueToJsonData' =<< jsonData)

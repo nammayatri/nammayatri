@@ -37,13 +37,13 @@ acUsageRestrictionKey = "AC_USAGE_RESTRICTED"
 acUsageRestrictionLiftedKey :: Text
 acUsageRestrictionLiftedKey = "AC_USAGE_RESTRICTION_LIFTED"
 
-sendACUsageRestrictionLiftedOverlay :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> m ()
+sendACUsageRestrictionLiftedOverlay :: KvDbFlow m r => DP.Person -> m ()
 sendACUsageRestrictionLiftedOverlay = sendACOverlay acUsageRestrictionLiftedKey
 
-sendACUsageRestrictionOverlay :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> m ()
+sendACUsageRestrictionOverlay :: KvDbFlow m r => DP.Person -> m ()
 sendACUsageRestrictionOverlay = sendACOverlay acUsageRestrictionKey
 
-sendACOverlay :: (CacheFlow m r, EsqDBFlow m r) => Text -> DP.Person -> m ()
+sendACOverlay :: KvDbFlow m r => Text -> DP.Person -> m ()
 sendACOverlay overlayKey person = do
   mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf person.merchantOperatingCityId overlayKey (fromMaybe ENGLISH person.language) Nothing
   whenJust mOverlay $ \overlay -> do

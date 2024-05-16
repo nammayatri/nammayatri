@@ -14,12 +14,12 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, Currency, EsqDBFlow, HighPrecMoney, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (Currency, HighPrecMoney, KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
 import qualified Storage.Queries.Person as QP
 
-getMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => (Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Text -> m (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity))
+getMerchantOperatingCityId :: KvDbFlow m r => (Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Text -> m (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity))
 getMerchantOperatingCityId merchantOperatingCityId driverId id = do
   merchantOperatingCityId' <- case merchantOperatingCityId of
     Nothing -> do
@@ -30,7 +30,7 @@ getMerchantOperatingCityId merchantOperatingCityId driverId id = do
     Just mOpCityId -> return $ Id mOpCityId
   return merchantOperatingCityId'
 
-updateMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Id MerchantOperatingCity -> m ()
+updateMerchantOperatingCityId :: KvDbFlow m r => Id DriverFee -> Id MerchantOperatingCity -> m ()
 updateMerchantOperatingCityId driverFeeId merchantOperatingCityId = do
   updateOneWithKV
     [Se.Set BeamDF.merchantOperatingCityId (Just merchantOperatingCityId.getId)]

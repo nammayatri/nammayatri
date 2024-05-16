@@ -52,7 +52,7 @@ data RouteServiceability = RouteServiceability
     routeDuration :: Seconds
   }
 
-checkRouteServiceability :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> (Int, RoutePoints, Meters, Seconds) -> [Maps.RouteInfo] -> m RouteServiceability
+checkRouteServiceability :: (KvDbFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> (Int, RoutePoints, Meters, Seconds) -> [Maps.RouteInfo] -> m RouteServiceability
 checkRouteServiceability merchantOperatingCityId (customerPrefferedSearchRouteIdx, customerPrefferedSearchRoutePoints, customerPrefferedSearchRouteDistance, customerPrefferedSearchRouteDuration) routes = do
   let route' =
         if null routes

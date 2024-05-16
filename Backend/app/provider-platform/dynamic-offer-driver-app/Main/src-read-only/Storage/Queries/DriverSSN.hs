@@ -11,24 +11,24 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverSSN as Beam
 import Storage.Queries.DriverSSNExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverSSN.DriverSSN -> m ())
+create :: KvDbFlow m r => (Domain.Types.DriverSSN.DriverSSN -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverSSN.DriverSSN] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.DriverSSN.DriverSSN] -> m ())
 createMany = traverse_ create
 
-findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverSSN.DriverSSN))
+findByDriverId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverSSN.DriverSSN))
 findByDriverId (Kernel.Types.Id.Id driverId) = do findOneWithKV [Se.Is Beam.driverId $ Se.Eq driverId]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverSSN.DriverSSN -> m (Maybe Domain.Types.DriverSSN.DriverSSN))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.DriverSSN.DriverSSN -> m (Maybe Domain.Types.DriverSSN.DriverSSN))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverSSN.DriverSSN -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.DriverSSN.DriverSSN -> m ())
 updateByPrimaryKey (Domain.Types.DriverSSN.DriverSSN {..}) = do
   updateWithKV
     [ Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),

@@ -14,29 +14,27 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as Beam
 import Storage.Queries.BookingCancellationReasonExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingCancellationReason.BookingCancellationReason -> m ())
+create :: KvDbFlow m r => (Domain.Types.BookingCancellationReason.BookingCancellationReason -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BookingCancellationReason.BookingCancellationReason] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.BookingCancellationReason.BookingCancellationReason] -> m ())
 createMany = traverse_ create
 
-findByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe Domain.Types.BookingCancellationReason.BookingCancellationReason))
+findByBookingId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe Domain.Types.BookingCancellationReason.BookingCancellationReason))
 findByBookingId (Kernel.Types.Id.Id bookingId) = do findOneWithKV [Se.Is Beam.bookingId $ Se.Eq bookingId]
 
-findByRideId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride) -> m (Maybe Domain.Types.BookingCancellationReason.BookingCancellationReason))
+findByRideId :: KvDbFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride) -> m (Maybe Domain.Types.BookingCancellationReason.BookingCancellationReason))
 findByRideId rideId = do findOneWithKV [Se.Is Beam.rideId $ Se.Eq (Kernel.Types.Id.getId <$> rideId)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe Domain.Types.BookingCancellationReason.BookingCancellationReason))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe Domain.Types.BookingCancellationReason.BookingCancellationReason))
 findByPrimaryKey (Kernel.Types.Id.Id bookingId) = do findOneWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq bookingId]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingCancellationReason.BookingCancellationReason -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.BookingCancellationReason.BookingCancellationReason -> m ())
 updateByPrimaryKey (Domain.Types.BookingCancellationReason.BookingCancellationReason {..}) = do
   updateWithKV
     [ Se.Set Beam.additionalInfo additionalInfo,

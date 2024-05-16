@@ -26,7 +26,6 @@ import Data.Text as Text
 import qualified EulerHS.Language as L
 import qualified EulerHS.Types as T
 import qualified GHC.List as GL
-import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude as KP
@@ -68,24 +67,24 @@ pushCacDataToKafka stickeyKey context toss getVariants tenant key' = do
     let cacData = CACData (getKeyValue key) (getKeyValue key) (Text.pack (show context)) (Text.pack (show key')) (Text.pack (show variantIds))
     pushToKafka cacData "cac-data" ""
 
-getConfigListFromCac :: (CacheFlow m r, EsqDBFlow m r, FromJSON a, ToJSON a) => [(CacContext, Value)] -> String -> Int -> CacPrefix -> String -> m (Maybe [a])
+getConfigListFromCac :: (KvDbFlow m r, FromJSON a, ToJSON a) => [(CacContext, Value)] -> String -> Int -> CacPrefix -> String -> m (Maybe [a])
 getConfigListFromCac context' tenant toss prefix id = do
   let context = fmap (DBF.first KP.show) context'
   liftIO $ CM.getConfigListFromCAC context tenant toss (KP.show prefix) id
 
-getConfigFromCac :: (CacheFlow m r, EsqDBFlow m r, FromJSON a, ToJSON a) => [(CacContext, Value)] -> String -> Int -> CacPrefix -> m (Maybe a)
+getConfigFromCac :: (KvDbFlow m r, FromJSON a, ToJSON a) => [(CacContext, Value)] -> String -> Int -> CacPrefix -> m (Maybe a)
 getConfigFromCac context' tenant toss prefix = do
   let context = fmap (DBF.first KP.show) context'
   liftIO $ CM.getConfigFromCAC context tenant toss (KP.show prefix)
 
 ---------------------------------------------------- Common Cac Application Usage functions ------------------------------------------------------------
 
-getConfigFromCACStrictCommon :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, FromJSON b, ToJSON b) => Int -> [(CacContext, Value)] -> CacPrefix -> m (Maybe b)
+getConfigFromCACStrictCommon :: (KvDbFlow m r, FromJSON b, ToJSON b) => Int -> [(CacContext, Value)] -> CacPrefix -> m (Maybe b)
 getConfigFromCACStrictCommon toss context cpf = do
   cacConfig <- asks (.cacConfig)
   getConfigFromCac context cacConfig.tenant toss cpf
 
-createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, FromJSON b, ToJSON b, HasSchemaName BeamSC.SystemConfigsT) => Int -> [(CacContext, Value)] -> CacPrefix -> m (Maybe b)
+createThroughConfigHelper :: (KvDbFlow m r, FromJSON b, ToJSON b, HasSchemaName BeamSC.SystemConfigsT) => Int -> [(CacContext, Value)] -> CacPrefix -> m (Maybe b)
 createThroughConfigHelper toss context cpf = do
   cacConfig <- asks (.cacConfig)
   config' <- KSQS.findById $ Text.pack cacConfig.tenant
@@ -94,8 +93,7 @@ createThroughConfigHelper toss context cpf = do
   getConfigFromCACStrictCommon toss context cpf
 
 getConfigFromCACCommon ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     FromJSON a,
     FromJSON b,
     ToJSON b,
@@ -132,8 +130,7 @@ getConfigFromCACCommon context stickyId fromCactyp cpf = do
     config
 
 getConfigFromCacOrDB ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     MonadFlow m,
     FromJSON a,
     FromJSON b,

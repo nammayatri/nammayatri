@@ -21,14 +21,13 @@ import Kernel.Beam.Functions (FromCacType (..))
 import qualified Kernel.Beam.Functions as KBF
 import Kernel.Prelude
 import Kernel.Types.App
-import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (KvDbFlow)
 import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as BeamDEFB
 import Storage.Queries.FarePolicy.DriverExtraFeeBounds ()
 import Utils.Common.CacUtils
 
-getDriverExtraFeeBoundsFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [DFP.FullDriverExtraFeeBounds]
+getDriverExtraFeeBoundsFromCAC :: KvDbFlow m r => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [DFP.FullDriverExtraFeeBounds]
 getDriverExtraFeeBoundsFromCAC context tenant id toss = do
   res :: (Maybe [BeamDEFB.DriverExtraFeeBounds]) <- getConfigListFromCac context tenant toss FarePolicyDriverExtraFeeBounds (Text.unpack id.getId)
   config <- mapM KBF.fromCacType (fromMaybe [] res)

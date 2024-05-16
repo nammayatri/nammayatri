@@ -18,19 +18,18 @@ module Storage.CachedQueries.BlockedRoute where
 import Domain.Types.BlockedRoute
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (KvDbFlow)
 import qualified Storage.Queries.BlockedRoute as Queries
 
-findAllBlockedRoutesByMerchantOperatingCity :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> m [BlockedRoute]
+findAllBlockedRoutesByMerchantOperatingCity :: KvDbFlow m r => Id MerchantOperatingCity -> m [BlockedRoute]
 findAllBlockedRoutesByMerchantOperatingCity merchantOpCityId =
   (Hedis.safeGet $ makeBlockedRoutesKeyByMerchantOperatingCityId merchantOpCityId) >>= \case
     Just a -> pure a
     Nothing -> cacheAllBlockedRoutesByMerchantOperatingCity merchantOpCityId /=<< Queries.findAllBlockedRoutesByMerchantOperatingCity (Just merchantOpCityId)
 
-cacheAllBlockedRoutesByMerchantOperatingCity :: (CacheFlow m r) => Id MerchantOperatingCity -> [BlockedRoute] -> m ()
+cacheAllBlockedRoutesByMerchantOperatingCity :: (KvDbFlow m r) => Id MerchantOperatingCity -> [BlockedRoute] -> m ()
 cacheAllBlockedRoutesByMerchantOperatingCity merchantOpCityId blockedRoutes = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeBlockedRoutesKeyByMerchantOperatingCityId merchantOpCityId) blockedRoutes expTime

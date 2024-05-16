@@ -8,7 +8,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (MonadFlow, fromMaybeM, getCurrentTime)
 
 -- descriptions on Tabular level is separated with '|' symbol
 -- On Domain level it's list

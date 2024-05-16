@@ -13,23 +13,23 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FleetOwnerDocumentVerificationConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig -> m ())
+create :: KvDbFlow m r => (Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig] -> m ())
 createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig])
 findAllByMerchantOpCityId limit offset (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId] (Se.Asc Beam.order) limit offset
 
 findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig))
 findByPrimaryKey documentType (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findOneWithKV
@@ -39,7 +39,7 @@ findByPrimaryKey documentType (Kernel.Types.Id.Id merchantOperatingCityId) = do
         ]
     ]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig -> m ())
 updateByPrimaryKey (Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
