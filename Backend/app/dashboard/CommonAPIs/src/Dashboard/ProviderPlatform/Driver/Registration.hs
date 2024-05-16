@@ -203,6 +203,11 @@ type UploadDocumentAPI =
 data DocumentType
   = DriverLicense
   | VehicleRegistrationCertificate
+  | PanCard
+  | VehiclePermitImage
+  | VehiclePUCImage
+  | VehicleInsuranceImage
+  | VehicleFitnessCertificateImage
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data UploadDocumentReq = UploadDocumentReq

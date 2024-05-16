@@ -41,6 +41,7 @@ module Domain.Action.Dashboard.Merchant
     deleteSpecialLocationGate,
     upsertSpecialLocation,
     deleteSpecialLocation,
+    castCategory,
   )
 where
 

@@ -31,7 +31,8 @@ data PersonE e = Person
     passwordHash :: Maybe DbHash,
     dashboardAccessType :: Maybe DRole.DashboardAccessType,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    verified :: Maybe Bool
   }
   deriving (Generic)
 

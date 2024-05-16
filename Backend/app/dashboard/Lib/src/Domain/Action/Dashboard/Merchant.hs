@@ -216,6 +216,7 @@ buildPersonCreateReq req role = do
         mobileNumber = mobileNumber,
         roleId = role.id,
         dashboardAccessType = Just role.dashboardAccessType,
+        verified = Nothing,
         createdAt = now,
         updatedAt = now
       }

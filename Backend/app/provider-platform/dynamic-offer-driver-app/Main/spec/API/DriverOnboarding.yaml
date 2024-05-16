@@ -10,6 +10,8 @@ imports:
   Money: Kernel.Types.Common
   Driver: Domain.Types.Person
   TripCategory: Domain.Types.Common
+  Image: Domain.Types.Image
+
 
 module: DriverOnboardingV2
 types:
@@ -71,6 +73,12 @@ types:
     tripCategory: TripCategory
     farePolicyHour: FarePolicyHour
     rateCardItems: [RateCardItem]
+  DriverPanReq:
+    panNumber: Text
+    imageId1 : Id Image
+    imageId2 : Maybe (Id Image)
+    consent: Bool
+
 
 apis:
   - GET:
@@ -112,5 +120,12 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       request:
         type: SSNReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /driver/register/pancard
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DriverPanReq
       response:
         type: APISuccess

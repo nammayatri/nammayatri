@@ -21,6 +21,7 @@ where
 
 import qualified "dynamic-offer-driver-app" API.Dashboard.Management.Subscription as ADSubscription
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Registration
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Driver as DDriver
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Driver as Driver
 import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
@@ -78,6 +79,7 @@ type API =
            :<|> UpdateDriverAadhaarAPI
            :<|> AddVehicleAPI
            :<|> AddVehicleForFleetAPI
+           :<|> RegisterRCForFleetWithoutDriverAPI
            :<|> GetAllVehicleForFleetAPI
            :<|> GetAllDriverForFleetAPI
            :<|> FleetUnlinkVehicleAPI
@@ -233,6 +235,10 @@ type AddVehicleAPI =
 type AddVehicleForFleetAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'FLEET 'ADD_VEHICLE_FLEET
     :> Common.AddVehicleForFleetAPI
+
+type RegisterRCForFleetWithoutDriverAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'FLEET 'ADD_RC_FLEET_WITHOUT_DRIVER
+    :> Common.RegisterRCForFleetWithoutDriverAPI
 
 type GetAllVehicleForFleetAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'FLEET 'GET_ALL_VEHICLE_FOR_FLEET
@@ -392,6 +398,7 @@ handler merchantId city =
     :<|> updateByPhoneNumber merchantId city
     :<|> addVehicle merchantId city
     :<|> addVehicleForFleet merchantId city
+    :<|> registerRCForFleetWithoutDriver merchantId city
     :<|> getAllVehicleForFleet merchantId city
     :<|> getAllDriverForFleet merchantId city
     :<|> fleetUnlinkVehicle merchantId city
@@ -626,6 +633,11 @@ addVehicleForFleet merchantShortId opCity apiTokenInfo phoneNo mbMobileCountryCo
   runRequestValidation Common.validateAddVehicleReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.addVehicleForFleet) phoneNo mbMobileCountryCode apiTokenInfo.personId.getId req
+
+registerRCForFleetWithoutDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Registration.RegisterRCReq -> FlowHandler APISuccess
+registerRCForFleetWithoutDriver merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.registerRCForFleetWithoutDriver) apiTokenInfo.personId.getId req
 
 getAllVehicleForFleet :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> FlowHandler Common.ListVehicleRes
 getAllVehicleForFleet merchantShortId opCity apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI' $ do
