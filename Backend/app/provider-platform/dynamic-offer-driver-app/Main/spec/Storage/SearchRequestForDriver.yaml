@@ -183,6 +183,26 @@ SearchRequestForDriver:
       params: [response, status]
       where: id
 
+  sqlType:
+    actualDistanceToPickup: bigint
+    durationToPickup: bigint
+    vehicleVariant: character varying (255)
+    status: character varying (255)
+    straightLineDistanceToPickup: bigint
+    response: character varying (255)
+    driverMinExtraFee: double precision
+    driverMaxExtraFee: double precision
+    cancellationRatio: real
+    parallelSearchRequestCount: smallint
+    acceptanceRatio: real
+    driverAvailableTime: real
+    estimateId: character varying (36)
+
+  default:
+    rideRequestPopupDelayDuration: 0
+    customerCancellationDues: 0
+
+
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -191,5 +211,4 @@ SearchRequestForDriver:
   excludedDefaultQueries:
     - create
     - createMany
-
 

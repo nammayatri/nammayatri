@@ -229,5 +229,3 @@ Person:
     - EXTRA_QUERY_FILE
 
   excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
-
-

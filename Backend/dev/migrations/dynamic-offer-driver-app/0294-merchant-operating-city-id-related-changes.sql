@@ -30,23 +30,10 @@ ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offe
 
 ALTER TABLE atlas_driver_offer_bpp.go_home_config
 ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offer_bpp.merchant_operating_city (id);
-
-ALTER TABLE atlas_driver_offer_bpp.person
-ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offer_bpp.merchant_operating_city (id);
-
-ALTER TABLE atlas_driver_offer_bpp.registration_token
-ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offer_bpp.merchant_operating_city (id);
-
 -- for local testing only
 UPDATE atlas_driver_offer_bpp.registration_token SET merchant_operating_city_id = 'favorit0-0000-0000-0000-00000000city';
 
 ALTER TABLE atlas_driver_offer_bpp.search_request
-ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offer_bpp.merchant_operating_city (id);
-
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver
-ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offer_bpp.merchant_operating_city (id);
-
-ALTER TABLE atlas_driver_offer_bpp.search_try
 ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offer_bpp.merchant_operating_city (id);
 
 ALTER TABLE atlas_driver_offer_bpp.driver_intelligent_pool_config

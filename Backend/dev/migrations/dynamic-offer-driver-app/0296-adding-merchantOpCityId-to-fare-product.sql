@@ -1,6 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.fare_product
-ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offer_bpp.merchant_operating_city (id);
-
 UPDATE atlas_driver_offer_bpp.fare_product
 SET merchant_operating_city_id = merchant_operating_city.id
 FROM atlas_driver_offer_bpp.merchant_operating_city

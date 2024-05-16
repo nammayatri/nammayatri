@@ -1,3 +1,1 @@
 ALTER TABLE atlas_driver_offer_bpp.booking add COLUMN vehicle_service_tier_name text;
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver add COLUMN vehicle_service_tier_name text;
-ALTER TABLE atlas_driver_offer_bpp.search_try add COLUMN vehicle_service_tier_name text;

@@ -55,7 +55,7 @@ CallStatus:
       params: [callError, callService, merchantId]
       where: id
 
-  excludedFields: [merchantId, merchantOperatingCityId]
+  excludedFields: [merchantOperatingCityId]
 
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -232,7 +232,6 @@ library
       Domain.Types.DriverPlan
       Domain.Types.DriverStats
       Domain.Types.Extra.DriverFee
-      Domain.Types.Extra.Person
       Domain.Types.Extra.Plan
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
@@ -624,10 +623,10 @@ library
       Domain.Types.DriverSSN
       Domain.Types.Estimate
       Domain.Types.Exophone
+      Domain.Types.FareProduct
       Domain.Types.FleetOwnerDocumentVerificationConfig
       Domain.Types.FleetOwnerInformation
       Domain.Types.FleetRCAssociation
-      Domain.Types.FareProduct
       Domain.Types.IdfyVerification
       Domain.Types.Image
       Domain.Types.InterCityTravelCities
@@ -694,10 +693,10 @@ library
       Storage.Beam.DriverSSN
       Storage.Beam.Estimate
       Storage.Beam.Exophone
+      Storage.Beam.FareProduct
       Storage.Beam.FleetOwnerDocumentVerificationConfig
       Storage.Beam.FleetOwnerInformation
       Storage.Beam.FleetRCAssociation
-      Storage.Beam.FareProduct
       Storage.Beam.IdfyVerification
       Storage.Beam.Image
       Storage.Beam.InterCityTravelCities
@@ -764,10 +763,10 @@ library
       Storage.Queries.DriverSSN
       Storage.Queries.Estimate
       Storage.Queries.Exophone
+      Storage.Queries.FareProduct
       Storage.Queries.FleetOwnerDocumentVerificationConfig
       Storage.Queries.FleetOwnerInformation
       Storage.Queries.FleetRCAssociation
-      Storage.Queries.FareProduct
       Storage.Queries.IdfyVerification
       Storage.Queries.Image
       Storage.Queries.InterCityTravelCities
@@ -795,8 +794,8 @@ library
       Storage.Queries.OrphanInstances.DriverReferral
       Storage.Queries.OrphanInstances.DriverSSN
       Storage.Queries.OrphanInstances.Exophone
-      Storage.Queries.OrphanInstances.FleetRCAssociation
       Storage.Queries.OrphanInstances.FareProduct
+      Storage.Queries.OrphanInstances.FleetRCAssociation
       Storage.Queries.OrphanInstances.Image
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.Plan

@@ -142,8 +142,7 @@ initiateCallToCustomer rideId merchantOpCityId = do
             merchantId = Just booking.providerId.getId,
             callService = Just Exotel,
             callError = Nothing,
-            createdAt = now,
-            updatedAt = now -- remove this after DSL FIX
+            createdAt = now
           }
 
 getDriverMobileNumber :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, HasField "esqDBReplicaEnv" r EsqDBEnv, HasField "loggerEnv" r LoggerEnv) => (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> m CallRes
@@ -178,8 +177,7 @@ getDriverMobileNumber (driverId, merchantId, merchantOpCityId) rcNo = do
             merchantId = Just merchantId.getId,
             callError = Nothing,
             callService = Just Exotel,
-            createdAt = now,
-            updatedAt = now
+            createdAt = now
           }
 
 getDecryptedMobileNumberByDriverId :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> m Text
@@ -270,8 +268,7 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = d
             merchantId = Nothing,
             callService = Nothing,
             callError = Nothing,
-            createdAt = now,
-            updatedAt = now
+            createdAt = now
           }
 
 throwCallError ::

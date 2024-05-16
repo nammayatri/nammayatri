@@ -37,9 +37,7 @@ data PlanT f = PlanT
     serviceName :: (B.C f Domain.Types.Plan.ServiceNames),
     sgstPercentage :: (B.C f Kernel.Types.Common.HighPrecMoney),
     subscribedFlagToggleAllowed :: (B.C f Kernel.Prelude.Bool),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
   }
   deriving (Generic, B.Beamable)
 

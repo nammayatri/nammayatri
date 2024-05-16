@@ -63,7 +63,6 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Plan.Plan -> m ())
 updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
-  _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.basedOnEntity basedOnEntity,
       Se.Set Beam.cgstPercentage cgstPercentage,
@@ -86,8 +85,6 @@ updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
       Se.Set Beam.serviceName serviceName,
       Se.Set Beam.sgstPercentage sgstPercentage,
       Se.Set Beam.subscribedFlagToggleAllowed subscribedFlagToggleAllowed,
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

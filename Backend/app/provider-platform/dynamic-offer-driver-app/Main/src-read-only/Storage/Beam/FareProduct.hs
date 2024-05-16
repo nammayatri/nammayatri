@@ -24,9 +24,7 @@ data FareProductT f = FareProductT
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     timeBounds :: (B.C f Domain.Action.UI.FareProduct.TimeBound),
     tripCategory :: (B.C f Domain.Types.Common.TripCategory),
-    vehicleVariant :: (B.C f Domain.Types.ServiceTierType.ServiceTierType),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+    vehicleVariant :: (B.C f Domain.Types.ServiceTierType.ServiceTierType)
   }
   deriving (Generic, B.Beamable)
 

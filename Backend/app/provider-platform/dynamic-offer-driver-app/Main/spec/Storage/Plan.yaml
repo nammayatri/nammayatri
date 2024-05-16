@@ -97,10 +97,12 @@ Plan:
     subscribedFlagToggleAllowed: "true"
     isDeprecated: "false"
     eligibleForCoinDiscount: "true"
-    serviceName: YATRI_SUBSCRIPTION
+    serviceName: "'YATRI_SUBSCRIPTION'"
     basedOnEntity: "'RIDE'"
 
 
   extraOperations:
     - EXTRA_QUERY_FILE
     - EXTRA_DOMAIN_TYPE_FILE
+
+  excludedFields: [createdAt, updatedAt]

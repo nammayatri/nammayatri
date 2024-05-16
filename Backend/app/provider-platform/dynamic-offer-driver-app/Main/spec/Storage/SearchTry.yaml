@@ -117,7 +117,7 @@ SearchTry:
     vehicleVariant: character varying (255)
     estimateId : character (36)
     searchRepeatType: character varying (255)
-    estimateIds: "ARRAY []"
 
   extraOperations:
     - EXTRA_QUERY_FILE
+

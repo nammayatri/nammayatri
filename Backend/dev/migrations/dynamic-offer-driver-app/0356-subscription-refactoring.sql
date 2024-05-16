@@ -24,12 +24,6 @@ Alter table atlas_driver_offer_bpp.invoice add column merchant_operating_city_id
 
 ----- alter in plan table ----
 
-Alter table atlas_driver_offer_bpp.plan add column subscribed_flag_toggle_allowed boolean NOT NULL DEFAULT true;
-Alter table atlas_driver_offer_bpp.plan add column is_deprecated boolean NOT NULL DEFAULT false;
-Alter table atlas_driver_offer_bpp.plan add column eligible_for_coin_discount boolean NOT NULL DEFAULT true;
-Alter table atlas_driver_offer_bpp.plan add column merchant_op_city_id Text; --- make it not null after backfill
-Alter table atlas_driver_offer_bpp.plan add column service_name Text NOT NULL DEFAULT 'YATRI_SUBSCRIPTION';
-Alter table atlas_driver_offer_bpp.plan add column based_on_entity Text NOT NULL DEFAULT  'RIDE';
 Alter table atlas_driver_offer_bpp.plan drop CONSTRAINT plan_pkey;
 Alter table atlas_driver_offer_bpp.plan add PRIMARY KEY(id, service_name, payment_mode);
 

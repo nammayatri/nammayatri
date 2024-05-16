@@ -87,7 +87,6 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FareProduct.FareProduct -> m ())
 updateByPrimaryKey (Domain.Types.FareProduct.FareProduct {..}) = do
-  _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.area area,
       Se.Set Beam.enabled enabled,
@@ -96,8 +95,6 @@ updateByPrimaryKey (Domain.Types.FareProduct.FareProduct {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.timeBounds timeBounds,
       Se.Set Beam.tripCategory tripCategory,
-      Se.Set Beam.vehicleVariant vehicleServiceTier,
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.vehicleVariant vehicleServiceTier
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

@@ -11,5 +11,4 @@ ALTER TABLE atlas_driver_offer_bpp.call_status ADD COLUMN id character varying(3
 ALTER TABLE atlas_driver_offer_bpp.call_status ADD COLUMN merchant_id character varying (36) ;
 ALTER TABLE atlas_driver_offer_bpp.call_status ADD COLUMN recording_url character varying (255) ;
 ALTER TABLE atlas_driver_offer_bpp.call_status ADD COLUMN status character varying (255) NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.call_status ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.call_status ADD PRIMARY KEY ( id);

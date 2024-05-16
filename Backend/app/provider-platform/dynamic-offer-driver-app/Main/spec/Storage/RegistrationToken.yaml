@@ -57,8 +57,6 @@ RegistrationToken:
   default:
     alternateNumberAttempts: "5"
 
-
-
   fromTType:
     merchantOperatingCityId: Storage.Queries.Transformers.RegistrationToken.getMerchantOperatingCityId merchantOperatingCityId merchantId|EM
   toTType:
@@ -99,5 +97,3 @@ RegistrationToken:
 
   extraOperations:
     - EXTRA_QUERY_FILE
-
-

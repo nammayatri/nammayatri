@@ -54,7 +54,14 @@ FareProduct:
       where:
         and: [merchantOperatingCityId, enabled]
 
+  sqlType:
+    vehicleVariant: character varying (60)
+    merchantOperatingCityId: character (36)
+  default:
+    timeBounds: "'Unbounded'"
+    enabled: "true"
 
   extraOperations:
     - EXTRA_QUERY_FILE
+  excludedFields: [createdAt, updatedAt]
 

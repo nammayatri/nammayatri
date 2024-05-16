@@ -317,16 +317,15 @@ fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbD
     snd' (_, x, _, _, _, _) = x
     thd' (_, _, x, _, _, _) = x
 
-findAdminsByMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m [Person]
-findAdminsByMerchantId (Id merchantId) = findAllWithDb [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.ADMIN]]
-
-findByMobileNumberAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
-findByMobileNumberAndMerchant countryCode mobileNumberHash (Id merchantId) =
+findByRoleAndMobileNumberAndMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Role -> Text -> Text -> Id Merchant -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber (Id merchantId) = do
+  mobileNumberDbHash <- getDbHash mobileNumber
   findOneWithKV
     [ Se.And
-        [ Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
-          Se.Is BeamP.merchantId $ Se.Eq merchantId,
-          Se.Or [Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberHash, Se.Is BeamP.alternateMobileNumberHash $ Se.Eq $ Just mobileNumberHash]
+        [ Se.Is BeamP.role $ Se.Eq role_,
+          Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
+          Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberDbHash,
+          Se.Is BeamP.merchantId $ Se.Eq merchantId
         ]
     ]
 
@@ -340,29 +339,6 @@ findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash (Id merchantId
           Se.Is BeamP.role $ Se.Eq mbRole
         ]
     ]
-    
-findByRoleAndMobileNumberAndMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Role -> Text -> Text -> Id Merchant -> m (Maybe Person)
-findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber (Id merchantId) = do
-  mobileNumberDbHash <- getDbHash mobileNumber
-  findOneWithKV
-    [ Se.And
-        [ Se.Is BeamP.role $ Se.Eq role_,
-          Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
-          Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberDbHash,
-          Se.Is BeamP.merchantId $ Se.Eq merchantId
-        ]
-    ]
-
-updateMerchantIdAndMakeAdmin :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id Merchant -> m ()
-updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamP.merchantId merchantId,
-      Se.Set BeamP.role Person.ADMIN,
-      Se.Set BeamP.updatedAt now
-    ]
-    [Se.Is BeamP.id (Se.Eq personId)]
-
 
 updatePersonRec :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Person -> m ()
 updatePersonRec (Id personId) person = do
@@ -447,16 +423,6 @@ updateMerchantOperatingCityId (Id driverId) (Id opCityId) = updateWithKV [Se.Set
 
 updateTag :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> [Text] -> m ()
 updateTag (Id driverId) tags = updateOneWithKV [Se.Set BeamP.driverTag $ Just tags] [Se.Is BeamP.id $ Se.Eq driverId]
-
-findByMobileNumberAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
-findByMobileNumberAndMerchant countryCode mobileNumberHash (Id merchantId) =
-  findOneWithKV
-    [ Se.And
-        [ Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
-          Se.Is BeamP.merchantId $ Se.Eq merchantId,
-          Se.Or [Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberHash, Se.Is BeamP.alternateMobileNumberHash $ Se.Eq $ Just mobileNumberHash]
-        ]
-    ]
 
 updateMobileNumberAndCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Person -> m ()
 updateMobileNumberAndCode person = do

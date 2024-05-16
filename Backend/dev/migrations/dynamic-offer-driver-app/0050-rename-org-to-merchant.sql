@@ -8,7 +8,6 @@ ALTER TABLE atlas_driver_offer_bpp.merchant
   DROP COLUMN domain;
 
 ALTER TABLE atlas_driver_offer_bpp.fare_policy RENAME COLUMN organization_id TO merchant_id;
-ALTER TABLE atlas_driver_offer_bpp.person RENAME COLUMN organization_id TO merchant_id;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config RENAME COLUMN organization_id TO merchant_id;
 
 UPDATE atlas_driver_offer_bpp.booking_cancellation_reason

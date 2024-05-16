@@ -22,7 +22,6 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_scheduled boolean;
 -- atlas_driver_offer_bpp.drop_not_null_if_exists('atlas_driver_offer_bpp', 'booking', 'estimated_duration');
 
 -- DRIVER QUOTE --
-ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN trip_category text;
 -- atlas_driver_offer_bpp.drop_not_null_if_exists('atlas_driver_offer_bpp', 'driver_quote', 'distance');
 
 -- FARE PARAMETERS --
@@ -52,13 +51,7 @@ ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details_distance_buffers A
 ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details_distance_buffers ADD COLUMN buffer_kms integer;
 
 -- FARE PRODUCT --
-ALTER TABLE atlas_driver_offer_bpp.fare_product ADD COLUMN trip_category text;
-UPDATE atlas_driver_offer_bpp.fare_product
-SET trip_category = CASE
-                        WHEN flow = 'NORMAL' THEN 'OneWay_OneWayOnDemandDynamicOffer'
-                        WHEN flow = 'RIDE_OTP' THEN 'OneWay_OneWayRideOtp'
-                        ELSE trip_category
-                    END;
+
 ALTER TABLE atlas_driver_offer_bpp.fare_product ALTER COLUMN trip_category SET NOT NULL;
 
 -- TRANSPORTER CONFIG --
@@ -78,14 +71,11 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN message_id characte
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN start_time TIMESTAMP WITH TIME ZONE;
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN valid_till TIMESTAMP WITH TIME ZONE;;
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN is_scheduled boolean;
-ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN is_scheduled boolean;
 
 -- atlas_driver_offer_bpp.drop_not_null_if_exists("atlas_driver_offer_bpp", "search_request", "estimated_distance");
 -- atlas_driver_offer_bpp.drop_not_null_if_exists("atlas_driver_offer_bpp", "search_request", "estimated_duration");
 
 -- SEARCH TRY --
-ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN trip_category text;
-
 -- FARE POLICY --
 ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN max_additional_kms_limit integer;
 ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN total_additional_kms_limit integer;
@@ -104,13 +94,12 @@ INSERT INTO atlas_driver_offer_bpp.fare_policy_rental_details_distance_buffers (
 
 INSERT INTO atlas_driver_offer_bpp.fare_policy (id, night_shift_start, night_shift_end, created_at, updated_at, min_allowed_trip_distance, max_allowed_trip_distance, service_charge, govt_charges, fare_policy_type, description) VALUES ('71b52524-e773-03dc-5853-290132ce6fd5', '22:00:00', '06:00:00', now(), now(), 0, 100000, null, null, 'Rental', 'Yatri Sathi SEDAN Rental');
 INSERT INTO atlas_driver_offer_bpp.fare_policy (id, night_shift_start, night_shift_end, created_at, updated_at, min_allowed_trip_distance, max_allowed_trip_distance, service_charge, govt_charges, fare_policy_type, description) VALUES ('51b42524-e113-03dc-5453-290032ce6fd5', '22:00:00', '06:00:00', now(), now(), 0, 100000, null, null, 'Rental', 'Yatri Sathi SUV Rental');
+INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area, trip_category, time_bounds, enabled, merchant_operating_city_id) VALUES ('294abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '71b52524-e773-03dc-5853-290132ce6fd5', 'SEDAN', 'Default', 'Rental_OnDemandStaticOffer', 'Unbounded', true, (SELECT id from atlas_driver_offer_bpp.merchant_operating_city where merchant_id = 'favorit0-0000-0000-0000-00000favorit'));
+INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area, trip_category, time_bounds, enabled, merchant_operating_city_id) VALUES ('394abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '51b42524-e113-03dc-5453-290032ce6fd5', 'SUV', 'Default', 'Rental_OnDemandStaticOffer', 'Unbounded', true, (SELECT id from atlas_driver_offer_bpp.merchant_operating_city where merchant_id = 'favorit0-0000-0000-0000-00000favorit'));
 
-INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area, flow, trip_category, merchant_operating_city_id) VALUES ('294abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '71b52524-e773-03dc-5853-290132ce6fd5', 'SEDAN', 'Default', 'RENTAL', 'Rental_OnDemandStaticOffer', (SELECT id from atlas_driver_offer_bpp.merchant_operating_city where merchant_id = 'favorit0-0000-0000-0000-00000favorit'));
-INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area, flow, trip_category, merchant_operating_city_id) VALUES ('394abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '51b42524-e113-03dc-5453-290032ce6fd5', 'SUV', 'Default', 'RENTAL', 'Rental_OnDemandStaticOffer', (SELECT id from atlas_driver_offer_bpp.merchant_operating_city where merchant_id = 'favorit0-0000-0000-0000-00000favorit'));
 -- ONLY FOR LOCAL
-INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area, flow, trip_category, merchant_operating_city_id) VALUES ('494abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '51b42524-e113-03dc-5453-290032ce6fd5', 'SEDAN', 'Default', 'INTERCITY', 'InterCity_OneWayOnDemandStaticOffer', (SELECT id from atlas_driver_offer_bpp.merchant_operating_city where merchant_id = 'favorit0-0000-0000-0000-00000favorit'));
+INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area , trip_category, time_bounds, enabled, merchant_operating_city_id) VALUES ('494abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '51b42524-e113-03dc-5453-290032ce6fd5', 'SEDAN', 'Default', 'InterCity_OneWayOnDemandStaticOffer', 'Unbounded', true, (SELECT id from atlas_driver_offer_bpp.merchant_operating_city where merchant_id = 'favorit0-0000-0000-0000-00000favorit'));
 
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ --
 -- @ WARNING: DO NOT ENTER BEFORE FULL RELEASE - DROP QUERY ZONE @ --
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ --
-ALTER TABLE atlas_driver_offer_bpp.fare_product DROP COLUMN flow;

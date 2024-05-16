@@ -25,8 +25,6 @@ data FareProduct = FareProduct
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
     timeBounds :: Domain.Action.UI.FareProduct.TimeBound,
     tripCategory :: Domain.Types.Common.TripCategory,
-    vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
-    createdAt :: Kernel.Prelude.UTCTime,
-    updatedAt :: Kernel.Prelude.UTCTime
+    vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

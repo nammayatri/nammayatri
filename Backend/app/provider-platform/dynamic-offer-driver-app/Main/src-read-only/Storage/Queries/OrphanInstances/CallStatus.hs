@@ -27,8 +27,7 @@ instance FromTType' Beam.CallStatus Domain.Types.CallStatus.CallStatus where
             id = Kernel.Types.Id.Id id,
             merchantId = merchantId,
             recordingUrl = recordingUrl,
-            status = status,
-            updatedAt = updatedAt
+            status = status
           }
 
 instance ToTType' Beam.CallStatus Domain.Types.CallStatus.CallStatus where
@@ -44,6 +43,5 @@ instance ToTType' Beam.CallStatus Domain.Types.CallStatus.CallStatus where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = merchantId,
         Beam.recordingUrl = recordingUrl,
-        Beam.status = status,
-        Beam.updatedAt = updatedAt
+        Beam.status = status
       }

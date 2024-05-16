@@ -58,7 +58,7 @@ CallStatus:
   default:
     entityId: "'UNKNOWN'"
 
-  excludedFields: [merchantOperatingCityId, createdAt]
+  excludedFields: [merchantOperatingCityId, updatedAt]
 
   excludedDefaultQueries:
     - create

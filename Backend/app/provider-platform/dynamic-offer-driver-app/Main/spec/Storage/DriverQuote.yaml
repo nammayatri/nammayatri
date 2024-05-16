@@ -82,6 +82,10 @@ DriverQuote:
       clientOsType: Maybe DeviceType
       clientOsVersion: Maybe Text
 
+    estimatedFare:
+      estimatedFare: Money
+      estimatedFareAmount: Maybe HighPrecMoney
+
     fareParams:
       fareParametersId: Text
 
@@ -98,6 +102,7 @@ DriverQuote:
     updatedAt: Data.Time.localTimeToUTC Data.Time.utc updatedAt|E
     validTill: Data.Time.localTimeToUTC Data.Time.utc validTill|E
     currency: fromMaybe Kernel.Types.Common.INR currency|E
+    estimatedFare: Kernel.Types.Common.mkAmountWithDefault estimatedFareAmount estimatedFare|E
 
   toTType:
     fareParametersId: Kernel.Types.Id.getId ((.id) fareParams)|E
@@ -113,6 +118,8 @@ DriverQuote:
     updatedAt: Data.Time.utcToLocalTime Data.Time.utc updatedAt|E
     validTill: Data.Time.utcToLocalTime Data.Time.utc validTill|E
     currency: Kernel.Prelude.Just|I
+    estimatedFareAmount: Kernel.Prelude.Just|I
+    estimatedFare: Kernel.Prelude.roundToIntegral estimatedFare|E
 
   queries:
     findById:
@@ -132,6 +139,19 @@ DriverQuote:
     driverId: SecondaryKey
     searchTryId: SecondaryKey
     requestId: SecondaryKey
+
+  sqlType:
+    status: character varying(255)
+    distanceToPickup: bigint
+    durationToPickup: bigint
+    vehicleVariant: character varying(255)
+    driverRating: double precision
+    estimateId : text
+
+
+  default:
+    providerId: "'7f7896dd-787e-4a0b-8675-e9e6fe93bb8f'"
+
 
   excludedFields: [merchantId, merchantOperatingCityId]
 

@@ -40,9 +40,7 @@ data Plan = Plan
     serviceName :: Domain.Types.Plan.ServiceNames,
     sgstPercentage :: Kernel.Types.Common.HighPrecMoney,
     subscribedFlagToggleAllowed :: Kernel.Prelude.Bool,
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity),
-    createdAt :: Kernel.Prelude.UTCTime,
-    updatedAt :: Kernel.Prelude.UTCTime
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

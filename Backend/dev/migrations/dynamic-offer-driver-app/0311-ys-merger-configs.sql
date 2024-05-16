@@ -1,6 +1,5 @@
 
 alter table atlas_driver_offer_bpp.transporter_config add column consider_special_zone_ride_charges_in_free_trial boolean not null default false;
-alter table atlas_driver_offer_bpp.plan add column max_mandate_amount double precision;
 alter table atlas_driver_offer_bpp.transporter_config add column enable_udf_for_offers boolean not null default false;
 
 update atlas_driver_offer_bpp.transporter_config set enable_udf_for_offers = true where merchant_id = '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f';
@@ -12,5 +11,5 @@ update atlas_driver_offer_bpp.plan
 set plan_type = 'DEFAULT'
 where id = '25ade579-fd9c-4288-a015-337af085e66c' and plan_type = 'MANUAL';
 
-INSERT INTO atlas_driver_offer_bpp.plan (id, merchant_id, payment_mode, frequency, plan_base_amount, name, description, max_amount, registration_amount, is_offer_applicable, max_credit_limit, free_ride_count, plan_type, cgst_percentage , sgst_percentage, max_mandate_amount) VALUES
-   ('25ade579-fd9c-4288-a015-337af085e66c', 'favorit0-0000-0000-0000-00000favorit', 'MANUAL', 'DAILY', 'PERRIDE_10', 'DAILY PER RIDE' , 'Up to a maximum of ₹100 per day', 100, 1, true, 350, 0, 'DEFAULT', 0.09 , 0.09, 150.0);
+INSERT INTO atlas_driver_offer_bpp.plan (id, merchant_id, payment_mode, frequency, plan_base_amount, name, description, max_amount, registration_amount, is_offer_applicable, max_credit_limit, free_ride_count, plan_type, cgst_percentage , sgst_percentage, max_mandate_amount, merchant_op_city_id) VALUES
+   ('25ade579-fd9c-4288-a015-337af085e66c', 'favorit0-0000-0000-0000-00000favorit', 'MANUAL', 'DAILY', 'PERRIDE_10', 'DAILY PER RIDE' , 'Up to a maximum of ₹100 per day', 100, 1, true, 350, 0, 'DEFAULT', 0.09 , 0.09, 150.0, 'mOpCityId');

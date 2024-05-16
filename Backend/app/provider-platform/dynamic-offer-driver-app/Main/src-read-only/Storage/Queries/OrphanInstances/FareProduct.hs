@@ -25,9 +25,7 @@ instance FromTType' Beam.FareProduct Domain.Types.FareProduct.FareProduct where
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             timeBounds = timeBounds,
             tripCategory = tripCategory,
-            vehicleServiceTier = vehicleVariant,
-            createdAt = createdAt,
-            updatedAt = updatedAt
+            vehicleServiceTier = vehicleVariant
           }
 
 instance ToTType' Beam.FareProduct Domain.Types.FareProduct.FareProduct where
@@ -41,7 +39,5 @@ instance ToTType' Beam.FareProduct Domain.Types.FareProduct.FareProduct where
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.timeBounds = timeBounds,
         Beam.tripCategory = tripCategory,
-        Beam.vehicleVariant = vehicleServiceTier,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
+        Beam.vehicleVariant = vehicleServiceTier
       }
