@@ -68,7 +68,8 @@ data AppEnv = AppEnv
     enablePrometheusMetricLogging :: Bool,
     shouldLogRequestId :: Bool,
     requestId :: Maybe Text,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    isArtReplayerEnabled :: Bool
   }
   deriving (Generic)
 
@@ -79,6 +80,7 @@ buildAppEnv config@AppCfg {..} = do
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Nothing
+      isArtReplayerEnabled = False
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv

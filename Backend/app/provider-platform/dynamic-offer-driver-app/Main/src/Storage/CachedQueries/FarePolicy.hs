@@ -38,14 +38,14 @@ import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.FarePolicy as Queries
 
-findFarePolicyFromDB :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
+findFarePolicyFromDB :: KvDbFlow m r => Id FarePolicy -> m (Maybe FarePolicy)
 findFarePolicyFromDB id = do
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
     Nothing -> do
       flip whenJust cacheFarePolicy /=<< Queries.findById id
 
-cacheFarePolicy :: (CacheFlow m r) => FarePolicy -> m ()
+cacheFarePolicy :: (KvDbFlow m r) => FarePolicy -> m ()
 cacheFarePolicy fp = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey fp.id

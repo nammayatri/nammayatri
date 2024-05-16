@@ -15,7 +15,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
 import qualified Storage.Beam.Common as BeamCommon
@@ -23,7 +23,7 @@ import Storage.Queries.OrphanInstances.BookingCancellationReason
 
 -- Extra code goes here --
 
-upsert :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => BookingCancellationReason -> m ()
+upsert :: KvDbFlow m r => BookingCancellationReason -> m ()
 upsert cancellationReason = do
   res <- findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq (getId cancellationReason.bookingId)]
   if isJust res
@@ -39,7 +39,7 @@ upsert cancellationReason = do
         [Se.Is BeamBCR.bookingId (Se.Eq $ getId cancellationReason.bookingId)]
     else createWithKV cancellationReason
 
-countCancelledBookingsByBookingIds :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Id Booking] -> CancellationSource -> m Int
+countCancelledBookingsByBookingIds :: KvDbFlow m r => [Id Booking] -> CancellationSource -> m Int
 countCancelledBookingsByBookingIds bookingIds cancellationSource = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $

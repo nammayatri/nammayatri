@@ -10,16 +10,13 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Sequelize as Se
-import qualified Storage.Beam.FareBreakup as Beam
 import Storage.Queries.FareBreakupExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FareBreakup.FareBreakup -> m ())
+create :: KvDbFlow m r => (Domain.Types.FareBreakup.FareBreakup -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FareBreakup.FareBreakup] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.FareBreakup.FareBreakup] -> m ())
 createMany = traverse_ create
 
 findAllByEntityIdAndEntityType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Domain.Types.FareBreakup.FareBreakupEntityType -> m [Domain.Types.FareBreakup.FareBreakup])

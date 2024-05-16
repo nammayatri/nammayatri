@@ -13,35 +13,33 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.ClientPersonInfo as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ClientPersonInfo.ClientPersonInfo -> m ())
+create :: KvDbFlow m r => (Domain.Types.ClientPersonInfo.ClientPersonInfo -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ClientPersonInfo.ClientPersonInfo] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.ClientPersonInfo.ClientPersonInfo] -> m ())
 createMany = traverse_ create
 
-findAllByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.ClientPersonInfo.ClientPersonInfo])
+findAllByPersonId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.ClientPersonInfo.ClientPersonInfo])
 findAllByPersonId (Kernel.Types.Id.Id personId) = do findAllWithKV [Se.Is Beam.personId $ Se.Eq personId]
 
 findByPersonIdAndVehicleCategory ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  KvDbFlow m r =>
   (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Domain.Types.BecknConfig.VehicleCategory -> m (Maybe Domain.Types.ClientPersonInfo.ClientPersonInfo))
 findByPersonIdAndVehicleCategory (Kernel.Types.Id.Id personId) vehicleCategory = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq personId, Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory]]
 
-updateHasTakenValidRideCount ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Domain.Types.BecknConfig.VehicleCategory -> m ())
+updateHasTakenValidRideCount :: KvDbFlow m r => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Domain.Types.BecknConfig.VehicleCategory -> m ())
 updateHasTakenValidRideCount rideCount (Kernel.Types.Id.Id personId) vehicleCategory = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.rideCount rideCount, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.personId $ Se.Eq personId, Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory]]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.ClientPersonInfo.ClientPersonInfo -> m (Maybe Domain.Types.ClientPersonInfo.ClientPersonInfo))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.ClientPersonInfo.ClientPersonInfo -> m (Maybe Domain.Types.ClientPersonInfo.ClientPersonInfo))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ClientPersonInfo.ClientPersonInfo -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.ClientPersonInfo.ClientPersonInfo -> m ())
 updateByPrimaryKey (Domain.Types.ClientPersonInfo.ClientPersonInfo {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -36,21 +36,21 @@ import Tools.Error
 
 -- Extra code goes here --
 
-findByPId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Person.Person))
+findByPId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Person.Person))
 findByPId (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is BeamP.id $ Se.Eq id]
 
-findByEmailAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Merchant -> Text -> m (Maybe Person)
+findByEmailAndMerchantId :: (KvDbFlow m r, EncFlow m r) => Id Merchant -> Text -> m (Maybe Person)
 findByEmailAndMerchantId (Id merchantId) email_ = do
   emailDbHash <- getDbHash email_
   findOneWithKV [Se.And [Se.Is BeamP.emailHash $ Se.Eq (Just emailDbHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
-findByMobileNumberAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
+findByMobileNumberAndMerchantId :: KvDbFlow m r => Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByMobileNumberAndMerchantId countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
-findByRoleAndMobileNumberAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Role -> Text -> DbHash -> Id Merchant -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantId :: KvDbFlow m r => Role -> Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
-updatePersonVersions :: (MonadFlow m, EsqDBFlow m r) => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Device -> Text -> m ()
+updatePersonVersions :: KvDbFlow m r => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Device -> Text -> m ()
 updatePersonVersions person mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion =
   when
     ((isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice || isJust mbClientConfigVersion) && (person.clientBundleVersion /= mbBundleVersion || person.clientSdkVersion /= mbClientVersion || person.clientConfigVersion /= mbClientConfigVersion || person.clientDevice /= mbDevice || person.backendAppVersion /= Just deploymentVersion))
@@ -68,7 +68,7 @@ updatePersonVersions person mbClientVersion mbBundleVersion mbClientConfigVersio
         [Se.Is BeamP.id (Se.Eq (getId (person.id)))]
 
 updatePersonalInfo ::
-  (MonadFlow m, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id Person ->
   Maybe Text ->
   Maybe Text ->
@@ -111,11 +111,11 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralC
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
-findBlockedByDeviceToken :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Text -> m [Person]
+findBlockedByDeviceToken :: (KvDbFlow m r, EncFlow m r) => Maybe Text -> m [Person]
 findBlockedByDeviceToken Nothing = return [] -- return empty array in case device token is Nothing (WARNING: DON'T REMOVE IT)
 findBlockedByDeviceToken deviceToken = findAllWithKV [Se.And [Se.Is BeamP.deviceToken (Se.Eq deviceToken), Se.Is BeamP.blocked (Se.Eq True)]]
 
-updatingEnabledAndBlockedState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> m ()
+updatingEnabledAndBlockedState :: KvDbFlow m r => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> m ()
 updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
   person <- findByPId (Id personId)
   case person of
@@ -136,7 +136,7 @@ updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
         )
         [Se.Is BeamP.id (Se.Eq personId)]
 
-findAllCustomers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> m [Person]
+findAllCustomers :: KvDbFlow m r => Merchant -> DMOC.MerchantOperatingCity -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> m [Person]
 findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash =
   findAllWithOptionsDb
     [ Se.And
@@ -157,7 +157,7 @@ findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearch
     (Just limitVal)
     (Just offsetVal)
 
-fetchRidesCount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Int)
+fetchRidesCount :: KvDbFlow m r => Id Person -> m (Maybe Int)
 fetchRidesCount personId = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
@@ -173,7 +173,7 @@ fetchRidesCount personId = do
               B.all_ (BeamCommon.booking BeamCommon.atlasDB)
   pure $ either (const Nothing) (\r -> if null r then Nothing else Just (head r)) res
 
-findCityInfoById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe PersonCityInformation)
+findCityInfoById :: KvDbFlow m r => Id Person -> m (Maybe PersonCityInformation)
 findCityInfoById personId = do
   person <- findByPId personId
   case person of
@@ -181,7 +181,7 @@ findCityInfoById personId = do
     Just Person {..} -> pure $ Just $ PersonCityInformation {personId = id, ..}
 
 updateEmergencyInfo ::
-  (MonadFlow m, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id Person ->
   Maybe Bool ->
   Maybe RideShareOptions ->
@@ -199,7 +199,7 @@ updateEmergencyInfo (Id personId) shareEmergencyContacts shareTripWithEmergencyC
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updateSafetyCenterBlockingCounter :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Maybe Int -> Maybe UTCTime -> m ()
+updateSafetyCenterBlockingCounter :: KvDbFlow m r => Id Person -> Maybe Int -> Maybe UTCTime -> m ()
 updateSafetyCenterBlockingCounter personId counter mbDate = do
   now <- getCurrentTime
   updateWithKV
@@ -211,7 +211,7 @@ updateSafetyCenterBlockingCounter personId counter mbDate = do
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
 
-updateCityInfoById :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Context.City -> Id DMOC.MerchantOperatingCity -> m ()
+updateCityInfoById :: KvDbFlow m r => Id Person -> Context.City -> Id DMOC.MerchantOperatingCity -> m ()
 updateCityInfoById (Id personId) currentCity (Id merchantOperatingCityId) = do
   now <- getCurrentTime
   updateOneWithKV
@@ -221,7 +221,7 @@ updateCityInfoById (Id personId) currentCity (Id merchantOperatingCityId) = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updateHasTakenValidRide :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
+updateHasTakenValidRide :: KvDbFlow m r => Id Person -> m ()
 updateHasTakenValidRide (Id personId) = do
   now <- getCurrentTime
   updateWithKV
@@ -230,7 +230,7 @@ updateHasTakenValidRide (Id personId) = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updateReferredByCustomer :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Text -> m () -- TODO: move this once DSL Bug Fixed
+updateReferredByCustomer :: KvDbFlow m r => Id Person -> Text -> m () -- TODO: move this once DSL Bug Fixed
 updateReferredByCustomer personId referredByPersonId = do
   now <- getCurrentTime
   updateWithKV
@@ -240,7 +240,7 @@ updateReferredByCustomer personId referredByPersonId = do
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
 
-updateCustomerReferralCode :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Text -> m () -- TODO: move this once DSL Bug Fixed
+updateCustomerReferralCode :: KvDbFlow m r => Id Person -> Text -> m () -- TODO: move this once DSL Bug Fixed
 updateCustomerReferralCode personId refferalCode = do
   now <- getCurrentTime
   updateWithKV

@@ -88,7 +88,7 @@ buildAppEnv AppCfg {..} = do
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Nothing
   isArtReplayerEnabled <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "IS_ART_REPLAYER_ENABLED"
-  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDBFunction
+  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDbFunctions
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   return AppEnv {..}
 

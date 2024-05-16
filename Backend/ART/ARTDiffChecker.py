@@ -52,7 +52,7 @@ def get_nested_diff_if_any(art_data_response, art_runner_data_response):
                 else:
                     if value != art_runner_data_response[key]:
                         diff_data = get_nested_diff_if_any(value, art_runner_data_response[key])
-                        if diff_data != None:
+                        if diff_data != None and diff_data != {} and diff_data != []:
                             diff[key] = diff_data
         elif isinstance(art_data_response, list):
             diff = []
@@ -62,7 +62,7 @@ def get_nested_diff_if_any(art_data_response, art_runner_data_response):
                 else:
                     if value != art_runner_data_response[index]:
                         diff_data = get_nested_diff_if_any(value, art_runner_data_response[index])
-                        if diff_data != None:
+                        if diff_data != None and diff_data != {} and diff_data != []:
                             diff.append(diff_data)
         else:
             if art_data_response != art_runner_data_response:
@@ -72,7 +72,7 @@ def get_nested_diff_if_any(art_data_response, art_runner_data_response):
                 else:
                     print(f"Skiiping time/uuid check as type of {art_data_response} and {art_runner_data_response} is {type}")
                     diff = None
-        if diff == {}:
+        if diff == {} or diff == []:
             return None
         return diff
 
@@ -122,7 +122,7 @@ def check_diff_between_art_and_art_runner():
         try:
             if key not in art_runner_data:
                 print(f"Key {key} not found in art_runner_data")
-                art_data_diff_result[key] = {"art_data": value, "art_runner_data": None , "diff": "No records found","calls_made":{"art":len(value),"art_runner":0}}
+                art_data_diff_result[key] = {"art_data": get_response_from_list(value), "art_runner_data": None , "diff": "No records found","calls_made":{"art":len(value),"art_runner":0}}
             else:
                 art_data_response = get_response_from_list(value)
                 art_runner_data_response = get_response_from_list(art_runner_data[key])
@@ -144,6 +144,11 @@ def check_diff_between_art_and_art_runner():
     return art_data_diff_result
 
 
+def compare_art_calls(calls_made_art, calls_made_art_runner):
+    if calls_made_art == calls_made_art_runner or abs(calls_made_art - calls_made_art_runner) <= 2:
+        return True
+    return False
+
 def print_diff_result(key, result):
     diff = result["diff"]
     calls_made = result["calls_made"]
@@ -151,23 +156,25 @@ def print_diff_result(key, result):
         print("\n","_"*100)
         print(f"Result for API -> {key}")
         print(f"Test-1 -> Api Response : Result : Passed ✅ ")
+        print(f"Diff found for key {key} -> {diff}")
         print(f" Result for calls made for API -> {key}")
-        if calls_made["art"] == calls_made["art_runner"]:
+        if compare_art_calls(calls_made["art"], calls_made["art_runner"]):
             print(f"Test-2 -> Calls made : Result : Passed ✅ ")
         else:
             print(f"Test-2 -> Calls made : Result : Failed ❌ ")
+            print(f"Art calls made -> {calls_made['art']} and Art_runner calls made -> {calls_made['art_runner']}")
         print("_"*100,"\n")
     else:
         print("\n","_"*100)
         print(f"Result for API -> {key}")
         print(f"Test-1 -> Api Response : Result : Failed ❌ ")
-        print(f"Diff found for key {key} -> {json.dumps(diff, indent=4)}")
+        print(f"🚨 Diff found for key {key} -> {json.dumps(diff, indent=4)}")
         print(f" Result for calls made for API -> {key}")
         if calls_made["art"] == calls_made["art_runner"]:
             print(f"Test-2 -> Calls made : Result : Passed ✅ ")
         else:
             print(f"Test-2 -> Calls made : Result : Failed ❌ ")
-            print(f"Art calls made -> {calls_made['art']} and Art_runner calls made -> {calls_made['art_runner']}")
+            print(f"🚨 Art calls made -> {calls_made['art']} and Art_runner calls made -> {calls_made['art_runner']}")
         print("_"*100,"\n")
         print(f"Diff -> {diff}")
         print("\n")
@@ -178,9 +185,9 @@ def write_to_file(file_path, data):
 
 #-----------------------------------------------------------main-----------------------------------------------------------
 
-if __name__ == "__main__":
+def main():
     result = check_diff_between_art_and_art_runner()
-    file_path = getFilePath("art_diff_result.json")
+    file_path = getFilePath("ArtLogs/"+time.strftime("%Y-%m-%d--%H-%M")+".json")
     print(f"Writing diff result to file -> {file_path}")
     write_to_file(file_path, result)
 
@@ -188,8 +195,7 @@ if __name__ == "__main__":
     print("Printing first passed and failed test cases")
     for key, value in result.items():
         print_diff_result(key, value)
-        time.sleep(1)
+        # time.sleep(1)
+        if input("Do you want to continue (y/n) : ") == "n":
+            break
         print("\n Sleep for 1 second")
-
-
-

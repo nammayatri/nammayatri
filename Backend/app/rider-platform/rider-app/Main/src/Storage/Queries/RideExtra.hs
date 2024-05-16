@@ -23,7 +23,6 @@ import EulerHS.Types (KVDBAnswer)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common (distanceToHighPrecDistance, distanceToHighPrecMeters)
 import Kernel.Types.Id
 import Kernel.Utils.Common (KvDbFlow, getCurrentTime, logTagDebug, logTagError)
@@ -352,7 +351,7 @@ extractRideIds :: KVDBAnswer [ByteString] -> [Text]
 extractRideIds (Right value) = TE.decodeUtf8 <$> value
 extractRideIds _ = []
 
-findLatestByDriverPhoneNumber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Ride)
+findLatestByDriverPhoneNumber :: KvDbFlow m r => Text -> m (Maybe Ride)
 findLatestByDriverPhoneNumber driverMobileNumber = do
   let lookupKey = driverMobileNumberKey driverMobileNumber
   rideIds_ <- L.runKVDB meshConfig.kvRedis $ L.smembers lookupKey
@@ -364,7 +363,7 @@ findLatestByDriverPhoneNumber driverMobileNumber = do
       findLatestActiveByDriverNumber driverMobileNumber
     _ -> findLatestActiveByRideIds rideIds
   where
-    findLatestActiveByRideIds :: (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) => [Text] -> m (Maybe Ride)
+    findLatestActiveByRideIds :: (CoreMetrics m, KvDbFlow m r) => [Text] -> m (Maybe Ride)
     findLatestActiveByRideIds rideIds =
       do
         findAllWithKVAndConditionalDB
@@ -376,7 +375,7 @@ findLatestByDriverPhoneNumber driverMobileNumber = do
           (Just (Se.Desc BeamR.createdAt))
         <&> listToMaybe
 
-    findLatestActiveByDriverNumber :: (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Ride)
+    findLatestActiveByDriverNumber :: KvDbFlow m r => Text -> m (Maybe Ride)
     findLatestActiveByDriverNumber driverNum =
       do
         let limit = 1
@@ -391,7 +390,7 @@ findLatestByDriverPhoneNumber driverMobileNumber = do
           Nothing
         <&> listToMaybe
 
-appendByDriverPhoneNumber :: (MonadFlow m, Hedis.HedisFlow m r) => Ride -> m ()
+appendByDriverPhoneNumber :: KvDbFlow m r => Ride -> m ()
 appendByDriverPhoneNumber ride = do
   let lookupKey = driverMobileNumberKey ride.driverMobileNumber
       rideId = [TE.encodeUtf8 $ getId ride.id]

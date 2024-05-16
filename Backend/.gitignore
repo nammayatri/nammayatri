@@ -1,4 +1,5 @@
 *~
+*.pyc
 .psc-ide-port
 dist
 dist-*

@@ -23,7 +23,7 @@ import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import Kernel.Utils.Logging
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantServiceConfig as BeamMSC
@@ -34,7 +34,7 @@ import Tools.Error
 
 -- Extra code goes here --
 findByMerchantOpCityIdAndService ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id Merchant ->
   Id DMOC.MerchantOperatingCity ->
   ServiceName ->
@@ -51,7 +51,7 @@ findByMerchantOpCityIdAndService (Id merchantId) (Id merchantOperatingCity) serv
       return $ Just resp'
 
 findByMerchantOpCityIdAndService' ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id Merchant ->
   Id DMOC.MerchantOperatingCity ->
   ServiceName ->
@@ -65,7 +65,7 @@ findByMerchantOpCityIdAndService' (Id merchantId) (Id merchantOperatingCity) ser
         ]
     ]
 
-upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
+upsertMerchantServiceConfig :: KvDbFlow m r => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig merchantServiceConfig = do
   now <- getCurrentTime
   let (_serviceName, configJSON) = getServiceNameConfigJSON merchantServiceConfig.serviceConfig

@@ -156,7 +156,7 @@ fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings dis
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
 
-buildLocation :: (MonadFlow m, EsqDBFlow m r) => DBBL.BookingLocation -> m DL.Location
+buildLocation :: KvDbFlow m r => DBBL.BookingLocation -> m DL.Location
 buildLocation DBBL.BookingLocation {..} =
   return $
     DL.Location
@@ -164,7 +164,7 @@ buildLocation DBBL.BookingLocation {..} =
         ..
       }
 
-upsertFromLocationAndMappingForOldData :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe (Id DBBL.BookingLocation) -> Text -> Text -> Maybe Text -> m DL.Location
+upsertFromLocationAndMappingForOldData :: KvDbFlow m r => Maybe (Id DBBL.BookingLocation) -> Text -> Text -> Maybe Text -> m DL.Location
 upsertFromLocationAndMappingForOldData locationId bookingId merchantId merchantOperatingCityId = do
   loc <- QBBL.findById `mapM` locationId >>= fromMaybeM (InternalError "From Location Id Not Found in Booking Table")
   pickupLoc <- maybe (throwError $ InternalError ("From Location Not Found in Booking Location Table for BookingId : " <> bookingId)) buildLocation loc
@@ -172,7 +172,7 @@ upsertFromLocationAndMappingForOldData locationId bookingId merchantId merchantO
   void $ QL.create pickupLoc >> QLM.create fromLocationMapping
   return pickupLoc
 
-upsertToLocationAndMappingForOldData :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Text -> Text -> Maybe Text -> m ()
+upsertToLocationAndMappingForOldData :: KvDbFlow m r => Maybe Text -> Text -> Text -> Maybe Text -> m ()
 upsertToLocationAndMappingForOldData toLocationId bookingId merchantId merchantOperatingCityId = do
   toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId >>= fromMaybeM (InternalError "toLocation is null for one way booking")
   dropLoc <- buildLocation toLocation

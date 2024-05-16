@@ -8,7 +8,7 @@ result-*
 .envrc
 ## Data directory used by services
 /data
-
+/Backend/ART/ArtLogs
 # Backend ignores
 dist-newstyle
 /data

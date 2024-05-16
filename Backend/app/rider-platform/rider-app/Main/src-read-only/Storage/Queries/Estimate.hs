@@ -13,20 +13,20 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as Beam
 import Storage.Queries.EstimateExtra as ReExport
 import Storage.Queries.Transformers.Estimate
 
-findAllBySRId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Estimate.Estimate])
+findAllBySRId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Estimate.Estimate])
 findAllBySRId (Kernel.Types.Id.Id requestId) = do findAllWithKV [Se.Is Beam.requestId $ Se.Eq requestId]
 
-findByBPPEstimateId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.BPPEstimate -> m (Maybe Domain.Types.Estimate.Estimate))
+findByBPPEstimateId :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Estimate.BPPEstimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findByBPPEstimateId (Kernel.Types.Id.Id bppEstimateId) = do findOneWithKV [Se.Is Beam.bppEstimateId $ Se.Eq bppEstimateId]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
+findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
 findBySRIdAndStatus ::
@@ -37,15 +37,15 @@ findBySRIdAndStatus status (Kernel.Types.Id.Id requestId) = do findOneWithKV [Se
 updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Estimate.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
 updateStatus status (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.updatedAt _now, Se.Set Beam.status status] [Se.Is Beam.id $ Se.Eq id]
 
-updateStatusByRequestId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Estimate.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
+updateStatusByRequestId :: KvDbFlow m r => (Domain.Types.Estimate.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateStatusByRequestId status (Kernel.Types.Id.Id requestId) = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.updatedAt _now, Se.Set Beam.status status] [Se.Is Beam.requestId $ Se.Eq requestId]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Estimate.Estimate -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.Estimate.Estimate -> m ())
 updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
   _now <- getCurrentTime
   updateWithKV

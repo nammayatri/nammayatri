@@ -19,7 +19,7 @@ import Storage.Queries.OrphanInstances.CancellationReason
 -- Extra code goes here --
 
 -- Not querying by Id. In case the table is enabled someday, better to route this through DB
-findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => CancellationStage -> m [CancellationReason]
+findAll :: KvDbFlow m r => CancellationStage -> m [CancellationReason]
 findAll cancStage = do
   seCaseCondition <- case cancStage of
     OnSearch -> pure $ Se.Is BeamCR.onSearch $ Se.Eq True

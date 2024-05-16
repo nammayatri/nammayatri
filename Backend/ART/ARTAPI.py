@@ -3,20 +3,27 @@ import requests
 import json
 import re
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
+import ARTDataFromKafka as art_kafka_data
+import ARTDiffChecker as art_diff_checker
+
+def get_current_time():
+    return datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+
+def create_folder_with_file(filepath):
+    directory = os.path.dirname(filepath)
+    os.makedirs(directory, exist_ok=True)
 
 def clean_file(filename):
     dummy_line ='{"dataTimestamp":"2024-03-14T07:10:25.215311256Z","whereClauseText":""}'
     with open(filename, 'w') as file:
         file.write(dummy_line)
 
-
 def getFilePath(file_name):
     current_file_path = os.path.abspath(__file__)
     current_directory = os.path.dirname(current_file_path)
     new_file_path = os.path.join(current_directory, file_name)
     return new_file_path
-
 
 dataFilePath = getFilePath("data.log")
 path = getFilePath("groupedRequestIds.log")
@@ -59,12 +66,11 @@ def replaceAllTimeInLine(line):
         if matches:
             timestamp = matches[0]
             pattern = r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d*Z'
-            pattern_without_z = r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d*'
-            # dataMatches = re.findall(pattern, line)
-            # dataMatches_without_z = re.findall(pattern_without_z, line)
-            # print("Data Matches:", dataMatches)
+            pattern_till_seconds = r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}'
+            pattern_without_z = r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d*'  # without Z
             new_line = re.sub(pattern, lambda x: calculate_new_time(x.group(), timestamp), line)
             new_line = re.sub(pattern_without_z, lambda x: calculate_new_time_without_z(x.group(), timestamp), new_line)
+            new_line = re.sub(pattern_till_seconds, lambda x: calculate_new_time_without_z(x.group(), timestamp), new_line)
             new_line = re.sub(r'"timestamp":"([^"]+)"', f'"timestamp":"{timestamp}"', new_line)
             return new_line
         else:
@@ -74,39 +80,59 @@ def replaceAllTimeInLine(line):
         return line
 
 
+def write_forked_data_to_file(data):
+    forkedTagData = {}
+    for line in data:
+        if "forkedTag" in line:
+            forkedTag = json.loads(line)["forkedTag"]
+            if forkedTag not in forkedTagData:
+                forkedTagData[forkedTag] = []
+            forkedTagData[forkedTag].append(line)
+    for key, value in forkedTagData.items():
+        lines = ""
+        for line in value:
+            lines += replaceAllTimeInLine(line)
+        lines = lines.strip()
+        file_name = getFilePath("ArtForked/"+key+".log")
+        create_folder_with_file(file_name)
+        with open(file_name, 'w') as file:
+            file.write(lines)
+        print(f"Data written to file: {key}.log")
 
 def groupDataIntoFile(file_path,apikey):
     with open(file_path, 'r') as file:
         data = json.load(file)
         for key, value in data.items():
             if key == apikey:
+                write_forked_data_to_file(value)
                 lines = ""
                 for line in value:
-                    lines += replaceAllTimeInLine(line)
+                    if "forkedTag" not in line:
+                        lines += replaceAllTimeInLine(line)
                 lines = lines.strip()
 
                 with open(dataFilePath, 'w') as file:
                     file.write(lines)
+                print("Data written to file")
                 return
             else:
                 continue
 
 
-
-
-
 def callApiForART (path):
     with open(path, 'r') as file:
+        time_to_sleep = 2
         api_data = json.load(file)
         for api_name, api_details in api_data.items():
             for line in api_details:
-                if "rawPathInfo" in line:
+                if "rawPathInfo" in line and not "/beckn/" in line:
                     # we will ask here to call the api or not or move to next
-                    ask = input(f' Do you want to call the API: {api_name} (y/n) or Exit (e):')
-                    if ask.lower() == "e":
-                        return
-                    elif ask.lower() == "n":
-                        continue
+                    # call_lts()
+                    # ask = input(f' Do you want to call the API: {api_name} (y/n) or Exit (e):')
+                    # if ask.lower() == "e":
+                    #     return
+                    # elif ask.lower() == "n":
+                    #     continue
                     groupDataIntoFile(path,api_name)
                     clean_file(processed_file)
                     api_details = json.loads(line)
@@ -120,7 +146,7 @@ def callApiForART (path):
                         host = "http://" + headers["Host"]
                     urlPath = eval(api_details["rawPathInfo"])
                     handledUrl = host + urlPath + eval(api_details["rawQueryString"])
-                    requestBody = eval(api_details["body"])
+                    requestBody = eval(api_details["body"].replace("Just", "").replace("Nothing", ""))
                     if len (requestBody) :
                         requestBody = json.loads(requestBody)
 
@@ -129,7 +155,7 @@ def callApiForART (path):
                     print(f'Request Method: {requestMethod}')
                     print(f'URL: {handledUrl}')
                     print(f'Headers: {headers}')
-                    print(f'Body: {requestBody}')
+                    print(f'Body: {json.dumps(requestBody)}')
 
                     try:
                         response = requests.request(
@@ -140,23 +166,54 @@ def callApiForART (path):
                         )
                         if response.status_code == 200:
                             print("\n\n********** Response **********\n")
-                            print(f"Response: {response.json()}")
-                            print("\nSleeping for 1 second............\n")
-                            time.sleep(1)
+                            print(f"Response: {json.dumps(response.json(), indent=4)}")
+                            print(f'\nSleeping for {time_to_sleep} seconds............\n')
+                            time.sleep(time_to_sleep)
 
                         else :
                             print("\n\n********** Response Error **********\n")
                             print(f"ErrorCode: {response.status_code}")
                             print(f"Error: {response.text}")
-                            print("\nSleeping for 1 second............\n")
-                            time.sleep(1)
+                            print(f'\nSleeping for {time_to_sleep} seconds............\n')
+                            time.sleep(time_to_sleep)
                     except Exception as e:
                         print(f"Error: {e}")
-                        print("\nSleeping for 1 seconds............\n")
-                        time.sleep(1)
+                        print("\nSleeping for 5 seconds............\n")
+                        time.sleep(time_to_sleep)
                 else:
                     continue
 
+# --------------------------------- Paths ---------------------------------------#
+input_file_path = getFilePath("custom.log")
+input_path_mocked_data = getFilePath("artRunner.log")
+
+# =====================================================================================================#'
 
 
+# write data for art mocker
+art_kafka_data.write_data_for_art_mocker(input_file_path)
+print("Data written for ART Mocker")
+
+print("Deleting kafka topic............\n")
+art_kafka_data.delete_kafka_topic("ART-Logs")
+
+print("Reading data and calling API for ART")
 callApiForART(path)
+print("API called for ART")
+
+# write data for art runner mocker
+# get mocked logs from kafka
+print("Reading data from Kafka")
+art_kafka_data.read_data_from_kafka("ART-Logs", input_path_mocked_data)
+print("Data read from Kafka")
+
+print("Writing data for ART Diff Checker")
+art_kafka_data.write_data_for_art_diff_checker(input_path_mocked_data)
+print("Data written for ART Diff Checker")
+
+
+# lets run diff checker here
+print("Running Diff Checker")
+art_diff_checker.main()
+
+

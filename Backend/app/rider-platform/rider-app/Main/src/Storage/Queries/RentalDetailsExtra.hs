@@ -8,9 +8,9 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import Storage.Queries.OrphanInstances.RentalDetails
 
 -- Extra code goes here --
-createRentalDetails :: (MonadFlow m, EsqDBFlow m r) => RentalDetails -> m ()
+createRentalDetails :: KvDbFlow m r => RentalDetails -> m ()
 createRentalDetails = createWithKV

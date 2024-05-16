@@ -11,24 +11,24 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SpecialZoneQuote as Beam
 import Storage.Queries.Transformers.SpecialZoneQuote
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SpecialZoneQuote.SpecialZoneQuote -> m ())
+create :: KvDbFlow m r => (Domain.Types.SpecialZoneQuote.SpecialZoneQuote -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.SpecialZoneQuote.SpecialZoneQuote] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.SpecialZoneQuote.SpecialZoneQuote] -> m ())
 createMany = traverse_ create
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SpecialZoneQuote.SpecialZoneQuote -> m (Maybe Domain.Types.SpecialZoneQuote.SpecialZoneQuote))
+findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.SpecialZoneQuote.SpecialZoneQuote -> m (Maybe Domain.Types.SpecialZoneQuote.SpecialZoneQuote))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SpecialZoneQuote.SpecialZoneQuote -> m (Maybe Domain.Types.SpecialZoneQuote.SpecialZoneQuote))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.SpecialZoneQuote.SpecialZoneQuote -> m (Maybe Domain.Types.SpecialZoneQuote.SpecialZoneQuote))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SpecialZoneQuote.SpecialZoneQuote -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.SpecialZoneQuote.SpecialZoneQuote -> m ())
 updateByPrimaryKey (Domain.Types.SpecialZoneQuote.SpecialZoneQuote {..}) = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt), Se.Set Beam.quoteId quoteId, Se.Set Beam.updatedAt (Just _now)] [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

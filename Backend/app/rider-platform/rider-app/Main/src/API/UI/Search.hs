@@ -106,7 +106,7 @@ checkSearchRateLimit personId = do
 searchHitsCountKey :: Id Person.Person -> Text
 searchHitsCountKey personId = "BAP:Ride:search:" <> getId personId <> ":hitsCount"
 
-updateVersions :: KvDbFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion] => Id Person.Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m ()
+updateVersions :: (KvDbFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Id Person.Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m ()
 updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
   deploymentVersion <- asks (.version)

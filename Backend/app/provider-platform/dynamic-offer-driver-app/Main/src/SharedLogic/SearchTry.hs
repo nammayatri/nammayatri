@@ -210,8 +210,7 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
       }
 
 buildTripQuoteDetail ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r
   ) =>
   DSR.SearchRequest ->

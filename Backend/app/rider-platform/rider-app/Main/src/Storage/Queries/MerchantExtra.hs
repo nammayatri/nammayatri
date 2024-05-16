@@ -12,16 +12,16 @@ import Kernel.Types.Geofencing
 import qualified Kernel.Types.Geofencing as Geo
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as BeamM
 import Storage.Queries.OrphanInstances.Merchant
 
 -- Extra code goes here --
-findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Merchant]
+findAll :: KvDbFlow m r => m [Merchant]
 findAll = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
 
-update :: (MonadFlow m, EsqDBFlow m r) => Merchant -> m ()
+update :: KvDbFlow m r => Merchant -> m ()
 update org = do
   now <- getCurrentTime
   updateOneWithKV
@@ -32,7 +32,7 @@ update org = do
     ]
     [Se.Is BeamM.id (Se.Eq (getId org.id))]
 
-updateGeofencingConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> GeoRestriction -> GeoRestriction -> m ()
+updateGeofencingConfig :: KvDbFlow m r => Id Merchant -> GeoRestriction -> GeoRestriction -> m ()
 updateGeofencingConfig merchantId originRestriction destinationRestriction = do
   now <- getCurrentTime
   updateOneWithKV

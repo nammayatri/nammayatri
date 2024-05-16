@@ -17,6 +17,7 @@ module App.Types where
 import qualified Data.Map as Map
 import EulerHS.Prelude
 import Kernel.External.Notification.FCM.Types
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.App
 import Kernel.Types.Common hiding (id)
@@ -41,7 +42,11 @@ data AppEnv = AppEnv
     notificationsMap :: MVar (Map.Map FCMRecipientToken [FCMMessage Value Value]),
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
-    version :: Metrics.DeploymentVersion
+    version :: Metrics.DeploymentVersion,
+    requestId :: Maybe Text,
+    shouldLogRequestId :: Bool,
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    isArtReplayerEnabled :: Bool
   }
   deriving (Generic)
 
@@ -52,6 +57,10 @@ buildAppEnv AppCfg {..} = do
   notificationsMap <- newMVar Map.empty
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   isShuttingDown <- mkShutdown
+  let shouldLogRequestId = False
+      requestId = Nothing
+      kafkaProducerForART = Nothing
+      isArtReplayerEnabled = False
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

@@ -13,29 +13,29 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOffer as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverOffer.DriverOffer -> m ())
+create :: KvDbFlow m r => (Domain.Types.DriverOffer.DriverOffer -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverOffer.DriverOffer] -> m ())
+createMany :: KvDbFlow m r => ([Domain.Types.DriverOffer.DriverOffer] -> m ())
 createMany = traverse_ create
 
-findByBPPQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.DriverOffer.DriverOffer])
+findByBPPQuoteId :: KvDbFlow m r => (Kernel.Prelude.Text -> m [Domain.Types.DriverOffer.DriverOffer])
 findByBPPQuoteId bppQuoteId = do findAllWithKV [Se.Is Beam.bppQuoteId $ Se.Eq bppQuoteId]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverOffer.DriverOffer -> m (Maybe Domain.Types.DriverOffer.DriverOffer))
+findById :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.DriverOffer.DriverOffer -> m (Maybe Domain.Types.DriverOffer.DriverOffer))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverOffer.DriverOfferStatus -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
+updateStatus :: KvDbFlow m r => (Domain.Types.DriverOffer.DriverOfferStatus -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
 updateStatus status (Kernel.Types.Id.Id estimateId) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.updatedAt _now, Se.Set Beam.status status] [Se.Is Beam.estimateId $ Se.Eq estimateId]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverOffer.DriverOffer -> m (Maybe Domain.Types.DriverOffer.DriverOffer))
+findByPrimaryKey :: KvDbFlow m r => (Kernel.Types.Id.Id Domain.Types.DriverOffer.DriverOffer -> m (Maybe Domain.Types.DriverOffer.DriverOffer))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverOffer.DriverOffer -> m ())
+updateByPrimaryKey :: KvDbFlow m r => (Domain.Types.DriverOffer.DriverOffer -> m ())
 updateByPrimaryKey (Domain.Types.DriverOffer.DriverOffer {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -52,7 +52,8 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     shouldLogRequestId :: Bool,
     requestId :: Maybe Text,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    isArtReplayerEnabled :: Bool
   }
   deriving (Generic)
 
@@ -65,6 +66,7 @@ buildAppEnv AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   version <- lookupDeploymentVersion
   let kafkaProducerForART = Nothing
+      isArtReplayerEnabled = False
   isShuttingDown <- mkShutdown
   let requestId = Nothing
       shouldLogRequestId = False

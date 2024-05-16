@@ -11,12 +11,12 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (KvDbFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.PlaceBasedServiceConfig as Beam
 import Storage.Queries.OrphanInstances.PlaceBasedServiceConfig
 
-findByPlaceIdAndServiceName :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Domain.Types.MerchantServiceConfig.ServiceName -> m (Maybe (Domain.Types.PlaceBasedServiceConfig.PlaceBasedServiceConfig))
+findByPlaceIdAndServiceName :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Domain.Types.MerchantServiceConfig.ServiceName -> m (Maybe (Domain.Types.PlaceBasedServiceConfig.PlaceBasedServiceConfig))
 findByPlaceIdAndServiceName (Kernel.Types.Id.Id placeId) serviceName = do
   findOneWithKV
     [ Se.And

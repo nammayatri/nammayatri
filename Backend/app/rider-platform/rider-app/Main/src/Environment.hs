@@ -30,7 +30,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import Domain.Types.FeedbackForm
 import EulerHS.Prelude (newEmptyTMVarIO)
-import Kernel.Beam.Functions (getArtDbFunctions, getDBFunction)
+import Kernel.Beam.Functions (getArtDbFunctions, getDbFunctions)
 import Kernel.Beam.Lib.Utils (DbFunctions)
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Infobip.Types (InfoBIPConfig)
@@ -244,13 +244,13 @@ buildAppEnv cfg@AppCfg {..} = do
   eventRequestCounter <- registerEventRequestCounterMetric
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
-  isArtReplayerEnabled <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "IS_ART_REPLAYER_ENABLED"
-  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDBFunction
+  isArtReplayerEnabled <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "IS_ART_REPLAYER_ENABLED_TEST"
+  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDbFunctions
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let nonCriticalModifierFunc = ("ab:n_c:" <>)
   hedisEnv <- connectHedis hedisCfg riderAppPrefix
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID"
+  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID_TEST"
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc
   let kafkaProducerForART = Just kafkaProducerTools
   hedisClusterEnv <-

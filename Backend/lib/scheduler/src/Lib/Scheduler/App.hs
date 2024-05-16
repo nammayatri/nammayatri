@@ -63,7 +63,7 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ma
       requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   isArtReplayerEnabled <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "IS_ART_REPLAYER_ENABLED"
-  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDBFunction
+  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDbFunctions
   hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg (\k -> hedisPrefix <> ":" <> k)
   hedisNonCriticalClusterEnv <-

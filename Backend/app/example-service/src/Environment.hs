@@ -16,6 +16,7 @@ module Environment where
 
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
@@ -40,7 +41,11 @@ data AppEnv = AppEnv
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
     coreMetrics :: CoreMetricsContainer,
-    version :: DeploymentVersion
+    version :: DeploymentVersion,
+    requestId :: Maybe Text,
+    shouldLogRequestId :: Bool,
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    isArtReplayerEnabled :: Bool
   }
   deriving (Generic)
 
@@ -52,6 +57,10 @@ buildAppEnv AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
+  let shouldLogRequestId = False
+      requestId = Nothing
+      kafkaProducerForART = Nothing
+      isArtReplayerEnabled = False
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
