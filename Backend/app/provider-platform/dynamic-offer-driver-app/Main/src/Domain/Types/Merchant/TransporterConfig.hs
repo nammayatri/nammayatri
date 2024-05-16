@@ -205,10 +205,3 @@ instance FromJSON (TransporterConfigD 'Safe)
 instance ToJSON (TransporterConfigD 'Safe)
 
 instance ToJSON (TransporterConfigD 'Unsafe)
-
--- type CityList = (City,City)
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be CityList where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- $(mkBeamInstancesForList ''CityList)

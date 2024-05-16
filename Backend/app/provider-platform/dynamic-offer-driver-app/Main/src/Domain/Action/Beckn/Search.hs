@@ -533,9 +533,10 @@ validateRequest merchantId sReq = do
             let allowedStates = maybe [sourceCity.state] (.allowedDestinationStates) mbMerchantState
             -- Destination states should be in the allowed states of the origin state
             if destinationCityState.state `elem` allowedStates
-              then case destinationCityState.city `elem` transporterConfig.crossTravelCities of
-                True -> return (True, True)
-                False -> return (True, False)
+              then do
+                if destinationCityState.city `elem` transporterConfig.crossTravelCities
+                  then return (True, True)
+                  else return (True, False)
               else throwError (RideNotServiceableInState $ show destinationCityState.state)
       Nothing -> pure (False, False)
 
