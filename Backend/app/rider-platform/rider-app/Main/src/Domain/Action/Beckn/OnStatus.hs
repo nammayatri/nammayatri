@@ -35,6 +35,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
+import Kernel.External.Types (SchedulerFlow)
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -169,6 +170,7 @@ onStatus ::
     ClickhouseFlow m r,
     HasBAPMetrics m r,
     EncFlow m r,
+    SchedulerFlow r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     EventStreamFlow m r,

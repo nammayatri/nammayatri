@@ -283,6 +283,7 @@ library
       SharedLogic.Allocator.Jobs.Mandate.Notification
       SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
+      SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
@@ -325,6 +326,7 @@ library
       SharedLogic.Person
       SharedLogic.Ride
       SharedLogic.RiderDetails
+      SharedLogic.ScheduledNotifications
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
       SharedLogic.SyncRide
@@ -395,6 +397,7 @@ library
       Storage.CachedQueries.Merchant.MerchantMessage
       Storage.CachedQueries.Merchant.MerchantOperatingCity
       Storage.CachedQueries.Merchant.MerchantPaymentMethod
+      Storage.CachedQueries.Merchant.MerchantPushNotification
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.Merchant.MerchantState
@@ -404,6 +407,7 @@ library
       Storage.CachedQueries.PlanTranslation
       Storage.CachedQueries.ReelsData
       Storage.CachedQueries.RegistryMapFallback
+      Storage.CachedQueries.RideRelatedNotificationConfig
       Storage.CachedQueries.SubscriptionConfig
       Storage.CachedQueries.Toll
       Storage.CachedQueries.ValueAddNP
@@ -619,6 +623,7 @@ library
       Domain.Types.MerchantMessage
       Domain.Types.MerchantOperatingCity
       Domain.Types.MerchantPaymentMethod
+      Domain.Types.MerchantPushNotification
       Domain.Types.MerchantServiceConfig
       Domain.Types.MerchantServiceUsageConfig
       Domain.Types.MerchantState
@@ -641,6 +646,7 @@ library
       Domain.Types.RegistrationToken
       Domain.Types.RegistryMapFallback
       Domain.Types.Ride
+      Domain.Types.RideRelatedNotificationConfig
       Domain.Types.RideDetails
       Domain.Types.RiderDetails
       Domain.Types.SearchReqLocation
@@ -724,6 +730,7 @@ library
       Storage.Beam.MerchantMessage
       Storage.Beam.MerchantOperatingCity
       Storage.Beam.MerchantPaymentMethod
+      Storage.Beam.MerchantPushNotification
       Storage.Beam.MerchantServiceConfig
       Storage.Beam.MerchantServiceUsageConfig
       Storage.Beam.MerchantState
@@ -746,6 +753,7 @@ library
       Storage.Beam.RegistrationToken
       Storage.Beam.RegistryMapFallback
       Storage.Beam.Ride
+      Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.RideDetails
       Storage.Beam.RiderDetails
       Storage.Beam.SearchReqLocation
@@ -829,6 +837,7 @@ library
       Storage.Queries.MerchantMessage
       Storage.Queries.MerchantOperatingCity
       Storage.Queries.MerchantPaymentMethod
+      Storage.Queries.MerchantPushNotification
       Storage.Queries.MerchantServiceConfig
       Storage.Queries.MerchantServiceUsageConfig
       Storage.Queries.MerchantState
@@ -904,6 +913,7 @@ library
       Storage.Queries.RegistrationToken
       Storage.Queries.RegistryMapFallback
       Storage.Queries.Ride
+      Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.RideDetails
       Storage.Queries.RiderDetails
       Storage.Queries.SearchReqLocation

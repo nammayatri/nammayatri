@@ -153,6 +153,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fare_recompute_
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN to_notify_driver_for_extra_kms_limit_exceed boolean NOT NULL default True;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN arriving_pickup_threshold double precision NOT NULL default 100;
 
 
