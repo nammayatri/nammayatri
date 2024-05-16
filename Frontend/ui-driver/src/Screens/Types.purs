@@ -2338,7 +2338,8 @@ type WelcomeScreenState = {
 }
 
 type WelcomeScreenData = {
-  logField :: Object Foreign
+  logField :: Object Foreign,
+  currentActiveIndex :: Int
 }
 ---------------------------------------------------- DriverEarningsScreen ----------------------------------
 

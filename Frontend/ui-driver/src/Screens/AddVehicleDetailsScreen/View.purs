@@ -414,13 +414,13 @@ vehicleRegistrationNumber state push =
                     , inputTypeI 4097
                     ] <> FontStyle.subHeading1 TypoGraphy)
                   ]
-              , textView
+              , textView $
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 , text (getString SAME_REENTERED_RC_MESSAGE)
                 , visibility $ if (DS.toLower(state.data.vehicle_registration_number) /= DS.toLower(state.data.reEnterVehicleRegistrationNumber) && not (DSC.null state.data.reEnterVehicleRegistrationNumber )) then VISIBLE else GONE
                 , color Color.darkGrey
-                ]
+                ] <> FontStyle.body3 TypoGraphy
           ]
         ] <> if state.data.cityConfig.registration.enableAc then [checkACView state push] else []
       ]

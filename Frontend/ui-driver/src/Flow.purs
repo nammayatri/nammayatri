@@ -676,7 +676,7 @@ onBoardingFlow = do
       filterCabs = DA.filter  (\item1 -> DA.any (\item2 -> item1.docType == item2.stage) registerationStepsCabs) documentStatusList
       -- filterAuto = DA.filter  (\item1 -> DA.any (\item2 -> item1.docType == item2.stage) registerationStepsAutos) documentStatusList
       -- finalDocumentStatusList = DA.union filterCabs filterAuto -- Need to check this logic
-      verifiedRC = find (\docStatus -> (docStatus.status == ST.COMPLETED || docStatus.status == ST.IN_PROGRESS) && docStatus.docType == ST.VEHICLE_DETAILS_OPTION && docStatus.verifiedVehicleCategory == uiCurrentCategory) documentStatusList
+      verifiedRC = find (\docStatus -> docStatus.status == ST.COMPLETED && docStatus.docType == ST.VEHICLE_DETAILS_OPTION && docStatus.verifiedVehicleCategory == uiCurrentCategory) documentStatusList
       onboardingRC = case verifiedRC of
                   Just rcItem -> rcItem.regNo
                   Nothing -> Nothing

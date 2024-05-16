@@ -8,6 +8,9 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Screens.Types (WelcomeScreenState)
 import ConfigProvider
+import Screens.WelcomeScreen.ScreenData
+import Engineering.Helpers.Commons as EHC
+import PrestoDOM (Margin(..))
 
 carouselData :: WelcomeScreenState -> Common.CarouselModal
 carouselData state =
@@ -37,12 +40,14 @@ carouselData state =
                 , margin: { top: 6, bottom: 0, right: 20, left: 20 }
                 }
             }
-        )
-        [ { image: "ny_ic_welcome_screen_1", title: getString $ DIRECT_PAYMENT_NO_COMMISSIONS "DIRECT_PAYMENT_NO_COMMISSIONS", description: getString $ CUSTOMER_PAYS_DIRECTLY "CUSTOMER_PAYS_DIRECTLY", gravity: 17, imageHeight: 260 }
+        ) (carouselTextData state)
+        
+  }
+carouselTextData :: WelcomeScreenState -> Array CarouselData
+carouselTextData state = [ { image: "ny_ic_welcome_screen_1", title: getString $ DIRECT_PAYMENT_NO_COMMISSIONS "DIRECT_PAYMENT_NO_COMMISSIONS", description: getString $ CUSTOMER_PAYS_DIRECTLY "CUSTOMER_PAYS_DIRECTLY", gravity: 17, imageHeight: 260 }
         , { image: "ny_ic_welcome_screen_2", title: getString $ HUNDRED_PERCENT_FARE_GOES_TO_YOU "HUNDRED_PERCENT_FARE_GOES_TO_YOU", description: getString $ FARE_SHOWN_IS_FARE_YOU_GET "FARE_SHOWN_IS_FARE_YOU_GET", gravity: 17, imageHeight: 260 }
         , { image: "ny_ic_welcome_screen_3", title: getString $ BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION "BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION", description: getString $ OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT "OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT", gravity: 17, imageHeight: 260 }
         ]
-  }
 
 primaryButtonConfig :: WelcomeScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -51,6 +56,7 @@ primaryButtonConfig state = let
       { textConfig { text = getString GET_STARTED }
       , id = "PrimaryButtonWelcomeScreen"
       , enableRipple = true
+      , margin = Margin 10 24 10 0
       }
   in primaryButtonConfig'
 
