@@ -75,7 +75,8 @@ import Constants
 import LocalStorage.Cache (getValueFromCache)
 import Engineering.Helpers.Utils (getFixedTwoDecimals)
 import Common.Resources.Constants
-import Helpers.Utils
+import Data.Function.Uncurried (runFn3)
+import DecodeUtil (getAnyFromWindow)
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -1956,7 +1957,7 @@ bgLocPopup state =
       , height =V 300
       , width = V 300
       , config{
-          rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/" <>  (if state.data.config.appData.name =="Mana Yatri" then "enable_locatio_permission_lottie_manayatri" else "enable_locatio_permission_lottie") <> ".json"
+          rawJson = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/" <>  (if state.data.config.appData.name =="Mana Yatri" then "enable_locatio_permission_lottie_manayatri" else "enable_locatio_permission_lottie") <> ".json"
         , lottieId = EHC.getNewIDWithTag "bgLocLottie"
         }
       }
@@ -2200,13 +2201,14 @@ isAcWorkingPopupConfig state = PopUpModal.config {
 
 topAcDriverPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
 topAcDriverPopUpConfig state = let 
+  appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
   config' = PopUpModal.config
     { gravity = CENTER,
       margin = MarginHorizontal 24 24 ,
       buttonLayoutMargin = Margin 16 0 16 20 ,
       optionButtonOrientation = "VERTICAL",
       primaryText {
-        text = getString TOP_AC_DRIVER,
+        text = getString $ TOP_AC_DRIVER appName,
         margin = Margin 18 24 18 24
     },
       secondaryText { visibility = GONE },

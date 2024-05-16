@@ -1875,7 +1875,8 @@ type BookingOptionsScreenData = {
   defaultRidePreference :: RidePreference,
   canSwitchToInterCity :: Boolean,
   canSwitchToRental :: Boolean,
-  airConditioned :: Maybe API.AirConditionedTier
+  airConditioned :: Maybe API.AirConditionedTier,
+  config :: AppConfig
 }
 
 type RidePreference = {
