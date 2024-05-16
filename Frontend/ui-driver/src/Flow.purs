@@ -538,6 +538,7 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
               changeDriverStatus Online
               pure unit
             "pref" -> do
+                globalState <- getState
                 void $ getDriverInfoDataFromCache globalState false
                 bookingOptionsFlow
             _ -> pure unit
@@ -1626,10 +1627,13 @@ bookingOptionsFlow = do
   action <- UI.bookingOptions
   case action of
     UPDATE_AC_AVAILABILITY state toggleVal -> do
-      resp <- HelpersAPI.callApi $ Remote.mkUpdateAirConditionWorkingStatus toggleVal
+      resp <- lift $ lift $ HelpersAPI.callApi $ Remote.mkUpdateAirConditionWorkingStatus toggleVal
       case resp of
         Right _ -> do
-          pure if toggleVal then toast $ getString VARIANTS_ARE_SWITCHED else toast $ getString NON_AC_ARE_SWITCHED
+          let toastMessage = if toggleVal 
+              then getString VARIANTS_ARE_SWITCHED 
+              else getString NON_AC_ARE_SWITCHED
+          pure $ toast toastMessage
           bookingOptionsFlow
         Left _ -> bookingOptionsFlow
     CHANGE_RIDE_PREFERENCE state service -> do
