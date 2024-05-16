@@ -14,7 +14,7 @@
 module Components.MessagingView.View where
 
 import Common.Types.App
-import Animation (translateInXBackwardAnim, translateInXForwardAnim, translateYAnimFromTop)
+import Animation (translateInXBackwardAnim, translateInXForwardAnim, translateYAnimFromTop, fadeIn)
 import Animation.Config (translateFullYAnimWithDurationConfig)
 import Components.MessagingView.Controller (Action(..), Config(..), ChatComponent)
 import Data.Array (mapWithIndex, (!!), length, null)
@@ -51,15 +51,14 @@ import Engineering.Helpers.Utils(getFlexBoxCompatibleVersion)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
- PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 300 true] $ 
+  PrestoAnim.animationSet [ fadeIn true] $ 
   relativeLayout
   [ height $ MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
   , clickable $ os == "IOS"
   , accessibility DISABLE
-  ][ PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 300 true] $ 
-      linearLayout
+  ][ linearLayout
      [ height $ WRAP_CONTENT
      , width $ MATCH_PARENT
      , clickable $ os == "IOS"
