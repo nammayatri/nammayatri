@@ -31,7 +31,6 @@ import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
 import Kernel.Utils.Shutdown
-import System.Environment (lookupEnv)
 import Tools.Metrics.Types
 import Tools.Streaming.Kafka.Environment
 
@@ -130,7 +129,7 @@ buildAppEnv AppCfg {..} = do
       else connectHedisCluster hedisNonCriticalClusterCfg publicTransportBapPrefix
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let shouldLogRequestId = False
   let kafkaProducerForART = Just kafkaProducerTools
       isArtReplayerEnabled = False
   return $ AppEnv {..}

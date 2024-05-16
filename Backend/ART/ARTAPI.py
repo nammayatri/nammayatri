@@ -7,6 +7,15 @@ from datetime import datetime
 import ARTDataFromKafka as art_kafka_data
 import ARTDiffChecker as art_diff_checker
 
+class colors:
+    RESET = '\033[0m'
+    RED = '\033[91m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    BLUE = '\033[94m'
+    PURPLE = '\033[95m'
+    CYAN = '\033[96m'
+
 def get_current_time():
     return datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
 
@@ -97,7 +106,7 @@ def write_forked_data_to_file(data):
         create_folder_with_file(file_name)
         with open(file_name, 'w') as file:
             file.write(lines)
-        print(f"Data written to file: {key}.log")
+        print(f"Forked Data written to file: {key}.log")
 
 def groupDataIntoFile(file_path,apikey):
     with open(file_path, 'r') as file:
@@ -127,7 +136,6 @@ def callApiForART (path):
             for line in api_details:
                 if "rawPathInfo" in line and not "/beckn/" in line:
                     # we will ask here to call the api or not or move to next
-                    # call_lts()
                     # ask = input(f' Do you want to call the API: {api_name} (y/n) or Exit (e):')
                     # if ask.lower() == "e":
                     #     return
@@ -150,7 +158,7 @@ def callApiForART (path):
                     if len (requestBody) :
                         requestBody = json.loads(requestBody)
 
-                    print(f"Calling API: {handledUrl}..............")
+                    print(f"{colors.YELLOW}Calling API: {api_name}{colors.RESET}")
                     print("\n********** Request **********\n")
                     print(f'Request Method: {requestMethod}')
                     print(f'URL: {handledUrl}')
@@ -165,20 +173,20 @@ def callApiForART (path):
                             json=requestBody
                         )
                         if response.status_code == 200:
-                            print("\n\n********** Response **********\n")
+                            print(f"\n\n{colors.GREEN}********** Success Response **********{colors.RESET}\n")
                             print(f"Response: {json.dumps(response.json(), indent=4)}")
                             print(f'\nSleeping for {time_to_sleep} seconds............\n')
                             time.sleep(time_to_sleep)
 
                         else :
-                            print("\n\n********** Response Error **********\n")
+                            print(f"\n\n{colors.RED}********** Response Error **********{colors.RESET}\n")
                             print(f"ErrorCode: {response.status_code}")
                             print(f"Error: {response.text}")
                             print(f'\nSleeping for {time_to_sleep} seconds............\n')
                             time.sleep(time_to_sleep)
                     except Exception as e:
-                        print(f"Error: {e}")
-                        print("\nSleeping for 5 seconds............\n")
+                        print(f"{colors.RED}Error in calling API: {api_name} -> {e}{colors.RESET}")
+                        print(f'\nSleeping for {time_to_sleep} seconds............\n')
                         time.sleep(time_to_sleep)
                 else:
                     continue

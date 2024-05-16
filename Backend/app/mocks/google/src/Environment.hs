@@ -24,7 +24,6 @@ import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Shutdown
 import Lib.GoogleConfig (GoogleCfgUnencrypted)
-import System.Environment (lookupEnv)
 import Tools.Metrics
 
 data AppCfg = AppCfg
@@ -64,7 +63,7 @@ buildAppEnv AppCfg {..} = do
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   coreMetrics <- registerCoreMetricsContainer
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let shouldLogRequestId = False
   let kafkaProducerForART = Nothing
       isArtReplayerEnabled = False
   isShuttingDown <- mkShutdown

@@ -142,9 +142,9 @@ buildAppEnv AppCfg {..} consumerType = do
   hedisEnv <- connectHedis hedisCfg id
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let shouldLogRequestId = False
   let kafkaProducerForART = Nothing
-  isArtReplayerEnabled <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "IS_ART_REPLAYER_ENABLED"
+  let isArtReplayerEnabled = False
   let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDbFunctions
   hedisClusterEnv <-
     if cutOffHedisCluster

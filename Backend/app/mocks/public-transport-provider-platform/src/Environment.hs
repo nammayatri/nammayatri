@@ -25,7 +25,6 @@ import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth hiding (prepareAuthManager)
 import Network.HTTP.Client (Manager, newManager)
 import Relude
-import System.Environment as SE
 
 data AppCfg = AppCfg
   { port :: Int,
@@ -78,7 +77,7 @@ buildAppEnv config@AppCfg {..} = do
   hedisEnv <- connectHedis hedisCfg ("mock_public_transport_provider_platform" <>)
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg ("mock_public_transport_provider_platform" <>)
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let shouldLogRequestId = False
   let kafkaProducerForART = Nothing
       isArtReplayerEnabled = False
   hedisNonCriticalClusterEnv <-

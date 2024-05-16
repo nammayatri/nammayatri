@@ -74,7 +74,7 @@ buildAppEnv AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let shouldLogRequestId = False
   let kafkaProducerForART = Nothing
       isArtReplayerEnabled = False
   return $ AppEnv {..}

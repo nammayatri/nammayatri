@@ -26,7 +26,6 @@ import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Servant.SignatureAuth
 import Kernel.Utils.Shutdown
-import System.Environment (lookupEnv)
 import Tools.Metrics
 import Tools.Streaming.Kafka
 
@@ -82,7 +81,7 @@ buildAppEnv AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let shouldLogRequestId = False
   let kafkaProducerForART = Nothing
       isArtReplayerEnabled = False
   kafkaConsumerEnv <- buildKafkaConsumerEnv kafkaConsumerCfgs

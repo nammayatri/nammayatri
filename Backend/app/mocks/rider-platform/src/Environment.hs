@@ -32,7 +32,6 @@ import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
 import Kernel.Utils.Shutdown
-import System.Environment (lookupEnv)
 
 data AppCfg = AppCfg
   { port :: Int,
@@ -85,9 +84,9 @@ buildAppEnv AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let shouldLogRequestId = False
   let kafkaProducerForART = Nothing
-  isArtReplayerEnabled <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "IS_ART_REPLAYER_ENABLED"
+  let isArtReplayerEnabled = False
   let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDbFunctions
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   return AppEnv {..}

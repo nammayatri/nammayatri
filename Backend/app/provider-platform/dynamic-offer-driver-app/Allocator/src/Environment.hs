@@ -121,9 +121,9 @@ buildHandlerEnv HandlerCfg {..} = do
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
   let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let shouldLogRequestId = False
   let kafkaProducerForART = Just kafkaProducerTools
-  isArtReplayerEnabled <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "IS_ART_REPLAYER_ENABLED"
+  let isArtReplayerEnabled = False
   let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDbFunctions
   hedisClusterEnv <-
     if cutOffHedisCluster

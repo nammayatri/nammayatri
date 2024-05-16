@@ -40,7 +40,6 @@ import Lib.Scheduler.Handler (SchedulerHandle, handler)
 import Lib.Scheduler.Metrics
 import Lib.Scheduler.Types (JobProcessor)
 import Servant (Context (EmptyContext))
-import System.Environment (lookupEnv)
 import System.Exit
 import UnliftIO
 
@@ -61,8 +60,8 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ma
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   let kafkaProducerForART = Just kafkaProducerTools
       requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
-  isArtReplayerEnabled <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "IS_ART_REPLAYER_ENABLED"
+  let shouldLogRequestId = False
+  let isArtReplayerEnabled = False
   let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDbFunctions
   hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg (\k -> hedisPrefix <> ":" <> k)
