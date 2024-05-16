@@ -20,6 +20,7 @@ where
 
 import qualified Domain.Action.UI.Ride.EndRide as EndRide
 import Domain.Types.Merchant
+import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -54,7 +55,7 @@ callBasedEndRide ::
   Text ->
   m AckResp
 callBasedEndRide shandle merchantId mobileNumberHash callFrom = do
-  driver <- runInReplica $ QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchantId >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
+  driver <- runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash merchantId DP.DRIVER >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
   activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
   _ <- runInReplica $ QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
   _ <- QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)

@@ -20,6 +20,7 @@ where
 
 import "dynamic-offer-driver-app" API.Dashboard.Fleet as BPP
 import qualified Dashboard.ProviderPlatform.Driver as Driver
+import qualified Dashboard.ProviderPlatform.Driver.Registration as Registration
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as Fleet
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
@@ -36,6 +37,7 @@ import "lib-dashboard" Tools.Metrics
 
 data FleetOperationsAPIs = FleetOperationsAPIs
   { addVehicleForFleet :: Text -> Maybe Text -> Text -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
+    registerRCForFleetWithoutDriver :: Text -> Registration.RegisterRCReq -> Euler.EulerClient APISuccess,
     getAllVehicleForFleet :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.ListVehicleRes,
     getAllDriverForFleet :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.FleetListDriverRes,
     fleetUnlinkVehicle :: Text -> Id Driver.Driver -> Text -> Euler.EulerClient APISuccess,
@@ -52,7 +54,8 @@ data FleetOperationsAPIs = FleetOperationsAPIs
 
 data FleetRegistrationAPIs = FleetRegistrationAPIs
   { fleetOwnerLogin :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
-    fleetOwnerVerify :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess
+    fleetOwnerVerify :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
+    fleetOwnerRegister :: Fleet.FleetOwnerRegisterReq -> Euler.EulerClient Fleet.FleetOwnerRegisterRes
   }
 
 data FleetAPIs = FleetAPIs
@@ -70,6 +73,7 @@ mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
       :<|> fleetRegisterationClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
 
     addVehicleForFleet
+      :<|> registerRCForFleetWithoutDriver
       :<|> getAllVehicleForFleet
       :<|> getAllDriverForFleet
       :<|> fleetUnlinkVehicle
@@ -84,7 +88,8 @@ mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
       :<|> setVehicleDriverRcStatusForFleet = fleetOperationsClient
 
     fleetOwnerLogin
-      :<|> fleetOwnerVerify = fleetRegisterationClient
+      :<|> fleetOwnerVerify
+      :<|> fleetOwnerRegister = fleetRegisterationClient
 
 callDynamicOfferDriverAppFleetApi ::
   forall m r b c.

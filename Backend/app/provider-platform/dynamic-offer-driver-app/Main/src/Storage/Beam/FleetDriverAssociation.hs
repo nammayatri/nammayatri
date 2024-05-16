@@ -25,6 +25,8 @@ data FleetDriverAssociationT f = FleetDriverAssociationT
     driverId :: B.C f Text,
     fleetOwnerId :: B.C f Text,
     isActive :: B.C f Bool,
+    associatedOn :: B.C f (Maybe UTCTime),
+    associatedTill :: B.C f (Maybe UTCTime),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

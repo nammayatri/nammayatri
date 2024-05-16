@@ -48,6 +48,7 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.DriverOnboarding as DomainRC
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
@@ -74,6 +75,11 @@ getDocument merchantShortId _ imageId = do
 mapDocumentType :: Common.DocumentType -> Domain.DocumentType
 mapDocumentType Common.DriverLicense = Domain.DriverLicense
 mapDocumentType Common.VehicleRegistrationCertificate = Domain.VehicleRegistrationCertificate
+mapDocumentType Common.VehiclePUCImage = Domain.VehiclePUC
+mapDocumentType Common.VehiclePermitImage = Domain.VehiclePermit
+mapDocumentType Common.VehicleInsuranceImage = Domain.VehicleInsurance
+mapDocumentType Common.VehicleFitnessCertificateImage = Domain.VehicleFitnessCertificate
+mapDocumentType Common.PanCard = Domain.PanCard
 
 uploadDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 uploadDocument merchantShortId opCity driverId_ req = do
@@ -188,8 +194,8 @@ verify authId mbFleet fleetOwnerId req = do
           whatsappNotificationEnroll = Nothing
         }
   when mbFleet $ do
-    assoc <- FDV.makeFleetVehicleDriverAssociation res.person.id fleetOwnerId
-    QFDV.upsert assoc
+    assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+    QFDV.create assoc
   pure Success
 
 underReviewDriversList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.UnderReviewDriversListResponse
