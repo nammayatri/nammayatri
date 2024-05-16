@@ -24,6 +24,8 @@ import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.location.Address;
+import android.location.Geocoder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -59,10 +61,13 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -240,6 +245,33 @@ public class RideRequestUtils {
         mFirebaseAnalytics.logEvent(event, params);
     }
 
+    public static String getPinCodeFromRR(double latitude, double longitude, Context context) {
+        try {
+            Geocoder geocoder = new Geocoder(context.getApplicationContext(), Locale.getDefault());
+            List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
+            if ( geocoder.isPresent() && addresses != null && addresses.size() > 0) {
+                Address address = addresses.get(0);
+                return matchRegex(address.getAddressLine(0), "\\b\\d{6}\\b");
+            } else {
+                return null;
+            }
+        } catch (Exception e) {
+            Exception exception = new Exception("Error in FetchingPinCode " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
+            e.printStackTrace();
+            return null;
+        }
+    };
+
+    private static String matchRegex(String input, String regexPattern) {
+        Pattern pattern = Pattern.compile(regexPattern);
+        Matcher matcher = pattern.matcher(input);
+        if (matcher.find()) {
+            return matcher.group();
+        } else {
+            return null;
+        }
+    }
     public static void restartLocationService(Context context) {
         if (!isServiceRunning(context, LocationUpdateService.class.getName())) {
             Intent locationService = new Intent(context, LocationUpdateService.class);
