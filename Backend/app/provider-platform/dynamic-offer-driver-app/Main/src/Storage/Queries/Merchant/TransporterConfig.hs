@@ -154,6 +154,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             variantsToEnableForSubscription = variantsToEnableForSubscription,
             cancellationFee = cancellationFee,
             currency = fromMaybe INR currency,
+            crossTravelCities = crossTravelCities,
             ..
           }
     where
@@ -301,5 +302,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.dlNumberVerification = dlNumberVerification,
         BeamTC.pastDaysRideCounter = pastDaysRideCounter,
         BeamTC.placeNameCacheExpiryDays = placeNameCacheExpiryDays,
-        BeamTC.emailOtpConfig = emailOtpConfig
+        BeamTC.emailOtpConfig = emailOtpConfig,
+        BeamTC.crossTravelCities = crossTravelCities
       }
