@@ -61,6 +61,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common hiding (mkPrice)
 import qualified Kernel.Types.Common as Common
+import Kernel.Types.Id
 import Kernel.Utils.Common hiding (mkPrice)
 import SharedLogic.DriverPool.Types
 import SharedLogic.FareCalculator
@@ -856,7 +857,7 @@ tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
     [ Spec.Item
         { itemDescriptor = tfItemDescriptor booking,
           itemFulfillmentIds = Just [booking.quoteId],
-          itemId = Just $ Common.mkItemId shortId booking.vehicleServiceTier,
+          itemId = Just $ maybe (Common.mkItemId shortId booking.vehicleServiceTier) getId (booking.estimateId),
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
           itemPrice = tfItemPrice $ booking.estimatedFare,

@@ -61,7 +61,8 @@ data InitReq = InitReq
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     bppSubscriberId :: Maybe Text,
     riderPhoneNumber :: Text,
-    mbRiderName :: Maybe Text
+    mbRiderName :: Maybe Text,
+    estimateId :: Text
   }
 
 data ValidatedInitQuote = ValidatedQuote DQ.Quote | ValidatedEstimate DDQ.DriverQuote DST.SearchTry
@@ -81,7 +82,8 @@ data InitRes = InitRes
     riderPhoneNumber :: Text,
     riderName :: Maybe Text,
     vehicleVariant :: Veh.Variant,
-    paymentId :: Text
+    paymentId :: Text,
+    estimateId :: Text
   }
 
 handler ::
@@ -117,6 +119,7 @@ handler merchantId req validatedReq = do
 
   let paymentMethodInfo = req.paymentMethodInfo
   let bppSubscriberId = req.bppSubscriberId
+      estimateId = req.estimateId
   pure InitRes {vehicleVariant = req.vehicleVariant, ..}
   where
     buildBooking ::
@@ -180,6 +183,7 @@ handler merchantId req validatedReq = do
             stopLocationId = (.id) <$> toLocation,
             startTime = searchRequest.startTime,
             tollNames = if isTollApplicableForServiceTier then searchRequest.tollNames else Nothing,
+            estimateId = Just $ Id req.estimateId,
             ..
           }
 

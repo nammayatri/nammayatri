@@ -221,7 +221,7 @@ tfItems booking merchant mbFarePolicy =
     [ Spec.Item
         { itemDescriptor = Nothing,
           itemFulfillmentIds = Just [booking.quoteId],
-          itemId = Just $ Common.mkItemId merchant.shortId.getShortId booking.vehicleServiceTier,
+          itemId = Just $ maybe (Common.mkItemId merchant.shortId.getShortId booking.vehicleServiceTier) getId (booking.estimateId),
           itemLocationIds = Nothing,
           itemPaymentIds = Nothing,
           itemPrice = tfItemPrice booking,

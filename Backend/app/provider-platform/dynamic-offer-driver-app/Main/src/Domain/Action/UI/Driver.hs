@@ -1070,7 +1070,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       QST.updateStatus DST.COMPLETED searchTry.id
       (ride, _, vehicle) <- initializeRide merchantId driver booking Nothing Nothing clientId
       driverFCMPulledList <- deactivateExistingQuotes merchantOpCityId merchantId driver.id searchTry.id $ mkPrice (Just quote.currency) quote.estimatedFare
-      void $ sendRideAssignedUpdateToBAP booking ride driver vehicle
+      void $ sendRideAssignedUpdateToBAP booking ride driver vehicle (Just quoteId)
       CS.markBookingAssignmentCompleted booking.id
       return driverFCMPulledList
 

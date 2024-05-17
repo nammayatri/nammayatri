@@ -18,6 +18,7 @@ import Data.Aeson
 import Data.OpenApi (ToSchema)
 import Data.Time
 import qualified Domain.Types.Common as DTC
+import qualified Domain.Types.Estimate as DE
 import Domain.Types.FareParameters (FareParameters)
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -84,7 +85,8 @@ data Booking = Booking
     paymentUrl :: Maybe Text,
     stopLocationId :: Maybe (Id DLoc.Location),
     distanceToPickup :: Maybe Meters,
-    isScheduled :: Bool
+    isScheduled :: Bool,
+    estimateId :: Maybe (Id DE.Estimate)
   }
   deriving (Generic)
 

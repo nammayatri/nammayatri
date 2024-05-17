@@ -43,27 +43,32 @@ data DRideAssignedReq = DRideAssignedReq
     image :: Maybe Text,
     isDriverBirthDay :: Bool,
     isFreeRide :: Bool,
+    estimateId :: Maybe Text,
     fareParams :: Fare.FareParameters
   }
 
 data DRideStartedReq = DRideStartedReq
   { bookingDetails :: BookingDetails,
-    tripStartLocation :: Maybe Maps.LatLong
+    tripStartLocation :: Maybe Maps.LatLong,
+    estimateId :: Maybe Text
   }
 
 data DRideCompletedReq = DRideCompletedReq
   { bookingDetails :: BookingDetails,
     fareParams :: Fare.FareParameters,
-    tripEndLocation :: Maybe Maps.LatLong
+    tripEndLocation :: Maybe Maps.LatLong,
+    estimateId :: Maybe Text
   }
 
 data DBookingCancelledReq = DBookingCancelledReq
   { booking :: DRB.Booking,
     bookingDetails :: Maybe BookingDetails,
-    cancellationSource :: SBCR.CancellationSource
+    cancellationSource :: SBCR.CancellationSource,
+    estimateId :: Maybe Text
   }
 
 data DDriverArrivedReq = DDriverArrivedReq
   { bookingDetails :: BookingDetails,
-    arrivalTime :: Maybe UTCTime
+    arrivalTime :: Maybe UTCTime,
+    estimateId :: Maybe Text
   }

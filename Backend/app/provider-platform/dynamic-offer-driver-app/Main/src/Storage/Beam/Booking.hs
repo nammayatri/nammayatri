@@ -65,7 +65,8 @@ data BookingT f = BookingT
     updatedAt :: B.C f UTCTime,
     stopLocationId :: B.C f (Maybe Text),
     distanceToPickup :: B.C f (Maybe HighPrecMeters),
-    isScheduled :: B.C f (Maybe Bool)
+    isScheduled :: B.C f (Maybe Bool),
+    estimateId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

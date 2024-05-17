@@ -64,9 +64,9 @@ buildSelectReqV2 subscriber req = do
       autoAssignEnabled = getAutoAssignEnabledV2 item.itemTags
       bookAnyEstimates = getBookAnyEstimates item.itemTags
   fulfillment <- case order.orderFulfillments of
-    Just [fulfillment] -> pure fulfillment
-    _ -> throwError $ InvalidRequest "There should be only one fulfillment"
-  estimateIdText <- fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "Missing fulfillment_id")
+    Just [fulfillment] -> pure $ Just fulfillment
+    _ -> pure Nothing
+  estimateIdText <- getEstimateId fulfillment item & fromMaybeM (InvalidRequest "Missing item_id")
   let customerPhoneNum = getCustomerPhoneNumber fulfillment
   pure
     DSelect.DSelectReq
@@ -104,5 +104,15 @@ cacheSelectMessageId messageId transactionId = do
   let msgKey = mkTxnIdKey transactionId
   Hedis.setExp msgKey messageId 3600
 
-getCustomerPhoneNumber :: Spec.Fulfillment -> Maybe Text
-getCustomerPhoneNumber fulfillment = fulfillment.fulfillmentCustomer >>= (.customerContact) >>= (.contactPhone)
+getCustomerPhoneNumber :: Maybe Spec.Fulfillment -> Maybe Text
+getCustomerPhoneNumber (Just fulfillment) = fulfillment.fulfillmentCustomer >>= (.customerContact) >>= (.contactPhone)
+getCustomerPhoneNumber Nothing = Nothing
+
+-- NOTE : This is a temporary function to keep the code backward compatible
+-- But this assumes that we will be sending fulfillmentId empty from next release? Change it maybe?
+getEstimateId :: Maybe Spec.Fulfillment -> Spec.Item -> Maybe Text
+getEstimateId (Just fulfillment) item = do
+  case fulfillment.fulfillmentId of
+    Just fulfillmentId -> Just fulfillmentId
+    Nothing -> item.itemId
+getEstimateId Nothing item = item.itemId

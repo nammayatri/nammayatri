@@ -272,8 +272,9 @@ sendRideAssignedUpdateToBAP ::
   SRide.Ride ->
   DP.Person ->
   DVeh.Vehicle ->
+  Maybe Text ->
   m ()
-sendRideAssignedUpdateToBAP booking ride driver veh = do
+sendRideAssignedUpdateToBAP booking ride driver veh estimateId = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   merchant <-
     CQM.findById booking.providerId
@@ -381,8 +382,9 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
     CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
   let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-  let paymentUrl = Nothing
-  let bookingDetails = ACL.BookingDetails {..}
+      paymentUrl = Nothing
+      bookingDetails = ACL.BookingDetails {..}
+      estimateId = booking.estimateId <&> (.getId)
       rideStartedBuildReq = ACL.RideStartedReq ACL.DRideStartedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
   rideStartedMsgV2 <- ACL.buildOnStatusReqV2 merchant booking rideStartedBuildReq Nothing
@@ -415,6 +417,7 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   let bookingDetails = ACL.BookingDetails {..}
+      estimateId = booking.estimateId <&> (.getId)
       rideCompletedBuildReq = ACL.RideCompletedBuildReq ACL.DRideCompletedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
   rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideCompletedBuildReq
@@ -525,8 +528,9 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
     CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
   let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-  let paymentUrl = Nothing
-  let bookingDetails = ACL.BookingDetails {..}
+      paymentUrl = Nothing
+      bookingDetails = ACL.BookingDetails {..}
+      estimateId = booking.estimateId <&> (.getId)
       driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
   driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverArrivedBuildReq
