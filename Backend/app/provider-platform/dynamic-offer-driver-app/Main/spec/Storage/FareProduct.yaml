@@ -2,7 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
   Area: Lib.Types.SpecialLocation
-  TimeBound: Domain.Action.UI.FareProduct
+  TimeBound: Domain.Types.Extra.FareProduct
   FarePolicy: Domain.Types.FarePolicy
   ServiceTierType: Domain.Types.ServiceTierType
   TripCategory: Domain.Types.Common
@@ -63,5 +63,6 @@ FareProduct:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
   excludedFields: [createdAt, updatedAt]
 

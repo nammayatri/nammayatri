@@ -15,8 +15,8 @@
 
 module Storage.CachedQueries.FareProduct where
 
-import qualified Domain.Action.UI.FareProduct as Domain
 import qualified Domain.Types.Common as DTC
+import qualified Domain.Types.Extra.FareProduct as Domain
 import Domain.Types.FareProduct
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.ServiceTierType as DVST

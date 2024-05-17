@@ -187,7 +187,6 @@ library
       Domain.Action.UI.DriverReferral
       Domain.Action.UI.EditBooking
       Domain.Action.UI.ExotelEndRide
-      Domain.Action.UI.FareProduct
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
       Domain.Action.UI.LmsModule
@@ -235,6 +234,7 @@ library
       Domain.Types.DriverPlan
       Domain.Types.DriverStats
       Domain.Types.Extra.DriverFee
+      Domain.Types.Extra.FareProduct
       Domain.Types.Extra.Plan
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
