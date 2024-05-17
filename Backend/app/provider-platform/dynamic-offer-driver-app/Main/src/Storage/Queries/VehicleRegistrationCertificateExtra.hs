@@ -86,3 +86,10 @@ findLastVehicleRCFleet' :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m
 findLastVehicleRCFleet' certNumber fleetOwnerId = do
   certNumberHash <- getDbHash certNumber
   runInReplica $ findLastVehicleRCFleet certNumberHash fleetOwnerId
+
+findByCertificateNumberHash ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (DbHash -> m (Maybe VehicleRegistrationCertificate))
+findByCertificateNumberHash certificateHash = do
+  findOneWithKV
+    [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash]

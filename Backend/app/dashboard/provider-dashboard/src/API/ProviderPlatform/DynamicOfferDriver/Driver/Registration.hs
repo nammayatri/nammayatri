@@ -101,11 +101,11 @@ buildTransaction ::
   ) =>
   Common.DriverRegistrationEndpoint ->
   ApiTokenInfo ->
-  Id Common.Driver ->
+  Maybe (Id Common.Driver) ->
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo driverId =
-  T.buildTransaction (DT.DriverRegistrationAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) (Just driverId) Nothing
+  T.buildTransaction (DT.DriverRegistrationAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) driverId Nothing
 
 documentsList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler Common.DocumentsListResponse
 documentsList merchantShortId opCity apiTokenInfo driverId =
@@ -123,7 +123,7 @@ uploadDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.
 uploadDocument merchantShortId opCity apiTokenInfo driverId req =
   withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    transaction <- buildTransaction Common.UploadDocumentEndpoint apiTokenInfo driverId (Just req)
+    transaction <- buildTransaction Common.UploadDocumentEndpoint apiTokenInfo (Just driverId) (Just req)
     T.withResponseTransactionStoring transaction $
       Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.uploadDocument) driverId req
 
@@ -131,7 +131,7 @@ registerDL :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driv
 registerDL merchantShortId opCity apiTokenInfo driverId req =
   withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    transaction <- buildTransaction Common.RegisterDLEndpoint apiTokenInfo driverId (Just req)
+    transaction <- buildTransaction Common.RegisterDLEndpoint apiTokenInfo (Just driverId) (Just req)
     T.withTransactionStoring transaction $
       Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.registerDL) driverId req
 
@@ -139,7 +139,7 @@ registerRC :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driv
 registerRC merchantShortId opCity apiTokenInfo driverId req =
   withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    transaction <- buildTransaction Common.RegisterRCEndpoint apiTokenInfo driverId (Just req)
+    transaction <- buildTransaction Common.RegisterRCEndpoint apiTokenInfo (Just driverId) (Just req)
     T.withTransactionStoring transaction $
       Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.registerRC) driverId req
 
@@ -147,7 +147,7 @@ generateAadhaarOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Com
 generateAadhaarOtp merchantShortId opCity apiTokenInfo driverId req =
   withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    transaction <- buildTransaction Common.GenerateAadhaarOtpEndpoint apiTokenInfo driverId (Nothing :: Maybe Common.GenerateAadhaarOtpReq)
+    transaction <- buildTransaction Common.GenerateAadhaarOtpEndpoint apiTokenInfo (Just driverId) (Nothing :: Maybe Common.GenerateAadhaarOtpReq)
     T.withTransactionStoring transaction $
       Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.generateAadhaarOtp) driverId req
 
@@ -155,7 +155,7 @@ verifyAadhaarOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Commo
 verifyAadhaarOtp merchantShortId opCity apiTokenInfo driverId req =
   withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    transaction <- buildTransaction Common.VerifyAadhaarOtpEndpoint apiTokenInfo driverId (Nothing :: Maybe Common.VerifyAadhaarOtpReq)
+    transaction <- buildTransaction Common.VerifyAadhaarOtpEndpoint apiTokenInfo (Just driverId) (Nothing :: Maybe Common.VerifyAadhaarOtpReq)
     T.withTransactionStoring transaction $
       Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.verifyAadhaarOtp) driverId req
 
@@ -190,4 +190,6 @@ updateDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.Upd
 updateDocument merchantShortId opCity apiTokenInfo req =
   withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.updateDocument) req
+    transaction <- buildTransaction Common.UpdateDocumentEndpoint apiTokenInfo Nothing (Just req)
+    T.withTransactionStoring transaction $
+      Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.updateDocument) req
