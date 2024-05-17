@@ -415,6 +415,7 @@ library
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.BlockedRoute
+      Storage.CachedQueries.CoinsConfig
       Storage.CachedQueries.DocumentVerificationConfig
       Storage.CachedQueries.Driver.DriverImage
       Storage.CachedQueries.Driver.GoHomeRequest
