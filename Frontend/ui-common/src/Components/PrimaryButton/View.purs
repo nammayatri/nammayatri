@@ -15,7 +15,7 @@
 module Components.PrimaryButton.View where
 
 import Effect (Effect)
-import Prelude (Unit, bind, const, discard, pure, unit, void, ($), (&&), (==), (<>))
+import Prelude (Unit, bind, const, discard, pure, unit, void, when, ($), (&&), (==), (<>))
 import Components.PrimaryButton.Controller (Action(..), Config)
 import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..),afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient, accessibilityHint, accessibility, weight, onAnimationEnd, textFromHtml, rippleColor, enableRoundedRipple)
 import JBridge (toggleBtnLoader, getKeyInSharedPrefKeys, startLottieProcess, lottieAnimationConfig, getLayoutBounds)
@@ -62,10 +62,10 @@ view push config =
                 (const OnClick)
             , orientation HORIZONTAL
             , onAnimationEnd
-                ( \action -> do
-                    _ <- pure $ if config.lottieConfig.autoDisableLoader then (toggleBtnLoader config.id false) else unit
-                    push action
-                )
+                ( \action -> when config.lottieConfig.autoDisableLoader $ 
+                                  do 
+                                    let _ = (toggleBtnLoader config.id false)
+                                    push action)
                 (const NoAction)
             , alpha if config.enableLoader then 0.5 else config.alpha
             , stroke config.stroke
@@ -82,7 +82,6 @@ view push config =
                 , accessibility DISABLE
                 , gravity config.gravity
                 , visibility if config.enableLoader then INVISIBLE else VISIBLE
-                , afterRender push (const NoAction)
                 ]
                 [ prefixImageLayout config
                 , linearLayout [

@@ -435,7 +435,7 @@ config =
   , acPopupConfig : {
       enableAcPopup : false,
       enableNonAcPopup : false,
-      showAfterTime : 3
+      showAfterTime : 5
     }
 }
 

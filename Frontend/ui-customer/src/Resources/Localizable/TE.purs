@@ -1163,4 +1163,4 @@ getTE stringKey =
     ESTIMATES_EXPIRY_ERROR ->  "అంచనాలు కాలము గడిచింది. దయచేసి మళ్ళీ ప్రయత్నించండి."
     ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "అంచనాలు కాలము గడిచింది. మళ్ళీ తీసుకుంటున్నాము, దయచేసి కొన్ని క్షణాల వేళ వీణ్డి మరియు మళ్ళీ తనిఖీ చేయండి."
     PAY_YOUR_DRIVER_BY_CASH_OR_UPI -> "డ్రైవర్‌ను క్యాష్ లేదా UPI ద్వారా చెల్లించండి"
-    TRIP_DELAYED -> "ప్రయాణం తడిమాయింది"
+    TRIP_DELAYED -> "ప్రయాణం ఆలస్యమైంది"

@@ -62,6 +62,7 @@ import Debug
 import Effect.Uncurried (runEffectFn9)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import SessionCache
+import LocalStorage.Cache (removeValueFromCache)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -332,6 +333,8 @@ placeDetailsBT (PlaceDetailsReq id) = do
 rideSearchBT :: SearchReq -> FlowBT String SearchRes
 rideSearchBT payload = do
         headers <- getHeaders' "" true
+        let _ = JB.removeKeysInSharedPrefs $ show RATE_CARD_INFO
+        void $ pure $ removeValueFromCache (show RATE_CARD_INFO)
         withAPIResultBT (EP.searchReq "") identity errorHandler (lift $ lift $ callAPI headers payload)
     where
       errorHandler errorPayload = do
