@@ -1,6 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.person drop CONSTRAINT person_unique_mobile_number_country_code;
-ALTER TABLE atlas_driver_offer_bpp.person drop CONSTRAINT unique_email;
-ALTER TABLE atlas_driver_offer_bpp.person drop CONSTRAINT unique_identifier;
 DROP INDEX atlas_driver_offer_bpp.idx_person_mobile_num;
 
 ALTER TABLE atlas_driver_offer_bpp.person ADD CONSTRAINT person_unique_mobile_number_country_code UNIQUE (merchant_id, mobile_country_code, mobile_number_hash);

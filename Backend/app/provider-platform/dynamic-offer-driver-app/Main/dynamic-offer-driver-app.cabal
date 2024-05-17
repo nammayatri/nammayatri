@@ -187,6 +187,7 @@ library
       Domain.Action.UI.DriverReferral
       Domain.Action.UI.EditBooking
       Domain.Action.UI.ExotelEndRide
+      Domain.Action.UI.FareProduct
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
       Domain.Action.UI.LmsModule
@@ -196,6 +197,7 @@ library
       Domain.Action.UI.OrgAdmin
       Domain.Action.UI.Payment
       Domain.Action.UI.Performance
+      Domain.Action.UI.Person
       Domain.Action.UI.Plan
       Domain.Action.UI.Rating
       Domain.Action.UI.Reels
@@ -211,6 +213,7 @@ library
       Domain.Action.UI.RideSummary
       Domain.Action.UI.Route
       Domain.Action.UI.SafetyWebhook
+      Domain.Action.UI.SearchRequestForDriver
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.SpecialLocation
       Domain.Action.UI.Tokenization
@@ -230,9 +233,9 @@ library
       Domain.Types.Driver.GoHomeFeature.DriverHomeLocation
       Domain.Types.DriverLocation
       Domain.Types.DriverPlan
-      Domain.Types.DriverQuote
       Domain.Types.DriverStats
       Domain.Types.Extra.DriverFee
+      Domain.Types.Extra.Plan
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
       Domain.Types.FarePolicy.DriverExtraFeeBounds
@@ -242,7 +245,6 @@ library
       Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffer
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
-      Domain.Types.FareProduct
       Domain.Types.Feedback.Feedback
       Domain.Types.Feedback.FeedbackForm
       Domain.Types.FleetDriverAssociation
@@ -271,18 +273,13 @@ library
       Domain.Types.Notification
       Domain.Types.OnCancel
       Domain.Types.OnUpdate
-      Domain.Types.Person
-      Domain.Types.Plan
       Domain.Types.Quote
-      Domain.Types.RegistrationToken
       Domain.Types.RegistryMapFallback
       Domain.Types.RideDetails
       Domain.Types.RiderDetails
       Domain.Types.RideRoute
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
-      Domain.Types.SearchRequestForDriver
-      Domain.Types.SearchTry
       Domain.Types.ServiceTierType
       Domain.Types.UtilsTH
       Environment
@@ -356,7 +353,6 @@ library
       Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation
       Storage.Beam.DriverPlan
-      Storage.Beam.DriverQuote
       Storage.Beam.DriverStats
       Storage.Beam.FareParameters
       Storage.Beam.FareParameters.FareParametersProgressiveDetails
@@ -369,7 +365,6 @@ library
       Storage.Beam.FarePolicy.FarePolicyRentalDetails
       Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
       Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab
-      Storage.Beam.FareProduct
       Storage.Beam.Feedback.Feedback
       Storage.Beam.Feedback.FeedbackBadge
       Storage.Beam.Feedback.FeedbackForm
@@ -401,17 +396,12 @@ library
       Storage.Beam.Message.MessageTranslation
       Storage.Beam.Notification
       Storage.Beam.Payment
-      Storage.Beam.Person
-      Storage.Beam.Plan
       Storage.Beam.Quote
-      Storage.Beam.RegistrationToken
       Storage.Beam.RegistryMapFallback
       Storage.Beam.RideDetails
       Storage.Beam.RiderDetails
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequest.SearchReqLocation
-      Storage.Beam.SearchRequestForDriver
-      Storage.Beam.SearchTry
       Storage.Beam.SystemConfigs
       Storage.Cac.DriverIntelligentPoolConfig
       Storage.Cac.DriverPoolConfig
@@ -488,8 +478,8 @@ library
       Storage.Queries.DriverLocation.Internal
       Storage.Queries.DriverPanCardExtra
       Storage.Queries.DriverPlan
-      Storage.Queries.DriverQuote
       Storage.Queries.DriverQuote.Internal
+      Storage.Queries.DriverQuoteExtra
       Storage.Queries.DriverRCAssociationExtra
       Storage.Queries.DriverReferralExtra
       Storage.Queries.DriverSSNExtra
@@ -506,7 +496,7 @@ library
       Storage.Queries.FarePolicy.FarePolicyRentalDetails
       Storage.Queries.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
-      Storage.Queries.FareProduct
+      Storage.Queries.FareProductExtra
       Storage.Queries.Feedback.Feedback
       Storage.Queries.Feedback.FeedbackBadge
       Storage.Queries.Feedback.FeedbackForm
@@ -515,7 +505,6 @@ library
       Storage.Queries.Geometry
       Storage.Queries.GoHomeConfig
       Storage.Queries.ImageExtra
-      Storage.Queries.Instances.Person
       Storage.Queries.Invoice
       Storage.Queries.KioskLocation
       Storage.Queries.KioskLocationTranslation
@@ -536,31 +525,36 @@ library
       Storage.Queries.Message.MessageReport
       Storage.Queries.Message.MessageTranslation
       Storage.Queries.Notification
-      Storage.Queries.Person
       Storage.Queries.Person.GetNearestDrivers
       Storage.Queries.Person.GetNearestDriversCurrentlyOnRide
       Storage.Queries.Person.GetNearestGoHomeDrivers
       Storage.Queries.Person.Internal
-      Storage.Queries.Plan
+      Storage.Queries.PersonExtra
+      Storage.Queries.PlanExtra
       Storage.Queries.PurchaseHistoryExtra
       Storage.Queries.Quote
       Storage.Queries.RatingExtra
-      Storage.Queries.RegistrationToken
+      Storage.Queries.RegistrationTokenExtra
       Storage.Queries.RegistryMapFallback
       Storage.Queries.RideDetails
       Storage.Queries.RideExtra
       Storage.Queries.RiderDetails
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequest.SearchReqLocation
-      Storage.Queries.SearchRequestForDriver
-      Storage.Queries.SearchTry
+      Storage.Queries.SearchRequestForDriverExtra
+      Storage.Queries.SearchTryExtra
       Storage.Queries.Status
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.DocumentVerificationConfig
       Storage.Queries.Transformers.DriverFee
+      Storage.Queries.Transformers.DriverQuote
+      Storage.Queries.Transformers.Person
       Storage.Queries.Transformers.QuestionInformation
       Storage.Queries.Transformers.ReelsData
+      Storage.Queries.Transformers.RegistrationToken
       Storage.Queries.Transformers.Ride
+      Storage.Queries.Transformers.SearchRequestForDriver
+      Storage.Queries.Transformers.SearchTry
       Storage.Queries.TranslationsExtra
       Storage.Queries.Vehicle.Internal
       Storage.Queries.VehicleDetailsExtra
@@ -626,11 +620,13 @@ library
       Domain.Types.DriverModuleCompletion
       Domain.Types.DriverPanCard
       Domain.Types.DriverPoolConfig
+      Domain.Types.DriverQuote
       Domain.Types.DriverRCAssociation
       Domain.Types.DriverReferral
       Domain.Types.DriverSSN
       Domain.Types.Estimate
       Domain.Types.Exophone
+      Domain.Types.FareProduct
       Domain.Types.FleetOwnerDocumentVerificationConfig
       Domain.Types.FleetOwnerInformation
       Domain.Types.FleetRCAssociation
@@ -645,13 +641,18 @@ library
       Domain.Types.MerchantState
       Domain.Types.MetaData
       Domain.Types.ModuleCompletionInformation
+      Domain.Types.Person
+      Domain.Types.Plan
       Domain.Types.PlanTranslation
       Domain.Types.PurchaseHistory
       Domain.Types.QuestionInformation
       Domain.Types.QuestionModuleMapping
       Domain.Types.Rating
       Domain.Types.ReelsData
+      Domain.Types.RegistrationToken
       Domain.Types.Ride
+      Domain.Types.SearchRequestForDriver
+      Domain.Types.SearchTry
       Domain.Types.SubscriptionConfig
       Domain.Types.Toll
       Domain.Types.Translations
@@ -689,11 +690,13 @@ library
       Storage.Beam.DriverModuleCompletion
       Storage.Beam.DriverPanCard
       Storage.Beam.DriverPoolConfig
+      Storage.Beam.DriverQuote
       Storage.Beam.DriverRCAssociation
       Storage.Beam.DriverReferral
       Storage.Beam.DriverSSN
       Storage.Beam.Estimate
       Storage.Beam.Exophone
+      Storage.Beam.FareProduct
       Storage.Beam.FleetOwnerDocumentVerificationConfig
       Storage.Beam.FleetOwnerInformation
       Storage.Beam.FleetRCAssociation
@@ -708,13 +711,18 @@ library
       Storage.Beam.MerchantState
       Storage.Beam.MetaData
       Storage.Beam.ModuleCompletionInformation
+      Storage.Beam.Person
+      Storage.Beam.Plan
       Storage.Beam.PlanTranslation
       Storage.Beam.PurchaseHistory
       Storage.Beam.QuestionInformation
       Storage.Beam.QuestionModuleMapping
       Storage.Beam.Rating
       Storage.Beam.ReelsData
+      Storage.Beam.RegistrationToken
       Storage.Beam.Ride
+      Storage.Beam.SearchRequestForDriver
+      Storage.Beam.SearchTry
       Storage.Beam.SubscriptionConfig
       Storage.Beam.Toll
       Storage.Beam.Translations
@@ -752,11 +760,13 @@ library
       Storage.Queries.DriverModuleCompletion
       Storage.Queries.DriverPanCard
       Storage.Queries.DriverPoolConfig
+      Storage.Queries.DriverQuote
       Storage.Queries.DriverRCAssociation
       Storage.Queries.DriverReferral
       Storage.Queries.DriverSSN
       Storage.Queries.Estimate
       Storage.Queries.Exophone
+      Storage.Queries.FareProduct
       Storage.Queries.FleetOwnerDocumentVerificationConfig
       Storage.Queries.FleetOwnerInformation
       Storage.Queries.FleetRCAssociation
@@ -782,28 +792,40 @@ library
       Storage.Queries.OrphanInstances.DriverInformation
       Storage.Queries.OrphanInstances.DriverLicense
       Storage.Queries.OrphanInstances.DriverPanCard
+      Storage.Queries.OrphanInstances.DriverQuote
       Storage.Queries.OrphanInstances.DriverRCAssociation
       Storage.Queries.OrphanInstances.DriverReferral
       Storage.Queries.OrphanInstances.DriverSSN
       Storage.Queries.OrphanInstances.Exophone
+      Storage.Queries.OrphanInstances.FareProduct
       Storage.Queries.OrphanInstances.FleetRCAssociation
       Storage.Queries.OrphanInstances.Image
+      Storage.Queries.OrphanInstances.Person
+      Storage.Queries.OrphanInstances.Plan
       Storage.Queries.OrphanInstances.PurchaseHistory
       Storage.Queries.OrphanInstances.Rating
+      Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
+      Storage.Queries.OrphanInstances.SearchRequestForDriver
+      Storage.Queries.OrphanInstances.SearchTry
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.Vehicle
       Storage.Queries.OrphanInstances.VehicleDetails
       Storage.Queries.OrphanInstances.VehicleRegistrationCertificate
       Storage.Queries.OrphanInstances.Volunteer
       Storage.Queries.OrphanInstances.WhiteListOrg
+      Storage.Queries.Person
+      Storage.Queries.Plan
       Storage.Queries.PlanTranslation
       Storage.Queries.PurchaseHistory
       Storage.Queries.QuestionInformation
       Storage.Queries.QuestionModuleMapping
       Storage.Queries.Rating
       Storage.Queries.ReelsData
+      Storage.Queries.RegistrationToken
       Storage.Queries.Ride
+      Storage.Queries.SearchRequestForDriver
+      Storage.Queries.SearchTry
       Storage.Queries.SubscriptionConfig
       Storage.Queries.Toll
       Storage.Queries.Translations

@@ -1,7 +1,1 @@
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN straight_line_distance_to_pickup bigint;
-
-UPDATE atlas_driver_offer_bpp.search_request_for_driver SET straight_line_distance_to_pickup = search_request_for_driver.distance_to_pickup;
-
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver RENAME COLUMN distance_to_pickup TO actual_distance_to_pickup;
-
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN straight_line_distance_to_pickup SET NOT NULL;

@@ -1,0 +1,123 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  SearchRequest: Domain.Types.SearchRequest
+  ServiceTierType: Domain.Types.ServiceTierType
+  TripCategory: Domain.Types.Common
+  Money: Kernel.Types.Common
+
+
+
+SearchTry:
+  tableNmae: search_try
+
+  types:
+
+    SearchTryStatus:
+      enum: "ACTIVE, CANCELLED, COMPLETED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+    SearchRepeatType:
+      enum: "INITIAL, RETRIED, REALLOCATION, CANCELLED_AND_RETRIED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+
+  fields:
+    id : Id SearchTry
+    requestId : Id SearchRequest
+    estimateId : Text
+    estimateIds : "[Text]"
+    merchantId : Maybe (Id Merchant)
+    merchantOperatingCityId : Id MerchantOperatingCity
+    messageId : Text
+    startTime : UTCTime
+    validTill : UTCTime
+    vehicleServiceTier : ServiceTierType|NoRelation
+    vehicleServiceTierName : Text
+    baseFare : HighPrecMoney
+    customerExtraFee : Maybe HighPrecMoney
+    currency: Currency
+    status : SearchTryStatus
+    searchRepeatCounter : Int
+    searchRepeatType : SearchRepeatType
+    tripCategory : TripCategory
+    isScheduled : Bool
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  beamType:
+    estimateIds: "Maybe [Text]"
+    merchantOperatingCityId: Maybe Text
+    tripCategory: Maybe TripCategory
+    isScheduled: Maybe Bool
+    vehicleServiceTierName: Maybe Text
+    currency: Maybe Currency
+
+
+  beamFields:
+    vehicleServiceTier:
+      vehicleVariant: ServiceTierType
+
+    baseFare:
+      baseFare: Money
+      baseFareAmount: Maybe HighPrecMoney
+
+    customerExtraFee:
+      customerExtraFee: Maybe Money
+      customerExtraFeeAmount: Maybe HighPrecMoney
+
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SearchTryStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SearchTryStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SearchRepeatType>
+
+  fromTType:
+    estimateIds: fromMaybe [estimateId] estimateIds|E
+    merchantOperatingCityId: Storage.Queries.Transformers.SearchRequestForDriver.getMerchantOpCId merchantOperatingCityId merchantId requestId|EM
+    tripCategory: getTripCategory
+    isScheduled: fromMaybe Kernel.Prelude.False isScheduled|E
+    vehicleServiceTier: vehicleVariant|E
+    vehicleServiceTierName: fromMaybe (Kernel.Prelude.show vehicleVariant) vehicleServiceTierName|E
+    baseFare: Kernel.Types.Common.mkAmountWithDefault baseFareAmount baseFare|E
+    customerExtraFee: Kernel.Types.Common.mkAmountWithDefault customerExtraFeeAmount <$> customerExtraFee|E
+    currency: fromMaybe Kernel.Types.Common.INR currency|E
+
+  toTType:
+    estimateIds: Kernel.Prelude.Just|I
+    merchantOperatingCityId: Kernel.Prelude.Just $ Kernel.Types.Id.getId merchantOperatingCityId|E
+    vehicleVariant: vehicleServiceTier|E
+    vehicleServiceTierName: Kernel.Prelude.Just|I
+    tripCategory: Kernel.Prelude.Just|I
+    isScheduled: Kernel.Prelude.Just|I
+    baseFare: Kernel.Prelude.roundToIntegral baseFare|E
+    baseFareAmount: Kernel.Prelude.Just baseFare|E
+    currency: Kernel.Prelude.Just|I
+    customerExtraFee: Kernel.Prelude.roundToIntegral <$> customerExtraFee|E
+    customerExtraFeeAmount: customerExtraFee|E
+
+
+  constriants:
+    id: PrimaryKey
+    requestId: SecondaryKey
+    estimateId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+
+  sqlType:
+    messageId: character (36)
+    vehicleVariant: character varying (255)
+    estimateId : character (36)
+    searchRepeatType: character varying (255)
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+

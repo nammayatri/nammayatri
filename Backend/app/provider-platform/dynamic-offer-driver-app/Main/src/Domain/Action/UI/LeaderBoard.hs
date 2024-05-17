@@ -20,6 +20,7 @@ import qualified Data.HashMap.Strict as HM
 import Data.Time hiding (getCurrentTime)
 import Data.Time.Calendar ()
 import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
+import Domain.Action.UI.Person
 import Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import qualified Domain.Types.LeaderBoardConfigs as LConfig
 import qualified Domain.Types.Merchant as DM

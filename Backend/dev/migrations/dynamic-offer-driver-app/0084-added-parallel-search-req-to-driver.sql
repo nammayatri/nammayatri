@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN parallel_search_request_count smallint;

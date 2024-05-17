@@ -1,1 +1,0 @@
-alter table atlas_driver_offer_bpp.search_request_for_driver drop constraint search_request_for_driver_search_request_id_driver_id_key;

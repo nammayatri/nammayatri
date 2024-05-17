@@ -5,8 +5,9 @@ CREATE INDEX idx_ride_booking_id ON atlas_driver_offer_bpp.ride USING btree (boo
 
 CREATE INDEX idx_person_mobile_num ON atlas_driver_offer_bpp.person USING btree (mobile_country_code, mobile_number_hash);
 
-CREATE INDEX idx_driver_quote_search_request_id ON atlas_driver_offer_bpp.driver_quote USING btree (search_request_id);
 CREATE INDEX idx_driver_quote_driver_id ON atlas_driver_offer_bpp.driver_quote USING btree (driver_id);
+
+CREATE INDEX idx_driver_quote_search_request_id ON atlas_driver_offer_bpp.driver_quote USING btree (request_id);
 
 CREATE INDEX idx_reg_token_token ON atlas_driver_offer_bpp.registration_token USING btree (token);
 

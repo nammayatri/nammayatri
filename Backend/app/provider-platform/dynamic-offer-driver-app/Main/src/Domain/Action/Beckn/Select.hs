@@ -20,11 +20,11 @@ module Domain.Action.Beckn.Select
 where
 
 import Data.Text as Text
+import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequestForDriver as DTSRD
 import Environment
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -68,7 +68,7 @@ handler merchant sReq searchReq estimates = do
     estimates `forM` \estimate -> do
       QDQ.setInactiveAllDQByEstId estimate.id now
       let mbDriverExtraFeeBounds = ((,) <$> estimate.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> estimate.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
-          driverPickUpCharge = join $ DTSRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
+          driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
       buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge estimate.id.getId
   let driverSearchBatchInput =
         DriverSearchBatchInput

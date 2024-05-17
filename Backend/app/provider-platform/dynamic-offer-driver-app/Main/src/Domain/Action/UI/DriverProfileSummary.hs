@@ -13,6 +13,7 @@
 -}
 module Domain.Action.UI.DriverProfileSummary where
 
+import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Feedback.Feedback (FeedbackBadge)
 import qualified Domain.Types.Merchant as DM

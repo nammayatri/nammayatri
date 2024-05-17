@@ -17,12 +17,12 @@ module SharedLogic.SearchTry where
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
+import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequestForDriver as DTSRD
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
@@ -120,7 +120,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
         Just scheduleTime -> scheduleBatching searchTry scheduleTime
         Nothing -> do
           booking <- QRB.findByQuoteId searchTry.estimateId >>= fromMaybeM (BookingDoesNotExist searchTry.estimateId)
-          QST.updateStatus searchTry.id DST.CANCELLED
+          QST.updateStatus DST.CANCELLED searchTry.id
           SBooking.cancelBooking booking Nothing merchant
   where
     scheduleBatching searchTry inTime = do
@@ -156,7 +156,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               --   throwError SearchTryEstimatedFareChanged
               searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory customerExtraFee messageId serviceTier
               when (oldSearchTry.status == DST.ACTIVE) $ do
-                QST.updateStatus oldSearchTry.id DST.CANCELLED
+                QST.updateStatus DST.CANCELLED oldSearchTry.id
                 void $ QDQ.setInactiveBySTId oldSearchTry.id
               _ <- QST.create searchTry
               return searchTry
@@ -242,8 +242,8 @@ buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceT
       _ -> do
         farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId (Just (TransactionId (Id searchReq.transactionId)))
         let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
-        return
-          ( DTSRD.extractDriverPickupCharges farePolicy.farePolicyDetails,
+        return $
+          ( USRD.extractDriverPickupCharges farePolicy.farePolicyDetails,
             mbDriverExtraFeeBounds <&> (.minFee),
             mbDriverExtraFeeBounds <&> (.maxFee),
             mbDriverExtraFeeBounds <&> (.stepFee),

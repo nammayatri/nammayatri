@@ -25,7 +25,7 @@ import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Person as BeamP
 import Storage.Queries.OrphanInstances.DriverInformation
-import Storage.Queries.Person (findAllPersonWithDriverInfos)
+import Storage.Queries.PersonExtra (findAllPersonWithDriverInfos)
 
 -- Extra code goes here --
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)

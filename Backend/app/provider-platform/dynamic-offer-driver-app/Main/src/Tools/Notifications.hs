@@ -17,6 +17,7 @@ module Tools.Notifications where
 import Data.Aeson
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
+import Domain.Action.UI.SearchRequestForDriver
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR
@@ -29,7 +30,6 @@ import Domain.Types.Message.Message as Message
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as DRide
-import Domain.Types.SearchRequestForDriver
 import Domain.Types.SearchTry
 import qualified EulerHS.Prelude hiding (null)
 import qualified Kernel.External.Notification as Notification

@@ -250,7 +250,7 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
       void $ PHistory.createPurchaseHistory history
       void $ QDS.updateCoinFieldsByDriverId driverId calculatedAmount
       driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      void $ Person.updateUsedCoins driverId (coins + driver.usedCoins)
+      void $ Person.updateUsedCoins (coins + driver.usedCoins) driverId
       mapM_ (\(id, coinValue, status) -> CHistory.updateStatusOfCoins id coinValue status) result
       Coins.safeIncrBy (Coins.mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral (- coins)) driverId transporterConfig.timeDiffFromUtc
     else do

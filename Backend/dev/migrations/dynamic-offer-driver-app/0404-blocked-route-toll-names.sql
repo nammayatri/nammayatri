@@ -8,9 +8,6 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN toll_names text[];
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN toll_names text[];
 
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_step_fee int;
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_default_step_fee int;
-
 ----------------------------------------------------------------------------------------
 ---------------Add The Step Values Accordingly To Current Frontend Configs---------------
 ----------------------------------------------------------------------------------------

@@ -1,5 +1,4 @@
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN estimated_fare double precision;
-ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN estimated_fare double precision;
 UPDATE atlas_driver_offer_bpp.booking SET estimated_fare = 0;
 UPDATE atlas_driver_offer_bpp.driver_quote SET estimated_fare = 0;
 ALTER TABLE atlas_driver_offer_bpp.booking ALTER COLUMN estimated_fare SET NOT NULL;
@@ -64,7 +63,5 @@ UPDATE atlas_driver_offer_bpp.fare_policy AS T1 SET driver_min_extra_fee = T2.mi
   FROM MinMaxExtraFee AS T2
   WHERE T1.id = T2.id;
 
-ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN driver_min_extra_fee SET NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN driver_max_extra_fee SET NOT NULL;
 
 ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN driver_extra_fee_list;
