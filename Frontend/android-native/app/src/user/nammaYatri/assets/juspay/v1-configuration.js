@@ -208,8 +208,9 @@ window.getMerchantConfig = function () {
     }
     , "tipEnabledCities" : ["Bangalore", "Hyderabad"]
     , "acPopupConfig" : {
-        "enableAcPopup" : false,
-        "enableNonAcPopup" : true
+        "enableAcPopup" : true,
+        "enableNonAcPopup" : true,
+        "showAfterTime" : 5
     }
     , "autoSelectBackground" : "#53BB6F"
     , "enableMockLocation" : true
