@@ -50,6 +50,7 @@ handler transporterId req = do
   booking <- B.runInReplica $ QRB.findByTransactionId req.transactionId >>= fromMaybeM (BookingNotFound req.transactionId)
   mbRide <- B.runInReplica $ QRide.findOneByBookingId booking.id
   let transporterId' = booking.providerId
+      estimateId = booking.estimateId <&> getId
   unless (transporterId' == transporterId) $ throwError AccessDenied
   info <- case mbRide of
     Just ride -> do
