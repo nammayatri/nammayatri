@@ -113,6 +113,6 @@ osrmConfig :: MapsServiceConfig
 osrmConfig =
   OSRMConfig
     OSRMCfg
-      { osrmUrl = fromJust $ parseBaseUrl "localhost:5000",
+      { osrmUrl = fromJust $ parseBaseUrl "localhost:5001",
         radiusDeviation = Just 20
       }

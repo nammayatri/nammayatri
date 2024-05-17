@@ -52,6 +52,6 @@ fetchGoogleConfig = do
 
 fetchOSRMConfig :: IO ()
 fetchOSRMConfig = do
-  fetchConfig Fixtures.nammaYatriPartnerMerchantId OSRM func (fromJust $ parseBaseUrl "localhost:5000")
+  fetchConfig Fixtures.nammaYatriPartnerMerchantId OSRM func (fromJust $ parseBaseUrl "localhost:5001")
   where
     func (MapsServiceConfig (OSRMConfig cfg)) = cfg.osrmUrl
