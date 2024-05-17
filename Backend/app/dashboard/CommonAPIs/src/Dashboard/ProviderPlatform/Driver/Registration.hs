@@ -190,8 +190,9 @@ data DocumentsListResponse = DocumentsListResponse
     vehicleRegistrationCertificate :: [Text],
     vehicleInsurance :: [Text],
     uploadProfile :: [Text],
-    ssn :: Text,
-    vehicleFitnessCertificate :: [Text]
+    ssn :: Maybe Text,
+    vehicleFitnessCertificate :: [Text],
+    profilePhoto :: [Text]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
