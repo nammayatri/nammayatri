@@ -34,7 +34,7 @@ data FarePolicyT f = FarePolicyT
     minAllowedTripDistance :: B.C f (Maybe Meters),
     govtCharges :: B.C f (Maybe Double),
     perMinuteRideExtraTimeCharge :: B.C f (Maybe HighPrecMoney),
-    congestionChargeMultiplier :: B.C f (Maybe Centesimal),
+    congestionCharge :: B.C f (Maybe Domain.CongestionChargeMultiplier),
     description :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime

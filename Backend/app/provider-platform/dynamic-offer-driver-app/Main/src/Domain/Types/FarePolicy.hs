@@ -29,7 +29,7 @@ import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForJSON)
 
 data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
   { id :: Id FarePolicy,
@@ -41,7 +41,7 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
-    congestionChargeMultiplier :: Maybe Centesimal,
+    congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
     farePolicyDetails :: FarePolicyDetailsD s,
     description :: Maybe Text,
     createdAt :: UTCTime,
@@ -74,6 +74,14 @@ instance FromJSON (FarePolicyDetailsD 'DTC.Safe)
 
 instance ToJSON (FarePolicyDetailsD 'DTC.Safe)
 
+data CongestionChargeMultiplier
+  = BaseFareAndExtraDistanceFare Centesimal
+  | ExtraDistanceFare Centesimal
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+$(mkBeamInstancesForJSON ''CongestionChargeMultiplier)
+
 data FarePolicyType = Progressive | Slabs | Rental
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -93,7 +101,7 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
-    congestionChargeMultiplier :: Maybe Centesimal,
+    congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
     farePolicyDetails :: FarePolicyDetailsD s,
     description :: Maybe Text,
     createdAt :: UTCTime,
@@ -116,6 +124,10 @@ type FullDriverExtraFeeBounds = (Id FarePolicy, DriverExtraFeeBounds)
 type FullFarePolicyProgressiveDetails = (Id FarePolicy, FPProgressiveDetails)
 
 type FullFarePolicyRentalDetails = (Id FarePolicy, FPRentalDetails)
+
+mkCongestionChargeMultiplier :: DPM.CongestionChargeMultiplierAPIEntity -> CongestionChargeMultiplier
+mkCongestionChargeMultiplier (DPM.BaseFareAndExtraDistanceFare charge) = BaseFareAndExtraDistanceFare charge
+mkCongestionChargeMultiplier (DPM.ExtraDistanceFare charge) = ExtraDistanceFare charge
 
 farePolicyToFullFarePolicy :: Id Merchant -> DVST.ServiceTierType -> DTC.TripCategory -> FarePolicy -> FullFarePolicy
 farePolicyToFullFarePolicy merchantId vehicleServiceTier tripCategory FarePolicy {..} =
