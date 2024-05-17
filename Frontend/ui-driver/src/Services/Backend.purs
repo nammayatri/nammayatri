@@ -736,12 +736,14 @@ validateImage payload = do
     where
         unwrapResponse (x) = x
 
-makeValidateImageReq :: String -> String -> Maybe String -> Maybe ST.VehicleCategory ->ValidateImageReq
-makeValidateImageReq image imageType rcNumber category = ValidateImageReq
+makeValidateImageReq :: String -> String -> Maybe String -> Maybe ValidationStatus -> Maybe String -> Maybe ST.VehicleCategory -> ValidateImageReq
+makeValidateImageReq image imageType rcNumber status transactionId category = ValidateImageReq
     {
       "image" : image,
       "imageType" : imageType,
       "rcNumber" : rcNumber,
+      "validationStatus" : status,
+      "workflowTransactionId" : transactionId,
       "vehicleCategory" : mkCategory category
     }
 
@@ -1505,28 +1507,12 @@ getSdkTokenBT expiry serviceName = do
 
 ----------------------------------------------------------------------- Onboarding Live selfie, aadhaar, and PAN APIs --------------------------------------------------
 
--- getLiveSelfieBT :: String -> FlowBT String GetLiveSelfieResp
--- getLiveSelfieBT status = do
---     headers <- getHeaders' "" false
---     withAPIResultBT (EP.getLiveSelfie status) identity errorHandler (lift $ lift $ callAPI headers (GetLiveSelfieReq status))
---     where
---     errorHandler (ErrorPayload errorPayload) =  do
---         BackT $ pure GoBack  
-
 getLiveSelfie :: String -> Flow GlobalState (Either ErrorResponse GetLiveSelfieResp)
 getLiveSelfie status = do
     headers <- getHeaders "" false
     withAPIResult (EP.getLiveSelfie status)  unwrapResponse $ callAPI headers (GetLiveSelfieReq status)
     where
         unwrapResponse x = x
-
--- registerDriverPANBT :: PanCardReq -> FlowBT String DriverPANResp
--- registerDriverPANBT payload = do
---         headers <- getHeaders' "" false
---         withAPIResultBT (EP.registerPAN "" ) identity errorHandler (lift $ lift $ callAPI headers payload)
---     where
---     errorHandler (ErrorPayload errorPayload) = do
---         BackT $ pure GoBack
 
 registerDriverPAN :: PanCardReq -> Flow GlobalState (Either ErrorResponse DriverPANResp)
 registerDriverPAN req = do
@@ -1535,13 +1521,19 @@ registerDriverPAN req = do
     where
         unwrapResponse x = x
 
--- registerDriverAadhaarBT :: AadhaarCardReq -> FlowBT String DriverAadhaarResp
--- registerDriverAadhaarBT payload = do
---         headers <- getHeaders' "" false
---         withAPIResultBT (EP.registerAadhaar "" ) identity errorHandler (lift $ lift $ callAPI headers payload)
---     where
---     errorHandler (ErrorPayload errorPayload) = do
---         BackT $ pure GoBack
+
+makePANCardReq :: Boolean -> String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> ValidationStatus -> PanCardReq
+makePANCardReq consent consentTimestamp dateOfBirth nameOnCard panImageId panNumber validationStatus = PanCardReq
+    {
+       "consent" : consent,
+       "consentTimestamp" : consentTimestamp,
+       "dateOfBirth" : dateOfBirth,
+       "nameOnCard" : nameOnCard,
+       "panImageId" : panImageId,
+       "panNumber" : panNumber,
+       "validationStatus" : validationStatus
+    }
+
 
 registerDriverAadhaar :: AadhaarCardReq -> Flow GlobalState (Either ErrorResponse DriverAadhaarResp)
 registerDriverAadhaar req = do
@@ -1549,3 +1541,18 @@ registerDriverAadhaar req = do
     withAPIResult (EP.registerAadhaar "")  unwrapResponse $ callAPI headers req
     where
         unwrapResponse x = x
+
+
+makeAadhaarCardReq :: Maybe String -> Maybe String -> Maybe String -> Boolean -> String -> Maybe String ->  Maybe String -> Maybe String -> ValidationStatus -> AadhaarCardReq
+makeAadhaarCardReq aadhaarBackImageId aadhaarFrontImageId address consent consentTimestamp dateOfBirth maskedAadhaarNumber nameOnCard validationStatus = AadhaarCardReq
+    {
+       "aadhaarBackImageId" : aadhaarBackImageId,
+       "aadhaarFrontImageId" : aadhaarFrontImageId,
+       "address" : address,
+       "consent" : consent,
+       "consentTimestamp" : consentTimestamp,
+       "dateOfBirth" : dateOfBirth,
+       "maskedAadhaarNumber" : maskedAadhaarNumber,
+       "nameOnCard" : nameOnCard,
+       "validationStatus" : validationStatus
+    }

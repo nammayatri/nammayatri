@@ -203,6 +203,7 @@ import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.hypersdk.data.KeyValueStore;
+import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
 
 public class MobilityCommonBridge extends HyperBridge {
@@ -3918,6 +3919,26 @@ public class MobilityCommonBridge extends HyperBridge {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void encodeToBase64(String url, String callback) {
+        ExecutorManager.runOnBackgroundThread(() -> {
+            try {
+                HttpURLConnection connection = MobilityCallAPI.callAPIConnection(url,MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false);
+                Bitmap bm = BitmapFactory.decodeStream(MobilityCallAPI.getResponseStream(connection));
+                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                bm.compress(Bitmap.CompressFormat.PNG, 90, byteArrayOutputStream);
+                while (byteArrayOutputStream.toByteArray().length > 716800) { //reducing to 700KB
+                    byteArrayOutputStream.reset();
+                    bm.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream);
+                }
+                byte[] byteArray = byteArrayOutputStream .toByteArray();
+                bridgeComponents.getJsCallback().addJsToWebView(String.format("window.callUICallback('%s','%s',\"%s\")",callback,"SUCCESS",Base64.encodeToString(byteArray, Base64.DEFAULT).replace("\n","")));
+            } catch (Exception e) {
+                bridgeComponents.getJsCallback().addJsToWebView(String.format("window.callUICallback('%s','%s','%s')",callback,"FAILED",""));
             }
         });
     }

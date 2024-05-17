@@ -28,7 +28,7 @@ import Prelude (class Show, class Eq, bind, discard, pure, show, unit, ($), void
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..))
+import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..), HyperVergeKycResult(..))
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Components.PrimaryEditText as PrimaryEditText
 import Components.InAppKeyboardModal as InAppKeyboardModal
@@ -49,6 +49,23 @@ import Components.OptionsMenu as OptionsMenu
 import Components.BottomDrawerList as BottomDrawerList
 import Effect.Uncurried (runEffectFn6)
 import Effect.Class (liftEffect)
+import Foreign.Generic (decodeJSON)
+import Services.Backend as Remote
+import Data.Function.Uncurried (runFn1)
+import Data.Either(Either(..))
+import Debug
+import Effect.Aff (launchAff)
+import Engineering.Helpers.Commons as EHC
+import Types.App (defaultGlobalState)
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
+import Control.Monad.Trans.Class (lift)
+import Presto.Core.Types.Language.Flow (doAff)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Control.Monad.Except (runExcept)
+import Services.API as API
+import PrestoDOM.Core (getPushFn)
+import Engineering.Helpers.Commons (liftFlow)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -100,6 +117,7 @@ data ScreenOutput = GoBack
                   | ReferralCode RegistrationScreenState
                   | DocCapture RegistrationScreenState RegisterationStep
                   | SelectLang RegistrationScreenState
+                  | GoToAadhaarPANSelfieUpload RegistrationScreenState ST.HyperVergeKycResult
 
 data Action = BackPressed 
             | NoAction
@@ -126,6 +144,7 @@ data Action = BackPressed
             | BottomDrawerListAC BottomDrawerList.Action
             | CallHV String String
             | OnActivityResult Int String
+            | CallWorkFlow String
             
 derive instance genericAction :: Generic Action _
 instance eqAction :: Eq Action where
@@ -153,9 +172,9 @@ eval (RegistrationAction step ) state = do
           VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state step.rcNumberPrefixList
           GRANT_PERMISSION -> exit $ GoToPermissionScreen state
           SUBSCRIPTION_PLAN -> exit GoToOnboardSubscription
-          PROFILE_PHOTO -> continueWithCmd state [ pure $ CallHV "ny-selfie-flow" "{\"key1\":\"value1\",\"key2\":\"value2\",\"key3\":\"value3\"}"]
-          AADHAAR_CARD -> continueWithCmd state [ pure $ CallHV "ny-aadhaar-flow" "{\"selfie\":\"https://prod-audit-portal-ind.s3.ap-south-1.amazonaws.com/gkyc-ap-south-1/checkLiveness/2024-05-15/tmdhyd/1715768121953-42922574-37f0-4bd4-9f86-9c151d6ea690/image.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAZRKK5ZMR2KBYHCHQ%2F20240515%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20240515T101522Z&X-Amz-Expires=900&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEDYaCmFwLXNvdXRoLTEiRjBEAiA3iUuVjbetQXdEFGZYy4%2BR7u7Vux2gGiwTgRVyZtKs3QIgH3ARfKT0C929PHBaJovxY9CMCTpujIWCPumq7OfIj7kqxwUIn%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARABGgw2NTU2NzY1MjUzNDciDKG9kKENMtAVSJuOUCqbBZaifBK7tZoa1nVOIUdtRuqwzRjWpTCw9tnVzfhAUfku3rwtyGKnA9ixN5dooIn%2B2t72wUup%2FrcyYeja7oHruUKrRXPaKi8IrO%2FY858TqVW2jKEDoXXODwpXCBvVgLKSyK2zFKarlNaq3U3N80eBQlZSMFYAg3KSGDKeTUMWA5uBkOlIpLze4ozDSY79rRUiDQEoe6v4fKRbkkFlOwcex3L4L%2BkpsichkE%2F6JriJMlt2AYUJDtrHYSWrRLk9yi8pdmjxf2idOsRZsA6YDvPB6raQ7%2F%2FRDMW6M5jvaJO9qJ%2Ff%2BtwHSWee23WwxmXRm1WtnraDCBdheITWBcO4lVkbt7oRkGWTVtX3RuFSqp3cAnUCAdq7S33V7Hg2EA33C%2BwsUApDRXMhVsn915l2osNScbeKaHjnJDMp2cesbe5EstOI5OeipL85wHCxcDCIte4ln89oA7YNlXQHaxskBSJkOpd1It71ffZsTsNQdFSDBwZrIIURNsteYRFl8aOIlrCssAWhAQAoVaen0lUAlD9JcQ01lU7RjNLyLysHRoXTrdB41zw9uFljDJDoeZpzZLQckDLWoCwH%2Bip7muui%2FIjyHplwKp0zfdHqUYh0O%2B7QoqwIew6FPcxU%2FBKJmBEW%2BkBtWZEFGXCnz5Wg91NL5Hi1mU25dq7LZ7MHnZY3OvLPQmjTGoALdZ33FO8nTCTIqmJko4vbPe65MzKnBvnM2RKvJT%2BEyWkk2Cn9vvWA3TA4rg%2Bs2%2Bz3h0tbkxPYsuooR9CJCj%2FUy5DD5FnWQMAce8DuxU0HZvUKAN%2FVnO2NU5hBUgNKD94MK2Mchi9ZbItBgrxzL17aIBDetQdNK0KLhbFAvUys578weiSbUHWaT9ekq7SDUIorjew0yh8xaiownaaRsgY6sgEGllafblc6fifVlsNPEyzfNKpg1PudYZdGohT2lU6yE%2Bx6BIzRY0RfeTIm%2FxAKCTudrEV%2BRQo6hZHKkbQo74B7FgESt7G6PbTrebm4hvp6qjZzLd9%2B2gtA1C%2B9p1%2BmUo122289Z5M%2F7sY%2FHY2w%2Bj5QDNN6UeJbQEjm79981sOAINT8OEKRIrP5pXsNsErANqlj12To1NhJIpiBgB8aYPRtI3kSwFZchFqAsVfOPiQnuQbZ&X-Amz-Signature=40b330eeedcaa0b26362dd96f2a9cf9ce63cf0aefb79bd14d8ef0395a013a1bc&X-Amz-SignedHeaders=host\"}"] --HVTODO: replace with selfie obtained from backend api.
-          PAN_CARD  -> continueWithCmd state [ pure $ CallHV "ny-pan-flow" "{\"selfie\":\"https://prod-audit-portal-ind.s3.ap-south-1.amazonaws.com/gkyc-ap-south-1/checkLiveness/2024-05-15/tmdhyd/1715768121953-42922574-37f0-4bd4-9f86-9c151d6ea690/image.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAZRKK5ZMR2KBYHCHQ%2F20240515%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20240515T101522Z&X-Amz-Expires=900&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEDYaCmFwLXNvdXRoLTEiRjBEAiA3iUuVjbetQXdEFGZYy4%2BR7u7Vux2gGiwTgRVyZtKs3QIgH3ARfKT0C929PHBaJovxY9CMCTpujIWCPumq7OfIj7kqxwUIn%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARABGgw2NTU2NzY1MjUzNDciDKG9kKENMtAVSJuOUCqbBZaifBK7tZoa1nVOIUdtRuqwzRjWpTCw9tnVzfhAUfku3rwtyGKnA9ixN5dooIn%2B2t72wUup%2FrcyYeja7oHruUKrRXPaKi8IrO%2FY858TqVW2jKEDoXXODwpXCBvVgLKSyK2zFKarlNaq3U3N80eBQlZSMFYAg3KSGDKeTUMWA5uBkOlIpLze4ozDSY79rRUiDQEoe6v4fKRbkkFlOwcex3L4L%2BkpsichkE%2F6JriJMlt2AYUJDtrHYSWrRLk9yi8pdmjxf2idOsRZsA6YDvPB6raQ7%2F%2FRDMW6M5jvaJO9qJ%2Ff%2BtwHSWee23WwxmXRm1WtnraDCBdheITWBcO4lVkbt7oRkGWTVtX3RuFSqp3cAnUCAdq7S33V7Hg2EA33C%2BwsUApDRXMhVsn915l2osNScbeKaHjnJDMp2cesbe5EstOI5OeipL85wHCxcDCIte4ln89oA7YNlXQHaxskBSJkOpd1It71ffZsTsNQdFSDBwZrIIURNsteYRFl8aOIlrCssAWhAQAoVaen0lUAlD9JcQ01lU7RjNLyLysHRoXTrdB41zw9uFljDJDoeZpzZLQckDLWoCwH%2Bip7muui%2FIjyHplwKp0zfdHqUYh0O%2B7QoqwIew6FPcxU%2FBKJmBEW%2BkBtWZEFGXCnz5Wg91NL5Hi1mU25dq7LZ7MHnZY3OvLPQmjTGoALdZ33FO8nTCTIqmJko4vbPe65MzKnBvnM2RKvJT%2BEyWkk2Cn9vvWA3TA4rg%2Bs2%2Bz3h0tbkxPYsuooR9CJCj%2FUy5DD5FnWQMAce8DuxU0HZvUKAN%2FVnO2NU5hBUgNKD94MK2Mchi9ZbItBgrxzL17aIBDetQdNK0KLhbFAvUys578weiSbUHWaT9ekq7SDUIorjew0yh8xaiownaaRsgY6sgEGllafblc6fifVlsNPEyzfNKpg1PudYZdGohT2lU6yE%2Bx6BIzRY0RfeTIm%2FxAKCTudrEV%2BRQo6hZHKkbQo74B7FgESt7G6PbTrebm4hvp6qjZzLd9%2B2gtA1C%2B9p1%2BmUo122289Z5M%2F7sY%2FHY2w%2Bj5QDNN6UeJbQEjm79981sOAINT8OEKRIrP5pXsNsErANqlj12To1NhJIpiBgB8aYPRtI3kSwFZchFqAsVfOPiQnuQbZ&X-Amz-Signature=40b330eeedcaa0b26362dd96f2a9cf9ce63cf0aefb79bd14d8ef0395a013a1bc&X-Amz-SignedHeaders=host\"}"] --HVTODO: replace with selfie obtained from backend api.
+          PROFILE_PHOTO -> continueWithCmd state [ pure $ CallHV "ny-selfie-flow" ""] 
+          AADHAAR_CARD -> continueWithCmd state [ pure $ CallWorkFlow "ny-aadhaar-flow"]
+          PAN_CARD  -> continueWithCmd state [ pure $ CallWorkFlow "ny-pan-flow"]
           VEHICLE_PERMIT  -> exit $ DocCapture state item
           FITNESS_CERTIFICATE  -> exit $ DocCapture state item
           VEHICLE_INSURANCE -> exit $ DocCapture state item
@@ -163,11 +182,29 @@ eval (RegistrationAction step ) state = do
           _ -> continue state
 
 eval (CallHV workFLowId inputJson) state = 
-  continueWithCmd state [do
-    transactionId <- liftEffect $ JB.generateUUID
-    void $ runEffectFn6 JB.initHVSdk state.data.accessToken workFLowId transactionId true "en" inputJson 
-    pure NoAction
-  ]
+  continueWithCmd state 
+    [ do
+        void $ pure $ spy "Entered the eval function of CallHV" ""
+        transactionId <- liftEffect $ JB.generateUUID
+        void $ runEffectFn6 JB.initHVSdk state.data.accessToken workFLowId transactionId true "en" inputJson 
+        pure NoAction
+    ]
+
+
+eval (CallWorkFlow flowId) state =
+  continueWithCmd state
+    [ do
+        void $ launchAff $ EHC.flowRunner defaultGlobalState
+          $ do
+              resp <- Remote.getLiveSelfie "APPROVED"
+              push <- liftFlow $ getPushFn Mb.Nothing "RegistrationScreen"
+              liftFlow $ push $ case resp of
+                Right (API.GetLiveSelfieResp response) -> do
+                  let imagePath = runFn1 JB.decodeAndStoreImage response.image
+                  CallHV flowId $ "{\"selfie\":\"" <> imagePath <> "\"}"
+                _ -> NoAction
+        pure NoAction
+    ]
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
 
@@ -291,21 +328,16 @@ eval ExpandOptionalDocs state = continue state { props { optionalDocsExpanded = 
 
 eval (OnActivityResult requestCode bundle) state = do
   -- bundle is the data returned from the activity
-  continue state
-
--- eval (OnActivityResult requestCode bundle) state = do
---   void $ pure $ spy "zxc " bundle
---   case runExcept $ decodeJSON bundle of
---     Left _ -> do
---       void $ pure $ spy "zxc failed to parse response " result
---       JB.toast "Some Error Occurred. Please try again."
---       continue state
---     Right (result :: HyperVergeKycReult) -> do
---       void $ pure $ spy "zxc parsed result : " result
---       case result of
---         "success" -> continue state
---         _ ->
---   continue state
+  case runExcept (decodeJSON bundle :: _ ST.HyperVergeKycResult) of
+    Left _ -> do
+      void $ pure $ JB.toast "Some Error Occurred. Please try again."
+      continue state
+    Right (ST.HyperVergeKycResult result) -> do
+      if result.status == (Mb.Just "auto_approved") || result.status == (Mb.Just "auto_declined") || result.status == (Mb.Just "needs_review")
+        then exit $ GoToAadhaarPANSelfieUpload state (ST.HyperVergeKycResult result)
+      else continue state
+    _ -> continue state
+      
 
 eval _ state = update state
 

@@ -31,6 +31,7 @@ import android.os.RemoteException;
 import android.provider.Settings;
 import android.text.Html;
 import android.util.Log;
+import android.util.Base64;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -76,6 +77,11 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Locale;
@@ -1151,6 +1157,23 @@ public class MobilityAppBridge extends HyperBridge {
     public void stopRecord() {
         if(cameraUtils != null)
             cameraUtils.stopRecord();
+    }
+
+    @JavascriptInterface
+    public String decodeAndStoreImage(String base64ImageString) {
+        try {
+            byte[] imageBytes = Base64.decode(base64ImageString, Base64.DEFAULT);
+            String fileName = "image_" + System.currentTimeMillis() + ".png";
+            File outputDir = bridgeComponents.getContext().getCacheDir();
+            File outputFile = new File(outputDir, fileName);
+            FileOutputStream fos = new FileOutputStream(outputFile);
+            fos.write(imageBytes);
+            fos.close();
+            return outputFile.getAbsolutePath();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     // region Override functions

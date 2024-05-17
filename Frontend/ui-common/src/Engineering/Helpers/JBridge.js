@@ -2554,9 +2554,43 @@ export const jBridgeMethodExists = function (method) {
 }
 
 export const initHVSdk = function (accessToken, workFLowId, transactionId, useLocation, defLanguageCode, inputJson) {
-  return JBridge.initHVSdk(accessToken, workFLowId, transactionId, useLocation, defLanguageCode, inputJson);         
+  if (JBridge.initHVSdk) {
+    return JBridge.initHVSdk(accessToken, workFLowId, transactionId, useLocation, defLanguageCode, inputJson);
+  }        
 }
 
 export const generateUUID = function () {
   return Math.random().toString(16);
+}
+
+export const decodeAndStoreImage = function (base64Image) {
+  if (JBridge.decodeAndStoreImage) {
+    return JBridge.decodeAndStoreImage(base64Image);
+  }
+}
+
+
+export const encodeToBase64 = function (url){
+  return function (cb){
+    return function () {
+      if (JBridge.encodeToBase64) {
+        const callback = callbackMapper.map(function(res, image) {
+          cb(image)();
+        });
+        return JBridge.encodeToBase64(url,callback);
+      } 
+    }
+  }
+}
+
+export const isSdkTokenExpired = function (expiry) {
+  const now = new Date();
+  const utcTimeInSeconds = Math.floor(now.getTime() / 1000);
+  return !(utcTimeInSeconds + 1200 < parseInt(expiry));
+}
+
+export const makeSdkTokenExpiry = function (delta) {
+  const now = new Date();
+  const utcTimeInSeconds = Math.floor(now.getTime() / 1000);
+  return String(utcTimeInSeconds + delta);
 }

@@ -1049,6 +1049,8 @@ newtype ValidateImageReq = ValidateImageReq {
   image :: String,
   imageType :: String,
   rcNumber :: Maybe String,
+  validationStatus :: Maybe ValidationStatus,
+  workflowTransactionId :: Maybe String,
   vehicleCategory :: Maybe String
 }
 
@@ -4690,7 +4692,7 @@ newtype AadhaarCardReq = AadhaarCardReq
 newtype DriverAadhaarResp = DriverAadhaarResp ApiSuccessResult
 
 instance makeGetLiveSelfieReq  :: RestEndpoint GetLiveSelfieReq GetLiveSelfieResp where
-    makeRequest reqBody@(GetLiveSelfieReq status) headers = defaultMakeRequest GET (EP.getLiveSelfie status) headers reqBody Nothing
+    makeRequest reqBody@(GetLiveSelfieReq status) headers = defaultMakeRequest GET (EP.getLiveSelfie (show status)) headers reqBody Nothing
     decodeResponse = decodeJSON
     encodeRequest req = defaultEncode req
 

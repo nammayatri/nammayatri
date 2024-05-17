@@ -19,7 +19,7 @@ public class HyperVergeSdk {
         HyperKycConfig config = new HyperKycConfig(accessToken, workFlowId, transactionId);
         config.setUseLocation(useLocation);
         config.setDefaultLangCode(defLanguageCode);
-        if (inputsJson != null) {
+        if (inputsJson.length() > 0) {
             Map<String, String> inpMap = new HashMap<>();
             JSONObject jsonObject;
             try {

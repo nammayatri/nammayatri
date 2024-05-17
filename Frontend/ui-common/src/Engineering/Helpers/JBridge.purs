@@ -37,7 +37,7 @@ import Engineering.Helpers.Commons (screenHeight, screenWidth, parseFloat)
 import Effect.Uncurried
 import Data.Maybe (Maybe(..))
 -- import LoaderOverlay.Handler as UI
--- import Effect.Aff (launchAff)
+import Effect.Aff (makeAff, Aff, nonCanceler)
 -- import Effect.Class (liftEffect)
 -- import PrestoDOM.Core(terminateUI)
 import Presto.Core.Types.Language.Flow
@@ -290,7 +290,10 @@ foreign import displayBase64Image :: EffectFn1 DisplayBase64ImageConig Unit
 foreign import jBridgeMethodExists :: String -> Boolean
 foreign import initHVSdk :: EffectFn6 String String String Boolean String String (Effect Unit)
 foreign import generateUUID :: Effect String
-
+foreign import decodeAndStoreImage :: Fn1 String String
+foreign import encodeToBase64 :: forall action. String -> (action -> Effect Unit)  -> Effect String
+foreign import isSdkTokenExpired :: Fn1 String Boolean
+foreign import makeSdkTokenExpiry :: Fn1 Int String
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
 setMapPadding = runEffectFn4 setMapPaddingImpl
 
@@ -703,3 +706,6 @@ showDatePicker push action= do
   let (TimePicker timeResp hour minute) = timePicker
   liftEffect $ push $ action dateResp year month day timeResp hour minute
   
+
+encodeToBase64Type :: String -> Aff String
+encodeToBase64Type url = makeAff \cb -> encodeToBase64 url (cb <<< Right) $> nonCanceler
