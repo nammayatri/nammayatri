@@ -13,7 +13,8 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data TicketServiceT f = TicketServiceT
-  { allowFutureBooking :: B.C f Kernel.Prelude.Bool,
+  { allowCancellation :: B.C f Kernel.Prelude.Bool,
+    allowFutureBooking :: B.C f Kernel.Prelude.Bool,
     businessHours :: B.C f [Kernel.Prelude.Text],
     expiry :: B.C f Domain.Types.TicketService.ExpiryType,
     id :: B.C f Kernel.Prelude.Text,

@@ -239,6 +239,9 @@ data UserActionType
   | GET_TICKET_PLACES
   | REMOVE_AC_USAGE_RESTRICTION
   | UPDATE_DRIVER_TAG
+  | CANCEL_TICKET_BOOKING
+  | CANCEL_TICKET_SERVICE
+  | GET_TICKET_BOOKING_DETAILS
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

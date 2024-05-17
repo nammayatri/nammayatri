@@ -97,6 +97,7 @@ ghc-options:
 library:
   source-dirs:
     - src
+    - src-read-only
   ghc-options:
     - -Wall
     - -Wcompat

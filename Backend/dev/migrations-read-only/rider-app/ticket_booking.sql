@@ -28,3 +28,9 @@ ALTER TABLE atlas_app.ticket_booking ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_booking ADD COLUMN currency text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking ADD COLUMN cancelled_seats integer ;
+ALTER TABLE atlas_app.ticket_booking ADD COLUMN booked_seats integer NOT NULL default 0;

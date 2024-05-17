@@ -22,6 +22,7 @@ module Lib.Payment.Domain.Action
     createNotificationService,
     createExecutionService,
     buildSDKPayload,
+    refundService,
   )
 where
 
@@ -29,6 +30,7 @@ import qualified Data.Text as T
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
+import Kernel.External.Payment.Juspay.Types (RefundStatus (REFUND_PENDING))
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value, isNothing)
@@ -40,9 +42,11 @@ import Kernel.Utils.Common
 import Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
+import Lib.Payment.Domain.Types.Refunds (Refunds (..))
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QTransaction
+import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 
 data PaymentStatusResp
   = PaymentStatus
@@ -282,6 +286,7 @@ orderStatusService personId orderId orderStatusCall = do
             Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn Nothing
         )
         transactionUUID
+      mapM_ updateRefundStatus refunds
       return $ PaymentStatus {status = transactionStatus, bankErrorCode = orderTxn.bankErrorCode, bankErrorMessage = orderTxn.bankErrorMessage, isRetried = isRetriedOrder, isRetargeted = isRetargetedOrder, retargetLink = retargetPaymentLink}
     _ -> throwError $ InternalError "Unexpected Order Status Response."
 
@@ -432,6 +437,7 @@ juspayWebhookService resp respDump = do
             Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn $ Just respDump
         )
         transactionUUID
+      mapM_ updateRefundStatus refunds
     _ -> return ()
   return Ack
 
@@ -503,5 +509,46 @@ createExecutionService (request, orderId) merchantId executionCall = do
             updatedAt = now
           }
 
+--- refunds api ----
+
+refundService ::
+  ( EncFlow m r,
+    BeamFlow m r
+  ) =>
+  (Payment.AutoRefundReq, Id Refunds) ->
+  Id Merchant ->
+  (Payment.AutoRefundReq -> m Payment.AutoRefundResp) ->
+  m Payment.AutoRefundResp
+refundService (request, refundId) merchantId refundsCall = do
+  now <- getCurrentTime
+  QRefunds.create $ mkRefundsEntry now
+  response <- refundsCall request
+  mapM_ (\Payment.RefundsData {..} -> QRefunds.updateRefundsEntryByResponse initiatedBy (Just idAssignedByServiceProvider) errorMessage errorCode status (Kernel.Types.Id.Id requestId)) response.refunds
+  return response
+  where
+    mkRefundsEntry now =
+      Refunds
+        { id = refundId,
+          merchantId = merchantId.getId,
+          shortId = request.requestId,
+          status = REFUND_PENDING,
+          orderId = Id request.orderId,
+          refundAmount = request.amount,
+          errorMessage = Nothing,
+          errorCode = Nothing,
+          idAssignedByServiceProvider = Nothing,
+          initiatedBy = Nothing,
+          createdAt = now,
+          updatedAt = now
+        }
+
+updateRefundStatus :: (BeamFlow m r) => Payment.RefundsData -> m ()
+updateRefundStatus Payment.RefundsData {..} = do
+  Redis.whenWithLockRedis (refundProccessingKey requestId) 60 $
+    QRefunds.updateRefundsEntryByResponse initiatedBy (Just idAssignedByServiceProvider) errorMessage errorCode status (Kernel.Types.Id.Id requestId)
+
 txnProccessingKey :: Text -> Text
 txnProccessingKey txnUUid = "Txn:Processing:TxnUuid" <> txnUUid
+
+refundProccessingKey :: Text -> Text
+refundProccessingKey refundId = "Refund:Processing:RefundId" <> refundId

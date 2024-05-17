@@ -38,6 +38,7 @@ data MessageKey
   | MARK_RIDE_AS_SAFE
   | FOLLOW_RIDE
   | ADDED_AS_EMERGENCY_CONTACT
+  | TICKET_BOOKING_CANCELLED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe

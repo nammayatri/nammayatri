@@ -13,9 +13,12 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data TicketBookingPeopleCategoryT f = TicketBookingPeopleCategoryT
-  { id :: B.C f Kernel.Prelude.Text,
+  { amountToRefund :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    id :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
     numberOfUnits :: B.C f Kernel.Prelude.Int,
+    numberOfUnitsCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    peopleCategoryId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     pricePerUnit :: B.C f Kernel.Types.Common.HighPrecMoney,
     ticketBookingServiceCategoryId :: B.C f Kernel.Prelude.Text,

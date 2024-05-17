@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.TicketBookingService where
+module Storage.Queries.TicketBookingService (module Storage.Queries.TicketBookingService, module ReExport) where
 
 import qualified Domain.Types.TicketBooking
 import qualified Domain.Types.TicketBookingService
@@ -10,12 +10,12 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketBookingService as Beam
+import Storage.Queries.TicketBookingServiceExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TicketBookingService.TicketBookingService -> m ())
 create = createWithKV
@@ -41,6 +41,13 @@ updateAllStatusByBookingId status (Kernel.Types.Id.Id ticketBookingId) = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.ticketBookingId $ Se.Eq ticketBookingId]
 
+updateStatusAndCancelledSeatsById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.TicketBookingService.ServiceStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m ())
+updateStatusAndCancelledSeatsById status cancelledSeats (Kernel.Types.Id.Id id) = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.cancelledSeats cancelledSeats, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+
 updateVerificationById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.TicketBookingService.ServiceStatus -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m ())
@@ -59,7 +66,10 @@ updateByPrimaryKey (Domain.Types.TicketBookingService.TicketBookingService {..})
   updateWithKV
     [ Se.Set Beam.amount ((.amount) amount),
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) amount),
+      Se.Set Beam.bHourId (Kernel.Types.Id.getId <$> bHourId),
+      Se.Set Beam.bookedSeats bookedSeats,
       Se.Set Beam.btype btype,
+      Se.Set Beam.cancelledSeats cancelledSeats,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.expiryDate expiryDate,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
@@ -69,45 +79,7 @@ updateByPrimaryKey (Domain.Types.TicketBookingService.TicketBookingService {..})
       Se.Set Beam.ticketServiceId (Kernel.Types.Id.getId ticketServiceId),
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.verificationCount verificationCount,
+      Se.Set Beam.visitDate visitDate,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.TicketBookingService Domain.Types.TicketBookingService.TicketBookingService where
-  fromTType' (Beam.TicketBookingServiceT {..}) = do
-    pure $
-      Just
-        Domain.Types.TicketBookingService.TicketBookingService
-          { amount = Kernel.Types.Common.mkPrice currency amount,
-            btype = btype,
-            createdAt = createdAt,
-            expiryDate = expiryDate,
-            id = Kernel.Types.Id.Id id,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            shortId = Kernel.Types.Id.ShortId shortId,
-            status = status,
-            ticketBookingId = Kernel.Types.Id.Id ticketBookingId,
-            ticketServiceId = Kernel.Types.Id.Id ticketServiceId,
-            updatedAt = updatedAt,
-            verificationCount = verificationCount,
-            merchantId = Kernel.Types.Id.Id <$> merchantId
-          }
-
-instance ToTType' Beam.TicketBookingService Domain.Types.TicketBookingService.TicketBookingService where
-  toTType' (Domain.Types.TicketBookingService.TicketBookingService {..}) = do
-    Beam.TicketBookingServiceT
-      { Beam.amount = (.amount) amount,
-        Beam.currency = (Kernel.Prelude.Just . (.currency)) amount,
-        Beam.btype = btype,
-        Beam.createdAt = createdAt,
-        Beam.expiryDate = expiryDate,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.shortId = Kernel.Types.Id.getShortId shortId,
-        Beam.status = status,
-        Beam.ticketBookingId = Kernel.Types.Id.getId ticketBookingId,
-        Beam.ticketServiceId = Kernel.Types.Id.getId ticketServiceId,
-        Beam.updatedAt = updatedAt,
-        Beam.verificationCount = verificationCount,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId
-      }
