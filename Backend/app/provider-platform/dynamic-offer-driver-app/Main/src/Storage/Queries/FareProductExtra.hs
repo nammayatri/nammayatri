@@ -3,8 +3,8 @@
 
 module Storage.Queries.FareProductExtra where
 
-import qualified Domain.Action.UI.FareProduct as Domain
 import Domain.Types.Common
+import qualified Domain.Types.Extra.FareProduct as Domain
 import Domain.Types.FareProduct
 import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC

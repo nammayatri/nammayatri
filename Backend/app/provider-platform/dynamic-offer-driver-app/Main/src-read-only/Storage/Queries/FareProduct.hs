@@ -4,8 +4,8 @@
 
 module Storage.Queries.FareProduct (module Storage.Queries.FareProduct, module ReExport) where
 
-import qualified Domain.Action.UI.FareProduct
 import qualified Domain.Types.Common
+import qualified Domain.Types.Extra.FareProduct
 import qualified Domain.Types.FareProduct
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
@@ -30,7 +30,7 @@ createMany = traverse_ create
 
 findAllBoundedByMerchantOpCityIdVariantArea ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Lib.Types.SpecialLocation.Area -> Domain.Types.ServiceTierType.ServiceTierType -> Domain.Types.Common.TripCategory -> Domain.Action.UI.FareProduct.TimeBound -> Kernel.Prelude.Bool -> m ([Domain.Types.FareProduct.FareProduct]))
+  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Lib.Types.SpecialLocation.Area -> Domain.Types.ServiceTierType.ServiceTierType -> Domain.Types.Common.TripCategory -> Domain.Types.Extra.FareProduct.TimeBound -> Kernel.Prelude.Bool -> m [Domain.Types.FareProduct.FareProduct])
 findAllBoundedByMerchantOpCityIdVariantArea (Kernel.Types.Id.Id merchantOperatingCityId) area vehicleServiceTier tripCategory timeBounds enabled = do
   findAllWithKV
     [ Se.And
@@ -45,7 +45,7 @@ findAllBoundedByMerchantOpCityIdVariantArea (Kernel.Types.Id.Id merchantOperatin
 
 findAllBoundedFareProductForVariants ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Lib.Types.SpecialLocation.Area -> Domain.Types.Common.TripCategory -> Domain.Action.UI.FareProduct.TimeBound -> Kernel.Prelude.Bool -> m ([Domain.Types.FareProduct.FareProduct]))
+  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Lib.Types.SpecialLocation.Area -> Domain.Types.Common.TripCategory -> Domain.Types.Extra.FareProduct.TimeBound -> Kernel.Prelude.Bool -> m [Domain.Types.FareProduct.FareProduct])
 findAllBoundedFareProductForVariants (Kernel.Types.Id.Id merchantOperatingCityId) area tripCategory timeBounds enabled = do
   findAllWithKV
     [ Se.And
@@ -59,7 +59,7 @@ findAllBoundedFareProductForVariants (Kernel.Types.Id.Id merchantOperatingCityId
 
 findAllFareProductByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m ([Domain.Types.FareProduct.FareProduct]))
+  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m [Domain.Types.FareProduct.FareProduct])
 findAllFareProductByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId) enabled = do
   findAllWithKV
     [ Se.And
@@ -70,7 +70,7 @@ findAllFareProductByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId
 
 findAllUnboundedFareProductForVariants ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Lib.Types.SpecialLocation.Area -> Domain.Types.Common.TripCategory -> Domain.Action.UI.FareProduct.TimeBound -> Kernel.Prelude.Bool -> m ([Domain.Types.FareProduct.FareProduct]))
+  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Lib.Types.SpecialLocation.Area -> Domain.Types.Common.TripCategory -> Domain.Types.Extra.FareProduct.TimeBound -> Kernel.Prelude.Bool -> m [Domain.Types.FareProduct.FareProduct])
 findAllUnboundedFareProductForVariants (Kernel.Types.Id.Id merchantOperatingCityId) area tripCategory timeBounds enabled = do
   findAllWithKV
     [ Se.And
