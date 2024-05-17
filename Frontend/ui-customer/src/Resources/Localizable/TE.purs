@@ -344,7 +344,7 @@ getTE stringKey =
     VIEW_DETAILS -> "వివరాలను వీక్షించండి"
     REPEAT_RIDE -> "రిపీట్ రైడ్"
     FARE_WAS_HIGH -> "ఛార్జీ ఎక్కువగా ఉండేది"
-    AUTO_ASSIGN_DRIVER -> "డ్రైవర్‌ను స్వయంచాలకంగా కేటాయించండి"
+    AUTO_ASSIGN_DRIVER -> "డ్రైవర్‌ను ఆటో-అసైన్ చేయండి"
     CHOOSE_BETWEEN_MULTIPLE_DRIVERS -> "బహుళ డ్రైవర్ల మధ్య ఎంచుకోండి"
     CHOOSE_BETWEEN_MULTIPLE_RIDES -> "బహుళ రైడ్ ఎంపికల మధ్య ఎంచుకోండి"
     ENABLE_THIS_FEATURE_TO_CHOOSE_YOUR_RIDE -> "మీరు ఇష్టపడే రైడ్ & ఛార్జీలను ఎంచుకోవడానికి ఈ ఫీచర్‌ని ప్రారంభించండి"

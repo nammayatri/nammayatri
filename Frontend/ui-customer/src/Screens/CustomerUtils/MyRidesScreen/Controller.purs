@@ -233,7 +233,7 @@ myRideListTransformerProp listRes =
         showRepeatRide : toPropValue if getFareProductType rideApiDetails.fareProductType == FPT.RENTAL || isScheduled then "gone" else "visible",
         showDestination : toPropValue if (decodeAddress $ Booking destination) == "" then "gone" else "visible",
         variantImage : toPropValue $ if os == "IOS" then "url->" <> imageUrl <> "," <> imageName else  "url->" <> imageUrl,
-        showVariantImage : toPropValue $ (if isScheduled then "gone" else "visible")
+        showVariantImage : toPropValue "visible"
       }) $ reverse $ sortWith (\(RideBookingRes ride) -> fromMaybe ride.createdAt ride.rideScheduledTime) listRes)
 
 
