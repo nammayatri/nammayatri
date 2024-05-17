@@ -189,6 +189,8 @@ foreign import incrOrDecrTimeFrom :: Fn3 String Int Boolean String
 
 foreign import getMockFollowerName :: String -> String
 
+foreign import getAndRemoveLatestNotificationType :: Unit -> String
+
 data TimeUnit
   = HOUR
   | MINUTE
@@ -639,7 +641,7 @@ getVehicleVariantImage variant =
                           Kochi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
                           Chennai -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
                           Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
-                          Delhi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
+                          Delhi -> variantConfig.autoRickshaw.image
                           _ -> variantConfig.autoRickshaw.image
       "BOOK_ANY"      -> case getMerchant FunctionCall of 
                            YATRISATHI -> variantConfig.bookAny.image

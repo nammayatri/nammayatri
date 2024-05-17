@@ -148,6 +148,7 @@ export const storeCallBackCustomer = function (cb) {
           }
           const callback = callbackMapper.map(function (notificationType, notificationBody) {
             console.log("notificationType ->", notificationType);
+            window.notificationType = notificationType;
             if (window.whitelistedNotification.includes(notificationType)) {
               Object.keys(notificationCallBacks).forEach((key) => {
                 notificationCallBacks[key](notificationType);
@@ -513,4 +514,10 @@ export const getMockFollowerName = function() {
     currentMockName = msg.split(" ")[0];
   }
   return currentMockName;
+}
+
+export const getAndRemoveLatestNotificationType = function() {
+  const notificationType = window.notificationType;
+  window.notificationType = null;
+  return notificationType;
 }
