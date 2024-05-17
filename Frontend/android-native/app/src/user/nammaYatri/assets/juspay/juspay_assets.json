@@ -467,6 +467,7 @@
       "ny_ic_referral_invalid" : true,
       "ny_ic_rental" : true,
       "ny_ic_rental_banner" : true,
+      "ny_ic_rental_bg_img" : true,
       "ny_ic_rental_booking" : true,
       "ny_ic_rental_hourly_charge" : true,
       "ny_ic_repeat_trip" : true,

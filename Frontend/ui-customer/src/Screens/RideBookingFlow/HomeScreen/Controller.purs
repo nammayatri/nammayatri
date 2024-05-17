@@ -1913,7 +1913,7 @@ eval WhereToClick state = do
     continue state {data{invalidBookingId = maybe Nothing (\invalidBookingTime -> Just invalidBookingTime.bookingId) maybeInvalidBookingDetails}, props{showScheduledRideExistsPopUp = true}}
   else do
     void $ pure $ updateLocalStage SearchLocationModel
-    exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}, data{source= state.data.source}}
+    exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}, data{source= if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source}}
   
 eval (RideCompletedAC RideCompletedCard.GoToSOS) state = exit $ GoToNammaSafety state true false 
 
@@ -2641,7 +2641,7 @@ eval (CurrentLocation lat lng) state = do
   void $ pure $ setValueToLocalStore LAST_KNOWN_LON lng
   if isLocalStageOn FindingEstimate
     then continue state
-    else exit $ UpdatedState state { props { sourceLat = fromMaybe 0.0 (NUM.fromString lat), sourceLong = fromMaybe 0.0 (NUM.fromString lng) } } false
+    else exit $ UpdatedState state { props { currentLocation { lat =  fromMaybe 0.0 (NUM.fromString lat), lng = fromMaybe 0.0 (NUM.fromString lng) }, sourceLat = fromMaybe 0.0 (NUM.fromString lat), sourceLong = fromMaybe 0.0 (NUM.fromString lng) } } false
 
 eval (RateCardAction RateCard.Close) state = continue state { props { showRateCard = false } , data{rateCard{onFirstPage = false,currentRateCardType = DefaultRateCard}}}
 

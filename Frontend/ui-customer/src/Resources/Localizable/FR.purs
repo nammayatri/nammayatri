@@ -1221,8 +1221,8 @@ getFR stringKey =
         RIDE_BOOKING -> "Réservation de trajet."
         SPECIAL_ZONE_RENTAL_INELIGIBLE -> "Les lieux situés dans une zone spéciale ne sont pas éligibles pour les locations."
         SERVICES -> "Services"
-        YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "Vous avez une réservation de location à venir le " <> bookingTime
-        YOU_HAVE_UPCOMING_INTERCITY_BOOKING bookingTime -> "Vous avez une réservation interurbaine à venir le " <> bookingTime
+        YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "Vous avez une réservation de location à venir le <b>" <> bookingTime <> "</b>"
+        YOU_HAVE_UPCOMING_INTERCITY_BOOKING bookingTime -> "Vous avez une réservation interurbaine à venir le <b>" <> bookingTime <> "</b>"
         SCHEDULED -> "Planifié"
         UPCOMING_BOOKINGS -> "Vous avez des réservations à venir"
         RENTALS_ -> "Locations"
@@ -1232,7 +1232,7 @@ getFR stringKey =
         EXTRA_PER_KM_FARE -> "Tarif supplémentaire par KM"
         EXTRA_PER_MINUTE_FARE -> "Tarif supplémentaire par minute"
         PICKUP_CHARGES -> "Frais de prise en charge"
-        WAITING_CHARGES_AFTER_5_MINS -> "Frais d'attente (après 5 minutes)"
+        WAITING_CHARGES_AFTER_3_MINS -> "Frais d'attente (après 3 minutes)"
         FARE_DETERMINED_AS_PER_KARNATAKA_GUIDELINES -> "Le tarif est déterminé conformément aux directives du gouvernement de l'État du Karnataka"
         RENTAL_CHARGES -> "Frais de location"
         RENTAL_INFO_POLICY_DESC inclusiveKms -> "&#8226; " <> inclusiveKms <> " kms pour chaque heure de réservation de location sont inclus dans votre forfait.<br><br>&#8226; Si la distance de base n'est pas suffisante, vous pouvez choisir d'ajouter des kilomètres supplémentaires et économiser sur les coûts supplémentaires."
