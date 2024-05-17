@@ -63,7 +63,7 @@ view push config =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , gravity LEFT
-          , text config.title
+          , textFromHtml config.title
           , color config.titleColor
           , padding $ PaddingBottom 8
           , visibility if config.titleTextVisibility then VISIBLE else GONE

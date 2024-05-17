@@ -76,6 +76,8 @@ initData = {
     pickUpSelectedOnMap : false,
     showRateCard : false,
     fareProductType : RENTAL,
+    currentEstimateHeight : 84 ,
+    selectedEstimateHeight : 84 ,
     tipViewProps : {
         stage : DEFAULT
       , isVisible : false

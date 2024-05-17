@@ -1582,7 +1582,7 @@ homeScreenFlow = do
         RentalScreenData.initData
           { data
               { pickUpLoc 
-                  { address = getString STR.CURRENT_LOCATION
+                  { address = if DS.null state.data.source then getString STR.CURRENT_LOCATION else state.data.source
                   , city = state.props.city
                   , lat = Just state.props.currentLocation.lat
                   , lon = Just state.props.currentLocation.lng
@@ -4511,9 +4511,13 @@ rentalScreenFlow = do
               rideScheduledFlow
         Left err -> do
           if ((decodeError err.response.errorMessage "errorCode") == "INVALID_REQUEST" && DS.contains (Pattern "Quote Expired") (decodeError err.response.errorMessage "errorMessage")) 
-            then void $ pure $ toast "Please select a future time to proceed with rental booking"
-            else void $ pure $ toast "A Ride is already scheduled. Please Choose another time."
-          homeScreenFlow
+            then do 
+              void $ pure $ toast "Quote Expired, Please scheduled a ride again"
+              modifyScreenState $ RentalScreenStateType (\_ -> updatedState{data{currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = []}})
+              rentalScreenFlow 
+            else do 
+              void $ pure $ toast "A Ride is already scheduled. Please Choose another time."
+              homeScreenFlow
     RentalScreenController.GoToSelectPackage updatedState -> do
       modifyScreenState $ RentalScreenStateType (\_ -> updatedState)
       rentalScreenFlow

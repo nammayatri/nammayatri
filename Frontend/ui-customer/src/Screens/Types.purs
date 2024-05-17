@@ -2076,7 +2076,9 @@ type SearchLocationScreenProps =
   , showRateCard :: Boolean 
   , tipViewProps :: TipViewProps 
   , customerTip :: CustomerTipProps
-  , fareProductType :: FareProductType}
+  , fareProductType :: FareProductType
+  , currentEstimateHeight :: Int
+  , selectedEstimateHeight :: Int }
 
 data SearchLocationActionType = AddingStopAction 
                               | SearchLocationAction

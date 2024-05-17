@@ -41,7 +41,7 @@ import Language.Strings (getVarString)
 import Language.Types (STR(..))
 import MerchantConfig.Types as MT
 import Mobility.Prelude (boolToVisibility)
-import Prelude ((==), (<>), ($), (/=), (>), (||), map, not, identity)
+import Prelude ((==), (<>), ($), (/=), (>), (||), map, not, identity, (-), (*))
 import Prelude (show, (&&), identity)
 import PrestoDOM (Margin(..), Padding(..), Length(..), Orientation(..), Gravity(..), Visibility(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -422,6 +422,7 @@ rentalRateCardConfig :: ST.SearchLocationScreenState -> RateCard.Config
 rentalRateCardConfig state =
   let config = RateCard.config
       currency = getCurrency appConfig
+      extraDistance = state.data.rideDetails.rideDistance - (state.data.rideDetails.rideDuration * 10)
       selectedQuote = MB.maybe dummyQuote identity (state.data.selectedQuote)
       rentalRateCardConfig' = config
         { currentRateCardType = RentalRateCard
@@ -438,21 +439,22 @@ rentalRateCardConfig state =
             visibility = VISIBLE
           }
         , additionalStrings = [
-            {key : "TOTAL_FARE_CHANGE", val : (getString TOTAL_FARE_MAY_CHANGE_DUE_TO_CHANGE_IN_ROUTE)}
-          , {key : "EXCESS_DISTANCE_CHARGE_DESCRIPTION", val : (getString (EXCESS_DISTANCE_CHARGE_DESCRIPTION (currency <> (show selectedQuote.fareDetails.perExtraKmRate))))}
+          {key : "TOLL_CHARGES", val : "<b>Applicable toll charges will be added at the end of the ride.</b>"}
           , {key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getVarString NIGHT_TIME_FEE_DESCRIPTION $ DA.singleton $ currency <> (show selectedQuote.fareDetails.nightShiftCharge))}
+          , {key : "APPLICABLE_WAITING_CHARGES" , val : "Applicable waiting charges will be added to your final fare."}
           , {key : "PARKING_FEES_AND_TOLLS_NOT_INCLUDED", val : (getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED)}
-          , {key : "FARE_ACCORDING_TO_GOVERNMENT", val : (getString FARE_DETERMINED_AS_PER_KARNATAKA_GUIDELINES)}
           ]
         , fareList = [
-            {key : ("Base Fare (incl. " <> show state.data.rideDetails.rideDistance <> " km & " <> show state.data.rideDetails.rideDuration <> " hrs)"), val : (currency <> show selectedQuote.fareDetails.baseFare)}
-          , {key : getString EXTRA_PER_KM_FARE, val : (currency <> show selectedQuote.fareDetails.perExtraKmRate <> "/km")}
-          , {key : getString EXTRA_PER_MINUTE_FARE, val : (currency <> show selectedQuote.fareDetails.perExtraMinRate <> "/min")}
-          -- , {key : getString PICKUP_CHARGES, val :(currency <> "25")} -- TODO-codex :: Pickup Charges not coming with API
-          , {key : getString WAITING_CHARGES_AFTER_5_MINS, val : (currency <> "1.5" <> "/min")} -- TODO-codex :: Waiting Charges not coming with API
-          ] <> case selectedQuote.fareDetails.tollCharges of
-                  MB.Just tollCharges -> [{key : getString TOLL_CHARGES_ESTIMATED, val : (currency <> show tollCharges)}]
-                  MB.Nothing -> []
+            {key : ("Base Rental Fare (incl. " <> show (state.data.rideDetails.rideDistance - extraDistance)  <> " km & " <> show state.data.rideDetails.rideDuration <> " hrs)"), val : (currency <> show (state.data.rideDetails.rideDuration * selectedQuote.fareDetails.perHourCharge))}
+            ] <> 
+            (if extraDistance > 0 then 
+              [{key : "Add on fare for " <> show ( extraDistance) <> " km", val : (currency <> show (extraDistance * selectedQuote.fareDetails.plannedPerKmRate))}] 
+              else [] )
+            <> [  {key : "Extra distance fare", val : (currency <> show selectedQuote.fareDetails.perExtraKmRate <> "/km")}
+                , {key : "Extra time fare", val : (currency <> show selectedQuote.fareDetails.perExtraMinRate <> "/min")}
+                ] <> case selectedQuote.fareDetails.tollCharges of
+                        MB.Just tollCharges -> [{key : getString TOLL_CHARGES_ESTIMATED, val : (currency <> show tollCharges)}]
+                        MB.Nothing -> []
                   
         }
   in rentalRateCardConfig'
@@ -476,7 +478,10 @@ chooseYourRideConfig state =
     tipViewProps = getTipViewProps state.props.tipViewProps quoteSelected.quoteDetails.vehicleVariant ,
     tipForDriver = state.props.customerTip.tipForDriver,
     fareProductType = state.props.fareProductType,
-    activeIndex = quoteSelected.activeIndex 
+    activeIndex = quoteSelected.activeIndex ,
+    currentEstimateHeight = state.props.currentEstimateHeight,
+    selectedEstimateHeight = state.props.selectedEstimateHeight,
+    showMultiProvider = false
   }
 
   where 

@@ -66,7 +66,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn9)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap, getCurrentUTC)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap, getCurrentUTC, convertUTCtoISC)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion, emChatSuggestion)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, compareUTCDate, getCurrentUTC)
 import Engineering.Helpers.Utils (showAndHideLoader)
@@ -75,7 +75,7 @@ import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage)
 import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, differenceBetweenTwoUTCInMinutes, differenceBetweenTwoUTC)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -215,6 +215,7 @@ screen initialState =
                   void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   void $ launchAff $ flowRunner defaultGlobalState $ confirmRide (getValueToLocalStore TRACKING_ID) GetRideConfirmation CheckFlowStatusAction GoToHomeScreen pollingCount 3000.0 push initialState
               HomeScreen -> do
+                fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
                 let suggestionsMap = getSuggestionsMapFromLocal FunctionCall
                 if (getValueToLocalStore UPDATE_REPEAT_TRIPS == "true" && Map.isEmpty suggestionsMap) then do
                   void $ launchAff $ flowRunner defaultGlobalState $ updateRecentTrips UpdateRepeatTrips push Nothing
@@ -227,15 +228,15 @@ screen initialState =
                 _ <- pure $ removeAllPolylines ""
                 _ <- pure $ enableMyLocation true
                 _ <- pure $ setValueToLocalStore NOTIFIED_CUSTOMER "false"
-                fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
-                when (initialState.props.scheduledRidePollingDelay < 1800.0 && initialState.props.scheduledRidePollingDelay > 0.0) do
-                  _ <- launchAff $ flowRunner defaultGlobalState $ do
-                        doAff do liftEffect $ push $ StartScheduledRidePolling
-                  pure unit
-                when (initialState.props.startScheduledRidePolling) do
-                  void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-                  let polling_count = ceil $ initialState.props.scheduledRidePollingDelay/(120.0)
-                  void $ launchAff $ flowRunner defaultGlobalState $ confirmRide (getValueToLocalStore TRACKING_ID) GetRideConfirmation CheckFlowStatusAction GoToHomeScreen polling_count 120000.0 push initialState
+                pure unit
+                -- when (initialState.props.scheduledRidePollingDelay < 1800.0 && initialState.props.scheduledRidePollingDelay > 0.0) do
+                --   _ <- launchAff $ flowRunner defaultGlobalState $ do
+                --         doAff do liftEffect $ push $ StartScheduledRidePolling
+                --   pure unit
+                -- when (initialState.props.startScheduledRidePolling) do
+                --   void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
+                --   let polling_count = ceil $ initialState.props.scheduledRidePollingDelay/(120.0)
+                --   void $ launchAff $ flowRunner defaultGlobalState $ confirmRide (getValueToLocalStore TRACKING_ID) GetRideConfirmation CheckFlowStatusAction GoToHomeScreen polling_count 120000.0 push initialState
               SettingPrice -> do
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
 
@@ -461,7 +462,7 @@ view push state =
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
                     , background Color.transparent
-                    , padding $ spy "INside enable special pickup extra padding " $ PaddingBottom $ 95 + extraPadding
+                    , padding $ PaddingBottom $ 95 + extraPadding
                     , gravity CENTER
                     , accessibility DISABLE
                     , orientation VERTICAL
@@ -2833,6 +2834,8 @@ confirmRide trackingId rideConfirmationAction checkFlowStatusAction goToHomeScre
         else if resp.status == "CANCELLED" then do
           doAff do liftEffect $ push $ checkFlowStatusAction
           pure unit
+        else if resp.status == "REALLOCATED" then do
+          doAff do liftEffect $ push $ checkFlowStatusAction
         else do
           void $ delay $ Milliseconds duration
           confirmRide trackingId rideConfirmationAction checkFlowStatusAction goToHomeScreenAction (count - 1) duration push state
@@ -3361,7 +3364,7 @@ pickupLocationView push state =
                 , padding $ Padding 14 16 14 16 
                 , stroke $ "1," <> Color.mountainFig
                 , margin $ Margin 16 8 16 16
-                , onClick push $ const WhereToClick
+                , onClick push $ const  $ OpenSearchLocation
                 , clickable $ state.props.isSrcServiceable
                 , alpha $ if state.props.isSrcServiceable then 1.0 else 0.5
                 , gravity CENTER_VERTICAL
@@ -4024,7 +4027,49 @@ rentalBanner push state =
     , gradient if os == "IOS" then (Linear 270.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 [Color.transparent, "#FFFFFF" , "#FFFFFF" , "#FFFFFF"])
     ][  if state.props.showShimmer then 
           textView[]
-          else Banner.view (push <<< RentalBannerAction) (rentalBannerConfig state) ]
+          else rentalBannerView state ]
+
+rentalBannerView state =  
+  linearLayout 
+    [ height WRAP_CONTENT 
+    , width MATCH_PARENT 
+    , orientation HORIZONTAL 
+    , background Color.moonCreme
+    , cornerRadius 8.0
+    ][  textView
+        [ weight 1.0 
+        , height WRAP_CONTENT
+        , padding $ Padding 16 16 16 16
+        , textFromHtml $ (maybe "" (\rentalsInfo ->
+                              if rentalsInfo.multipleScheduled then getString UPCOMING_BOOKINGS
+                              else do
+                                let timeUTC = rentalsInfo.rideScheduledAtUTC
+                                    fpt = rentalsInfo.fareProductType
+                                    bookingInfoString = if fpt == FPT.INTER_CITY then YOU_HAVE_UPCOMING_INTERCITY_BOOKING
+                                                        else YOU_HAVE_UPCOMING_RENTAL_BOOKING
+                                getString $ bookingInfoString $ convertUTCtoISC timeUTC "D" <> " " <> convertUTCtoISC timeUTC "MMMM" <> " " <> convertUTCtoISC timeUTC "YYYY" <> " , " <> convertUTCtoISC timeUTC "HH" <> ":" <> convertUTCtoISC timeUTC "mm"
+                          ) state.data.rentalsInfo)
+        , color Color.black900
+        ]
+      , frameLayout
+        [ height WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        , width WRAP_CONTENT
+        ][ 
+          -- imageView
+          --   [ height $ V 95 
+          --   , width $ V 123 
+          --   , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_rental_bg_img"
+          --   ]
+          -- , 
+          imageView
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleVariantImage (maybe "" (\item -> item.vehicleVariant) state.data.rentalsInfo) LEFT_VIEW
+            , height $ V 45
+            , width $ V 66 
+            ]
+        ]
+
+    ]
 
 additionalServicesView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 additionalServicesView push state = let 
