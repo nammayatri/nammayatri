@@ -898,6 +898,7 @@ paymentMethodView push state title shouldShowIcon uid =
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , gravity CENTER_VERTICAL
+          , padding $ Padding 0 5 20 5
           , onClick push $ const RateCardInfo
           ][ textView $
              [ text title

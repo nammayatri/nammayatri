@@ -260,7 +260,7 @@ getVehicleImage variant vehicleDetail city = do
                           "SUV" -> "ny_ic_suv_concept"
                           _     -> "ny_ic_sedan_concept"
           _          -> case variant of
-                          "TAXI"      -> "ny_ic_sedan_concept"
+                          "TAXI"      -> "ny_ic_hatchback_concept"
                           "TAXI_PLUS" -> "ny_ic_sedan_concept"
                           "SUV"       -> "ny_ic_suv_concept"
                           "SEDAN"     -> "ny_ic_sedan_concept"
