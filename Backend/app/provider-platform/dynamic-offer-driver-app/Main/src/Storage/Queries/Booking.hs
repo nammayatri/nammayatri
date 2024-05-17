@@ -256,6 +256,7 @@ instance FromTType' BeamB.Booking Booking where
                 stopLocationId = Id <$> stopLocationId,
                 isScheduled = fromMaybe False isScheduled,
                 distanceToPickup = roundToIntegral <$> distanceToPickup,
+                estimateId = Id <$> estimateId,
                 ..
               }
       else do
@@ -310,6 +311,7 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.distanceToPickup = realToFrac <$> distanceToPickup,
         BeamB.isScheduled = Just isScheduled,
         BeamB.stopLocationId = getId <$> stopLocationId,
+        BeamB.estimateId = getId <$> estimateId,
         ..
       }
 

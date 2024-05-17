@@ -96,7 +96,7 @@ tfProviderItems :: Domain.Action.Beckn.Search.DSearchRes -> Bool -> Beckn.OnDema
 tfProviderItems res isValueAddNP pricing = do
   let itemDescriptor_ = tfItemDescriptor pricing
       itemFulfillmentIds_ = Just [pricing.pricingId]
-      itemId_ = Beckn.ACL.Common.mkItemId res.provider.shortId.getShortId pricing.vehicleServiceTier & Just
+      itemId_ = Just pricing.pricingId
       itemLocationIds_ = Beckn.OnDemand.Utils.OnSearch.mkItemLocationIds ((map (\(_, _, c) -> c) res.estimates) <> (map (\(_, _, c) -> c) res.quotes))
       itemPaymentIds_ = Nothing
       itemTags_ = Beckn.OnDemand.Utils.OnSearch.mkItemTags pricing isValueAddNP

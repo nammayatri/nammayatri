@@ -19,7 +19,6 @@ module Beckn.ACL.OnSelect
   )
 where
 
-import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
@@ -71,7 +70,7 @@ mkOnSelectMessageV2 isValueAddNP bppConfig merchant mbFarePolicy req@DOnSelectRe
     Just
       Spec.Order
         { orderFulfillments = Just fulfillments,
-          orderItems = Just $ map (\fulf -> mkItemV2 fulf vehicleServiceTierItem driverQuote transporterInfo isValueAddNP mbFarePolicy) fulfillments,
+          orderItems = Just $ map (\fulf -> mkItemV2 fulf vehicleServiceTierItem driverQuote isValueAddNP mbFarePolicy) fulfillments,
           orderQuote = Just $ mkQuoteV2 driverQuote req.now,
           orderPayments = Just [paymentV2],
           orderProvider = mkProvider bppConfig,
@@ -166,11 +165,11 @@ mkDriverRatingTag quote
           }
       ]
 
-mkItemV2 :: Spec.Fulfillment -> DVST.VehicleServiceTier -> DQuote.DriverQuote -> TransporterInfo -> Bool -> Maybe FarePolicyD.FullFarePolicy -> Spec.Item
-mkItemV2 fulfillment vehicleServiceTierItem quote provider isValueAddNP mbFarePolicy = do
+mkItemV2 :: Spec.Fulfillment -> DVST.VehicleServiceTier -> DQuote.DriverQuote -> Bool -> Maybe FarePolicyD.FullFarePolicy -> Spec.Item
+mkItemV2 fulfillment vehicleServiceTierItem quote isValueAddNP mbFarePolicy = do
   let fulfillmentId = fulfillment.fulfillmentId & fromMaybe (error $ "It should never happen as we have created fulfillment:-" <> show fulfillment)
   Spec.Item
-    { itemId = Just $ Common.mkItemId provider.merchantShortId.getShortId quote.vehicleServiceTier,
+    { itemId = Just quote.estimateId.getId,
       itemFulfillmentIds = Just [fulfillmentId],
       itemPrice = Just $ mkPriceV2 quote,
       itemTags = mkItemTagsV2 quote isValueAddNP mbFarePolicy,
