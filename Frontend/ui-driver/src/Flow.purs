@@ -406,7 +406,6 @@ enterOTPFlow = do
         void $ pure $ JB.extractReferrerUrl unit
       else pure unit
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ mkUpdateDriverInfoReq ""
-      void $ lift $ lift $ toggleLoader false
       getDriverInfoFlow Nothing Nothing Nothing true
     RETRY updatedState -> do
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen -> updatedState)
@@ -685,11 +684,12 @@ onBoardingFlow = do
       rcNo = if manageVehicle then enteredRC else onboardingRC
       filteredVehicleDocs = if manageVehicle then filter (\docStatus -> docStatus.regNo == rcNo) documentStatusList else documentStatusList
       manageVehicle = registrationState.props.manageVehicle
-      isAllCompleted = (length filterCabs) == (DA.foldr (\item acc -> if item.status == ST.COMPLETED then acc + 1 else acc) 0 filterCabs)
+      rcVerified = getStatusValue driverRegistrationResp.rcVerificationStatus
+      isAllCompleted = ((length filterCabs) == (DA.foldr (\item acc -> if item.status == ST.COMPLETED then acc + 1 else acc) 0 filterCabs)) && rcVerified == ST.COMPLETED
   
   modifyScreenState $ RegisterScreenStateType (\registerationScreen -> 
                   registerationScreen { data { 
-                      vehicleDetailsStatus = getStatusValue driverRegistrationResp.rcVerificationStatus,
+                      vehicleDetailsStatus = rcVerified,
                       drivingLicenseStatus = getStatusValue driverRegistrationResp.dlVerificationStatus, 
                       lastUpdateTime = convertUTCtoISC (getCurrentUTC "") "hh:mm A",
                       enteredDL = getValueToLocalStore ENTERED_DL,
@@ -934,7 +934,7 @@ uploadDrivingLicenseFlow = do
             modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { data { vehicleDetailsStatus = ST.COMPLETED}})
             uploadDrivingLicenseFlow
           Left errorPayload -> do
-            modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {dateOfIssue = Just ""}}
+            modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {dateOfIssue = if state.data.cityConfig.registration.enableDataOfIssue then Just "" else Nothing}}
             if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
               let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
               modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {errorVisibility = true, validating = false, validateProfilePicturePopUp = false, openHowToUploadManual = false}, data {errorMessage = correspondingErrorMessage}}
@@ -974,7 +974,7 @@ uploadDrivingLicenseFlow = do
           onBoardingFlow
         Left errorPayload -> do
           void $ lift $ lift $ toggleLoader false
-          modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {dateOfIssue = Just ""}}
+          modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {dateOfIssue = if state.data.cityConfig.registration.enableDataOfIssue then Just "" else Nothing}}
           if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
             let cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
                 hideError = not cityConfig.uploadRCandDL && ((decodeErrorCode errorPayload.response.errorMessage) == "IMAGE_NOT_FOUND")

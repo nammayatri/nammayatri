@@ -1107,8 +1107,7 @@ dropDownFields push state idx item =
         , width MATCH_PARENT
         ]$
         [] <> if item.isExpanded then [dropDownList item push (idx + 3)] else []
-           <> if item.showEditText then [PrimaryEditText.view (push <<< (ModelEditText item.type)) $ modelEditTextConfig state] else []
-    ]
+    ] <> if item.showEditText then [PrimaryEditText.view (push <<< (ModelEditText item.type)) $ modelEditTextConfig state] else []
 
 
 

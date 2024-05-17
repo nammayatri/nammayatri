@@ -5,11 +5,12 @@ import Animation.Config as AnimConfig
 import Common.Types.App as CT
 import Components.BottomDrawerList.Controller (Action(..), Config, ListComponent)
 import Data.Array as DA
+import Data.String as DS
 import Effect (Effect)
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Mobility.Prelude (boolToVisibility)
-import Prelude (Unit, const, ($), (/=), (<>), (==), (>))
+import Prelude (Unit, const, ($), (/=), (<>), (==), (>), not)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, gravity, height, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, scrollView, text, textView, visibility, weight, width, clickable, alignParentBottom)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
@@ -92,6 +93,7 @@ listComponent push index item =
           , height WRAP_CONTENT
           , orientation VERTICAL
           , margin $ MarginHorizontal 10 10
+          , gravity CENTER
           ][  textView $
               [ width MATCH_PARENT
               , height WRAP_CONTENT
@@ -103,6 +105,7 @@ listComponent push index item =
               , height WRAP_CONTENT
               , color Color.black600
               , text item.desc
+              , visibility $ boolToVisibility $ not $ DS.null item.desc
               ] <> FontStyle.tags CT.TypoGraphy
           ]
         , imageView

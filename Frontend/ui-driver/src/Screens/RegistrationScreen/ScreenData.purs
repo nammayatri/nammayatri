@@ -89,6 +89,7 @@ dummyCityConfig = {
                     cityLat : 0.0,
                     cityLong : 0.0,
                     supportNumber : "",
+                    supportMail: "",
                     languageKey : "",
                     showDriverReferral : false,
                     showCustomerReferral : false,
@@ -99,7 +100,9 @@ dummyCityConfig = {
                       callSupport : false,
                       supportWAN : "", 
                       whatsappSupport : false,
+                      emailSupport : false,
                       enableAc: true,
+                      enableDataOfIssue: true,
                       defVariantList : []
                     },
                     variantSubscriptionConfig : {

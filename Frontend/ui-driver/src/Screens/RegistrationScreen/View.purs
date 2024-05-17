@@ -711,7 +711,7 @@ applicationInVerification push state =
       [ text "Thank you for completing the registration. We will update you once the verification is done."
       , color Color.black800
       , width MATCH_PARENT
-      , margin $ MarginTop 10
+      , margin $ Margin 16 10 16 0
       , gravity CENTER
       ] <> FontStyle.body1 TypoGraphy
   ]

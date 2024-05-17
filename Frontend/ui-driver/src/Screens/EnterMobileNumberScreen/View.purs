@@ -43,6 +43,7 @@ import Debug(spy)
 import ConfigProvider
 import Services.API (OAuthProvider(..))
 import Effect.Uncurried (runEffectFn2)
+import Mobility.Prelude
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -213,12 +214,14 @@ enterMobileNumberView  state push =
 
 
 oAuthProvidersView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
-oAuthProvidersView state push = 
+oAuthProvidersView state push =
+  let isFunctionExists = JB.jBridgeMethodExists "oAuthSignIn"
+  in
   scrollView
   [ width MATCH_PARENT
   , height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - 150 - EHC.safeMarginBottom else WRAP_CONTENT
   , disableKeyboardAvoidance true
-  , id $ EHC.getNewIDWithTag "ChatScrollView"
+  , id $ EHC.getNewIDWithTag "OAuthScrollView"
   , scrollBarY false
   ][
   linearLayout
@@ -228,17 +231,18 @@ oAuthProvidersView state push =
     , margin $ MarginTop 37
     , adjustViewWithKeyboard "true"
     ][ textView $
-      [ text "To signup or login, choose an option"
+      [ text $ if isFunctionExists then "To signup or login, choose an option" else "Enter a email to signup or login"
       , color Color.black800
       ] <> FontStyle.subHeading2 TypoGraphy
-    , PrimaryButton.view (push <<< (OAuthPB Google)) (googleProvider state)
-    , if EHC.os == "IOS" then PrimaryButton.view (push <<< (OAuthPB IOS)) (appleProvider state) else linearLayout[][]
+    , PrimaryButton.view (push <<< (OAuthPB Google)) (googleProvider state isFunctionExists)
+    , if EHC.os == "IOS" then PrimaryButton.view (push <<< (OAuthPB IOS)) (appleProvider state isFunctionExists) else linearLayout[][]
     , textView $
         [ text "Or"
         , gravity CENTER
         , width MATCH_PARENT
-        , margin $ MarginVertical 24 24
+        , margin $ MarginTop 24
         , color Color.black800
+        , visibility $ boolToVisibility isFunctionExists
         ] <> FontStyle.body1 TypoGraphy
     ,  PrimaryEditText.view (push <<< EmailPBAC) $ emailIdPrimaryEditTextConfig state
     , linearLayout

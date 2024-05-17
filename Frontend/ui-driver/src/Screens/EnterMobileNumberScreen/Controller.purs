@@ -130,7 +130,7 @@ eval (KeyboardCallback event) state = case event of
     if state.data.config.enterMobileNumberScreen.emailAuth then do
       continueWithCmd state
         [ do 
-          void $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
+          void $ scrollToEnd (getNewIDWithTag "OAuthScrollView") true
           pure NoAction
         ]
     else

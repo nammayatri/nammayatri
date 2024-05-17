@@ -590,10 +590,14 @@ export const openUrlInApp = function (str) {
 
 export const openUrlInMailApp = function (str) {
   return function (unit) {
-    if (window.JBridge.openUrlInMailApp) {
-      return window.JBridge.openUrlInMailApp(str);
+    if (window.__OS == "IOS") {
+      const payload = btoa(str);
+      if (JBridge.canOpenApp(payload) == "1"){
+        JBridge.openApp(payload)
+      }
+    } else {
+      openUrlInApp(str)();
     }
-
   };
 };
 
@@ -2285,20 +2289,6 @@ export const listDownloadedTranslationModels = function (cb) {
   }
 }
 
-export const horizontalScrollToPos = function (id, childId, idx, scrollFocus) {
-  if (window.JBridge.horizontalScrollToPos) {
-    window.JBridge.horizontalScrollToPos(id, childId, scrollFocus);
-  } else if (window.JBridge.focusChild) {
-    window.JBridge.focusChild(id, idx)
-  }
-}
-
-export const focusChild = function(id,idx) {
-  if (window.JBridge.focusChild) {
-    window.JBridge.focusChild(id, idx)
-  }
-}
-
 // focus values --
 // left - 17
 // right - 66
@@ -2361,6 +2351,22 @@ export const scrollViewFocus = function (parentID) {
       console.log("error in scrollViewFocus : " + err);
     }
     return false;
+  }
+}
+
+export const horizontalScrollToPos = function (id, childId, idx, scrollFocus) {
+  if (window.JBridge.horizontalScrollToPos) {
+    window.JBridge.horizontalScrollToPos(id, childId, scrollFocus);
+  } else if (window.JBridge.focusChild) {
+    window.JBridge.focusChild(id, idx)
+  }
+}
+
+export const focusChild = function(id,idx) {
+  if (window.JBridge.focusChild) {
+    window.JBridge.focusChild(id, idx)
+  } else {
+    scrollViewFocus(id)(idx);
   }
 }
 

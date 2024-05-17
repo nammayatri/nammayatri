@@ -2,7 +2,6 @@ module Types where
 
 import Api.Types (SearchRequest)
 import Screens.RideRequestPopUp.ScreenData (RideRequestPopUpScreenData, initData)
-import Screens.TopPriceView.ScreenData (TopPriceViewState, initData) as TopPriceViewState
 import Prelude
 import PrestoDOM (class Loggable, defaultPerformLog)
 
@@ -10,14 +9,12 @@ import PrestoDOM (class Loggable, defaultPerformLog)
 newtype OverlayData
   = OverlayData
   { rideRequestPopUpScreen :: RideRequestPopUpScreenData
-  , topPriceViewState:: TopPriceViewState.TopPriceViewState
   }
 
 defaultOverlayData :: OverlayData
 defaultOverlayData =
   OverlayData
     { rideRequestPopUpScreen: initData
-    , topPriceViewState: TopPriceViewState.initData
     }
 
 data LazyCheck

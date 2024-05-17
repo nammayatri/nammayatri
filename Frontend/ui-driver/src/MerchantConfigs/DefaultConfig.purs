@@ -139,6 +139,7 @@ config =
               cityLat : 12.971599,
               cityLong : 77.594566,
               supportNumber : "",
+              supportMail: "",
               languageKey : "KN_IN",
               showDriverReferral : true,
               showCustomerReferral : false,
@@ -169,6 +170,7 @@ config =
               cityLat : 17.387140,
               cityLong : 78.491684,
               supportNumber : "+918069724900",
+              supportMail : "",
               languageKey : "TE_IN",
               showDriverReferral : true,
               showCustomerReferral : false,
@@ -199,6 +201,7 @@ config =
               cityLat : 12.295810,
               cityLong : 76.639381,
               supportNumber : "",
+              supportMail: "",
               languageKey : "KN_IN",
               showDriverReferral : true,
               showCustomerReferral : false,
@@ -229,6 +232,7 @@ config =
               cityLat : 28.644800,
               cityLong : 77.216721,
               supportNumber : "+918069724848",
+              supportMail : "",
               languageKey : "HI_IN",
               showDriverReferral : true,
               showCustomerReferral : false,
@@ -259,6 +263,7 @@ config =
               cityLat : 13.067439,
               cityLong : 80.237617,
               supportNumber : "08069724899",
+              supportMail : "",
               languageKey : "TA_IN",
               showDriverReferral : true,
               showCustomerReferral : false,
@@ -289,6 +294,7 @@ config =
               cityLat : 11.004556,
               cityLong : 76.961632,
               supportNumber : "",
+              supportMail: "",
               languageKey : "TA_IN",
               showDriverReferral : true,
               showCustomerReferral : false,
@@ -319,6 +325,7 @@ config =
               cityLat : 11.943852,
               cityLong : 79.808292,
               supportNumber : "08069724899",
+              supportMail : "",
               languageKey : "TA_IN",
               showDriverReferral : true,
               showCustomerReferral : false,
@@ -349,6 +356,7 @@ config =
               cityLat : 28.457523,
               cityLong : 77.026344,
               supportNumber : "",
+              supportMail: "",
               languageKey : "HI_IN",
               showDriverReferral : true,
               showCustomerReferral : true,
@@ -379,6 +387,7 @@ config =
               cityLat : 28.535517,
               cityLong : 77.391029,
               supportNumber : "",
+              supportMail: "",
               languageKey : "HI_IN",
               showDriverReferral : true,
               showCustomerReferral : true,
@@ -409,6 +418,7 @@ config =
               cityLat : 11.1271,
               cityLong : 78.6569,
               supportNumber : "08069724899",
+              supportMail : "",
               languageKey : "TA_IN",
               showDriverReferral : true,
               showCustomerReferral : true,
@@ -439,6 +449,7 @@ config =
               cityLat : 22.5354064,
               cityLong : 88.2649516,
               supportNumber : "",
+              supportMail: "",
               languageKey : "BN_IN",
               showDriverReferral : true,
               showCustomerReferral : true,
@@ -449,6 +460,8 @@ config =
                   supportWAN : "",
                   callSupport : false,
                   whatsappSupport : false,
+                  emailSupport: false,
+                  enableDataOfIssue: true,
                   enableAc :true,
                   defVariantList : []
               },
@@ -474,13 +487,14 @@ config =
             , cityLat: 44.977753
             , cityLong: - 93.2650108
             , supportNumber: "+19522390127"
+            , supportMail : "drivers@bridge.cab"
             , languageKey: "EN_US"
             , showDriverReferral: false
             , showCustomerReferral: false
             , uploadRCandDL: true
             , enableYatriCoins: false
             , vehicleNSImg : ""
-            , registration: registrationConfig{defVariantList = [CTA.CarCategory], enableAc = false}
+            , registration: registrationConfig{defVariantList = [CTA.CarCategory], enableAc = false, enableDataOfIssue = false, emailSupport = true}
             , variantSubscriptionConfig:
                 { enableVariantBasedSubscription: false
                 , variantList: []
@@ -505,6 +519,7 @@ config =
             --   cityLat : 9.93069,
             --   cityLong : 78.11956,
             --   supportNumber : "",
+            -- supportMail: "",
             --   languageKey : "TA_IN",
             --   enableYatriCoins : false
             -- }
@@ -647,8 +662,10 @@ registrationConfig = {
   supportWAN : "919625724848",
   callSupport : true,
   whatsappSupport : false,
+  emailSupport : false,
   defVariantList : [],
-  enableAc : true
+  enableAc : true,
+  enableDataOfIssue: true
 }
 
 getStaticViewPlans :: Array CTC.StaticViewPlans

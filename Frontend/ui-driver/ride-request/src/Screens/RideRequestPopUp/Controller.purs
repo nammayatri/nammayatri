@@ -39,9 +39,9 @@ eval (UpdateRideRequest searchData) state =
       ]
 
 eval (AppendRequest request) state = do
-  -- let updatedRequest = foldr (\item acc -> zcc) state.rideRequests state.rideRequests
+  let updatedRequest = foldr (\(SearchRequest item1) acc -> acc <> map (\(SearchRequest item2) -> if item2.searchTryId /= item1.searchTryId then (SearchRequest item2) else  (SearchRequest item1)) state.rideRequests) [] request
   let popup = toPopupProp request
-      updatedState = state { holderData = state.holderData <> popup, rideRequests = nub $  state.rideRequests <> request }
+      updatedState = state { holderData = toPopupProp updatedRequest, rideRequests = updatedRequest }
   continueWithCmd updatedState
     [ do
         notifyTopView $ TopPriceView.AppendRequest updatedState.rideRequests

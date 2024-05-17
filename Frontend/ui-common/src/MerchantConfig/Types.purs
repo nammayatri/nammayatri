@@ -97,6 +97,7 @@ type CityConfig = {
   cityLat :: Number,
   cityLong :: Number,
   supportNumber :: String,
+  supportMail :: String,
   languageKey :: String,
   showDriverReferral :: Boolean,
   showCustomerReferral :: Boolean,
@@ -136,8 +137,10 @@ type RegistrationConfig = {
   supportWAN :: String,
   callSupport :: Boolean,
   whatsappSupport :: Boolean,
+  emailSupport :: Boolean,
   defVariantList :: Array VehicleCategory,
-  enableAc :: Boolean
+  enableAc :: Boolean,
+  enableDataOfIssue :: Boolean
 }
 
 type BannerCarousalConfig = {

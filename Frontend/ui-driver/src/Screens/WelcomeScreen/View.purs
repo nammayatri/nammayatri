@@ -25,6 +25,8 @@ import PrestoDOM.Types.Core (toPropValue)
 import Data.Maybe
 import Common.Types.App as Common
 import Data.Array as DA
+import MerchantConfig.Utils
+import Helpers.Utils (FetchImageFrom(..), fetchImage)
 
 screen :: WelcomeScreenState -> ListItem -> Screen Action WelcomeScreenState ScreenOutput
 screen initialState carouselItem =
@@ -61,7 +63,7 @@ view carouselItem push state =
           , imageView
             [ height $ V 50
             , width $ V 147
-            , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ic_namma_yatri_logo"
+            , imageWithFallback $ HU.fetchImage HU.FF_ASSET $ if (getMerchant Common.FunctionCall) == BRIDGE then "ny_ic_bridge_logo" else "ic_namma_yatri_logo"
             ]
             , carouselView carouselItem config state push list
             , linearLayout[weight 1.0, width MATCH_PARENT][]
@@ -144,8 +146,15 @@ indicatorDot push isActive idx =
   ][]
 
 carouselTransformer :: Array CarouselData -> Array (Record WelcomeScreenCarousel)
-carouselTransformer arrData = map (\item -> {
+carouselTransformer arrData = 
+  let merchant = getMerchant Common.FunctionCall
+      isBridge = merchant == BRIDGE
+      isIos = os == "IOS"
+  in   map (\item -> {
   title : toPropValue item.title,
   subTitle : toPropValue item.description,
-  image : toPropValue $ item.image
+  image : toPropValue $ if isBridge then do
+    let imageName = item.image <> "_bridge"
+        imageUrl = (HU.getAssetLink Common.FunctionCall) <> imageName <> ".png"
+    if isIos then "url->" <> imageUrl <> "," <> imageName else  "url->" <> imageUrl else item.image
 }) arrData

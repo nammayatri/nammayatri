@@ -31,7 +31,7 @@ import Presto.Core.Types.Language.Interaction (request)
 import PrestoDOM.List (listDataV2, listItem, onClickHolder, textHolder, viewPager2)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.TopPriceView.ScreenData (TopPriceViewState, TabTimers)
+import Screens.RideRequestPopUp.ScreenData (RideRequestPopUpScreenData, TabTimers)
 import Services.Backend (nearBySearchRequest)
 import Timers (clearAllTimers, clearTimerWithId, startTimer)
 import Types (LazyCheck(..), OverlayData(..), defaultOverlayData)
@@ -39,15 +39,15 @@ import Types (LazyCheck(..), OverlayData(..), defaultOverlayData)
 type Layout w
   = PrestoDOM (Effect Unit) w
 
-screen :: OverlayData -> ScopedScreen Action TopPriceViewState ScreenOutput
+screen :: OverlayData -> ScopedScreen Action RideRequestPopUpScreenData ScreenOutput
 screen (OverlayData gState) =
-  { initialState: gState.topPriceViewState
+  { initialState: gState.rideRequestPopUpScreen
   , view: view
   , name: "TopPriceView"
   , globalEvents:
       [ ( \push -> do
-            _ <- updateTimers push gState.topPriceViewState
-            when (gState.topPriceViewState.timer == 0.0) $ startTimer 0 "RideRequestTimer" "0.001" (\id s dt -> push $ UpdateProgress id s dt)
+            _ <- updateTimers push gState.rideRequestPopUpScreen
+            when (gState.rideRequestPopUpScreen.timer == 0.0) $ startTimer 0 "RideRequestTimer" "1" (\id s dt -> push $ UpdateProgress id s dt)
             pure $ pure unit
         )
       ]
@@ -66,7 +66,7 @@ screen (OverlayData gState) =
       )
   }
 
-view :: forall w. (Action -> Effect Unit) -> TopPriceViewState -> Layout w
+view :: forall w. (Action -> Effect Unit) -> RideRequestPopUpScreenData -> Layout w
 view push state =
   linearLayout
     [ height MATCH_PARENT
@@ -83,7 +83,7 @@ view push state =
         ]
     ]
 
-rideRequestTab :: forall w. (Action -> Effect Unit) -> TopPriceViewState -> Layout w
+rideRequestTab :: forall w. (Action -> Effect Unit) -> RideRequestPopUpScreenData -> Layout w
 rideRequestTab push state =
   linearLayout
     [ height WRAP_CONTENT
@@ -111,7 +111,7 @@ singleTabView push idx item =
       [ width $ V $ getSingleTab
       , height WRAP_CONTENT
       , orientation VERTICAL
-      , background $ if item.selected then Color.black500 else Color.white900
+      , background $ if item.isSelected then Color.black500 else Color.white900
       , padding $ Padding 14 20 14 20
       , gravity CENTER
       , onClick push $ const (OnTabClick idx)
@@ -126,6 +126,7 @@ singleTabView push idx item =
           , height $ V 10
           , gravity LEFT
           , background Color.white900
+          , visibility $ if progress <= 0 then  GONE else VISIBLE
           , cornerRadius 5.0
           ]
           [ linearLayout
@@ -152,12 +153,12 @@ singleTabView push idx item =
       else
         Color.red900
 
-getPriceFromArray :: TopPriceViewState -> Int -> String
+getPriceFromArray :: RideRequestPopUpScreenData -> Int -> String
 getPriceFromArray state idx = case index state.rideRequests idx of
   Nothing -> " -- "
   Just (SearchRequest request) -> show $ request.baseFare
 
-updateTimers :: (Action -> Effect Unit) -> TopPriceViewState -> Effect Unit
+updateTimers :: (Action -> Effect Unit) -> RideRequestPopUpScreenData -> Effect Unit
 updateTimers push state =
   foldMapWithIndex
     ( \idx (SearchRequest item) -> do

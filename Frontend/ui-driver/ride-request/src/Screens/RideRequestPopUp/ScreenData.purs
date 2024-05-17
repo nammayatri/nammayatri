@@ -13,6 +13,30 @@ initData =
   , holderData: []
   , rideRequests: []
   , selectedRequest: 0
+  , timer : 0.0
+  , tabs:
+      [ { currentProgress: 0.0
+        , maxProgress: 1.0
+        , startTime: 0.0
+        , price : 0.0
+        , id : Nothing
+        , isSelected : true
+        }
+      , { currentProgress: 0.0
+        , maxProgress: 1.0
+        , startTime: 0.0
+        , price : 0.0
+        , id : Nothing
+        , isSelected : false
+        }
+      , { currentProgress: 0.0
+        , maxProgress: 1.0
+        , startTime: 0.0
+        , price : 0.0
+        , id : Nothing
+        , isSelected : false
+        }
+      ]
   }
 
 type RideRequestPopUpScreenData
@@ -21,6 +45,8 @@ type RideRequestPopUpScreenData
     , holderData :: Array PopupProps
     , rideRequests :: Array SearchRequest
     , selectedRequest :: Int
+    , tabs :: Array TabTimers
+    , timer :: Number
     }
 
 type PopupProps
@@ -33,4 +59,13 @@ type PopupProps
     , destinationArea :: PropValue
     , destinationFullAddress :: PropValue
     , destinationPincode :: PropValue
+    }
+
+type TabTimers
+  = { currentProgress :: Number
+    , startTime :: Number
+    , maxProgress :: Number
+    , price :: Number
+    , id :: Maybe String
+    , isSelected :: Boolean
     }

@@ -409,9 +409,7 @@ getGenderIndex req arr = do
   reqIndex
 
 getMerchantVehicleSize :: Unit -> Int
-getMerchantVehicleSize unit = 
-  case getMerchant FunctionCall of 
-    _ -> 90
+getMerchantVehicleSize unit = 90
 
 getAssetLink :: LazyCheck -> String
 getAssetLink lazy = case (getMerchant lazy) of
@@ -654,6 +652,7 @@ getCityConfig cityConfig cityName = do
                           cityLat : 0.0,
                           cityLong : 0.0,
                           supportNumber : "",
+                          supportMail: "",
                           languageKey : "",
                           enableYatriCoins : false,
                           showDriverReferral : false,
@@ -664,7 +663,9 @@ getCityConfig cityConfig cityName = do
                             callSupport : false,
                             supportWAN : "", 
                             whatsappSupport : false,
+                            emailSupport : false,
                             defVariantList : [],
+                            enableDataOfIssue: true,
                             enableAc: true
                           },
                           variantSubscriptionConfig : {

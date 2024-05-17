@@ -7,7 +7,7 @@ import Api.Types (SearchRequest(..))
 import Data.Array (mapWithIndex, nub)
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
-import Screens.TopPriceView.ScreenData (TopPriceViewState)
+import Screens.RideRequestPopUp.ScreenData (RideRequestPopUpScreenData)
 import Types (Action(..)) as RideRequestPopUpAction
 import Web.DOM.DOMTokenList (item)
 
@@ -16,7 +16,7 @@ import Web.DOM.DOMTokenList (item)
 -- P.S. This is not the actual logic for going to next screen or previous screen. This is just a example
 -- for showing 2 kinds of exits from the screen.
 data ScreenOutput
-  = UpdateTimers TopPriceViewState
+  = UpdateTimers RideRequestPopUpScreenData
 
 data Action
   = UpdateRideRequest (Array SearchRequest)
@@ -32,11 +32,13 @@ instance showAction :: Show Action where
 instance loggableAction :: Loggable Action where
   performLog = defaultPerformLog
 
-eval :: Action -> TopPriceViewState -> Eval Action ScreenOutput TopPriceViewState
+eval :: Action -> RideRequestPopUpScreenData -> Eval Action ScreenOutput RideRequestPopUpScreenData
 
 eval (UpdateProgress _ time diffTime) state = do
   let
-    updatedTabs = map (\item -> item{currentProgress = item.startTime + item.maxProgress - diffTime}) state.tabs
+    updatedTabs = map (\item -> do
+      let currentProgress = item.startTime + item.maxProgress - diffTime
+      if currentProgress < 0.0 then item else item{currentProgress = currentProgress}) state.tabs
   continue state { tabs = updatedTabs, timer = diffTime}
 
 eval (UpdateMaxProgress idx (SearchRequest request) time) state = do
@@ -49,7 +51,7 @@ eval (AppendRequest searchData) state = exit $ UpdateTimers state{rideRequests =
 
 eval (OnTabClick idx) state = do
   let
-    updatedState = state { tabs = mapWithIndex (\index item -> if index == idx then item { selected = true } else item { selected = false }) state.tabs }
+    updatedState = state { tabs = mapWithIndex (\index item -> if index == idx then item { isSelected = true } else item { isSelected = false }) state.tabs }
   continueWithCmd updatedState
     [ (pure NoAction)
     , ( do

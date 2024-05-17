@@ -117,7 +117,7 @@ data Action = BackPressed
             | EnterReferralCode Boolean
             | InAppKeyboardModalAction InAppKeyboardModal.Action
             | SupportClick Boolean
-            | WhatsAppClick
+            | WhatsAppClick Boolean
             | CallButtonClick
             | ChooseVehicleCategory Int
             | ContinueButtonAction PrimaryButtonController.Action
@@ -187,16 +187,20 @@ eval (BottomDrawerListAC BottomDrawerList.OnAnimationEnd) state = continue state
 
 eval (BottomDrawerListAC (BottomDrawerList.OnItemClick item)) state = do
   case item.identifier of
-    "whatsapp" -> continueWithCmd state [pure WhatsAppClick]
+    "whatsapp" -> continueWithCmd state [pure $ WhatsAppClick false]
+    "email" -> continueWithCmd state [pure $ WhatsAppClick true]
     "call" -> continueWithCmd state [pure CallButtonClick]
     _ -> continue state
 
-eval WhatsAppClick state = continueWithCmd state [do
+eval (WhatsAppClick isMail) state = continueWithCmd state [do
   let supportPhone = state.data.cityConfig.registration.supportWAN
-      phone = "%0APhone%20Number%3A%20"<> state.data.phoneNumber
-      dl = if (state.data.drivingLicenseStatus == ST.FAILED && state.data.enteredDL /= "__failed") then ("%0ADL%20Number%3A%20"<> state.data.enteredDL) else ""
-      rc = if (state.data.vehicleDetailsStatus == ST.FAILED && state.data.enteredRC /= "__failed") then ("%0ARC%20Number%3A%20"<> state.data.enteredRC) else ""
-  void $ JB.openUrlInApp $ "https://wa.me/" <> supportPhone <> "?text=Hi%20Team%2C%0AI%20would%20require%20help%20in%20onboarding%20%0A%E0%A4%AE%E0%A5%81%E0%A4%9D%E0%A5%87%20%E0%A4%AA%E0%A4%82%E0%A4%9C%E0%A5%80%E0%A4%95%E0%A4%B0%E0%A4%A3%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B8%E0%A4%B9%E0%A4%BE%E0%A4%AF%E0%A4%A4%E0%A4%BE%20%E0%A4%95%E0%A5%80%20%E0%A4%86%E0%A4%B5%E0%A4%B6%E0%A5%8D%E0%A4%AF%E0%A4%95%E0%A4%A4%E0%A4%BE%20%E0%A4%B9%E0%A5%8B%E0%A4%97%E0%A5%80" <> phone <> dl <> rc
+      phone = "%0APhone%20Number%3A%20"<> getValueToLocalStore MOBILE_NUMBER_KEY
+      dlNumber = getValueToLocalStore ENTERED_DL
+      rcNumber = getValueToLocalStore ENTERED_RC
+      dl = if (dlNumber /= "__failed") then ("%0ADL%20Number%3A%20"<> dlNumber) else ""
+      rc = if (rcNumber /= "__failed") then ("%0ARC%20Number%3A%20"<> rcNumber) else ""
+      url = if isMail then "mailto:" <> state.data.cityConfig.supportMail else "https://wa.me/" <> supportPhone <> "?text=Hi%20Team%2C%0AI%20would%20require%20help%20in%20onboarding%20%0A%E0%A4%AE%E0%A5%81%E0%A4%9D%E0%A5%87%20%E0%A4%AA%E0%A4%82%E0%A4%9C%E0%A5%80%E0%A4%95%E0%A4%B0%E0%A4%A3%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B8%E0%A4%B9%E0%A4%BE%E0%A4%AF%E0%A4%A4%E0%A4%BE%20%E0%A4%95%E0%A5%80%20%E0%A4%86%E0%A4%B5%E0%A4%B6%E0%A5%8D%E0%A4%AF%E0%A4%95%E0%A4%A4%E0%A4%BE%20%E0%A4%B9%E0%A5%8B%E0%A4%97%E0%A5%80" <> phone <> dl <> rc
+  void $ if isMail then JB.openUrlInMailApp url else JB.openUrlInApp $ url
   pure NoAction
   ]
 

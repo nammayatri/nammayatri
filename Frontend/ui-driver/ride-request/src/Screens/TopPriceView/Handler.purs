@@ -19,8 +19,8 @@ import Types (OverlayData(..))
 
 topPriceView :: Array SearchRequest -> Flow OverlayData Unit
 topPriceView searchRequests = do
-  OverlayData oState <- modifyState \(OverlayData oState) -> OverlayData $ oState{topPriceViewState{rideRequests = searchRequests}}
+  OverlayData oState <- getState
   (UpdateTimers state) <- showScreenWithNameSpace $ View.screen (OverlayData oState)
-  void $ modifyState \(OverlayData currentOState) -> OverlayData $ currentOState{topPriceViewState = state}
+  void $ modifyState \(OverlayData currentOState) -> OverlayData $ currentOState{rideRequestPopUpScreen = state}
   topPriceView state.rideRequests
 

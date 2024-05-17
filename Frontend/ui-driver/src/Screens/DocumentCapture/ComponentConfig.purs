@@ -160,8 +160,9 @@ bottomDrawerListConfig state = BottomDrawerList.config {
   animState = state.props.contactSupportModal,
   titleText = getString CONTACT_SUPPORT_VIA,
   itemList = [
-    {prefixImg : "ny_ic_whatsapp_black", title : "Whatsapp", desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : true, identifier : "whatsapp"},
-    {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : true, identifier : "call"}
+    {prefixImg : "ny_ic_whatsapp_black", title : "Whatsapp", desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.whatsappSupport, identifier : "whatsapp"},
+    {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : true, identifier : "call"},
+    {prefixImg : "ny_ic_mail", title : "Mail", desc : "Write an email for any help in uploading the documents" , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.emailSupport, identifier : "email"}
   ]
 }
 

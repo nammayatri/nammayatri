@@ -32,6 +32,7 @@ import Resource.Constants as Constant
 import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Mobility.Prelude
 
 primaryButtonViewConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
 primaryButtonViewConfig state = let
@@ -65,13 +66,14 @@ mobileNumberButtonConfig state = let
   in primaryButtonConfig'
 
 
-googleProvider :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
-googleProvider state = PrimaryButton.config
+googleProvider :: ST.EnterMobileNumberScreenState -> Boolean -> PrimaryButton.Config
+googleProvider state isFunctionExists = PrimaryButton.config
     { textConfig{ text = "Continue with Google"
       , color = Color.blue500 }
       , id = "PrimaryButtonGoogleAuth"
       , margin = MarginTop 16
       , isPrefixImage = true
+      , visibility = boolToVisibility isFunctionExists
       , prefixImageConfig {
           height = V 25
         , width = V 25
@@ -81,13 +83,14 @@ googleProvider state = PrimaryButton.config
       , background = Color.bridgeGreen
     }
 
-appleProvider :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
-appleProvider state = PrimaryButton.config
+appleProvider :: ST.EnterMobileNumberScreenState -> Boolean -> PrimaryButton.Config
+appleProvider state isFunctionExists = PrimaryButton.config
     { textConfig{ text = "Continue with Apple"
       , color = Color.white900 }
       , id = "PrimaryButtonAppleAuth"
       , margin = MarginTop 12
       , isPrefixImage = true
+      , visibility = boolToVisibility isFunctionExists
       , prefixImageConfig {
           height = V 25
         , width = V 25
@@ -180,7 +183,7 @@ emailIdPrimaryEditTextConfig state =
       , topLabel
         { visibility = GONE
         }  
-      , margin = MarginTop 0
+      , margin = MarginTop 24
       , errorLabel{
           text = "Enter a Valid Email"
         , color = Color.textDanger
