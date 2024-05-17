@@ -446,6 +446,7 @@ rentalBannerConfig state =
                                 getString $ bookingInfoString $ EHC.convertUTCtoISC timeUTC "D" <> " " <> EHC.convertUTCtoISC timeUTC "MMMM" <> " " <> EHC.convertUTCtoISC timeUTC "YYYY" <> " , " <> EHC.convertUTCtoISC timeUTC "HH" <> ":" <> EHC.convertUTCtoISC timeUTC "mm"
                           ) state.data.rentalsInfo)
       , titleColor = Color.black900
+      , titleStyle = Body1
       , actionTextVisibility = false
       , cornerRadius = 8.0
       , imageUrl = fetchImage FF_COMMON_ASSET $ HU.getVehicleVariantImage (maybe "" (\item -> item.vehicleVariant) state.data.rentalsInfo) LEFT_VIEW--fetchImage FF_COMMON_ASSET "ny_ic_rental_booking"
@@ -1902,7 +1903,7 @@ locationTagBarConfig state  = let
               { height : V 32
               , width : V 32
               , imageWithFallback : fetchImage FF_ASSET item.image
-              , margin : MarginBottom 6
+              , margin : MarginRight 8
               } ,
             textConfig : 
               { text : item.text
@@ -1915,8 +1916,8 @@ locationTagBarConfig state  = let
             background : item.background ,
             height :  WRAP_CONTENT ,
             width : WRAP_CONTENT,
-            padding : Padding 8 0 8 8 ,
-            orientation : VERTICAL,
+            padding : PaddingVertical 16 16 ,
+            orientation : HORIZONTAL,
             enableRipple : true,
             rippleColor : Color.rippleShade,
             bannerConfig : {
@@ -1930,11 +1931,9 @@ locationTagBarConfig state  = let
             showBanner : item.showBanner,
             id : item.id
           })
-        [ { image : "ny_ic_instant", text : (getString INSTANT), id : "INSTANT", background : Color.lightMintGreen , showBanner : INVISIBLE},
-          { image : "ny_ic_rental" , text : (getString RENTALS_), id : "RENTALS" , background : Color.moonCreme, showBanner : INVISIBLE},
-          { image : "ny_ic_intercity", text : (getString INTER_CITY_), id : "INTER_CITY" , background: Color.blue600' , showBanner : VISIBLE }
-          ] 
-          -- { image : "ny_ic_ambulance", text : "Ambulance", id : "AMBULANCE" }]
+        ([ { image : "ny_ic_instant", text : (getString INSTANT), id : "INSTANT", background : Color.lightMintGreen , showBanner : GONE},
+          { image : "ny_ic_rental" , text : (getString RENTALS_), id : "RENTALS" , background : Color.moonCreme, showBanner : GONE}
+          ]  <> if state.data.currentCityConfig.enableIntercity then [{ image : "ny_ic_intercity", text : (getString INTER_CITY_), id : "INTER_CITY" , background: Color.blue600' , showBanner : GONE }] else [])
   in 
     { tagList : locTagList }
   

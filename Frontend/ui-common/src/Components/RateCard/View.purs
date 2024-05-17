@@ -476,7 +476,7 @@ commonTV push text' color' theme gravity' marginTop action =
   textView $
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , text text'
+  , textFromHtml text'
   , color color'
   , gravity gravity'
   , margin $ MarginTop marginTop
@@ -504,12 +504,10 @@ rentalRateCardView push config =
     ]
     [ fareList push config
     , dottedHorizontalLineView push config
-    , commonTV push (getStringByKey config "TOTAL_FARE_CHANGE") Color.black900 FontStyle.paragraphText LEFT 0 NoAction
-    , commonTV push (getStringByKey config "EXCESS_DISTANCE_CHARGE_DESCRIPTION") Color.black650 FontStyle.paragraphText LEFT 16 NoAction
     , commonTV push (getStringByKey config "NIGHT_TIME_FEE_DESCRIPTION") Color.black650 FontStyle.paragraphText LEFT 16 NoAction
+    , commonTV push (getStringByKey config "APPLICABLE_WAITING_CHARGES") Color.black650 FontStyle.paragraphText LEFT 16 NoAction
     , commonTV push (getStringByKey config "PARKING_FEES_AND_TOLLS_NOT_INCLUDED") Color.black650 FontStyle.paragraphText LEFT 16 NoAction
-    , dottedHorizontalLineView push config
-    , commonTV push ("* " <> getStringByKey config "FARE_ACCORDING_TO_GOVERNMENT") Color.black650 FontStyle.paragraphText LEFT 0 NoAction
+    , commonTV push (getStringByKey config "TOLL_CHARGES") Color.black650 FontStyle.paragraphText LEFT 16 NoAction
     ]
   ]
 

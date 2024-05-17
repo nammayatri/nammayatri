@@ -337,7 +337,7 @@ rideSearchBT payload = do
         headers <- getHeaders' "" true
         let _ = JB.removeKeysInSharedPrefs $ show RATE_CARD_INFO
         void $ pure $ removeValueFromCache (show RATE_CARD_INFO)
-        withAPIResultBT (EP.searchReq "") identity errorHandler (lift $ lift $ callAPI headers payload)
+        withAPIResultBT (EP.searchReq "") identity handleError (lift $ lift $ callAPI headers payload)
     where
         handleError :: ErrorResponse -> FlowBT String SearchRes
         handleError errorPayload = do

@@ -296,7 +296,7 @@ findingRidesView state push =
       , textView 
         [ text $ getString $ if state.isRentalSearch then FINDING_RIDES_NEAR_YOU else FINDING_QUOTES_TEXT
         , color "#7C7C7C"
-        , visibility if state.appConfig.showQuoteFindingText || state.isRentalSearch then VISIBLE else GONE
+        , visibility if state.appConfig.showQuoteFindingText || state.isRentalSearch && (state.vehicleVariant /= "AUTO_RICKSHAW") then VISIBLE else GONE
         , textSize FontSize.a_17
         , accessibility DISABLE
         , gravity CENTER
