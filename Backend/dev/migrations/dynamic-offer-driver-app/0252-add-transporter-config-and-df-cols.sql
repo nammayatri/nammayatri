@@ -1,5 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN cgst_percentage double precision;
-ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN sgst_percentage double precision;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_fee_calculation_time bigint; -- this gets added to endTime of window
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_fee_calculator_batch_size int;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_fee_calculator_batch_gap bigint;

@@ -1,4 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN distance double precision NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN distance double precision NOT NULL;
 
 CREATE TABLE atlas_driver_offer_bpp.booking_location (
@@ -50,7 +49,6 @@ ALTER TABLE atlas_driver_offer_bpp.ride_booking OWNER TO atlas_driver_offer_bpp_
 --
 ALTER TABLE atlas_driver_offer_bpp.ride_booking ADD COLUMN quote_id character(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN start_time timestamp with time zone NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN start_time timestamp with time zone NOT NULL;
 
 -- ride
 ALTER TABLE atlas_driver_offer_bpp.ride

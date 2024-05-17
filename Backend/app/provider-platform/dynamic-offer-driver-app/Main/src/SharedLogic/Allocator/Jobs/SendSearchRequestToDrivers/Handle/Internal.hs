@@ -102,4 +102,4 @@ createRescheduleTime singleBatchProcessTime lastProcTime = do
 
 cancelSearchTry :: (CacheFlow m r, EsqDBFlow m r) => Id SearchTry -> m ()
 -- cancelSearchTry searchTryId = Esq.runTransaction $ QST.updateStatus searchTryId DST.CANCELLED
-cancelSearchTry searchTryId = QST.updateStatus searchTryId DST.CANCELLED
+cancelSearchTry searchTryId = QST.updateStatus DST.CANCELLED searchTryId

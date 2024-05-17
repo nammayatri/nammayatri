@@ -13,6 +13,4 @@ ALTER TABLE atlas_driver_offer_bpp.rider_details ADD column dispute_chances_used
 
 CREATE INDEX ON atlas_driver_offer_bpp.cancellation_charges USING btree (driver_id);
 
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD column customer_cancellation_dues double precision;
-
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD column customer_cancellation_dues double precision;

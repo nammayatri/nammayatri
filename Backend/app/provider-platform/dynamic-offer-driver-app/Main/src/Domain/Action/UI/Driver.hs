@@ -87,7 +87,9 @@ import qualified Data.Text as T
 import Data.Time (Day, diffDays, fromGregorian)
 import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
+import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Action.UI.Plan as DAPlan
+import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Common as DTC
@@ -112,6 +114,7 @@ import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as Plan
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
+import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.Vehicle (VehicleAPIEntity)
@@ -332,7 +335,7 @@ validateUpdateDriverReq UpdateDriverReq {..} =
 type UpdateDriverRes = DriverInformationRes
 
 newtype GetNearbySearchRequestsRes = GetNearbySearchRequestsRes
-  { searchRequestsForDriver :: [SearchRequestForDriverAPIEntity]
+  { searchRequestsForDriver :: [USRD.SearchRequestForDriverAPIEntity]
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -714,7 +717,7 @@ deleteDriver admin driverId = do
   Auth.clearDriverSession driverId
   QDriverInformation.deleteById (cast driverId)
   QDriverStats.deleteById (cast driverId)
-  QR.deleteByPersonId driverId
+  QR.deleteByPersonId driverId.getId
   QVehicle.deleteById driverId
   QDHL.deleteByDriverId driverId
   QPerson.deleteById driverId
@@ -875,8 +878,8 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       isValueAddNP <- CQVAN.isValueAddNP searchRequest.bapId
       farePolicy <- getFarePolicyByEstOrQuoteId searchRequest.merchantOperatingCityId searchTry.tripCategory nearbyReq.vehicleServiceTier searchRequest.area (fromMaybe searchTry.estimateId nearbyReq.estimateId) (Just (TransactionId (Id searchRequest.transactionId)))
       popupDelaySeconds <- DP.getPopupDelay merchantOpCityId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
-      let driverPickUpCharges = extractDriverPickupCharges farePolicy.farePolicyDetails
-      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP driverPickUpCharges -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
+      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP driverPickUpCharges -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -917,7 +920,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
     driverFCMPulledList <-
       case req.response of
         Pulled -> do
-          QSRD.updateDriverResponse sReqFD.id Pulled Inactive
+          QSRD.updateDriverResponse (Just Pulled) Inactive sReqFD.id
           throwError UnexpectedResponseValue
         Accept -> do
           whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
@@ -925,10 +928,10 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             case searchTry.tripCategory of
               DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
               _ -> acceptStaticOfferDriverRequest searchTry driver sReqFD reqOfferedValue
-          QSRD.updateDriverResponse sReqFD.id Accept Inactive
+          QSRD.updateDriverResponse (Just Accept) Inactive sReqFD.id
           return pullList
         Reject -> do
-          QSRD.updateDriverResponse sReqFD.id Reject Inactive
+          QSRD.updateDriverResponse (Just Reject) Inactive sReqFD.id
           pure []
     DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id driverFCMPulledList
   pure Success
@@ -1046,7 +1049,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       void $ QDrQt.create driverQuote
       driverFCMPulledList <-
         if (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
-          then QSRD.findAllActiveBySTId searchTry.id
+          then QSRD.findAllActiveBySTId searchTry.id DSRD.Active
           else pure []
       pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id $ mkPrice (Just driverQuote.currency) driverQuote.estimatedFare
       sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
@@ -1063,7 +1066,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       when isBookingCancelled' $ throwError (InternalError "BOOKING_CANCELLED")
       CS.markBookingAssignmentInprogress booking.id -- this is to handle booking assignment and user cancellation at same time
       unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
-      QST.updateStatus searchTry.id DST.COMPLETED
+      QST.updateStatus DST.COMPLETED searchTry.id
       (ride, _, vehicle) <- initializeRide merchantId driver booking Nothing Nothing clientId
       driverFCMPulledList <- deactivateExistingQuotes merchantOpCityId merchantId driver.id searchTry.id $ mkPrice (Just quote.currency) quote.estimatedFare
       void $ sendRideAssignedUpdateToBAP booking ride driver vehicle

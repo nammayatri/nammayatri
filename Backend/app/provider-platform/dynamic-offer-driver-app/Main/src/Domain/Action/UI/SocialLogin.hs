@@ -71,7 +71,7 @@ postSocialLogin req = do
   result <- L.runIO $ fetchTokenInfo iosValidateEnpoint req.oauthProvider req.tokenId
   case result of
     Right info -> do
-      oldPerson <- PQ.findByEmailAndMerchant req.merchantId info.email
+      oldPerson <- PQ.findByEmailAndMerchant (Just $ info.email) req.merchantId
       moc <- CQMOC.findByMerchantIdAndCity req.merchantId req.merchantOperatingCity >>= fromMaybeM (MerchantOperatingCityNotFound $ show req.merchantOperatingCity)
       (person, isNew) <-
         case oldPerson of
@@ -81,7 +81,7 @@ postSocialLogin req = do
               deploymentVersion <- asks (.version)
               let createPersonInput = buildCreatePersonInput moc.city req.name info.email
               DR.createDriverWithDetails createPersonInput Nothing Nothing Nothing Nothing (Just deploymentVersion.getDeploymentVersion) req.merchantId moc.id False
-      QR.deleteByPersonId person.id
+      QR.deleteByPersonId (getId person.id)
       token <- makeSession person.id.getId req.merchantId.getId moc.id.getId
       _ <- QR.create token
       pure $ SL.SocialLoginRes isNew token.token

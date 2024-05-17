@@ -12,8 +12,6 @@ CREATE TABLE atlas_driver_offer_bpp.gate_info (
 
 CREATE INDEX idx_point ON atlas_driver_offer_bpp.gate_info USING BTREE (point);
 
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN pickup_zone BOOLEAN;
-
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN pickup_zone_gate_id varchar(36);
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN driver_default_extra_fee double precision;
 

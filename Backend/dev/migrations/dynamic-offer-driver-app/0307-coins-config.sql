@@ -62,10 +62,6 @@ CREATE TABLE atlas_driver_offer_bpp.coin_purchase_history (
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN distance_to_pickup double precision;
 
-ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN total_earned_coins INT NOT NULL DEFAULT 0;
-
-ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN used_coins INT NOT NULL DEFAULT 0;
-
 Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN coin_feature BOOL NOT NULL DEFAULT True;
 
 Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN coin_expire_time INT NOT NULL DEFAULT 1296000;

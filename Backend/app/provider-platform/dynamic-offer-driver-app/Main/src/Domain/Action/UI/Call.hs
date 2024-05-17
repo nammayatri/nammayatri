@@ -31,8 +31,8 @@ where
 
 import qualified Data.Text as T
 import qualified Domain.Action.UI.CallEvent as DCE
-import qualified Domain.Action.UI.CallStatus as SCS
 import qualified Domain.Types.Booking as DB
+import Domain.Types.CallStatus as CallStatus
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
@@ -78,13 +78,27 @@ data CallAttachments = CallAttachments
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
+data CallStatusAPIEntity = CallStatusAPIEntity
+  { callStatusId :: Id CallStatus.CallStatus,
+    entityId :: Maybe Text,
+    status :: CallTypes.CallStatus
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+makeCallStatusAPIEntity :: CallStatus.CallStatus -> CallStatusAPIEntity
+makeCallStatusAPIEntity CallStatus.CallStatus {..} =
+  CallStatusAPIEntity
+    { callStatusId = id,
+      ..
+    }
+
 type CallCallbackRes = AckResponse
 
 type GetCustomerMobileNumberResp = Text
 
 type GetDriverMobileNumberResp = Text
 
-type GetCallStatusRes = SCS.CallStatusAPIEntity
+type GetCallStatusRes = CallStatusAPIEntity
 
 -- | Try to initiate a call driver -> customer
 initiateCallToCustomer ::
@@ -178,7 +192,7 @@ callStatusCallback :: (CacheFlow m r, EsqDBFlow m r) => CallCallbackReq -> m Cal
 callStatusCallback req = do
   let callStatusId = req.customField.callStatusId
   _ <- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist
-  _ <- QCallStatus.updateCallStatus callStatusId (exotelStatusToInterfaceStatus req.status) req.conversationDuration (Just req.recordingUrl)
+  _ <- QCallStatus.updateCallStatus req.conversationDuration (Just req.recordingUrl) (exotelStatusToInterfaceStatus req.status) callStatusId
   return Ack
 
 directCallStatusCallback :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r) => Text -> ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes
@@ -203,7 +217,7 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel 
   DCE.sendCallDataToKafka (Just "EXOTEL") (Id <$> callStatus.entityId) (Just "ANONYMOUS_CALLER") (Just callSid) (Just (show dialCallStatus)) System Nothing
   return Ack
   where
-    updateCallStatus id callStatus url callDuration = QCallStatus.updateCallStatus id callStatus (fromMaybe 0 callDuration) url
+    updateCallStatus id callStatus url callDuration = QCallStatus.updateCallStatus (fromMaybe 0 callDuration) url callStatus id
 
 getCustomerMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r) => Text -> Text -> Text -> Maybe Text -> ExotelCallStatus -> Text -> m GetCustomerMobileNumberResp
 getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = do
@@ -234,7 +248,7 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = d
       & fromMaybeM (BookingFieldNotPresent "riderId")
   riderDetails <- runInReplica $ QRD.findById riderId >>= maybe (throwCallError callSid (RiderDetailsNotFound riderId.getId) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
   requestorPhone <- decrypt riderDetails.mobileNumber
-  _ <- QCallStatus.updateCallStatusWithRideId callId (Just activeRide.id.getId) dtmfNumberUsed (Just exophone.merchantId.getId) (Just exophone.callService)
+  _ <- QCallStatus.updateCallStatusWithRideId (Just activeRide.id.getId) dtmfNumberUsed (Just exophone.merchantId.getId) (Just exophone.callService) callId
   DCE.sendCallDataToKafka (Just "EXOTEL") (Just activeRide.id) (Just "ANONYMOUS_CALLER") (Just callSid) Nothing System (Just to)
   return requestorPhone
   where
@@ -270,12 +284,12 @@ throwCallError ::
   Maybe CallService ->
   m a
 throwCallError callSid err merchantId callService = do
-  QCallStatus.updateCallError callSid (Just (show err)) merchantId callService
+  QCallStatus.updateCallError (Just (show err)) callService merchantId (Id callSid)
   throwError err
 
 getCallStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SCS.CallStatus -> m GetCallStatusRes
 getCallStatus callStatusId = do
-  runInReplica $ QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> SCS.makeCallStatusAPIEntity
+  runInReplica $ QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> makeCallStatusAPIEntity
 
 -- | Get customer's mobile phone
 getCustomerPhone :: (EncFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DB.Booking -> m Text

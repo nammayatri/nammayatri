@@ -28,23 +28,37 @@ CallStatus:
       kvFunction: findOneWithKV
       where: id
 
+    updateCallStatus:
+      kvFunction: updateWithKV
+      params: [conversationDuration, recordingUrl, status]
+      where: id
+
+    updateCallError:
+      kvFunction: updateWithKV
+      params: [callError, callService, merchantId]
+      where: id
+
+    updateCallStatusWithRideId:
+      kvFunction: updateWithKV
+      params: [entityId, dtmfNumberUsed, merchantId, callService]
+      where: id
+
   extraOperations:
     - EXTRA_QUERY_FILE
 
-  excludedDefaultQueries:
-    - create
-
   sqlType:
-    callId: character varying(255)
-    recordingUrl: character varying(255)
-    status: character varying(255)
+    callId: character varying (255)
+    recordingUrl: character varying (255)
+    status: character varying (255)
     conversationDuration: bigint
-    dtmfNumberUsed: character varying(255)
-    entityId: character (36)
-    merchantId: character (36)
+    dtmfNumberUsed: character varying (255)
+    entityId: character varying (36)
+    merchantId: character varying (36)
 
   default:
     entityId: "'UNKNOWN'"
 
   excludedFields: [merchantOperatingCityId, updatedAt]
 
+  excludedDefaultQueries:
+    - create

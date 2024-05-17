@@ -30,6 +30,7 @@ where
 
 import Data.OpenApi hiding (email, info, name, url)
 import Domain.Action.UI.DriverReferral
+import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
@@ -166,7 +167,7 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDe
       SP.EMAIL -> do
         email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
         person <-
-          QP.findByEmailAndMerchant merchant.id email
+          QP.findByEmailAndMerchant (Just email) merchant.id
             >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
         return (person, SP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
@@ -401,10 +402,10 @@ verify tokenId req = do
   let deviceToken = Just req.deviceToken
   cleanCachedTokens person.id
   QR.deleteByPersonIdExceptNew person.id tokenId
-  _ <- QR.setVerified tokenId
-  _ <- QP.updateDeviceToken person.id deviceToken
+  _ <- QR.setVerified True tokenId
+  _ <- QP.updateDeviceToken deviceToken person.id
   when isNewPerson $
-    QP.setIsNewFalse person.id
+    QP.setIsNewFalse False person.id
   updPers <- QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
   decPerson <- decrypt updPers
   unless (decPerson.whatsappNotificationEnrollStatus == req.whatsappNotificationEnroll && isJust req.whatsappNotificationEnroll) $ do
@@ -433,7 +434,7 @@ callWhatsappOptApi ::
 callWhatsappOptApi mobileNo personId hasOptedIn merchantId merchantOpCityId = do
   let status = fromMaybe Whatsapp.OPT_IN hasOptedIn
   void $ Whatsapp.whatsAppOptAPI merchantId merchantOpCityId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
-  QP.updateWhatsappNotificationEnrollStatus personId $ Just status
+  QP.updateWhatsappNotificationEnrollStatus (Just status) personId
 
 checkRegistrationTokenExists :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id SR.RegistrationToken -> m SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
@@ -476,7 +477,7 @@ resend tokenId = do
 
 cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
-  regTokens <- QR.findAllByPersonId personId
+  regTokens <- QR.findAllByPersonId personId.getId
   for_ regTokens $ \regToken -> do
     let key = authTokenCacheKey regToken.token
     void $ Redis.del key
@@ -493,7 +494,7 @@ logout (personId, _, _) = do
   uperson <-
     QP.findById personId
       >>= fromMaybeM (PersonNotFound personId.getId)
-  _ <- QP.updateDeviceToken uperson.id Nothing
-  QR.deleteByPersonId personId
+  _ <- QP.updateDeviceToken Nothing uperson.id
+  QR.deleteByPersonId personId.getId
   when (uperson.role == SP.DRIVER) $ void (QD.updateActivity False (Just DriverInfo.OFFLINE) (cast uperson.id))
   pure Success
