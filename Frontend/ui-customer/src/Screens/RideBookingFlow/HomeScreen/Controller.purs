@@ -1720,6 +1720,8 @@ eval (RatingCardAC (RatingCard.SelectPill feedbackItem id)) state = do
 
 eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = updateAndExit state $ SubmitRating state
 
+eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.NoAction)) state = continue state
+
 eval (RatingCardAC (RatingCard.FeedbackChanged value)) state = continue state { data { rideRatingState { feedback = value } } }
 
 eval (RatingCardAC (RatingCard.BackPressed)) state = do

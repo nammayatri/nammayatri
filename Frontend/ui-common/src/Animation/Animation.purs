@@ -391,5 +391,5 @@ scaleYAnimWithDelay delay =
 triggerOnAnimationEnd :: Boolean -> PrestoAnim.Animation
 triggerOnAnimationEnd ifAnim =
   PrestoAnim.Animation
-    [ PrestoAnim.duration 250
+    [ PrestoAnim.duration 10
     ] ifAnim

@@ -124,28 +124,22 @@ fareList push config =
         , height WRAP_CONTENT
         , orientation HORIZONTAL
         , margin $ MarginTop 10
-        ][ textView
-            [ width $ V ((3 * screenWidth unit) /5 )
-            , height WRAP_CONTENT
-            , textSize FontSize.a_16
-            , lineHeight "18"
+        ][ textView $
+            [ height WRAP_CONTENT
             , singleLine false
             , maxLines 2
-            , fontStyle $ FontStyle.medium LanguageStyle
             , color Color.black700
             , text item.key
-            ]
-          , textView
+            , weight 1.0
+            ] <> FontStyle.body2 LanguageStyle
+          , textView $
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
-            , textSize FontSize.a_16
             , color Color.black800
             , text item.val
-            , gravity RIGHT
             , singleLine false
             , maxLines 2
-            , weight 1.0
-            ]
+            ] <> FontStyle.body2 LanguageStyle
           ]
       ) config.fareList)
 
