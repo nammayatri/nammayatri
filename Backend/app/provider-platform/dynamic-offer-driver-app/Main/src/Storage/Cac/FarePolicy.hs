@@ -119,7 +119,7 @@ instance FromCacType (BeamFP.FarePolicy, [(CacContext, Value)], String, Id FareP
                 driverExtraFeeBounds = nonEmpty fDEFB,
                 farePolicyDetails,
                 perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,
-                congestionChargeMultiplier = congestionChargeMultiplier,
+                congestionChargeMultiplier = congestionCharge,
                 description = description,
                 createdAt = createdAt,
                 updatedAt = updatedAt

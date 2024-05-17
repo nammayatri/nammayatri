@@ -149,7 +149,11 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) mbDistance mbServiceT
       now <- getCurrentTime
       fullFarePolicy <- getFarePolicy merchantOperatingCityId (OneWay OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing
       let rateCardItems = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id mkBreakupItem Nothing Nothing (fullFarePolicyToFarePolicy fullFarePolicy)
-      let isPeak = maybe False (> 1) fullFarePolicy.congestionChargeMultiplier
+      let isPeak =
+            fromMaybe False $
+              fullFarePolicy.congestionChargeMultiplier <&> \case
+                BaseFareAndExtraDistanceFare congestionChargeMultiplier -> congestionChargeMultiplier > 1
+                ExtraDistanceFare congestionChargeMultiplier -> congestionChargeMultiplier > 1
       let mbIsNight =
             if isRentalTrip tripCategory
               then Just $ isNightAllowanceApplicable fullFarePolicy.nightShiftBounds now now (maybe 19800 (.timeDiffFromUtc) transporterConfig)

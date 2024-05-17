@@ -687,7 +687,7 @@ data UpdateFarePolicyReq = UpdateFarePolicyReq
     govtCharges :: Maybe Double,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     perMinuteRideExtraTimeChargeWithCurrency :: Maybe PriceAPIEntity,
-    congestionChargeMultiplier :: Maybe Centesimal,
+    congestionChargeMultiplier :: Maybe CongestionChargeMultiplierAPIEntity,
     description :: Maybe Text,
     baseDistance :: Maybe Meters,
     baseFare :: Maybe Money,
@@ -719,6 +719,12 @@ data WaitingChargeAPIEntity
   | ConstantWaitingChargeWithCurrency PriceAPIEntity
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CongestionChargeMultiplierAPIEntity
+  = BaseFareAndExtraDistanceFare Centesimal
+  | ExtraDistanceFare Centesimal
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data NightShiftChargeAPIEntity
   = ProgressiveNightShiftCharge Float
