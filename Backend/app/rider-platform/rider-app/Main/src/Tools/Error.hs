@@ -221,6 +221,8 @@ data TicketBookingError
   | ServiceCategoryNotFound Text
   | TicketSeatManagementNotFound Text Text
   | PeopleCategoryNotFound Text
+  | TicketBookingNotConfirmed Text
+  | TicketBookingServiceNotConfirmed Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''TicketBookingError
@@ -229,6 +231,8 @@ instance IsBaseError TicketBookingError where
   toMessage (TicketServiceNotFound serviceId) = Just $ "Ticker service not found: " <> show serviceId
   toMessage (TicketBookingNotFound bookingId) = Just $ "Ticket booking not found: " <> show bookingId
   toMessage (TicketBookingServiceNotFound bookingServiceId) = Just $ "Ticket booking service not found: " <> show bookingServiceId
+  toMessage (TicketBookingNotConfirmed bookingId) = Just $ "Ticket booking not confirmed: " <> show bookingId
+  toMessage (TicketBookingServiceNotConfirmed bookingServiceId) = Just $ "Ticket booking service not confirmed: " <> show bookingServiceId
   toMessage (TicketPlaceNotFound placeId) = Just $ "Ticket place not found: " <> show placeId
   toMessage (BusinessHourNotFound businessHourId) = Just $ "Business hour not found: " <> show businessHourId
   toMessage (ServiceCategoryNotFound sCategoryId) = Just $ "Service category not found: " <> show sCategoryId
@@ -239,7 +243,9 @@ instance IsHTTPError TicketBookingError where
   toErrorCode = \case
     TicketServiceNotFound _ -> "TICKET_SERVICE_NOT_FOUND"
     TicketBookingNotFound _ -> "TICKET_BOOKING_NOT_FOUND"
+    TicketBookingNotConfirmed _ -> "TICKET_BOOKING_NOT_CONFIRMED"
     TicketBookingServiceNotFound _ -> "TICKET_BOOKING_SERVICE_NOT_FOUND"
+    TicketBookingServiceNotConfirmed _ -> "TICKET_BOOKING_SERVICE_NOT_CONFIRMED"
     TicketPlaceNotFound _ -> "TICKET_PLACE_NOT_FOUND"
     BusinessHourNotFound _ -> "BUSINESS_HOUR_NOT_FOUND"
     ServiceCategoryNotFound _ -> "SERVICE_CATEGORY_NOT_FOUND"
@@ -249,6 +255,8 @@ instance IsHTTPError TicketBookingError where
     TicketServiceNotFound _ -> E500
     TicketBookingNotFound _ -> E500
     TicketBookingServiceNotFound _ -> E400
+    TicketBookingNotConfirmed _ -> E400
+    TicketBookingServiceNotConfirmed _ -> E400
     TicketPlaceNotFound _ -> E500
     BusinessHourNotFound _ -> E500
     ServiceCategoryNotFound _ -> E500

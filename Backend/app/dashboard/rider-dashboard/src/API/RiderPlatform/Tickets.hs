@@ -11,6 +11,7 @@ import qualified "rider-app" API.Types.UI.TicketService as DTB
 import Dashboard.Common (HideSecrets)
 import Data.Time
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import qualified "rider-app" Domain.Types.TicketBooking as DTB
 import qualified "rider-app" Domain.Types.TicketBookingService as DTB
 import qualified "rider-app" Domain.Types.TicketPlace as DTB
 import qualified "rider-app" Domain.Types.TicketService as DTB
@@ -20,6 +21,7 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
+import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp.Operations as Client
 import Servant hiding (throwError)
@@ -34,6 +36,9 @@ type API =
     :<|> GetServicesAPI
     :<|> UpdateSeatManagementAPI
     :<|> GetTicketPlacesAPI
+    :<|> CancelTicketBookingServiceAPI
+    :<|> CancelTicketServiceAPI
+    :<|> GetTicketBookingDetails
 
 type VerifyBookingDetailsAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'VERIFY_BOOKING_DETAILS
@@ -51,12 +56,27 @@ type GetTicketPlacesAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'GET_TICKET_PLACES
     :> ADT.GetTicketPlacesAPI
 
+type CancelTicketBookingServiceAPI =
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'CANCEL_TICKET_BOOKING
+    :> ADT.CancelTicketBookingServiceAPI
+
+type CancelTicketServiceAPI =
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'CANCEL_TICKET_SERVICE
+    :> ADT.CancelTicketServiceAPI
+
+type GetTicketBookingDetails =
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'GET_TICKET_BOOKING_DETAILS
+    :> ADT.GetTicketBookingDetailsAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   verifyBookingDetails merchantId city
     :<|> getServices merchantId city
     :<|> updateSeatManagement merchantId city
     :<|> getTicketPlaces merchantId city
+    :<|> cancelTicketBookingService merchantId city
+    :<|> cancelTicketService merchantId city
+    :<|> getTicketBookingDetails merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -106,3 +126,33 @@ getTicketPlaces :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> FlowHandl
 getTicketPlaces merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderAppOperations checkedMerchantId opCity (.tickets.getTicketPlaces)
+
+cancelTicketBookingService ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  DTB.TicketBookingCancelReq ->
+  FlowHandler APISuccess
+cancelTicketBookingService merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callRiderAppOperations checkedMerchantId opCity (.tickets.cancelTicketBookingService) req
+
+cancelTicketService ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  DTB.TicketServiceCancelReq ->
+  FlowHandler APISuccess
+cancelTicketService merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callRiderAppOperations checkedMerchantId opCity (.tickets.cancelTicketService) req
+
+getTicketBookingDetails ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  Id.ShortId DTB.TicketBooking ->
+  FlowHandler DTB.TicketBookingDetails
+getTicketBookingDetails merchantShortId opCity apiTokenInfo ticketBookingShortId = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callRiderAppOperations checkedMerchantId opCity (.tickets.getTicketBookingDetails) ticketBookingShortId

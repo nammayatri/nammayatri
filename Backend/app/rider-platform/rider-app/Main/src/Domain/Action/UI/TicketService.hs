@@ -4,14 +4,22 @@
 module Domain.Action.UI.TicketService where
 
 import API.Types.UI.TicketService
+import qualified Control.Monad.Extra as ME
+import Data.List (findIndex, sortBy)
+import Data.List.Extra ((!?))
 import qualified Data.List.NonEmpty as DLN
+import qualified Data.Map as Map
 import Data.OpenApi (ToSchema)
+import Data.Ord as DO
 import qualified Data.Text as Data.Text
+import qualified Data.Text as T
 import Data.Time (UTCTime (UTCTime), dayOfWeek, midnight, timeOfDayToTime, utctDay)
 import qualified Data.Time.Calendar as Data.Time.Calendar
 import qualified Domain.Types.BusinessHour as Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant as Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantOperatingCity as MerchantOperatingCity
+import qualified Domain.Types.NotificationSoundsConfig as NSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person as Domain.Types.Person
 import qualified Domain.Types.SeatManagement as Domain.Types.SeatManagement
@@ -30,22 +38,30 @@ import qualified Environment as Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface.Types as Kernel.External.Payment.Interface.Types
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.Prelude as Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as Kernel.Types.APISuccess
+import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Common as Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id as Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import Lib.Payment.Domain.Types.Refunds (Refunds (..))
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
+import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Servant hiding (throwError)
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.BusinessHour as QBH
+import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PersonExtra as PersonExtra
 import qualified Storage.Queries.SeatManagement as QTSM
 import qualified Storage.Queries.ServiceCategory as QSC
 import qualified Storage.Queries.ServicePeopleCategory as QPC
@@ -58,12 +74,50 @@ import qualified Storage.Queries.TicketPlace as QTP
 import qualified Storage.Queries.TicketService as QTS
 import Tools.Auth
 import Tools.Error
+import qualified Tools.Notifications as Notifications
 import qualified Tools.Payment as Payment
+import qualified Tools.SMS as Sms
+
+type TicketBookingServiceMap = Map.Map (Kernel.Types.Id.Id DTB.TicketBookingService) DTB.TicketBookingService
+
+type TicketBookingServiceShortIdMap = Map.Map (Kernel.Types.Id.ShortId DTB.TicketBookingService) DTB.TicketBookingService
+
+type TicketBookingMap = Map.Map (Kernel.Types.Id.Id DTTB.TicketBooking) DTTB.TicketBooking
+
+type TicketBookingPeopleCategoryMap = Map.Map (Kernel.Types.Id.Id DTB.TicketBookingPeopleCategory) DTB.TicketBookingPeopleCategory
+
+type TicketBookingServiceCategoryMap = Map.Map (Kernel.Types.Id.Id DTB.TicketBookingServiceCategory) DTB.TicketBookingServiceCategory
+
+type TicketServiceMap = Map.Map (Kernel.Types.Id.Id Domain.Types.TicketService.TicketService) Domain.Types.TicketService.TicketService
+
+type PersonMap = Map.Map (Kernel.Types.Id.Id DP.Person) DP.Person
 
 data ConvertedTime = ConvertedTime
   { slot :: Maybe Kernel.Prelude.TimeOfDay,
     startTime :: Maybe Kernel.Prelude.TimeOfDay,
     endTime :: Maybe Kernel.Prelude.TimeOfDay
+  }
+
+data CancellationInfo = CancellationInfo
+  { cancelledServices :: [ServiceCancellationInfo],
+    ticketbooking :: DTTB.TicketBooking
+  }
+
+data ServiceCancellationInfo = ServiceCancellationInfo
+  { cancelledService :: DTB.TicketBookingService,
+    cancelledServiceCategories :: [CategoryCancellationInfo]
+  }
+
+data CategoryCancellationInfo = CategoryCancellationInfo
+  { cancelledCategory :: DTB.TicketBookingServiceCategory,
+    cancelledPeopleCategories :: [PeopleCategoryCancellationInfo],
+    businessHourId :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
+    serviceCategoryId :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory
+  }
+
+data PeopleCategoryCancellationInfo = PeopleCategoryCancellationInfo
+  { cancelledPeopleCategory :: DTB.TicketBookingPeopleCategory,
+    cancelledQuantity :: Int
   }
 
 convertBusinessHT :: Domain.Types.BusinessHour.BusinessHourType -> ConvertedTime
@@ -100,7 +154,8 @@ getTicketPlacesServices _ placeId mbDate = do
                   allowFutureBooking = service.allowFutureBooking,
                   expiry = service.expiry,
                   businessHours,
-                  shortDesc = service.shortDesc
+                  shortDesc = service.shortDesc,
+                  allowCancellation = service.allowCancellation
                 }
         )
         ticketServices
@@ -145,7 +200,8 @@ getTicketPlacesServices _ placeId mbDate = do
             id = peopleCategory.id,
             pricePerUnit = peopleCategory.pricePerUnit.amount,
             pricePerUnitWithCurrency = mkPriceAPIEntity peopleCategory.pricePerUnit,
-            description = peopleCategory.description
+            description = peopleCategory.description,
+            cancellationCharges = peopleCategory.cancellationCharges
           }
 
     findSpecialOccasion service = QSO.findAllSpecialOccasionByEntityId service.id.getId Nothing
@@ -162,11 +218,13 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
 
   ticketBookingId <- generateGUID
-  ticketBookingServices <- mapM (createTicketBookingService merchantOpCity.id ticketBookingId) req.services
+  ticketBookingServices <- mapM (createTicketBookingService merchantOpCity.id ticketBookingId req.visitDate) req.services
 
   amount <- withCurrencyCheckingList (ticketBookingServices <&> (.amount)) $ \mbCurrency as ->
     mkPrice mbCurrency $ sum as
-  ticketBooking <- createTicketBooking personId_ merchantOpCity.id ticketBookingId amount
+
+  let bookedSeats = sum $ ticketBookingServices <&> (.bookedSeats)
+  ticketBooking <- createTicketBooking personId_ merchantOpCity.id ticketBookingId amount bookedSeats
 
   QTBS.createMany ticketBookingServices
   QTB.create ticketBooking
@@ -201,7 +259,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
     Nothing -> do
       throwError $ InternalError "Failed to create order"
   where
-    createTicketBooking personId_ merchantOperatingCityId ticketBookingId amount = do
+    createTicketBooking personId_ merchantOperatingCityId ticketBookingId amount bookedSeats = do
       shortId <- generateShortId
       now <- getCurrentTime
       return $
@@ -216,10 +274,12 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             merchantId = Just merchantId,
             merchantOperatingCityId = merchantOperatingCityId,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            bookedSeats,
+            cancelledSeats = Nothing
           }
 
-    createTicketBookingService merchantOperatingCityId ticketBookingId ticketServicesReq = do
+    createTicketBookingService merchantOperatingCityId ticketBookingId visitDate ticketServicesReq = do
       let ticketServiceId = ticketServicesReq.serviceId
       let bHourId = ticketServicesReq.businessHourId
       let categories = ticketServicesReq.categories
@@ -228,10 +288,11 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
       now <- getCurrentTime
       ticketService <- QTS.findById ticketServicesReq.serviceId >>= fromMaybeM (TicketServiceNotFound ticketServicesReq.serviceId.getId)
       businessHour <- QBH.findById bHourId >>= fromMaybeM (BusinessHourNotFound bHourId.getId)
-      tBookingSCats <- mapM (createTicketBookingServiceCategory merchantOperatingCityId id) categories
+      tBookingSCats <- mapM (createTicketBookingServiceCategory merchantOperatingCityId id visitDate businessHour) categories
       QTBSC.createMany tBookingSCats
       amount <- withCurrencyCheckingList (tBookingSCats <&> (.amount)) $ \mbCurrency as ->
         mkPrice mbCurrency $ sum as
+      let bookedSeats = sum $ tBookingSCats <&> (.bookedSeats)
       let expiry = calcExpiry ticketService.expiry req.visitDate now
       return $
         DTB.TicketBookingService
@@ -241,18 +302,24 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             ticketServiceId,
             amount,
             btype = businessHour.btype,
+            bHourId = Just businessHour.id,
             status = DTB.Pending,
             verificationCount = 0,
             expiryDate = Just expiry,
             merchantId = Just merchantId,
             merchantOperatingCityId = merchantOperatingCityId,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            visitDate = Just visitDate,
+            bookedSeats,
+            cancelledSeats = Nothing
           }
 
-    createTicketBookingServiceCategory merchantOperatingCityId ticketBookingServiceId ticketServiceCReq = do
+    createTicketBookingServiceCategory merchantOperatingCityId ticketBookingServiceId visitDate businessHour ticketServiceCReq = do
       id <- generateGUID
       now <- getCurrentTime
+      mbAnySplOccassion <- QSO.findBySplDayAndEntityIdAndDate Domain.Types.SpecialOccasion.Closed (ticketServiceCReq.categoryId.getId) (Just visitDate)
+      when (maybe False (\anySplOccassion -> elem businessHour.id anySplOccassion.businessHours) mbAnySplOccassion) $ throwError $ InvalidRequest "Business hour is closed"
       let serviceCatId = ticketServiceCReq.categoryId
       tBookingSC <- QSC.findById serviceCatId >>= fromMaybeM (ServiceCategoryNotFound serviceCatId.getId)
       tBookingPCats <- mapM (createTicketBookingPeopleCategory now merchantOperatingCityId id) ticketServiceCReq.peopleCategories
@@ -289,7 +356,12 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             merchantId = Just merchantId,
             merchantOperatingCityId = Just merchantOperatingCityId,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            cancelledSeats = Nothing,
+            eventCancelledBy = Nothing,
+            amountToRefund = Nothing,
+            visitDate = Just visitDate,
+            btype = Just businessHour.btype
           }
 
     createTicketBookingPeopleCategory now merchantOperatingCityId ticketBookingServiceCategoryId ticketServicePCReq = do
@@ -307,8 +379,11 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             pricePerUnit,
             merchantId = Just merchantId,
             merchantOperatingCityId = Just merchantOperatingCityId,
+            numberOfUnitsCancelled = Nothing,
+            amountToRefund = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            peopleCategoryId = Just tPCatId
           }
 
     calculateAmountAndSeats :: (MonadThrow m, Log m) => [DTB.TicketBookingPeopleCategory] -> m (Price, Int)
@@ -358,6 +433,7 @@ getTicketBookingsDetails _ shortId_ = do
   mkTicketBookingDetails ticketBooking services
   where
     mkTicketBookingDetails DTTB.TicketBooking {..} services = do
+      refunds <- QRefunds.findAllByOrderId $ Kernel.Types.Id.Id shortId.getShortId
       ticketPlace <- QTP.findById ticketPlaceId >>= fromMaybeM (TicketPlaceNotFound ticketPlaceId.getId)
       return $
         TicketBookingDetails
@@ -367,9 +443,10 @@ getTicketBookingsDetails _ shortId_ = do
             ticketPlaceName = ticketPlace.name,
             amount = amount.amount,
             amountWithCurrency = mkPriceAPIEntity amount,
+            refundDetails = refunds,
             ..
           }
-
+    mkTicketBookingServiceDetails :: DTB.TicketBookingService -> Environment.Flow API.Types.UI.TicketService.TicketBookingServiceDetails
     mkTicketBookingServiceDetails DTB.TicketBookingService {..} = do
       ticketService <- QTS.findById ticketServiceId >>= fromMaybeM (TicketServiceNotFound ticketServiceId.getId)
       serviceCategories <- QTBSC.findAllByTicketBookingServiceId id
@@ -381,11 +458,13 @@ getTicketBookingsDetails _ shortId_ = do
             ticketServiceShortId = shortId.getShortId,
             slot = convertedBH.slot,
             ticketServiceName = ticketService.service,
+            businessHourId = bHourId,
             amount = amount.amount,
             amountWithCurrency = mkPriceAPIEntity amount,
+            allowCancellation = ticketService.allowCancellation,
             ..
           }
-
+    mkTicketBookingCategoryDetails :: DTB.TicketBookingServiceCategory -> Environment.Flow API.Types.UI.TicketService.TicketBookingCategoryDetails
     mkTicketBookingCategoryDetails DTB.TicketBookingServiceCategory {..} = do
       peopleCategories <- QTBPC.findAllByServiceCategoryId id
       peopleCategoryDetails <- mapM (mkTicketBookingPeopleCategoryDetails) peopleCategories
@@ -394,14 +473,22 @@ getTicketBookingsDetails _ shortId_ = do
           { peopleCategories = peopleCategoryDetails,
             amount = amount.amount,
             amountWithCurrency = mkPriceAPIEntity amount,
+            amountToRefund = amountToRefund,
+            bookedSeats = bookedSeats,
             ..
           }
-
+    mkTicketBookingPeopleCategoryDetails :: DTB.TicketBookingPeopleCategory -> Environment.Flow API.Types.UI.TicketService.TicketBookingPeopleCategoryDetails
     mkTicketBookingPeopleCategoryDetails DTB.TicketBookingPeopleCategory {..} = do
+      cancellationCharges <- case peopleCategoryId of
+        Nothing -> pure Nothing
+        Just peopleCategoryId' -> do
+          peopleCategory' <- QPC.findById peopleCategoryId'
+          pure $ (.cancellationCharges) =<< peopleCategory'
       return $
         TicketBookingPeopleCategoryDetails
           { pricePerUnit = pricePerUnit.amount,
             pricePerUnitWithCurrency = mkPriceAPIEntity pricePerUnit,
+            cancelCharges = cancellationCharges,
             ..
           }
 
@@ -427,6 +514,7 @@ postTicketBookingsVerify _ = processBookingService
         DTB.Failed -> createVerificationResp InvalidBooking (Just bookingService) (Just ticketService) (Just booking)
         DTB.Verified -> handleConfirmedBooking bookingService ticketService booking
         DTB.Confirmed -> handleConfirmedBooking bookingService ticketService booking
+        DTB.Cancelled -> createVerificationResp CancelledBooking (Just bookingService) (Just ticketService) (Just booking)
 
     handleConfirmedBooking :: DTB.TicketBookingService -> Domain.Types.TicketService.TicketService -> DTTB.TicketBooking -> Environment.Flow TicketServiceVerificationResp
     handleConfirmedBooking bookingService ticketServiceConfig booking = do
@@ -487,11 +575,15 @@ postTicketBookingsVerify _ = processBookingService
                 let peopleCategoryDetails = map mkTicketBookingPeopleCategoryDetails peopleCategories
                 return
                   TicketBookingCategoryDetails
-                    { peopleCategories = peopleCategoryDetails,
+                    { id = category.id,
+                      peopleCategories = peopleCategoryDetails,
                       amount = category.amount.amount,
                       amountWithCurrency = mkPriceAPIEntity category.amount,
-                      bookedSeats = category.bookedSeats,
-                      name = category.name
+                      bookedSeats = category.bookedSeats - fromMaybe 0 category.cancelledSeats, -- for verify we should send booked seats - cancelled seats
+                      name = category.name,
+                      cancelledSeats = category.cancelledSeats,
+                      amountToRefund = category.amountToRefund,
+                      serviceCategoryId = category.serviceCategoryId
                     }
             )
             list
@@ -501,6 +593,7 @@ postTicketBookingsVerify _ = processBookingService
       TicketBookingPeopleCategoryDetails
         { pricePerUnit = pricePerUnit.amount,
           pricePerUnitWithCurrency = mkPriceAPIEntity pricePerUnit,
+          cancelCharges = Nothing,
           ..
         }
 
@@ -522,6 +615,7 @@ postTicketBookingsVerify _ = processBookingService
     verificationMsg DifferentService = "Different Service!"
     verificationMsg PaymentPending = "Payment Pending!"
     verificationMsg InvalidBooking = "Not a valid QR"
+    verificationMsg CancelledBooking = "Booking Cancelled!"
 
 getTicketBookingsStatus :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Types.TicketBooking.BookingStatus
 getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.ShortId shortId) = do
@@ -533,8 +627,9 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
   ticketBookingServices <- QTBS.findAllByBookingId ticketBooking'.id
   tBookingServiceCats <- mapM (\tBookingS -> QTBSC.findAllByTicketBookingServiceId tBookingS.id) ticketBookingServices
   let ticketBookingServiceCategories = concat tBookingServiceCats
-  if order.status == Payment.CHARGED -- Consider CHARGED status as terminal status
-    then return ticketBooking'.status
+  if ticketBooking'.status == DTTB.Cancelled || order.status == Payment.CHARGED -- Consider CHARGED status as terminal status
+    then do
+      return ticketBooking'.status
     else do
       paymentStatus <- DPayment.orderStatusService commonPersonId order.id orderStatusCall
       case paymentStatus of
@@ -557,7 +652,8 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
                     updateBlockedSeats (Kernel.Types.Id.Id serviceId) tbsc ticketBooking'.visitDate
               )
               ticketBookingServiceCategories
-        _ -> return ()
+        _ -> pure ()
+
       ticketBooking <- QTB.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (TicketBookingNotFound shortId) -- fetch again for updated status
       return ticketBooking.status
   where
@@ -594,3 +690,289 @@ postTicketBookingsUpdateSeats _ TicketBookingUpdateSeatsReq {..} = do
               }
       QTSM.create seatM
   pure Kernel.Types.APISuccess.Success
+
+postTicketServiceCancel :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.UI.TicketService.TicketServiceCancelReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postTicketServiceCancel (_mbPersonId, merchantId) req = do
+  now <- getCurrentTime
+  bHoursRes <- QBH.findById req.businessHourId >>= fromMaybeM (BusinessHourNotFound req.businessHourId.getId)
+  fork "cancel and refund:" $ do
+    isLockAcquired <- tryMerchantTicketCancellationLock req.businessHourId req.date req.ticketServiceCategoryId
+    unless isLockAcquired $ throwError $ InvalidRequest "This Service Category Ticket cancellation is already in progress"
+    preventFutureTicketBookingServiceStatus req.date req.description Domain.Types.SpecialOccasion.Closed req.ticketServiceCategoryId merchantId
+
+    ticketBookingServices <- QTBS.findByVisitDateAndStatusAndServiceIdAndBtype (Just req.date) DTB.Confirmed req.ticketServiceId bHoursRes.btype (Just now)
+    let tickekBookingServiceMap = Map.fromList $ (\tbs -> (tbs.id, tbs)) <$> ticketBookingServices
+
+    ticketBookings <- QTB.findByIds $ (.ticketBookingId) <$> ticketBookingServices
+    let ticketBookingMap = Map.fromList $ (\tb -> (tb.id, tb)) <$> ticketBookings
+
+    ticketBookingServiceCategory <- QTBSC.findAllByServiceCategoryIdDateAndBtype (Just req.ticketServiceCategoryId.getId) (Just req.date) (Just bHoursRes.btype)
+
+    let personIds = foldr (\tbs personIds' -> maybe personIds' (\tb -> tb.personId : personIds') (Map.lookup tbs.ticketBookingId ticketBookingMap)) [] ticketBookingServices
+    person <- PersonExtra.findAllByIds personIds
+    let personMap = Map.fromList $ (\per -> (per.id, per)) <$> person
+
+    refundAndNotificationCalls <- mapM (cancelAndRefundConfirmedBookingService personMap tickekBookingServiceMap ticketBookingMap) ticketBookingServiceCategory
+    fork "refund api calls" $ mapM_ fst refundAndNotificationCalls
+    fork "notification api calls" $ mapM_ snd refundAndNotificationCalls
+
+  pure Kernel.Types.APISuccess.Success
+  where
+    preventFutureTicketBookingServiceStatus :: Data.Time.Calendar.Day -> Maybe Text -> Domain.Types.SpecialOccasion.SpecialDayType -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Environment.Flow ()
+    preventFutureTicketBookingServiceStatus visitDate cancelDescription specialDayType serviceCategoryId mId = do
+      QTSM.updateBookedAndBlockedSeats 0 0 serviceCategoryId visitDate
+      mbSplOccasion <- QSO.findBySplDayAndEntityIdAndDate Domain.Types.SpecialOccasion.Closed serviceCategoryId.getId (Just visitDate)
+      case mbSplOccasion of
+        Nothing -> mkSpecialOccasionEntry req.businessHourId (Just visitDate) cancelDescription serviceCategoryId specialDayType (Just mId)
+        Just splOccasion -> unless (elem req.businessHourId splOccasion.businessHours) $ QSO.updateBusinessHoursById (splOccasion.businessHours ++ [req.businessHourId]) splOccasion.id
+
+    mkSpecialOccasionEntry :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> Maybe Data.Time.Calendar.Day -> Maybe Text -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Domain.Types.SpecialOccasion.SpecialDayType -> Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.Flow ()
+    mkSpecialOccasionEntry bHourId date description serviceCategoryId specialDayType mbMerchantId = do
+      splOccasionId <- generateGUID
+      now <- getCurrentTime
+      let splOccasionEntry =
+            Domain.Types.SpecialOccasion.SpecialOccasion
+              { businessHours = [bHourId],
+                date = date,
+                dayOfWeek = Nothing,
+                description = description,
+                entityId = serviceCategoryId.getId,
+                id = splOccasionId,
+                specialDayType = specialDayType,
+                merchantId = mbMerchantId,
+                merchantOperatingCityId = Nothing,
+                createdAt = now,
+                updatedAt = now
+              }
+      QSO.create splOccasionEntry
+
+    cancelAndRefundConfirmedBookingService :: PersonMap -> TicketBookingServiceMap -> TicketBookingMap -> DTB.TicketBookingServiceCategory -> Environment.Flow (Environment.Flow (), Environment.Flow ())
+    cancelAndRefundConfirmedBookingService personMap ticketBookingServiceMap ticketBookingMap tbServiceCategory = do
+      let ticketBookingService' = Map.lookup tbServiceCategory.ticketBookingServiceId ticketBookingServiceMap
+          ticketBooking' = ticketBookingService' >>= (\tbs -> Map.lookup tbs.ticketBookingId ticketBookingMap)
+
+      case (ticketBooking', ticketBookingService') of
+        (Just ticketBooking, Just ticketBookingService) -> do
+          let refundAmount = tbServiceCategory.amount.amount - fromMaybe (HighPrecMoney 0) tbServiceCategory.amountToRefund -- should we refund all amount if user had cancelled some ticket then merchant had cancelled whole category
+          void $ QTBSC.updateCancellationDetailsById (Just tbServiceCategory.bookedSeats) (Just tbServiceCategory.amount.amount) (Just DTB.Merchant) tbServiceCategory.id
+          updateStatusForBooking ticketBooking ticketBookingService tbServiceCategory.bookedSeats
+          case Map.lookup ticketBooking.personId personMap of
+            Just person -> do
+              let refundCall = when (refundAmount > 0) $ intializeRefundProcess ticketBooking.shortId (Just ticketBooking.ticketPlaceId) refundAmount person.merchantId person.merchantOperatingCityId
+              let notificationCall = Notifications.notifyTicketCancelled ticketBooking.id.getId tbServiceCategory.name person
+              pure (refundCall, notificationCall)
+            Nothing -> pure (unit, unit)
+        (_, _) -> pure (unit, unit)
+      where
+        unit = pure ()
+        updateStatusForBooking :: DTTB.TicketBooking -> DTB.TicketBookingService -> Int -> Environment.Flow ()
+        updateStatusForBooking ticketBooking ticketBookingService cancelledSeats = do
+          let tbsCancelledSeats = fromMaybe 0 ticketBookingService.cancelledSeats + cancelledSeats
+          let updateTicketBookingServiceStatus = if tbsCancelledSeats == ticketBookingService.bookedSeats then DTB.Cancelled else ticketBookingService.status
+          QTBS.updateStatusAndCancelledSeatsById updateTicketBookingServiceStatus (Just tbsCancelledSeats) ticketBookingService.id
+          let tbCancelledSeats = fromMaybe 0 ticketBooking.cancelledSeats + cancelledSeats
+          let updateTicketBookingStatus = if tbCancelledSeats == ticketBooking.bookedSeats then DTTB.Cancelled else ticketBooking.status
+          QTB.updateStatusAndCancelledSeatsById updateTicketBookingStatus (Just tbCancelledSeats) ticketBooking.id
+
+    _sendSms :: Domain.Types.Person.Person -> Text -> Environment.Flow ()
+    _sendSms person categoryName = do
+      smsCfg <- asks (.smsCfg)
+      mobileNumber <- mapM decrypt person.mobileNumber
+      let countryCode = fromMaybe "+91" person.mobileCountryCode
+          merchantOperatingCityId = person.merchantOperatingCityId
+          sender = smsCfg.sender
+      case mobileNumber of
+        Just mNumber -> do
+          let phoneNumber = countryCode <> mNumber
+          message <- MessageBuilder.buildTicketBookingCancelled merchantOperatingCityId $ MessageBuilder.BuildTicketBookingCancelledMessageReq {personName = fromMaybe "" person.firstName, categoryName = categoryName}
+          Sms.sendSMS person.merchantId merchantOperatingCityId (Sms.SendSMSReq message phoneNumber sender)
+            >>= Sms.checkSmsResult
+        _ -> logDebug $ "Could n't send Ticket Booking Cancellation SMS : " <> person.id.getId
+
+postTicketBookingCancel :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.UI.TicketService.TicketBookingCancelReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postTicketBookingCancel (_, merchantId) req = do
+  let lockKeys = makeUserLockKeyTuple req
+  executeNLockOperations lockKeys $ do
+    ticketBooking <- QTB.findByShortId req.ticketBookingShortId >>= fromMaybeM (TicketBookingNotFound req.ticketBookingShortId.getShortId)
+    ticketBookingServices <- QTBS.findByShortIds $ (.shortId) <$> req.ticketBookingServices
+    ticketService <- QTS.findByIds $ (.ticketServiceId) <$> ticketBookingServices
+    ticketBookingServiceCategory <- QTBSC.findByIds $ concatMap (\serviceReq -> (.id) <$> serviceReq.serviceCategory) req.ticketBookingServices
+    ticketBookingPeopleCategory <- QTBPC.findByIds $ concatMap (\serviceReq -> concatMap (\serviceCategory -> (.id) <$> serviceCategory.peopleCategory) serviceReq.serviceCategory) req.ticketBookingServices
+    let ticketBookingServiceMap = Map.fromList $ (\tbs -> (tbs.shortId, tbs)) <$> ticketBookingServices
+    let ticketServiceMap = Map.fromList $ (\ts -> (ts.id, ts)) <$> ticketService
+    let ticketBookingServiceCategoryMap = Map.fromList $ (\tbsc -> (tbsc.id, tbsc)) <$> ticketBookingServiceCategory
+    let ticketBookingPeopleCategoryMap = Map.fromList $ (\tbpc -> (tbpc.id, tbpc)) <$> ticketBookingPeopleCategory
+    validationResp <- validateCancellationRequest ticketBooking req ticketBookingServiceMap ticketServiceMap ticketBookingServiceCategoryMap ticketBookingPeopleCategoryMap
+
+    resp <- mapM (cancelTicketBookingService ticketBooking) validationResp.cancelledServices
+    let totalRefundAmount = sum $ fst <$> resp
+    let totalNoOfCancelledSeats = sum (snd <$> resp) + fromMaybe 0 ticketBooking.cancelledSeats
+    let status = if totalNoOfCancelledSeats == ticketBooking.bookedSeats then DTTB.Cancelled else ticketBooking.status
+
+    QTB.updateStatusAndCancelledSeatsById status (Just totalNoOfCancelledSeats) ticketBooking.id
+
+    when (totalRefundAmount > 0) $ intializeRefundProcess ticketBooking.shortId (Just ticketBooking.ticketPlaceId) totalRefundAmount merchantId ticketBooking.merchantOperatingCityId
+
+  pure Kernel.Types.APISuccess.Success
+  where
+    makeUserLockKeyTuple :: API.Types.UI.TicketService.TicketBookingCancelReq -> [(Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour, Data.Time.Calendar.Day, Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory)]
+    makeUserLockKeyTuple req' = concatMap (\serviceReq -> (\category -> (serviceReq.businessHourId, category.visitDate, category.serviceCategoryId)) <$> serviceReq.serviceCategory) req'.ticketBookingServices
+
+    executeNLockOperations :: [(Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour, Data.Time.Calendar.Day, Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory)] -> Environment.Flow () -> Environment.Flow ()
+    executeNLockOperations [] cancelAndRefundOperation = cancelAndRefundOperation
+    executeNLockOperations ((businessHourId, visitDate, serviceCategoryId) : lockKeys) cancelAndRefundOperation = do
+      tryUserTicketCancellationLock businessHourId visitDate serviceCategoryId $
+        executeNLockOperations lockKeys cancelAndRefundOperation
+
+    validateCancellationRequest :: DTTB.TicketBooking -> API.Types.UI.TicketService.TicketBookingCancelReq -> TicketBookingServiceShortIdMap -> TicketServiceMap -> TicketBookingServiceCategoryMap -> TicketBookingPeopleCategoryMap -> Environment.Flow CancellationInfo
+    validateCancellationRequest tb req' ticketBookingServiceMap ticketServiceMap ticketBookingCategoryMap ticketBookingPeopleCategoryMap = do
+      unless (tb.status == DTTB.Booked) $
+        throwError $ TicketBookingNotConfirmed (tb.shortId.getShortId)
+      cancelledServices <- forM (req'.ticketBookingServices) $ \tbServiceReq -> do
+        validateTicketBookingService tb tbServiceReq ticketBookingServiceMap ticketServiceMap ticketBookingCategoryMap ticketBookingPeopleCategoryMap
+      return $ CancellationInfo {ticketbooking = tb, cancelledServices = cancelledServices}
+
+    validateTicketBookingService :: DTTB.TicketBooking -> API.Types.UI.TicketService.TicketBookingServiceCancelReq -> TicketBookingServiceShortIdMap -> TicketServiceMap -> TicketBookingServiceCategoryMap -> TicketBookingPeopleCategoryMap -> Environment.Flow ServiceCancellationInfo
+    validateTicketBookingService tb tbServiceReq ticketBookingServiceMap ticketServiceMap ticketBookingCategoryMap ticketBookingPeopleCategoryMap = do
+      currentTime <- getCurrentTime
+      tbService <- fromMaybeM (TicketBookingServiceNotFound (tbServiceReq.shortId.getShortId)) (Map.lookup (tbServiceReq.shortId) ticketBookingServiceMap)
+      ticketService <- fromMaybeM (TicketBookingServiceNotFound (tbServiceReq.shortId.getShortId)) (Map.lookup tbService.ticketServiceId ticketServiceMap)
+
+      unless (tbService.ticketBookingId == tb.id) $
+        throwError $ InvalidRequest "The ticket booking service does not belong to this booking."
+      unless (tbService.status == DTB.Confirmed && ticketService.allowCancellation) $
+        throwError $ InvalidRequest "Ticket Cancellation Not allowed"
+      unless (maybe True (currentTime <) tbService.expiryDate) $
+        throwError $ InvalidRequest "Ticket Cancellation Expired"
+      cancelledServiceCategories <- forM (tbServiceReq.serviceCategory) $ \serviceCategoryReq -> do
+        validateTicketBookingServiceCategory tbService serviceCategoryReq ticketBookingCategoryMap ticketBookingPeopleCategoryMap
+      return $ ServiceCancellationInfo {cancelledService = tbService, cancelledServiceCategories}
+
+    validateTicketBookingServiceCategory :: DTB.TicketBookingService -> API.Types.UI.TicketService.TicketBookingServiceCategoryCancelReq -> TicketBookingServiceCategoryMap -> TicketBookingPeopleCategoryMap -> Environment.Flow CategoryCancellationInfo
+    validateTicketBookingServiceCategory tbService serviceCategoryReq ticketBookingCategoryMap ticketBookingPeopleCategoryMap = do
+      tbCategory <- fromMaybeM (ServiceCategoryNotFound serviceCategoryReq.id.getId) (Map.lookup (serviceCategoryReq.id) ticketBookingCategoryMap)
+      businessHourId <- fromMaybeM (BusinessHourNotFound "Business Hour Not Found") tbService.bHourId
+      serviceCategoryId <- pure tbCategory.serviceCategoryId >>= fromMaybeM (ServiceCategoryNotFound $ "Service Category not present in " <> tbCategory.id.getId)
+      unless (tbCategory.ticketBookingServiceId == tbService.id) $
+        throwError $ InvalidRequest "The ticket booking service category does not belong to this service."
+      when (isJust tbCategory.eventCancelledBy) $
+        throwError $ InvalidRequest "Event is already cancelled"
+      cancelledPeopleCategories <- forM (serviceCategoryReq.peopleCategory) $ \peopleCategory -> do
+        validateTicketBookingPeopleCategory tbCategory peopleCategory ticketBookingPeopleCategoryMap
+      return $ CategoryCancellationInfo {cancelledCategory = tbCategory, cancelledPeopleCategories, businessHourId = businessHourId, serviceCategoryId = Kernel.Types.Id.Id serviceCategoryId}
+
+    validateTicketBookingPeopleCategory :: DTB.TicketBookingServiceCategory -> API.Types.UI.TicketService.TicketBookingServicePeopleCategoryCancelReq -> TicketBookingPeopleCategoryMap -> Environment.Flow PeopleCategoryCancellationInfo
+    validateTicketBookingPeopleCategory tbCategory peopleCategory ticketBookingPeopleCategoryMap = do
+      tbPeopleCategory <- fromMaybeM (PeopleCategoryNotFound peopleCategory.id.getId) (Map.lookup peopleCategory.id ticketBookingPeopleCategoryMap)
+      unless (tbPeopleCategory.ticketBookingServiceCategoryId == tbCategory.id) $
+        throwError $ InvalidRequest "The ticket booking service people category does not belong to this service category."
+      when (tbPeopleCategory.numberOfUnits - fromMaybe 0 tbPeopleCategory.numberOfUnitsCancelled < peopleCategory.quantity) $
+        throwError $ InvalidRequest "Invalid Quantity"
+      when (peopleCategory.quantity <= 0) $
+        throwError $ InvalidRequest "Invalid Quantity"
+      return $ PeopleCategoryCancellationInfo {cancelledPeopleCategory = tbPeopleCategory, cancelledQuantity = peopleCategory.quantity}
+
+cancelTicketBookingService :: DTTB.TicketBooking -> ServiceCancellationInfo -> Environment.Flow (HighPrecMoney, Int)
+cancelTicketBookingService ticketBooking ServiceCancellationInfo {..} = do
+  let startTime = case cancelledService.btype of
+        Domain.Types.BusinessHour.Slot time -> time
+        Domain.Types.BusinessHour.Duration startTime' _ -> startTime'
+  refundAmountAndCancelledSeatRes <- mapM (cancelTBServiceCategory ticketBooking.visitDate startTime) cancelledServiceCategories
+  let totalRefundAmount = sum $ fst <$> refundAmountAndCancelledSeatRes
+  let noOfCancelledSeats = sum $ snd <$> refundAmountAndCancelledSeatRes
+  let tbsStatus = if (fromMaybe 0 cancelledService.cancelledSeats) + noOfCancelledSeats == cancelledService.bookedSeats then DTB.Cancelled else cancelledService.status
+  QTBS.updateStatusAndCancelledSeatsById tbsStatus (Just $ (fromMaybe 0 cancelledService.cancelledSeats) + noOfCancelledSeats) cancelledService.id
+  pure (totalRefundAmount, noOfCancelledSeats)
+
+cancelTBServiceCategory :: Data.Time.Calendar.Day -> Kernel.Prelude.TimeOfDay -> CategoryCancellationInfo -> Environment.Flow (HighPrecMoney, Int)
+cancelTBServiceCategory visitDate startTime CategoryCancellationInfo {..} = do
+  resp <- mapM (cancelTBSPeopleCategory visitDate startTime) cancelledPeopleCategories
+  let totalRefundAmount = sum $ fst <$> resp
+      noOfCancelledSeats = sum $ snd <$> resp
+      isEventCancelled = if cancelledCategory.bookedSeats - noOfCancelledSeats - (fromMaybe 0 cancelledCategory.cancelledSeats) == 0 then Just DTB.User else Nothing
+  whenJust cancelledCategory.serviceCategoryId $ \id -> updateCancelledSeatsInSeatManagement (Kernel.Types.Id.Id id) noOfCancelledSeats visitDate
+
+  QTBSC.updateCancellationDetailsById (Just $ noOfCancelledSeats + fromMaybe 0 cancelledCategory.cancelledSeats) (Just $ totalRefundAmount + fromMaybe 0 cancelledCategory.amountToRefund) isEventCancelled cancelledCategory.id
+
+  pure (totalRefundAmount, noOfCancelledSeats)
+
+cancelTBSPeopleCategory :: Data.Time.Calendar.Day -> Kernel.Prelude.TimeOfDay -> PeopleCategoryCancellationInfo -> Environment.Flow (HighPrecMoney, Int)
+cancelTBSPeopleCategory visitDate startTime PeopleCategoryCancellationInfo {..} = do
+  mbCancellationCharges <- case cancelledPeopleCategory.peopleCategoryId of
+    Just peopleCategoryId -> do
+      peopleCategory <- QPC.findById peopleCategoryId
+      pure $ (.cancellationCharges) =<< peopleCategory
+    Nothing -> pure Nothing
+  cancellationCharge <- case mbCancellationCharges of
+    Just cancellationCharges -> calculateCancellationChargesForPeopleCategory cancelledPeopleCategory cancelledQuantity cancellationCharges
+    Nothing -> pure $ HighPrecMoney 0
+  let amountToRefund = cancelledPeopleCategory.pricePerUnit.amount * fromIntegral cancelledQuantity - cancellationCharge
+
+  QTBPC.updateTicketPeopleUnitsAndAmountById (Just $ cancelledQuantity + fromMaybe 0 cancelledPeopleCategory.numberOfUnitsCancelled) (Just $ amountToRefund + fromMaybe 0 cancelledPeopleCategory.amountToRefund) cancelledPeopleCategory.id
+  pure (amountToRefund, cancelledQuantity)
+  where
+    calculateCancellationChargesForPeopleCategory :: DTB.TicketBookingPeopleCategory -> Int -> [Domain.Types.ServicePeopleCategory.CancellationCharge] -> Environment.Flow HighPrecMoney
+    calculateCancellationChargesForPeopleCategory tBSPeopleCategory noOfTicketToCancel cancellationCharges' = do
+      istCurrentTime <- getLocalCurrentTime 19800
+      let visitDateTime = UTCTime visitDate (timeOfDayToTime startTime)
+          remainingSeconds = max 0 (Kernel.Prelude.roundToIntegral $ diffUTCTime visitDateTime istCurrentTime)
+
+      case filter (\cancellationCharge -> cancellationCharge.time <= remainingSeconds) $ sortBy (comparing (.time)) cancellationCharges' of
+        [] -> pure $ HighPrecMoney 0
+        cChange -> case (Kernel.Prelude.last cChange).cancelCharge of
+          Domain.Types.ServicePeopleCategory.FlatFee fee ->
+            let chargeAmount = min fee (tBSPeopleCategory.pricePerUnit.amount)
+             in pure $ chargeAmount * fromIntegral noOfTicketToCancel
+          Domain.Types.ServicePeopleCategory.Percentage per ->
+            let chargeAmount = (HighPrecMoney (toRational per) * tBSPeopleCategory.pricePerUnit.amount * fromIntegral noOfTicketToCancel) / 100
+             in pure chargeAmount
+
+updateCancelledSeatsInSeatManagement :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Int -> Data.Time.Calendar.Day -> Environment.Flow ()
+updateCancelledSeatsInSeatManagement categoryId noOfSeatsToCancel date = do
+  mbSeatM <- QTSM.findByTicketServiceCategoryIdAndDate categoryId date
+  whenJust mbSeatM $ \seatM -> QTSM.updateBookedSeats (max 0 $ seatM.booked - noOfSeatsToCancel) categoryId date
+
+intializeRefundProcess :: Kernel.Types.Id.ShortId DTTB.TicketBooking -> Maybe $ Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> HighPrecMoney -> Kernel.Types.Id.Id Merchant.Merchant -> Kernel.Types.Id.Id MerchantOperatingCity.MerchantOperatingCity -> Environment.Flow ()
+intializeRefundProcess ticketBookingShortId ticketPlaceId amountToRefund personMerchantId personMerchantOperatingCityId = do
+  refundId <- generateGUID
+  let autoRefundReq =
+        Payment.AutoRefundReq
+          { orderId = ticketBookingShortId.getShortId,
+            amount = amountToRefund,
+            requestId = refundId
+          }
+      commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant personMerchantId
+      createRefundCall = Payment.refundOrder personMerchantId personMerchantOperatingCityId ticketPlaceId Payment.Normal
+  void $ try @_ @SomeException $ DPayment.refundService (autoRefundReq, Kernel.Types.Id.Id {Kernel.Types.Id.getId = refundId}) commonMerchantId createRefundCall
+
+tryUserTicketCancellationLock :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Environment.Flow () -> Environment.Flow ()
+tryUserTicketCancellationLock businessHourId date serviceCategoryId executeFunction = do
+  isMerchantLockAcquired <- isMerchantTicketCancellationLock businessHourId date serviceCategoryId
+  when isMerchantLockAcquired $ throwError $ InvalidRequest "Merchant is cancelling the service"
+  Redis.whenWithLockRedis lockKey 10 executeFunction
+  where
+    lockKey = mkUserTicketBookingCancellationKey businessHourId date serviceCategoryId
+
+tryMerchantTicketCancellationLock :: (Redis.HedisFlow m r) => Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> m Bool
+tryMerchantTicketCancellationLock businessHourId date serviceCategoryId = do
+  isUserLockAcquired <- isUserTicketCancellationLock businessHourId date serviceCategoryId
+  when isUserLockAcquired $ throwError $ InvalidRequest "Some User Ticket cancellation is in progress, try again"
+  Redis.tryLockRedis lockKey 10
+  where
+    lockKey = mkMerchantTicketBookingCancellationKey businessHourId date serviceCategoryId
+
+isUserTicketCancellationLock :: (Redis.HedisFlow m r) => Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> m Bool
+isUserTicketCancellationLock businessHourId date serviceCategoryId = do
+  (\(val :: Maybe Bool) -> isJust val) <$> Redis.safeGet (mkUserTicketBookingCancellationKey businessHourId date serviceCategoryId)
+
+isMerchantTicketCancellationLock :: (Redis.HedisFlow m r) => Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> m Bool
+isMerchantTicketCancellationLock businessHourId date serviceCategoryId = do
+  (\(val :: Maybe Bool) -> isJust val) <$> Redis.safeGet (mkMerchantTicketBookingCancellationKey businessHourId date serviceCategoryId)
+
+mkMerchantTicketBookingCancellationKey :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Text
+mkMerchantTicketBookingCancellationKey businessHourId date serviceCategoryId =
+  "Merchant:ticket:booking:cancel:-" <> businessHourId.getId <> "-" <> show date <> "-" <> serviceCategoryId.getId
+
+mkUserTicketBookingCancellationKey :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Text
+mkUserTicketBookingCancellationKey businessHourId date serviceCategoryId =
+  "User:ticket:booking:cancel:-" <> businessHourId.getId <> "-" <> show date <> "-" <> serviceCategoryId.getId

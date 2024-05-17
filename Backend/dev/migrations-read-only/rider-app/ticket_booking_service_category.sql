@@ -16,3 +16,13 @@ ALTER TABLE atlas_app.ticket_booking_service_category ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN currency text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking_service_category ALTER COLUMN booked_seats SET DEFAULT 0;
+ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN visit_date date ;
+ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN event_cancelled_by text ;
+ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN cancelled_seats integer ;
+ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN btype text ;
+ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN amount_to_refund double precision ;

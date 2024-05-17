@@ -5,6 +5,7 @@
 
 module Storage.Beam.TicketBookingService where
 
+import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.TicketBookingService
@@ -17,7 +18,10 @@ import Tools.Beam.UtilsTH
 data TicketBookingServiceT f = TicketBookingServiceT
   { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    bHourId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    bookedSeats :: B.C f Kernel.Prelude.Int,
     btype :: B.C f Domain.Types.BusinessHour.BusinessHourType,
+    cancelledSeats :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     expiryDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     id :: B.C f Kernel.Prelude.Text,
@@ -28,6 +32,7 @@ data TicketBookingServiceT f = TicketBookingServiceT
     ticketServiceId :: B.C f Kernel.Prelude.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     verificationCount :: B.C f Kernel.Prelude.Int,
+    visitDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)

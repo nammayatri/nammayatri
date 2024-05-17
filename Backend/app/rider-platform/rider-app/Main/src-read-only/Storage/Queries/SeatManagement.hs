@@ -39,6 +39,19 @@ updateBlockedSeats blocked (Kernel.Types.Id.Id ticketServiceCategoryId) date = d
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.blocked blocked, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.ticketServiceCategoryId $ Se.Eq ticketServiceCategoryId, Se.Is Beam.date $ Se.Eq date]]
 
+updateBookedAndBlockedSeats ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m ())
+updateBookedAndBlockedSeats booked blocked (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.booked booked, Se.Set Beam.blocked blocked, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq ticketServiceCategoryId,
+          Se.Is Beam.date $ Se.Eq date
+        ]
+    ]
+
 updateBookedSeats :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m ())
 updateBookedSeats booked (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
   _now <- getCurrentTime
