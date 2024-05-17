@@ -253,7 +253,7 @@ foreign import clearChatMessages :: Effect Unit
 foreign import getLocationPermissionStatus :: Fn1 Unit String 
 foreign import pauseYoutubeVideo :: Unit -> Unit 
 foreign import releaseYoutubeView :: Unit -> Unit 
-foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
+foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit) -> (String -> String -> String -> Boolean -> action) -> Effect Unit
 foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> Boolean -> action) -> Boolean -> Effect Unit
 foreign import updateInputString :: String -> Unit
 foreign import downloadMLTranslationModel :: EffectFn1 String Unit
@@ -494,6 +494,7 @@ type LocateOnMapConfig = {
   , points :: (Array Location)
   , zoomLevel :: Number
   , labelId :: String
+  , pointerId :: String
   , markerCallbackForTags :: Array String
   , markerCallback :: String
   , specialZoneMarkerConfig :: SpecialZoneMarkerConfig
@@ -513,6 +514,7 @@ locateOnMapConfig = {
   , points : []
   , zoomLevel : Constant.zoomLevel
   , labelId : ""
+  , pointerId : ""
   , markerCallbackForTags : []
   , markerCallback : ""
   , specialZoneMarkerConfig : {

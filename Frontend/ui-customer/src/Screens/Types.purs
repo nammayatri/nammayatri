@@ -2383,6 +2383,7 @@ type LocateOnMapProps = {
   , sourceGates :: Maybe (Array Location)
   , isSpecialPickUpGate :: Boolean
   , cameraAnimatedToSource :: Boolean
+  , isSpotInVisibleRange :: Boolean
 }
 
 data NavigationMode = WALK | DRIVE

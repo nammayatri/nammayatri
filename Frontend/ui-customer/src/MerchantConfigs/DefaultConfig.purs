@@ -262,9 +262,10 @@ config =
   , mapConfig : 
       { locateOnMapConfig : 
           { dottedLineConfig : 
-              { visible : false
+              { visible : true
               , range : 100
               , color : "#323643"
+              , minimumRAM : 2
               },
             apiTriggerRadius : 10.0,
             pickUpToSourceThreshold : 1.0,
@@ -273,6 +274,7 @@ config =
               , showHotSpotsWithinRadius : 150.0
               , enableHotSpot : EHC.jBridgeMethodExists "locateOnMapV2"
               , updateHotSpotOutSideRange : 200.0
+              , visibilityCameraHeight : 16.0
               }
           }
       , labelTextSize : 30

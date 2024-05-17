@@ -2432,12 +2432,13 @@ export const storeCallBackLocateOnMap = function (cb) {
   return function (action) {
     return function () {
       try {
-        const callback = callbackMapper.map(function (key, lat, lon) {
+        const callback = callbackMapper.map(function (key, lat, lon, isInVisibleRange) {
+          const isSpotInVisibleRange = isInVisibleRange == undefined || isInVisibleRange == "true";
           if (timerIdDebounce) {
             clearTimeout(timerIdDebounce);
           }
           timerIdDebounce = setTimeout(() => {
-            cb(action(key)(lat)(lon))();
+            cb(action(key)(lat)(lon)(isSpotInVisibleRange))();
           }, 100);
         });
         window.JBridge.storeCallBackLocateOnMap(callback);

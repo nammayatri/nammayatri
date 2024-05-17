@@ -99,7 +99,7 @@ instance loggableAction :: Loggable Action where
     ClearEditText -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "editted_text_onclear"
     SelectedCurrentLocation key lat lon ->  trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "current_location_selected"
     MAPREADY key latitude longitude -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "map_view_rendered"
-    UpdateLocation key lat lon -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "location_updated"
+    UpdateLocation key lat lon _ -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "location_updated"
     EditTextFocusChanged -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "edit_text_change_focussed"
     UpdateCurrLocName lat lon name -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "current_location_name_updated"
     CurrentLocationAction -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "current_location"
@@ -128,7 +128,7 @@ data Action = BackPressed AddNewAddressScreenState
             | SetLocationOnMap
             | MAPREADY String String String
             | AfterRender
-            | UpdateLocation String String String
+            | UpdateLocation String String String Boolean
             | UpdateCurrLocName String String String
             | UpdateCurrentLocation String String
             | RecenterCurrentLocation
@@ -160,14 +160,14 @@ eval (ClearEditText) state = do
   continue state{props{isSearchedLocationServiceable = true}}
 
 eval SetLocationOnMap state = do
-  let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "AddAddressPin"}
+  let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "AddAddressPin", pointerId = getNewIDWithTag "AddAddressPointer"}
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ toggleBtnLoader "" false
   _ <- pure $ firebaseLogEvent "ny_user_favourite_select_on_map"
   let newState = state{props{isLocateOnMap = true}}
   continue newState
 
-eval (UpdateLocation key lat lon) state = do
+eval (UpdateLocation key lat lon isInVisibleRange) state = do
   let latitude = fromMaybe 0.0 (Number.fromString lat)
       longitude = fromMaybe 0.0 (Number.fromString lon)
   case key of

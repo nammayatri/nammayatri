@@ -772,12 +772,12 @@ data Action = NoAction
             | QuoteListModelActionController QuoteListModelController.Action
             | DriverInfoCardActionController DriverInfoCardController.Action
             | RatingCardAC RatingCard.Action
-            | UpdateLocation String String String
+            | UpdateLocation String String String Boolean
             | CancelRidePopUpAction CancelRidePopUp.Action
             | PopUpModalAction PopUpModal.Action
             | TrackDriver GetDriverLocationResp
             | HandleCallback
-            | UpdatePickupLocation String String String
+            | UpdatePickupLocation String String String Boolean
             | CloseLocationTracking
             | ShowCallDialer CallType
             | CloseShowCallDialer
@@ -1727,16 +1727,16 @@ eval OpenSearchLocation state = do
 
 eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = continueWithCmd state [ do pure $ OpenSearchLocation ]
 
-eval (UpdateLocation key lat lon) state = do
+eval (UpdateLocation key lat lon isInVisibleRange) state = do
   let latitude = fromMaybe 0.0 (NUM.fromString lat)
       longitude = fromMaybe 0.0 (NUM.fromString lon)
   if os == "IOS" && not state.props.locateOnMapProps.cameraAnimatedToSource && (getDistanceBwCordinates latitude longitude state.props.sourceLat state.props.sourceLong) > 5.0 then do
-    continueWithCmd state{ props{ locateOnMapProps{ cameraAnimatedToSource = true } } } [do
+    continueWithCmd state{ props{ locateOnMapProps{ cameraAnimatedToSource = true, isSpotInVisibleRange = isInVisibleRange } } } [do
       void $ animateCamera state.props.sourceLat state.props.sourceLong 25.0 "NO_ZOOM"
       pure NoAction
     ]
   else do
-    let updatedState = state{ props{ locateOnMapProps{ cameraAnimatedToSource = true } } }
+    let updatedState = state{ props{ locateOnMapProps{ cameraAnimatedToSource = true, isSpotInVisibleRange = isInVisibleRange } } }
         sourceManuallyMoved = if updatedState.props.isSource == Just true then true else updatedState.props.rideSearchProps.sourceManuallyMoved
         destManuallyMoved = if updatedState.props.isSource == Just false then true else updatedState.props.rideSearchProps.destManuallyMoved
     case key of
@@ -1748,16 +1748,16 @@ eval (UpdateLocation key lat lon) state = do
               Nothing -> continue updatedState
     
 
-eval (UpdatePickupLocation key lat lon) state = do
+eval (UpdatePickupLocation key lat lon isInVisibleRange) state = do
   let latitude = fromMaybe 0.0 (NUM.fromString lat)
       longitude = fromMaybe 0.0 (NUM.fromString lon)
   if os == "IOS" && not state.props.locateOnMapProps.cameraAnimatedToSource && (getDistanceBwCordinates latitude longitude state.props.sourceLat state.props.sourceLong) > 5.0 then do
-    continueWithCmd state{ props{ locateOnMapProps{ cameraAnimatedToSource = true } } } [do
+    continueWithCmd state{ props{ locateOnMapProps{ cameraAnimatedToSource = true, isSpotInVisibleRange = isInVisibleRange } } } [do
       void $ animateCamera state.props.sourceLat state.props.sourceLong 25.0 "NO_ZOOM"
       pure NoAction
     ]
   else do
-    let updatedState = state{ props{ locateOnMapProps{ cameraAnimatedToSource = true } } }
+    let updatedState = state{ props{ locateOnMapProps{ cameraAnimatedToSource = true, isSpotInVisibleRange = isInVisibleRange } } }
         sourceManuallyMoved = true
     case key of
       "LatLon" -> do
@@ -2275,7 +2275,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
       lon = if isDestinationNotEmpty then state.props.destinationLong else state.props.sourceLong
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ removeAllPolylines ""
-  _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon state.props.confirmLocationCategory }}
+  _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", pointerId = getNewIDWithTag "LocateOnMapPointer", locationName = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon state.props.confirmLocationCategory }}
   pure $ unsafePerformEffect $ logEvent state.data.logField if state.props.isSource == Just true  then "ny_user_src_set_location_on_map" else "ny_user_dest_set_location_on_map"
   let srcValue = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source
   when (state.data.destination == "") $ do
@@ -2284,21 +2284,22 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
                   { data {source = srcValue}
                   , props { isSearchLocation = LocateOnMap
                           , currentStage = SearchLocationModel
-                          , locateOnMap = true,
-                           isRideServiceable = true
-                           , showlocUnserviceablePopUp = false
-                           , searchLocationModelProps{isAutoComplete = false}
-                           , locateOnMapLocation
-                              { sourceLat = state.props.sourceLat
-                              , sourceLng = state.props.sourceLong
-                              , source = state.data.source
-                              , sourceAddress = state.data.sourceAddress
-                              , destinationLat = if state.props.destinationLat /= 0.0 then state.props.destinationLat else state.props.sourceLat
-                              , destinationLng = if state.props.destinationLong /= 0.0 then state.props.destinationLong else state.props.sourceLong
-                              , destination = state.data.destination
-                              , destinationAddress = state.data.destinationAddress 
-                              }
-                           }
+                          , locateOnMap = true
+                          , isRideServiceable = true
+                          , showlocUnserviceablePopUp = false
+                          , searchLocationModelProps{isAutoComplete = false}
+                          , locateOnMapLocation
+                             { sourceLat = state.props.sourceLat
+                             , sourceLng = state.props.sourceLong
+                             , source = state.data.source
+                             , sourceAddress = state.data.sourceAddress
+                             , destinationLat = if state.props.destinationLat /= 0.0 then state.props.destinationLat else state.props.sourceLat
+                             , destinationLng = if state.props.destinationLong /= 0.0 then state.props.destinationLong else state.props.sourceLong
+                             , destination = state.data.destination
+                             , destinationAddress = state.data.destinationAddress 
+                             }
+                          , hotSpot { centroidPoint = Nothing }
+                          }
                     }
   (updateAndExit newState) $ UpdatedState newState false
 

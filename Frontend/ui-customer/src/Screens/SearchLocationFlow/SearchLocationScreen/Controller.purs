@@ -89,7 +89,7 @@ data Action = NoAction
             | MetroRouteMapAction
             | ClearTextField SearchLocationTextField
             | AutoCompleteCallBack String Boolean
-            | LocFromMap String String String
+            | LocFromMap String String String Boolean
             | LocationTagBarAC (Array LocationListItemState) LocationTagBarController.Action
             | LocationListItemAC (Array LocationListItemState) LocationListItemController.Action 
             | FavouriteLocationModelAC FavouriteLocModelController.Action
@@ -398,7 +398,7 @@ eval (SetLocationOnMap) state = do
   where 
     mkLatLong currentLat currentLng loc = { lat: MB.fromMaybe currentLat loc.lat, lng: MB.fromMaybe currentLng loc.lon }
 
-eval (LocFromMap key lat lon) state = do
+eval (LocFromMap key lat lon isInVisibleRange) state = do
   case key of 
     "LatLon" -> do 
       let newState = state{data{defaultGate = ""}}

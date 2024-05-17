@@ -314,7 +314,8 @@ type LocateOnMapConfigs = {
 type DottedLineConfig = {
   visible :: Boolean,
   range :: Int,
-  color :: String
+  color :: String,
+  minimumRAM :: Int
 }
 
 type PurpleRideConfig = {
@@ -393,7 +394,8 @@ type HotSpotConfig = {
   goToNearestPointWithinRadius :: Number,
   showHotSpotsWithinRadius :: Number,
   enableHotSpot :: Boolean,
-  updateHotSpotOutSideRange :: Number
+  updateHotSpotOutSideRange :: Number,
+  visibilityCameraHeight :: Number
 }
 
 type CityConfig = {

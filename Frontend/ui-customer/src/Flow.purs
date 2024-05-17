@@ -1989,8 +1989,8 @@ homeScreenFlow = do
       else do
         findEstimates state
     GOTO_CONFIRMING_LOCATION_STAGE finalState -> do
-      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = finalState.props.sourceLat, lon = finalState.props.sourceLong, geoJson = finalState.data.polygonCoordinates, points = finalState.data.nearByPickUpPoints, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" finalState.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig { labelImage = zoneLabelIcon finalState.props.confirmLocationCategory } }
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = ConfirmingLocation, rideRequestFlow = true, locateOnMapLocation { sourceLat = finalState.props.sourceLat, sourceLng = finalState.props.sourceLong, source = finalState.data.source, sourceAddress = finalState.data.sourceAddress }, locateOnMapProps { cameraAnimatedToSource = false } } })
+      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = finalState.props.sourceLat, lon = finalState.props.sourceLong, geoJson = finalState.data.polygonCoordinates, points = finalState.data.nearByPickUpPoints, labelId = getNewIDWithTag "LocateOnMapPin", pointerId = getNewIDWithTag "LocateOnMapPointer", locationName = fromMaybe "" finalState.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon finalState.props.confirmLocationCategory }}
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true, locateOnMapLocation{sourceLat = finalState.props.sourceLat, sourceLng = finalState.props.sourceLong, source = finalState.data.source, sourceAddress = finalState.data.sourceAddress }, locateOnMapProps{ cameraAnimatedToSource = false } }})
       void $ pure $ updateLocalStage ConfirmingLocation
       void $ lift $ lift $ toggleLoader false
       homeScreenFlow
@@ -3022,7 +3022,7 @@ addNewAddressScreenFlow input = do
                     }
               )
         void $ pure $ removeAllPolylines ""
-        liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints, labelId = getNewIDWithTag "AddAddressPin", locationName = srcSpecialLocation.locationName }
+        liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints, labelId = getNewIDWithTag "AddAddressPin", pointerId = getNewIDWithTag "AddAddressPointer", locationName = srcSpecialLocation.locationName }
         addNewAddressScreenFlow ""
       else do
         fullAddress <- getPlaceName lat lon gateAddress true
@@ -5099,6 +5099,7 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
               , points = pickUpPoints
               , zoomLevel = zoomLevel
               , labelId = getNewIDWithTag "LocateOnMapPin"
+              , pointerId = getNewIDWithTag "LocateOnMapPointer"
               , locationName = locationName
               , specialZoneMarkerConfig { labelImage = zoneLabelIcon zoneType }
               }
@@ -5110,27 +5111,15 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
       points = filterHotSpots state serviceabilityResp.hotSpotInfo lat lon
     if (state.data.nearByPickUpPoints /= points && not (null points)) then do
       void $ pure $ removeAllPolylines ""
-      modifyScreenState
-        $ HomeScreenStateType
-            ( \homeScreen ->
-                homeScreen
-                  { data
-                    { polygonCoordinates = ""
-                    , nearByPickUpPoints = points
-                    }
-                  , props
-                    { isSpecialZone = false
-                    , defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (points !! 0)).place
-                    , confirmLocationCategory = zoneType
-                    , hotSpot { centroidPoint = Just { lat: lat, lng: lon } }
-                    }
-                  }
-            )
-      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { points = points, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin" }
-    else
-      pure unit
-  else
-    pure unit
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data {  polygonCoordinates = ""
+                                                                                , nearByPickUpPoints = points}
+                                                                        , props { isSpecialZone = false 
+                                                                                , defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (points!!0)).place
+                                                                                , confirmLocationCategory = zoneType
+                                                                                , hotSpot{ centroidPoint = Just { lat : lat, lng : lon } } }})
+      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { points = points, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", pointerId = getNewIDWithTag "LocateOnMapPointer"}
+    else pure unit
+  else pure unit
 
 firstRideCompletedEvent :: String -> FlowBT String Unit
 firstRideCompletedEvent str = do

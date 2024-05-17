@@ -483,6 +483,7 @@ view push state =
                     , gravity CENTER
                     , accessibility DISABLE
                     , orientation VERTICAL
+                    , id (getNewIDWithTag "LocateOnMapPointer")
                     , visibility $ boolToVisibility $ state.data.config.feature.enableSpecialPickup && ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)
                     ]
                     [ imageView
@@ -3419,7 +3420,7 @@ mapView push state idTag =
                 if os == "IOS" then
                   case state.props.currentStage of  
                     HomeScreen -> void $ setMapPadding 0 0 0 0
-                    ConfirmingLocation -> void $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = state.props.sourceLat, lon = state.props.sourceLong, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin" }
+                    ConfirmingLocation -> void $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = state.props.sourceLat, lon = state.props.sourceLong, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", pointerId = getNewIDWithTag "LocateOnMapPointer" }
                     _ -> pure unit
                 else pure unit
                 if state.props.openChatScreen && state.props.currentStage == RideAccepted then push OpenChatScreen

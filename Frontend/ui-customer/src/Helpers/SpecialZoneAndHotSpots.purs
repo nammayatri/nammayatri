@@ -89,12 +89,15 @@ getSpecialTag specialTag =
 
 getConfirmLocationCategory :: HomeScreenState -> ZoneType
 getConfirmLocationCategory state = 
-  if state.props.locateOnMapProps.isSpecialPickUpGate then 
-    SPECIAL_PICKUP 
-  else if isJust state.props.hotSpot.centroidPoint then
-    HOTSPOT (isJust state.props.hotSpot.selectedSpot)
-  else 
-    state.props.confirmLocationCategory
+  if state.props.locateOnMapProps.isSpotInVisibleRange then
+    if state.props.locateOnMapProps.isSpecialPickUpGate then 
+      SPECIAL_PICKUP 
+    else if isJust state.props.hotSpot.centroidPoint then
+      HOTSPOT (isJust state.props.hotSpot.selectedSpot)
+    else 
+      state.props.confirmLocationCategory
+  else
+    NOZONE
 
 transformHotSpotInfo :: Array SA.HotSpotInfo -> Array HotSpotData
 transformHotSpotInfo hotSpotInfo = map (\hotSpot -> transformHotSpot hotSpot) hotSpotInfo
