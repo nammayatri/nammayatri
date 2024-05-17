@@ -700,7 +700,7 @@ type QuoteListItemState =
     seconds :: Int
   , id :: String  
   , timer :: String
-  , timeLeft :: Int
+  , distanceToPickup :: String
   , driverRating :: Number
   , profile :: String
   , price :: String
@@ -711,6 +711,7 @@ type QuoteListItemState =
   , city :: City
   , vehicleImage :: String
   , serviceTierName :: Maybe String
+  , vehicleModel :: Maybe String
   }
 
 

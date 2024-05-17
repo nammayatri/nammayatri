@@ -674,7 +674,8 @@ newtype QuoteAPIEntity = QuoteAPIEntity {
   agencyCompletedRidesCount :: Maybe Int,
   serviceTierName :: Maybe String,
   serviceTierShortDesc :: Maybe String,
-  airConditioned :: Maybe Boolean
+  airConditioned :: Maybe Boolean,
+  vehicleModel :: Maybe String
 }
 
 newtype QuoteAPIDetails = QuoteAPIDetails {
@@ -719,6 +720,7 @@ newtype DriverOfferAPIEntity = DriverOfferAPIEntity
   , driverName :: String
   , distanceToPickup :: Maybe Number
   , durationToPickup :: Maybe Int
+  , gender :: Maybe String
   }
 
 newtype MetroOffer = MetroOffer {

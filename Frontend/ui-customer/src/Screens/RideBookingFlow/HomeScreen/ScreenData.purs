@@ -511,7 +511,8 @@ dummyQuoteAPIEntity = QuoteAPIEntity {
   quoteDetails : QuoteAPIDetails {fareProductType : "", contents : dummyDriverOfferAPIEntity},
   serviceTierShortDesc : Nothing,
   serviceTierName : Nothing, 
-  airConditioned : Nothing
+  airConditioned : Nothing,
+  vehicleModel : Nothing
 }
 
 dummyDriverOfferAPIEntity :: QuoteAPIContents
@@ -523,6 +524,7 @@ dummyDriverOfferAPIEntity =
         , driverName: ""
         , distanceToPickup: Nothing
         , durationToPickup: Nothing
+        , gender: Just "FEMALE"
         }
 
 dummyLocationName :: PlaceName

@@ -23,8 +23,8 @@ config =
     { primaryButtonCorner: 8.0
     , expiresColor: "#E55454"
     , driverImagebg: "#F1F1F1"
-    , vehicleHeight: 37
-    , vehicleWidth: 40
+    , vehicleHeight: 42
+    , vehicleWidth: 42
     }
   , quoteListModel:
     { backgroundColor: "#2C2F3A"

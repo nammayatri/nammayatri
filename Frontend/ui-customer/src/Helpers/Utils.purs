@@ -542,6 +542,14 @@ emitTerminateApp screen exitApp = runFn3 emitJOSEvent "java" "onEvent" $ encode 
   }
 }
 
+getDriverProfile :: String -> Maybe String -> String
+getDriverProfile vehicleVariant gender = 
+  case vehicleVariant, gender of 
+    "AUTO_RICKSHAW", Just "FEMALE" -> fetchImage COMMON_ASSET "ny_ic_driver_avatar_female"
+    "AUTO_RICKSHAW", _        -> fetchImage FF_COMMON_ASSET "ny_ic_driver_avatar"
+    _, Just "FEMALE"               -> fetchImage COMMON_ASSET "ny_ic_driver_avatar_cab_female"
+    _, _                      -> fetchImage COMMON_ASSET "ny_ic_driver_avatar_cab"
+
 makeNumber :: String -> String
 makeNumber number = (DS.take 2 number) <> " " <> (DS.drop 2 (DS.take 4 number)) <> " " <>  reverse' (DS.drop 4 (reverse' (DS.drop 4 number))) <> " " <>  reverse' (DS.take 4 (reverse' number))
 

@@ -32,12 +32,12 @@ import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Array (mapWithIndex, filter, head, find, foldl)
 import Control.Monad.Except.Trans (lift)
 import Data.Array as DA
-import Data.Int (toNumber, round, fromString)
+import Data.Int (toNumber, round, fromString, fromNumber)
 import Data.Lens ((^.), view)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim, null)
 import Data.Function.Uncurried (runFn1)
-import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig, getAllServices, getSelectedServices)
+import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig, getAllServices, getSelectedServices, getDriverProfile)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
 import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage,fetchImage, FetchImageFrom(..))
@@ -132,21 +132,26 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
     (DRIVER_OFFER contents) -> 
       let (DriverOfferAPIEntity quoteDetails) = contents
           expiryTime = (getExpiryTime quoteDetails.validTill isForLostAndFound) -4
-          timeLeft = fromMaybe 0 quoteDetails.durationToPickup
+          pickUpDistance = fromMaybe 0 (fromNumber (fromMaybe 0.0 quoteDetails.distanceToPickup))
+          pickUpDistanceNum = fromMaybe 0.0 quoteDetails.distanceToPickup
+          distanceToPickup = if pickUpDistance == 0 then (getString NEARBY) else if pickUpDistance > 1000 then ((parseFloat (pickUpDistanceNum/1000.0) 1) <> "km away") else (show pickUpDistance) <> "m away"
+          serviceTierName = quoteEntity.serviceTierName
+          driverProfile = getDriverProfile quoteEntity.vehicleVariant quoteDetails.gender
       in {  seconds : expiryTime
           , id : quoteEntity.id
           , timer : show expiryTime
-          , timeLeft : timeLeft/60
+          , distanceToPickup : distanceToPickup
           , driverRating : fromMaybe 0.0 quoteDetails.rating
-          , profile : ""
+          , profile : driverProfile 
           , price :  show quoteEntity.estimatedTotalFare
           , vehicleType : quoteEntity.vehicleVariant
           , driverName : quoteDetails.driverName
           , selectedQuote : Nothing
           , vehicleImage : getVehicleVariantImage quoteEntity.vehicleVariant RIGHT_VIEW
-          , serviceTierName : quoteEntity.serviceTierName
+          , serviceTierName : serviceTierName
           , appConfig : getAppConfig appConfig
           , city : city
+          , vehicleModel : quoteEntity.vehicleModel
         }
     (RENTAL contents) -> QLI.config
     (INTER_CITY contents) -> QLI.config

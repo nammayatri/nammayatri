@@ -32,7 +32,7 @@ config = {
    seconds : 15
   , id : ""  
   , timer : "-"
-  , timeLeft : 0
+  , distanceToPickup : ""
   , driverRating : 4.0
   , profile : ""
   , price : "0"
@@ -43,4 +43,5 @@ config = {
   , selectedQuote : Nothing
   , appConfig : getAppConfig appConfig
   , city : AnyCity
+  , vehicleModel : Nothing
   }
