@@ -1580,7 +1580,7 @@ homeScreenFlow = do
         RentalScreenData.initData
           { data
               { pickUpLoc 
-                  { address = getString STR.CURRENT_LOCATION
+                  { address = if DS.null state.data.source then getString STR.CURRENT_LOCATION else state.data.source
                   , city = state.props.city
                   , lat = Just state.props.currentLocation.lat
                   , lon = Just state.props.currentLocation.lng
@@ -4394,7 +4394,7 @@ rentalScreenFlow = do
       --   modifyScreenState $ RentalScreenStateType (\_ -> state {data {currentStage = RENTAL_SELECT_PACKAGE}, props{showPrimaryButton = true, showPopUpModal = true}})
       --   rentalScreenFlow 
       -- else do  
-      if false && state.data.pickUpLoc.address == (getString STR.CURRENT_LOCATION) then do
+      if state.data.pickUpLoc.address == (getString STR.CURRENT_LOCATION) then do
         let placeLat = fromMaybe 0.0 state.data.pickUpLoc.lat
             placeLon = fromMaybe 0.0 state.data.pickUpLoc.lon
             currTextField = SearchLocPickup
