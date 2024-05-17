@@ -1163,7 +1163,7 @@ getEN stringKey =
         FINAL_FARE_DESCRIPTION -> "Final fare will be based on the actual trip duration rounded up to the next hour or the trip duration selected (whichever is higher)."
         EXCESS_DISTANCE_CHARGE_DESCRIPTION charges -> "Excess distance will be charged at " <> charges
         ADDITIONAL_CHARGES_DESCRIPTION -> "Final fare will be based on the actual trip duration and distance"
-        PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "Parking fees and tolls are not included. Please pay those separately to the driver."
+        PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "Parking fees and other surcharges are not included. Please pay those separately to the driver."
         NIGHT_TIME_FEE_DESCRIPTION -> "A flat night time fee of {} will be charged if your ride starts/ends anytime between 10:00 PM and 5:00 AM"
         CHOOSE_YOUR_RENTAL_RIDE -> "Choose Your Rental Ride"
         FIRST_STOP_OPTIONAL -> "First Stop (Optional)"
@@ -1220,8 +1220,8 @@ getEN stringKey =
         RIDE_BOOKING -> "Ride Booking"
         SPECIAL_ZONE_RENTAL_INELIGIBLE -> "Locations within special zone are not eligible for rental rides."
         SERVICES -> "Services"
-        YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "You have an upcoming rental booking on " <> bookingTime
-        YOU_HAVE_UPCOMING_INTERCITY_BOOKING bookingTime -> "You have an upcoming intercity booking on " <> bookingTime 
+        YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "You have an upcoming rental booking on <b>" <> bookingTime <> "</b>"
+        YOU_HAVE_UPCOMING_INTERCITY_BOOKING bookingTime -> "You have an upcoming intercity booking on <b>" <> bookingTime <> "</b>"
         SCHEDULED -> "Scheduled"
         UPCOMING_BOOKINGS -> "You have upcoming bookings"
         RENTALS_ -> "Rentals"
@@ -1231,7 +1231,7 @@ getEN stringKey =
         EXTRA_PER_KM_FARE -> "Extra per KM Fare"
         EXTRA_PER_MINUTE_FARE -> "Extra per Minute Fare"
         PICKUP_CHARGES -> "Pickup Charges"
-        WAITING_CHARGES_AFTER_5_MINS -> "Waiting Charges (after 5 mins)"
+        WAITING_CHARGES_AFTER_3_MINS -> "Waiting Charges (after 3 mins)"
         TOLL_CHARGES_ESTIMATED -> "Toll Charges (Estimated)"
         FARE_DETERMINED_AS_PER_KARNATAKA_GUIDELINES -> "The Fare is determined as per the Karnataka State Government guidelines."
         RENTAL_CHARGES -> "Rental Charges"
