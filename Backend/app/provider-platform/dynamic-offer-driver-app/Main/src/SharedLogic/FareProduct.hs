@@ -12,8 +12,8 @@ module SharedLogic.FareProduct where
 import Control.Applicative ((<|>))
 import Data.Time hiding (getCurrentTime)
 import Data.Time.Calendar.WeekDate
-import qualified Domain.Action.UI.FareProduct as UFP
 import qualified Domain.Types.Common as DTC
+import qualified Domain.Types.Extra.FareProduct as UFP
 import qualified Domain.Types.FareProduct as DFareProduct
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
