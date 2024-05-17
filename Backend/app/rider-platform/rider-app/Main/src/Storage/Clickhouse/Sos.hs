@@ -33,9 +33,7 @@ data SosT f = SosT
     status :: C f DSos.SosStatus,
     ticketId :: C f (Maybe Text),
     merchantId :: C f (Maybe (Id DM.Merchant)),
-    merchantOperatingCityId :: C f (Maybe (Id DMOC.MerchantOperatingCity)),
-    createdAt :: C f UTCTime,
-    updatedAt :: C f UTCTime
+    merchantOperatingCityId :: C f (Maybe (Id DMOC.MerchantOperatingCity))
   }
   deriving (Generic)
 
@@ -55,9 +53,7 @@ sosTTable =
       status = "status",
       ticketId = "ticket_id",
       merchantId = "merchant_id",
-      merchantOperatingCityId = "merchant_operating_city_id",
-      createdAt = "created_at",
-      updatedAt = "updated_at"
+      merchantOperatingCityId = "merchant_operating_city_id"
     }
 
 type Sos = SosT Identity
