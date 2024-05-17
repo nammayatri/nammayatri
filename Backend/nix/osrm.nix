@@ -4,6 +4,8 @@ let
   openStreetDataFile = inputs.osrm-pbf;
   # NOTE: This *should* match the flake input.
   openStreetDataFileName = "southern-zone-230101";
+  # Custom Port for OSRM
+  customPort = "5001";
 in
 {
   perSystem = { pkgs, lib, ... }: {
@@ -26,6 +28,7 @@ in
           text = ''
             set -x
             osrm-routed --algorithm mld \
+               --port ${customPort} \
                ${osrm-data}/${openStreetDataFileName}.osrm
           '';
         };

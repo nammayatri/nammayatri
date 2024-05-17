@@ -16,5 +16,5 @@
   passetto-db = 5422;
   passetto-service = 8021;
   # osrm-server port is not configurable atm
-  # osrm-server = 5000;
+  # osrm-server = 5001;
 }
