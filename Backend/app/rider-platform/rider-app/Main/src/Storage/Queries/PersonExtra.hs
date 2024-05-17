@@ -249,3 +249,6 @@ updateCustomerReferralCode personId refferalCode = do
     ]
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
+
+findAllByIds :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Id Person] -> m [Person]
+findAllByIds personIds = findAllWithKV [Se.Is BeamP.id $ Se.In (getId <$> personIds)]

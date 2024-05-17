@@ -865,3 +865,29 @@ getNotificationSound tag notificationSoundFromConfig =
     (Just "BLIND_LOW_VISION", Just ns) -> ns.blindSound
     (_, Just ns) -> ns.defaultSound
     (_, _) -> Nothing
+
+notifyTicketCancelled :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> Person.Person -> m ()
+notifyTicketCancelled ticketBookingId ticketBookingCategoryName person = do
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.CANCELLED_PRODUCT person.merchantOperatingCityId
+  let notificationSound = NSC.defaultSound =<< notificationSoundFromConfig
+  let notificationData =
+        Notification.NotificationReq
+          { category = Notification.CANCELLED_PRODUCT,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product person.id.getId (),
+            body = body,
+            title = title,
+            dynamicParams = EmptyDynamicParam,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing,
+            sound = notificationSound
+          }
+      title = ticketBookingCategoryName <> " Ticket Service is Cancelled"
+      body =
+        unwords
+          [ "Sorry, Ticket Booking " <> ticketBookingId <> " having " <> ticketBookingCategoryName <> " Service is cancelled will be Refunded",
+            "Check the app for details"
+          ]
+  notifyPerson person.merchantId person.merchantOperatingCityId notificationData

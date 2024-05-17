@@ -319,6 +319,11 @@ library
       Storage.Queries.RideExtra
       Storage.Queries.SavedReqLocationExtra
       Storage.Queries.SearchRequestExtra
+      Storage.Queries.TicketBookingExtra
+      Storage.Queries.TicketBookingPeopleCategoryExtra
+      Storage.Queries.TicketBookingServiceCategoryExtra
+      Storage.Queries.TicketBookingServiceExtra
+      Storage.Queries.TicketServiceExtra
       Storage.Queries.Transformers.AppInstalls
       Storage.Queries.Transformers.BlackListOrg
       Storage.Queries.Transformers.Booking
@@ -335,6 +340,7 @@ library
       Storage.Queries.Transformers.RentalDetails
       Storage.Queries.Transformers.SearchReqLocation
       Storage.Queries.Transformers.SearchRequest
+      Storage.Queries.Transformers.ServicePeopleCategory
       Storage.Queries.Transformers.SpecialZoneQuote
       Storage.Queries.Transformers.TripTerms
       Storage.Queries.Transformers.WhiteListOrg
@@ -606,6 +612,11 @@ library
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.SavedReqLocation
       Storage.Queries.OrphanInstances.SearchRequest
+      Storage.Queries.OrphanInstances.TicketBooking
+      Storage.Queries.OrphanInstances.TicketBookingPeopleCategory
+      Storage.Queries.OrphanInstances.TicketBookingService
+      Storage.Queries.OrphanInstances.TicketBookingServiceCategory
+      Storage.Queries.OrphanInstances.TicketService
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.Person
       Storage.Queries.PersonDefaultEmergencyNumber

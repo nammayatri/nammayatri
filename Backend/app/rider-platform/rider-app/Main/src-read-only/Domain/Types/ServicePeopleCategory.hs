@@ -13,7 +13,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data ServicePeopleCategory = ServicePeopleCategory
-  { description :: Kernel.Prelude.Text,
+  { cancellationCharges :: Kernel.Prelude.Maybe [Domain.Types.ServicePeopleCategory.CancellationCharge],
+    description :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory,
     name :: Kernel.Prelude.Text,
     pricePerUnit :: Kernel.Types.Common.Price,
@@ -23,3 +24,12 @@ data ServicePeopleCategory = ServicePeopleCategory
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show)
+
+data CancelCharge = FlatFee Kernel.Types.Common.HighPrecMoney | Percentage Kernel.Prelude.Int deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data CancellationCharge = CancellationCharge {cancelCharge :: Domain.Types.ServicePeopleCategory.CancelCharge, time :: Kernel.Types.Common.Seconds}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancelCharge)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationCharge)

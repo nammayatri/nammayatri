@@ -18,6 +18,7 @@ imports:
   ServiceCategory: Domain.Types.ServiceCategory
   ServicePeopleCategory: Domain.Types.ServicePeopleCategory
   BusinessHourType: Domain.Types.BusinessHour
+  Value: Data.Aeson
 
 TicketPlace:
   tableName: ticket_place
@@ -70,6 +71,7 @@ TicketService:
     operationalDays : "[Text]"
     maxVerification : Int
     allowFutureBooking : Bool
+    allowCancellation : Bool
     expiry : ExpiryType
     businessHours : "[Id BusinessHour]"
   types:
@@ -79,6 +81,7 @@ TicketService:
   default:
     operationalDays: "'{Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}'"
     allowFutureBooking: "true"
+    allowCancellation: "false"
     business_hours: "'{}'"
     expiry: "'VisitDate 12:00:00'"
 
@@ -90,6 +93,9 @@ TicketService:
     getTicketServicesByPlaceId:
       kvFunction: findAllWithKV
       where: placesId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 SpecialOccasion:
   tableName : special_occasion
@@ -120,6 +126,14 @@ SpecialOccasion:
       kvFunction: findOneWithKV
       where:
         and: [entityId, dayOfWeek]
+    updateBusinessHoursById:
+      kvFunction: updateOneWithKV
+      params: [businessHours]
+      where: id
+    findBySplDayAndEntityIdAndDate:
+      kvFunction: findOneWithKV
+      where:
+        and: [specialDayType, entityId, date]
 
 BusinessHour:
   tableName: business_hour
@@ -161,6 +175,13 @@ ServicePeopleCategory:
     name: Text
     description: Text
     pricePerUnit: Price
+    cancellationCharges: "Maybe [CancellationCharge]"
+
+  beamType:
+    cancellationCharges: Maybe Value
+
+  sqlType:
+    cancellationCharges: json
 
   beamFields:
     pricePerUnit:
@@ -169,10 +190,20 @@ ServicePeopleCategory:
 
   fromTType:
     pricePerUnit: Kernel.Types.Common.mkPrice currency pricePerUnit|E
+    cancellationCharges: getCancellationChargesFromTable
 
   toTType:
     pricePerUnit: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
+    cancellationCharges: convertCancellationChargesToTable
+
+  types:
+    CancellationCharge:
+      time: Seconds
+      cancelCharge: CancelCharge
+      derive: "'ListInstance, Eq, Ord, Read"
+    CancelCharge:
+      enum: "FlatFee HighPrecMoney,Percentage Int"
 
   queries:
     findById:
@@ -208,6 +239,11 @@ SeatManagement:
       params: [blocked]
       where:
         and: [ticketServiceCategoryId, date]
+    updateBookedAndBlockedSeats:
+      kvFunction: updateOneWithKV
+      params: [booked, blocked]
+      where:
+        and: [ticketServiceCategoryId, date]
 
 
 ### Ticket Booking ###
@@ -225,6 +261,8 @@ TicketBooking:
     status: BookingStatus
     createdAt: UTCTime
     updatedAt: UTCTime
+    bookedSeats: Int
+    cancelledSeats: Maybe Int
 
   beamFields:
     amount:
@@ -245,8 +283,11 @@ TicketBooking:
 
   types:
     BookingStatus:
-      enum: "Pending,Failed,Booked"
+      enum: "Pending,Failed,Booked,Cancelled"
       derive: HttpInstance
+
+  default:
+    bookedSeats: "0"
 
   queries:
     updateStatusByShortId:
@@ -263,6 +304,17 @@ TicketBooking:
       kvFunction: findAllWithOptionsKV
       where:
         and: [personId, merchantOperatingCityId, status]
+    getAllBookingsByPlaceIdAndVisitDate:
+      kvFunction: findAllWithKV
+      where:
+        and: [ticketPlaceId, visitDate, status]
+    updateStatusAndCancelledSeatsById:
+      kvFunction: updateOneWithKV
+      params: [status, cancelledSeats, updatedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 TicketBookingService:
   tableName: ticket_booking_service
@@ -276,10 +328,14 @@ TicketBookingService:
     amount: Price
     status: ServiceStatus
     verificationCount: Int
+    visitDate: Maybe Day
     btype: BusinessHourType
+    bHourId: Maybe (Id BusinessHour)
     expiryDate: Maybe UTCTime
     createdAt: UTCTime
     updatedAt: UTCTime
+    bookedSeats: Int
+    cancelledSeats: Maybe Int
 
   beamFields:
     amount:
@@ -295,10 +351,11 @@ TicketBookingService:
 
   types:
     ServiceStatus:
-      enum: "Pending,Failed,Confirmed,Verified"
+      enum: "Pending,Failed,Confirmed,Verified,Cancelled"
 
   default:
     btype: "'Duration 03:30:00 12:00:00'"
+    bookedSeats: "0"
 
   queries:
     findById:
@@ -318,6 +375,13 @@ TicketBookingService:
       kvFunction: updateWithKV
       params: [status, verificationCount, updatedAt]
       where: id
+    updateStatusAndCancelledSeatsById:
+      kvFunction: updateOneWithKV
+      params: [status, cancelledSeats, updatedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 TicketBookingServiceCategory:
   tableName: ticket_booking_service_category
@@ -328,7 +392,12 @@ TicketBookingServiceCategory:
     name: Text
     bookedSeats: Int
     amount: Price
+    eventCancelledBy: Maybe CancelledBy
+    cancelledSeats: Maybe Int
+    amountToRefund: Maybe HighPrecMoney
     serviceCategoryId: Maybe Text
+    visitDate: Maybe Day
+    btype: Maybe BusinessHourType
 
   beamFields:
     amount:
@@ -342,10 +411,31 @@ TicketBookingServiceCategory:
     amount: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
 
+  types:
+    CancelledBy:
+        enum: "User,Merchant"
+
   queries:
     findAllByTicketBookingServiceId:
       kvFunction: findAllWithKV
       where: ticketBookingServiceId
+    updateCancellationDetailsById:
+      kvFunction: updateWithKV
+      params: [cancelledSeats, amountToRefund, eventCancelledBy]
+      where: id
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByServiceCategoryIdDateAndBtype:
+      kvFunction: findAllWithKV
+      where:
+        and: [serviceCategoryId, visitDate, btype]
+
+  default:
+    bookedSeats: "0"
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 TicketBookingPeopleCategory:
   tableName: ticket_booking_people_category
@@ -353,9 +443,12 @@ TicketBookingPeopleCategory:
   fields:
     id: Id TicketBookingPeopleCategory
     ticketBookingServiceCategoryId: Id TicketBookingServiceCategory
+    peopleCategoryId: Maybe (Id ServicePeopleCategory)
     name: Text
     pricePerUnit: Price
     numberOfUnits: Int
+    numberOfUnitsCancelled: Maybe Int
+    amountToRefund: Maybe HighPrecMoney
 
   beamFields:
     pricePerUnit:
@@ -376,3 +469,10 @@ TicketBookingPeopleCategory:
     findAllByServiceCategoryId:
       kvFunction: findAllWithKV
       where: ticketBookingServiceCategoryId
+    updateTicketPeopleUnitsAndAmountById:
+      kvFunction: updateWithKV
+      params: [numberOfUnitsCancelled,amountToRefund]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

@@ -18,6 +18,7 @@ module Tools.Payment
   ( module Reexport,
     createOrder,
     orderStatus,
+    refundOrder,
     PaymentServiceType (..),
   )
 where
@@ -29,7 +30,8 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.TicketPlace
 import Kernel.External.Payment.Interface as Reexport hiding
-  ( createOrder,
+  ( autoRefunds,
+    createOrder,
     orderStatus,
   )
 import qualified Kernel.External.Payment.Interface as Payment
@@ -47,6 +49,9 @@ createOrder = runWithServiceConfig Payment.createOrder
 
 orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
 orderStatus = runWithServiceConfig Payment.orderStatus
+
+refundOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.AutoRefundReq -> m Payment.AutoRefundResp
+refundOrder = runWithServiceConfig Payment.autoRefunds
 
 runWithServiceConfig ::
   ServiceFlow m r =>

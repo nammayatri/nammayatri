@@ -27,6 +27,8 @@ module SharedLogic.MessageBuilder
     buildFollowRideStartedMessage,
     BuildAddedAsEmergencyContactMessageReq (..),
     buildAddedAsEmergencyContactMessage,
+    BuildTicketBookingCancelledMessageReq (..),
+    buildTicketBookingCancelled,
   )
 where
 
@@ -150,3 +152,19 @@ buildAddedAsEmergencyContactMessage merchantOperatingCityId req = do
     merchantMessage.message
       & T.replace (templateText "userName") req.userName
       & T.replace (templateText "appUrl") req.appUrl
+
+data BuildTicketBookingCancelledMessageReq = BuildTicketBookingCancelledMessageReq
+  { personName :: Text,
+    categoryName :: Text
+  }
+  deriving (Generic)
+
+buildTicketBookingCancelled :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildTicketBookingCancelledMessageReq -> m Text
+buildTicketBookingCancelled merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.TICKET_BOOKING_CANCELLED
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.TICKET_BOOKING_CANCELLED))
+  return $
+    merchantMessage.message
+      & T.replace (templateText "personName") req.personName
+      & T.replace (templateText "categoryName") req.categoryName

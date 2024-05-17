@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.TicketService where
+module Storage.Queries.TicketService (module Storage.Queries.TicketService, module ReExport) where
 
 import qualified Domain.Types.TicketService
 import Kernel.Beam.Functions
@@ -14,6 +14,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketService as Beam
+import Storage.Queries.TicketServiceExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TicketService.TicketService -> m ())
 create = createWithKV
@@ -34,7 +35,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.TicketService.TicketService {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.allowFutureBooking allowFutureBooking,
+    [ Se.Set Beam.allowCancellation allowCancellation,
+      Se.Set Beam.allowFutureBooking allowFutureBooking,
       Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
       Se.Set Beam.expiry expiry,
       Se.Set Beam.maxVerification maxVerification,
@@ -48,41 +50,3 @@ updateByPrimaryKey (Domain.Types.TicketService.TicketService {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.TicketService Domain.Types.TicketService.TicketService where
-  fromTType' (Beam.TicketServiceT {..}) = do
-    pure $
-      Just
-        Domain.Types.TicketService.TicketService
-          { allowFutureBooking = allowFutureBooking,
-            businessHours = Kernel.Types.Id.Id <$> businessHours,
-            expiry = expiry,
-            id = Kernel.Types.Id.Id id,
-            maxVerification = maxVerification,
-            operationalDays = operationalDays,
-            placesId = placesId,
-            service = service,
-            shortDesc = shortDesc,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.TicketService Domain.Types.TicketService.TicketService where
-  toTType' (Domain.Types.TicketService.TicketService {..}) = do
-    Beam.TicketServiceT
-      { Beam.allowFutureBooking = allowFutureBooking,
-        Beam.businessHours = Kernel.Types.Id.getId <$> businessHours,
-        Beam.expiry = expiry,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.maxVerification = maxVerification,
-        Beam.operationalDays = operationalDays,
-        Beam.placesId = placesId,
-        Beam.service = service,
-        Beam.shortDesc = shortDesc,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
-      }

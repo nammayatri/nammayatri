@@ -5,6 +5,7 @@
 
 module Storage.Beam.ServicePeopleCategory where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -13,7 +14,8 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data ServicePeopleCategoryT f = ServicePeopleCategoryT
-  { description :: B.C f Kernel.Prelude.Text,
+  { cancellationCharges :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    description :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
