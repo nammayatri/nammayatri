@@ -5,6 +5,7 @@
 module Storage.Queries.SpecialOccasion where
 
 import qualified Data.Time.Calendar
+import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.SpecialOccasion
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -27,6 +28,18 @@ findAllSpecialOccasionByEntityId ::
   (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m [Domain.Types.SpecialOccasion.SpecialOccasion])
 findAllSpecialOccasionByEntityId entityId date = do findAllWithKV [Se.And [Se.Is Beam.entityId $ Se.Eq entityId, Se.Is Beam.date $ Se.Eq date]]
 
+findBySplDayAndEntityIdAndDate ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.SpecialOccasion.SpecialDayType -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m (Maybe Domain.Types.SpecialOccasion.SpecialOccasion))
+findBySplDayAndEntityIdAndDate specialDayType entityId date = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.specialDayType $ Se.Eq specialDayType,
+          Se.Is Beam.entityId $ Se.Eq entityId,
+          Se.Is Beam.date $ Se.Eq date
+        ]
+    ]
+
 findSpecialOccasionByEntityIdAndDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m (Maybe Domain.Types.SpecialOccasion.SpecialOccasion))
@@ -36,6 +49,13 @@ findSpecialOccasionByEntityIdAndDayOfWeek ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.SpecialOccasion.SpecialOccasion))
 findSpecialOccasionByEntityIdAndDayOfWeek entityId dayOfWeek = do findOneWithKV [Se.And [Se.Is Beam.entityId $ Se.Eq entityId, Se.Is Beam.dayOfWeek $ Se.Eq dayOfWeek]]
+
+updateBusinessHoursById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour] -> Kernel.Types.Id.Id Domain.Types.SpecialOccasion.SpecialOccasion -> m ())
+updateBusinessHoursById businessHours (Kernel.Types.Id.Id id) = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SpecialOccasion.SpecialOccasion -> m (Maybe Domain.Types.SpecialOccasion.SpecialOccasion))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]

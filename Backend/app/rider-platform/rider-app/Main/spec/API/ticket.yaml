@@ -1,5 +1,6 @@
 imports:
   Text: Data.Text
+  Seconds: Kernel.Types.Common
   TicketService: Domain.Types.TicketService
   BusinessHour: Domain.Types.BusinessHour
   SpecialOccasion: Domain.Types.SpecialOccasion
@@ -15,8 +16,12 @@ imports:
   TicketBooking: Domain.Types.TicketBooking
   BookingStatus: Domain.Types.TicketBooking
   TicketBookingService: Domain.Types.TicketBookingService
+  TicketBookingServiceCategory: Domain.Types.TicketBookingServiceCategory
+  TicketBookingPeopleCategory: Domain.Types.TicketBookingPeopleCategory
   ServiceStatus: Domain.Types.TicketBookingService
   ExpiryType: Domain.Types.TicketService
+  CancellationCharge: Domain.Types.ServicePeopleCategory
+  Refunds: Lib.Payment.Domain.Types.Refunds
 
 module: TicketService
 types:
@@ -29,6 +34,7 @@ types:
     expiry: ExpiryType
     businessHours: [BusinessHourResp]
     shortDesc: Maybe Text
+    allowCancellation: Bool
 
   BusinessHourResp:
     id: Id BusinessHour
@@ -54,6 +60,7 @@ types:
     pricePerUnit: HighPrecMoney
     pricePerUnitWithCurrency: PriceAPIEntity
     description: Text
+    cancellationCharges: "Maybe [CancellationCharge]"
 
   TicketBookingReq:
     visitDate: Day
@@ -92,30 +99,41 @@ types:
     visitDate: Day
     status: BookingStatus
     services: [TicketBookingServiceDetails]
+    refundDetails: [Refunds]
 
   TicketBookingServiceDetails:
     ticketServiceShortId: Text
     ticketServiceName: Text
     amount : HighPrecMoney
+    allowCancellation: Bool
     amountWithCurrency: PriceAPIEntity
     status : ServiceStatus
+    businessHourId : Maybe (Id BusinessHour)
     verificationCount : Int
     slot: Maybe TimeOfDay
     expiryDate : Maybe UTCTime
     categories : [TicketBookingCategoryDetails]
 
-  TicketBookingCategoryDetails :
+  TicketBookingCategoryDetails:
+    id : Id TicketBookingServiceCategory
     name : Text
     bookedSeats: Int
+    cancelledSeats: Maybe Int
     amount: HighPrecMoney
+    amountToRefund: Maybe HighPrecMoney
     amountWithCurrency: PriceAPIEntity
+    serviceCategoryId: Maybe (Text)
     peopleCategories : [TicketBookingPeopleCategoryDetails]
 
   TicketBookingPeopleCategoryDetails:
+    id : Id TicketBookingPeopleCategory
     name : Text
     pricePerUnit : HighPrecMoney
     pricePerUnitWithCurrency: PriceAPIEntity
     numberOfUnits : Int
+    numberOfUnitsCancelled : Maybe Int
+    amountToRefund : Maybe HighPrecMoney
+    cancelCharges: "Maybe [CancellationCharge]"
 
   TicketBookingUpdateSeatsReq:
     ticketServiceId: Id TicketService
@@ -123,6 +141,32 @@ types:
     businessHourId: Id BusinessHour
     categoryId: Id ServiceCategory
     updatedBookedSeats: Int
+
+  TicketServiceCancelReq:
+    businessHourId : (Id BusinessHour)
+    date : Day
+    description : Maybe Text
+    ticketServiceId : Id TicketService
+    ticketServiceCategoryId: Id ServiceCategory
+
+  TicketBookingCancelReq:
+    ticketBookingServices: [TicketBookingServiceCancelReq]
+    ticketBookingShortId: ShortId TicketBooking
+
+  TicketBookingServiceCancelReq:
+    shortId:  ShortId TicketBookingService
+    businessHourId: Id BusinessHour
+    serviceCategory: [TicketBookingServiceCategoryCancelReq]
+
+  TicketBookingServiceCategoryCancelReq:
+    id: Id TicketBookingServiceCategory
+    visitDate: Day
+    serviceCategoryId: Id ServiceCategory
+    peopleCategory: [TicketBookingServicePeopleCategoryCancelReq]
+
+  TicketBookingServicePeopleCategoryCancelReq:
+    id: Id TicketBookingPeopleCategory
+    quantity: Int
 
   TicketServiceVerificationResp:
     ticketServiceName: Maybe Text
@@ -139,7 +183,7 @@ types:
     categories: [TicketBookingCategoryDetails]
 
   TicketVerificationStatus:
-    enum: "BookingSuccess,BookingExpired,BookingFuture,BookingAlreadyVerified,DifferentService,PaymentPending,InvalidBooking"
+    enum: "BookingSuccess,BookingExpired,BookingFuture,BookingAlreadyVerified,DifferentService,PaymentPending,InvalidBooking,CancelledBooking"
 
   PeopleCategoriesVerificationRes:
     id: Id ServicePeopleCategory
@@ -216,11 +260,29 @@ apis:
       response:
         type: BookingStatus
 
+  # POST /ticket/bookings/cancel
+  - POST:
+      endpoint: /ticket/booking/cancel
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.TicketService.TicketBookingCancelReq
+      response:
+        type: APISuccess
+
   # # dashboard APIs
   - POST:
       endpoint: /ticket/bookings/update/seats
       auth: TokenAuth
       request:
         type: API.Types.UI.TicketService.TicketBookingUpdateSeatsReq
+      response:
+        type: APISuccess
+
+  # # cancel service /ticket/bookings/services/cancel
+  - POST:
+      endpoint: /ticket/service/cancel
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.TicketService.TicketServiceCancelReq
       response:
         type: APISuccess

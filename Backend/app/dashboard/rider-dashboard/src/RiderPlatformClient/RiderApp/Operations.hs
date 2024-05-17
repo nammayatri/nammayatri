@@ -32,6 +32,7 @@ import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
 import qualified Domain.Action.Dashboard.Ride as DCM
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
+import qualified "rider-app" Domain.Types.TicketBooking as DTB
 import qualified "rider-app" Domain.Types.TicketBookingService as DTB
 import qualified "rider-app" Domain.Types.TicketPlace as DTB
 import qualified "rider-app" Domain.Types.TicketService as DTB
@@ -46,6 +47,7 @@ import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
+import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common hiding (callAPI)
 import qualified Lib.Types.SpecialLocation as SL
 import Servant hiding (route)
@@ -124,7 +126,10 @@ data TicketAPIs = TicketAPIs
   { verifyBookingDetails :: Id DTB.TicketService -> ShortId DTB.TicketBookingService -> Euler.EulerClient DTB.TicketServiceVerificationResp,
     getServices :: Id DTB.TicketPlace -> Maybe Day -> Euler.EulerClient [DTB.TicketServiceResp],
     updateSeatManagement :: DTB.TicketBookingUpdateSeatsReq -> Euler.EulerClient APISuccess,
-    getTicketPlaces :: Euler.EulerClient [DTB.TicketPlace]
+    getTicketPlaces :: Euler.EulerClient [DTB.TicketPlace],
+    cancelTicketBookingService :: DTB.TicketBookingCancelReq -> Euler.EulerClient APISuccess,
+    cancelTicketService :: DTB.TicketServiceCancelReq -> Euler.EulerClient APISuccess,
+    getTicketBookingDetails :: Id.ShortId DTB.TicketBooking -> Euler.EulerClient DTB.TicketBookingDetails
   }
 
 newtype HotSpotAPIs = HotSpotAPIs
@@ -201,7 +206,10 @@ mkAppBackendAPIs merchantId city token = do
     verifyBookingDetails
       :<|> getServices
       :<|> updateSeatManagement
-      :<|> getTicketPlaces = ticketsClient
+      :<|> getTicketPlaces
+      :<|> cancelTicketBookingService
+      :<|> cancelTicketService
+      :<|> getTicketBookingDetails = ticketsClient
 
     removeExpires = hotSpotClient
 

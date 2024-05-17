@@ -97,6 +97,16 @@ type API =
            Domain.Types.TicketBooking.BookingStatus
       :<|> TokenAuth
       :> "ticket"
+      :> "booking"
+      :> "cancel"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.TicketService.TicketBookingCancelReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "ticket"
       :> "bookings"
       :> "update"
       :> "seats"
@@ -106,10 +116,20 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "ticket"
+      :> "service"
+      :> "cancel"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.TicketService.TicketServiceCancelReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getTicketPlaces :<|> getTicketPlacesServices :<|> postTicketPlacesBook :<|> getTicketBookings :<|> getTicketBookingsDetails :<|> postTicketBookingsVerify :<|> getTicketBookingsStatus :<|> postTicketBookingsUpdateSeats
+handler = getTicketPlaces :<|> getTicketPlacesServices :<|> postTicketPlacesBook :<|> getTicketBookings :<|> getTicketBookingsDetails :<|> postTicketBookingsVerify :<|> getTicketBookingsStatus :<|> postTicketBookingCancel :<|> postTicketBookingsUpdateSeats :<|> postTicketServiceCancel
 
 getTicketPlaces :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [Domain.Types.TicketPlace.TicketPlace])
 getTicketPlaces a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketPlaces (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
@@ -173,6 +193,15 @@ getTicketBookingsStatus ::
   )
 getTicketBookingsStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketBookingsStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
+postTicketBookingCancel ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.TicketService.TicketBookingCancelReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postTicketBookingCancel a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.postTicketBookingCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
 postTicketBookingsUpdateSeats ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -181,3 +210,12 @@ postTicketBookingsUpdateSeats ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postTicketBookingsUpdateSeats a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.postTicketBookingsUpdateSeats (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postTicketServiceCancel ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.TicketService.TicketServiceCancelReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postTicketServiceCancel a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.postTicketServiceCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

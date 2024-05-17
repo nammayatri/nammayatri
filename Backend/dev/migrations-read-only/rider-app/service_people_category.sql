@@ -14,3 +14,8 @@ ALTER TABLE atlas_app.service_people_category ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.service_people_category ADD COLUMN currency text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.service_people_category ADD COLUMN cancellation_charges json ;

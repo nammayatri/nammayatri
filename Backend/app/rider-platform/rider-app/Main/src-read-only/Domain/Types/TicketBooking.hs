@@ -18,6 +18,8 @@ import qualified Tools.Beam.UtilsTH
 
 data TicketBooking = TicketBooking
   { amount :: Kernel.Types.Common.Price,
+    bookedSeats :: Kernel.Prelude.Int,
+    cancelledSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
@@ -31,7 +33,7 @@ data TicketBooking = TicketBooking
   }
   deriving (Generic, Show)
 
-data BookingStatus = Pending | Failed | Booked deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data BookingStatus = Pending | Failed | Booked | Cancelled deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingStatus)
 

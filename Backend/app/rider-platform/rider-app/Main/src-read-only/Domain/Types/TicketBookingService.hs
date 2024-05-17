@@ -5,6 +5,7 @@
 module Domain.Types.TicketBookingService where
 
 import Data.Aeson
+import qualified Data.Time.Calendar
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -17,7 +18,10 @@ import qualified Tools.Beam.UtilsTH
 
 data TicketBookingService = TicketBookingService
   { amount :: Kernel.Types.Common.Price,
+    bHourId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour),
+    bookedSeats :: Kernel.Prelude.Int,
     btype :: Domain.Types.BusinessHour.BusinessHourType,
+    cancelledSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService,
@@ -28,10 +32,11 @@ data TicketBookingService = TicketBookingService
     ticketServiceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
     updatedAt :: Kernel.Prelude.UTCTime,
     verificationCount :: Kernel.Prelude.Int,
+    visitDate :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)
   }
   deriving (Generic, Show)
 
-data ServiceStatus = Pending | Failed | Confirmed | Verified deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ServiceStatus = Pending | Failed | Confirmed | Verified | Cancelled deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceStatus)

@@ -15,6 +15,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.ServicePeopleCategory as Beam
+import Storage.Queries.Transformers.ServicePeopleCategory
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ServicePeopleCategory.ServicePeopleCategory -> m ())
 create = createWithKV
@@ -36,7 +37,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.ServicePeopleCategory.ServicePeopleCategory {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.description description,
+    [ Se.Set Beam.cancellationCharges (convertCancellationChargesToTable cancellationCharges),
+      Se.Set Beam.description description,
       Se.Set Beam.name name,
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) pricePerUnit),
       Se.Set Beam.pricePerUnit ((.amount) pricePerUnit),
@@ -52,7 +54,8 @@ instance FromTType' Beam.ServicePeopleCategory Domain.Types.ServicePeopleCategor
     pure $
       Just
         Domain.Types.ServicePeopleCategory.ServicePeopleCategory
-          { description = description,
+          { cancellationCharges = getCancellationChargesFromTable cancellationCharges,
+            description = description,
             id = Kernel.Types.Id.Id id,
             name = name,
             pricePerUnit = Kernel.Types.Common.mkPrice currency pricePerUnit,
@@ -65,7 +68,8 @@ instance FromTType' Beam.ServicePeopleCategory Domain.Types.ServicePeopleCategor
 instance ToTType' Beam.ServicePeopleCategory Domain.Types.ServicePeopleCategory.ServicePeopleCategory where
   toTType' (Domain.Types.ServicePeopleCategory.ServicePeopleCategory {..}) = do
     Beam.ServicePeopleCategoryT
-      { Beam.description = description,
+      { Beam.cancellationCharges = convertCancellationChargesToTable cancellationCharges,
+        Beam.description = description,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.name = name,
         Beam.currency = (Kernel.Prelude.Just . (.currency)) pricePerUnit,
