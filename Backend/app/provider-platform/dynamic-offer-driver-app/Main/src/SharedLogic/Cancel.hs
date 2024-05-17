@@ -14,6 +14,7 @@
 
 module SharedLogic.Cancel where
 
+import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Common as DTC
@@ -21,7 +22,6 @@ import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.SearchRequestForDriver as DTSRD
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import Kernel.Prelude
@@ -102,7 +102,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
               newQuote = quote{id = Id quoteId, fareParams = newFareParams, validTill = searchRequestExpirationSeconds `addUTCTime` now, isScheduled = False} -- check if validTill req'D
               newBooking = booking{id = bookingId, quoteId = quoteId, status = SRB.NEW, isScheduled = False, startTime = max now booking.startTime, createdAt = now, updatedAt = now}
               mbDriverExtraFeeBounds = ((,) <$> searchReq.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> quote.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
-              driverPickUpCharge = join $ DTSRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> quote.farePolicy)
+              driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> quote.farePolicy)
           tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge quoteId
           void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId
           QQuote.create newQuote
@@ -132,7 +132,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
     createQuoteDetails searchReq searchTry estimateId = do
       estimate <- QEst.findById (Id estimateId) >>= fromMaybeM (EstimateNotFound estimateId)
       let mbDriverExtraFeeBounds = ((,) <$> estimate.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> estimate.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
-          driverPickUpCharge = join $ DTSRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
+          driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
       buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge estimate.id.getId
 
     cancelRideTransactionForNonReallocation :: Maybe SRB.Booking -> Maybe Text -> Flow Bool

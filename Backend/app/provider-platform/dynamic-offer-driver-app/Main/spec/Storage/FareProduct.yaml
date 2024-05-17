@@ -1,0 +1,67 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  Area: Lib.Types.SpecialLocation
+  TimeBound: Domain.Action.UI.FareProduct
+  FarePolicy: Domain.Types.FarePolicy
+  ServiceTierType: Domain.Types.ServiceTierType
+  TripCategory: Domain.Types.Common
+
+
+FareProduct:
+  tableName: fare_product
+
+
+  fields:
+    id : Id FareProduct
+    merchantId : Id Merchant
+    merchantOperatingCityId : Id MerchantOperatingCity
+    farePolicyId : Id FarePolicy
+    vehicleServiceTier : ServiceTierType
+    area : Area
+    tripCategory : TripCategory
+    timeBounds : TimeBound
+    enabled : Bool
+
+  beamFields:
+    vehicleServiceTier:
+      vehicleVariant: ServiceTierType
+
+
+  constriants:
+    id: PrimaryKey
+    merchantOperatingCityId: SecondaryKey
+    area: SecondaryKey
+
+  queries:
+    findAllBoundedFareProductForVariants:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, area, tripCategory, timeBounds, enabled]
+
+    findAllUnboundedFareProductForVariants:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, area, tripCategory, timeBounds, enabled]
+
+    findAllBoundedByMerchantOpCityIdVariantArea:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, area, vehicleServiceTier, tripCategory, timeBounds, enabled]
+
+    findAllFareProductByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, enabled]
+
+  sqlType:
+    vehicleVariant: character varying (60)
+    merchantOperatingCityId: character (36)
+  default:
+    timeBounds: "'Unbounded'"
+    enabled: "true"
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+  excludedFields: [createdAt, updatedAt]
+

@@ -4,10 +4,6 @@ update atlas_driver_offer_bpp.vehicle_registration_certificate set vehicle_varia
 
 delete from atlas_driver_offer_bpp.fare_product where vehicle_variant = 'TAXI_PLUS';
 
-ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN vehicle_service_tier text;
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN vehicle_service_tier text;
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN air_conditioned boolean;
-
 -- run in only in prod and master: commenting as local will break
 -- ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ALTER COLUMN allowed_vehicle_variant TYPE text[] USING allowed_vehicle_variant::text[];
 

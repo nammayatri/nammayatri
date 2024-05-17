@@ -21,6 +21,3 @@ CREATE TABLE atlas_driver_offer_bpp.driver_go_home_request(
     updated_at timestamp with time zone NOT NULL
 );
 
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN go_home_request_id character(36);
-ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN go_home_request_id character(36);
-

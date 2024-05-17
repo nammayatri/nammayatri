@@ -20,13 +20,13 @@ where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
+import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSSL
-import qualified Domain.Types.SearchRequestForDriver as DSearchReq
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import Kernel.Beam.Functions as B
@@ -85,7 +85,7 @@ triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
   void $ TN.sendSearchRequestToDriverNotification driver.merchantId fallBackCity notificationData
   pure Success
 
-mkDummyNotificationEntityData :: UTCTime -> DVeh.Variant -> DLoc.DummyLocationInfo -> DLoc.DummyLocationInfo -> Bool -> DSearchReq.SearchRequestForDriverAPIEntity
+mkDummyNotificationEntityData :: UTCTime -> DVeh.Variant -> DLoc.DummyLocationInfo -> DLoc.DummyLocationInfo -> Bool -> USRD.SearchRequestForDriverAPIEntity
 mkDummyNotificationEntityData now driverVehicle fromLocData toLocData isValueAddNP =
   let searchRequestValidTill = addUTCTime 30 now
       fromLocation = mkDummySearchReqFromLocation now fromLocData
@@ -93,7 +93,7 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData isValueAdd
       newFromLocation = mkDummyFromLocation now fromLocData
       newToLocation = Just $ mkDummyToLocation now toLocData
       mkDummyPrice (amountInt :: Int) = PriceAPIEntity (toHighPrecMoney amountInt) INR
-   in DSearchReq.SearchRequestForDriverAPIEntity
+   in USRD.SearchRequestForDriverAPIEntity
         { searchRequestId = Id fromLocData.dummyId,
           searchTryId = Id fromLocData.dummyId,
           startTime = now,

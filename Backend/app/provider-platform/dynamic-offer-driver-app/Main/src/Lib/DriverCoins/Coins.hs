@@ -84,7 +84,7 @@ updateCoinsByDriverId driverId coinUpdateValue timeDiffFromUtc = do
 updateDriverCoins :: EventFlow m r => Id DP.Person -> Int -> Seconds -> m ()
 updateDriverCoins driverId finalCoinsValue timeDiffFromUtc = do
   driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  void $ Person.updateTotalEarnedCoins driverId (finalCoinsValue + driver.totalEarnedCoins)
+  void $ Person.updateTotalEarnedCoins (finalCoinsValue + driver.totalEarnedCoins) driverId
   updateCoinsByDriverId driverId finalCoinsValue timeDiffFromUtc
 
 driverCoinsEvent :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> m ()

@@ -29,6 +29,7 @@ import qualified Data.List as List
 import Data.Maybe
 import qualified Data.Text as T
 import Domain.Action.Beckn.Search
+import qualified Domain.Action.UI.Person as SP
 import Domain.Types
 import Domain.Types.BecknConfig
 import Domain.Types.BecknConfig as DBC

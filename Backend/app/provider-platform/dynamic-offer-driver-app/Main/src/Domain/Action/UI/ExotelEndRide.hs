@@ -30,7 +30,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.PersonExtra as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 

@@ -65,7 +65,7 @@ deleteDriver merchantShortId reqDriverId = do
   QSearchReqForDriver.deleteByDriverId reqDriverId
   QFleetDriverAssociation.deleteByDriverId reqDriverId
   QDriverStats.deleteById (cast reqDriverId)
-  QR.deleteByPersonId reqDriverId
+  QR.deleteByPersonId reqDriverId.getId
   QVehicle.deleteById reqDriverId
   QDriverInfo.deleteById (cast reqDriverId)
   QMessage.deleteByPersonId reqDriverId

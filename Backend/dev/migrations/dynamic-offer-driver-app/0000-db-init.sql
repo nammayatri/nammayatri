@@ -28,39 +28,6 @@ unique_key_id character varying(255) DEFAULT 'FIXME'::character varying NOT NULL
 ALTER TABLE atlas_driver_offer_bpp.organization OWNER TO atlas_driver_offer_bpp_user;
 CREATE INDEX idx_organization_short_id ON atlas_driver_offer_bpp.organization USING btree (short_id);
 
-CREATE TABLE atlas_driver_offer_bpp.person (
-id character(36) NOT NULL,
-first_name character varying(255),
-middle_name character varying(255),
-last_name character varying(255),
-full_name character varying(255),
-role character varying(255) NOT NULL,
-gender character varying(255) NOT NULL,
-identifier_type character varying(255) NOT NULL,
-email character varying(255),
-password_hash bytea,
-mobile_number_encrypted character varying(255),
-mobile_number_hash bytea,
-mobile_country_code character varying(255),
-identifier character varying(255),
-is_new boolean NOT NULL,
-udf1 character varying(255),
-udf2 character varying(255),
-organization_id character varying(255),
-device_token character varying(255),
-description character varying(255),
-created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-rating double precision
-,CONSTRAINT  idx_16419_primary PRIMARY KEY (id)
-,CONSTRAINT  person_unique_mobile_number_country_code UNIQUE (mobile_country_code, mobile_number_hash)
-,CONSTRAINT  unique_email UNIQUE (email)
-,CONSTRAINT  unique_identifier UNIQUE (identifier)
-);
-ALTER TABLE atlas_driver_offer_bpp.person OWNER TO atlas_driver_offer_bpp_user;
-CREATE INDEX idx_16419_organization_id ON atlas_driver_offer_bpp.person USING btree (organization_id);
-CREATE INDEX idx_16419_role ON atlas_driver_offer_bpp.person USING btree (role);
-
 CREATE TABLE atlas_driver_offer_bpp.search_request_location (
 id character(36) NOT NULL,
 lat double precision NOT NULL,
@@ -99,57 +66,6 @@ created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 ,CONSTRAINT  idx_16386_primary PRIMARY KEY (id)
 );
 ALTER TABLE atlas_driver_offer_bpp.search_request OWNER TO atlas_driver_offer_bpp_user;
-
-CREATE TABLE atlas_driver_offer_bpp.search_request_for_driver (
-id character(36) NOT NULL PRIMARY KEY,
-search_request_id character(36) REFERENCES atlas_driver_offer_bpp.search_request (id) NOT NULL,
-distance_to_pickup bigint NOT NULL,
-duration_to_pickup bigint NOT NULL,
-vehicle_variant character varying(255) NOT NULL,
-base_fare double precision NOT NULL,
-search_request_valid_till timestamp NOT NULL,
-driver_id character(36) REFERENCES atlas_driver_offer_bpp.person (id) NOT NULL,
-created_at timestamp NOT NULL,
-unique (search_request_id, driver_id)
-);
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver OWNER TO atlas_driver_offer_bpp_user;
-
-CREATE TABLE atlas_driver_offer_bpp.driver_quote (
-id character(36) NOT NULL PRIMARY KEY,
-status character varying(255) NOT NULL,
-search_request_id character(36) REFERENCES atlas_driver_offer_bpp.search_request (id) NOT NULL,
-driver_id character(36) REFERENCES atlas_driver_offer_bpp.person (id) NOT NULL,
-base_fare double precision NOT NULL,
-extra_fare_selected double precision,
-distance_to_pickup bigint NOT NULL,
-duration_to_pickup bigint NOT NULL,
-vehicle_variant character varying(255) NOT NULL,
-valid_till timestamp NOT NULL,
-created_at timestamp NOT NULL,
-updated_at timestamp NOT NULL
-);
-ALTER TABLE atlas_driver_offer_bpp.driver_quote OWNER TO atlas_driver_offer_bpp_user;
-
-CREATE TABLE atlas_driver_offer_bpp.registration_token (
-id character(36) NOT NULL,
-auth_medium character varying(255) NOT NULL,
-auth_type character varying(255) NOT NULL,
-auth_value_hash character varying(1024) NOT NULL,
-token character varying(1024) NOT NULL,
-verified boolean NOT NULL,
-auth_expiry bigint NOT NULL,
-token_expiry bigint NOT NULL,
-attempts bigint NOT NULL,
-entity_id character(36) NOT NULL,
-entity_type character(36) NOT NULL,
-info text,
-created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-,CONSTRAINT  idx_16435_primary PRIMARY KEY (id)
-);
-ALTER TABLE atlas_driver_offer_bpp.registration_token OWNER TO atlas_driver_offer_bpp_user;
-CREATE INDEX idx_16435_entity_id ON atlas_driver_offer_bpp.registration_token USING btree (entity_id);
-CREATE INDEX idx_16435_entity_type ON atlas_driver_offer_bpp.registration_token USING btree (entity_type);
 
 CREATE TABLE atlas_driver_offer_bpp.driver_location (
 driver_id character(36) NOT NULL,

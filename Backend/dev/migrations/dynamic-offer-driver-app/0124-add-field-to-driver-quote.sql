@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN provider_id character(36) NOT NULL REFERENCES atlas_driver_offer_bpp.merchant (id) default 'favorit0-0000-0000-0000-00000favorit';

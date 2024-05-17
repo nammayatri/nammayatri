@@ -215,7 +215,7 @@ buildTrackingUrl rideId = do
 
 deactivateExistingQuotes :: Id DTMM.MerchantOperatingCity -> Id Merchant -> Id Person -> Id SearchTry -> Price -> Flow [SearchRequestForDriver]
 deactivateExistingQuotes merchantOpCityId merchantId quoteDriverId searchTryId estimatedFare = do
-  driverSearchReqs <- QSRD.findAllActiveBySTId searchTryId
+  driverSearchReqs <- QSRD.findAllActiveBySTId searchTryId SReqD.Active
   QDQ.setInactiveBySTId searchTryId
   QSRD.setInactiveBySTId searchTryId
   pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare
@@ -228,7 +228,7 @@ pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDrive
     unless (driverId == quoteDriverId) $ do
       DP.decrementTotalQuotesCount merchantId merchantOpCityId (cast driverReq.driverId) driverReq.searchTryId
       DP.removeSearchReqIdFromMap merchantId driverId driverReq.searchTryId
-      void $ QSRD.updateDriverResponse driverReq.id SReqD.Pulled SReqD.Inactive
+      void $ QSRD.updateDriverResponse (Just SReqD.Pulled) SReqD.Inactive driverReq.id
       driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       Notify.notifyDriverClearedFare merchantOpCityId driver_ driverReq.searchTryId estimatedFare
 

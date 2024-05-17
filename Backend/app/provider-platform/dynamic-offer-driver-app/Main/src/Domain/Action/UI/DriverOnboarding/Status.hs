@@ -246,7 +246,7 @@ enableDriver merchantOpCityId personId (Just dl) = do
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   unless driverInfo.enabled $ do
     enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId True
-    whenJust dl.driverName $ \name -> Person.updateName personId name
+    whenJust dl.driverName $ \name -> Person.updateName name personId
 
 activateRCAutomatically :: Id SP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Flow ()
 activateRCAutomatically personId merchantId merchantOpCityId rcNumber = do

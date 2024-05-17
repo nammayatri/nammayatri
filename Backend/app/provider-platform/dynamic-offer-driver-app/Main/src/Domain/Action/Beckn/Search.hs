@@ -290,6 +290,7 @@ addNearestDriverInfo merchantOpCityId (Just driverPool) estdOrQuotes = do
     matchInputWithNearestDriver driverPools input = do
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId input.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show input.vehicleServiceTier))
       let driverPool' = M.lookup input.vehicleServiceTier driverPools
+      logDebug $ "DP:Nearest driver info " <> show driverPool'
       case driverPool' of
         Nothing -> return (input, vehicleServiceTierItem, Nothing)
         Just dp -> do
@@ -297,6 +298,7 @@ addNearestDriverInfo merchantOpCityId (Just driverPool) estdOrQuotes = do
               distanceToNearestDriver = NE.head dp & (.distanceToPickup)
               locationId = NE.head dp & (.driverId) & (.getId)
               nearestDriverInfo = NearestDriverInfo {..}
+          logDebug $ "Nearest driver info " <> show nearestDriverInfo
           return (input, vehicleServiceTierItem, Just nearestDriverInfo)
 
 selectDriversAndMatchFarePolicies :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> SL.Area -> [DFP.FullFarePolicy] -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])

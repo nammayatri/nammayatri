@@ -1,8 +1,5 @@
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN currency character varying(255);
 
-ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN currency character varying(255);
-ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN estimated_fare_amount double precision;
-
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN currency character varying(255);
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_earnings_amount double precision;
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN bonus_earned_amount double precision;
@@ -64,14 +61,3 @@ ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN currency character v
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN currency character varying(255);
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN driver_default_extra_fee_amount double precision;
-
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN currency character varying(255);
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN base_fare_amount double precision;
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_min_extra_fee_amount double precision;
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_max_extra_fee_amount double precision;
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_step_fee_amount double precision;
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_default_step_fee_amount double precision;
-
-ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN currency character varying(255);
-ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN base_fare_amount double precision;
-ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN customer_extra_fee_amount double precision;
