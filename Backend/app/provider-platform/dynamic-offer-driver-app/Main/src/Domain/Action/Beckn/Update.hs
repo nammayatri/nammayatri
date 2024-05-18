@@ -17,7 +17,7 @@ module Domain.Action.Beckn.Update where
 import qualified API.Types.UI.EditBooking as EditBooking
 import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import qualified BecknV2.OnDemand.Enums as Enums
-import Data.List.NonEmpty (last)
+import Data.List (last)
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Domain.Action.UI.EditBooking as EditBooking
@@ -169,10 +169,13 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         (pickedWaypoints, currentPoint) <-
           if ride.status == DRide.INPROGRESS
             then do
-              locationPts <- LTS.driverLocation rideId merchantOperatingCity.merchantId ride.driverId
-              let (currentPoint :: Maps.LatLong) = last locationPts.loc
-              pts <- getInterpolatedPointsImplementation ride.driverId
-              return (srcPt :| (pickWaypoints pts ++ [currentPoint, dropLatLong]), Just currentPoint)
+              currentLocationPointsBatch <- LTS.driverLocation rideId merchantOperatingCity.merchantId ride.driverId
+              previousLocationPointBatches <- getInterpolatedPointsImplementation ride.driverId
+              let (currentPoint :: Maps.LatLong) =
+                    fromMaybe (Maps.LatLong ride.fromLocation.lat ride.fromLocation.lon) $
+                      (if not $ null currentLocationPointsBatch.loc then Just (last currentLocationPointsBatch.loc) else Nothing)
+                        <|> (if not $ null previousLocationPointBatches then Just (last previousLocationPointBatches) else Nothing)
+              return (srcPt :| (pickWaypoints (previousLocationPointBatches <> currentLocationPointsBatch.loc) ++ [currentPoint, dropLatLong]), Just currentPoint)
             else return (srcPt :| [dropLatLong], Nothing)
         logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show pickedWaypoints
         routeResponse <-
