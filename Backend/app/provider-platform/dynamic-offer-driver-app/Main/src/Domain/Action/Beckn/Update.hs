@@ -36,6 +36,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRoute as RR
 import Environment
 import EulerHS.Prelude hiding (drop, id, state)
+import GHC.Utils.Misc (lastMaybe)
 import Kernel.Beam.Functions as B
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types
@@ -169,9 +170,15 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         (pickedWaypoints, currentPoint) <-
           if ride.status == DRide.INPROGRESS
             then do
-              locationPts <- LTS.driverLocation rideId merchantOperatingCity.merchantId ride.driverId
-              let (currentPoint :: Maps.LatLong) = last locationPts.loc
-              pts <- getInterpolatedPointsImplementation ride.driverId
+              currentLocationPointsBatch <- LTS.driverLocation rideId merchantOperatingCity.merchantId ride.driverId
+              previousLocationPointBatches <- getInterpolatedPointsImplementation ride.driverId
+              let (currentPoint :: Maps.LatLong) =
+                    lastMaybe currentLocationPointsBatch.loc
+                      <|> lastMaybe previousLocationPointBatches
+                      <|> ( (ride.fromLocation <&> (.lat)) <*> (ride.fromLocation <&> (.lon))
+                              <&> (\lat lon -> Maps.LatLong lat lon)
+                          )
+                      & fromMaybeM (InternalError "Not able to find current location")
               return (srcPt :| (pickWaypoints pts ++ [currentPoint, dropLatLong]), Just currentPoint)
             else return (srcPt :| [dropLatLong], Nothing)
         logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show pickedWaypoints
