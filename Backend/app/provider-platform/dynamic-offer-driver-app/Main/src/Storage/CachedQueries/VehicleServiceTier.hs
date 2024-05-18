@@ -24,6 +24,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.VehicleServiceTier as Queries
 
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [VehicleServiceTier] -> m ()
+createMany = Queries.createMany
+
 findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m [VehicleServiceTier]
 findAllByMerchantOpCityId merchantOpCityId =
   Hedis.safeGet (makeMerchantOpCityIdKey merchantOpCityId) >>= \case
