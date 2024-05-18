@@ -15,6 +15,7 @@
 module Helpers.Commons where
 
 import Prelude
+
 import Control.Monad.Except (runExcept, throwError)
 import Control.Monad.Rec.Class (class MonadRec, Step(Done, Loop), tailRecM)
 import Control.Monad.State as S
@@ -36,7 +37,7 @@ import Effect.Aff.AVar (new)
 import Effect.Class (liftEffect)
 import Effect.Console (log)
 import Effect.Exception (Error)
-import Effect.Uncurried (EffectFn1, EffectFn3, EffectFn7, EffectFn8, mkEffectFn6, runEffectFn7, runEffectFn8)
+import Effect.Uncurried (EffectFn1, EffectFn2, EffectFn3, EffectFn7, EffectFn8, mkEffectFn6, runEffectFn7, runEffectFn8)
 import Foreign.Generic (Foreign, decode, decodeJSON)
 import Foreign.Object (empty, insert, lookup)
 import JSURI (decodeURIComponent)
@@ -93,6 +94,8 @@ foreign import emitEvent :: EffectFn3 String String Foreign Unit
 
 foreign import hideLoader :: EffectFn1 String Unit
 foreign import storeNotifitionListener :: EffectFn1 (String -> String -> Effect Unit) Unit
+foreign import storeInWindow :: forall a. EffectFn2 String a Unit
+foreign import removeFromWindow :: EffectFn1 String Unit
 foreign import getSearchRequestId :: EffectFn1 String String
 
 foreign import getExpiryTime :: String -> Int

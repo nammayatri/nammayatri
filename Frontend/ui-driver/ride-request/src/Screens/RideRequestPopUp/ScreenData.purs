@@ -14,29 +14,7 @@ initData =
   , rideRequests: []
   , selectedRequest: 0
   , timer : 0.0
-  , tabs:
-      [ { currentProgress: 0.0
-        , maxProgress: 1.0
-        , startTime: 0.0
-        , price : 0.0
-        , id : Nothing
-        , isSelected : true
-        }
-      , { currentProgress: 0.0
-        , maxProgress: 1.0
-        , startTime: 0.0
-        , price : 0.0
-        , id : Nothing
-        , isSelected : false
-        }
-      , { currentProgress: 0.0
-        , maxProgress: 1.0
-        , startTime: 0.0
-        , price : 0.0
-        , id : Nothing
-        , isSelected : false
-        }
-      ]
+  , tabs: defaultTabs
   }
 
 type RideRequestPopUpScreenData
@@ -69,3 +47,18 @@ type TabTimers
     , id :: Maybe String
     , isSelected :: Boolean
     }
+
+dummyTabTimer :: TabTimers
+dummyTabTimer =  { currentProgress: 0.0
+        , maxProgress: 0.0
+        , startTime: 0.0
+        , price : 0.0
+        , id : Nothing
+        , isSelected : false
+        }
+
+defaultTabs :: Array TabTimers
+defaultTabs = [ dummyTabTimer
+      , dummyTabTimer
+      , dummyTabTimer
+      ]

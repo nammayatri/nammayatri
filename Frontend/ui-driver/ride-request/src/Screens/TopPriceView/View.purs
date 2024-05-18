@@ -47,7 +47,7 @@ screen (OverlayData gState) =
   , globalEvents:
       [ ( \push -> do
             _ <- updateTimers push gState.rideRequestPopUpScreen
-            when (gState.rideRequestPopUpScreen.timer == 0.0) $ startTimer 0 "RideRequestTimer" "1" (\id s dt -> push $ UpdateProgress id s dt)
+            when (gState.rideRequestPopUpScreen.timer == 0.0) $ startTimer 0 "RideRequestTimer" "0.001" (\id s dt -> push $ UpdateProgress id s dt)
             pure $ pure unit
         )
       ]
@@ -115,6 +115,7 @@ singleTabView push idx item =
       , padding $ Padding 14 20 14 20
       , gravity CENTER
       , onClick push $ const (OnTabClick idx)
+      , clickable $ item.price /= 0.0
       ]
       [ textView
           $ [ text $ if item.price == 0.0 then "--" else show item.price
@@ -126,7 +127,7 @@ singleTabView push idx item =
           , height $ V 10
           , gravity LEFT
           , background Color.white900
-          , visibility $ if progress <= 0 then  GONE else VISIBLE
+          , visibility $ if progress <= 0 then INVISIBLE else VISIBLE
           , cornerRadius 5.0
           ]
           [ linearLayout
@@ -138,7 +139,7 @@ singleTabView push idx item =
           ]
       ]
   where
-  getWidthFromProgress progress progressWidth = ceil $ getValueBtwRange progress 1.0 item.maxProgress 0.0 (toNumber progressWidth)
+  getWidthFromProgress progress progressWidth = ceil $ getValueBtwRange progress 0.0 item.maxProgress 0.0 (toNumber progressWidth)
 
   getSingleTab ∷ Int
   getSingleTab = (((screenWidth unit) - 32) / 3) + 1

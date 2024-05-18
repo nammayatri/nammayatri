@@ -332,6 +332,13 @@ export const storeNotifitionListener = function (callBack) {
   window.notificationCallBack = callBack;
 }
 
+export const storeInWindow = function (key, value) {
+  window[key] = value;
+}
+export const removeFromWindow = function (key) {
+  window[key] = undefined;
+}
+
 
 
 export const getSearchRequestId = function () {

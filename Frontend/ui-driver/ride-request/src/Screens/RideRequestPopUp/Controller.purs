@@ -3,7 +3,8 @@ module Screens.RideRequestPopUp.Controller (module Screens.RideRequestPopUp.Cont
 import Prelude
 
 import Api.Types (NearBySearchRequestRes(..), SearchRequest(..))
-import Data.Array (foldr, nub, null)
+import Control.Monad.State (state)
+import Data.Array (elem, filter, foldr, notElem, nub, null)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Debug (spy)
@@ -11,7 +12,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Helpers.Commons (flowRunner, liftFlow)
 import Presto.Core.Types.Language.Flow (Flow)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, getPushFn, update)
+import PrestoDOM (Eval, continue, continueWithCmd, exit, getPushFn, id, update)
 import Screens.RideRequestPopUp.ScreenData (RideRequestPopUpScreenData)
 import Screens.RideRequestPopUp.TransFormer (toPopupProp)
 import Screens.TopPriceView.Controller as TopPriceView
@@ -38,9 +39,20 @@ eval (UpdateRideRequest searchData) state =
           pure NoAction
       ]
 
+eval (NotifyExpired ids) state = do
+  if null ids then update state
+    else do
+      let onGoingRequest = filter (\(SearchRequest item) ->  notElem item.searchTryId ids) state.rideRequests
+      if null onGoingRequest then exit $ Back state
+        else do 
+          let updatedState = state { holderData = toPopupProp onGoingRequest, rideRequests = onGoingRequest }
+          continueWithCmd updatedState [ do
+              notifyTopView $ TopPriceView.AppendRequest updatedState.rideRequests
+              pure NoAction
+          ]
+
 eval (AppendRequest request) state = do
-  let updatedRequest = foldr (\(SearchRequest item1) acc -> acc <> map (\(SearchRequest item2) -> if item2.searchTryId /= item1.searchTryId then (SearchRequest item2) else  (SearchRequest item1)) state.rideRequests) [] request
-  let popup = toPopupProp request
+  let updatedRequest = spy "AppendRequest -> " $ foldr (\(SearchRequest item1) acc -> acc <> map (\(SearchRequest item2) -> if item2.searchTryId /= item1.searchTryId then (SearchRequest item2) else  (SearchRequest item1)) state.rideRequests) state.rideRequests request
       updatedState = state { holderData = toPopupProp updatedRequest, rideRequests = updatedRequest }
   continueWithCmd updatedState
     [ do
@@ -59,29 +71,16 @@ eval (Decline idx) state = exit $ Back state
 eval (UpdateCarousel idx) state = continue state{selectedRequest = idx}
 
 eval (NotificationLister nType id) state 
-  | nType == "CLEARED_FARE" || nType == "CANCELLED_SEARCH_REQUEST" = do 
-    let updatedRequests = foldr (\(SearchRequest item) acc -> if item.searchTryId == id then acc else acc <> [(SearchRequest item)]) [] state.rideRequests
-    continueWithCmd state [(pure $ UpdateRideRequest updatedRequests)]
-  | otherwise =  continueWithCmd state [ (do
-                push <- getPushFn (Just "RideRequestPopUp") "RideRequestPopUp"
-                fiber <- launchAff $ flowRunner defaultOverlayData $ getRideRequest push id
-                pure $ NoAction
-            )]
-
-eval _ state = update state
+  | nType == "CLEARED_FARE" || nType == "CANCELLED_SEARCH_REQUEST" = continueWithCmd state [(pure $ NotifyExpired [id])]
+  | otherwise =  continue state 
+      -- continueWithCmd state [ (do
+      --           push <- getPushFn (Just "RideRequestPopUp") "RideRequestPopUp"
+      --           void $ pure $ launchAff $ flowRunner defaultOverlayData $ getRideRequest push id
+      --           pure $ NoAction
+      --       )]
 
 notifyTopView :: TopPriceView.Action -> Effect Unit
 notifyTopView action = do
   push <- getPushFn (Just "TopPriceView") "TopPriceView"
   void $ push action
 
-
-getRideRequest :: (Action -> Effect Unit) -> String -> Flow OverlayData Unit
-getRideRequest push id = do
-  eiResp <- nearBySearchRequest id
-  case eiResp of
-    Right (NearBySearchRequestRes resp) -> do 
-      liftFlow $ push $ AppendRequest resp.searchRequestsForDriver
-    Left err -> do
-      let _ = spy "Left err ->" err
-      pure unit

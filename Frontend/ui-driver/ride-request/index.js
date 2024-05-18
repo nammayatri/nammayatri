@@ -55,7 +55,8 @@ function checkAndStart() {
 }
   
 window.onMerchantEvent = function (_event, payload) {
-  console.warn("onMerchantEvent RideRequest",_event, payload);
+  console.warn("onMerchantEvent RideRequest",_event, Object.assign({},JSON.parse(payload)));
+  console.error("onMerchantEvent RideRequest",Object.assign({},JSON.parse(payload))["payload"]["rideData"]["notification_type"]);
   const clientPaylod = JSON.parse(payload);
   const appName = clientPaylod.payload.appName;
   window.appName = appName;
@@ -63,8 +64,8 @@ window.onMerchantEvent = function (_event, payload) {
   if (_event == "initiate") {
     callInitiateResult();
   } else if (_event == "process") {
-    if (window.notificationCallBack) {
-      window.notificationCallBack(getNotificationType())(getSearchRequestId())()
+    if (window.notificationCallBack || window.rideRequestCallBack) {
+      purescript.checkAndPushRideRequest(window.rideRequestCallBack)(window.notificationCallBack)(getNotificationType())(getSearchRequestId())();
     } else {
       checkAndStart();
     }

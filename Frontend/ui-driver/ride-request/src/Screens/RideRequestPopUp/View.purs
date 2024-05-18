@@ -17,10 +17,10 @@ import Data.Time (Millisecond)
 import Data.Time.Duration (Milliseconds(..))
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
 import Effect.Aff.Class (liftAff)
-import Effect.Uncurried (mkEffectFn1, runEffectFn1)
+import Effect.Uncurried (mkEffectFn1, runEffectFn1, runEffectFn2)
 import Font.Style as FontStyle
 import Helpers.Colors as Color
-import Helpers.Commons (flowRunner, getHeightFromPercent, hideLoader, safeMarginBottom, screenHeight, storeNotifitionListener)
+import Helpers.Commons (flowRunner, getHeightFromPercent, hideLoader, removeFromWindow, safeMarginBottom, screenHeight, storeInWindow, storeNotifitionListener)
 import Helpers.Commons (liftFlow, screenWidth)
 import Helpers.Commons (safeMarginBottom, safeMarginTop, screenWidth)
 import Helpers.Commons (screenWidth)
@@ -45,8 +45,11 @@ screen (OverlayData oState) =
   , globalEvents:
       [ (\push ->  do 
                 void $ runEffectFn1 hideLoader ""
-                void $ runEffectFn1 storeNotifitionListener (\nType entityId -> push $ NotificationLister nType entityId)
-                pure (pure unit)),
+                void $ runEffectFn2 storeInWindow "notificationCallBack" (\nType entityId -> push $ NotificationLister nType entityId)
+                void $ runEffectFn2 storeInWindow "rideRequestCallBack" (\searchData -> push $ AppendRequest searchData)
+                pure (do 
+                        void $ runEffectFn1 removeFromWindow "notificationCallBack"
+                        void $ runEffectFn1 removeFromWindow "rideRequestCallBack")),
         (\_->
           do 
             fiber <- launchAff $ flowRunner (OverlayData oState) $ showTopPriceView oState.rideRequestPopUpScreen.rideRequests

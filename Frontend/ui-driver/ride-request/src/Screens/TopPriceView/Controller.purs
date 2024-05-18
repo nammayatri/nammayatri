@@ -4,10 +4,13 @@ import Prelude
 import PrestoDOM
 
 import Api.Types (SearchRequest(..))
-import Data.Array (mapWithIndex, nub)
+import Data.Array (catMaybes, filter, foldr, mapWithIndex, nub, null, take)
+import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
+import Data.Tuple (Tuple(..))
+import Debug (spy)
 import Effect (Effect)
-import Screens.RideRequestPopUp.ScreenData (RideRequestPopUpScreenData)
+import Screens.RideRequestPopUp.ScreenData (RideRequestPopUpScreenData, defaultTabs)
 import Types (Action(..)) as RideRequestPopUpAction
 import Web.DOM.DOMTokenList (item)
 
@@ -36,14 +39,19 @@ eval :: Action -> RideRequestPopUpScreenData -> Eval Action ScreenOutput RideReq
 
 eval (UpdateProgress _ time diffTime) state = do
   let
-    updatedTabs = map (\item -> do
-      let currentProgress = item.startTime + item.maxProgress - diffTime
-      if currentProgress < 0.0 then item else item{currentProgress = currentProgress}) state.tabs
-  continue state { tabs = updatedTabs, timer = diffTime}
+    updatedRequests = map (\item -> item{currentProgress = item.startTime + item.maxProgress - diffTime}) state.tabs
+    Tuple onGoingRequests expiredRequested = foldr (\item (Tuple ong exp) -> if item.currentProgress > 0.0 then Tuple (ong <> [item]) exp else Tuple ong (exp <> if item.id == Nothing then [] else [item.id])) (Tuple [] []) updatedRequests
+    updatedTabs = take 3 $ onGoingRequests <> defaultTabs
+    updatedState = state { tabs = updatedTabs, timer = toNumber time}
+  if null expiredRequested then continue updatedState 
+    else continueWithCmd updatedState [ do 
+          callPopUpAction (RideRequestPopUpAction.NotifyExpired $ catMaybes expiredRequested)
+          pure $ NoAction ]
+    
 
 eval (UpdateMaxProgress idx (SearchRequest request) time) state = do
   let
-    updatedTabs = mapWithIndex (\index item -> if index == idx then item { maxProgress = time, price = request.baseFare, id = Just request.searchTryId, startTime = state.timer } else item) state.tabs
+    updatedTabs = mapWithIndex (\index item -> if index == idx then item { maxProgress = time, price = request.baseFare, id = Just request.searchTryId, startTime = state.timer, isSelected = true} else item) state.tabs
   continue state { tabs = updatedTabs }
 
 eval (UpdateRideRequest searchData) state = exit $ UpdateTimers state{rideRequests = searchData}

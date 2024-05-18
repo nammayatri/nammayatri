@@ -30,6 +30,7 @@ data Action
   | NotificationLister String String
   | UpdateCarousel Int
   | AppendRequest (Array SearchRequest)
+  | NotifyExpired (Array String)
 
 instance showAction :: Show Action where
   show _ = "BackClick"
