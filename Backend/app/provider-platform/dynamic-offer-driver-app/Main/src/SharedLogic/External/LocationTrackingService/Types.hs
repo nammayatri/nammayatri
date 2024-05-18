@@ -92,7 +92,7 @@ data DriverLocationReq = DriverLocationReq
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 newtype DriverLocationResp = DriverLocationResp
-  { loc :: NonEmpty LatLong
+  { loc :: [LatLong]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
