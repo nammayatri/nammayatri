@@ -71,8 +71,9 @@ import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Merchant.Overlay as DMO
 import qualified Domain.Types.Merchant.TransporterConfig as DTC
 import qualified Domain.Types.Plan as Plan
-import qualified Domain.Types.ServiceTierType as DVST
+import qualified Domain.Types.ServiceTierType as DVSTT
 import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import qualified EulerHS.Language as L
 import qualified Kernel.External.Maps as Maps
@@ -119,6 +120,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.Overlay as CQMO
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFPPDEKM
@@ -393,7 +395,7 @@ buildDriverPoolConfig ::
   Id DMOC.MerchantOperatingCity ->
   Meters ->
   SL.Area ->
-  Maybe DVST.ServiceTierType ->
+  Maybe DVSTT.ServiceTierType ->
   Text ->
   Common.DriverPoolConfigCreateReq ->
   m DDPC.DriverPoolConfig
@@ -979,6 +981,10 @@ createMerchantOperatingCity merchantShortId city req = do
   fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityId baseOperatingCityId
   newFareProducts <- mapM (buildFareProduct newOperatingCity.id) fareProducts
 
+  -- vehicle service tier
+  vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId baseOperatingCityId
+  newVehicleServiceTiers <- mapM (buildVehicleServiceTier newOperatingCity.id) vehicleServiceTiers
+
   -- go home config
   goHomeConfig <- CGHC.findByMerchantOpCityId baseOperatingCityId Nothing
   newGoHomeConfig <- buildGoHomeConfig newOperatingCity.id goHomeConfig
@@ -1026,6 +1032,7 @@ createMerchantOperatingCity merchantShortId city req = do
   CQDIPC.create newIntelligentPoolConfig
   mapM_ CQDPC.create newDriverPoolConfigs
   mapM_ CQFProduct.create newFareProducts
+  CQVST.createMany newVehicleServiceTiers
   CQGHC.create newGoHomeConfig
   mapM_ CQLBC.create newLeaderBoardConfigs
   mapM_ CQMM.create newMerchantMessages
@@ -1119,6 +1126,15 @@ createMerchantOperatingCity merchantShortId city req = do
       newId <- generateGUID
       return $
         DFareProduct.FareProduct
+          { id = newId,
+            merchantOperatingCityId = newCityId,
+            ..
+          }
+
+    buildVehicleServiceTier newCityId DVST.VehicleServiceTier {..} = do
+      newId <- generateGUID
+      return $
+        DVST.VehicleServiceTier
           { id = newId,
             merchantOperatingCityId = newCityId,
             ..
