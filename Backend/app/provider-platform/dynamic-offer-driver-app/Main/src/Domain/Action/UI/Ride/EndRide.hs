@@ -349,15 +349,12 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
               let (tollCharges, tollNames, tollConfidence) = do
                     let distanceCalculationFailure = distanceCalculationFailed || (maybe False (> 0) updRide.numberOfSelfTuned)
                         driverDeviationToTollRoute = fromMaybe False updRide.driverDeviatedToTollRoute
-                    if isJust updRide.estimatedTollCharges && distanceCalculationFailure && driverDeviationToTollRoute
-                      then (updRide.estimatedTollCharges, updRide.estimatedTollNames, Just DRide.Neutral)
+                    if (isJust updRide.tollCharges && driverDeviationToTollRoute && distanceCalculationFailure)
+                      then (updRide.tollCharges, updRide.tollNames, Just DRide.Neutral)
                       else
-                        if (isJust updRide.estimatedTollCharges && isJust updRide.tollCharges && distanceCalculationFailure) || (isNothing updRide.estimatedTollCharges && isNothing updRide.tollCharges && distanceCalculationFailure && driverDeviationToTollRoute)
+                        if (isJust updRide.estimatedTollCharges || isJust updRide.tollCharges) && distanceCalculationFailure
                           then (Nothing, Nothing, Just DRide.Unsure)
-                          else
-                            if distanceCalculationFailure
-                              then (Nothing, Nothing, Nothing)
-                              else (updRide.tollCharges, updRide.tollNames, Just DRide.Sure)
+                          else (updRide.tollCharges, updRide.tollNames, Just DRide.Sure)
 
               let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollConfidence = tollConfidence}
 
