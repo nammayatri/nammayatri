@@ -68,6 +68,7 @@ buildOnConfirmReqV2 req isValueAddNP = do
               driverRegisteredAt = Nothing
               isDriverBirthDay = False
               isFreeRide = False
+              previousRideEndPos = Nothing
 
           rideOtp <- maybe (Left "Missing rideOtp in on_confirm") Right mbRideOtp
           bppRideId <- fulf >>= (.fulfillmentId) & maybe (Left "Missing fulfillmentId") (Right . Id)
@@ -77,7 +78,6 @@ buildOnConfirmReqV2 req isValueAddNP = do
           vehicleNumber <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleRegistration) & maybe (Left "Missing fulfillment.vehicle.registration in on_confirm") Right
           let vehicleColor = fulf >>= (.fulfillmentVehicle) >>= (.vehicleColor)
           vehicleModel <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleModel) & maybe (Left "Missing fulfillment.vehicle.model in on_confirm") Right
-
           Right $ DOnConfirm.RideAssigned DOnConfirm.RideAssignedInfo {..}
         else Right $ DOnConfirm.BookingConfirmed DOnConfirm.BookingConfirmedInfo {bppBookingId, specialZoneOtp = mbRideOtp}
 

@@ -32,6 +32,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
+import Kernel.External.Maps (LatLong (..))
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common hiding (id)
@@ -67,6 +68,7 @@ data RideAssignedInfo = RideAssignedInfo
     driverRegisteredAt :: Maybe UTCTime,
     isDriverBirthDay :: Bool,
     isFreeRide :: Bool,
+    previousRideEndPos :: Maybe LatLong,
     rideOtp :: Text,
     vehicleNumber :: Text,
     vehicleColor :: Maybe Text,
@@ -93,6 +95,7 @@ onConfirm ::
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasField "storeRidesTimeLimit" r Int,
     HasBAPMetrics m r,
     EventStreamFlow m r
   ) =>

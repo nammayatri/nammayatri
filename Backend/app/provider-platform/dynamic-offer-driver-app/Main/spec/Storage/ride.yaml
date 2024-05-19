@@ -18,6 +18,7 @@ imports:
   Device : Kernel.Types.Version
   DeviceType: Kernel.Types.Version
   Version: Kernel.Types.Version
+  TripCategory: Domain.Types.Common
 
 Ride:
   tableName: ride
@@ -56,6 +57,8 @@ Ride:
     tripEndTime: Maybe UTCTime
     tripStartPos: Maybe LatLong
     tripEndPos: Maybe LatLong
+    previousRideTripEndPos: Maybe LatLong
+    isAdvanceBooking : Bool
     fromLocation: Location
     toLocation: Maybe Location
     fareParametersId: Maybe (Id FareParameters)
@@ -91,6 +94,7 @@ Ride:
     backendConfigVersion: Maybe Version
     backendAppVersion: Maybe Text
     clientDevice: Maybe Device
+    tripCategory: TripCategory
 
   sqlType:
     id: character(36)
@@ -113,6 +117,7 @@ Ride:
     tripStartTime: 'CURRENT_TIMESTAMP'
     tripEndTime: 'CURRENT_TIMESTAMP'
     safetyAlertTriggered: 'false'
+    isAdvanceBooking: 'false'
 
   beamFields:
     toLocation: {}
@@ -126,6 +131,9 @@ Ride:
     tripEndPos:
       tripEndLat: Maybe Double
       tripEndLon: Maybe Double
+    previousRideTripEndPos:
+      previousRideTripEndLat: Maybe Double
+      previousRideTripEndLon: Maybe Double
     startOdometerReading:
       startOdometerReadingValue: Maybe Centesimal
       startOdometerReadingFileId:  Maybe Text
@@ -145,6 +153,7 @@ Ride:
     merchantOperatingCityId: Storage.Queries.Transformers.Ride.getMerchantOperatingCityId bookingId merchantId|IM
     tripStartPos: Storage.Queries.Transformers.Ride.mkLatLong|I
     tripEndPos: Storage.Queries.Transformers.Ride.mkLatLong|I
+    previousRideTripEndPos: Storage.Queries.Transformers.Ride.mkLatLong|I
     startOdometerReading: Storage.Queries.Transformers.Ride.mkOdometerReading|I
     endOdometerReading: Storage.Queries.Transformers.Ride.mkOdometerReading|I
     clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
@@ -154,6 +163,8 @@ Ride:
     clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion)|E
     fare: fmap (Kernel.Types.Common.mkAmountWithDefault fareAmount) fare|E
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+    isAdvanceBooking: Kernel.Prelude.fromMaybe False|I
+    tripCategory: Storage.Queries.Transformers.Ride.getTripCategory bookingId |IM
 
   toTType:
     trackingUrl: Kernel.Prelude.showBaseUrl|I
@@ -161,6 +172,8 @@ Ride:
     tripStartLon: Kernel.Prelude.fmap (.lon)|I
     tripEndLat: Kernel.Prelude.fmap (.lat)|I
     tripEndLon: Kernel.Prelude.fmap (.lon)|I
+    previousRideTripEndLat: Kernel.Prelude.fmap (.lat)|I
+    previousRideTripEndLon: Kernel.Prelude.fmap (.lon)|I
     startOdometerReadingValue: Kernel.Prelude.fmap Domain.Types.Ride.value|I
     startOdometerReadingFileId: getStartOdometerReadingFileId
     endOdometerReadingValue: Kernel.Prelude.fmap Domain.Types.Ride.value|I
@@ -174,7 +187,8 @@ Ride:
     clientOsType:  (clientDevice <&> (.deviceType))|E
     fare: Kernel.Prelude.fmap roundToIntegral|I
     currency: Kernel.Prelude.Just|I
-
+    isAdvanceBooking: Kernel.Prelude.Just|I
+    tripCategory: Kernel.Prelude.Just|I
   beamType:
     trackingUrl: Text
     merchantOperatingCityId: Maybe Text
@@ -183,6 +197,8 @@ Ride:
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
     clientOsVersion: Maybe Text
+    isAdvanceBooking: Maybe Bool
+    tripCategory: Maybe TripCategory
 
   constraints:
     id: PrimaryKey

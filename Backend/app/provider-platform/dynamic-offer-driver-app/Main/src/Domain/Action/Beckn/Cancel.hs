@@ -45,6 +45,7 @@ import qualified Lib.DriverCoins.Types as DCT
 import SharedLogic.Cancel
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -52,7 +53,6 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPers
 import qualified Storage.Queries.Person as QPerson
@@ -90,7 +90,7 @@ cancel req merchant booking mbActiveSearchTry = do
     mbRide <- QRide.findActiveByRBId req.bookingId
     whenJust mbRide $ \ride -> do
       void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
-      QDI.updateOnRide False (cast ride.driverId)
+      updateOnRideStatusWithAdvancedRideCheck ride.driverId
       void $ LF.rideDetails ride.id SRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
       QRide.updateStatus ride.id SRide.CANCELLED
 

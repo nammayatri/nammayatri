@@ -18,6 +18,8 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
     BatchSplitByPickupDistance (..),
     HasDriverPoolBatchesConfig,
     PoolSortingType (..),
+    OnRideRadiusConfig (..),
+    BatchSplitByPickupDistanceOnRide (..),
   )
 where
 
@@ -34,7 +36,23 @@ data BatchSplitByPickupDistance = BatchSplitByPickupDistance
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
+data BatchSplitByPickupDistanceOnRide = BatchSplitByPickupDistanceOnRide
+  { batchSplitSize :: Int,
+    batchSplitDelay :: Seconds
+  }
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OnRideRadiusConfig = OnRideRadiusConfig
+  { onRideRadius :: Meters,
+    batchNumber :: Int
+  }
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 $(mkBeamInstancesForList ''BatchSplitByPickupDistance)
+$(mkBeamInstancesForList ''BatchSplitByPickupDistanceOnRide)
+$(mkBeamInstancesForList ''OnRideRadiusConfig)
 
 data DriverPoolBatchesConfig = DriverPoolBatchesConfig
   { driverBatchSize :: Int,
@@ -52,6 +70,12 @@ data PoolSortingType = Intelligent | Random
   deriving anyclass (FromJSON, ToJSON, FromDhall, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be BatchSplitByPickupDistance where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be BatchSplitByPickupDistanceOnRide where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be OnRideRadiusConfig where
   sqlValueSyntax = autoSqlValueSyntax
 
 $(mkBeamInstancesForEnum ''PoolSortingType)

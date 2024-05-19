@@ -7,6 +7,7 @@ module Domain.Types.Ride where
 import Data.Aeson
 import qualified Domain.Types.Booking
 import qualified Domain.Types.Client
+import qualified Domain.Types.Common
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
 import qualified Domain.Types.FareParameters
 import qualified Domain.Types.Location
@@ -49,6 +50,7 @@ data Ride = Ride
     fareParametersId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FareParameters.FareParameters),
     fromLocation :: Domain.Types.Location.Location,
     id :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
+    isAdvanceBooking :: Kernel.Prelude.Bool,
     isFreeRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
@@ -58,6 +60,7 @@ data Ride = Ride
     numberOfSnapToRoadCalls :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     otp :: Kernel.Prelude.Text,
     pickupDropOutsideOfThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    previousRideTripEndPos :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     rideEndedBy :: Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy,
     safetyAlertTriggered :: Kernel.Prelude.Bool,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
@@ -69,6 +72,7 @@ data Ride = Ride
     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     trackingUrl :: Kernel.Types.Common.BaseUrl,
     traveledDistance :: Kernel.Types.Common.HighPrecMeters,
+    tripCategory :: Domain.Types.Common.TripCategory,
     tripEndPos :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     tripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tripStartPos :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,

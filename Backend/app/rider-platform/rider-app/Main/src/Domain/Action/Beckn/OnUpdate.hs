@@ -287,6 +287,7 @@ onUpdate ::
     HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasField "storeRidesTimeLimit" r Int,
     HasBAPMetrics m r,
     EventStreamFlow m r,
     HasField "hotSpotExpiry" r Seconds

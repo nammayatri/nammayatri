@@ -29,12 +29,12 @@ import qualified SharedLogic.CallBAP as BP
 import SharedLogic.Cancel
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Ride (updateOnRideStatusWithAdvancedRideCheck)
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -82,7 +82,7 @@ cancelRideTransaction ::
 cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy = do
   let driverId = cast ride.driverId
   void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
-  QDI.updateOnRide False (cast ride.driverId)
+  updateOnRideStatusWithAdvancedRideCheck driverId
   void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
   void $ QRide.updateStatus ride.id DRide.CANCELLED
   void $ QRide.updateRideEndedBy ride.id rideEndedBy

@@ -273,6 +273,7 @@ in  { esqDBCfg
     , cacheTranslationConfig
     , cacheFeedbackFormConfig
     , maxEmergencyNumberCount = +3
+    , storeRidesTimeLimit = +3600
     , minTripDistanceForReferralCfg = Some +1000
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True

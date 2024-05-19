@@ -33,3 +33,14 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN area text NOT NULL default 'Default';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_radius_config text[] NOT NULL default ARRAY[]::TEXT[];
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_batch_split_config text NOT NULL default Array ['BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 4 }'];
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN max_parallel_search_requests_on_ride integer NOT NULL default 1;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN enable_forward_batching boolean NOT NULL default false;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN current_ride_trip_category_valid_for_forward_batching text[] NOT NULL default Array ['OneWay_OneWayOnDemandDynamicOffer'];
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN batch_size_on_ride integer NOT NULL default 10;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN actual_distance_threshold_on_ride integer ;

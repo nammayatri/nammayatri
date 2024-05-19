@@ -155,6 +155,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             cancellationFee = cancellationFee,
             currency = fromMaybe INR currency,
             crossTravelCities = crossTravelCities,
+            useSilentFCMForForwardBatch = useSilentFCMForForwardBatch,
             ..
           }
     where
@@ -294,6 +295,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.specialLocationTags = specialLocationTags,
         BeamTC.kaptureDisposition = kaptureDisposition,
         BeamTC.kaptureQueue = kaptureQueue,
+        BeamTC.useSilentFCMForForwardBatch = useSilentFCMForForwardBatch,
         BeamTC.fakeOtpMobileNumbers = fakeOtpMobileNumbers,
         BeamTC.fakeOtpEmails = fakeOtpEmails,
         BeamTC.dummyFromLocation = Just $ toJSON dummyFromLocation,

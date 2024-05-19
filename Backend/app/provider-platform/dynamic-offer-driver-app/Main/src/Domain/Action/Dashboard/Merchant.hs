@@ -342,12 +342,14 @@ driverPoolConfigUpdate merchantShortId opCity tripDistance area mbVariant mbTrip
                radiusStepSize = maybe config.radiusStepSize (.value) req.radiusStepSize,
                driverPositionInfoExpiry = maybe config.driverPositionInfoExpiry (.value) req.driverPositionInfoExpiry,
                actualDistanceThreshold = maybe config.actualDistanceThreshold (.value) req.actualDistanceThreshold,
+               actualDistanceThresholdOnRide = maybe config.actualDistanceThresholdOnRide (.value) req.actualDistanceThresholdOnRide,
                maxDriverQuotesRequired = maybe config.maxDriverQuotesRequired (.value) req.maxDriverQuotesRequired,
                driverQuoteLimit = maybe config.driverQuoteLimit (.value) req.driverQuoteLimit,
                driverRequestCountLimit = maybe config.driverRequestCountLimit (.value) req.driverRequestCountLimit,
                driverBatchSize = maybe config.driverBatchSize (.value) req.driverBatchSize,
                maxNumberOfBatches = maybe config.maxNumberOfBatches (.value) req.maxNumberOfBatches,
                maxParallelSearchRequests = maybe config.maxParallelSearchRequests (.value) req.maxParallelSearchRequests,
+               maxParallelSearchRequestsOnRide = maybe config.maxParallelSearchRequestsOnRide (.value) req.maxParallelSearchRequestsOnRide,
                poolSortingType = maybe config.poolSortingType (castPoolSortingType . (.value)) req.poolSortingType,
                singleBatchProcessTime = maybe config.singleBatchProcessTime (.value) req.singleBatchProcessTime,
                distanceBasedBatchSplit = maybe config.distanceBasedBatchSplit (map castBatchSplitByPickupDistance . (.value)) req.distanceBasedBatchSplit
@@ -364,6 +366,12 @@ castPoolSortingType = \case
 
 castBatchSplitByPickupDistance :: Common.BatchSplitByPickupDistance -> DriverPool.BatchSplitByPickupDistance
 castBatchSplitByPickupDistance Common.BatchSplitByPickupDistance {..} = DriverPool.BatchSplitByPickupDistance {..}
+
+castOnRideSplitByPickupDistance :: Common.BatchSplitByPickupDistanceOnRide -> DriverPool.BatchSplitByPickupDistanceOnRide
+castOnRideSplitByPickupDistance Common.BatchSplitByPickupDistanceOnRide {..} = DriverPool.BatchSplitByPickupDistanceOnRide {..}
+
+castOnRideRadiusConfig :: Common.OnRideRadiusConfig -> DriverPool.OnRideRadiusConfig
+castOnRideRadiusConfig Common.OnRideRadiusConfig {..} = DriverPool.OnRideRadiusConfig {..}
 
 ---------------------------------------------------------------------
 driverPoolConfigCreate ::
@@ -413,6 +421,9 @@ buildDriverPoolConfig merchantId merchantOpCityId tripDistance area vehicleVaria
         updatedAt = now,
         createdAt = now,
         thresholdToIgnoreActualDistanceThreshold = Nothing,
+        onRideBatchSplitConfig = map castOnRideSplitByPickupDistance onRideBatchSplitConfig,
+        onRideRadiusConfig = map castOnRideRadiusConfig onRideRadiusConfig,
+        batchSizeOnRide = batchSizeOnRide,
         ..
       }
 
