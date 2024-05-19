@@ -168,7 +168,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
           updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls currSnapToRoadState.numberOfSelfTuned
           when (isNothing rectifyDistantPointsFailureUsing && isTollApplicable) $ do
             mbTollCharges :: Maybe HighPrecMoney <- Redis.safeGet (onRideTollChargesKey driverId)
-            tollNames :: [Text] <- Redis.lRange (onRideTollChargesKey driverId) 0 (-1)
+            tollNames :: [Text] <- Redis.lRange (onRideTollNamesKey driverId) 0 (-1)
             whenJust mbTollCharges $ \tollCharges -> updateTollChargesAndNames driverId tollCharges tollNames
         else do
           (distanceToBeUpdated, tollChargesInfo) <- getTravelledDistanceAndTollInfo driverId estDist ((,,False) <$> estTollCharges <*> estTollNames)
