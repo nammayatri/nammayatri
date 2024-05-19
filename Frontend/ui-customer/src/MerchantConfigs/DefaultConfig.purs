@@ -380,9 +380,25 @@ config =
                 strictBounds = true
               },
             featureConfig {
-              enableCabBanner = true,
-              enableChangeRideVariant = true
-            }
+              enableCabBanner = true
+            },
+            enableAcViews = true
+          },
+        defaultCityConfig 
+          { cityName = "Mysore",
+            cityCode = "std:0821",
+            featureConfig {
+              enableCabBanner = true
+            },
+            enableAcViews = true
+          },
+        defaultCityConfig 
+          { cityName = "Tumakuru",
+            cityCode = "std:0816",
+            featureConfig {
+              enableCabBanner = true
+            },
+            enableAcViews = true
           },
         defaultCityConfig 
           { cityName = "Chennai",
@@ -455,8 +471,7 @@ defaultCityConfig =
       },
     enableCabs : false,
     featureConfig : {
-      enableCabBanner : false,
-      enableChangeRideVariant : false
+      enableCabBanner : false
     },
     referral : {
       domain : "https://nammayatri.in",
@@ -464,5 +479,6 @@ defaultCityConfig =
     },
     appLogo : "",
     dashboardUrl : "",
-    appLogoLight : ""
+    appLogoLight : "",
+    enableAcViews : false
   }

@@ -26,7 +26,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&), (/), (*), (/=), (+), (<<<), unit, map, (-))
+import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&), (/), (*), (/=), (+), (<<<), unit, map, (-), not)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, imageUrl, fontStyle, gravity, height, imageView, textFromHtml,imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, lineHeight,fontStyle, scrollView, maxLines, singleLine, stroke, horizontalScrollView, relativeLayout)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -39,6 +39,7 @@ import Data.Maybe (Maybe(..))
 import Components.PrimaryButton as PrimaryButton
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Commons (os, screenWidth)
+import Mobility.Prelude (boolToVisibility)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -162,6 +163,7 @@ defaultRateCardView push config =
           , height $ V 2 
           , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_horizontal_dash"
           , margin $ Margin 20 20 20 12
+          , visibility $ boolToVisibility $ not $ DA.null config.fareInfoDescription
           ]
         , linearLayout
           [ width MATCH_PARENT

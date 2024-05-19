@@ -42,6 +42,11 @@ import Screens.RideSelectionScreen.Controller
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.Types as ST
 import Components.ServiceTierCard.View as ServiceTierCard
+import Helpers.Utils as HU
+import Storage (getValueToLocalStore, KeyStore(..))
+import MerchantConfig.Types as MT
+import ConfigProvider (getAppConfig)
+import Constants (appConfig)
 
 rideSelection :: FlowBT String FlowState
 rideSelection = do
@@ -85,10 +90,11 @@ selectRideHandler :: RideSelectionScreenState -> FlowBT String FlowState
 selectRideHandler state = do
   modifyScreenState $ RideSelectionScreenStateType (\_ -> state )
   let language = fetchLanguage $ getLanguageLocale languageKey
+      config = getAppConfig appConfig
   (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language state.selectedCategory.categoryId "" ""
   (GlobalState globalState) <- getState
   let 
-    transformedOptions = transformIssueOptions getOptionsRes.options state.selectedItem globalState.helpAndSupportScreen.data.ongoingIssueList
+    transformedOptions = transformIssueOptions getOptionsRes.options state.selectedItem globalState.helpAndSupportScreen.data.ongoingIssueList config.cityConfig
     getOptionsRes' = mapWithIndex (
       \index (Option optionObj) -> optionObj { 
         option = (show (index + 1)) <> ". " <> optionObj.option 
@@ -147,16 +153,17 @@ refreshScreenHandler state = do
   )
   App.BackT $ App.NoBack <$> (pure  RideSelectionScreenFlow)
 
-transformIssueOptions :: Array Option -> Maybe IndividualRideCardState -> Array ST.IssueInfo -> Array Option
-transformIssueOptions options mbRide ongoingIssues = filteredOptionsForAc
+transformIssueOptions :: Array Option -> Maybe IndividualRideCardState -> Array ST.IssueInfo -> Array MT.CityConfig -> Array Option
+transformIssueOptions options mbRide ongoingIssues arrCityConfig = filteredOptionsForAc
   where
     filteredOptionsForAc = case mbRide of
       Just ride -> let alreadyHasAcIssue = any (\issue -> issue.optionLabel == Just "AC_RELATED_ISSUE" && issue.rideId == Just ride.rideId) ongoingIssues
                    in
                     case ride.serviceTierName of
-                      (Just name) -> if not alreadyHasAcIssue && ServiceTierCard.showACDetails name Nothing
+                      (Just name) -> if not alreadyHasAcIssue && ServiceTierCard.showACDetails name Nothing && cityConfig.enableAcViews
                                 then options 
                                 else filteredOptions
                       Nothing -> filteredOptions
       Nothing -> filteredOptions
     filteredOptions = filter (\(Option option) -> option.label /= "AC_RELATED_ISSUE") options
+    cityConfig = HU.getCityConfig arrCityConfig (getValueToLocalStore CUSTOMER_LOCATION)

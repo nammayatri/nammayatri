@@ -553,3 +553,8 @@ type Price = {
     amount :: Number
   , currency :: String
 }
+
+type WaitingTimeInfo = {
+  freeMinutes :: String,
+  charge :: String
+}

@@ -111,4 +111,5 @@ type DriverInfoCardData =
   , serviceTierName :: Maybe String
   , providerName :: String 
   , providerType :: CTP.ProviderType
+  , cityConfig :: CityConfig
   }

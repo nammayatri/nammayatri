@@ -3539,6 +3539,7 @@ cacheRateCard state = do
                   , nightChargeTill = state.data.selectedEstimatesObject.nightChargeTill
                   , nightChargeFrom = state.data.selectedEstimatesObject.nightChargeFrom
                   , driverAdditions = state.data.selectedEstimatesObject.driverAdditions
+                  , waitingTimeInfo = state.data.selectedEstimatesObject.waitingTimeInfo
                   }
   if state.data.selectedEstimatesObject.vehicleVariant == "BOOK_ANY" then do
     let _ = JB.removeKeysInSharedPrefs $ show RATE_CARD_INFO

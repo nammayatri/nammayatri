@@ -522,6 +522,7 @@ view push state =
                         && state.props.showAcWorkingPopup
                         && ((isAcRide && acPopupConfig.enableAcPopup) || (not isAcRide && acPopupConfig.enableNonAcPopup))
                         && state.data.driverInfoCardState.serviceTierName /= Just "Auto"
+                        && state.data.currentCityConfig.enableAcViews
 
     showSafetyAlertPopup = Arr.notElem (getValueToLocalNativeStore SAFETY_ALERT_TYPE) ["__failed", "false", "(null)"]
     onUsRide = state.data.driverInfoCardState.providerType == CTP.ONUS
@@ -3025,7 +3026,7 @@ homeScreenViewV2 push state =
         , width MATCH_PARENT 
         , onAnimationEnd push (const MapReadyAction)
         ][tagShimmerView state]] 
-      else if state.data.config.banners.homeScreenCabLaunch && state.props.city == ST.Bangalore then ([
+      else if state.data.config.banners.homeScreenCabLaunch && Arr.elem state.props.city [ST.Bangalore, ST.Tumakuru, ST.Mysore] then ([
         imageView
           [ imageWithFallback "ny_ic_cab_banner,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_cab_banner.png"
           , height $ V 135

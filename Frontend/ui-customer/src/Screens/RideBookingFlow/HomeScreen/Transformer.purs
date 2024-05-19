@@ -526,6 +526,7 @@ getEstimates (EstimateAPIEntity estimate) estimates index isFareRange count acti
       , nightChargeFrom = breakupConfig.nightChargeStart
       , nightChargeTill = breakupConfig.nightChargeEnd
       , driverAdditions = breakupConfig.driverAdditions
+      , waitingTimeInfo = breakupConfig.waitingTimeInfo
       , availableServices = availableServices
       , selectedServices = selectedServices
       , validTill = estimate.validTill
