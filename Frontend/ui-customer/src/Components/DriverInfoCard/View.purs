@@ -1287,6 +1287,7 @@ getDriverDetails state = {
   , vehicleColor : capitalize $ STR.toLower state.data.vehicleColor
   , serviceTierName : state.data.serviceTierName
   , providerType : state.data.providerType
+  , showAcView : state.data.cityConfig.enableAcViews
 }
 
 getTripDetails :: DriverInfoCardState -> TripDetails Action

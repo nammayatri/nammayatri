@@ -33,7 +33,7 @@ view config =
         , width WRAP_CONTENT
         , background Color.blue800
         , padding $ Padding 4 bluePillPadding 5 bluePillPadding
-        , visibility $ MP.boolToVisibility $ showACDetails config.name config.isAc
+        , visibility $ MP.boolToVisibility $ showACDetails config.name config.isAc && config.showACPill
         , gravity CENTER_VERTICAL
         , cornerRadius if EHC.os == "IOS" then 11.0 else 18.0
         ]
@@ -55,7 +55,9 @@ view config =
     , textView
         $ [ height WRAP_CONTENT
           , width WRAP_CONTENT
-          , text $ parseName config.name
+          , text $ if config.showACPill 
+                      then parseName config.name
+                      else config.name
           , color Color.black700
           , padding $ PaddingBottom if EHC.os == "IOS" then 0 else 2
           , margin $ MarginLeft 4
@@ -107,6 +109,7 @@ type Config
   = { name :: String
     , capacity :: Maybe Int
     , isAc :: Maybe Boolean
+    , showACPill :: Boolean
     }
 
 parseName :: String -> String

@@ -18,6 +18,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Data.Tuple as DT
 import Data.Number.Format (fixed, toStringWith)
+import Components.ChooseVehicle.Controller as CVC
 
 type StepFare
   = { lLimit :: Number
@@ -31,7 +32,8 @@ type BreakupList = {
   driverAdditions :: Array FareList,
   nightChargeStart :: String,
   nightChargeEnd :: String,
-  isNightShift :: Boolean
+  isNightShift :: Boolean,
+  waitingTimeInfo :: WaitingTimeInfo
 }
 
 fetchSpecificFare :: Array EstimateFares -> String -> Price
@@ -59,7 +61,11 @@ getFareBreakupList (EstimateAPIEntity estimate) maxTip =
     driverAdditions : map constructDriverAdditions driverAdditionsParsed,
     nightChargeStart : EHC.convertUTCtoISC nightShiftStart "hh a",
     nightChargeEnd : EHC.convertUTCtoISC nightShiftEnd "hh a",
-    isNightShift : isNightShift
+    isNightShift : isNightShift,
+    waitingTimeInfo : { 
+      freeMinutes: EHU.formatNumber freeWaitingTime.amount Nothing, 
+      charge: priceToBeDisplayed waitingCharge <> "/min" 
+    }
   }
   where
   fareBreakupConstructed = 
@@ -69,6 +75,7 @@ getFareBreakupList (EstimateAPIEntity estimate) maxTip =
     <> (if tollCharge.amount > 0.0 then [ { key: getString TOLL_CHARGES_ESTIMATED, val: priceToBeDisplayed tollCharge } ] else [])
     <> [ { key: getString PICKUP_CHARGE, val: pickupCharges } ]
     <> [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.formatNumber freeWaitingTime.amount Nothing, val: priceToBeDisplayed waitingCharge <> "/min" } ]
+
 
   fareInfoDescription = 
     [ getString TOTAL_FARE_MAY_CHANGE_DUE_TO_CHANGE_IN_ROUTE

@@ -977,7 +977,8 @@ type RateCard =
     onFirstPage :: Boolean,
     vehicleVariant :: String,
     createdTime :: String,
-    tollCharge :: Number
+    tollCharge :: Number,
+    waitingTimeInfo :: WaitingTimeInfo
   }
 
 type RateCardDetails = {
