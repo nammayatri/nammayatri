@@ -72,6 +72,7 @@ DriverInformation:
     acUsageRestrictionType: AirConditionedRestrictionType
     acRestrictionLiftCount: Int
     lastACStatusCheckedAt: Maybe UTCTime
+    hasAdvanceBooking: Bool
 
   default:
     active: "false"
@@ -90,7 +91,7 @@ DriverInformation:
     canSwitchToInterCity: "false"
     aadhaarVerified: "false"
     acRestrictionLiftCount: "0"
-
+    hasAdvanceBooking: "false"
   constraints:
     driverId: PrimaryKey
 
@@ -98,16 +99,19 @@ DriverInformation:
     canSwitchToRental: Maybe Bool
     canSwitchToInterCity: Maybe Bool
     acUsageRestrictionType: Maybe AirConditionedRestrictionType
+    hasAdvanceBooking: Maybe Bool
 
   fromTType:
     canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     canSwitchToInterCity: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     acUsageRestrictionType: Kernel.Prelude.fromMaybe Domain.Types.DriverInformation.NoRestriction|I
+    hasAdvanceBooking: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
 
   toTType:
     canSwitchToRental: Kernel.Prelude.Just|I
     canSwitchToInterCity: Kernel.Prelude.Just|I
     acUsageRestrictionType: Kernel.Prelude.Just|I
+    hasAdvanceBooking: Kernel.Prelude.Just|I
 
   extraOperations:
     - EXTRA_QUERY_FILE

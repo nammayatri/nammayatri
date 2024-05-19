@@ -83,12 +83,14 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     driverPickUpChargesWithCurrency :: Maybe PriceAPIEntity,
     tollCharges :: Maybe HighPrecMoney,
     tollChargesWithCurrency :: Maybe PriceAPIEntity,
+    useSilentFCMForForwardBatch :: Bool,
+    isOnRide :: Bool,
     tollNames :: Maybe [Text]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Maybe HighPrecMoney -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP driverPickUpCharges =
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges =
   let isTollApplicableForServiceTier = DTC.isTollApplicable requestedVehicleServiceTier
       specialZoneExtraTip = min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation
    in SearchRequestForDriverAPIEntity
@@ -138,6 +140,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           tollCharges = if isTollApplicableForServiceTier then searchRequest.tollCharges else Nothing,
           tollChargesWithCurrency = flip PriceAPIEntity searchRequest.currency <$> if isTollApplicableForServiceTier then searchRequest.tollCharges else Nothing,
           tollNames = if isTollApplicableForServiceTier then searchRequest.tollNames else Nothing,
+          useSilentFCMForForwardBatch = useSilentFCMForForwardBatch,
+          isOnRide = nearbyReq.isForwardRequest,
           ..
         }
 

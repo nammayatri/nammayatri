@@ -92,3 +92,11 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN currency character varying(25
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN toll_confidence text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN trip_category text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN previous_ride_trip_end_lon double precision ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN previous_ride_trip_end_lat double precision ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN is_advance_booking boolean  default false;

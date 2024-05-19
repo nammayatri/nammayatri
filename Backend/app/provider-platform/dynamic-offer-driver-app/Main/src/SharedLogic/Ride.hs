@@ -30,8 +30,10 @@ import qualified Domain.Types.SearchRequestForDriver as SReqD
 import Domain.Types.SearchTry
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
+import Kernel.External.Maps (LatLong (..))
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
@@ -79,15 +81,17 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
             pure otpCode
           Just otp -> pure otp
   ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
-
-  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId
+  previousRideInprogress <- QRide.getInProgressByDriverId driver.id
+  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   rideDetails <- buildRideDetails ride driver vehicle
 
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
   QRideD.create rideDetails
-  QDI.updateOnRide True (cast driver.id)
+  Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey driver.id.getId) 4 4 $ do
+    QDI.updateOnRide True (cast driver.id)
+    when (isJust previousRideInprogress) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
   void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
@@ -136,14 +140,23 @@ buildRideDetails ride driver vehicle = do
         createdAt = Just now
       }
 
-buildRide :: DPerson.Person -> DBooking.Booking -> Maybe (Id DGetHomeRequest.DriverGoHomeRequest) -> Text -> Maybe Bool -> Maybe (Id DC.Client) -> Flow DRide.Ride
-buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId = do
+buildRide ::
+  DPerson.Person ->
+  DBooking.Booking ->
+  Maybe (Id DGetHomeRequest.DriverGoHomeRequest) ->
+  Text ->
+  Maybe Bool ->
+  Maybe (Id DC.Client) ->
+  Maybe DRide.Ride ->
+  Flow DRide.Ride
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previousRide = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   now <- getCurrentTime
   deploymentVersion <- asks (.version)
   transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   trackingUrl <- buildTrackingUrl guid
+  let previousRideToLocation = previousRide >>= (.toLocation)
   return
     DRide.Ride
       { id = guid,
@@ -168,6 +181,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId = do
         tripStartPos = Nothing,
         tripEndPos = Nothing,
         rideEndedBy = Nothing,
+        previousRideTripEndPos = LatLong <$> (previousRideToLocation <&> (.lat)) <*> (previousRideToLocation <&> (.lon)),
+        isAdvanceBooking = isJust previousRideToLocation,
         startOdometerReading = Nothing,
         endOdometerReading = Nothing,
         fromLocation = booking.fromLocation, --check if correct
@@ -200,7 +215,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId = do
         clientDevice = driver.clientDevice,
         clientConfigVersion = driver.clientConfigVersion,
         backendConfigVersion = driver.backendConfigVersion,
-        backendAppVersion = Just deploymentVersion.getDeploymentVersion
+        backendAppVersion = Just deploymentVersion.getDeploymentVersion,
+        tripCategory = booking.tripCategory
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl
@@ -246,3 +262,13 @@ bookingRequestKeySoftUpdate bId = "Driver:Booking:Request:SoftUpdate" <> bId
 
 multipleRouteKeySoftUpdate :: Text -> Text
 multipleRouteKeySoftUpdate id = "multiple-routes-SoftUpdate-" <> id
+
+isOnRideWithAdvRideConditionKey :: Text -> Text
+isOnRideWithAdvRideConditionKey driverId = "Driver:SetOnRide:" <> driverId
+
+updateOnRideStatusWithAdvancedRideCheck :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> m ()
+updateOnRideStatusWithAdvancedRideCheck personId = do
+  Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey personId.getId) 4 4 $ do
+    hasAdvancedRide <- QDI.findById (cast personId) <&> maybe False (.hasAdvanceBooking)
+    unless hasAdvancedRide $ QDI.updateOnRide False (cast personId)
+    QDI.updateHasAdvancedRide (cast personId) False

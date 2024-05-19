@@ -31,6 +31,8 @@ import qualified AWS.S3 as S3
 import qualified Data.ByteString as BS
 import Data.HashMap.Strict as HMS
 import qualified Data.HashMap.Strict as HM
+import Data.List (sortOn)
+import Data.Ord
 import qualified Data.Text as T hiding (count, map)
 import Data.Time (Day)
 import Domain.Action.Dashboard.Ride
@@ -124,6 +126,10 @@ newtype UploadOdometerResp = UploadOdometerResp
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data BookingType = CURRENT | ADVANCED
+  deriving stock (Eq, Show, Generic, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DriverRideRes = DriverRideRes
   { id :: Id DRide.Ride,
     shortRideId :: ShortId DRide.Ride,
@@ -187,6 +193,7 @@ data DriverRideRes = DriverRideRes
     endOdometerReading :: Maybe DRide.OdometerReading,
     tripScheduledAt :: UTCTime,
     isValueAddNP :: Bool,
+    bookingType :: BookingType,
     enableFrequentLocationUpdates :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
@@ -227,7 +234,7 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
     isValueAddNP <- CQVAN.isValueAddNP booking.bapId
     let goHomeReqId = ride.driverGoHomeRequestId
     mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP
-  pure . DriverRideListRes $ driverRideLis
+  pure . DriverRideListRes $ sortOn (Down . (.bookingType)) driverRideLis
 
 mkDriverRideRes ::
   ( EncFlow m r,
@@ -317,6 +324,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         nextStopLocation = nextStopLocation,
         lastStopLocation = lastStopLocation,
         tripScheduledAt = booking.startTime,
+        bookingType = if ride.status == DRide.NEW && ride.isAdvanceBooking && maybe False (.hasAdvanceBooking) driverInfo then ADVANCED else CURRENT,
         isValueAddNP,
         enableFrequentLocationUpdates = ride.enableFrequentLocationUpdates
       }
@@ -369,8 +377,7 @@ otpRideCreate driver otpCode booking clientId = do
   driverInfo <- QDI.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   unless (driverInfo.enabled) $ throwError DriverAccountDisabled
-  when driverInfo.onRide $ throwError DriverOnRide
-
+  when (driverInfo.hasAdvanceBooking) $ throwError DriverOnRide
   (ride, rideDetails, _) <- initializeRide transporter.id driver booking (Just otpCode) Nothing clientId
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle

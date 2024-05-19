@@ -110,8 +110,8 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     airConditioned :: Maybe Double,
     lat :: Double,
     lon :: Double,
-    destinationLat :: Double,
-    destinationLon :: Double,
+    previousRideDropLat :: Double,
+    previousRideDropLon :: Double,
     distanceToPickup :: Meters,
     distanceFromDriverToDestination :: Meters,
     mode :: Maybe DI.DriverMode,
@@ -133,6 +133,7 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     isPartOfIntelligentPool :: Bool,
     pickupZone :: Bool,
     specialZoneExtraTip :: Maybe HighPrecMoney,
+    isForwardRequest :: Bool,
     goHomeReqId :: Maybe (Id DDGR.DriverGoHomeRequest)
   }
   deriving (Generic, Show, FromJSON, ToJSON)

@@ -22,10 +22,10 @@ import qualified Storage.Queries.Transformers.SearchRequestForDriver
 
 instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDriver.SearchRequestForDriver where
   fromTType' (Beam.SearchRequestForDriverT {..}) = do
-    backendConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))
-    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
-    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
-    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
+    backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
+    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
+    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
+    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     merchantOperatingCityId' <- Storage.Queries.Transformers.SearchRequestForDriver.getMerchantOpCId merchantOperatingCityId merchantId requestId
     pure $
       Just
@@ -40,7 +40,7 @@ instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDri
             cancellationRatio = cancellationRatio,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion),
+            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion,
             clientSdkVersion = clientSdkVersion',
             createdAt = Data.Time.localTimeToUTC Data.Time.utc searchRequestValidTill,
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
@@ -56,6 +56,7 @@ instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDri
             estimateId = estimateId,
             goHomeRequestId = Kernel.Types.Id.Id <$> goHomeRequestId,
             id = Kernel.Types.Id.Id id,
+            isForwardRequest = Kernel.Prelude.fromMaybe False isForwardRequest,
             isPartOfIntelligentPool = isPartOfIntelligentPool,
             keepHiddenForSeconds = keepHiddenForSeconds,
             lat = lat,
@@ -93,8 +94,8 @@ instance ToTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDrive
         Beam.cancellationRatio = cancellationRatio,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientOsType = (clientDevice <&> (.deviceType)),
-        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
+        Beam.clientOsType = clientDevice <&> (.deviceType),
+        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = Data.Time.utcToLocalTime Data.Time.utc searchRequestValidTill,
         Beam.currency = Kernel.Prelude.Just currency,
@@ -114,6 +115,7 @@ instance ToTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDrive
         Beam.estimateId = estimateId,
         Beam.goHomeRequestId = Kernel.Types.Id.getId <$> goHomeRequestId,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.isForwardRequest = Kernel.Prelude.Just isForwardRequest,
         Beam.isPartOfIntelligentPool = isPartOfIntelligentPool,
         Beam.keepHiddenForSeconds = keepHiddenForSeconds,
         Beam.lat = lat,

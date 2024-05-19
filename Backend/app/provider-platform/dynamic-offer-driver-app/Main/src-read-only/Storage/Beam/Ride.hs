@@ -6,6 +6,7 @@
 module Storage.Beam.Ride where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.Common
 import qualified Domain.Types.Ride
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -43,6 +44,7 @@ data RideT f = RideT
     fareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     fareParametersId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
+    isAdvanceBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isFreeRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -52,6 +54,8 @@ data RideT f = RideT
     numberOfSnapToRoadCalls :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     otp :: B.C f Kernel.Prelude.Text,
     pickupDropOutsideOfThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    previousRideTripEndLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    previousRideTripEndLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     rideEndedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy),
     safetyAlertTriggered :: B.C f Kernel.Prelude.Bool,
     shortId :: B.C f Kernel.Prelude.Text,
@@ -63,6 +67,7 @@ data RideT f = RideT
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     trackingUrl :: B.C f Kernel.Prelude.Text,
     traveledDistance :: B.C f Kernel.Types.Common.HighPrecMeters,
+    tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
     tripEndLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     tripEndLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     tripEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

@@ -1233,3 +1233,43 @@ castPaymentType :: MonadFlow m => Text -> m DMPM.PaymentType
 castPaymentType "ON_ORDER" = return DMPM.ON_FULFILLMENT
 castPaymentType "ON_FULFILLMENT" = return DMPM.POSTPAID
 castPaymentType _ = throwM $ InvalidRequest "Unknown Payment Type"
+
+mkForwardBatchTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
+mkForwardBatchTagGroupV2 previousRideDropLocation' =
+  previousRideDropLocation' <&> \previousRideDropLocation ->
+    [ Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.FORWARD_BATCHING_REQUEST_INFO,
+                  descriptorName = Just "Forward Batching Request Info",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDisplay = Just False,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.PREVIOUS_RIDE_DROP_LOCATION_LAT,
+                            descriptorName = Just "Current Location Lat",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ show previousRideDropLocation.lat
+                  },
+                Spec.Tag
+                  { tagDisplay = Just False,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.PREVIOUS_RIDE_DROP_LOCATION_LON,
+                            descriptorName = Just "Current Location Lon",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ show previousRideDropLocation.lon
+                  }
+              ]
+        }
+    ]
