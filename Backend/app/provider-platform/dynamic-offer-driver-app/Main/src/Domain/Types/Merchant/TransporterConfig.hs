@@ -192,7 +192,8 @@ data TransporterConfigD u = TransporterConfig
     pastDaysRideCounter :: Int,
     placeNameCacheExpiryDays :: Maybe Int,
     emailOtpConfig :: Maybe Email.Types.EmailOTPConfig,
-    crossTravelCities :: [City]
+    crossTravelCities :: [City],
+    useSilentFCMForForwardBatch :: Bool
   }
   deriving (Generic, Show)
 

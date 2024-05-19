@@ -4,6 +4,7 @@ module Storage.Queries.Extra.Transformers.Ride where
 
 import Domain.Types.Location
 import qualified Domain.Types.LocationMapping as DLM
+import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM)
@@ -40,3 +41,6 @@ getFromLocation id bookingId merchantId merchantOperatingCityId = do
         return fromLocationRideMapping
       else QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
   QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
+
+mkLatLong :: Maybe Double -> Maybe Double -> Maybe LatLong
+mkLatLong lat lon = LatLong <$> lat <*> lon

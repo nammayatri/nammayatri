@@ -3,6 +3,8 @@
 
 module Storage.Queries.Transformers.Ride where
 
+import Domain.Types.Booking as Booking
+import qualified Domain.Types.Common as Common
 import Domain.Types.Location
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant.MerchantOperatingCity
@@ -70,3 +72,10 @@ mkOdometerReading fileId odoValue = odoValue <&> (\value -> OdometerReading (Id 
 
 mkLatLong :: Maybe Double -> Maybe Double -> Maybe LatLong
 mkLatLong lat lon = LatLong <$> lat <*> lon
+
+getTripCategory :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Maybe Common.TripCategory -> m Common.TripCategory
+getTripCategory bookingId tripCategory = case tripCategory of
+  Just cat -> pure cat
+  Nothing -> do
+    booking <- QBooking.findById (cast $ Id bookingId) >>= fromMaybeM (BookingNotFound bookingId)
+    pure $ booking.tripCategory

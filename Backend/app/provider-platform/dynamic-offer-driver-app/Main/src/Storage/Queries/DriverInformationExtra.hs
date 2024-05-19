@@ -263,3 +263,12 @@ updatPayerVpa payerVpa (Id driverId) = do
         <> [Se.Set BeamDI.payerVpa payerVpa | isJust payerVpa]
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
+
+updateHasAdvancedRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> m ()
+updateHasAdvancedRide (Id driverId) isOnAdvancedRide = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.hasAdvanceBooking (Just isOnAdvancedRide),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq driverId)]

@@ -22,12 +22,10 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.VehicleServiceTier
-import qualified Storage.Queries.Booking.Internal as Int
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
-import qualified Storage.Queries.DriverQuote.Internal as Int
-import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Person.Internal as Int
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle.Internal as Int
 
 data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
@@ -41,8 +39,8 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
     serviceTier :: DVST.ServiceTierType,
     serviceTierDowngradeLevel :: Int,
     airConditioned :: Maybe Double,
-    destinationLat :: Double,
-    destinationLon :: Double,
+    previousRideDropLat :: Double,
+    previousRideDropLon :: Double,
     distanceToDriver :: Meters,
     distanceFromDriverToDestination :: Meters,
     mode :: Maybe DriverInfo.DriverMode,
@@ -64,47 +62,48 @@ getNearestDriversCurrentlyOnRide ::
   Id Merchant ->
   Maybe Seconds ->
   Meters ->
+  [Text] ->
   Bool ->
   Bool ->
   m [NearestDriversResultCurrentlyOnRide]
-getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue isRental isInterCity = do
-  let onRideRadius = radiusMeters - reduceRadiusValue
+getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong radiusMeters merchantId mbDriverPositionInfoExpiry _reduceRadiusValue currentRideTripCategoryValidForForwardBatching isRental isInterCity = do
+  let onRideRadius = radiusMeters
+  logDebug $ "On Ride radius " <> show onRideRadius
+  logDebug $ "lat long" <> show fromLocLatLong
   driverLocs <- Int.getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry fromLocLatLong onRideRadius
+  logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show driverLocs
   driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity
+  logDebug $ "GetNearestDriversCurrentlyOnRide - DInfo:- " <> show driverInfos
   vehicles <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicles
-  driverQuote <- Int.getDriverQuote $ map ((.getId) . (.id)) drivers
-  bookingInfo <- Int.getBookingInfo driverQuote
-  bookingLocation <- QL.getBookingLocs (mapMaybe (\b -> (.id) <$> b.toLocation) bookingInfo)
-  logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> " Dquotes:- " <> show (length driverQuote) <> " BInfos:- " <> show (length bookingInfo) <> " BLocs:- " <> show (length bookingLocation)
-  let res = linkArrayListForOnRide driverQuote bookingInfo bookingLocation driverLocs driverInfos vehicles drivers (fromIntegral onRideRadius :: Double)
+  rideCurrentlyInProgress <- filter (\ride -> show ride.tripCategory `elem` currentRideTripCategoryValidForForwardBatching) <$> QRide.getInProgressByDriverIds (map (.id) drivers)
+  let rideEndLocations = mapMaybe (.toLocation) rideCurrentlyInProgress
+  logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> "Rides" <> show (length rideCurrentlyInProgress) <> "RideLocs:- " <> show (length rideEndLocations)
+  let res = linkArrayListForOnRide rideCurrentlyInProgress rideEndLocations driverLocs driverInfos vehicles drivers (fromIntegral onRideRadius :: Double)
   logDebug $ "GetNearestDriversCurrentlyOnRide Result:- " <> show (length res)
   return res
   where
-    linkArrayListForOnRide driverQuotes bookings bookingLocs driverLocations driverInformations vehicles persons onRideRadius =
+    linkArrayListForOnRide rideCurrentlyInProgress rideEndLocations driverLocations driverInformations vehicles persons onRideRadius =
       let locationHashMap = HashMap.fromList $ (\loc -> (loc.driverId, loc)) <$> driverLocations
           personHashMap = HashMap.fromList $ (\p -> (p.id, p)) <$> persons
-          quotesHashMap = HashMap.fromList $ (\quote -> (quote.driverId, quote)) <$> driverQuotes
-          bookingHashMap = HashMap.fromList $ (\booking -> (Id booking.quoteId, booking)) <$> bookings
-          bookingLocsHashMap = HashMap.fromList $ (\loc -> (loc.id, loc)) <$> bookingLocs
+          rideByDriverIdHashMap = HashMap.fromList $ (\ride -> (ride.driverId, ride)) <$> rideCurrentlyInProgress
+          rideToLocsHashMap = HashMap.fromList $ (\loc -> (loc.id, loc)) <$> rideEndLocations
           driverInfoHashMap = HashMap.fromList $ (\info -> (info.driverId, info)) <$> driverInformations
-       in concat $ mapMaybe (buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locationHashMap driverInfoHashMap personHashMap onRideRadius) vehicles
+       in concat $ mapMaybe (buildFullDriverListOnRide rideByDriverIdHashMap rideToLocsHashMap locationHashMap driverInfoHashMap personHashMap onRideRadius) vehicles
 
-    buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locationHashMap driverInfoHashMap personHashMap onRideRadius vehicle = do
+    buildFullDriverListOnRide rideByDriverIdHashMap rideToLocsHashMap locationHashMap driverInfoHashMap personHashMap onRideRadius vehicle = do
       let driverId' = vehicle.driverId
       location <- HashMap.lookup driverId' locationHashMap
-      quote <- HashMap.lookup driverId' quotesHashMap
-      booking <- HashMap.lookup quote.id bookingHashMap
-      toLocation <- booking.toLocation
-      bookingLocation <- HashMap.lookup toLocation.id bookingLocsHashMap
+      ride <- HashMap.lookup driverId' rideByDriverIdHashMap
+      rideToLoc <- ride.toLocation
+      rideToLocation <- HashMap.lookup rideToLoc.id rideToLocsHashMap
       info <- HashMap.lookup driverId' driverInfoHashMap
       person <- HashMap.lookup driverId' personHashMap
       let driverLocationPoint = LatLong {lat = location.lat, lon = location.lon}
-          destinationPoint = LatLong {lat = bookingLocation.lat, lon = bookingLocation.lon}
+          destinationPoint = LatLong {lat = rideToLocation.lat, lon = rideToLocation.lon}
           distanceFromDriverToDestination = realToFrac $ distanceBetweenInMeters driverLocationPoint destinationPoint
           distanceFromDestinationToPickup = realToFrac $ distanceBetweenInMeters fromLocLatLong destinationPoint
           onRideRadiusValidity = (distanceFromDriverToDestination + distanceFromDestinationToPickup) < onRideRadius
-
       -- ideally should be there inside the vehicle.selectedServiceTiers but still to make sure we have a default service tier for the driver
       let cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
       let mbDefaultServiceTierForDriver = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
@@ -119,18 +118,18 @@ getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong ra
       if onRideRadiusValidity
         then do
           if null serviceTiers
-            then Just $ mapMaybe (mkDriverResult mbDefaultServiceTierForDriver person info location bookingLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap) selectedDriverServiceTiers
+            then Just $ mapMaybe (mkDriverResult mbDefaultServiceTierForDriver person info location rideToLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap) selectedDriverServiceTiers
             else do
               Just $
                 mapMaybe
                   ( \serviceTier -> do
                       if serviceTier `elem` selectedDriverServiceTiers
-                        then mkDriverResult mbDefaultServiceTierForDriver person info location bookingLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap serviceTier
+                        then mkDriverResult mbDefaultServiceTierForDriver person info location rideToLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap serviceTier
                         else Nothing
                   )
                   serviceTiers
         else Nothing
       where
-        mkDriverResult mbDefaultServiceTierForDriver person info location bookingLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap serviceTier = do
+        mkDriverResult mbDefaultServiceTierForDriver person info location rideToLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
-          Just $ NearestDriversResultCurrentlyOnRide (cast person.id) person.deviceToken person.language info.onRide location.lat location.lon vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.airConditioned bookingLocation.lat bookingLocation.lon (roundToIntegral $ distanceFromDriverToDestination + distanceFromDestinationToPickup) (roundToIntegral distanceFromDriverToDestination) info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice person.backendConfigVersion person.backendAppVersion
+          Just $ NearestDriversResultCurrentlyOnRide (cast person.id) person.deviceToken person.language info.onRide location.lat location.lon vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.airConditioned rideToLocation.lat rideToLocation.lon (roundToIntegral $ distanceFromDriverToDestination + distanceFromDestinationToPickup) (roundToIntegral distanceFromDriverToDestination) info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice person.backendConfigVersion person.backendAppVersion

@@ -75,6 +75,7 @@ SearchRequestForDriver:
     clientDevice : Maybe Device
     backendConfigVersion : Maybe Version
     backendAppVersion : Maybe Text
+    isForwardRequest : Bool
     currency: Currency
 
   beamType:
@@ -89,7 +90,7 @@ SearchRequestForDriver:
     vehicleServiceTier: Maybe ServiceTierType
     currency: Maybe Currency
     customerCancellationDues: Maybe HighPrecMoney
-
+    isForwardRequest: Maybe Bool
 
   beamFields:
     clientDevice:
@@ -134,6 +135,7 @@ SearchRequestForDriver:
     driverDefaultStepFee: Kernel.Types.Common.mkAmountWithDefault driverDefaultStepFeeAmount <$> driverDefaultStepFee|E
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency|E
     customerCancellationDues: getCustomerCancellationDues
+    isForwardRequest: Kernel.Prelude.fromMaybe False isForwardRequest|E
 
 
   toTType:
@@ -161,6 +163,7 @@ SearchRequestForDriver:
     estimatedFareAmount: Kernel.Prelude.Just estimatedFare|E
     currency: Kernel.Prelude.Just|I
     customerCancellationDues: Kernel.Prelude.Just|I
+    isForwardRequest: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey

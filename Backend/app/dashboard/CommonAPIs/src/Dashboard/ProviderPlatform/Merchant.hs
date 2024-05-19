@@ -234,12 +234,14 @@ data DriverPoolConfigItem = DriverPoolConfigItem
     radiusStepSize :: Meters,
     driverPositionInfoExpiry :: Maybe Seconds,
     actualDistanceThreshold :: Maybe Meters,
+    actualDistanceThresholdOnRide :: Maybe Meters,
     maxDriverQuotesRequired :: Int,
     driverQuoteLimit :: Int,
     driverRequestCountLimit :: Int,
     driverBatchSize :: Int,
     maxNumberOfBatches :: Int,
     maxParallelSearchRequests :: Int,
+    maxParallelSearchRequestsOnRide :: Int,
     poolSortingType :: PoolSortingType,
     singleBatchProcessTime :: Seconds,
     tripDistance :: Meters,
@@ -276,12 +278,14 @@ data DriverPoolConfigUpdateReq = DriverPoolConfigUpdateReq
     radiusStepSize :: Maybe (MandatoryValue Meters),
     driverPositionInfoExpiry :: Maybe (OptionalValue Seconds),
     actualDistanceThreshold :: Maybe (OptionalValue Meters),
+    actualDistanceThresholdOnRide :: Maybe (OptionalValue Meters),
     maxDriverQuotesRequired :: Maybe (MandatoryValue Int),
     driverQuoteLimit :: Maybe (MandatoryValue Int),
     driverRequestCountLimit :: Maybe (MandatoryValue Int),
     driverBatchSize :: Maybe (MandatoryValue Int),
     maxNumberOfBatches :: Maybe (MandatoryValue Int),
     maxParallelSearchRequests :: Maybe (MandatoryValue Int),
+    maxParallelSearchRequestsOnRide :: Maybe (MandatoryValue Int),
     poolSortingType :: Maybe (MandatoryValue PoolSortingType),
     singleBatchProcessTime :: Maybe (MandatoryValue Seconds),
     distanceBasedBatchSplit :: Maybe (MandatoryValue [BatchSplitByPickupDistance])
@@ -300,12 +304,14 @@ validateDriverPoolConfigUpdateReq DriverPoolConfigUpdateReq {..} =
       validateField "radiusStepSize" radiusStepSize $ InMaybe $ InValue $ Min @Meters 1,
       validateField "driverPositionInfoExpiry" driverPositionInfoExpiry $ InMaybe $ InValue $ Min @Seconds 1,
       validateField "actualDistanceThreshold" actualDistanceThreshold $ InMaybe $ InValue $ Min @Meters 0,
+      validateField "actualDistanceThresholdOnRide" actualDistanceThresholdOnRide $ InMaybe $ InValue $ Min @Meters 0,
       validateField "maxDriverQuotesRequired" maxDriverQuotesRequired $ InMaybe $ InValue $ Min @Int 1,
       validateField "driverQuoteLimit" driverQuoteLimit $ InMaybe $ InValue $ Min @Int 1,
       validateField "driverRequestCountLimit" driverRequestCountLimit $ InMaybe $ InValue $ Min @Int 1,
       validateField "driverBatchSize" driverBatchSize $ InMaybe $ InValue $ Min @Int 1,
       validateField "maxNumberOfBatches" maxNumberOfBatches $ InMaybe $ InValue $ Min @Int 1,
       validateField "maxParallelSearchRequests" maxParallelSearchRequests $ InMaybe $ InValue $ Min @Int 1,
+      validateField "maxParallelSearchRequestsOnRide" maxParallelSearchRequestsOnRide $ InMaybe $ InValue $ Min @Int 1,
       validateField "singleBatchProcessTime" singleBatchProcessTime $ InMaybe $ InValue $ Min @Seconds 1
     ]
 
@@ -330,18 +336,39 @@ data BatchSplitByPickupDistance = BatchSplitByPickupDistance
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data BatchSplitByPickupDistanceOnRide = BatchSplitByPickupDistanceOnRide
+  { batchSplitSize :: Int,
+    batchSplitDelay :: Seconds
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OnRideRadiusConfig = OnRideRadiusConfig
+  { onRideRadius :: Meters,
+    batchNumber :: Int
+  }
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
   { minRadiusOfSearch :: Meters,
     maxRadiusOfSearch :: Meters,
     radiusStepSize :: Meters,
     driverPositionInfoExpiry :: Maybe Seconds,
     actualDistanceThreshold :: Maybe Meters,
+    actualDistanceThresholdOnRide :: Maybe Meters,
+    onRideBatchSplitConfig :: [BatchSplitByPickupDistanceOnRide],
+    onRideRadiusConfig :: [OnRideRadiusConfig],
+    enableForwardBatching :: Bool,
+    currentRideTripCategoryValidForForwardBatching :: [Text],
+    batchSizeOnRide :: Int,
     maxDriverQuotesRequired :: Int,
     driverQuoteLimit :: Int,
     driverRequestCountLimit :: Int,
     driverBatchSize :: Int,
     maxNumberOfBatches :: Int,
     maxParallelSearchRequests :: Int,
+    maxParallelSearchRequestsOnRide :: Int,
     poolSortingType :: PoolSortingType,
     distanceBasedBatchSplit :: [BatchSplitByPickupDistance],
     singleBatchProcessTime :: Seconds,
@@ -363,12 +390,14 @@ validateDriverPoolConfigCreateReq DriverPoolConfigCreateReq {..} =
       validateField "radiusStepSize" radiusStepSize $ Min @Meters 1,
       validateField "driverPositionInfoExpiry" driverPositionInfoExpiry $ InMaybe $ Min @Seconds 1,
       validateField "actualDistanceThreshold" actualDistanceThreshold $ InMaybe $ Min @Meters 0,
+      validateField "actualDistanceThresholdOnRide" actualDistanceThresholdOnRide $ InMaybe $ Min @Meters 0,
       validateField "maxDriverQuotesRequired" maxDriverQuotesRequired $ Min @Int 1,
       validateField "driverQuoteLimit" driverQuoteLimit $ Min @Int 1,
       validateField "driverRequestCountLimit" driverRequestCountLimit $ Min @Int 1,
       validateField "driverBatchSize" driverBatchSize $ Min @Int 1,
       validateField "maxNumberOfBatches" maxNumberOfBatches $ Min @Int 1,
       validateField "maxParallelSearchRequests" maxParallelSearchRequests $ Min @Int 1,
+      validateField "maxParallelSearchRequestsOnRide" maxParallelSearchRequestsOnRide $ Min @Int 1,
       validateField "singleBatchProcessTime" singleBatchProcessTime $ Min @Seconds 1,
       validateField "radiusShrinkValueForDriversOnRide" radiusShrinkValueForDriversOnRide $ Min @Meters 1,
       validateField "driverToDestinationDistanceThreshold" driverToDestinationDistanceThreshold $ Min @Meters 1,

@@ -31,7 +31,7 @@ import Domain.Types.Ride (Ride (..), RideAPIEntity (..))
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.Sos as DSos
 import qualified Domain.Types.VehicleServiceTier as DVST
-import EulerHS.Prelude hiding (id, null)
+import EulerHS.Prelude hiding (id, length, null)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -64,6 +64,8 @@ data BookingAPIEntity = BookingAPIEntity
     estimatedTotalFareWithCurrency :: PriceAPIEntity,
     fromLocation :: LocationAPIEntity,
     initialPickupLocation :: LocationAPIEntity,
+    driversPreviousRideDropLocLat :: Maybe Double,
+    driversPreviousRideDropLocLon :: Maybe Double,
     rideList :: [RideAPIEntity],
     hasNightIssue :: Bool,
     tripTerms :: [Text],
@@ -149,8 +151,9 @@ makeBookingAPIEntity ::
   Maybe DSos.SosStatus ->
   DBppDetails.BppDetails ->
   Bool ->
+  Bool ->
   BookingAPIEntity
-makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPaymentMethod hasDisability hasNightIssue mbSosStatus bppDetails isValueAddNP = do
+makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPaymentMethod hasDisability hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon = do
   let bookingDetails = mkBookingAPIDetails booking.bookingDetails
       providerNum = fromMaybe "+91" bppDetails.supportNumber
   BookingAPIEntity
@@ -190,7 +193,9 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
       isValueAddNP,
       vehicleServiceTierType = booking.vehicleServiceTierType,
       serviceTierName = booking.serviceTierName,
-      serviceTierShortDesc = booking.serviceTierShortDesc
+      serviceTierShortDesc = booking.serviceTierShortDesc,
+      driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
+      driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing
     }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -259,7 +264,8 @@ buildBookingAPIEntity booking personId = do
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
-  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) fareBreakups mbExoPhone mbPaymentMethod person.hasDisability False mbSosStatus bppDetails isValueAddNP
+  let showPrevDropLocationLatLon = maybe False (.showDriversPreviousRideDropLoc) mbRide
+  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) fareBreakups mbExoPhone mbPaymentMethod person.hasDisability False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon
 
 -- TODO move to Domain.Types.Ride.Extra
 makeRideAPIEntity :: Ride -> RideAPIEntity

@@ -45,6 +45,7 @@ data TagGroup
   | DRIVER_NEW_MESSAGE
   | PREVIOUS_CANCELLATION_REASONS
   | UPDATE_DETAILS
+  | FORWARD_BATCHING_REQUEST_INFO
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data EXTRA_PER_KM_STEP_FARE = EXTRA_PER_KM_STEP_FARE
@@ -198,4 +199,7 @@ data Tag
     CANCELLATION_REASON
   | -- Book Any estimates
     OTHER_SELECT_ESTIMATES
+  | -- Forward batching request info tags
+    PREVIOUS_RIDE_DROP_LOCATION_LAT
+  | PREVIOUS_RIDE_DROP_LOCATION_LON
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

@@ -142,7 +142,7 @@ buildRideEntity booking updRide newRideInfo = do
       unless (existingRide.bookingId == booking.id) $ throwError (InvalidRequest "Invalid rideId")
       pure $ UpdatedRide $ DUpdatedRide {ride = updRide existingRide, rideOldStatus = existingRide.status}
 
-rideBookingTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DB.BookingStatus -> DRide.RideStatus -> DB.Booking -> RideEntity -> m ()
+rideBookingTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => DB.BookingStatus -> DRide.RideStatus -> DB.Booking -> RideEntity -> m ()
 rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity = do
   unless (booking.status == bookingNewStatus) $ do
     QB.updateStatus booking.id bookingNewStatus
@@ -176,6 +176,7 @@ onStatus ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasField "storeRidesTimeLimit" r Int,
     HasField "hotSpotExpiry" r Seconds
   ) =>
   ValidatedOnStatusReq ->
@@ -305,6 +306,8 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       endOtp = Nothing
       startOdometerReading = Nothing
       endOdometerReading = Nothing
+      driversPreviousRideDropLoc = Nothing
+      showDriversPreviousRideDropLoc = False
       clientId = booking.clientId
       backendAppVersion = Nothing
       backendConfigVersion = Nothing
