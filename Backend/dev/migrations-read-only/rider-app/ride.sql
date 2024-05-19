@@ -68,3 +68,10 @@ ALTER TABLE atlas_app.ride ADD COLUMN client_config_version text ;
 ALTER TABLE atlas_app.ride ADD COLUMN client_bundle_version text ;
 ALTER TABLE atlas_app.ride ADD COLUMN backend_config_version text ;
 ALTER TABLE atlas_app.ride ADD COLUMN backend_app_version text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN show_drivers_previous_ride_drop_loc boolean ;
+ALTER TABLE atlas_app.ride ADD COLUMN drivers_previous_ride_drop_lon double precision ;
+ALTER TABLE atlas_app.ride ADD COLUMN drivers_previous_ride_drop_lat double precision ;

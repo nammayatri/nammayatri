@@ -47,6 +47,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     estimateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     goHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest.DriverGoHomeRequest),
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver,
+    isForwardRequest :: Kernel.Prelude.Bool,
     isPartOfIntelligentPool :: Kernel.Prelude.Bool,
     keepHiddenForSeconds :: Kernel.Types.Common.Seconds,
     lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
@@ -69,12 +70,12 @@ data SearchRequestForDriver = SearchRequestForDriver
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.Vehicle.Variant
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show)
 
 data DriverSearchRequestStatus = Active | Inactive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SearchRequestForDriverResponse = Accept | Reject | Pulled deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverSearchRequestStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverSearchRequestStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SearchRequestForDriverResponse))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchRequestForDriverResponse)

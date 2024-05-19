@@ -309,8 +309,8 @@ selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLoc
   driverPoolCurrentlyOnRide <-
     if null driverPoolNotOnRide
       then do
-        if transporterConfig.includeDriverCurrentlyOnRide
-          then calculateDriverPoolCurrentlyOnRide cityServiceTiers Estimate (fromJust driverPoolCfg) [] fromLocation merchantId Nothing False False
+        if transporterConfig.includeDriverCurrentlyOnRide && (fromJust driverPoolCfg).enableForwardBatching
+          then snd <$> calculateDriverPoolCurrentlyOnRide cityServiceTiers Estimate (fromJust driverPoolCfg) [] fromLocation merchantId Nothing False False Nothing
           else pure []
       else pure []
   let driverPool =

@@ -83,13 +83,15 @@ data RideAssignedReq = RideAssignedReq
   { bookingDetails :: BookingDetails,
     transactionId :: Text,
     isDriverBirthDay :: Bool,
-    isFreeRide :: Bool
+    isFreeRide :: Bool,
+    previousRideEndPos :: Maybe LatLong
   }
 
 data ValidatedRideAssignedReq = ValidatedRideAssignedReq
   { bookingDetails :: BookingDetails,
     isDriverBirthDay :: Bool,
     isFreeRide :: Bool,
+    previousRideEndPos :: Maybe LatLong,
     booking :: DRB.Booking
   }
 
@@ -194,6 +196,7 @@ data DFareBreakup = DFareBreakup
 
 rideAssignedReqHandler ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
+    HasField "storeRidesTimeLimit" r Int,
     CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
@@ -212,7 +215,7 @@ rideAssignedReqHandler req = do
   void $ QRB.updateBPPBookingId req.booking.id bppBookingId
   let booking = req.booking {DRB.bppBookingId = Just bppBookingId}
   mbMerchant <- CQM.findById booking.merchantId
-  ride <- buildRide mbMerchant booking req.bookingDetails
+  ride <- buildRide mbMerchant booking req.bookingDetails req.previousRideEndPos
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
   let category = case booking.specialLocationTag of
         Just _ -> "specialLocation"
@@ -229,8 +232,8 @@ rideAssignedReqHandler req = do
       Notify.notifyDriverBirthDay booking.riderId driverName
   withLongRetry $ CallBPP.callTrack booking ride
   where
-    buildRide :: (MonadFlow m, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> m DRide.Ride
-    buildRide mbMerchant booking BookingDetails {..} = do
+    buildRide :: (MonadFlow m, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> m DRide.Ride
+    buildRide mbMerchant booking BookingDetails {..} previousRideEndPos = do
       guid <- generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
@@ -275,6 +278,8 @@ rideAssignedReqHandler req = do
             clientConfigVersion = booking.clientConfigVersion,
             backendConfigVersion = booking.backendConfigVersion,
             backendAppVersion = Just deploymentVersion.getDeploymentVersion,
+            driversPreviousRideDropLoc = previousRideEndPos,
+            showDriversPreviousRideDropLoc = isJust previousRideEndPos,
             ..
           }
 
@@ -344,7 +349,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   fork "updating total rides count" $ SMC.updateTotalRidesCounters booking.riderId
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
-
+  mbAdvRide <- QRide.findLatestByDriverPhoneNumber ride.driverMobileNumber
+  whenJust mbAdvRide $ do \advRide -> when (advRide.id /= ride.id) $ QRide.updateshowDriversPreviousRideDropLoc False advRide.id
   let updRide =
         ride{status = DRide.COMPLETED,
              fare = Just fare,

@@ -81,7 +81,7 @@ import SharedLogic.Allocator
 import SharedLogic.DriverOnboarding
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
-import SharedLogic.Ride (multipleRouteKey, searchRequestKey)
+import SharedLogic.Ride (multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import SharedLogic.TollsDetector
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -129,7 +129,7 @@ endRideTransaction ::
   TransporterConfig ->
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
-  QDI.updateOnRide False (cast ride.driverId)
+  updateOnRideStatusWithAdvancedRideCheck ride.driverId
   QRide.updateStatus ride.id Ride.COMPLETED
   QRB.updateStatus booking.id SRB.COMPLETED
   whenJust mbFareParams QFare.create

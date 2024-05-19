@@ -234,11 +234,14 @@ tfAssignedReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideAssignedReq ->
 tfAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig = do
   let Common.BookingDetails {..} = bookingDetails
       arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
+      currentRideDropLocation = if isValueAddNP then Utils.mkForwardBatchTagGroupV2 ride.previousRideTripEndPos else Nothing
+      tagGroups = currentRideDropLocation <> arrivalTimeTagGroup
       quote = Utils.tfQuotation booking
       farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
       items = Utils.tfItems booking merchant.shortId.getShortId Nothing farePolicy Nothing
       payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
-  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing isDriverBirthDay isFreeRide (Just $ show EventEnum.RIDE_ASSIGNED) isValueAddNP
+  logDebug $ "currentRideDropLocation: " <> show currentRideDropLocation
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image tagGroups Nothing isDriverBirthDay isFreeRide (Just $ show EventEnum.RIDE_ASSIGNED) isValueAddNP
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,

@@ -2,11 +2,14 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
   BatchSplitByPickupDistance: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
+  BatchSplitByPickupDistanceOnRide: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
+  OnRideRadiusConfig: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   PoolSortingType: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   Seconds: Kernel.Types.Common
   IndianState: Kernel.Types.Beckn.Context
   ServiceTierType: Domain.Types.ServiceTierType
   Area: Lib.Types.SpecialLocation
+  Common: Domain.Types.Common
 
 DriverPoolConfig:
   tableName: driver_pool_config
@@ -35,11 +38,18 @@ DriverPoolConfig:
     driverToDestinationDuration: Seconds
     scheduleTryTimes: "[Int]"
     area: Area
+    batchSizeOnRide: Int
+    onRideRadiusConfig: "[OnRideRadiusConfig]"
+    onRideBatchSplitConfig: "[BatchSplitByPickupDistanceOnRide]"
+    enableForwardBatching: Bool
     createdAt: UTCTime
     updatedAt: UTCTime
     vehicleVariant: Maybe ServiceTierType|NoRelation
     tripCategory: Text
+    maxParallelSearchRequestsOnRide: Int
     thresholdToIgnoreActualDistanceThreshold: Maybe Meters
+    actualDistanceThresholdOnRide: Maybe Meters
+    currentRideTripCategoryValidForForwardBatching : "[Text]"
 
   beamInstance:
     - MakeTableInstances
@@ -49,6 +59,7 @@ DriverPoolConfig:
 
   sqlType:
     distanceBasedBatchSplit: text[]
+    onRideRadiusConfig: text[]
     scheduleTryTimes: integer[]
 
   default:
@@ -56,6 +67,12 @@ DriverPoolConfig:
     area: "'Default'"
     distanceBasedBatchSplit: "Array ['BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 4 }']"
     scheduleTryTimes: "'{1800, 900, 300}'"
+    batchSizeOnRide: "10"
+    onRideRadiusConfig: "ARRAY[]::TEXT[]"
+    currentRideTripCategoryValidForForwardBatching: "Array ['OneWay_OneWayOnDemandDynamicOffer']"
+    onRideBatchSplitConfig: "Array ['BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 4 }']"
+    enableForwardBatching: "false"
+    maxParallelSearchRequestsOnRide: "1"
 
   queries:
     findAllByMerchantOpCityId:

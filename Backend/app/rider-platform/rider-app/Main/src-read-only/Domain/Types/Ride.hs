@@ -12,6 +12,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleServiceTier
 import qualified Domain.Types.VehicleVariant
+import qualified Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -39,6 +40,7 @@ data Ride = Ride
     driverName :: Kernel.Prelude.Text,
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     driverRegisteredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    driversPreviousRideDropLoc :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     endOdometerReading :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     endOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fare :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
@@ -53,6 +55,7 @@ data Ride = Ride
     rideStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     safetyCheckStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
+    showDriversPreviousRideDropLoc :: Kernel.Prelude.Bool,
     startOdometerReading :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     status :: Domain.Types.Ride.RideStatus,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,

@@ -163,7 +163,8 @@ data TransporterConfigT f = TransporterConfigT
     pastDaysRideCounter :: B.C f Int,
     placeNameCacheExpiryDays :: B.C f (Maybe Int),
     emailOtpConfig :: B.C f (Maybe Email.Types.EmailOTPConfig),
-    crossTravelCities :: B.C f [City]
+    crossTravelCities :: B.C f [City],
+    useSilentFCMForForwardBatch :: B.C f Bool
   }
   deriving (Generic, B.Beamable)
 

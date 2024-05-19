@@ -28,6 +28,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
     merchantOperatingCityId' <- Storage.Queries.Transformers.Ride.getMerchantOperatingCityId bookingId merchantId merchantOperatingCityId
     toLocation' <- Storage.Queries.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId
     trackingUrl' <- Kernel.Prelude.parseBaseUrl trackingUrl
+    tripCategory' <- Storage.Queries.Transformers.Ride.getTripCategory bookingId tripCategory
     pure $
       Just
         Domain.Types.Ride.Ride
@@ -57,6 +58,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             fareParametersId = Kernel.Types.Id.Id <$> fareParametersId,
             fromLocation = fromLocation',
             id = Kernel.Types.Id.Id id,
+            isAdvanceBooking = Kernel.Prelude.fromMaybe False isAdvanceBooking,
             isFreeRide = isFreeRide,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
@@ -66,6 +68,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             numberOfSnapToRoadCalls = numberOfSnapToRoadCalls,
             otp = otp,
             pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
+            previousRideTripEndPos = Storage.Queries.Transformers.Ride.mkLatLong previousRideTripEndLat previousRideTripEndLon,
             rideEndedBy = rideEndedBy,
             safetyAlertTriggered = safetyAlertTriggered,
             shortId = Kernel.Types.Id.ShortId shortId,
@@ -77,6 +80,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             tollNames = tollNames,
             trackingUrl = trackingUrl',
             traveledDistance = traveledDistance,
+            tripCategory = tripCategory',
             tripEndPos = Storage.Queries.Transformers.Ride.mkLatLong tripEndLat tripEndLon,
             tripEndTime = tripEndTime,
             tripStartPos = Storage.Queries.Transformers.Ride.mkLatLong tripStartLat tripStartLon,
@@ -119,6 +123,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.fareAmount = fare,
         Beam.fareParametersId = Kernel.Types.Id.getId <$> fareParametersId,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.isAdvanceBooking = Kernel.Prelude.Just isAdvanceBooking,
         Beam.isFreeRide = isFreeRide,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Prelude.Just $ Kernel.Types.Id.getId merchantOperatingCityId,
@@ -128,6 +133,8 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.numberOfSnapToRoadCalls = numberOfSnapToRoadCalls,
         Beam.otp = otp,
         Beam.pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
+        Beam.previousRideTripEndLat = Kernel.Prelude.fmap (.lat) previousRideTripEndPos,
+        Beam.previousRideTripEndLon = Kernel.Prelude.fmap (.lon) previousRideTripEndPos,
         Beam.rideEndedBy = rideEndedBy,
         Beam.safetyAlertTriggered = safetyAlertTriggered,
         Beam.shortId = Kernel.Types.Id.getShortId shortId,
@@ -139,6 +146,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.tollNames = tollNames,
         Beam.trackingUrl = Kernel.Prelude.showBaseUrl trackingUrl,
         Beam.traveledDistance = traveledDistance,
+        Beam.tripCategory = Kernel.Prelude.Just tripCategory,
         Beam.tripEndLat = Kernel.Prelude.fmap (.lat) tripEndPos,
         Beam.tripEndLon = Kernel.Prelude.fmap (.lon) tripEndPos,
         Beam.tripEndTime = tripEndTime,

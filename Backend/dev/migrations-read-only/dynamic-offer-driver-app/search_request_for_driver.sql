@@ -54,3 +54,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN vehicle_
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN vehicle_service_tier_name text ;
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN vehicle_variant character varying (255) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN is_forward_request boolean ;

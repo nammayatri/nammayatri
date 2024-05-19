@@ -66,3 +66,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN can_switch_to_i
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN last_ac_status_checked_at timestamp with time zone ;
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN ac_usage_restriction_type text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN ac_restriction_lift_count integer NOT NULL default 0;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN has_advance_booking boolean  default false;

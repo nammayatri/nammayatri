@@ -147,6 +147,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import SharedLogic.Ride
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -1603,7 +1604,7 @@ clearOnRideStuckDrivers merchantShortId _ dbSyncTime = do
   driverIds <-
     mapM
       ( \dI -> do
-          QDriverInfo.updateOnRide False (cast dI.driverInfo.driverId)
+          updateOnRideStatusWithAdvancedRideCheck (cast dI.driverInfo.driverId)
           void $ LF.rideDetails dI.ride.id SRide.CANCELLED merchant.id dI.ride.driverId dI.ride.fromLocation.lat dI.ride.fromLocation.lon
           return (cast dI.driverInfo.driverId)
       )

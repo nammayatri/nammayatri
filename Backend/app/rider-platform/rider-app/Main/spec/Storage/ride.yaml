@@ -15,6 +15,7 @@ imports:
   Device: Kernel.Types.Version
   DeviceType: Kernel.Types.Version
   Version: Kernel.Types.Version
+  LatLong: Kernel.External.Maps
 
 Ride:
   tableName: ride
@@ -88,6 +89,7 @@ Ride:
     rideEndTime: Maybe UTCTime
     rideRating: Maybe Int
     allowedEditLocationAttempts: Maybe Int
+    driversPreviousRideDropLoc : Maybe LatLong
     startOdometerReading: Maybe Centesimal
     endOdometerReading: Maybe Centesimal
     isFreeRide: Maybe Bool
@@ -100,6 +102,7 @@ Ride:
     backendConfigVersion: Maybe Version
     backendAppVersion: Maybe Text
     safetyCheckStatus: Maybe Bool
+    showDriversPreviousRideDropLoc: Bool
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -146,6 +149,9 @@ Ride:
     traveledDistance:
       traveledDistanceValue: Maybe HighPrecDistance
       traveledDistance: Maybe HighPrecMeters
+    driversPreviousRideDropLoc:
+      driversPreviousRideDropLat: Maybe Double
+      driversPreviousRideDropLon: Maybe Double
 
   fromTType:
     toLocation: Storage.Queries.Extra.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
@@ -160,6 +166,8 @@ Ride:
     clientConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)|EM
     clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion|E
     backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
+    driversPreviousRideDropLoc: Storage.Queries.Extra.Transformers.Ride.mkLatLong|I
+    showDriversPreviousRideDropLoc: Kernel.Prelude.fromMaybe False showDriversPreviousRideDropLoc|E
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -179,6 +187,9 @@ Ride:
     clientOsVersion: clientDevice <&> (.deviceVersion)|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
 
+    driversPreviousRideDropLat: Kernel.Prelude.fmap (.lat)|I
+    driversPreviousRideDropLon: Kernel.Prelude.fmap (.lon)|I
+    showDriversPreviousRideDropLoc: Kernel.Prelude.Just showDriversPreviousRideDropLoc|E
   beamType:
     fare: Maybe HighPrecMoney
     totalFare: Maybe HighPrecMoney
@@ -187,6 +198,7 @@ Ride:
     clientSdkVersion: Maybe Text
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
+    showDriversPreviousRideDropLoc : Maybe Bool
 
   constraints:
     id: PrimaryKey

@@ -39,10 +39,10 @@ import Storage.Queries.OrphanInstances.Ride ()
 import Storage.Queries.Person ()
 import Tools.Metrics (CoreMetrics)
 
-createRide' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Ride -> m ()
+createRide' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
 createRide' ride = createWithKV ride >> appendByDriverPhoneNumber ride
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Ride -> m ()
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
 create ride = do
   _ <- whenNothingM_ (QL.findById ride.fromLocation.id) $ do QL.create ride.fromLocation
   _ <- whenJust ride.toLocation $ \location -> processLocation location
@@ -50,7 +50,7 @@ create ride = do
   where
     processLocation location = whenNothingM_ (QL.findById location.id) $ do QL.create location
 
-createRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Ride -> m ()
+createRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
 createRide ride = do
   fromLocationMap <- SLM.buildPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId
   mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId) ride.toLocation
@@ -391,12 +391,18 @@ findLatestByDriverPhoneNumber driverMobileNumber = do
           Nothing
         <&> listToMaybe
 
-appendByDriverPhoneNumber :: (MonadFlow m, Hedis.HedisFlow m r) => Ride -> m ()
+appendByDriverPhoneNumber :: (MonadFlow m, Hedis.HedisFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
 appendByDriverPhoneNumber ride = do
+  storeRidesTimeLimit <- asks (.storeRidesTimeLimit)
   let lookupKey = driverMobileNumberKey ride.driverMobileNumber
       rideId = [TE.encodeUtf8 $ getId ride.id]
-      expTime = 60 * 60 -- 60 minutes
+      expTime = toInteger storeRidesTimeLimit -- 60 minutes
   void $
     L.runKVDB meshConfig.kvRedis $ do
       void $ L.sadd lookupKey rideId
       L.expire lookupKey expTime
+
+updateshowDriversPreviousRideDropLoc :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Id Ride -> m ()
+updateshowDriversPreviousRideDropLoc showDriversPreviousRideDropLoc (Kernel.Types.Id.Id id) = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamR.showDriversPreviousRideDropLoc $ Kernel.Prelude.Just showDriversPreviousRideDropLoc, Se.Set BeamR.updatedAt _now] [Se.Is BeamR.id $ Se.Eq id]

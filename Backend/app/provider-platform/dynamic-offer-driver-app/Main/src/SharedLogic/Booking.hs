@@ -18,10 +18,10 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Ride
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
 import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
@@ -51,7 +51,7 @@ cancelBooking booking mbDriver transporter = do
   bookingCancellationReason <- case mbDriver of
     Nothing -> buildBookingCancellationReason booking.id Nothing mbRide transporterId'
     Just driver -> do
-      QDI.updateOnRide False driver.id
+      updateOnRideStatusWithAdvancedRideCheck driver.id
       buildBookingCancellationReason booking.id (Just driver.id) mbRide transporterId'
 
   QRB.updateStatus booking.id DRB.CANCELLED
@@ -59,7 +59,7 @@ cancelBooking booking mbDriver transporter = do
   whenJust mbRide $ \ride -> do
     void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
     QRide.updateStatus ride.id SRide.CANCELLED
-    QDI.updateOnRide False (cast ride.driverId)
+    updateOnRideStatusWithAdvancedRideCheck (cast ride.driverId)
     void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
   fork "cancelBooking - Notify BAP" $ do
