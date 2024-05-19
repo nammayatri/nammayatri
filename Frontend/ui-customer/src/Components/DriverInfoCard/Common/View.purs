@@ -43,7 +43,7 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, chatSuggestion)
 import Helpers.Utils (parseFloat)
 import Data.Int(toNumber, fromString)
 import MerchantConfig.Types (DriverInfoConfig)
-import Mobility.Prelude (boolToVisibility)
+import Mobility.Prelude (boolToVisibility, spaceSeparatedPascalCase)
 import Data.Function.Uncurried(runFn1)
 import Components.ServiceTierCard.View as ServiceTierCard
 import Resources.Constants (getVehicleCapacity)
@@ -99,7 +99,7 @@ driverDetailsView config uid nid =
           , gravity LEFT
           ] <> FontStyle.body27 TypoGraphy
         , textView (
-          [ text $ config.vehicleColor <> " " <> config.vehicleModel
+          [ text $ spaceSeparatedPascalCase $ config.vehicleColor <> " " <> config.vehicleModel
           , color Color.black700
           , accessibilityHint $ "Driver : " <> config.driverName <> " : Vehicle : " <>  config.vehicleModel
           , accessibility ENABLE
@@ -210,7 +210,8 @@ driverDetailsView config uid nid =
         serviceTierConfig name = {
           name : name,
           capacity : fromString $ getVehicleCapacity config.vehicleVariant,
-          isAc : Nothing
+          isAc : Nothing,
+          showACPill : config.showAcView
         }
 
 

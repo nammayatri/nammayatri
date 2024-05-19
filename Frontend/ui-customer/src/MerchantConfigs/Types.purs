@@ -404,12 +404,12 @@ type CityConfig = {
   referral :: ReferalConfig,
   dashboardUrl :: String,
   appLogo :: String,
-  appLogoLight :: String
+  appLogoLight :: String,
+  enableAcViews :: Boolean
 }
 
 type CityBasedFeatures = {
-  enableCabBanner :: Boolean,
-  enableChangeRideVariant :: Boolean
+  enableCabBanner :: Boolean
 }
 
 type EstimateConfig = {

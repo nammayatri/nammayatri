@@ -33,7 +33,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage, getVariantRideType)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage, getVariantRideType, getCityConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
@@ -46,6 +46,7 @@ import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (PaymentMode(..))
 import Screens.Types as ST
 import Styles.Colors as Color
+import Storage (getValueToLocalStore, KeyStore(..))
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput
 screen initialState =
@@ -153,9 +154,13 @@ tripDetailsLayout state push =
 ---------------------- tripIdView ---------------------------
 tripIdView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
 tripIdView push state =
-  let rideType = ServiceTierCard.parseName $ fromMaybe "" state.data.selectedItem.serviceTierName 
+  let serviceTierName = fromMaybe "" state.data.selectedItem.serviceTierName
+      cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
+      rideType = if cityConfig.enableAcViews 
+                  then ServiceTierCard.parseName serviceTierName
+                  else serviceTierName
       hasAirConditioned = ServiceTierCard.showACDetails rideType Nothing
-      rideTypeWithAc = if hasAirConditioned && rideType /= "" then "AC • " <> rideType else rideType
+      rideTypeWithAc = if hasAirConditioned && rideType /= "" && cityConfig.enableAcViews then "AC • " <> rideType else rideType
   in
   linearLayout
   [ width MATCH_PARENT
@@ -182,7 +187,7 @@ tripIdView push state =
               , height $ V 18
               , width $ V 18
               , margin $ Margin 0 1 3 0
-              , visibility $ boolToVisibility hasAirConditioned
+              , visibility $ boolToVisibility $ hasAirConditioned && cityConfig.enableAcViews
               ]
             , textView $
               [ text rideTypeWithAc

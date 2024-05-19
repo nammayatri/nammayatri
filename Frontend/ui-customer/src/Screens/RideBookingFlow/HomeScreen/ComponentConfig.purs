@@ -836,7 +836,7 @@ waitTimeInfoCardConfig state = let
     }
   , secondaryText {
       text = getString waitTimeConfig.secondaryText,
-      visibility = VISIBLE,
+      visibility = boolToVisibility waitTimeConfig.waitingChargeApplicable,
       padding = PaddingLeft 16,
       color = Color.black700,
       textStyle = FontStyle.ParagraphText,
@@ -857,19 +857,14 @@ waitTimeInfoCardConfig state = let
   }
   in requestInfoCardConfig'
   where 
-    textConfig :: Boolean -> {title :: STR, primaryText :: STR, secondaryText :: STR}
-    textConfig isQuotes = if isQuotes then {title : OTP_EXPIRE_TIMER, primaryText : SHOWS_FOR_HOW_LONG_YOUR_OTP_, secondaryText : IF_YOUR_OTP_EXPIRES_}
-                          else {title : WAIT_TIMER, primaryText : HOW_LONG_DRIVER_WAITED_FOR_PICKUP, secondaryText : YOU_WILL_PAY_FOR_EVERY_MINUTE waitingChargeInfo.freeMinutes waitingChargeInfo.chargePerMinute}
+    textConfig :: Boolean -> {title :: STR, primaryText :: STR, secondaryText :: STR, waitingChargeApplicable :: Boolean}
+    textConfig isQuotes = if isQuotes then {title : OTP_EXPIRE_TIMER, primaryText : SHOWS_FOR_HOW_LONG_YOUR_OTP_, secondaryText : IF_YOUR_OTP_EXPIRES_, waitingChargeApplicable : true}
+                          else {title : WAIT_TIMER, primaryText : HOW_LONG_DRIVER_WAITED_FOR_PICKUP, secondaryText : YOU_WILL_PAY_FOR_EVERY_MINUTE waitingChargeInfo.freeMinutes waitingChargeInfo.chargePerMinute, waitingChargeApplicable : waitingChargeInfo.chargePerMinute /= "₹0/min"}
 
     waitingChargeInfo = case state.data.rateCardCache of
-                          Just rateCard -> do
-                            let info = DA.find (\item -> DS.contains (DS.Pattern "Waiting Charges") item.key) rateCard.extraFare
-                            case info of
-                              Just item -> case extractNumber item.key of
-                                Just number -> {freeMinutes : number, chargePerMinute : item.val}
-                                Nothing -> {freeMinutes : "0", chargePerMinute : "0"}
-                              Nothing -> {freeMinutes : "0", chargePerMinute : "0"}
-                          Nothing -> {freeMinutes : "0", chargePerMinute : "0"}
+                          Just rateCard -> 
+                            {freeMinutes : rateCard.waitingTimeInfo.freeMinutes, chargePerMinute : rateCard.waitingTimeInfo.charge}
+                          Nothing -> {freeMinutes : "0", chargePerMinute : "₹0/min"}
 
     extractNumber :: String -> Maybe String
     extractNumber str = stripSuffix (DS.Pattern " mins)") $ fromMaybe "" $ stripPrefix (DS.Pattern "Waiting Charges (after ") str
@@ -981,8 +976,6 @@ driverInfoCardViewState state = { props:
                                   }
                               , data: driverInfoTransformer state
                             }
-  where 
-    rateCardInfo = getValueToLocalStore RATE_CARD_INFO
 
 messagingViewConfig :: ST.HomeScreenState -> MessagingView.Config
 messagingViewConfig state = let
@@ -1085,6 +1078,7 @@ driverInfoTransformer state =
     , serviceTierName : cardState.serviceTierName
     , providerName : cardState.providerName
     , providerType : cardState.providerType
+    , cityConfig : state.data.currentCityConfig
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -1582,6 +1576,10 @@ chooseVehicleConfig state = let
     , serviceTierShortDesc = selectedEstimates.serviceTierShortDesc
     , airConditioned = selectedEstimates.airConditioned
     , extraFare = selectedEstimates.extraFare
+    , fareInfoDescription = selectedEstimates.fareInfoDescription
+    , isNightShift = selectedEstimates.isNightShift
+    , nightChargeTill = selectedEstimates.nightChargeTill
+    , nightChargeFrom = selectedEstimates.nightChargeFrom
     , driverAdditions = selectedEstimates.driverAdditions
     , showEditButton = true
     , editBtnText = getString CHANGE

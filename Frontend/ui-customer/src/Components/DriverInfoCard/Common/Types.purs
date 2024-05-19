@@ -22,6 +22,7 @@ type DriverDetailsType
   , vehicleColor :: String
   , serviceTierName :: Maybe String
   , providerType :: CTP.ProviderType
+  , showAcView :: Boolean
   }
 
 type TripDetails a
