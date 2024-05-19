@@ -19,7 +19,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Data.Show.Generic (genericShow)
 import Prelude (class Eq, class Show)
-import Common.Types.App (RateCardType(..), FareList(..))
+import Common.Types.App (RateCardType(..), FareList(..), WaitingTimeInfo(..))
 import Components.PrimaryButton as PrimaryButton
 import Data.Maybe(Maybe(..))
 
@@ -49,7 +49,8 @@ type Config = {
     fareList :: Array FareList,
     otherOptions :: Array FareList,
     additionalStrings :: Array FareList,
-    fareInfoText :: String
+    fareInfoText :: String,
+    waitingTimeInfo :: WaitingTimeInfo
 }
 
 config :: Config 
@@ -68,5 +69,6 @@ config = {
     fareList : [],
     otherOptions : [],
     additionalStrings : [],
-    fareInfoText : ""
+    fareInfoText : "",
+    waitingTimeInfo : { freeMinutes: "", charge: "" }
 }

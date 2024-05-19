@@ -2100,7 +2100,7 @@ tripDetailsScreenFlow = do
                                 pure $ getUpdatedIssueList ["OPEN", "PENDING", "RESOLVED", "REOPENED"] issues 
                               else pure []
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" ""
-      let filteredOptions = UI.transformIssueOptions getOptionsRes.options (Just updatedState.data.selectedItem) currentIssueList
+      let filteredOptions = UI.transformIssueOptions getOptionsRes.options (Just updatedState.data.selectedItem) currentIssueList updatedState.data.config.cityConfig
           options' = mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) filteredOptions
           messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))getOptionsRes.messages
           chats' = map (\(Message currMessage) -> Chat {
