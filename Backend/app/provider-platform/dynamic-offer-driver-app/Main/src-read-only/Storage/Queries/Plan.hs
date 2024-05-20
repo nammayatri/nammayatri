@@ -37,7 +37,7 @@ findByIdAndPaymentModeWithServiceName (Kernel.Types.Id.Id id) paymentMode servic
 
 findByMerchantOpCityIdAndTypeWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PlanType -> Domain.Types.Plan.ServiceNames -> m ([Domain.Types.Plan.Plan]))
+  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PlanType -> Domain.Types.Plan.ServiceNames -> m [Domain.Types.Plan.Plan])
 findByMerchantOpCityIdAndTypeWithServiceName (Kernel.Types.Id.Id merchantOpCityId) planType serviceName = do
   findAllWithKV
     [ Se.And
@@ -49,7 +49,7 @@ findByMerchantOpCityIdAndTypeWithServiceName (Kernel.Types.Id.Id merchantOpCityI
 
 findByMerchantOpCityIdWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.ServiceNames -> m ([Domain.Types.Plan.Plan]))
+  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.ServiceNames -> m [Domain.Types.Plan.Plan])
 findByMerchantOpCityIdWithServiceName (Kernel.Types.Id.Id merchantOpCityId) serviceName = do
   findAllWithKV
     [ Se.And
@@ -84,7 +84,6 @@ updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
       Se.Set Beam.registrationAmount registrationAmount,
       Se.Set Beam.serviceName serviceName,
       Se.Set Beam.sgstPercentage sgstPercentage,
-      Se.Set Beam.subscribedFlagToggleAllowed subscribedFlagToggleAllowed,
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
+      Se.Set Beam.subscribedFlagToggleAllowed subscribedFlagToggleAllowed
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

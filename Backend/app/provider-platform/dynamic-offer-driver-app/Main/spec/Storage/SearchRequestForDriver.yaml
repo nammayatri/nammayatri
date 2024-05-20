@@ -162,7 +162,7 @@ SearchRequestForDriver:
     currency: Kernel.Prelude.Just|I
     customerCancellationDues: Kernel.Prelude.Just|I
 
-  constriants:
+  constraints:
     id: PrimaryKey
     searchTryId: SecondaryKey
     requestId: SecondaryKey
@@ -206,7 +206,7 @@ SearchRequestForDriver:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-  excludedFields: [updatedAt]
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
 
   excludedDefaultQueries:
     - create
