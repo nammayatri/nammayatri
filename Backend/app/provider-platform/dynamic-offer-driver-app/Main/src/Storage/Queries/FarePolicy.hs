@@ -128,6 +128,7 @@ update farePolicy = do
           Se.Set BeamFPRD.perExtraMinRateAmount $ Just fPRD.perExtraMinRate,
           Se.Set BeamFPRD.perExtraKmRate $ roundToIntegral fPRD.perExtraKmRate,
           Se.Set BeamFPRD.perExtraKmRateAmount $ Just fPRD.perExtraKmRate,
+          Se.Set BeamFPRD.deadKmFare $ fPRD.deadKmFare,
           Se.Set BeamFPRD.includedKmPerHr $ fPRD.includedKmPerHr,
           Se.Set BeamFPRD.plannedPerKmRate $ roundToIntegral fPRD.plannedPerKmRate,
           Se.Set BeamFPRD.plannedPerKmRateAmount $ Just fPRD.plannedPerKmRate,

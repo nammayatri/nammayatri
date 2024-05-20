@@ -1,0 +1,2 @@
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN dead_km_fare INTEGER NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ADD COLUMN dead_km_fare INTEGER;

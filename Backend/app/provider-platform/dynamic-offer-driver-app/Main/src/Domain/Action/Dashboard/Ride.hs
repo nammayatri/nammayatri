@@ -603,6 +603,7 @@ makeFareParam (DFP.RentalDetails DFP.FParamsRentalDetails {..}) =
         distBasedFare = roundToIntegral distBasedFare,
         timeBasedFareWithCurrency = PriceAPIEntity timeBasedFare currency,
         distBasedFareWithCurrency = PriceAPIEntity distBasedFare currency,
+        deadKmFare = PriceAPIEntity deadKmFare currency,
         ..
       }
 makeFareParam (DFP.InterCityDetails DFP.FParamsInterCityDetails {..}) =

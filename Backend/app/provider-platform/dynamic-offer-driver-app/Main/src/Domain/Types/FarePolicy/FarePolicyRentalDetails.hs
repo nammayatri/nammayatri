@@ -30,6 +30,7 @@ data FPRentalDetailsD (s :: UsageSafety) = FPRentalDetails
     includedKmPerHr :: Kilometers,
     plannedPerKmRate :: HighPrecMoney,
     currency :: Currency,
+    deadKmFare :: HighPrecMoney,
     maxAdditionalKmsLimit :: Kilometers,
     totalAdditionalKmsLimit :: Kilometers,
     nightShiftCharge :: Maybe Domain.NightShiftCharge,

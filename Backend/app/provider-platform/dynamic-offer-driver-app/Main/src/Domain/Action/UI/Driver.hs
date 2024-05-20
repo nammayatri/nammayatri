@@ -1096,9 +1096,9 @@ getStats (driverId, _, merchantOpCityId) date = do
       deadKmFares =
         mapMaybe
           ( \x -> case fareParametersDetails x of
-              ProgressiveDetails det -> Just (deadKmFare det)
+              ProgressiveDetails det -> Just ((deadKmFare :: Fare.FParamsProgressiveDetails -> HighPrecMoney) det)
               SlabDetails _ -> Nothing
-              RentalDetails _ -> Nothing
+              RentalDetails det -> Just ((deadKmFare :: Fare.FParamsRentalDetails -> HighPrecMoney) det)
               InterCityDetails det -> Just (pickupCharge det)
           )
           fareParameters

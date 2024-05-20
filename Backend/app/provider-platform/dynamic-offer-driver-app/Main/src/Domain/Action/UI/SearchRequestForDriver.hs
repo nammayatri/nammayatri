@@ -149,6 +149,7 @@ extractDriverPickupCharges :: DFP.FarePolicyDetailsD s -> Maybe HighPrecMoney
 extractDriverPickupCharges farePolicyDetails =
   case farePolicyDetails of
     DFP.ProgressiveDetails det -> Just det.deadKmFare
+    DFP.RentalDetails det -> Just det.deadKmFare
     DFP.InterCityDetails det -> Just det.deadKmFare
     _ -> Nothing
 

@@ -23,6 +23,7 @@ data FareParametersRentalDetailsT f = FareParametersRentalDetailsT
     timeBasedFareAmount :: B.C f (Maybe HighPrecMoney),
     distBasedFareAmount :: B.C f (Maybe HighPrecMoney),
     currency :: B.C f (Maybe Currency),
+    deadKmFare :: B.C f (Maybe HighPrecMoney),
     extraDuration :: B.C f (Maybe Seconds),
     extraDistance :: B.C f (Maybe Meters)
   }
