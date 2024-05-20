@@ -74,6 +74,8 @@ import Mobility.Prelude (boolToVisibility)
 import Constants 
 import LocalStorage.Cache (getValueFromCache)
 import Engineering.Helpers.Utils (getFixedTwoDecimals)
+import Common.Resources.Constants
+import Helpers.Utils
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -1944,9 +1946,19 @@ bgLocPopup state =
       cornerRadius = PTD.Corners 15.0 true true true true,
       coverImageConfig {
         imageUrl = fetchImage FF_ASSET "ny_ic_bgloc"
-      , visibility = VISIBLE
+      , visibility = GONE
       , width = V 300
       , height = V 315
+      }
+    , coverLottie{
+        visibility = VISIBLE
+      , id = EHC.getNewIDWithTag "bgLocLottie"
+      , height =V 300
+      , width = V 300
+      , config{
+          rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/" <>  (if state.data.config.appData.name =="Mana Yatri" then "enable_locatio_permission_lottie_manayatri" else "enable_locatio_permission_lottie") <> ".json"
+        , lottieId = EHC.getNewIDWithTag "bgLocLottie"
+        }
       }
     }
   

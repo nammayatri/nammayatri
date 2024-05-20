@@ -26,6 +26,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
 import Data.Maybe as Mb
 import Components.TipsView as TipsView
+import JBridge
 
 data Action = OnButton1Click
             | OnButton2Click
@@ -86,6 +87,7 @@ type Config = {
     isTipPopup :: Boolean,
     coverLottieConfig :: LottieConfig,
     showRetry :: Boolean
+, coverLottie :: CoverLottie
 }
 
 type CoverMediaConfig = {
@@ -201,6 +203,18 @@ type TopTitle = {
   , margin :: Margin
   , color :: String
   , gravity :: Gravity
+}
+
+type CoverLottie = {
+  id :: String
+, background :: String
+, cornerRadius :: Number
+, padding :: Padding
+, visibility :: Visibility
+, height :: Length
+, width :: Length
+, margin :: Margin
+, config :: LottieAnimationConfig
 }
 
 config :: Config
@@ -531,6 +545,17 @@ config = {
     isVisible : false,
     isTipEnabled : true,
     isTipPopup : false
+  , coverLottie : {
+      id : ""
+    , background : Color.transparent
+    , cornerRadius : 0.0
+    , padding : Padding 0 0 0 0
+    , visibility : GONE
+    , height : V 0
+    , width : V 0
+    , margin : Margin 0 0 0 0
+    , config : lottieAnimationConfig
+    }
 }
 
 
