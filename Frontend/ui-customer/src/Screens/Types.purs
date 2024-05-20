@@ -1034,7 +1034,7 @@ type RateCard =
     additionalFare :: Int,
     createdTime :: String,
     tollCharge :: Number,
-    waitingTimeInfo :: WaitingTimeInfo,
+    waitingTimeInfo :: Common.WaitingTimeInfo,
     currentRateCardType :: Common.RateCardType,
     driverAdditions :: Array Common.FareList,
     extraFare :: Array Common.FareList,

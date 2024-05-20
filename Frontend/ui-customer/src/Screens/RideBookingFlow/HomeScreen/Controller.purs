@@ -891,7 +891,6 @@ data Action = NoAction
             | ChooseSingleVehicleAction ChooseVehicleController.Action
             | LocationTagBarAC LocationTagBarV2Controller.Action
             | UpdateSheetState BottomSheetState
-            | RentalBannerAction Banner.Action
             | BottomNavBarAction BottomNavBarIcon
             | BannerCarousel BannerCarousel.Action
             | SetBannerItem ListItem
@@ -929,6 +928,7 @@ data Action = NoAction
             | RentalInfoAction PopUpModal.Action
             | IntercitySpecialZone PopUpModal.Action
             | StartScheduledRidePolling 
+            | RentalBannerClick 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -2612,7 +2612,7 @@ eval (ContinueWithoutOffers (SelectListRes resp)) state = do
 
 eval (GetRideConfirmation resp) state = do
   logStatus "confirming_ride" resp
-  void $ pure $ setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ filter (\item -> item.bookingId /= state.props.bookingId) $ decodeBookingTimeList FunctionCall
+  -- void $ pure $ setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ filter (\item -> item.bookingId /= state.props.bookingId) $ decodeBookingTimeList FunctionCall
   case state.props.isSpecialZone of
     false -> normalRideFlow resp state
     true -> specialZoneRideFlow resp state
@@ -3030,8 +3030,7 @@ eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do
     "INSTANT" -> continueWithCmd state [ pure $ WhereToClick]
     _ -> continue state
   
-eval (RentalBannerAction Banner.OnClick) state = maybe (exit GoToScheduledRides) (\rentalsInfo -> if rentalsInfo.multipleScheduled then exit (PastRides state true) else exit GoToScheduledRides) state.data.rentalsInfo
-
+eval (RentalBannerClick) state = maybe (exit GoToScheduledRides) (\rentalsInfo -> if rentalsInfo.multipleScheduled then exit (PastRides state true) else exit GoToScheduledRides) state.data.rentalsInfo
 eval (BottomNavBarAction id) state = do 
   let newState = state {props {focussedBottomIcon = id}}
   case id of 

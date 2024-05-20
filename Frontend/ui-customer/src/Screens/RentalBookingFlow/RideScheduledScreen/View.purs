@@ -19,7 +19,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (FetchImageFrom(..), fetchImage, decodeError)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, decodeError, storeCallBackCustomer)
 import JBridge (toast)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -51,6 +51,7 @@ rideScheduledScreen initialState =
   }
   where
     getBookingListEvent push = do
+      void $ storeCallBackCustomer push NotificationListener "RideScheduledScreen"
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ getBookingList GetBookingList CheckFlowStatusAction 10 1000.0 push initialState
       pure $ pure unit
 

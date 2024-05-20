@@ -636,6 +636,8 @@ dummyRentalBookingConfig =
   , finalDistance : 0
   , rideStartedAt : ""
   , rideEndedAt : ""
+  , extraDistanceFare : ""
+  , extraTimeFare : ""
   }
 
 dummyBookingTime :: BookingTime

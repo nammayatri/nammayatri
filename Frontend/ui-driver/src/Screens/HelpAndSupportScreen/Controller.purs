@@ -50,7 +50,6 @@ instance loggableAction :: Loggable Action where
     BackPressed -> do
       trackAppBackPress appId (getScreen HELP_AND_SUPPORT_SCREEN)
       trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
-    SourceToDestinationAction (SourceToDestinationController.Dummy) -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "source_to_destination" "dummy"
     OptionClick optionIndex -> do
       trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "view_options"
       trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
@@ -112,7 +111,6 @@ eval BackPressed state = do
         HOME_SCREEN -> exit (GoToHomeScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
         TRIP_DETAILS_SCREEN -> exit (GoToTripDetailsScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
         _ -> continue state
-eval (SourceToDestinationAction (SourceToDestinationController.Dummy)) state = continue state
 eval (SelectRide selectedCategory) state = do
   when (not (DS.null state.data.timerId)) $ do
     void $ pure $ TF.clearTimerWithId state.data.timerId
