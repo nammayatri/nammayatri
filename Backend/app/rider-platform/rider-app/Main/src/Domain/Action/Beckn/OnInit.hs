@@ -104,7 +104,7 @@ onInit req = do
         OnInitRes
           { bookingId = booking.id,
             paymentUrl = booking.paymentUrl,
-            itemId = booking.itemId,
+            itemId = booking.bppEstimateId,
             vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType,
             fulfillmentId = booking.fulfillmentId,
             bookingDetails = booking.bookingDetails,

@@ -84,9 +84,8 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
                 handle (errHandler dConfirmRes transporter (Just rideInfo'.driver)) $ do
                   -- We assign driver post `on_confirm`, so removing `rideInfo` details fron `dConfirmRes`.
                   let dConfirmRes' = dConfirmRes {DConfirm.rideInfo = Nothing}
-                      estimateId = dConfirmRes.booking.estimateId <&> getId
                   callOnConfirm dConfirmRes' msgId txnId bapId callbackUrl bppId bppUri city country
-                  void $ BP.sendRideAssignedUpdateToBAP dConfirmRes.booking rideInfo'.ride rideInfo'.driver rideInfo'.vehicle estimateId
+                  void $ BP.sendRideAssignedUpdateToBAP dConfirmRes.booking rideInfo'.ride rideInfo'.driver rideInfo'.vehicle
             Nothing -> do
               fork "on_confirm/on_update" $ do
                 handle (errHandler dConfirmRes transporter Nothing) $ do
