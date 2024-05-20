@@ -246,6 +246,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       case searchRequest.riderPreferredOption of
         Rental -> []
         OneWay -> _estimateInfo
+        InterCity -> []
 
     mkBppDetails :: Flow BppDetails
     mkBppDetails = do

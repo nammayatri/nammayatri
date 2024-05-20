@@ -25,8 +25,13 @@ data FareProduct = FareProduct
     id :: Kernel.Types.Id.Id Domain.Types.FareProduct.FareProduct,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
+    searchSource :: Domain.Types.FareProduct.SearchSource,
     timeBounds :: Domain.Types.Extra.FareProduct.TimeBound,
     tripCategory :: Domain.Types.Common.TripCategory,
     vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data SearchSource = ALL | DASHBOARD | MOBILE_APP deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchSource)
