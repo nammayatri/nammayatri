@@ -123,7 +123,7 @@ tfOrderItem res isValueAddNP =
       itemFulfillmentIds = Nothing
       itemLocationIds = Nothing
       itemPaymentIds = Nothing
-      itemId = Just res.estimate.itemId
+      itemId = Just res.estimate.bppEstimateId.getId
       itemTags =
         if isValueAddNP
           then Just $ mkItemTags res

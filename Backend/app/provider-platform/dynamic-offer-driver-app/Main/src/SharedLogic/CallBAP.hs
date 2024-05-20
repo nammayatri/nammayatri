@@ -272,10 +272,10 @@ sendRideAssignedUpdateToBAP ::
   SRide.Ride ->
   DP.Person ->
   DVeh.Vehicle ->
-  Maybe Text ->
   m ()
-sendRideAssignedUpdateToBAP booking ride driver veh estimateId = do
+sendRideAssignedUpdateToBAP booking ride driver veh = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  let estimateId = booking.estimateId <&> getId
   merchant <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
