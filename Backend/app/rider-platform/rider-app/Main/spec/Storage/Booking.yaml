@@ -151,7 +151,7 @@ Booking:
     status: BookingStatus
     providerId: Text
     providerUrl: BaseUrl
-    itemId: Text
+    bppEstimateId: Text
     primaryExophone: Text
     startTime: UTCTime
     riderId: Id Person
@@ -208,6 +208,8 @@ Booking:
     clientDevice:
       clientOsType: Maybe DeviceType
       clientOsVersion: Maybe Text
+    bppEstimateId:
+      itemId: Text
   beamInstance: MakeTableInstancesWithTModifier [("bppBookingId", "bpp_ride_booking_id"), ("riderTransactionId", "transaction_id")]
   beamType:
     discount: Maybe HighPrecMoney
@@ -299,6 +301,7 @@ Booking:
     clientSdkVersion: Kernel.Utils.Version.versionToText <$> clientSdkVersion|E
     clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
     backendConfigVersion: Kernel.Utils.Version.versionToText <$> backendConfigVersion|E
+    bppEstimateId: itemId|E
 
   intermediateTransformers:
     toTType:
@@ -323,6 +326,7 @@ Booking:
     clientConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)|EM
     clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion|E
     backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
+    itemId: bppEstimateId|E
 
   extraOperations:
     - EXTRA_QUERY_FILE
