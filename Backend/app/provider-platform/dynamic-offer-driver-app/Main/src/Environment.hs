@@ -64,7 +64,8 @@ data SuperPositionConfig = SuperPositionConfig
   { host :: String,
     interval :: Natural,
     tenants :: [String],
-    retryConnection :: Bool
+    retryConnection :: Bool,
+    enablePolling :: Bool
   }
   deriving (Generic, FromDhall)
 

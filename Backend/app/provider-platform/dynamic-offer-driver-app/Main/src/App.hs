@@ -65,14 +65,14 @@ import "utils" Utils.Common.Events as UE
 
 createCAC :: AppCfg -> IO ()
 createCAC appCfg = do
-  cacStatus <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) (appCfg.cacConfig.tenant : appCfg.cacTenants)
+  cacStatus <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) (appCfg.cacConfig.tenant : appCfg.cacTenants) appCfg.cacConfig.enablePolling
   case cacStatus of
     0 -> CM.startCACPolling appCfg.cacTenants
     _ -> do
       -- logError "CAC client failed to start"
       threadDelay 1000000
       B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
-  superPositionStatus <- CM.initSuperPositionClient appCfg.superPositionConfig.host (fromIntegral appCfg.superPositionConfig.interval) appCfg.superPositionConfig.tenants
+  superPositionStatus <- CM.initSuperPositionClient appCfg.superPositionConfig.host (fromIntegral appCfg.superPositionConfig.interval) appCfg.superPositionConfig.tenants appCfg.superPositionConfig.enablePolling
   case superPositionStatus of
     0 -> CM.runSuperPositionPolling appCfg.superPositionConfig.tenants
     _ -> do
