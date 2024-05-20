@@ -7,7 +7,7 @@ import qualified API.Types.UI.VehicleDetails
 import qualified Control.Lens
 import qualified Domain.Action.UI.VehicleDetails as Domain.Action.UI.VehicleDetails
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleDetails
 import qualified Environment
@@ -43,7 +43,7 @@ handler = getVehicleMakes :<|> postVehicleModels :<|> postVehicleDetails
 getVehicleMakes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Environment.FlowHandler API.Types.UI.VehicleDetails.VehicleMakesResp
   )
@@ -52,7 +52,7 @@ getVehicleMakes a1 = withFlowHandlerAPI $ Domain.Action.UI.VehicleDetails.getVeh
 postVehicleModels ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.VehicleDetails.VehicleModelsReq ->
     Environment.FlowHandler API.Types.UI.VehicleDetails.VehicleModelsResp
@@ -62,7 +62,7 @@ postVehicleModels a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.VehicleDetails.p
 postVehicleDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.VehicleDetails.VehicleDetailsReq ->
     Environment.FlowHandler Domain.Types.VehicleDetails.VehicleDetails

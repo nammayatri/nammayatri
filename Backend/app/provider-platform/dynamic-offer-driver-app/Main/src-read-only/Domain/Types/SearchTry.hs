@@ -7,7 +7,7 @@ module Domain.Types.SearchTry where
 import Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.ServiceTierType
 import qualified Kernel.Beam.Lib.UtilsTH
@@ -27,7 +27,7 @@ data SearchTry = SearchTry
     id :: Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry,
     isScheduled :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     messageId :: Kernel.Prelude.Text,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     searchRepeatCounter :: Kernel.Prelude.Int,
@@ -42,12 +42,12 @@ data SearchTry = SearchTry
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data SearchRepeatType = INITIAL | RETRIED | REALLOCATION | CANCELLED_AND_RETRIED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data SearchRepeatType = INITIAL | RETRIED | REALLOCATION | CANCELLED_AND_RETRIED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SearchTryStatus = ACTIVE | CANCELLED | COMPLETED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data SearchTryStatus = ACTIVE | CANCELLED | COMPLETED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''SearchTryStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''SearchTryStatus)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''SearchTryStatus))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''SearchTryStatus)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''SearchRepeatType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''SearchRepeatType)

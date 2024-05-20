@@ -13,7 +13,7 @@ imports:
   QuizQuestion: Domain.Types.LmsEnumTypes
   QuizOptions: Domain.Types.QuestionInformation
   QuestionInformation: Domain.Types.QuestionInformation
-  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   ModuleCompletionStatus: Domain.Types.DriverModuleCompletion
   UTCTime: Kernel.Prelude
   APISuccess: Kernel.Types.APISuccess

@@ -6,7 +6,7 @@ module API.Action.UI.SpecialLocation where
 import qualified Control.Lens
 import qualified Domain.Action.UI.SpecialLocation as Domain.Action.UI.SpecialLocation
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
@@ -26,7 +26,7 @@ handler = getSpecialLocationList
 getSpecialLocationList ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Environment.FlowHandler [Lib.Queries.SpecialLocation.SpecialLocationFull]
   )

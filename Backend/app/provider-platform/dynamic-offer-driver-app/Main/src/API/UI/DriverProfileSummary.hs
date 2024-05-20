@@ -16,7 +16,7 @@ module API.UI.DriverProfileSummary where
 
 import qualified Domain.Action.UI.DriverProfileSummary as Domain
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)

@@ -30,8 +30,8 @@ import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.Notification (Notification)
 import qualified Domain.Types.Notification as DNTF
 import qualified Domain.Types.Person as DP

@@ -15,7 +15,7 @@
 module Storage.CachedQueries.Merchant.LeaderBoardConfig where
 
 import Domain.Types.LeaderBoardConfigs
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis

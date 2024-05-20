@@ -20,7 +20,7 @@ where
 import Data.Time (utctDay)
 import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverStats as DS
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.SearchRequestForDriver as SRD

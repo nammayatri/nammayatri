@@ -6,7 +6,7 @@ module Domain.Types.DriverPoolConfig where
 
 import Data.Aeson
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceTierType
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -37,7 +37,7 @@ data DriverPoolConfig = DriverPoolConfig
     maxParallelSearchRequestsOnRide :: Kernel.Prelude.Int,
     maxRadiusOfSearch :: Kernel.Types.Common.Meters,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     minRadiusOfSearch :: Kernel.Types.Common.Meters,
     onRideBatchSplitConfig :: [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.BatchSplitByPickupDistanceOnRide],
     onRideRadiusConfig :: [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.OnRideRadiusConfig],

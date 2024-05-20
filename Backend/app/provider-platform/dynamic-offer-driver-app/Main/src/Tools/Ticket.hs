@@ -19,8 +19,8 @@ module Tools.Ticket
 where
 
 import Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import EulerHS.Prelude
 import qualified Kernel.External.Ticket.Interface as Ticket
 import Kernel.External.Ticket.Interface.Types as TIT

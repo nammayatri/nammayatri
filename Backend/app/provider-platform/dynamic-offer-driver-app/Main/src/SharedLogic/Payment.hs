@@ -18,9 +18,9 @@ import Data.Time (UTCTime (UTCTime), secondsToDiffTime, utctDay)
 import Domain.Types.DriverFee
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.Merchant.MerchantMessage as MessageKey
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import Domain.Types.MerchantMessage as MessageKey
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as DP
 import qualified Kernel.Beam.Functions as B

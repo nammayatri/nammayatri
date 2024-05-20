@@ -8,7 +8,7 @@ import qualified Control.Lens
 import qualified Domain.Action.UI.LmsModule as Domain.Action.UI.LmsModule
 import qualified Domain.Types.LmsModule
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Vehicle
 import qualified Environment
@@ -91,7 +91,7 @@ handler = getLmsListAllModules :<|> getLmsListAllVideos :<|> getLmsListAllQuiz :
 getLmsListAllModules ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Maybe Kernel.External.Types.Language ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
@@ -104,7 +104,7 @@ getLmsListAllModules a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsM
 getLmsListAllVideos ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule ->
     Kernel.Prelude.Maybe Kernel.External.Types.Language ->
@@ -115,7 +115,7 @@ getLmsListAllVideos a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.g
 getLmsListAllQuiz ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule ->
     Kernel.Prelude.Maybe Kernel.External.Types.Language ->
@@ -126,7 +126,7 @@ getLmsListAllQuiz a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.get
 postLmsMarkVideoAsStarted ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.LmsModule.VideoUpdateAPIReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
@@ -136,7 +136,7 @@ postLmsMarkVideoAsStarted a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModul
 postLmsMarkVideoAsCompleted ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.LmsModule.VideoUpdateAPIReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
@@ -146,7 +146,7 @@ postLmsMarkVideoAsCompleted a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsMod
 postLmsQuestionConfirm ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.LmsModule.QuestionConfirmReq ->
     Environment.FlowHandler API.Types.UI.LmsModule.QuestionConfirmRes

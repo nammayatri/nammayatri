@@ -1,3 +1,1 @@
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN place_name_cache_expiry_days integer ;
-
 update atlas_driver_offer_bpp.transporter_config set place_name_cache_expiry_days = 90;

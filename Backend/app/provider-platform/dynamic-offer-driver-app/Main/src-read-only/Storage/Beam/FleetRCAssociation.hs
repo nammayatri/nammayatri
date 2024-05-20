@@ -17,8 +17,8 @@ data FleetRCAssociationT f = FleetRCAssociationT
     fleetOwnerId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     rcId :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

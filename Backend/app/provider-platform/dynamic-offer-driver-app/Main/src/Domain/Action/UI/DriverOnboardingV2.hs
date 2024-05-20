@@ -16,10 +16,10 @@ import Domain.Types.FarePolicy
 import qualified Domain.Types.IdfyVerification as DIV
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
-import Domain.Types.Merchant.TransporterConfig
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import Domain.Types.ServiceTierType
+import Domain.Types.TransporterConfig
 import qualified Domain.Types.Vehicle as DTV
 import Domain.Types.VehicleServiceTier
 import qualified Environment
@@ -80,7 +80,7 @@ mkDocumentVerificationConfigAPIEntity language Domain.Types.DocumentVerification
 getOnboardingConfigs ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
@@ -117,7 +117,7 @@ getOnboardingConfigs (mbPersonId, _, merchanOperatingCityId) mbOnlyVehicle = do
 getDriverRateCard ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Maybe Meters ->
     Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType ->
@@ -210,7 +210,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) mbDistance mbServiceT
 postDriverUpdateAirCondition ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -226,7 +226,7 @@ postDriverUpdateAirCondition (mbPersonId, _, merchanOperatingCityId) API.Types.U
 getDriverVehicleServiceTiers ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Environment.Flow API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers
   )
@@ -285,7 +285,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchanOperatingCityId) = do
 postDriverUpdateServiceTiers ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers ->
     Environment.Flow APISuccess
@@ -322,7 +322,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchanOperatingCityId) API.Types.U
 postDriverRegisterSsn ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.DriverOnboardingV2.SSNReq ->
     Environment.Flow APISuccess
@@ -346,7 +346,7 @@ postDriverRegisterSsn (mbPersonId, _, _) API.Types.UI.DriverOnboardingV2.SSNReq 
 postDriverRegisterPancard ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.DriverOnboardingV2.DriverPanReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess

@@ -7,7 +7,7 @@ import qualified API.Types.UI.DriverOnboardingV2
 import qualified Control.Lens
 import qualified Domain.Action.UI.DriverOnboardingV2 as Domain.Action.UI.DriverOnboardingV2
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.ServiceTierType
 import qualified Environment
@@ -88,7 +88,7 @@ handler = getOnboardingConfigs :<|> getDriverRateCard :<|> postDriverUpdateAirCo
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
@@ -98,7 +98,7 @@ getOnboardingConfigs a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboard
 getDriverRateCard ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Maybe Kernel.Types.Common.Meters ->
     Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType ->
@@ -109,7 +109,7 @@ getDriverRateCard a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboard
 postDriverUpdateAirCondition ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
@@ -119,7 +119,7 @@ postDriverUpdateAirCondition a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Drive
 getDriverVehicleServiceTiers ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers
   )
@@ -128,7 +128,7 @@ getDriverVehicleServiceTiers a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOn
 postDriverUpdateServiceTiers ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
@@ -138,7 +138,7 @@ postDriverUpdateServiceTiers a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Drive
 postDriverRegisterSsn ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.DriverOnboardingV2.SSNReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
@@ -148,7 +148,7 @@ postDriverRegisterSsn a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboar
 postDriverRegisterPancard ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.DriverOnboardingV2.DriverPanReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess

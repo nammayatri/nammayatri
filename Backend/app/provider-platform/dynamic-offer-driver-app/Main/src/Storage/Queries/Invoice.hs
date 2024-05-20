@@ -5,7 +5,7 @@ module Storage.Queries.Invoice where
 import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Invoice as Domain
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
 import Domain.Types.Plan (ServiceNames (YATRI_SUBSCRIPTION))
 import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findAllWithOptionsKV', findOneWithKV, updateWithKV)

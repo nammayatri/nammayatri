@@ -35,7 +35,7 @@ import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as Ride
 import Environment

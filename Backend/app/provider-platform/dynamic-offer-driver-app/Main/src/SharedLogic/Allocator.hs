@@ -19,9 +19,9 @@ module SharedLogic.Allocator where
 
 import Data.Singletons.TH
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.Merchant.MerchantMessage
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import Domain.Types.Merchant.Overlay
+import Domain.Types.MerchantMessage
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.Overlay
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as Plan
 import qualified Domain.Types.SearchTry as DST

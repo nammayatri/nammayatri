@@ -1,5 +1,5 @@
 imports:
-  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Merchant: Domain.Types.Merchant
   ReelsData: Domain.Types.ReelsData
   Language: Kernel.External.Types

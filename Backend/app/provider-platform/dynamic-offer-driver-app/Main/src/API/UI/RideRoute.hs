@@ -15,7 +15,7 @@ where
 
 import qualified Domain.Action.UI.RideRoute as DRideRoute
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DM
+import qualified Domain.Types.MerchantOperatingCity as DM
 import qualified Domain.Types.Person as Person
 import Domain.Types.Ride
 import Domain.Types.RideRoute

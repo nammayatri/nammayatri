@@ -27,13 +27,14 @@ where
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
-import Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import Domain.Types.Merchant.MerchantServiceConfig
+import Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.MerchantServiceConfig
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.Merchant.MerchantServiceConfig as Queries
+import qualified Storage.Queries.MerchantServiceConfig as Queries
+import Storage.Queries.Transformers.MerchantServiceConfig (getServiceName)
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
 create = Queries.create
@@ -74,13 +75,13 @@ findOne serviceName = do
 cacheOneServiceConfig :: CacheFlow m r => MerchantServiceConfig -> m ()
 cacheOneServiceConfig orgServiceConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let serviceNameKey = makeServiceNameKey (getServiceName orgServiceConfig)
+  let serviceNameKey = makeServiceNameKey (getServiceName orgServiceConfig.serviceConfig)
   Hedis.withCrossAppRedis $ Hedis.setExp serviceNameKey (coerce @MerchantServiceConfig @(MerchantServiceConfigD 'Unsafe) orgServiceConfig) expTime
 
 cacheMerchantServiceConfig :: CacheFlow m r => Id DMOC.MerchantOperatingCity -> MerchantServiceConfig -> m ()
 cacheMerchantServiceConfig merchantOperatingCity orgServiceConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantIdAndServiceWithCityKey orgServiceConfig.merchantId (getServiceName orgServiceConfig) merchantOperatingCity
+  let idKey = makeMerchantIdAndServiceWithCityKey orgServiceConfig.merchantId (getServiceName orgServiceConfig.serviceConfig) merchantOperatingCity
   Hedis.withCrossAppRedis $ Hedis.setExp idKey (coerce @MerchantServiceConfig @(MerchantServiceConfigD 'Unsafe) orgServiceConfig) expTime
 
 makeMerchantIdAndServiceWithCityKey :: Id Merchant -> ServiceName -> Id DMOC.MerchantOperatingCity -> Text

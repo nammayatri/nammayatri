@@ -7,7 +7,7 @@ import qualified API.Types.UI.Tokenization
 import qualified Control.Lens
 import qualified Domain.Action.UI.Tokenization as Domain.Action.UI.Tokenization
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
@@ -32,7 +32,7 @@ handler = getDriverSdkToken
 getDriverSdkToken ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Int ->
     Kernel.External.Tokenize.TokenizationService ->

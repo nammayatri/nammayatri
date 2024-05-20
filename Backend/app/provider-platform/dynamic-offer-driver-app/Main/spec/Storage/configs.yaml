@@ -1,6 +1,6 @@
 imports:
   Merchant: Domain.Types.Merchant
-  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   BatchSplitByPickupDistance: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   BatchSplitByPickupDistanceOnRide: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   OnRideRadiusConfig: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
@@ -61,6 +61,7 @@ DriverPoolConfig:
     distanceBasedBatchSplit: text[]
     onRideRadiusConfig: text[]
     scheduleTryTimes: integer[]
+    onRideBatchSplitConfig: text[]
 
   default:
     tripCategory: "'All'"

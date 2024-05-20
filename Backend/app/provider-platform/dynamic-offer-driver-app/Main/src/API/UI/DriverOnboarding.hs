@@ -21,7 +21,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Referral as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.Status as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DM
+import qualified Domain.Types.MerchantOperatingCity as DM
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude

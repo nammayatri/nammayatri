@@ -22,7 +22,7 @@ where
 
 import qualified Domain.Action.UI.Route as DRoute
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import qualified Kernel.External.Maps as Maps

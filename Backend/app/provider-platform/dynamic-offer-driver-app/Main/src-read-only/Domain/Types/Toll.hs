@@ -6,7 +6,7 @@ module Domain.Types.Toll where
 
 import Data.Aeson
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -23,6 +23,6 @@ data Toll = Toll
     tollStartGates :: [Kernel.Utils.ComputeIntersection.LineSegment],
     updatedAt :: Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity)
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
   deriving (Generic, Show, Read, FromJSON, ToJSON)

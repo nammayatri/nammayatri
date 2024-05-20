@@ -34,7 +34,7 @@ import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverLicense as DL
 import qualified Domain.Types.IdfyVerification as IV
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as Plan
 import qualified Domain.Types.Vehicle as DVeh

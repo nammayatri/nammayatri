@@ -24,9 +24,9 @@ module Tools.Verification
 where
 
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
-import Domain.Types.Merchant.MerchantServiceUsageConfig
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceConfig as DMSC
+import Domain.Types.MerchantServiceUsageConfig
 import Kernel.External.Types (ServiceFlow)
 import Kernel.External.Verification as Reexport hiding
   ( extractDLImage,

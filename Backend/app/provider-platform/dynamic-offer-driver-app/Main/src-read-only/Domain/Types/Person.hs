@@ -6,7 +6,7 @@ module Domain.Types.Person where
 
 import Data.Aeson
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
@@ -45,7 +45,7 @@ data PersonE e = Person
     languagesSpoken :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     middleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
@@ -65,11 +65,9 @@ data PersonE e = Person
   }
   deriving (Generic)
 
-type Person = PersonE ('AsEncrypted)
+type Person = PersonE 'AsEncrypted
 
-type DecryptedPerson = PersonE ('AsUnencrypted)
-
-type Driver = Person
+type DecryptedPerson = PersonE 'AsUnencrypted
 
 instance EncryptedItem Person where
   type Unencrypted Person = (DecryptedPerson, HashSalt)
@@ -175,20 +173,22 @@ instance EncryptedItem' Person where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
-data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
+type Driver = Person
 
-data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
+data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data Role = DRIVER | ADMIN | FLEET_OWNER deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
+data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''Role))
+data Role = DRIVER | ADMIN | FLEET_OWNER deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''Role))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Role)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''IdentifierType))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''Role)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''IdentifierType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''IdentifierType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''Gender))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''IdentifierType)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''Gender))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Gender)
+
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''Gender)

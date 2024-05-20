@@ -1,2 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN vehicle_service_tier_seating_capacity integer ;
-ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN vehicle_service_tier_air_conditioned double precision ;

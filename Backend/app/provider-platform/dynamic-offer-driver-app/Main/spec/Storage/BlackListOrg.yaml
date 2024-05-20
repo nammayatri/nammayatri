@@ -1,6 +1,6 @@
 imports:
   Merchant: Domain.Types.Merchant
-  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   ShortId: Kernel.Types.Id
   Subscriber: Kernel.Types.Registry
   Domain: Kernel.Types.Beckn.Domain

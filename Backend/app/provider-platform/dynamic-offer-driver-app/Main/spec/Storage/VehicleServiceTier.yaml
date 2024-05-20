@@ -1,6 +1,6 @@
 imports:
   Variant: Domain.Types.Vehicle
-  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Merchant: Domain.Types.Merchant
   Centesimal: Kernel.Types.Common
   ServiceTierType: Domain.Types.ServiceTierType

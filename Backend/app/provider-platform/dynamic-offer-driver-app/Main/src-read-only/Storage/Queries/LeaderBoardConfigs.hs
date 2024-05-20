@@ -5,8 +5,7 @@
 module Storage.Queries.LeaderBoardConfigs where
 
 import qualified Domain.Types.LeaderBoardConfigs
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -24,12 +23,12 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs])
 findAllByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
 findLeaderBoardConfigbyType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.LeaderBoardConfigs.LeaderBoardType -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs))
+  (Domain.Types.LeaderBoardConfigs.LeaderBoardType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs))
 findLeaderBoardConfigbyType leaderBoardType (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findOneWithKV
     [ Se.And

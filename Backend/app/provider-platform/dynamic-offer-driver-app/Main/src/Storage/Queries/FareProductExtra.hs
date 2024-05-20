@@ -7,7 +7,7 @@ import Domain.Types.Common
 import qualified Domain.Types.Extra.FareProduct as Domain
 import Domain.Types.FareProduct
 import qualified Domain.Types.FareProduct as Domain
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Beam.Functions
 import Kernel.External.Encryption

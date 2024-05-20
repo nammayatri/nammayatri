@@ -21,7 +21,7 @@ module Storage.Queries.GoHomeConfig
 where
 
 import Domain.Types.GoHomeConfig
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id

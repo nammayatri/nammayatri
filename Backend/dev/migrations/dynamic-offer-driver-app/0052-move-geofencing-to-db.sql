@@ -1,6 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN origin_restriction text[];
-ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN destination_restriction text[];
-
 -- test data
 UPDATE atlas_driver_offer_bpp.merchant
 SET origin_restriction = '{Karnataka}', destination_restriction = '{Karnataka}';

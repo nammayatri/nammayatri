@@ -7,7 +7,7 @@ import Domain.Types.Booking as Booking
 import qualified Domain.Types.Common as Common
 import Domain.Types.Location
 import qualified Domain.Types.LocationMapping as DLM
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
 import Domain.Types.Ride (OdometerReading (..))
 import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude

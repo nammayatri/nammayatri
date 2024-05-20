@@ -21,6 +21,7 @@ import Data.List (last)
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Domain.Action.UI.EditBooking as EditBooking
+import qualified Domain.Action.UI.Location as DL
 import Domain.Action.UI.Ride.EndRide.Internal
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingUpdateRequest as DBUR
@@ -29,8 +30,8 @@ import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.OnUpdate
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRoute as RR
@@ -48,6 +49,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.LocationMapping as SLM
+import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.Ride
 import SharedLogic.TollsDetector
 import qualified Storage.Cac.TransporterConfig as SCTC

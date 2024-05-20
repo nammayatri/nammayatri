@@ -19,10 +19,10 @@ import Data.Maybe (listToMaybe)
 import Data.Time (Day, UTCTime (utctDay))
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Invoice as INV
-import qualified Domain.Types.Merchant.MerchantOperatingCity as MOC
-import Domain.Types.Merchant.TransporterConfig as TC
+import qualified Domain.Types.MerchantOperatingCity as MOC
 import Domain.Types.Person (Person)
 import Domain.Types.Plan (Plan, ServiceNames (..))
+import Domain.Types.TransporterConfig as TC
 import EulerHS.Prelude hiding (id, state)
 import GHC.Float (double2Int)
 import GHC.Records.Extra

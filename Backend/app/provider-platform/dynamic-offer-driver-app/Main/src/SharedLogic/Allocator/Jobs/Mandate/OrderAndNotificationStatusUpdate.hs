@@ -3,7 +3,7 @@ module SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate where
 import Data.List (nubBy)
 import qualified Domain.Action.UI.Payment as SharedPayment
 import qualified Domain.Types.Invoice as INV
-import Domain.Types.Merchant.TransporterConfig
+import Domain.Types.TransporterConfig
 import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude

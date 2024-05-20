@@ -3,11 +3,11 @@
 module Domain.Types.Cac where
 
 import Data.Time.Clock (diffUTCTime, getCurrentTime, nominalDiffTimeToSeconds)
+import qualified Domain.Types.DriverIntelligentPoolConfig as DIPC
 import qualified Domain.Types.DriverPoolConfig as DPC
 import qualified Domain.Types.FarePolicy as FP
 import qualified Domain.Types.GoHomeConfig as GHC
-import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DIPC
-import qualified Domain.Types.Merchant.TransporterConfig as TC
+import qualified Domain.Types.TransporterConfig as TC
 import qualified EulerHS.Language as L
 import EulerHS.Types (OptionEntity)
 import Kernel.Prelude

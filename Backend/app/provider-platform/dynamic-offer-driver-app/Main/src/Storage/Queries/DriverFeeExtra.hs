@@ -9,10 +9,10 @@ import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverFee as Domain
 import Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity
-import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
+import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import Domain.Types.Plan as DPlan
+import Domain.Types.TransporterConfig (TransporterConfig)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.CacheFlow (CacheFlow)

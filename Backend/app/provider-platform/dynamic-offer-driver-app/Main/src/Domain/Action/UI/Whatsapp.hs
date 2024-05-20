@@ -15,7 +15,7 @@
 module Domain.Action.UI.Whatsapp (module Domain.Action.UI.Whatsapp, module Reexport) where
 
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (ServiceFlow)

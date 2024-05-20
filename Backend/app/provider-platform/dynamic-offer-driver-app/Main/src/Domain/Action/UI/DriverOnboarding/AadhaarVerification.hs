@@ -32,7 +32,7 @@ import Domain.Types.AadhaarVerification
 import qualified Domain.Types.AadhaarVerification as VDomain
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Beam.Functions

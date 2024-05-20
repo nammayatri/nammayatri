@@ -3,7 +3,7 @@
 
 module Storage.Queries.PlanExtra where
 
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Plan
 import Kernel.Beam.Functions
 import Kernel.External.Encryption

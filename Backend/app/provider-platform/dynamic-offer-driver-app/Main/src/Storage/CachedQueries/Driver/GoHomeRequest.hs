@@ -5,7 +5,7 @@ import Data.Text (pack)
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
 import Domain.Types.GoHomeConfig
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBFlow)

@@ -35,8 +35,8 @@ import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as DFParams
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
-import Domain.Types.Merchant.TransporterConfig (AvgSpeedOfVechilePerKm)
 import Domain.Types.ServiceTierType
+import Domain.Types.TransporterConfig (AvgSpeedOfVechilePerKm)
 import EulerHS.Prelude hiding (id, map)
 import Kernel.Prelude
 import Kernel.Utils.Common hiding (isTimeWithinBounds, mkPrice)

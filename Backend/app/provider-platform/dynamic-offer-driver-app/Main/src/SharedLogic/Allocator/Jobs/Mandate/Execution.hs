@@ -8,11 +8,11 @@ import Domain.Types.DriverPlan as DP
 import qualified Domain.Types.Invoice as INV
 import Domain.Types.Mandate (Mandate)
 import Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import Domain.Types.Merchant.TransporterConfig
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Notification as NTF
 import Domain.Types.Person as P
 import Domain.Types.Plan as Plan
+import Domain.Types.TransporterConfig
 import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import qualified Kernel.External.Payment.Juspay.Types as JuspayTypes
 import Kernel.Prelude

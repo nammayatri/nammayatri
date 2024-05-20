@@ -15,7 +15,7 @@
 
 module Storage.CachedQueries.ReelsData where
 
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMMOC
+import qualified Domain.Types.MerchantOperatingCity as DMMOC
 import qualified Domain.Types.ReelsData as DTRD
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude

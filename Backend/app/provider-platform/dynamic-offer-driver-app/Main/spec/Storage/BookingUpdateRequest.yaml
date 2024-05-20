@@ -3,7 +3,7 @@ imports:
   FarePolicy: Domain.Types.FarePolicy
   Booking: Domain.Types.Booking
   Merchant: Domain.Types.Merchant
-  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Price: Kernel.Types.Common
 
 

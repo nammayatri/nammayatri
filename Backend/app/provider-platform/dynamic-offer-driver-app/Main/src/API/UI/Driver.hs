@@ -42,7 +42,7 @@ import Domain.Types.DriverFee (DriverFeeStatus)
 import Domain.Types.DriverInformation as DI
 import Domain.Types.Invoice (InvoicePaymentMode)
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.SearchTry as DTST

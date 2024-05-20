@@ -40,7 +40,7 @@ import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as DVeh

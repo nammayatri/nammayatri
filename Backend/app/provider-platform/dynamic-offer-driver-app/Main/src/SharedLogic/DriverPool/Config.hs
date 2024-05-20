@@ -26,7 +26,7 @@ where
 import Control.Applicative ((<|>))
 import Data.Text as Text hiding (find)
 import Domain.Types.DriverPoolConfig
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude as KP
 import Kernel.Types.Common

@@ -1,7 +1,7 @@
 imports:
   UTCTime: Kernel.Prelude
   Seconds: Kernel.Types.Common
-  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Merchant: Domain.Types.Merchant
   Id: Kernel.Types.Id
 
@@ -14,13 +14,13 @@ SubscriptionConfig:
   fields:
     allowManualPaymentLinks : Bool
     useOverlayService : Bool
-    paymentLinkChannel : Domain.Types.Merchant.MerchantMessage.MediaChannel
+    paymentLinkChannel : Domain.Types.MerchantMessage.MediaChannel
     paymentLinkJobTime : Data.Time.NominalDiffTime
     genericBatchSizeForJobs : Int
     genericJobRescheduleTime : Data.Time.NominalDiffTime
     maxRetryCount : Int
     sendInAppFcmNotifications : Bool
-    paymentServiceName : Domain.Types.Merchant.MerchantServiceConfig.ServiceName
+    paymentServiceName : Domain.Types.MerchantServiceConfig.ServiceName
     allowDueAddition : Bool
     serviceName : Domain.Types.Plan.ServiceNames
     sendDeepLink : Bool

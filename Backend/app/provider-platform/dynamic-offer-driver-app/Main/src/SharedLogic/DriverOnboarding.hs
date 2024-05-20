@@ -27,8 +27,8 @@ import Domain.Types.IdfyVerification
 import qualified Domain.Types.IdfyVerification as DIV
 import qualified Domain.Types.Image as Domain
 import qualified Domain.Types.Merchant as DTM
-import qualified Domain.Types.Merchant.MerchantMessage as DMM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantMessage as DMM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.Vehicle

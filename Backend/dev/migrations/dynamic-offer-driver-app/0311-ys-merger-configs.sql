@@ -1,6 +1,6 @@
 
-alter table atlas_driver_offer_bpp.transporter_config add column consider_special_zone_ride_charges_in_free_trial boolean not null default false;
-alter table atlas_driver_offer_bpp.transporter_config add column enable_udf_for_offers boolean not null default false;
+--alter table atlas_driver_offer_bpp.transporter_config add column consider_special_zone_ride_charges_in_free_trial boolean not null default false;
+--alter table atlas_driver_offer_bpp.transporter_config add column enable_udf_for_offers boolean not null default false;
 
 update atlas_driver_offer_bpp.transporter_config set enable_udf_for_offers = true where merchant_id = '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f';
 update atlas_driver_offer_bpp.plan set max_mandate_amount = 35.0 where id = '18911beb-28ba-456d-8cca-4d019461d2b0';

@@ -10,10 +10,3 @@ CREATE TABLE atlas_driver_offer_bpp.fare_parameters (
 -- driver quote
 
 
--- ride booking
-ALTER TABLE atlas_driver_offer_bpp.ride_booking DROP COLUMN estimated_fare;
-
-ALTER TABLE atlas_driver_offer_bpp.ride_booking ADD COLUMN fare_parameters_id character(36) NOT NULL REFERENCES atlas_driver_offer_bpp.fare_parameters(id);
-
--- search request
-ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN fare_parameters_id character(36) NOT NULL REFERENCES atlas_driver_offer_bpp.fare_parameters(id);

@@ -3,7 +3,7 @@ imports:
   Ride: Domain.Types.Ride
   HighPrecMoney: Kernel.Types.Common
   Merchant: Domain.Types.Merchant
-  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Text: Data.Text
 
 CancellationReason:

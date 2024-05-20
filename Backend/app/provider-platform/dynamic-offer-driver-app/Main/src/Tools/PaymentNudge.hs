@@ -25,10 +25,10 @@ import Data.Ord
 import qualified Data.Text as T
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPlan as DPlan
-import qualified Domain.Types.Merchant.Overlay as DOverlay
-import qualified Domain.Types.Merchant.TransporterConfig as TC
+import qualified Domain.Types.Overlay as DOverlay
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
+import qualified Domain.Types.TransporterConfig as TC
 import Kernel.Beam.Functions as B
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Types as Payments

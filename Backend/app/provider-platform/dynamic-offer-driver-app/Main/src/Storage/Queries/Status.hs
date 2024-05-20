@@ -22,7 +22,7 @@ import Domain.Types.DriverLicense
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.IdfyVerification as IV
 import Domain.Types.Merchant (Merchant)
-import qualified Domain.Types.Merchant.MerchantOperatingCity as CQMOC
+import qualified Domain.Types.MerchantOperatingCity as CQMOC
 import Domain.Types.Person
 import Domain.Types.VehicleRegistrationCertificate (VehicleRegistrationCertificate)
 import qualified EulerHS.Language as L
