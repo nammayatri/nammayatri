@@ -280,5 +280,5 @@ Person:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-  excludedFields: [merchantOperatingCityId]
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
 

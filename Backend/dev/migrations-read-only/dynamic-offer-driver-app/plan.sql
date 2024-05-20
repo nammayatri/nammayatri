@@ -24,3 +24,8 @@ ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN sgst_percentage double precis
 ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN subscribed_flag_toggle_allowed boolean NOT NULL default true;
 ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.plan ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.plan DROP COLUMN merchant_operating_city_id;

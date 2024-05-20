@@ -6,13 +6,10 @@ imports:
   TripCategory: Domain.Types.Common
   Money: Kernel.Types.Common
 
-
-
 SearchTry:
-  tableNmae: search_try
+  tableName: search_try
 
   types:
-
     SearchTryStatus:
       enum: "ACTIVE, CANCELLED, COMPLETED"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
@@ -20,7 +17,6 @@ SearchTry:
     SearchRepeatType:
       enum: "INITIAL, RETRIED, REALLOCATION, CANCELLED_AND_RETRIED"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
-
 
   fields:
     id : Id SearchTry
@@ -66,7 +62,6 @@ SearchTry:
       customerExtraFee: Maybe Money
       customerExtraFeeAmount: Maybe HighPrecMoney
 
-
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SearchTryStatus>
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SearchTryStatus>
@@ -95,9 +90,7 @@ SearchTry:
     currency: Kernel.Prelude.Just|I
     customerExtraFee: Kernel.Prelude.roundToIntegral <$> customerExtraFee|E
     customerExtraFeeAmount: customerExtraFee|E
-
-
-  constriants:
+  constraints:
     id: PrimaryKey
     requestId: SecondaryKey
     estimateId: SecondaryKey
@@ -117,6 +110,8 @@ SearchTry:
     vehicleVariant: character varying (255)
     estimateId : character (36)
     searchRepeatType: character varying (255)
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
 
   extraOperations:
     - EXTRA_QUERY_FILE
