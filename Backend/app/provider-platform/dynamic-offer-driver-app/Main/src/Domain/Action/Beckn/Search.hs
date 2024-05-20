@@ -102,6 +102,7 @@ data DSearchReq = DSearchReq
     routeDistance :: Maybe Meters,
     routeDuration :: Maybe Seconds,
     routePoints :: Maybe [LatLong],
+    isDashboardRequest :: Bool,
     multipleRoutes :: Maybe [Maps.RouteInfo]
   }
 
@@ -179,7 +180,7 @@ handler ValidatedDSearchReq {..} sReq = do
         mbTollChargesAndNames <- getTollInfoOnRoute merchantOpCityId Nothing serviceableRoute.routePoints
         return (Just setRouteInfo, Just toLocation, Just estimatedDistance, Just estimatedDuration, Just serviceableRoute.isCustomerPrefferedSearchRoute, Just serviceableRoute.isBlockedRoute, (\(charges, _, _) -> charges) <$> mbTollChargesAndNames, (\(_, names, _) -> names) <$> mbTollChargesAndNames, (\(_, _, isAutoRickshawAllowed) -> isAutoRickshawAllowed) <$> mbTollChargesAndNames)
       _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration, Nothing, Nothing, Nothing, Nothing, Nothing) -- estimate distance and durations by user
-  allFarePoliciesProduct <- combineFarePoliciesProducts <$> ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.pickupLocation sReq.dropLocation (Just (TransactionId (Id sReq.transactionId)))) `mapM` possibleTripOption.tripCategories)
+  allFarePoliciesProduct <- combineFarePoliciesProducts <$> ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation (Just (TransactionId (Id sReq.transactionId)))) `mapM` possibleTripOption.tripCategories)
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed allFarePoliciesProduct.farePolicies
 
   (driverPool, selectedFarePolicies) <-
@@ -290,7 +291,6 @@ addNearestDriverInfo merchantOpCityId (Just driverPool) estdOrQuotes = do
     matchInputWithNearestDriver driverPools input = do
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId input.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show input.vehicleServiceTier))
       let driverPool' = M.lookup input.vehicleServiceTier driverPools
-      logDebug $ "DP:Nearest driver info " <> show driverPool'
       case driverPool' of
         Nothing -> return (input, vehicleServiceTierItem, Nothing)
         Just dp -> do
@@ -298,7 +298,6 @@ addNearestDriverInfo merchantOpCityId (Just driverPool) estdOrQuotes = do
               distanceToNearestDriver = NE.head dp & (.distanceToPickup)
               locationId = NE.head dp & (.driverId) & (.getId)
               nearestDriverInfo = NearestDriverInfo {..}
-          logDebug $ "Nearest driver info " <> show nearestDriverInfo
           return (input, vehicleServiceTierItem, Just nearestDriverInfo)
 
 selectDriversAndMatchFarePolicies :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> SL.Area -> [DFP.FullFarePolicy] -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])

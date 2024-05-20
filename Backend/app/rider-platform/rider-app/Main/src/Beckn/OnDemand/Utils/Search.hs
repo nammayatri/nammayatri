@@ -20,16 +20,17 @@ import qualified Data.Aeson as A
 import qualified Data.List as List
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.Encoding as TE
+import qualified Data.Time as Time
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Common
 import qualified Tools.Maps as Maps
 
-mkSearchFulFillmentTags :: Maybe Meters -> Maybe Seconds -> Maybe [Maps.LatLong] -> Maybe Bool -> Maybe [Maps.RouteInfo] -> Maybe [Spec.TagGroup]
-mkSearchFulFillmentTags distance duration mbPoints mbIsReallocationEnabled mbMultipleRoutes =
-  mkRouteInfoTags distance duration mbPoints mbMultipleRoutes <> mkReallocationInfoTags mbIsReallocationEnabled
+mkSearchFulFillmentTags :: Maybe Meters -> Maybe Seconds -> Maybe [Maps.LatLong] -> Maybe Bool -> Maybe Time.UTCTime -> Bool -> Maybe [Maps.RouteInfo] -> Maybe [Spec.TagGroup]
+mkSearchFulFillmentTags distance duration mbPoints mbIsReallocationEnabled returnTime roundTrip mbMultipleRoutes =
+  mkRouteInfoTags distance duration returnTime roundTrip mbPoints mbMultipleRoutes <> mkReallocationInfoTags mbIsReallocationEnabled
 
-mkRouteInfoTags :: Maybe Meters -> Maybe Seconds -> Maybe [Maps.LatLong] -> Maybe [Maps.RouteInfo] -> Maybe [Spec.TagGroup]
-mkRouteInfoTags distance duration mbPoints mbMultipleRoutes =
+mkRouteInfoTags :: Maybe Meters -> Maybe Seconds -> Maybe Time.UTCTime -> Bool -> Maybe [Maps.LatLong] -> Maybe [Maps.RouteInfo] -> Maybe [Spec.TagGroup]
+mkRouteInfoTags distance duration returnTime roundTrip mbPoints mbMultipleRoutes =
   Just
     [ Spec.TagGroup
         { tagGroupDescriptor =
@@ -46,6 +47,8 @@ mkRouteInfoTags distance duration mbPoints mbMultipleRoutes =
                 ++ durationSingleton
                 ++ mbPointsSingleton
                 ++ mkMultipleRoutesTags
+                ++ returnTimeSingleton
+                ++ roundTripSingleton
         }
     ]
   where
@@ -79,6 +82,34 @@ mkRouteInfoTags distance duration mbPoints mbMultipleRoutes =
               tagDisplay = Just False,
               tagValue = (\durationInS -> Just $ show durationInS.getSeconds) =<< duration
             }
+    returnTimeSingleton
+      | isNothing returnTime = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tag.RETURN_TIME,
+                      descriptorName = Just "Return time in UTC",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = show <$> returnTime
+            }
+    roundTripSingleton =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tag.ROUND_TRIP,
+                    descriptorName = Just "Round trip",
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = Just (show roundTrip)
+          }
     mbPointsSingleton
       | isNothing mbPoints = []
       | otherwise =
@@ -110,9 +141,9 @@ mkRouteInfoTags distance duration mbPoints mbMultipleRoutes =
               tagValue = (Just . LT.toStrict . TE.decodeUtf8 . A.encode) =<< mbMultipleRoutes
             }
 
-mkCustomerInfoTags :: Maybe Maps.Language -> Maybe Text -> Maybe Text -> Maybe [Spec.TagGroup]
-mkCustomerInfoTags Nothing Nothing _ = Nothing
-mkCustomerInfoTags customerLanguage disabilityTag _ =
+mkCustomerInfoTags :: Maybe Maps.Language -> Maybe Text -> Maybe Text -> Bool -> Maybe [Spec.TagGroup]
+mkCustomerInfoTags Nothing Nothing _ False = Nothing
+mkCustomerInfoTags customerLanguage disabilityTag _ isDashboard =
   Just
     [ Spec.TagGroup
         { tagGroupDescriptor =
@@ -123,7 +154,7 @@ mkCustomerInfoTags customerLanguage disabilityTag _ =
                   descriptorShortDesc = Nothing
                 },
           tagGroupDisplay = Just False,
-          tagGroupList = customerLanguageSingleton customerLanguage <> disabilityTagSingleton disabilityTag
+          tagGroupList = customerLanguageSingleton customerLanguage <> disabilityTagSingleton disabilityTag <> dashboardUserSingleton
         }
     ]
   where
@@ -141,6 +172,20 @@ mkCustomerInfoTags customerLanguage disabilityTag _ =
                     },
               tagDisplay = Just False,
               tagValue = (Just . show) language
+            }
+    dashboardUserSingleton =
+      Just $
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tag.DASHBOARD_USER,
+                      descriptorName = Just "Dashboard User",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = (Just . show) isDashboard
             }
     disabilityTagSingleton Nothing = Nothing
     disabilityTagSingleton (Just disability) =

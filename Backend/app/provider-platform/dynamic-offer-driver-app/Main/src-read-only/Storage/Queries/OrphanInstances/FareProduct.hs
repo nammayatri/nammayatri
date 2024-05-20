@@ -23,6 +23,7 @@ instance FromTType' Beam.FareProduct Domain.Types.FareProduct.FareProduct where
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            searchSource = searchSource,
             timeBounds = timeBounds,
             tripCategory = tripCategory,
             vehicleServiceTier = vehicleVariant
@@ -37,6 +38,7 @@ instance ToTType' Beam.FareProduct Domain.Types.FareProduct.FareProduct where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.searchSource = searchSource,
         Beam.timeBounds = timeBounds,
         Beam.tripCategory = tripCategory,
         Beam.vehicleVariant = vehicleServiceTier

@@ -11,7 +11,9 @@ imports:
 FareProduct:
   tableName: fare_product
 
-
+  types:
+    SearchSource:
+      enum: "ALL,DASHBOARD,MOBILE_APP"
   fields:
     id : Id FareProduct
     merchantId : Id Merchant
@@ -21,6 +23,7 @@ FareProduct:
     area : Area
     tripCategory : TripCategory
     timeBounds : TimeBound
+    searchSource: SearchSource
     enabled : Bool
 
   beamFields:
@@ -34,20 +37,26 @@ FareProduct:
     area: SecondaryKey
 
   queries:
-    findAllBoundedFareProductForVariants:
-      kvFunction: findAllWithKV
-      where:
-        and: [merchantOperatingCityId, area, tripCategory, timeBounds, enabled]
-
     findAllUnboundedFareProductForVariants:
       kvFunction: findAllWithKV
       where:
-        and: [merchantOperatingCityId, area, tripCategory, timeBounds, enabled]
+        and:
+          - eq: [merchantOperatingCityId, area, tripCategory, timeBounds, enabled]
+          - in: [searchSource]
 
-    findAllBoundedByMerchantOpCityIdVariantArea:
+    findUnboundedByMerchantOpCityIdVariantArea:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - eq: [merchantOperatingCityId, area, tripCategory, vehicleServiceTier, timeBounds, enabled]
+          - in: [searchSource]
+
+    findAllUnboundedFareProductForArea:
       kvFunction: findAllWithKV
       where:
-        and: [merchantOperatingCityId, area, vehicleServiceTier, tripCategory, timeBounds, enabled]
+        and:
+          - eq: [merchantOperatingCityId, area, timeBounds, enabled]
+          - in: [searchSource]
 
     findAllFareProductByMerchantOpCityId:
       kvFunction: findAllWithKV
@@ -60,6 +69,7 @@ FareProduct:
   default:
     timeBounds: "'Unbounded'"
     enabled: "true"
+    searchSource: "'ALL'"
 
   extraOperations:
     - EXTRA_QUERY_FILE

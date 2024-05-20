@@ -35,9 +35,11 @@ import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonFlowStatus as DPFS
+import Domain.Types.RiderConfig
 import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
+import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps
@@ -47,7 +49,6 @@ import qualified Kernel.External.Maps.Interface.NextBillion as NextBillion
 import qualified Kernel.External.Maps.NextBillion.Types as NBT
 import qualified Kernel.External.Maps.Utils as Search
 import Kernel.Prelude
-import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Context (City)
@@ -74,10 +75,9 @@ import Tools.Error
 import Tools.Event
 import qualified Tools.JSON as J
 import qualified Tools.Maps as Maps
-import Tools.Metrics
 import qualified Tools.Metrics as Metrics
 
-data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq
+data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq
   deriving (Generic, Show)
 
 instance ToJSON SearchReq where
@@ -114,6 +114,7 @@ fareProductConstructorModifier :: String -> String
 fareProductConstructorModifier = \case
   "OneWaySearch" -> "ONE_WAY"
   "RentalSearch" -> "RENTAL"
+  "InterCitySearch" -> "INTER_CITY"
   x -> x
 
 data OneWaySearchReq = OneWaySearchReq
@@ -140,10 +141,28 @@ data RentalSearchReq = RentalSearchReq
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
+data InterCitySearchReq = InterCitySearchReq
+  { origin :: SearchReqLocation,
+    stops :: Maybe [SearchReqLocation],
+    roundTrip :: Bool,
+    isSourceManuallyMoved :: Maybe Bool,
+    isDestinationManuallyMoved :: Maybe Bool,
+    isSpecialLocation :: Maybe Bool,
+    startTime :: UTCTime,
+    returnTime :: Maybe UTCTime,
+    sessionToken :: Maybe Text,
+    isReallocationEnabled :: Maybe Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
 data SearchRes = SearchRes
   { origin :: SearchReqLocation,
     stops :: [SearchReqLocation],
     startTime :: UTCTime,
+    returnTime :: Maybe UTCTime,
+    riderPreferredOption :: SearchRequest.RiderPreferredOption,
+    roundTrip :: Bool,
+    isDashboardRequest :: Bool,
     searchId :: Id DSearchReq.SearchRequest,
     now :: UTCTime,
     gatewayUrl :: BaseUrl,
@@ -199,18 +218,6 @@ updateForSpecialLocation merchantId origin mbIsSpecialLocation = do
         Nothing -> return ()
 
 search ::
-  ( CacheFlow m r,
-    EncFlow m r,
-    ClickhouseFlow m r,
-    EsqDBReplicaFlow m r,
-    HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
-    EsqDBFlow m r,
-    HasBAPMetrics m r,
-    MonadFlow m,
-    EventStreamFlow m r,
-    HasField "hotSpotExpiry" r Seconds,
-    HasFlowEnv m r '["collectRouteData" ::: Bool]
-  ) =>
   Id Person.Person ->
   SearchReq ->
   Maybe Version ->
@@ -218,15 +225,19 @@ search ::
   Maybe Version ->
   Maybe (Id DC.Client) ->
   Maybe Text ->
-  m SearchRes
-search personId req bundleVersion clientVersion clientConfigVersion clientId device = do
+  Bool ->
+  Flow SearchRes
+search personId req bundleVersion clientVersion clientConfigVersion clientId device isDashboardRequest = do
   now <- getCurrentTime
-  let (riderPreferredOption, origin, stops, isSourceManuallyMoved, isSpecialLocation, startTime, isReallocationEnabled) =
+  let (riderPreferredOption, origin, roundTrip, stops, isSourceManuallyMoved, isSpecialLocation, startTime, returnTime, isReallocationEnabled) =
         case req of
           OneWaySearch oneWayReq ->
-            (SearchRequest.OneWay, oneWayReq.origin, [oneWayReq.destination], oneWayReq.isSourceManuallyMoved, oneWayReq.isSpecialLocation, fromMaybe now oneWayReq.startTime, oneWayReq.isReallocationEnabled)
+            (SearchRequest.OneWay, oneWayReq.origin, False, [oneWayReq.destination], oneWayReq.isSourceManuallyMoved, oneWayReq.isSpecialLocation, fromMaybe now oneWayReq.startTime, Nothing, oneWayReq.isReallocationEnabled)
           RentalSearch rentalReq ->
-            (SearchRequest.Rental, rentalReq.origin, fromMaybe [] rentalReq.stops, rentalReq.isSourceManuallyMoved, rentalReq.isSpecialLocation, rentalReq.startTime, rentalReq.isReallocationEnabled)
+            (SearchRequest.Rental, rentalReq.origin, False, fromMaybe [] rentalReq.stops, rentalReq.isSourceManuallyMoved, rentalReq.isSpecialLocation, rentalReq.startTime, Nothing, rentalReq.isReallocationEnabled)
+          InterCitySearch interCityReq ->
+            (SearchRequest.InterCity, interCityReq.origin, interCityReq.roundTrip, fromMaybe [] interCityReq.stops, interCityReq.isSourceManuallyMoved, interCityReq.isSpecialLocation, interCityReq.startTime, interCityReq.returnTime, interCityReq.isReallocationEnabled)
+
   unless ((120 `addUTCTime` startTime) >= now) $ throwError (InvalidRequest "Ride time should only be future time") -- 2 mins buffer
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber
@@ -260,72 +271,15 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
     case req of
       OneWaySearch oneWayReq -> do
         riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (RiderConfigNotFound merchantOperatingCity.id.getId)
-
-        let destinationLatLong = oneWayReq.destination.gps
-        let request =
-              Maps.GetRoutesReq
-                { waypoints = NE.fromList [sourceLatLong, destinationLatLong],
-                  calcPoints = True,
-                  mode = Just Maps.CAR
-                }
-        routeResponse <- Maps.getRoutes (Just riderConfig.isAvoidToll) person.id person.merchantId (Just merchantOperatingCity.id) request
-
-        fork "calling mmi directions api" $ do
-          let collectMMIData = fromMaybe False riderConfig.collectMMIRouteData
-          when collectMMIData $ do
-            mmiConfigs <- QMSC.findByMerchantOpCityIdAndService person.merchantId merchantOperatingCity.id (DMSC.MapsService MapsK.MMI) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "MMI")
-            case mmiConfigs.serviceConfig of
-              DMSC.MapsServiceConfig mapsCfg -> do
-                routeResp <- MapsRoutes.getRoutes True mapsCfg request
-                logInfo $ "MMI route response: " <> show routeResp
-                let routeData = RouteDataEvent (Just $ show MapsK.MMI) (map show routeResp) (Just searchRequestId) merchant.id merchantOperatingCity.id now now
-                triggerRouteDataEvent routeData
-              _ -> logInfo "MapsServiceConfig config not found for MMI"
-
-        fork "calling next billion directions api" $ do
-          shouldCollectRouteData <- asks (.collectRouteData)
-          when shouldCollectRouteData $ do
-            nextBillionConfigs <- QMSC.findByMerchantOpCityIdAndService person.merchantId merchantOperatingCity.id (DMSC.MapsService MapsK.NextBillion) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "NextBillion")
-            case nextBillionConfigs.serviceConfig of
-              DMSC.MapsServiceConfig mapsCfg -> do
-                case mapsCfg of
-                  MapsK.NextBillionConfig msc -> do
-                    let nbFastestReq = NBT.GetRoutesRequest request.waypoints (Just True) (Just 3) (Just "fastest") Nothing
-                    let nbShortestReq = NBT.GetRoutesRequest request.waypoints (Just True) (Just 3) (Just "shortest") (Just "flexible")
-                    nbFastestRouteResponse <- NextBillion.getRoutesWithExtraParameters msc nbFastestReq
-                    nbShortestRouteResponse <- NextBillion.getRoutesWithExtraParameters msc nbShortestReq
-                    logInfo $ "NextBillion route responses: " <> show nbFastestRouteResponse <> "\n" <> show nbShortestRouteResponse
-                    let fastRouteData = RouteDataEvent (Just "NB_Fastest") (map show nbFastestRouteResponse) (Just searchRequestId) (merchant.id) (merchantOperatingCity.id) now now
-                    let shortRouteData = RouteDataEvent (Just "NB_Shortest") (map show nbShortestRouteResponse) (Just searchRequestId) (merchant.id) (merchantOperatingCity.id) now now
-                    triggerRouteDataEvent fastRouteData
-                    triggerRouteDataEvent shortRouteData
-                  _ -> logInfo "No NextBillion config"
-              _ -> logInfo "NextBillion route not found"
-
-        fork "Updating autocomplete data in search" $ do
-          whenJust oneWayReq.sessionToken $ \token -> do
-            let toCollectData = fromMaybe False riderConfig.collectAutoCompleteData
-            when toCollectData $ do
-              let pickUpKey = makeAutoCompleteKey token (show DMaps.PICKUP)
-              let dropKey = makeAutoCompleteKey token (show DMaps.DROP)
-              pickupRecord :: Maybe AutoCompleteEventData <- Redis.safeGet pickUpKey
-              dropRecord :: Maybe AutoCompleteEventData <- Redis.safeGet dropKey
-              whenJust pickupRecord $ \record -> do
-                let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id (oneWayReq.isSourceManuallyMoved) (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
-                -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = oneWayReq.isSourceManuallyMoved, DTA.updatedAt = now}
-                triggerAutoCompleteEvent updatedRecord
-              whenJust dropRecord $ \record -> do
-                let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id (oneWayReq.isDestinationManuallyMoved) (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
-                -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = oneWayReq.isDestinationManuallyMoved, DTA.updatedAt = now}
-                triggerAutoCompleteEvent updatedRecord
-
-        let distanceWeightage = riderConfig.distanceWeightage
-            durationWeightage = 100 - distanceWeightage
-            (shortestRouteInfo, shortestRouteIndex) = Search.getEfficientRouteInfo routeResponse distanceWeightage durationWeightage
-            longestRouteDistance = (.distance) =<< Search.getLongestRouteDistance routeResponse
-            shortestRouteDistance = (.distance) =<< shortestRouteInfo
-            shortestRouteDuration = (.duration) =<< shortestRouteInfo
-        return (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo, Just $ Search.updateEfficientRoutePosition routeResponse shortestRouteIndex)
+        autoCompleteEvent riderConfig searchRequestId oneWayReq.sessionToken oneWayReq.isSourceManuallyMoved oneWayReq.isDestinationManuallyMoved now
+        destinationLatLong <- listToMaybe stopsLatLong & fromMaybeM (InternalError "Destination is required for OneWay Search")
+        calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person searchRequestId [sourceLatLong, destinationLatLong] now
+      InterCitySearch rentalReq -> do
+        riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (RiderConfigNotFound merchantOperatingCity.id.getId)
+        autoCompleteEvent riderConfig searchRequestId rentalReq.sessionToken rentalReq.isSourceManuallyMoved rentalReq.isDestinationManuallyMoved now
+        destinationLatLong <- listToMaybe stopsLatLong & fromMaybeM (InternalError "Destination is required for OneWay Search")
+        let latLongs = if roundTrip then [sourceLatLong, destinationLatLong, sourceLatLong] else [sourceLatLong, destinationLatLong]
+        calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person searchRequestId latLongs now
       RentalSearch rentalReq -> return (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Just (RouteInfo (Just rentalReq.estimatedRentalDuration) (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] []), Nothing)
 
   fromLocation <- buildSearchReqLoc origin
@@ -341,6 +295,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
       (metersToDistance <$> longestRouteDistance)
       (metersToDistance <$> shortestRouteDistance)
       startTime
+      returnTime
       bundleVersion
       clientVersion
       clientConfigVersion
@@ -385,11 +340,6 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
         else throwError RideNotServiceable
 
 buildSearchRequest ::
-  ( (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds, "version" ::: DeploymentVersion]),
-    EsqDBFlow m r,
-    CoreMetrics m,
-    MonadFlow m
-  ) =>
   Id SearchRequest.SearchRequest ->
   Maybe (Id DC.Client) ->
   DPerson.Person ->
@@ -399,6 +349,7 @@ buildSearchRequest ::
   Maybe Distance ->
   Maybe Distance ->
   UTCTime ->
+  Maybe UTCTime ->
   Maybe Version ->
   Maybe Version ->
   Maybe Version ->
@@ -406,8 +357,8 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Seconds ->
   SearchRequest.RiderPreferredOption ->
-  m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime bundleVersion clientVersion clientConfigVersion device disabilityTag duration riderPreferredOption = do
+  Flow SearchRequest.SearchRequest
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime bundleVersion clientVersion clientConfigVersion device disabilityTag duration riderPreferredOption = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)
@@ -415,6 +366,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
     SearchRequest.SearchRequest
       { id = searchRequestId,
         startTime,
+        returnTime,
         validTill = validTill,
         riderId = person.id,
         fromLocation = pickup,
@@ -447,6 +399,90 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
     getSearchRequestExpiry time = do
       searchRequestExpiry <- maybe 1800 fromIntegral <$> asks (.searchRequestExpiry)
       pure $ addUTCTime (fromInteger searchRequestExpiry) time
+
+calculateDistanceAndRoutes ::
+  RiderConfig ->
+  DM.Merchant ->
+  DMOC.MerchantOperatingCity ->
+  DPerson.Person ->
+  Id SearchRequest.SearchRequest ->
+  [LatLong] ->
+  UTCTime ->
+  Flow (Maybe Meters, Maybe Meters, Maybe Seconds, Maybe Maps.RouteInfo, Maybe [Maps.RouteInfo])
+calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person searchRequestId latLongs now = do
+  let request =
+        Maps.GetRoutesReq
+          { waypoints = NE.fromList latLongs,
+            calcPoints = True,
+            mode = Just Maps.CAR
+          }
+  routeResponse <- Maps.getRoutes (Just riderConfig.isAvoidToll) person.id person.merchantId (Just merchantOperatingCity.id) request
+
+  fork "calling mmi directions api" $ do
+    let collectMMIData = fromMaybe False riderConfig.collectMMIRouteData
+    when collectMMIData $ do
+      mmiConfigs <- QMSC.findByMerchantOpCityIdAndService person.merchantId merchantOperatingCity.id (DMSC.MapsService MapsK.MMI) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "MMI")
+      case mmiConfigs.serviceConfig of
+        DMSC.MapsServiceConfig mapsCfg -> do
+          routeResp <- MapsRoutes.getRoutes True mapsCfg request
+          logInfo $ "MMI route response: " <> show routeResp
+          let routeData = RouteDataEvent (Just $ show MapsK.MMI) (map show routeResp) (Just searchRequestId) merchant.id merchantOperatingCity.id now now
+          triggerRouteDataEvent routeData
+        _ -> logInfo "MapsServiceConfig config not found for MMI"
+
+  fork "calling next billion directions api" $ do
+    shouldCollectRouteData <- asks (.collectRouteData)
+    when shouldCollectRouteData $ do
+      nextBillionConfigs <- QMSC.findByMerchantOpCityIdAndService person.merchantId merchantOperatingCity.id (DMSC.MapsService MapsK.NextBillion) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "NextBillion")
+      case nextBillionConfigs.serviceConfig of
+        DMSC.MapsServiceConfig mapsCfg -> do
+          case mapsCfg of
+            MapsK.NextBillionConfig msc -> do
+              let nbFastestReq = NBT.GetRoutesRequest request.waypoints (Just True) (Just 3) (Just "fastest") Nothing
+              let nbShortestReq = NBT.GetRoutesRequest request.waypoints (Just True) (Just 3) (Just "shortest") (Just "flexible")
+              nbFastestRouteResponse <- NextBillion.getRoutesWithExtraParameters msc nbFastestReq
+              nbShortestRouteResponse <- NextBillion.getRoutesWithExtraParameters msc nbShortestReq
+              logInfo $ "NextBillion route responses: " <> show nbFastestRouteResponse <> "\n" <> show nbShortestRouteResponse
+              let fastRouteData = RouteDataEvent (Just "NB_Fastest") (map show nbFastestRouteResponse) (Just searchRequestId) (merchant.id) (merchantOperatingCity.id) now now
+              let shortRouteData = RouteDataEvent (Just "NB_Shortest") (map show nbShortestRouteResponse) (Just searchRequestId) (merchant.id) (merchantOperatingCity.id) now now
+              triggerRouteDataEvent fastRouteData
+              triggerRouteDataEvent shortRouteData
+            _ -> logInfo "No NextBillion config"
+        _ -> logInfo "NextBillion route not found"
+
+  let distanceWeightage = riderConfig.distanceWeightage
+      durationWeightage = 100 - distanceWeightage
+      (shortestRouteInfo, shortestRouteIndex) = Search.getEfficientRouteInfo routeResponse distanceWeightage durationWeightage
+      longestRouteDistance = (.distance) =<< Search.getLongestRouteDistance routeResponse
+      shortestRouteDistance = (.distance) =<< shortestRouteInfo
+      shortestRouteDuration = (.duration) =<< shortestRouteInfo
+  return (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo, Just $ Search.updateEfficientRoutePosition routeResponse shortestRouteIndex)
+
+autoCompleteEvent ::
+  RiderConfig ->
+  Id SearchRequest.SearchRequest ->
+  Maybe Text ->
+  Maybe Bool ->
+  Maybe Bool ->
+  UTCTime ->
+  Flow ()
+autoCompleteEvent riderConfig searchRequestId sessionToken isSourceManuallyMoved isDestinationManuallyMoved now = do
+  fork "Updating autocomplete data in search" $ do
+    whenJust sessionToken $ \token -> do
+      let toCollectData = fromMaybe False riderConfig.collectAutoCompleteData
+      when toCollectData $ do
+        let pickUpKey = makeAutoCompleteKey token (show DMaps.PICKUP)
+        let dropKey = makeAutoCompleteKey token (show DMaps.DROP)
+        pickupRecord :: Maybe AutoCompleteEventData <- Redis.safeGet pickUpKey
+        dropRecord :: Maybe AutoCompleteEventData <- Redis.safeGet dropKey
+        whenJust pickupRecord $ \record -> do
+          let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id isSourceManuallyMoved (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
+          -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = isSourceManuallyMoved, DTA.updatedAt = now}
+          triggerAutoCompleteEvent updatedRecord
+        whenJust dropRecord $ \record -> do
+          let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id isDestinationManuallyMoved (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
+          -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = isDestinationManuallyMoved, DTA.updatedAt = now}
+          triggerAutoCompleteEvent updatedRecord
 
 data SearchReqLocation = SearchReqLocation
   { gps :: LatLong,
