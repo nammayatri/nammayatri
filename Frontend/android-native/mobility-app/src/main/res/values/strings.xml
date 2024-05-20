@@ -82,4 +82,5 @@
     <string name="toll_text">Toll included</string>
     <string name="new_distance">New Distance :</string>
     <string name="new_fare">New fare :</string>
+    <string name="no_change">No Change</string>
 </resources>

@@ -112,7 +112,7 @@ public class OverlayMessagingService extends Service {
     private JSONArray secondaryActions2;
     private CountDownTimer countDownTimer;
     private String reqBody;
-    private MobilityRemoteConfigs remoteConfigs;
+    private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
     private String toastMessage;
     private String supportPhoneNumber;
 
@@ -170,7 +170,6 @@ public class OverlayMessagingService extends Service {
             LinearLayout buttonLayout = messageView.findViewById(R.id.button_view);
             MaterialButton buttonOk = messageView.findViewById(R.id.button_ok);
             TextView buttonCancel = messageView.findViewById(R.id.button_cancel);
-            remoteConfigs = new MobilityRemoteConfigs(false, false);
             ImageView cancelButtonImage = messageView.findViewById(R.id.cancel_button_image);
             TextView buttonCancelRight = messageView.findViewById(R.id.button_cancel_right);
             title.setText(data.has("title") ? data.getString("title") : "");
@@ -233,7 +232,7 @@ public class OverlayMessagingService extends Service {
         } catch (Exception e) {
             Exception exception = new Exception("Error in ConstructView " + e);
             FirebaseCrashlytics.getInstance().recordException(exception);
-            RideRequestUtils.firebaseLogEventWithParams("exception_construct_view", "CONSTRUCT_VIEW", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
+            RideRequestUtils.firebaseLogEventWithParams("exception_construct_view", "CONSTRUCT_VIEW", String.valueOf(e), this);
             stopSelf();
         }
     }
@@ -241,10 +240,8 @@ public class OverlayMessagingService extends Service {
 
     public void setDataToLocationDetailsComponent (JSONObject data) throws JSONException {
         JSONObject updateLocDetails = data.getJSONObject("updateLocDetails");
-        System.out.println("RITIKA in set Data updateLocDetails" + updateLocDetails);
         JSONObject mbDestination = updateLocDetails.has("destination") ? updateLocDetails.getJSONObject("destination") : null;
         if (mbDestination != null) {
-            System.out.println("RITIKA in set Data mbDestination" + mbDestination);
             double destLat = mbDestination.optDouble("lat", 0.0);
             double destLon = mbDestination.optDouble("lon", 0.0);
             JSONObject destAddress = mbDestination.has("address") ? mbDestination.getJSONObject("address") : null;
@@ -280,7 +277,7 @@ public class OverlayMessagingService extends Service {
         String fareDiffColorPositive = "#53BB6F";
         String fareDiffColorNegative = "#E55454";
         String fareDiffColorNeutral = "#A7A7A7";
-        Integer minTimeToShowPopupInMS = 50000;
+        int minTimeToShowPopupInMS = 50000;
         if (updateConfigs!=null)
         {
             JSONObject updateRemoteConfig = new JSONObject(updateConfigs);
@@ -295,12 +292,12 @@ public class OverlayMessagingService extends Service {
                 minTimeToShowPopupInMS = updateRemoteConfig.optInt("minTimeToShowPopupInMS", minTimeToShowPopupInMS);
             }
         }
-        Integer fareDrawable = R.drawable.ny_ic_down_arrow_white;
-        Integer fareDrawableVisibility;
+        int fareDrawable = R.drawable.ny_ic_down_arrow_white;
+        int fareDrawableVisibility;
         String fareDiffColor;
         String fareDiffValueText;
-        Integer distDrawable = R.drawable.ny_ic_down_arrow_white;
-        Integer distDrawableVisibility;
+        int distDrawable = R.drawable.ny_ic_down_arrow_white;
+        int distDrawableVisibility;
         String distDiffColor;
         String distDiffValueText;
         if (fareDiff < 0) {
@@ -319,7 +316,7 @@ public class OverlayMessagingService extends Service {
         }
         else {
             fareDrawableVisibility = View.GONE;
-            fareDiffValueText = "No Change";
+            fareDiffValueText = getString(R.string.no_change);
             fareDiffColor = fareDiffColorNeutral;
         }
         fareIndicator.setCardBackgroundColor(Color.parseColor(fareDiffColor));
@@ -349,7 +346,7 @@ public class OverlayMessagingService extends Service {
         else {
             distDrawableVisibility = View.GONE;
             distDiffColor = distDiffColorNeutral;
-            distDiffValueText = "No Change";
+            distDiffValueText = getString(R.string.no_change);
         }
         distIndicatorArrow.setImageDrawable(getDrawable(distDrawable));
         distIndicatorArrow.setVisibility(distDrawableVisibility);
@@ -362,12 +359,9 @@ public class OverlayMessagingService extends Service {
         int calculatedTime = RideRequestUtils.calculateExpireTimer(validTill, getCurrTime);
         int calculatedTimeInMS = Math.min ((calculatedTime - 5) * 1000, minTimeToShowPopupInMS);
         LinearProgressIndicator progressIndicator = messageView.findViewById(R.id.progress_indicator_overlay);
-        System.out.println("RITIKA in set Data calculatedTimeInMS" + calculatedTimeInMS);
         countDownTimer = new CountDownTimer(calculatedTimeInMS, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {
-                System.out.println("RITIKA on Tick is running millisUntilFinished" + millisUntilFinished/1000);
-                System.out.println("RITIKA on Tick is running calculatedTimeInMS" + calculatedTimeInMS/1000);
                 int progressCompat = (int) (millisUntilFinished/1000);
                 progressIndicator.setProgressCompat(progressCompat*2, true);
                 if (progressCompat <= 8) {
@@ -460,7 +454,8 @@ public class OverlayMessagingService extends Service {
                         performAction(action);
                     }
                 }
-                countDownTimer.cancel();
+                if(countDownTimer != null){
+                countDownTimer.cancel();}
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -481,7 +476,8 @@ public class OverlayMessagingService extends Service {
                     performAction(action);
                 }
                 }
-                countDownTimer.cancel();
+                if(countDownTimer != null){
+                countDownTimer.cancel();}
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -594,11 +590,9 @@ public class OverlayMessagingService extends Service {
                     break;
                 case "CALL_API":
                     try{
-                        System.out.println("RITIKA in CALL_API");
                         String endPoint = actionDetails.optString("endPoint", null);
                         String reqBody = actionDetails.optString("reqBody", null);
                         String method = actionDetails.optString("method", null);
-                        System.out.println("RITIKA IN endpoint : " + endPoint);
                         if (endPoint != null && reqBody != null && method != null) {
                             new Thread(new Runnable() {
                                 @Override
@@ -612,19 +606,16 @@ public class OverlayMessagingService extends Service {
                                         public void run() {
                                             if (apiResponse.getStatusCode() == 200)
                                             {
-                                                if (toastMessage == null)
-                                                    toastMessage = "Successful! Please wait for the response.";
-                                                Toast.makeText(OverlayMessagingService.this, toastMessage, Toast.LENGTH_SHORT).show();
-                                                System.out.println("RITIKA in CALL_API response success:" + apiResponse.getStatusCode());
-                                                System.out.println("RITIKA IN CALL_API success dependentActions" + dependentActions.toString());
+                                                if (toastMessage != null)
+                                                    Toast.makeText(OverlayMessagingService.this, toastMessage, Toast.LENGTH_SHORT).show();
                                                 performDependentAction(dependentActions);
                                             }
                                             else
                                             {
+                                                RideRequestUtils.firebaseLogEventWithParams("failure_call_api", "CALL_API", String.valueOf(apiResponse), getApplicationContext());
                                                 toastMessage = "Something went Wrong.";
                                                 Toast.makeText(OverlayMessagingService.this, toastMessage, Toast.LENGTH_SHORT).show();
                                             }
-                                            System.out.println("RITIKA in CALL_API response :" + apiResponse.getStatusCode());
                                         }
 
                                     });
@@ -634,7 +625,7 @@ public class OverlayMessagingService extends Service {
                             }).start();
                         }
                     } catch (Exception e){
-                        System.out.println("Error : RITIKA in CALL_API" + e);
+                        RideRequestUtils.firebaseLogEventWithParams("exception_call_api", "CALL_API", String.valueOf(e), this);
                     }
                     break;
                 case "OPEN_APP":
@@ -669,7 +660,7 @@ public class OverlayMessagingService extends Service {
             }
         }
             catch (Exception e){
-                System.out.println("Error : RITIKA " + e);
+                RideRequestUtils.firebaseLogEventWithParams("exception_perform_action", "PERFORM_ACTION", String.valueOf(e), this);
             }
     }
 

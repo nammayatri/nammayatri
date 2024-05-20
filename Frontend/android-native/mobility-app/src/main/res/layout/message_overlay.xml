@@ -128,7 +128,6 @@
                                         app:cardElevation="0dp"
                                         android:layout_marginHorizontal="4dp" />
 
-
                                     <LinearLayout
                                         android:layout_width="match_parent"
                                         android:layout_height="wrap_content"
@@ -154,8 +153,6 @@
 
                                 </LinearLayout>
 
-
-
                                 <LinearLayout
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
@@ -170,61 +167,56 @@
                                         android:maxWidth="200dp"
                                         android:fontFamily="@font/plus_jakartasans_regular"
                                         android:id="@+id/new_fare"/>
+
                                     <LinearLayout
                                         android:layout_width="match_parent"
                                         android:layout_height="match_parent"
                                         android:layout_marginTop="4dp"
                                         android:orientation="horizontal">
-                                    <TextView
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text=" ₹ "
-                                        android:fontFamily="@font/plus_jakarta_sans_bold"
-                                        android:id="@+id/new_fare_val"/>
 
-                                    <com.google.android.material.card.MaterialCardView
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:theme="@style/Theme.MaterialComponents.Light"
-                                        app:cardCornerRadius="10dp"
-                                        app:cardElevation="0dp"
-                                        app:contentPadding="5dp"
-                                        app:contentPaddingLeft="5dp"
-                                        android:layout_marginLeft="5dp"
-                                        app:contentPaddingRight="5dp"
-                                        android:id="@+id/fare_diff_indicator"
-                                        app:cardBackgroundColor="@color/green900"
-                                        >
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text=" ₹ "
+                                            android:fontFamily="@font/plus_jakarta_sans_bold"
+                                            android:id="@+id/new_fare_val"/>
 
+                                        <com.google.android.material.card.MaterialCardView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:theme="@style/Theme.MaterialComponents.Light"
+                                            app:cardCornerRadius="10dp"
+                                            app:cardElevation="0dp"
+                                            app:contentPadding="5dp"
+                                            app:contentPaddingLeft="5dp"
+                                            android:layout_marginLeft="5dp"
+                                            app:contentPaddingRight="5dp"
+                                            android:id="@+id/fare_diff_indicator"
+                                            app:cardBackgroundColor="@color/green900">
 
-                                        <LinearLayout
-                                            android:layout_width="match_parent"
-                                            android:layout_height="match_parent"
-                                            android:orientation="horizontal">
-
-                                            <ImageView
-                                                android:layout_width="18dp"
-                                                android:layout_height="18dp"
-                                                android:id="@+id/fare_diff_indicator_arrow"
-                                                android:src="@drawable/ny_ic_up_arrow_white" />
-
-                                            <TextView
+                                            <LinearLayout
                                                 android:layout_width="match_parent"
                                                 android:layout_height="match_parent"
-                                                android:textColor="@color/white"
-                                                android:id="@+id/fare_diff_indicator_val"
-                                                android:textSize="15dp"
-                                                android:fontFamily="@font/dmsans_bold"
-                                                android:text=" ₹ "/>
+                                                android:orientation="horizontal">
 
-                                        </LinearLayout>
+                                                <ImageView
+                                                    android:layout_width="18dp"
+                                                    android:layout_height="18dp"
+                                                    android:id="@+id/fare_diff_indicator_arrow"
+                                                    android:src="@drawable/ny_ic_up_arrow_white" />
 
+                                                <TextView
+                                                    android:layout_width="match_parent"
+                                                    android:layout_height="match_parent"
+                                                    android:textColor="@color/white"
+                                                    android:id="@+id/fare_diff_indicator_val"
+                                                    android:textSize="15dp"
+                                                    android:fontFamily="@font/dmsans_bold"
+                                                    android:text=" ₹ "/>
 
-                                    </com.google.android.material.card.MaterialCardView>
+                                            </LinearLayout>
+                                        </com.google.android.material.card.MaterialCardView>
                                     </LinearLayout>
-
-
-
                                 </LinearLayout>
 
                                 <LinearLayout
@@ -265,8 +257,7 @@
                                         android:layout_marginLeft="5dp"
                                         app:contentPaddingRight="5dp"
                                         android:id="@+id/dist_diff_indicator"
-                                        app:cardBackgroundColor="@color/green900"
-                                        >
+                                        app:cardBackgroundColor="@color/green900">
 
                                         <LinearLayout
                                             android:layout_width="match_parent"
@@ -290,29 +281,13 @@
 
                                         </LinearLayout>
 
-
-
                                     </com.google.android.material.card.MaterialCardView>
-
                                 </LinearLayout>
-
-
                                 </LinearLayout>
-
-
-
-
                             </LinearLayout>
-
-
-
                         </androidx.cardview.widget.CardView>
-
-
                     </FrameLayout>
-
-
-                
+               
                     <LinearLayout
                         android:layout_marginTop="10dp"
                         android:layout_width="match_parent"
