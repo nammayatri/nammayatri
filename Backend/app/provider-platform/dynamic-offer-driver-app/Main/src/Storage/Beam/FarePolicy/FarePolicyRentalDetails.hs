@@ -29,6 +29,7 @@ data FarePolicyRentalDetailsT f = FarePolicyRentalDetailsT
     perExtraMinRateAmount :: B.C f (Maybe HighPrecMoney),
     perExtraKmRateAmount :: B.C f (Maybe HighPrecMoney),
     nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge),
+    deadKmFare :: B.C f HighPrecMoney,
     includedKmPerHr :: B.C f Kilometers,
     plannedPerKmRate :: B.C f Money,
     plannedPerKmRateAmount :: B.C f (Maybe HighPrecMoney),
