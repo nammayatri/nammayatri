@@ -28,7 +28,7 @@ import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment (Flow)

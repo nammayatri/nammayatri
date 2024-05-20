@@ -23,14 +23,14 @@ where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
-import Domain.Types.Merchant.MerchantOperatingCity
-import Domain.Types.Merchant.Overlay
+import Domain.Types.MerchantOperatingCity
+import Domain.Types.Overlay
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.Merchant.Overlay as Queries
+import qualified Storage.Queries.Overlay as Queries
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Overlay -> m ()
 create = Queries.create

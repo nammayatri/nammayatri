@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN include_driver_currently_on_ride boolean DEFAULT true;

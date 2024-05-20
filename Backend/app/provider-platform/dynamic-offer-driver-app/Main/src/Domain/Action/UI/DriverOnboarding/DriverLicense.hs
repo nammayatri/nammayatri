@@ -32,7 +32,7 @@ import qualified Domain.Types.DriverLicense as Domain
 import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Domain.Types.Vehicle
 import Environment

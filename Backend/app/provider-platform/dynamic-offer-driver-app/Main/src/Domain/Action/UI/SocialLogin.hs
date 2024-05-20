@@ -12,7 +12,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Registration as DR
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
@@ -134,7 +134,7 @@ makeSession entityId merchantId merchantOpCityId = do
 postSocialUpdateProfile ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.SocialLogin.SocialUpdateProfileReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess

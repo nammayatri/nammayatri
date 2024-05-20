@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN estimate_id VARCHAR(255);

@@ -5,8 +5,7 @@
 module Storage.Queries.Exophone (module Storage.Queries.Exophone, module ReExport) where
 
 import qualified Domain.Types.Exophone
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import qualified Kernel.External.Call.Types
 import Kernel.External.Encryption
@@ -24,17 +23,15 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Exophone.Exophone] -> m ())
 createMany = traverse_ create
 
-deleteByMerchantOpCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m ())
+deleteByMerchantOpCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
 deleteByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do deleteWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
-findAllByMerchantOpCityId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.Exophone.Exophone])
+findAllByMerchantOpCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.Exophone.Exophone])
 findAllByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
 findByMerchantOpCityIdServiceAndExophoneType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Call.Types.CallService -> Domain.Types.Exophone.ExophoneType -> m [Domain.Types.Exophone.Exophone])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Call.Types.CallService -> Domain.Types.Exophone.ExophoneType -> m [Domain.Types.Exophone.Exophone])
 findByMerchantOpCityIdServiceAndExophoneType (Kernel.Types.Id.Id merchantOperatingCityId) callService exophoneType = do
   findAllWithKV
     [ Se.And

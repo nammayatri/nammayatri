@@ -28,14 +28,14 @@ where
 import Data.Coerce (coerce)
 import Data.Text as Text
 import Domain.Types.Common
-import Domain.Types.Merchant.DriverIntelligentPoolConfig
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.DriverIntelligentPoolConfig
+import Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.Queries.Merchant.DriverIntelligentPoolConfig as Queries
+import qualified Storage.Queries.DriverIntelligentPoolConfig as Queries
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverIntelligentPoolConfig -> m ()
 create = Queries.create

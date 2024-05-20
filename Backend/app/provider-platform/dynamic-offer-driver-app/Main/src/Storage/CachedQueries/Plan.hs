@@ -2,7 +2,7 @@
 
 module Storage.CachedQueries.Plan where
 
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Plan
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis

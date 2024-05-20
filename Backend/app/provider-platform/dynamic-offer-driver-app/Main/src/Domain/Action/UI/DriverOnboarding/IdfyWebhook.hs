@@ -27,7 +27,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Status as Status
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as RC
 import qualified Domain.Types.IdfyVerification as IV
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Environment
 import Kernel.Beam.Functions
 import qualified Kernel.External.Verification.Idfy.WebhookHandler as Idfy

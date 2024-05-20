@@ -17,7 +17,7 @@ module Storage.Queries.Coins.CoinsConfig where
 
 import Domain.Types.Coins.CoinsConfig
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id

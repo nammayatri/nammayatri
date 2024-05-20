@@ -39,7 +39,7 @@ import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.FleetDriverAssociation as FDV
 import qualified Domain.Types.IdfyVerification as VerificationT
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.VehicleFitnessCertificate as DFC

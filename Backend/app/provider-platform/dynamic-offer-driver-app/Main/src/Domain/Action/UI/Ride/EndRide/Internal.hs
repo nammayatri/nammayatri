@@ -50,13 +50,13 @@ import Domain.Types.DriverPlan
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.LeaderBoardConfigs as LConfig
 import Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import Domain.Types.Merchant.TransporterConfig
+import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RiderDetails as RD
+import Domain.Types.TransporterConfig
 import EulerHS.Prelude hiding (elem, foldr, id, length, mapM_, null)
 import GHC.Float (double2Int)
 import GHC.Num.Integer (integerFromInt, integerToInt)

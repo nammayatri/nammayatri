@@ -7,9 +7,9 @@ module Domain.Types.SubscriptionConfig where
 import Data.Aeson
 import qualified Data.Time
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantMessage
-import qualified Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.Merchant.MerchantServiceConfig
+import qualified Domain.Types.MerchantMessage
+import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantServiceConfig
 import qualified Domain.Types.Plan
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -24,15 +24,15 @@ data SubscriptionConfig = SubscriptionConfig
     genericJobRescheduleTime :: Data.Time.NominalDiffTime,
     isTriggeredAtEndRide :: Kernel.Prelude.Bool,
     maxRetryCount :: Kernel.Prelude.Int,
-    paymentLinkChannel :: Domain.Types.Merchant.MerchantMessage.MediaChannel,
+    paymentLinkChannel :: Domain.Types.MerchantMessage.MediaChannel,
     paymentLinkJobTime :: Data.Time.NominalDiffTime,
-    paymentServiceName :: Domain.Types.Merchant.MerchantServiceConfig.ServiceName,
+    paymentServiceName :: Domain.Types.MerchantServiceConfig.ServiceName,
     sendDeepLink :: Kernel.Prelude.Bool,
     sendInAppFcmNotifications :: Kernel.Prelude.Bool,
     serviceName :: Domain.Types.Plan.ServiceNames,
     useOverlayService :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

@@ -1,7 +1,7 @@
 module SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler where
 
 import qualified Data.Map as M
-import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
+import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.Error

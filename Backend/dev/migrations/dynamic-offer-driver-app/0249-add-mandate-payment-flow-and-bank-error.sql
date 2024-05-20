@@ -3,7 +3,6 @@ ALTER TABLE atlas_driver_offer_bpp.payment_order ADD COLUMN bank_error_message t
 ALTER TABLE atlas_driver_offer_bpp.payment_order ADD COLUMN bank_error_code text;
 ALTER TABLE atlas_driver_offer_bpp.payment_transaction ADD COLUMN bank_error_message text;
 ALTER TABLE atlas_driver_offer_bpp.payment_transaction ADD COLUMN bank_error_code text;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN bank_error_expiry bigint DEFAULT 3600 NOT NULL; -- error expires in 1 hour of updation
 
 ALTER TABLE atlas_driver_offer_bpp.invoice ADD COLUMN payment_mode Text NOT NULL DEFAULT 'MANUAL_INVOICE';
 ALTER TABLE atlas_driver_offer_bpp.invoice ADD COLUMN bank_error_message Text;

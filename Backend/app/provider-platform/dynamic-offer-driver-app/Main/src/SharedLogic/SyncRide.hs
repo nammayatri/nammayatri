@@ -33,7 +33,7 @@ import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude (whenNothing_)
@@ -43,6 +43,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.Beckn.Common as DCommon
 import qualified SharedLogic.CallBAP as CallBAP
+import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM

@@ -23,13 +23,13 @@ where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
-import Domain.Types.Merchant.MerchantMessage
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantMessage
+import Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.Merchant.MerchantMessage as Queries
+import qualified Storage.Queries.MerchantMessage as Queries
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantMessage -> m ()
 create = Queries.create

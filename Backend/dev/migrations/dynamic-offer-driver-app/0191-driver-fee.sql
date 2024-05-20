@@ -16,9 +16,3 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.driver_fee
     updated_at timestamp with time zone NOT NULL
 );
 ALTER TABLE atlas_driver_offer_bpp.driver_fee OWNER TO atlas_driver_offer_bpp_user;
-
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_payment_cycle_duration int NOT NULL DEFAULT 86400; -- 24 hrs
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_payment_cycle_start_time int NOT NULL DEFAULT 36000; -- 10 AM
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_payment_cycle_buffer int NOT NULL DEFAULT 14400; -- 4 hrs (2 PM)
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_payment_reminder_interval int NOT NULL DEFAULT 1800; -- 30 mins
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN time_diff_from_utc int NOT NULL DEFAULT 19800; -- +5:30

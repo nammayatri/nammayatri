@@ -5,8 +5,7 @@
 module Storage.Queries.BlockedRoute where
 
 import qualified Domain.Types.BlockedRoute
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -25,7 +24,7 @@ createMany = traverse_ create
 
 findAllBlockedRoutesByMerchantOperatingCity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> m [Domain.Types.BlockedRoute.BlockedRoute])
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m [Domain.Types.BlockedRoute.BlockedRoute])
 findAllBlockedRoutesByMerchantOperatingCity merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BlockedRoute.BlockedRoute -> m (Maybe Domain.Types.BlockedRoute.BlockedRoute))

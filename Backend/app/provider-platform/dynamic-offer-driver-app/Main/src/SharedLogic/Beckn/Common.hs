@@ -19,7 +19,7 @@ import Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
 import Domain.Types.Vehicle as SVeh

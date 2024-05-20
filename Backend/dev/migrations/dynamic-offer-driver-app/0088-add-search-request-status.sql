@@ -1,2 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN status text NOT NULL DEFAULT 'ACTIVE';
-ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL;

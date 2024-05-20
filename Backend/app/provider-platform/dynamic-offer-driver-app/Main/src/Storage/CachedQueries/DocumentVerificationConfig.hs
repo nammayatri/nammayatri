@@ -26,7 +26,7 @@ module Storage.CachedQueries.DocumentVerificationConfig
 where
 
 import Domain.Types.DocumentVerificationConfig as DTO
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
 import Domain.Types.Vehicle
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis

@@ -25,7 +25,7 @@ createMany = traverse_ create
 deleteByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ())
 deleteByPersonId entityId = do deleteWithKV [Se.Is Beam.entityId $ Se.Eq entityId]
 
-findAllByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.RegistrationToken.RegistrationToken]))
+findAllByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RegistrationToken.RegistrationToken])
 findAllByPersonId entityId = do findAllWithKV [Se.Is Beam.entityId $ Se.Eq entityId]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RegistrationToken.RegistrationToken -> m (Maybe Domain.Types.RegistrationToken.RegistrationToken))

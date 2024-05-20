@@ -52,8 +52,10 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
 import qualified Data.Text as T
 import qualified Data.Vector as V
+import qualified Domain.Action.UI.MerchantServiceConfig as DMSC
 import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DriverIntelligentPoolConfig as DDIPC
 import qualified Domain.Types.DriverPoolConfig as DDPC
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FarePolicy as FarePolicy
@@ -63,16 +65,15 @@ import qualified Domain.Types.Geometry as DGEO
 import qualified Domain.Types.GoHomeConfig as DGoHomeConfig
 import qualified Domain.Types.LeaderBoardConfigs as DLC
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DDIPC
-import qualified Domain.Types.Merchant.MerchantMessage as DMM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
-import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as DMSUC
-import qualified Domain.Types.Merchant.Overlay as DMO
-import qualified Domain.Types.Merchant.TransporterConfig as DTC
+import qualified Domain.Types.MerchantMessage as DMM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantServiceConfig as DMSC
+import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
+import qualified Domain.Types.Overlay as DMO
 import qualified Domain.Types.Plan as Plan
-import qualified Domain.Types.ServiceTierType as DVSTT
+import qualified Domain.Types.ServiceTierType as DVST
+import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
@@ -404,7 +405,7 @@ buildDriverPoolConfig ::
   Id DMOC.MerchantOperatingCity ->
   Meters ->
   SL.Area ->
-  Maybe DVSTT.ServiceTierType ->
+  Maybe DVST.ServiceTierType ->
   Text ->
   Common.DriverPoolConfigCreateReq ->
   m DDPC.DriverPoolConfig

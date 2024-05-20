@@ -7,7 +7,7 @@ module Domain.Types.DriverModuleCompletion where
 import Data.Aeson
 import qualified Domain.Types.LmsModule
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -20,7 +20,7 @@ data DriverModuleCompletion = DriverModuleCompletion
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     entitiesCompleted :: [Domain.Types.DriverModuleCompletion.ModuleCompletionEntity],
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
     ratingAtTheTimeOfCompletion :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     startedAt :: Kernel.Prelude.UTCTime,

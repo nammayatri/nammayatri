@@ -21,7 +21,7 @@ import Control.Monad
 import Data.Aeson as DA
 import qualified Domain.Types.Cac as DTC
 import Domain.Types.GoHomeConfig
-import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Beam.Functions as KBF
 import Kernel.Prelude
 import Kernel.Types.Cac

@@ -9,7 +9,7 @@ import qualified Domain.Types.Booking
 import qualified Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -29,7 +29,7 @@ data BookingUpdateRequest = BookingUpdateRequest
     id :: Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest,
     maxEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     oldEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     oldEstimatedFare :: Kernel.Types.Common.HighPrecMoney,
     oldFareParamsId :: Kernel.Types.Id.Id Domain.Types.FareParameters.FareParameters,

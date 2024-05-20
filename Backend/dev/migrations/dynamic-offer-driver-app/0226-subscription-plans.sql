@@ -1,8 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_auto_pay_notification_time bigint DEFAULT 32400; -- Notification scheduled at 9am
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_auto_pay_execution_time bigint DEFAULT 104400; -- Execution scheduled at next day 2pm
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN subscription_start_time timestamp with time zone DEFAULT TIMESTAMP '2023-08-31 00:00:00' NOT NULL; -- Invoice generation from 1st September
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN mandate_validity Int DEFAULT 5  NOT NULL;
-
 CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.driver_plan
     (   driver_id character(36) NOT NULL,
         plan_id character(36) NOT NULL,

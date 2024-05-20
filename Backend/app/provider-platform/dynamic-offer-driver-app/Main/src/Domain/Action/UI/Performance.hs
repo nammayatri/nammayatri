@@ -1,7 +1,7 @@
 module Domain.Action.UI.Performance where
 
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.RiderDetails ()
 import qualified Kernel.Beam.Functions as B

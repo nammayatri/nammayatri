@@ -6,7 +6,7 @@ module Domain.Types.VehicleServiceTier where
 
 import Data.Aeson
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.Vehicle
 import Kernel.Prelude
@@ -24,7 +24,7 @@ data VehicleServiceTier = VehicleServiceTier
     longDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     name :: Kernel.Prelude.Text,
     priority :: Kernel.Prelude.Int,
     seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

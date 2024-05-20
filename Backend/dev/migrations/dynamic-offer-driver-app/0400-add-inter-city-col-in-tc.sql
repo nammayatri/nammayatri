@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN can_switch_to_inter_city boolean default true;

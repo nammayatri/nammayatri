@@ -10,5 +10,3 @@ INSERT INTO atlas_driver_offer_bpp.exophone (id, merchant_id, merchant_operating
     ON CONFLICT DO NOTHING;
 
 ALTER TABLE atlas_driver_offer_bpp.merchant DROP COLUMN exo_phones;
-
-ALTER TABLE atlas_driver_offer_bpp.booking RENAME COLUMN provider_exo_phone TO primary_exophone;

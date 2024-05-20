@@ -4,8 +4,8 @@
 module Storage.Queries.Transformers.Person where
 
 import qualified Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude

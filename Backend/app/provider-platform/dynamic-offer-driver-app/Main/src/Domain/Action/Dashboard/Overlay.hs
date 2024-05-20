@@ -20,8 +20,8 @@ import "dashboard-helper-api" Dashboard.Common (HideSecrets (hideSecrets))
 import Data.Ord
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Merchant.Overlay as DTMO
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Overlay as DTMO
 import Environment
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (Language (..))
@@ -37,7 +37,7 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
-import qualified Storage.Queries.Merchant.Overlay as SQMO
+import qualified Storage.Queries.Overlay as SQMO
 import Tools.Error
 
 -- =============================================

@@ -10,7 +10,7 @@ import Data.Aeson
 import qualified Data.List as List
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DMerchant
-import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Common (HighPrecMoney, Money)

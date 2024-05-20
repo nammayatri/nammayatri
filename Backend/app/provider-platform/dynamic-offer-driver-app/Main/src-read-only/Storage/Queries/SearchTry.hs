@@ -41,7 +41,7 @@ updateByPrimaryKey (Domain.Types.SearchTry.SearchTry {..}) = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.customerExtraFee (Kernel.Prelude.roundToIntegral <$> customerExtraFee),
-      Se.Set Beam.customerExtraFeeAmount (customerExtraFee),
+      Se.Set Beam.customerExtraFeeAmount customerExtraFee,
       Se.Set Beam.estimateId estimateId,
       Se.Set Beam.estimateIds (Kernel.Prelude.Just estimateIds),
       Se.Set Beam.isScheduled (Kernel.Prelude.Just isScheduled),
@@ -56,7 +56,7 @@ updateByPrimaryKey (Domain.Types.SearchTry.SearchTry {..}) = do
       Se.Set Beam.tripCategory (Kernel.Prelude.Just tripCategory),
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.validTill validTill,
-      Se.Set Beam.vehicleVariant (vehicleServiceTier),
+      Se.Set Beam.vehicleVariant vehicleServiceTier,
       Se.Set Beam.vehicleServiceTierName (Kernel.Prelude.Just vehicleServiceTierName)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

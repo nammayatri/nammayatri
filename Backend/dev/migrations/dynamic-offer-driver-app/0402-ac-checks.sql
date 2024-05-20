@@ -1,5 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN ac_status_check_gap int default 7;
-
 INSERT INTO
   atlas_driver_offer_bpp.merchant_overlay
     (id,

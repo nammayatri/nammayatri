@@ -1,5 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN kapture_queue text DEFAULT '';
-
 UPDATE atlas_driver_offer_bpp.transporter_config AS tc
 SET kapture_queue =
     CASE

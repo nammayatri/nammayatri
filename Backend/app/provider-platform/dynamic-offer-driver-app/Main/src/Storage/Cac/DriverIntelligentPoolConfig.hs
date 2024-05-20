@@ -25,15 +25,15 @@ where
 import Client.Main as CM
 import Data.Aeson as DA
 import qualified Domain.Types.Cac as DTC
-import Domain.Types.Merchant.DriverIntelligentPoolConfig
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.DriverIntelligentPoolConfig
+import Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions as KBF
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Cac
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Beam.Merchant.DriverIntelligentPoolConfig as SBMDIPC
+import qualified Storage.Beam.DriverIntelligentPoolConfig as SBMDIPC
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as CMDP
 import Utils.Common.CacUtils as CCU

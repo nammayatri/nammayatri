@@ -6,7 +6,7 @@ module Domain.Types.LmsModule where
 
 import Data.Aeson
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Vehicle
 import qualified Kernel.External.Types
 import Kernel.Prelude
@@ -20,7 +20,7 @@ data LmsModule = LmsModule
     id :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
     languagesAvailableForQuiz :: [Kernel.External.Types.Language],
     languagesAvailableForVideos :: [Kernel.External.Types.Language],
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     moduleCompletionCriteria :: Domain.Types.LmsModule.ModuleCompletionCriteria,
     noOfVideos :: Kernel.Prelude.Int,
     rank :: Kernel.Prelude.Int,

@@ -44,7 +44,7 @@ import qualified Domain.Types.IdfyVerification as DIV
 import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Vehicle as Vehicle
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC

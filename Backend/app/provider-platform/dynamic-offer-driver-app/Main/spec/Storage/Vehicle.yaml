@@ -2,7 +2,7 @@ imports:
   Person: Domain.Types.Person
   Merchant: Domain.Types.Merchant
   UTCTime: Kernel.Prelude
-  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   ServiceTierType: Domain.Types.ServiceTierType
 
 Vehicle:

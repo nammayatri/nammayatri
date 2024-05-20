@@ -60,21 +60,21 @@ CREATE TABLE atlas_driver_offer_bpp.coin_purchase_history (
     title VARCHAR (36) NOT NULL
 );
 
-ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN distance_to_pickup double precision;
+-- ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN distance_to_pickup double precision;
 
-Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN coin_feature BOOL NOT NULL DEFAULT True;
+-- Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN coin_feature BOOL NOT NULL DEFAULT True;
 
-Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN coin_expire_time INT NOT NULL DEFAULT 1296000;
+-- Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN coin_expire_time INT NOT NULL DEFAULT 1296000;
 
-Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN coin_conversion_rate double precision NOT NULL DEFAULT 0.4;
+-- Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN coin_conversion_rate double precision NOT NULL DEFAULT 0.4;
 
 Alter Table atlas_driver_offer_bpp.driver_plan ADD COLUMN coin_coverted_to_cash_left double precision NOT NULL DEFAULT 0;
 
 Alter Table atlas_driver_offer_bpp.driver_plan ADD COLUMN total_coins_converted_cash double precision NOT NULL DEFAULT 0;
 
-Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_time_diff INT NOT NULL DEFAULT 120;
+-- Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_time_diff INT NOT NULL DEFAULT 120;
 
-Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_dist_diff INT NOT NULL DEFAULT 50;
+-- Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_dist_diff INT NOT NULL DEFAULT 50;
 
 ALTER TABLE atlas_driver_offer_bpp.coin_config
 ALTER COLUMN event_function SET NOT NULL,

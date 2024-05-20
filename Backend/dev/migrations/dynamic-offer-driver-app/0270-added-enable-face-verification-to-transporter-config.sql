@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_face_verification  Boolean DEFAULT false;

@@ -15,7 +15,7 @@
 
 module Storage.CachedQueries.VehicleServiceTier where
 
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.ServiceTierType
 import Domain.Types.VehicleServiceTier
 import Kernel.Prelude

@@ -16,7 +16,7 @@ import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Extra.FareProduct as UFP
 import qualified Domain.Types.FareProduct as DFareProduct
 import Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps (LatLong)

@@ -4,8 +4,7 @@
 
 module Storage.Queries.SubscriptionConfig where
 
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Plan
 import qualified Domain.Types.SubscriptionConfig
 import Kernel.Beam.Functions
@@ -27,7 +26,7 @@ createMany = traverse_ create
 
 findSubscriptionConfigsByMerchantOpCityIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Domain.Types.Plan.ServiceNames -> m (Maybe Domain.Types.SubscriptionConfig.SubscriptionConfig))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Domain.Types.Plan.ServiceNames -> m (Maybe Domain.Types.SubscriptionConfig.SubscriptionConfig))
 findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName = do
   findOneWithKV
     [ Se.And
@@ -38,7 +37,7 @@ findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId 
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> m (Maybe Domain.Types.SubscriptionConfig.SubscriptionConfig))
+  (Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m (Maybe Domain.Types.SubscriptionConfig.SubscriptionConfig))
 findByPrimaryKey serviceName merchantOperatingCityId = do
   findOneWithKV
     [ Se.And

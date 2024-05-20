@@ -22,7 +22,7 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Data.Text (toLower)
 import qualified Domain.Action.Beckn.Update as DUpdate
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import EulerHS.Prelude hiding (state)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context

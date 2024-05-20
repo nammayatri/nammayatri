@@ -16,7 +16,7 @@ module Domain.Action.UI.SafetyWebhook where
 
 import Data.Aeson.Types as DAT
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Environment
 import EulerHS.Prelude
 import Kernel.External.Encryption

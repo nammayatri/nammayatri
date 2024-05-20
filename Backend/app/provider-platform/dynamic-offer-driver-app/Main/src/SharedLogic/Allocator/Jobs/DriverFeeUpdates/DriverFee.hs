@@ -33,13 +33,13 @@ import qualified Domain.Types.DriverPlan as DPlan
 import qualified Domain.Types.Invoice as INV
 import Domain.Types.Mandate (Mandate)
 import Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantMessage (MessageKey (..))
-import Domain.Types.Merchant.MerchantOperatingCity
-import Domain.Types.Merchant.Overlay (OverlayCondition (..))
-import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
+import Domain.Types.MerchantMessage (MessageKey (..))
+import Domain.Types.MerchantOperatingCity
+import Domain.Types.Overlay (OverlayCondition (..))
 import Domain.Types.Person
 import Domain.Types.Plan (BasedOnEntity (..), PaymentMode (AUTOPAY, MANUAL), Plan (..), PlanBaseAmount (..), ServiceNames (..))
 import Domain.Types.SubscriptionConfig
+import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Kernel.External.Payment.Interface as PaymentInterface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude

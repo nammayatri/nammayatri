@@ -23,7 +23,7 @@ import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverInformation
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.Ride as DDR
 import Domain.Types.Ride as DR
