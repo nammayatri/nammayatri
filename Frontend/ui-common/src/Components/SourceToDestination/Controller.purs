@@ -22,7 +22,7 @@ import Common.Styles.Colors as Color
 import Common.Types.App
 import Data.Maybe (Maybe(..))
 
-data Action = Dummy | DestinationClicked
+data Action = DestinationClicked
 type Config =
   {
     margin :: Margin

@@ -348,7 +348,7 @@ view push state =
                         ]
                     ]
                 , linearLayout
-                    ([ if state.dontShowRetry then width state.option1.width 
+                    ([ if not state.showRetry then width state.option1.width 
                        else if state.option1.visibility then width state.option2.width else weight 1.0
                     , height state.option2.height
                     , background state.option2.background
