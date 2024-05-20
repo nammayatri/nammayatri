@@ -193,8 +193,9 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         let routeInfo = RR.RouteInfo {distance = Just estimatedDistance, duration = Just duration, points = Just shortestRoute.points}
         Redis.setExp (bookingRequestKeySoftUpdate booking.id.getId) routeInfo 600
         Redis.setExp (multipleRouteKeySoftUpdate booking.id.getId) (map RR.createMultipleRouteInfo routeResponse) 600
-        fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id srcPt (Just dropLatLong) (Just (TransactionId (Id booking.transactionId))) booking.tripCategory
-        farePolicy <- getFarePolicy merchantOperatingCity.id booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just (TransactionId (Id booking.transactionId)))
+        -- TODO: Currently isDashboard flagged is passed as False here, but fix it properly once we have edit destination from dashboard too
+        fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id False srcPt (Just dropLatLong) (Just (TransactionId (Id booking.transactionId))) booking.tripCategory
+        farePolicy <- getFarePolicy merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just (TransactionId (Id booking.transactionId)))
         mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
         fareParameters <-
           calculateFareParameters

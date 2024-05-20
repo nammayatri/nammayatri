@@ -54,8 +54,12 @@ buildSearchReqV2 DSearch.SearchRes {..} = do
     city
     (getPoints shortestRouteInfo)
     phoneNumber
+    isDashboardRequest
     isReallocationEnabled
     startTime
+    returnTime
+    roundTrip
+    riderPreferredOption
     multipleRoutes
     bapConfig
     ttl

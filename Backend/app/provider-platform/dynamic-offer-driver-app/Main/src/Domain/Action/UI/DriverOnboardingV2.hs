@@ -152,7 +152,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) mbDistance mbServiceT
     getRateCardForServiceTier :: Maybe TransporterConfig -> TripCategory -> Domain.Types.ServiceTierType.ServiceTierType -> Environment.Flow API.Types.UI.DriverOnboardingV2.RateCardResp
     getRateCardForServiceTier transporterConfig tripCategory serviceTierType = do
       now <- getCurrentTime
-      fullFarePolicy <- getFarePolicy merchantOperatingCityId (OneWay OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing
+      fullFarePolicy <- getFarePolicy merchantOperatingCityId False (OneWay OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing
       let rateCardItems = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id mkBreakupItem Nothing Nothing (fullFarePolicyToFarePolicy fullFarePolicy)
       let isPeak =
             fromMaybe False $

@@ -26,6 +26,7 @@ SearchRequest:
   fields:
     id: Id SearchRequest
     startTime: UTCTime
+    returnTime: Maybe UTCTime
     validTill: UTCTime
     riderId: Id Person
     clientId: Maybe (Id Client)
@@ -58,7 +59,7 @@ SearchRequest:
       enum: "NEW, INPROGRESS, CONFIRMED, COMPLETED, CLOSED"
       derive: "HttpInstance"
     RiderPreferredOption:
-      enum: "Rental, OneWay"
+      enum: "Rental, OneWay, InterCity"
       derive: "HttpInstance"
 
   beamType:

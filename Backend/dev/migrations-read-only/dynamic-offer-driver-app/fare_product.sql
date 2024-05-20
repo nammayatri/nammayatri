@@ -10,3 +10,8 @@ ALTER TABLE atlas_driver_offer_bpp.fare_product ADD COLUMN time_bounds text NOT 
 ALTER TABLE atlas_driver_offer_bpp.fare_product ADD COLUMN trip_category text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.fare_product ADD COLUMN vehicle_variant character varying (60) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.fare_product ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fare_product ADD COLUMN search_source text NOT NULL default 'ALL';
