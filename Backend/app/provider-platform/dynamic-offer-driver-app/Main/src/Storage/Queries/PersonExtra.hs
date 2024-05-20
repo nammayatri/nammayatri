@@ -10,6 +10,7 @@ where
 -- Extra code goes here --
 
 import Control.Applicative ((<|>))
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified Data.HashMap.Strict as HashMap
 import qualified Database.Beam as B
 import Database.Beam.Postgres hiding ((++.))
@@ -83,6 +84,9 @@ findAdminsByMerchantId (Id merchantId) = findAllWithDb [Se.And [Se.Is BeamP.merc
 
 findByEmail :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> m (Maybe Person)
 findByEmail email = findOneWithKV [Se.Is BeamP.email $ Se.Eq email]
+
+findByEmailAndMerchantIdAndRole :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Id Merchant -> Role -> m (Maybe Person)
+findByEmailAndMerchantIdAndRole email (Id merchantId) role_ = findOneWithKV [Se.And [Se.Is BeamP.email $ Se.Eq email, Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq role_]]
 
 findAllDriversWithInfoAndVehicle ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -406,6 +410,30 @@ updateAlternateMobileNumberAndCode person = do
 findAllPersonWithDriverInfos :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [DriverInformation] -> Id Merchant -> m [Person]
 findAllPersonWithDriverInfos dInfos merchantId = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In (getId . DriverInfo.driverId <$> dInfos), Se.Is BeamP.merchantId $ Se.Eq (getId merchantId)]]
 
+findAllPersonAndDriverInfoWithDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> m [(Person, DriverInformation)]
+findAllPersonAndDriverInfoWithDriverIds driverIds = do
+  let allDriverIds = map (\driverId -> driverId.getId) driverIds
+  dbConf <- getMasterBeamConfig
+  result <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.filter_'
+          ( \(person, _) ->
+              B.sqlBool_ $ person.id `B.in_` (B.val_ <$> allDriverIds)
+          )
+          do
+            person <- B.all_ (BeamCommon.person BeamCommon.atlasDB)
+            driverInfo <- B.join_' (BeamCommon.driverInformation BeamCommon.atlasDB) (\info' -> BeamP.id person B.==?. BeamDI.driverId info')
+            pure (person, driverInfo)
+  case result of
+    Right x -> do
+      let persons = fmap fst x
+          driverInfos = fmap snd x
+      p <- catMaybes <$> mapM fromTType' persons
+      di <- catMaybes <$> mapM fromTType' driverInfos
+      pure $ zip p di
+    Left _ -> pure []
+
 updateMediaId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe (Id MediaFile) -> m ()
 updateMediaId (Id driverId) faceImageId = updateWithKV [Se.Set BeamP.faceImageId (getId <$> faceImageId)] [Se.Is BeamP.id $ Se.Eq driverId]
 
@@ -458,6 +486,21 @@ updatePersonDetails person = do
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq $ getId person.id)]
+
+updateFleetOwnerDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Id Person -> Person -> m ()
+updateFleetOwnerDetails (Id personId) req = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [Se.Set BeamP.updatedAt now]
+        <> [Se.Set BeamP.firstName req.firstName]
+        <> [Se.Set BeamP.lastName req.lastName | isJust req.lastName]
+        <> [Se.Set BeamP.mobileCountryCode req.mobileCountryCode | isJust req.mobileCountryCode]
+        <> [Se.Set BeamP.mobileNumberEncrypted $ req.mobileNumber <&> unEncrypted . (.encrypted) | isJust req.mobileNumber]
+        <> [Se.Set BeamP.mobileNumberHash (req.mobileNumber <&> (.hash)) | isJust req.mobileNumber]
+        <> [Se.Set BeamP.unencryptedMobileNumber (req.unencryptedMobileNumber) | isJust req.mobileNumber]
+        <> [Se.Set BeamP.email req.email | isJust req.email]
+    )
+    [Se.Is BeamP.id (Se.Eq personId)]
 
 clearDeviceTokenByPersonId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
 clearDeviceTokenByPersonId personId = do

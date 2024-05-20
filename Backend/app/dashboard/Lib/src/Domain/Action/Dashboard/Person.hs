@@ -475,3 +475,39 @@ buildPerson req dashboardAccessType = do
         updatedAt = now,
         verified = Nothing
       }
+
+data UpdatePersonReq = UpdatePersonReq
+  { firstName :: Maybe Text,
+    lastName :: Maybe Text,
+    email :: Maybe Text,
+    mobileNumber :: Maybe Text,
+    mobileCountryCode :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+updatePerson :: (BeamFlow m r, EncFlow m r) => Id SP.Person -> UpdatePersonReq -> m APISuccess
+updatePerson personId req = do
+  person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  encryptedEmail <- case req.email of
+    Just email -> do
+      emailExists <- B.runInReplica $ QP.findByEmail email
+      when (isJust emailExists) $ throwError (InvalidRequest "Email already registered")
+      res <- encrypt (T.toLower email)
+      return $ Just res
+    Nothing -> pure person.email
+  encryptedMobileNumber <- case req.mobileNumber of
+    Just mobileNumber -> do
+      mobileNumberExists <- B.runInReplica $ QP.findByMobileNumber mobileNumber person.mobileCountryCode
+      when (isJust mobileNumberExists) $ throwError (InvalidRequest "Phone already registered")
+      encrypt mobileNumber
+    Nothing -> pure person.mobileNumber
+  let updatedPerson =
+        person
+          { SP.firstName = fromMaybe person.firstName req.firstName,
+            SP.lastName = fromMaybe person.lastName req.lastName,
+            SP.email = encryptedEmail,
+            SP.mobileNumber = encryptedMobileNumber,
+            SP.mobileCountryCode = fromMaybe person.mobileCountryCode req.mobileCountryCode
+          }
+  QP.updatePerson personId updatedPerson
+  pure Success

@@ -23,7 +23,8 @@ import Kernel.Types.Id
 data RideDetailsT f = RideDetailsT
   { id :: C f (Id DRD.RideDetails),
     vehicleNumber :: C f (Maybe Text),
-    fleetOwnerId :: C f (Maybe Text)
+    fleetOwnerId :: C f (Maybe Text),
+    createdAt :: C f (Maybe CH.DateTime)
   }
   deriving (Generic)
 
@@ -34,7 +35,8 @@ rideDetailsTTable =
   RideDetailsT
     { id = "id",
       vehicleNumber = "vehicle_number",
-      fleetOwnerId = "fleet_owner_id"
+      fleetOwnerId = "fleet_owner_id",
+      createdAt = "created_at"
     }
 
 type RideDetails = RideDetailsT Identity
@@ -44,13 +46,17 @@ $(TH.mkClickhouseInstances ''RideDetailsT)
 findIdsByFleetOwner ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Maybe Text ->
+  UTCTime ->
+  UTCTime ->
   m [Id DRD.RideDetails]
-findIdsByFleetOwner fleetOwnerId = do
+findIdsByFleetOwner fleetOwnerId from to = do
   CH.findAll $
     CH.select_ (\rd -> CH.notGrouped (rd.id)) $
       CH.filter_
-        ( \riderDetails _ ->
-            riderDetails.fleetOwnerId CH.==. fleetOwnerId
+        ( \rideDetails _ ->
+            rideDetails.fleetOwnerId CH.==. fleetOwnerId
+              CH.&&. rideDetails.createdAt >=. (Just $ CH.DateTime from)
+              CH.&&. rideDetails.createdAt <=. (Just $ CH.DateTime to)
         )
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE rideDetailsTTable)
 
@@ -58,13 +64,17 @@ findIdsByFleetOwnerAndVehicle ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Maybe Text ->
   Text ->
+  UTCTime ->
+  UTCTime ->
   m [Id DRD.RideDetails]
-findIdsByFleetOwnerAndVehicle fleetOwnerId vehicleNumber = do
+findIdsByFleetOwnerAndVehicle fleetOwnerId vehicleNumber from to = do
   CH.findAll $
     CH.select_ (\rd -> CH.notGrouped (rd.id)) $
       CH.filter_
         ( \rideDetails _ ->
             rideDetails.fleetOwnerId CH.==. fleetOwnerId
               CH.&&. rideDetails.vehicleNumber CH.==. Just vehicleNumber
+              CH.&&. rideDetails.createdAt >=. (Just $ CH.DateTime from)
+              CH.&&. rideDetails.createdAt <=. (Just $ CH.DateTime to)
         )
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE rideDetailsTTable)
