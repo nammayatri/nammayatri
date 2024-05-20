@@ -68,4 +68,5 @@
     <string name="toll_text">ടോൾ ഉൾപ്പെടുത്തിയിട്ടുണ്ട്</string>
     <string name="new_distance">പുതിയ ദൂരം :</string>
     <string name="new_fare">പുതിയ തുക :</string>
+    <string name="no_change">മാറ്റമില്ല</string>
 </resources>

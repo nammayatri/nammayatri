@@ -73,4 +73,5 @@
     <string name="toll_text">टोल शामिल है</string>
     <string name="new_distance">नई दूरी :</string>
     <string name="new_fare">नया किराया :</string>
+    <string name="no_change">कोई बदलाव नहीं</string>
 </resources>

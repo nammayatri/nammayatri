@@ -73,4 +73,5 @@
     <string name="toll_text">டோல் சேர்க்கப்பட்டுள்ளது</string>
     <string name="new_distance">புதிய தூரம் :</string>
     <string name="new_fare">புதிய கட்டணம் :</string>
+    <string name="no_change">மாற்றம் இல்லை</string>
 </resources>
