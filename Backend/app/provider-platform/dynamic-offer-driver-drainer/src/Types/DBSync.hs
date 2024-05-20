@@ -19,6 +19,7 @@ where
 
 import Data.Aeson (Object)
 import qualified Data.Aeson as A
+import Data.Pool (Pool)
 import Database.Beam.Postgres (Connection)
 import EulerHS.KVConnector.DBSync
 import EulerHS.KVConnector.Types
@@ -39,9 +40,10 @@ data Env = Env
   { _streamRedisInfo :: Text,
     _counterHandles :: Event.DBSyncCounterHandler,
     _kafkaConnection :: Producer.KafkaProducer,
-    _pgConnection :: Connection,
+    -- _pgConnection :: Connection,
     _dontEnableDbTables :: [Text],
-    _dontEnableForKafka :: [Text]
+    _dontEnableForKafka :: [Text],
+    _connectionPool :: Pool Connection
   }
 
 data AppCfg = AppCfg

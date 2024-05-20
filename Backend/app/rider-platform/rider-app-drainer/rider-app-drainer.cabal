@@ -114,6 +114,7 @@ library
     , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
+    , resource-pool
     , scientific
     , sequelize
     , servant-server
@@ -205,6 +206,7 @@ executable rider-app-drainer-exe
     , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
+    , resource-pool
     , rider-app-drainer
     , scientific
     , sequelize
