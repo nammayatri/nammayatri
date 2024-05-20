@@ -83,6 +83,7 @@ getConfigFromCac context' tenant toss prefix = do
 
 getConfigFromCACStrictCommon :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, FromJSON b, ToJSON b) => Int -> [(CacContext, Value)] -> CacPrefix -> m (Maybe b)
 getConfigFromCACStrictCommon toss context cpf = do
+  logDebug $ "Trying to find for last time for table " <> getTableName cpf <> " in cac."
   cacConfig <- asks (.cacConfig)
   getConfigFromCac context cacConfig.tenant toss cpf
 
@@ -96,6 +97,7 @@ createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, FromJSO
 createThroughConfigHelper toss context cpf = do
   cacConfig <- asks (.cacConfig)
   config' <- KSQS.findById $ Text.pack cacConfig.tenant
+  logError $ "Config not found for " <> getTableName cpf <> " in cac. Creating client through config"
   config <- maybe (throwError $ InternalError ("config not found for" <> getTableName cpf <> " in db")) pure config'
   _ <- initializeCACThroughConfig CM.createClientFromConfig config cacConfig.tenant cacConfig.host (fromIntegral cacConfig.interval)
   _ <- liftIO . CC.forkIO $ runPolling cacConfig.tenant
@@ -117,7 +119,8 @@ getConfigFromCACCommon ::
   m (Maybe a)
 getConfigFromCACCommon context stickyId fromCactyp cpf = do
   cacConfig <- asks (.cacConfig)
-  toss <- getToss (getKeyValue <$> stickyId)
+  isExp <- liftIO $ CM.isExperimentsRunning cacConfig.tenant
+  toss <- bool (pure 1) (getToss (getKeyValue <$> stickyId)) isExp
   res :: (Maybe b) <- getConfigFromCac context cacConfig.tenant toss cpf
   config' <-
     maybe
