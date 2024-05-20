@@ -37,7 +37,7 @@ import Control.Monad.Extra hiding (fromMaybeM, whenJust)
 import Data.Aeson hiding (Success)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
-import Data.Text as T hiding (elem, find, length, map, null, zip)
+import Data.Text as T hiding (any, elem, find, length, map, null, zip)
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.IdfyVerification as DIV
@@ -292,7 +292,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       -- update vehicle details too if exists
       mbVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
       whenJust mbVehicle $ \vehicle -> do
-        when (rc.verificationStatus == Domain.VALID && isJust rc.vehicleVariant) $ do
+        when (any (== rc.verificationStatus) [Domain.VALID, Domain.MANUAL_VERIFICATION_REQUIRED] && isJust rc.vehicleVariant) $ do
           driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
           driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
           vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
