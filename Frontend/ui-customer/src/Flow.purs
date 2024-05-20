@@ -329,9 +329,8 @@ currentFlowStatus = do
   goToConfirmingQuotesStage currentStatus = do
     let
       currentTimeToValid = EHC.getUTCAfterNSeconds (getCurrentUTC "") 1800
-
-      diffFromValidToCurrent = EHC.compareUTCDate currentStatus.validTill currentTimeToValid
-    when (diffFromValidToCurrent < 300) do
+      diffFromValidToCurrent = EHC.compareUTCDate currentStatus.validTill (getCurrentUTC "")
+    when (diffFromValidToCurrent < 3600 && diffFromValidToCurrent > 0 ) do --change depending on time
       setValueToLocalStore CONFIRM_QUOTES_POLLING "false"
       updateLocalStage ConfirmingQuotes
       hideLoaderFlow
@@ -519,7 +518,7 @@ currentFlowStatus = do
   goToConfirmRide currentStatus =
     let
       bookingId = currentStatus.bookingId
-
+      _ = spy "inside gotoconfirmride" currentStatus
       fareProductType = currentStatus.fareProductType
     in
       if any (_ == fareProductType) [ Just "ONE_WAY_SPECIAL_ZONE", Nothing ] then
@@ -1181,7 +1180,7 @@ homeScreenFlow = do
         if isNow then
           enterRentalRideSearchFlow bookingId
         else do
-          setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ Arr.sortWith (_.rideStartTime) $ (decodeBookingTimeList FunctionCall) <> [ { bookingId: bookingId, rideStartTime: state.data.startTimeUTC, estimatedDuration: state.data.maxEstimatedDuration } ]
+          -- setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ Arr.sortWith (_.rideStartTime) $ (decodeBookingTimeList FunctionCall) <> [ { bookingId: bookingId, rideStartTime: state.data.startTimeUTC, estimatedDuration: state.data.maxEstimatedDuration } ]
           rideScheduledFlow
 
       handleConfirmingRide :: String -> Stage -> FlowBT String Unit
@@ -1251,7 +1250,7 @@ homeScreenFlow = do
               , { key: "Night Ride", value: unsafeToForeign state.data.rateCard.isNightShift }
               , { key: "BookingId", value: unsafeToForeign state.props.bookingId }
               ]
-          setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ filter (\item -> item.bookingId /= state.props.bookingId) $ decodeBookingTimeList FunctionCall
+          -- setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ filter (\item -> item.bookingId /= state.props.bookingId) $ decodeBookingTimeList FunctionCall
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { autoScroll = false, isCancelRide = false, currentStage = HomeScreen, rideRequestFlow = false, isSearchLocation = NoView } })
           lift $ lift $ triggerRideStatusEvent "CANCELLED_PRODUCT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
           void $ pure $ clearTimerWithId <$> state.props.waitingTimeTimerIds
@@ -2506,52 +2505,6 @@ tripDetailsScreenFlow = do
           categoryName = getTitle selectedCategory.categoryAction
           merchantExoPhone' = if updatedState.data.selectedItem.merchantExoPhone == "" then Nothing else Just updatedState.data.selectedItem.merchantExoPhone
       modifyScreenState $ ReportIssueChatScreenStateType (\ reportIssueChatState -> reportIssueChatState { data { merchantExoPhone = merchantExoPhone',  selectedRide = Just updatedState.data.selectedItem, entryPoint = ReportIssueChatScreenData.TripDetailsScreenEntry, chats = chats', categoryName = categoryName, categoryId = selectedCategory.categoryId, options = options', chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{messages = messages'}, tripId = Just updatedState.data.selectedItem.rideId }})
-      flowRouter IssueReportChatScreenFlow
-
-        categoryOrder = [ "LOST_AND_FOUND", "DRIVER_RELATED", "RIDE_RELATED", "APP_RELATED" ]
-
-        compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
-      (GetCategoriesRes response) <- Remote.getCategoriesBT language
-      let
-        unsortedCatagory = map (\(Category catObj) -> { categoryName: if (language == "en") then capitalize catObj.category else catObj.category, categoryId: catObj.issueCategoryId, categoryAction: catObj.label, categoryImageUrl: catObj.logoUrl }) response.categories
-
-        categories' = sortBy compareByOrder unsortedCatagory
-      modifyScreenState $ TripDetailsScreenStateType (\helpAndSupportScreen -> updatedState { data { categories = categories' }, props { fromMyRides = updatedState.props.fromMyRides } })
-      tripDetailsScreenFlow
-    GO_TO_ISSUE_CHAT_SCREEN updatedState selectedCategory -> do
-      let
-        language = fetchLanguage $ getLanguageLocale languageKey
-      currentIssueList <-
-        if selectedCategory.categoryAction == "RIDE_RELATED" then do
-          (FetchIssueListResp issueListResponse) <- Remote.fetchIssueListBT language
-          let
-            issues = getApiIssueList issueListResponse.issues
-          pure $ getUpdatedIssueList [ "OPEN", "PENDING", "RESOLVED", "REOPENED" ] issues
-        else
-          pure []
-      (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" ""
-      let
-        filteredOptions = UI.transformIssueOptions getOptionsRes.options (Just updatedState.data.selectedItem) currentIssueList
-
-        options' = mapWithIndex (\index (Option optionObj) -> optionObj { option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option) }) filteredOptions
-
-        messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))) getOptionsRes.messages
-
-        chats' =
-          map
-            ( \(Message currMessage) ->
-                Chat
-                  { chatId: currMessage.id
-                  , chatType: "IssueMessage"
-                  , timestamp: getCurrentUTC ""
-                  }
-            )
-            getOptionsRes.messages
-
-        categoryName = getTitle selectedCategory.categoryAction
-
-        merchantExoPhone' = if updatedState.data.selectedItem.merchantExoPhone == "" then Nothing else Just updatedState.data.selectedItem.merchantExoPhone
-      modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueChatState -> reportIssueChatState { data { merchantExoPhone = merchantExoPhone', selectedRide = Just updatedState.data.selectedItem, entryPoint = ReportIssueChatScreenData.TripDetailsScreenEntry, chats = chats', categoryName = categoryName, categoryId = selectedCategory.categoryId, options = options', chatConfig = ReportIssueChatScreenData.initData.data.chatConfig { messages = messages' }, tripId = Just updatedState.data.selectedItem.rideId } })
       flowRouter IssueReportChatScreenFlow
 
 invoiceScreenFlow :: FlowBT String Unit
@@ -4141,7 +4094,7 @@ rideScheduledFlow = do
       resp <- lift $ lift $ Remote.cancelRide (Remote.makeCancelRequest state.props.cancelDescription state.props.cancelReasonCode) (state.data.bookingId)
       case resp of
         Right resp -> do
-          setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ filter (\item -> item.bookingId /= state.data.bookingId) $ decodeBookingTimeList FunctionCall
+          -- setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ filter (\item -> item.bookingId /= state.data.bookingId) $ decodeBookingTimeList FunctionCall
           homeScreenFlow
         Left _ -> do
           void $ pure $ toast "Failed To Cancel Ride"
@@ -4167,6 +4120,11 @@ rideScheduledFlow = do
     RideScheduledScreenOutput.GoToMyRidesScreen state -> do
       modifyScreenState $ RideScheduledScreenStateType (\_ -> RideScheduledScreenData.initData)
       myRidesScreenFlow
+    
+    RideScheduledScreenOutput.NotificationListenerSO notificationType -> do 
+      (GlobalState globalState) <- getState
+      fcmHandler notificationType globalState.homeScreen
+      homeScreenFlow
     _ -> pure unit
   where
   getStringFromMaybeAddress :: Maybe BookingLocationAPIEntity -> String
@@ -5397,11 +5355,12 @@ rentalScreenFlow = do
             setValueToLocalStore CONFIRM_QUOTES_POLLING "false"
             enterRentalRideSearchFlow resp.bookingId
           else do
-            setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ Arr.sortWith (_.rideStartTime) $ (decodeBookingTimeList FunctionCall) <> [ { bookingId: resp.bookingId, rideStartTime: updatedState.data.startTimeUTC, estimatedDuration: (updatedState.data.rentalBookingData.baseDuration * 60) } ]
+            -- setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ Arr.sortWith (_.rideStartTime) $ (decodeBookingTimeList FunctionCall) <> [ { bookingId: resp.bookingId, rideStartTime: updatedState.data.startTimeUTC, estimatedDuration: (updatedState.data.rentalBookingData.baseDuration * 60) } ]
             rideScheduledFlow
         Left err -> do
-          if ((decodeError err.response.errorMessage "errorCode") == "INVALID_REQUEST" && DS.contains (Pattern "Quote Expired") (decodeError err.response.errorMessage "errorMessage")) then do
-            void $ pure $ toast "Quote Expired, Please scheduled a ride again"
+          let _ = spy "inside (decodeError err.response.errorMessage errorCode)" (decodeError err.response.errorMessage "errorCode")
+          if ((decodeError err.response.errorMessage "errorCode") == "INVALID_REQUEST" && DS.contains (Pattern "Quote expired") (decodeError err.response.errorMessage "errorMessage")) then do
+            void $ pure $ toast "Quote Expired, Please schedule a ride again"
             modifyScreenState $ RentalScreenStateType (\_ -> updatedState { data { currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = [] } })
             rentalScreenFlow
           else do

@@ -1206,7 +1206,7 @@ getTE stringKey =
     RIDE_STARTED_AT -> "రైడ్ ఇక్కడ ప్రారంభమైంది"
     RIDE_ENDED_AT -> "రైడ్ ఇక్కడ ముగిసింది"
     ESTIMATED_FARE -> "అంచనా ధర"
-    EXTRA_TIME_PRICE -> "అదనపు సమయం ధర"
+    EXTRA_TIME_FARE -> "అదనపు సమయం ధర"
     TOTAL_FARE -> "మొత్తం ధర"
     FARE_UPDATE -> "ఫేర్ అప్‌డేట్"
     NOW -> "ఇప్పుడు"
@@ -1267,3 +1267,4 @@ getTE stringKey =
     INCLUDED_TIME -> "ప్రముఖ సమయం"
     TOLL_CHARGES_DESCRIPTION -> "ప్రయోజనాలు ఉన్న టోల్ చార్జులు చివరి భాడాకు జోడించబడుతుంది"
     WILL_BE_ADDED_TO_FINAL_FARE -> "చివరి భాడానికి చేరింది"
+    EXTRA_DISTANCE_FARE -> "అదనపు దూరం ఛార్జ్"

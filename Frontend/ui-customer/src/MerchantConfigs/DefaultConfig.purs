@@ -428,8 +428,7 @@ config =
               showInfoIcon = false
               }
             , featureConfig {
-                enableCabBanner = false,
-                enableChangeRideVariant = false
+                enableCabBanner = false
               }
           },
         defaultCityConfig
@@ -461,8 +460,7 @@ config =
               showInfoIcon = true
               }
             , featureConfig {
-                enableCabBanner = true,
-                enableChangeRideVariant = false
+                enableCabBanner = true
               }
           }
       ]

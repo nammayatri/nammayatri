@@ -37,6 +37,8 @@ initData =
         , nightCharge : "250"
         , rideStartedAt : ""
         , rideEndedAt : ""
+        , extraDistanceFare : ""
+        , extraTimeFare : ""
       }
     , selectedQuote : Nothing
     , config : getAppConfig appConfig
