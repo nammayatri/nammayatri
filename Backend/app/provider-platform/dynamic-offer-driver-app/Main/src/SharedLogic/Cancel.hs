@@ -54,7 +54,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
       searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-      isRepeatSearch <- checkIfRepeatSearch searchTry ride.driverArrivalTime searchReq.isReallocationEnabled now
+      isRepeatSearch <- checkIfRepeatSearch searchTry ride.driverArrivalTime searchReq.isReallocationEnabled now booking.isScheduled
       if isRepeatSearch
         then do
           DP.addDriverToSearchCancelledList searchReq.id ride.driverId
@@ -90,7 +90,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       quote <- QQuote.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
       searchTry <- QST.findLastByRequestId quote.searchRequestId >>= fromMaybeM (SearchTryNotFound quote.searchRequestId.getId)
-      isRepeatSearch <- checkIfRepeatSearch searchTry ride.driverArrivalTime searchReq.isReallocationEnabled now
+      isRepeatSearch <- checkIfRepeatSearch searchTry ride.driverArrivalTime searchReq.isReallocationEnabled now booking.isScheduled
       if isRepeatSearch
         then do
           DP.addDriverToSearchCancelledList searchReq.id ride.driverId
@@ -148,7 +148,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId -- shouldn't be required for new booking
       return False
 
-    checkIfRepeatSearch searchTry driverArrivalTime isReallocationEnabled now = do
+    checkIfRepeatSearch searchTry driverArrivalTime isReallocationEnabled now isScheduled = do
       transporterConfig <- QTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId $ Id booking.transactionId)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
       let searchRepeatLimit = transporterConfig.searchRepeatLimit
           isSearchTryValid = searchTry.validTill > now
@@ -157,7 +157,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       return $
         searchTry.searchRepeatCounter < searchRepeatLimit
           && (bookingCReason.source == SBCR.ByDriver || (bookingCReason.source == SBCR.ByUser && userReallocationEnabled))
-          && isSearchTryValid
+          && (isSearchTryValid || isScheduled)
           && fromMaybe False isReallocationEnabled
           && driverHasNotArrived
 

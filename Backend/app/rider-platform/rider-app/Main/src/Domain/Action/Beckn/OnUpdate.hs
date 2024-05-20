@@ -335,8 +335,7 @@ onUpdate = \case
     bookingId <- generateGUID
     quoteId_ <- generateGUID
     let newQuote = quote{id = Id quoteId_, createdAt = now, updatedAt = now}
-        newBooking = booking{id = bookingId, quoteId = Just (Id quoteId_), status = SRB.NEW, isScheduled = False, bppBookingId = Just newBppBookingId, startTime = booking.startTime, createdAt = now, updatedAt = now}
-    void $ SQQ.createQuote newQuote
+        newBooking = booking{id = bookingId, quoteId = Just (Id quoteId_), status = SRB.CONFIRMED, isScheduled = False, bppBookingId = Just newBppBookingId, startTime = booking.startTime, createdAt = now, updatedAt = now}
     void $ QRB.createBooking newBooking
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
