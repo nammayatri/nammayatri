@@ -61,6 +61,7 @@ dependencies:
   - beam-core
   - beam-mysql
   - beam-postgres
+  - resource-pool
   - bytestring
   - casing
   - connection

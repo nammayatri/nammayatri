@@ -115,6 +115,7 @@ library
     , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
+    , resource-pool
     , scientific
     , sequelize
     , servant-server
@@ -207,6 +208,7 @@ executable dynamic-offer-driver-drainer-exe
     , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
+    , resource-pool
     , scientific
     , sequelize
     , servant-server
