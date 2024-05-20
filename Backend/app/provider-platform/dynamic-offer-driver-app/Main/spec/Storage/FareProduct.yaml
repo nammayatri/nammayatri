@@ -28,7 +28,7 @@ FareProduct:
       vehicleVariant: ServiceTierType
 
 
-  constriants:
+  constraints:
     id: PrimaryKey
     merchantOperatingCityId: SecondaryKey
     area: SecondaryKey
@@ -64,5 +64,5 @@ FareProduct:
   extraOperations:
     - EXTRA_QUERY_FILE
     - EXTRA_DOMAIN_TYPE_FILE
-  excludedFields: [createdAt, updatedAt]
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
 

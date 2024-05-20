@@ -65,7 +65,7 @@ Plan:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ServiceNames>
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <ServiceNames>
 
-  constriants:
+  constraints:
     id: PrimaryKey
     paymentMode: SecondaryKey
     merchantId: SecondaryKey
@@ -105,4 +105,4 @@ Plan:
     - EXTRA_QUERY_FILE
     - EXTRA_DOMAIN_TYPE_FILE
 
-  excludedFields: [createdAt, updatedAt]
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

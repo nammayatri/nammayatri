@@ -39,7 +39,7 @@ RegistrationToken:
   beamType:
     merchantOperatingCityId: Maybe Text
 
-  constriants:
+  constraints:
     id: PrimaryKey
     token: SecondaryKey
     entityId: SecondaryKey
@@ -94,6 +94,8 @@ RegistrationToken:
       params: [merchantOperatingCityId]
       where:
         and: [entityId, merchantId]
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
 
   extraOperations:
     - EXTRA_QUERY_FILE

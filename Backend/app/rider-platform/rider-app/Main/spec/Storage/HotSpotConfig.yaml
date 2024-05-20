@@ -26,7 +26,7 @@ HotSpotConfig:
     maxGeoHashToFilter : Int
     hotSpotExpiry : Int
 
-  constriants:
+  constraints:
     id: PrimaryKey
 
   queries:

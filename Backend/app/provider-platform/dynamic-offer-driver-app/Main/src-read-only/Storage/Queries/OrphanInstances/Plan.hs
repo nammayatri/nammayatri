@@ -38,8 +38,7 @@ instance FromTType' Beam.Plan Domain.Types.Plan.Plan where
             registrationAmount = registrationAmount,
             serviceName = serviceName,
             sgstPercentage = sgstPercentage,
-            subscribedFlagToggleAllowed = subscribedFlagToggleAllowed,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
+            subscribedFlagToggleAllowed = subscribedFlagToggleAllowed
           }
 
 instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
@@ -66,6 +65,5 @@ instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
         Beam.registrationAmount = registrationAmount,
         Beam.serviceName = serviceName,
         Beam.sgstPercentage = sgstPercentage,
-        Beam.subscribedFlagToggleAllowed = subscribedFlagToggleAllowed,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
+        Beam.subscribedFlagToggleAllowed = subscribedFlagToggleAllowed
       }
