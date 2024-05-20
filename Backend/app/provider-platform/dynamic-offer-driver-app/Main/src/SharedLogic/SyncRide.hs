@@ -39,7 +39,6 @@ import Environment
 import EulerHS.Prelude (whenNothing_)
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.Beckn.Common as DCommon
@@ -70,8 +69,7 @@ syncNewRide :: DRide.Ride -> DB.Booking -> Flow Common.RideSyncRes
 syncNewRide ride' booking' = do
   DCommon.BookingDetails {..} <- fetchBookingDetails ride' booking'
   handle (errHandler (Just ride.status) booking.status "ride assigned") $ do
-    let estimateId = booking.estimateId <&> getId
-    CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle estimateId
+    CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle
   pure $ Common.RideSyncRes Common.RIDE_NEW "Success. Sent ride started update to bap"
 
 fetchBookingDetails :: DRide.Ride -> DB.Booking -> Flow DCommon.BookingDetails
