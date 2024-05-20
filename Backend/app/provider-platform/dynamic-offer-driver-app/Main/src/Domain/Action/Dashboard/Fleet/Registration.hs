@@ -65,18 +65,29 @@ data FleetOwnerLoginReq = FleetOwnerLoginReq
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
+data UpdateFleetOwnerReq = UpdateFleetOwnerReq
+  { firstName :: Maybe Text,
+    lastName :: Maybe Text,
+    email :: Maybe Text,
+    mobileNumber :: Maybe Text,
+    mobileCountryCode :: Maybe Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
 data FleetOwnerRegisterReq = FleetOwnerRegisterReq
   { firstName :: Text,
     lastName :: Text,
     mobileNumber :: Text,
     mobileCountryCode :: Text,
     merchantId :: Text,
+    email :: Maybe Text,
     city :: City.City,
     fleetType :: Maybe FOI.FleetType,
     panNumber :: Maybe Text,
     gstNumber :: Maybe Text,
     panImageId1 :: Maybe Text,
-    panImageId2 :: Maybe Text
+    panImageId2 :: Maybe Text,
+    gstCertificateImage :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -105,6 +116,11 @@ fleetOwnerRegister req = do
       >>= maybe (createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType req.gstNumber) return
   fork "Creating Pan Info for Fleet Owner" $ do
     createPanInfo person.id merchant.id merchantOpCityId req.panImageId1 req.panImageId2 req.panNumber
+  fork "Uploading GST Image" $ do
+    whenJust req.gstCertificateImage $ \gstImage -> do
+      let req' = Image.ImageValidateRequest {imageType = DVC.GSTCertificate, image = gstImage, rcNumber = Nothing, vehicleCategory = Nothing}
+      image <- Image.validateImage True (person.id, merchant.id, merchantOpCityId) req'
+      QFOI.updateGstImageId (Just image.imageId.getId) person.id
   return $ FleetOwnerRegisterRes {personId = person.id.getId}
 
 createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Text -> Flow DP.Person
@@ -132,10 +148,11 @@ createFleetOwnerInfo personId merchantId mbFleetType mbGstNumber = do
           { fleetOwnerPersonId = personId,
             merchantId = merchantId,
             fleetType = fleetType,
-            enabled = False,
+            enabled = True, ------ currently we are not validating any fleet owner Document there fore marking it as true
             blocked = False,
             verified = False,
             gstNumber = mbGstNumber,
+            gstImageId = Nothing,
             createdAt = now,
             updatedAt = now
           }

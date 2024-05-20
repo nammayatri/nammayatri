@@ -3,8 +3,13 @@
 
 module Storage.Queries.VehicleRegistrationCertificateExtra where
 
+import Data.Either (fromRight)
+import qualified Database.Beam as B
+import qualified Domain.Types.IdfyVerification as IV
+import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Vehicle as Vehicle
 import Domain.Types.VehicleRegistrationCertificate
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -14,6 +19,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
+import qualified Storage.Beam.Common as BeamCommon
+import qualified Storage.Beam.DriverRCAssociation as BeamDRA
 import qualified Storage.Beam.VehicleRegistrationCertificate as BeamVRC
 import Storage.Queries.OrphanInstances.VehicleRegistrationCertificate
 
@@ -93,3 +100,102 @@ findByCertificateNumberHash ::
 findByCertificateNumberHash certificateHash = do
   findOneWithKV
     [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash]
+
+findAllRCByStatusForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Documents.VerificationStatus -> Maybe Bool -> Integer -> Integer -> Id Merchant.Merchant -> m [VehicleRegistrationCertificate]
+findAllRCByStatusForFleet fleetOwnerId status mbRcActive limitVal offsetVal (Id merchantId') = do
+  dbConf <- getMasterBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ limitVal $
+            B.offset_ offsetVal $
+              B.orderBy_ (\(rc', _) -> B.desc_ rc'.createdAt) $
+                B.filter_'
+                  ( \(rc, driverRcAssociation) ->
+                      rc.merchantId B.==?. B.val_ (Just merchantId')
+                        B.&&?. rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
+                        B.&&?. rc.verificationStatus B.==?. B.val_ status
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isRcActive -> driverRcAssociation.isRcActive B.==?. B.val_ isRcActive) mbRcActive
+                  )
+                  do
+                    rc <- B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
+                    driverRcAssociation <- B.join_ (BeamCommon.driverRCAssociation BeamCommon.atlasDB) (\driverRcAssociation -> BeamVRC.id rc B.==. BeamDRA.rcId driverRcAssociation)
+                    pure (rc, driverRcAssociation)
+  case res of
+    Right res' -> do
+      let rcList = fst <$> res'
+      catMaybes <$> mapM fromTType' rcList
+    Left _ -> pure []
+
+findAllInactiveRCForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Integer -> Integer -> Id Merchant.Merchant -> m [VehicleRegistrationCertificate]
+findAllInactiveRCForFleet fleetOwnerId limitVal offsetVal merchantId = do
+  allActiveRCs <- findAllActiveRCForFleet fleetOwnerId Documents.VALID merchantId
+  -- now find all the rc which are not in this list
+  let allActiveRCIds = map (.id.getId) allActiveRCs
+  dbConf <- getMasterBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ limitVal $
+            B.offset_ offsetVal $
+              B.orderBy_ (\rc -> B.desc_ rc.createdAt) $
+                B.filter_'
+                  ( \rc ->
+                      B.sqlBool_ $ B.not_ (rc.id `B.in_` (B.val_ <$> allActiveRCIds))
+                  )
+                  $ B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
+  case res of
+    Right res' -> do
+      catMaybes <$> mapM fromTType' res'
+    Left _ -> pure []
+
+findAllActiveRCForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Documents.VerificationStatus -> Id Merchant.Merchant -> m [VehicleRegistrationCertificate]
+findAllActiveRCForFleet fleetOwnerId status (Id merchantId') = do
+  now <- getCurrentTime
+  dbConf <- getMasterBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.orderBy_ (\(rc', _) -> B.desc_ rc'.createdAt) $
+            B.filter_'
+              ( \(rc, driverRcAssociation) ->
+                  rc.merchantId B.==?. B.val_ (Just merchantId')
+                    B.&&?. rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
+                    B.&&?. rc.verificationStatus B.==?. B.val_ status
+                    B.&&?. driverRcAssociation.isRcActive B.==?. B.val_ True
+                    B.&&?. B.sqlBool_ (driverRcAssociation.associatedTill B.>=. B.val_ (Just now))
+              )
+              do
+                rc <- B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
+                driverRcAssociation <- B.join_ (BeamCommon.driverRCAssociation BeamCommon.atlasDB) (\driverRcAssociation -> BeamVRC.id rc B.==. BeamDRA.rcId driverRcAssociation)
+                pure (rc, driverRcAssociation)
+  case res of
+    Right res' -> do
+      let rcList = fst <$> res'
+      catMaybes <$> mapM fromTType' rcList
+    Left _ -> pure []
+
+countAllActiveRCForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Merchant.Merchant -> m Int
+countAllActiveRCForFleet fleetOwnerId (Id merchantId') = do
+  now <- getCurrentTime
+  dbConf <- getMasterBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+            B.filter_'
+              ( \(rc, driverRcAssociation) ->
+                  rc.merchantId B.==?. B.val_ (Just merchantId')
+                    B.&&?. rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
+                    B.&&?. driverRcAssociation.isRcActive B.==?. B.val_ True
+                    B.&&?. B.sqlBool_ (driverRcAssociation.associatedTill B.>=. B.val_ (Just now))
+              )
+              do
+                rc <- B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
+                driverRcAssociation <- B.join_ (BeamCommon.driverRCAssociation BeamCommon.atlasDB) (\driverRcAssociation -> BeamVRC.id rc B.==. BeamDRA.rcId driverRcAssociation)
+                pure (rc, driverRcAssociation)
+  pure $ either (const 0) (\r -> if null r then 0 else head r) res

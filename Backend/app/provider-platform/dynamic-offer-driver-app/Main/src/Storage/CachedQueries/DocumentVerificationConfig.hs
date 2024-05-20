@@ -26,6 +26,10 @@ module Storage.CachedQueries.DocumentVerificationConfig
 where
 
 import Domain.Types.DocumentVerificationConfig as DTO
+  ( DocumentType,
+    DocumentVerificationConfig,
+    SupportedVehicleClasses,
+  )
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Vehicle
 import Kernel.Prelude
