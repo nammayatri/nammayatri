@@ -19,26 +19,30 @@ import Kernel.Utils.Common
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Sequelize as Se
-import qualified Storage.Beam.FareProduct as BeamFP
+import qualified Storage.Beam.FareProduct as Beam
 import Storage.Queries.OrphanInstances.FareProduct
 
 -- Extra code goes here --
 
-findUnboundedByMerchantOpCityIdVariantArea ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+findAllBoundedByMerchantOpCityIdVariantArea ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
-  TripCategory ->
-  DVST.ServiceTierType ->
   SL.Area ->
-  m (Maybe Domain.FareProduct)
-findUnboundedByMerchantOpCityIdVariantArea (Id merchantOpCityId) tripCategory serviceTier area =
-  findOneWithKV
+  DVST.ServiceTierType ->
+  TripCategory ->
+  Domain.TimeBound ->
+  Bool ->
+  [Domain.SearchSource] ->
+  m [Domain.FareProduct]
+findAllBoundedByMerchantOpCityIdVariantArea (Id merchantOperatingCityId) area vehicleServiceTier tripCategory timeBounds enabled searchSources = do
+  findAllWithKV
     [ Se.And
-        [ Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId,
-          Se.Is BeamFP.area $ Se.Eq area,
-          Se.Is BeamFP.vehicleVariant $ Se.Eq serviceTier,
-          Se.Is BeamFP.tripCategory $ Se.Eq tripCategory,
-          Se.Is BeamFP.timeBounds $ Se.Eq Domain.Unbounded,
-          Se.Is BeamFP.enabled $ Se.Eq True
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+          Se.Is Beam.area $ Se.Eq area,
+          Se.Is Beam.vehicleVariant $ Se.Eq vehicleServiceTier,
+          Se.Is Beam.tripCategory $ Se.Eq tripCategory,
+          Se.Is Beam.searchSource $ Se.In searchSources,
+          Se.Is Beam.timeBounds $ Se.Not $ Se.Eq timeBounds,
+          Se.Is Beam.enabled $ Se.Eq enabled
         ]
     ]

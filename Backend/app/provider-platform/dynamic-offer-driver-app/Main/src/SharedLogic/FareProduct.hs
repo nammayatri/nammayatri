@@ -54,8 +54,11 @@ getDropSpecialLocation merchantOpCityId dropSpecialLocation = do
   dropSpecialLocationPriority <- B.runInReplica $ QSpecialLocationPriority.findAllByMerchantIdAndCategory merchantOpCityId.getId dropSpecialLocation.category
   return (dropSpecialLocation, maybe 999 (.dropPriority) dropSpecialLocationPriority)
 
-getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> Maybe LatLong -> DTC.TripCategory -> m FareProducts
-getAllFareProducts _merchantId merchantOpCityId fromLocationLatLong mToLocationLatLong tripCategory = do
+getSearchSources :: Bool -> [DFareProduct.SearchSource]
+getSearchSources isDashboard = [DFareProduct.ALL] <> (if isDashboard then [DFareProduct.DASHBOARD] else [DFareProduct.MOBILE_APP])
+
+getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> LatLong -> Maybe LatLong -> DTC.TripCategory -> m FareProducts
+getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLong mToLocationLatLong tripCategory = do
   mbPickupSpecialLocation <- mapM (getPickupSpecialLocation merchantOpCityId) =<< QSpecialLocation.findPickupSpecialLocationByLatLong fromLocationLatLong
   mbDropSpecialLocation <- maybe (pure Nothing) (\toLoc -> mapM (getDropSpecialLocation merchantOpCityId) =<< QSpecialLocation.findSpecialLocationByLatLong' toLoc) mToLocationLatLong
   case (mbPickupSpecialLocation, mbDropSpecialLocation) of
@@ -87,7 +90,7 @@ getAllFareProducts _merchantId merchantOpCityId fromLocationLatLong mToLocationL
           }
 
     getDefaultFareProducts = do
-      defFareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId tripCategory SL.Default
+      defFareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory SL.Default
       fareProducts <- mapM getBoundedOrDefaultFareProduct defFareProducts
       return $
         FareProducts
@@ -99,10 +102,11 @@ getAllFareProducts _merchantId merchantOpCityId fromLocationLatLong mToLocationL
     mkSpecialLocationTag pickupSpecialLocationCategory dropSpecialLocationCategory priority = pickupSpecialLocationCategory <> "_" <> dropSpecialLocationCategory <> "_" <> "Priority" <> priority
 
     getFareProducts area = do
-      fareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId tripCategory area
-      if null fareProducts && area /= SL.Default
+      fareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory area
+      otherFareProducts <- QFareProduct.findAllUnboundedFareProductForArea merchantOpCityId searchSources area
+      if null fareProducts && area /= SL.Default && null otherFareProducts
         then do
-          defFareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId tripCategory SL.Default
+          defFareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory SL.Default
           fareProducts' <- mapM getBoundedOrDefaultFareProduct defFareProducts
           return fareProducts'
         else do
@@ -110,12 +114,12 @@ getAllFareProducts _merchantId merchantOpCityId fromLocationLatLong mToLocationL
           return fareProducts'
 
     getBoundedOrDefaultFareProduct fareProduct = do
-      boundedFareProduct <- getBoundedFareProduct fareProduct.merchantOperatingCityId fareProduct.tripCategory fareProduct.vehicleServiceTier fareProduct.area
+      boundedFareProduct <- getBoundedFareProduct fareProduct.merchantOperatingCityId searchSources fareProduct.tripCategory fareProduct.vehicleServiceTier fareProduct.area
       return $ fromMaybe fareProduct boundedFareProduct
 
-getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m (Maybe DFareProduct.FareProduct)
-getBoundedFareProduct merchantOpCityId tripCategory serviceTier area = do
-  fareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId tripCategory serviceTier area
+getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m (Maybe DFareProduct.FareProduct)
+getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTier area = do
+  fareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area
   currentIstTime <- getLocalCurrentTime 19800
   let currTimeOfDay = utcTimeToDiffTime currentIstTime
       currentDay = utctDay currentIstTime
