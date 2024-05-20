@@ -13,7 +13,7 @@ let esqDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_app"
-      , connectionPoolCount = +25
+      , connectionPoolCount = +10
       }
 
 let esqDBReplicaCfg =

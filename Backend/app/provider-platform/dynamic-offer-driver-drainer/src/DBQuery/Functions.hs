@@ -3,6 +3,7 @@ module DBQuery.Functions where
 import Control.Exception (throwIO)
 import DBQuery.Types
 import qualified Data.Map.Strict as M
+import Data.Pool (Pool, withResource)
 import qualified Data.Text as T
 import qualified Database.PostgreSQL.Simple as Pg
 import EulerHS.Prelude hiding (id)
@@ -57,6 +58,13 @@ executeQuery conn query' = do
   result <- try $ Pg.execute_ conn query' :: IO (Either SomeException Int64)
   case result of
     Left e -> throwIO $ QueryError $ "Query execution failed: " <> T.pack (show e)
+    Right _ -> return ()
+
+executeQueryUsingConnectionPool :: Pool Pg.Connection -> Pg.Query -> IO ()
+executeQueryUsingConnectionPool pool query' = do
+  res <- try $ withResource pool $ \conn -> Pg.execute_ conn query'
+  case res of
+    Left (e :: SomeException) -> throwIO $ QueryError $ "Query execution failed: " <> T.pack (show e)
     Right _ -> return ()
 
 textToSnakeCaseText :: Text -> Text
