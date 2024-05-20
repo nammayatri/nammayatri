@@ -8,6 +8,8 @@ import Control.Concurrent.Async (async, cancel)
 import qualified DBSync.DBSync as DBSync
 import qualified Data.HashSet as HS
 import qualified "unordered-containers" Data.HashSet as HashSet
+import Data.Pool
+import Data.Pool.Internal
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Database.Beam.Postgres
@@ -36,7 +38,7 @@ main = do
   appCfg <- (id :: AppCfg -> AppCfg) <$> readDhallConfigDefault "driver-drainer"
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let connString = getConnectionString $ appCfg.esqDBCfg
-  pgConn <- connectPostgreSQL connString
+  connectionPool <- createDbPool appCfg.esqDBCfg
   let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
   kafkaProducerTools <- buildKafkaProducerTools' appCfg.kafkaProducerCfg appCfg.kafkaProperties
   bracket (async NW.runMetricServer) cancel $ \_ -> do
@@ -54,9 +56,10 @@ main = do
                   }
                 appCfg.kvConfigUpdateFrequency
             )
+
           dbSyncMetric <- Event.mkDBSyncMetric
           threadPerPodCount <- Env.getThreadPerPodCount
-          let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools.producer pgConn appCfg.dontEnableForDb appCfg.dontEnableForKafka
+          let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools.producer appCfg.dontEnableForDb appCfg.dontEnableForKafka connectionPool
           spawnDrainerThread threadPerPodCount flowRt environment
           R.runFlow flowRt (runReaderT DBSync.startDBSync environment)
       )
@@ -64,7 +67,7 @@ main = do
 spawnDrainerThread :: Int -> R.FlowRuntime -> TDB.Env -> IO ()
 spawnDrainerThread 0 _ _ = pure ()
 spawnDrainerThread count flowRt env = do
-  threadId <- forkIO $ R.runFlow flowRt (runReaderT DBSync.startDBSync env)
+  void . forkIO $ R.runFlow flowRt (runReaderT DBSync.startDBSync env)
   spawnDrainerThread (count -1) flowRt env
 
 getConnectionString :: EsqDBConfig -> ByteString
@@ -79,3 +82,20 @@ getConnectionString dbConfig =
       <> dbConfig.connectPassword
       <> " port="
       <> show dbConfig.connectPort
+
+createPoolConfig :: EsqDBConfig -> PoolConfig Connection
+createPoolConfig dbConfig =
+  let connectionString = getConnectionString dbConfig
+      createConnection = connectPostgreSQL connectionString
+   in PoolConfig
+        { createResource = createConnection,
+          freeResource = close,
+          poolCacheTTL = 600,
+          poolMaxResources = dbConfig.connectionPoolCount,
+          poolNumStripes = Nothing
+        }
+
+createDbPool :: EsqDBConfig -> IO (Pool Connection)
+createDbPool dbConfig =
+  let poolConfig = createPoolConfig dbConfig
+   in newPool poolConfig

@@ -37,7 +37,7 @@ runDeleteQuery deleteEntries dbDeleteObject = do
   let deleteQuery = getDeleteQueryForTable dbDeleteObject
   case deleteQuery of
     Just query -> do
-      result <- EL.runIO $ try $ executeQuery _pgConnection (Query $ TE.encodeUtf8 query)
+      result <- EL.runIO $ try $ executeQueryUsingConnectionPool _connectionPool (Query $ TE.encodeUtf8 query)
       case result of
         Left (QueryError errorMsg) -> do
           EL.logError ("QUERY DELETE FAILED" :: Text) (errorMsg <> " for query :: " <> query)
