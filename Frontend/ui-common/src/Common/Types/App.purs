@@ -571,5 +571,7 @@ type RentalBookingConfig = {
   , nightCharge :: String
   , rideStartedAt :: String 
   , rideEndedAt :: String
+  , extraDistanceFare :: String 
+  , extraTimeFare :: String
 }
 

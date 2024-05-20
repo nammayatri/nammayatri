@@ -66,11 +66,13 @@ data Action
   | CheckFlowStatusAction
   | GoBack
   | CancelRideActionController PopUpModalController.Action
+  | NotificationListener String
 
 data ScreenOutput = GoToHomeScreen RideScheduledScreenState
                   | GoToSearchLocationScreen RideScheduledScreenState
                   | CancelRentalRide RideScheduledScreenState
                   | GoToMyRidesScreen RideScheduledScreenState
+                  | NotificationListenerSO String
 
 eval :: Action -> RideScheduledScreenState -> Eval Action ScreenOutput RideScheduledScreenState
 
@@ -123,4 +125,5 @@ eval (GetBookingList resp) state =
 
 eval CheckFlowStatusAction state = update state
 
+eval (NotificationListener notificationType) state = exit $ NotificationListenerSO notificationType
 eval _ state = update state

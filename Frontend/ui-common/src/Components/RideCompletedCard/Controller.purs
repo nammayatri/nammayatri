@@ -93,7 +93,7 @@ data RideCompletedElements = BANNER | QR_VIEW | NO_VPA_VIEW | BADGE_CARD | DRIVE
 derive instance genericRideCompletedElements :: Generic RideCompletedElements _
 instance eqRideCompletedElements :: Eq RideCompletedElements where eq = genericEq
 
-data RentalRowView = RideTime | RideDistance | RideStartedAt | RideEndedAt | EstimatedFare | ExtraTimePrice | TotalFare
+data RentalRowView = RideTime | RideDistance | RideStartedAt | RideEndedAt | EstimatedFare | ExtraTimeFare | ExtraDistanceFare | TotalFare
 
 derive instance genericRentalRowView :: Generic RentalRowView _
 instance eqRentalRowView :: Eq RentalRowView where eq = genericEq
@@ -391,7 +391,8 @@ type RentalRowConfig = {
   , rideStartedAt :: String
   , rideEndedAt :: String
   , estimatedFare :: String
-  , extraTimePrice :: String
+  , extraTimeFare :: String
+  , extraDistanceFare :: String
   , totalFare :: String
   , rideDetailsTitle :: String
   , fareUpdateTitle :: String
@@ -404,7 +405,8 @@ dummyRentalRowConfig = {
   , rideStartedAt : ""
   , rideEndedAt : ""
   , estimatedFare : ""
-  , extraTimePrice : ""
+  , extraTimeFare : ""
+  , extraDistanceFare : ""
   , totalFare : ""
   , rideDetailsTitle : ""
   , fareUpdateTitle : ""
@@ -422,4 +424,6 @@ dummyRentalBookingConfig =
   , finalDistance : 0
   , rideStartedAt : "" 
   , rideEndedAt : ""
+  , extraDistanceFare : ""
+  , extraTimeFare : ""
   }

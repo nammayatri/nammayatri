@@ -456,51 +456,6 @@ genderBannerConfig state action =
   in
     config'
 
-rentalBannerConfig :: ST.HomeScreenState -> Banner.Config
-rentalBannerConfig state =
-  let
-    config = Banner.config
-
-    _ = spy "INside rentaBannerConfig" $ HU.getVehicleVariantImage (maybe "" (\item -> item.vehicleVariant) state.data.rentalsInfo) LEFT_VIEW
-
-    config' =
-      config
-        { backgroundColor = Color.moonCreme
-        , stroke = "0," <> Color.grey900
-        , imageHeight = V 45
-        , imageWidth = V 66
-        , imagePadding = PaddingVertical 0 0
-        , title =
-          ( maybe ""
-              ( \rentalsInfo ->
-                  if rentalsInfo.multipleScheduled then
-                    getString UPCOMING_BOOKINGS
-                  else do
-                    let
-                      timeUTC = rentalsInfo.rideScheduledAtUTC
-
-                      fpt = rentalsInfo.fareProductType
-
-                      bookingInfoString =
-                        if fpt == FPT.INTER_CITY then
-                          YOU_HAVE_UPCOMING_INTERCITY_BOOKING
-                        else
-                          YOU_HAVE_UPCOMING_RENTAL_BOOKING
-                    getString $ bookingInfoString $ EHC.convertUTCtoISC timeUTC "D" <> " " <> EHC.convertUTCtoISC timeUTC "MMMM" <> " " <> EHC.convertUTCtoISC timeUTC "YYYY" <> " , " <> EHC.convertUTCtoISC timeUTC "HH" <> ":" <> EHC.convertUTCtoISC timeUTC "mm"
-              )
-              state.data.rentalsInfo
-          )
-        , titleColor = Color.black900
-        , titleStyle = Body1
-        , actionTextVisibility = false
-        , cornerRadius = 8.0
-        , imageUrl = fetchImage FF_COMMON_ASSET $ HU.getVehicleVariantImage (maybe "" (\item -> item.vehicleVariant) state.data.rentalsInfo) LEFT_VIEW --fetchImage FF_COMMON_ASSET "ny_ic_rental_booking"
-        , imageMargin = MarginRight 0
-        , padding = Padding 0 0 0 0
-        }
-  in
-    config'
-
 disabilityBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a
 disabilityBannerConfig state action =
   let
@@ -999,67 +954,6 @@ waitTimeInfoCardConfig state = let
                           Just rateCard -> 
                             {freeMinutes : rateCard.waitingTimeInfo.freeMinutes, chargePerMinute : rateCard.waitingTimeInfo.charge}
                           Nothing -> {freeMinutes : "0", chargePerMinute : "₹0/min"}
-
-    config = RequestInfoCard.config
-
-    requestInfoCardConfig' =
-      config
-        { title
-          { text = getString waitTimeConfig.title
-          , accessibilityHint = getEN waitTimeConfig.title
-          }
-        , primaryText
-          { text = getString waitTimeConfig.primaryText
-          , padding = Padding 16 16 0 0
-          , textStyle = FontStyle.ParagraphText
-          , color = Color.black700
-          , accessibilityHint = getEN waitTimeConfig.primaryText
-          }
-        , secondaryText
-          { text = if not isQuotes then getVarString waitTimeConfig.secondaryText $ if state.data.vehicleVariant == "AUTO_RICKSHAW" then [ "3", "1.5" ] else [ "5", "1" ] else getString waitTimeConfig.secondaryText
-          , visibility = VISIBLE
-          , padding = PaddingLeft 16
-          , color = Color.black700
-          , textStyle = FontStyle.ParagraphText
-          , width = (V $ JB.getWidthFromPercent 75)
-          , accessibilityHint = getEN waitTimeConfig.secondaryText
-          }
-        , imageConfig
-          { imageUrl = fetchImage FF_ASSET "ny_ic_wait_timer"
-          , height = V 130
-          , width = V 130
-          , padding = Padding 0 2 2 0
-          , visibility = VISIBLE
-          }
-        , buttonConfig
-          { text = getString GOT_IT
-          , padding = PaddingVertical 16 20
-          , accessibilityHint = (getEN GOT_IT) <> " : Button"
-          }
-        }
-  in
-    requestInfoCardConfig'
-  where
-  textConfig :: Boolean -> { title :: STR, primaryText :: STR, secondaryText :: STR }
-  textConfig isQuotes =
-    if isQuotes then
-      { title: OTP_EXPIRE_TIMER, primaryText: SHOWS_FOR_HOW_LONG_YOUR_OTP_, secondaryText: IF_YOUR_OTP_EXPIRES_ }
-    else
-      { title: WAIT_TIMER, primaryText: HOW_LONG_DRIVER_WAITED_FOR_PICKUP, secondaryText: YOU_WILL_PAY_FOR_EVERY_MINUTE waitingChargeInfo.freeMinutes waitingChargeInfo.chargePerMinute }
-
-  waitingChargeInfo = case state.data.rateCardCache of
-    Just rateCard -> do
-      let
-        info = DA.find (\item -> DS.contains (DS.Pattern "Waiting Charges") item.key) rateCard.extraFare
-      case info of
-        Just item -> case extractNumber item.key of
-          Just number -> { freeMinutes: number, chargePerMinute: item.val }
-          Nothing -> { freeMinutes: "0", chargePerMinute: "0" }
-        Nothing -> { freeMinutes: "0", chargePerMinute: "0" }
-    Nothing -> { freeMinutes: "0", chargePerMinute: "0" }
-
-  extractNumber :: String -> Maybe String
-  extractNumber str = stripSuffix (DS.Pattern " mins)") $ fromMaybe "" $ stripPrefix (DS.Pattern "Waiting Charges (after ") str
 
 rateCardConfig :: ST.HomeScreenState -> RateCard.Config
 rateCardConfig state =
@@ -1837,40 +1731,6 @@ chooseVehicleConfig state = let
     }
   in chooseVehicleConfig'
 
-    selectedEstimates = state.data.selectedEstimatesObject
-
-    chooseVehicleConfig' =
-      config
-        { vehicleImage = HU.getVehicleVariantImage selectedEstimates.vehicleVariant RIGHT_VIEW
-        , isSelected = true
-        , vehicleVariant = selectedEstimates.vehicleVariant
-        , vehicleType = selectedEstimates.vehicleType
-        , capacity = selectedEstimates.capacity
-        , price = selectedEstimates.price
-        , isCheckBox = false
-        , isEnabled = true
-        , index = selectedEstimates.index
-        , activeIndex = selectedEstimates.activeIndex
-        , id = selectedEstimates.id
-        , maxPrice = selectedEstimates.maxPrice
-        , basePrice = selectedEstimates.basePrice
-        , showInfo = selectedEstimates.showInfo
-        , searchResultType = selectedEstimates.searchResultType
-        , isBookingOption = false
-        , pickUpCharges = selectedEstimates.pickUpCharges
-        , layoutMargin = Margin 0 0 0 0
-        , tollCharge = selectedEstimates.tollCharge
-        , serviceTierName = selectedEstimates.serviceTierName
-        , serviceTierShortDesc = selectedEstimates.serviceTierShortDesc
-        , airConditioned = selectedEstimates.airConditioned
-        , extraFare = selectedEstimates.extraFare
-        , driverAdditions = selectedEstimates.driverAdditions
-        , showEditButton = true
-        , editBtnText = getString CHANGE
-        , validTill = selectedEstimates.validTill
-        }
-  in
-    chooseVehicleConfig'
 
 rideCompletedCardConfig :: ST.HomeScreenState -> RideCompletedCard.Config
 rideCompletedCardConfig state =
@@ -1956,6 +1816,8 @@ rideCompletedCardConfig state =
         , finalDistance = state.data.driverInfoCardState.rentalData.finalDistance
         , rideStartedAt = state.data.rideRatingState.rideStartTime
         , rideEndedAt = state.data.rideRatingState.rideEndTime
+        , extraTimeFare = state.data.driverInfoCardState.rentalData.extraTimeFare
+        , extraDistanceFare = state.data.driverInfoCardState.rentalData.extraDistanceFare
         }
       , rentalRowDetails
         { rideTime = getString RIDE_TIME
@@ -1963,7 +1825,8 @@ rideCompletedCardConfig state =
         , rideStartedAt = getString RIDE_STARTED_AT
         , rideEndedAt = getString RIDE_ENDED_AT
         , estimatedFare = getString ESTIMATED_FARE
-        , extraTimePrice = getString EXTRA_TIME_PRICE
+        , extraTimeFare = getString EXTRA_TIME_FARE
+        , extraDistanceFare = getString EXTRA_DISTANCE_FARE
         , totalFare = getString TOTAL_FARE
         , rideDetailsTitle = getString RIDE_DETAILS
         , fareUpdateTitle = getString FARE_UPDATE

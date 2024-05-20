@@ -441,7 +441,7 @@ getDataFromDescType descriptionType state =
         EstimatedCharges -> {
           title : getString ESTIMATED_CHARGES,
           subHeadings : [
-            { title : getString ESTIMATED_BASE_FARE <> ": <b>" <> currency <> show selectedQuote.fareDetails.baseFare <> "</b>" , description : getString ADDITIONAL_CHARGES_DESCRIPTION},
+            { title : getString ESTIMATED_BASE_FARE <> ": <b>" <> selectedQuote.quoteDetails.price <> "</b>" , description : getString ADDITIONAL_CHARGES_DESCRIPTION},
             { title : getString TOLL_CHARGES <> ": <b> " <> getString WILL_BE_ADDED_TO_FINAL_FARE <> " </b>", description : getString TOLL_CHARGES_DESCRIPTION}
           ]
         }
