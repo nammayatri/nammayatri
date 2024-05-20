@@ -47,6 +47,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Common.Types.App as Common
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
 import Screens.Types (FareProductType(..)) as FPT
+import Resources.Constants (getFareFromArray)
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -157,6 +158,7 @@ checkRideStatus rideAssigned = do
                                 Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
                                 Nothing        -> "")
                 currentDate =  getCurrentDate ""
+                fareBreakup = resp.fareBreakup
             setValueToLocalStore IS_SOS_ACTIVE $ show false
             if(lastRideDate /= currentDate) then do
               setValueToLocalStore FLOW_WITHOUT_OFFERS "true"
@@ -223,6 +225,8 @@ checkRideStatus rideAssigned = do
                                 , rideEndedAt = case currRideListItem.rideEndTime of
                                               Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
                                               Nothing        -> ""
+                                , extraDistanceFare = show $ getFareFromArray fareBreakup "EXTRA_DISTANCE_FARE"
+                                , extraTimeFare = show $ getFareFromArray fareBreakup "EXTRA_TIME_FARE"
                                 }
                           }
                           , ratingViewState { rideBookingRes = (RideBookingRes resp), issueFacedView = nightSafetyFlow}

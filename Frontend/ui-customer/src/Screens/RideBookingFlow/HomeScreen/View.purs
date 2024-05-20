@@ -4028,19 +4028,22 @@ rentalBanner push state =
     , gradient if os == "IOS" then (Linear 270.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 [Color.transparent, "#FFFFFF" , "#FFFFFF" , "#FFFFFF"])
     ][  if state.props.showShimmer then 
           textView[]
-          else rentalBannerView state ]
+          else rentalBannerView state push]
 
-rentalBannerView state =  
+rentalBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+rentalBannerView state push =  
   linearLayout 
     [ height WRAP_CONTENT 
     , width MATCH_PARENT 
     , orientation HORIZONTAL 
+    , gravity CENTER_VERTICAL
     , background Color.moonCreme
-    , cornerRadius 8.0
+    , padding $ PaddingLeft 16
+    , cornerRadius 12.0
+    , onClick push $ const RentalBannerClick
     ][  textView
         [ weight 1.0 
         , height WRAP_CONTENT
-        , padding $ Padding 16 16 16 16
         , textFromHtml $ (maybe "" (\rentalsInfo ->
                               if rentalsInfo.multipleScheduled then getString UPCOMING_BOOKINGS
                               else do
@@ -4054,19 +4057,19 @@ rentalBannerView state =
         ]
       , frameLayout
         [ height WRAP_CONTENT
-        , gravity CENTER_VERTICAL
+        , gravity CENTER
         , width WRAP_CONTENT
         ][ 
-          -- imageView
-          --   [ height $ V 95 
-          --   , width $ V 123 
-          --   , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_rental_bg_img"
-          --   ]
-          -- , 
           imageView
+            [ height $ V 60
+            , width $ V 115
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_rental_bg_img"
+            ]
+          , imageView
             [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleVariantImage (maybe "" (\item -> item.vehicleVariant) state.data.rentalsInfo) LEFT_VIEW
-            , height $ V 45
-            , width $ V 66 
+            , height $ V 56
+            , width $ V 77 
+            , layoutGravity "center"
             ]
         ]
 

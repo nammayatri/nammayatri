@@ -1192,7 +1192,7 @@ getKN stringKey =
         RIDE_STARTED_AT -> "ಸವಾರಿ ಪ್ರಾರಂಭವಾಯಿತು"
         RIDE_ENDED_AT -> "ಸವಾರಿ ಮುಗಿಯಿತು"
         ESTIMATED_FARE -> "ಅಂದಾಜುಕೊಂಡ ಹಣವು"
-        EXTRA_TIME_PRICE -> "ಅತಿರಿಕ್ತ ಸಮಯ ಬೆಲೆ"
+        EXTRA_TIME_FARE -> "ಅತಿರಿಕ್ತ ಸಮಯ ಬೆಲೆ"
         TOTAL_FARE -> "ಒಟ್ಟು ಹಣ"
         FARE_UPDATE -> "ಹಣ ಅಪ್ಡೇಟ್"
         NOW -> "ಈಗ"
@@ -1235,7 +1235,7 @@ getKN stringKey =
         FARE_DETERMINED_AS_PER_KARNATAKA_GUIDELINES -> "ಕರ್ನಾಟಕ ರಾಜ್ಯ ಸರ್ಕಾರದ ಮಾರ್ಗದರ್ಶನದಂತೆ ನಿಗದಿತ ದರ"
         RENTAL_CHARGES -> "ಬಾಡಿಗೆ ಶುಲ್ಕ"
         RENTAL_INFO_POLICY_DESC inclusiveKms -> "&#8226; ನಿಮ್ಮ ಪ್ಯಾಕೇಜ್‌ನಲ್ಲಿ ಪ್ರತಿ ಗಂಟೆಗೆ ಬಾಡಿಗೆ ಬುಕಿಂಗ್‌ಗೆ " <> inclusiveKms <> " ಕಿಮೀಗಳನ್ನು ಸೇರಿಸಲಾಗಿದೆ.<br><br>&#8226; ಬೇಸ್ ದೂರವು ಸಾಕಷ್ಟಿಲ್ಲದಿದ್ದರೆ, ನೀವು ಹೆಚ್ಚುವರಿ ಕಿಲೋಮೀಟರ್‌ಗಳನ್ನು ಸೇರಿಸಲು ಮತ್ತು ಹೆಚ್ಚುವರಿ ವೆಚ್ಚದಲ್ಲಿ ಉಳಿಸಲು ಆಯ್ಕೆ ಮಾಡಬಹುದು."
-        RENTAL_SCREEN_EXPLAINER -> "ಬುಕಿಂಗ್ ಅನ್ನು ದೃಢೀಕರಿಸುವ ಮೊದಲು ಮುಂದಿನ ಪರದೆಯಲ್ಲಿ ನಿಮ್ಮ ಅಂತಿಮ ದರದ ಅಂದಾಜನ್ನು ನೀವು ಪರಿಶೀಲಿಸಬಹುದು"
+        RENTAL_SCREEN_EXPLAINER -> "మీ అవసరానికి అనుగుణంగా మీ ప్యాకేజీలో చేర్చిన దూరాన్ని అనుకూలీకరించండి."
         INSTANT -> "ತ್ವರಿತ"
         COMING_SOON -> "ಶೀಘ್ರದಲ್ಲೇ!"
         CANCEL_SCHEDULED_RIDE -> "ನಿಗದಿತ ರೈಡ್ ರದ್ದುಮಾಡಿ"
@@ -1253,4 +1253,4 @@ getKN stringKey =
         INCLUDED_TIME -> "ಸೇರ್ಪಡೆಯಾದ ಸಮಯ"
         TOLL_CHARGES_DESCRIPTION -> "ಅನ್ವಯಗೊಳ್ಳುವ ಟೋಲ್ ಶುಲ್ಕಗಳು ಕೊನೆಯ ವಾಯಿತುಗೆ ಸೇರಿಸಲಾಗುತ್ತವೆ"
         WILL_BE_ADDED_TO_FINAL_FARE -> "ಕೊನೆಯ ವಾಯಿತುಗಿನಲ್ಲಿ ಸೇರಿಸಲಾಗುತ್ತದೆ"
-        
+        EXTRA_DISTANCE_FARE -> "ಹೆಚ್ಚುವರಿ ಅಂತರದ ಭಾಡಿ"

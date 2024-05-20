@@ -35,6 +35,8 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
 import Engineering.Helpers.Utils as Utils
+import Data.Number (fromString)
+import Data.Int (ceil)
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -780,6 +782,7 @@ contactSupportPopUpView config push =
 rentalTripDetailsView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 rentalTripDetailsView config push =
   let rentalRowDetails = config.rentalRowDetails
+      fareDiff = config.topCard.finalAmount - config.topCard.initialAmount
   in 
     linearLayout
     [ height WRAP_CONTENT
@@ -800,15 +803,17 @@ rentalTripDetailsView config push =
       , stroke $ "1,"<> Color.grey900
       , orientation VERTICAL
       ] 
-      [ rentalTripRowView config push RideTime
-      , rentalTripRowView config push RideDistance
-      , separatorView
-      , rentalTripRowView config push RideStartedAt
+      [ 
+      --   rentalTripRowView config push RideTime
+      -- , rentalTripRowView config push RideDistance
+      -- , separatorView
+      rentalTripRowView config push RideStartedAt
       , rentalTripRowView config push RideEndedAt
       ]
     , textView $
       [ text rentalRowDetails.fareUpdateTitle
       , color Color.black800
+      , visibility $ boolToVisibility (fareDiff > 0)
       , margin $ MarginVertical 24 8
       ] <> FontStyle.body1 TypoGraphy
     , linearLayout
@@ -819,9 +824,11 @@ rentalTripDetailsView config push =
       , padding $ Padding 16 16 16 16
       , stroke $ "1,"<> Color.grey900
       , orientation VERTICAL
+      , visibility $ boolToVisibility (fareDiff > 0)
       ]
       [ rentalTripRowView config push EstimatedFare
-      , rentalTripRowView config push ExtraTimePrice
+      , rentalTripRowView config push ExtraTimeFare
+      , rentalTripRowView config push ExtraDistanceFare
       , separatorView
       , rentalTripRowView config push TotalFare
       ]
@@ -845,7 +852,7 @@ rentalTripRowView config push description =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation HORIZONTAL
-    , margin $ MarginTop if (description == RideTime || description == EstimatedFare) then 0 else 16
+    , margin $ MarginTop if (description == RideStartedAt || description == EstimatedFare) then 0 else 16
     ] 
     [ textView $ [
         text $ textConfig.title
@@ -883,11 +890,12 @@ rentalTripRowView config push description =
         in
           case description' of
             RideTime -> mkRentalTextConfig rentalRowDetails.rideTime (" / " <> show rentalBookingData.baseDuration <> "hr") (Utils.formatMinIntoHoursMins rentalBookingData.finalDuration) (showRedOrBlackColor ((rentalBookingData.finalDuration / 60) > rentalBookingData.baseDuration))
-            RideDistance -> mkRentalTextConfig rentalRowDetails.rideDistance (" / " <> show rentalBookingData.baseDistance <> "km") (show rentalBookingData.finalDistance <> "km") (showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance))
+            RideDistance -> mkRentalTextConfig rentalRowDetails.rideDistance "" (show rentalBookingData.finalDistance <> "km") (showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance))
             RideStartedAt -> mkRentalTextConfig rentalRowDetails.rideStartedAt rentalBookingData.rideStartedAt "" Color.black600
             RideEndedAt -> mkRentalTextConfig rentalRowDetails.rideEndedAt rentalBookingData.rideEndedAt "" Color.black600
             EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare ("₹" <> show config'.topCard.initialAmount) "" Color.black600
-            ExtraTimePrice -> mkRentalTextConfig rentalRowDetails.extraTimePrice ("₹" <> show (config'.topCard.finalAmount - config'.topCard.initialAmount)) "" Color.black600
+            ExtraTimeFare -> mkRentalTextConfig rentalRowDetails.extraTimeFare ("₹" <> show (config'.topCard.finalAmount - config'.topCard.initialAmount)) "" Color.black600
+            ExtraDistanceFare -> mkRentalTextConfig rentalRowDetails.extraDistanceFare ("₹" <> show (ceil ( fromMaybe 0.0 (fromString rentalBookingData.extraDistanceFare)))) "" Color.black600
             TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare ("₹" <> show config'.topCard.finalAmount) "" Color.black600
             
       mkRentalTextConfig :: String -> String -> String -> String -> RentalTextConfig
