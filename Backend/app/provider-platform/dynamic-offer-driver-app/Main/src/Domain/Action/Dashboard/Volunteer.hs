@@ -47,7 +47,7 @@ bookingInfo merchantShortId opCity otpCode = do
   now <- getCurrentTime
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP merchant.id otpCode now transporterConfig.specialZoneBookingOtpExpiry >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp otpCode)
+  booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP merchantOpCityId.getId otpCode now transporterConfig.specialZoneBookingOtpExpiry >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp otpCode)
   return $ buildMessageInfoResponse booking
   where
     buildMessageInfoResponse Domain.Booking {..} =
