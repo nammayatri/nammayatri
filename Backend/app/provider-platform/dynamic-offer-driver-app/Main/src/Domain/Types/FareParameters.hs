@@ -40,17 +40,17 @@ data FareParameters = FareParameters
     currency :: Currency,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, Eq, PrettyShow)
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
 data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails | RentalDetails FParamsRentalDetails | InterCityDetails FParamsInterCityDetails
-  deriving (Generic, Show, Eq, PrettyShow)
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
 data FParamsProgressiveDetails = FParamsProgressiveDetails
   { deadKmFare :: HighPrecMoney,
     extraKmFare :: Maybe HighPrecMoney,
     currency :: Currency
   }
-  deriving (Generic, Show, Eq, PrettyShow)
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
 data FParamsSlabDetails = FParamsSlabDetails
   { platformFee :: Maybe HighPrecMoney,
@@ -58,16 +58,17 @@ data FParamsSlabDetails = FParamsSlabDetails
     cgst :: Maybe HighPrecMoney,
     currency :: Currency
   }
-  deriving (Generic, Show, Eq, PrettyShow)
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
 data FParamsRentalDetails = FParamsRentalDetails
   { timeBasedFare :: HighPrecMoney,
     distBasedFare :: HighPrecMoney,
     currency :: Currency,
     extraDistance :: Meters,
-    extraDuration :: Seconds
+    extraDuration :: Seconds,
+    deadKmFare :: HighPrecMoney
   }
-  deriving (Generic, Show, Eq, PrettyShow)
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
 data FParamsInterCityDetails = FParamsInterCityDetails
   { timeFare :: HighPrecMoney,
@@ -77,7 +78,7 @@ data FParamsInterCityDetails = FParamsInterCityDetails
     extraDistanceFare :: HighPrecMoney,
     extraTimeFare :: HighPrecMoney
   }
-  deriving (Generic, Show, Eq, PrettyShow)
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
 type FullFareParametersProgressiveDetails = (Id FareParameters, FParamsProgressiveDetails)
 

@@ -576,6 +576,7 @@ data FParamsSlabDetails = FParamsSlabDetails
 data FParamsRentalDetails = FParamsRentalDetails
   { timeBasedFare :: Money,
     distBasedFare :: Money,
+    deadKmFare :: PriceAPIEntity,
     timeBasedFareWithCurrency :: PriceAPIEntity,
     distBasedFareWithCurrency :: PriceAPIEntity,
     extraDistance :: Meters,

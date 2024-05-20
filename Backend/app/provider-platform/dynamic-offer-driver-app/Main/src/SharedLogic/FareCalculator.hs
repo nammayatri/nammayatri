@@ -135,7 +135,9 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
           mbTimeBasedFare = mkBreakupItem timeBasedFareCaption (mkPrice det.timeBasedFare)
           distBasedCaption = show Enums.DIST_BASED_FARE
           mbDistBasedFare = mkBreakupItem distBasedCaption (mkPrice det.distBasedFare)
-      catMaybes [Just mbTimeBasedFare, Just mbDistBasedFare]
+          deadKmFareCaption = show Enums.DEAD_KILOMETER_FARE
+          mbDeadKmFare = mkBreakupItem deadKmFareCaption (mkPrice det.deadKmFare)
+      catMaybes [Just mbTimeBasedFare, Just mbDistBasedFare, Just mbDeadKmFare]
 
     mkFPInterCityDetailsBreakupList det = do
       let deadKmFareCaption = show Enums.DEAD_KILOMETER_FARE
@@ -349,7 +351,8 @@ calculateFareParameters params = do
               distBasedFare = fareByDist,
               extraDistance = Meters $ extraDist * 1000,
               extraDuration = Seconds $ extraMins * 60,
-              currency = params.currency
+              currency = params.currency,
+              ..
             }
         )
 
@@ -461,7 +464,7 @@ countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (HighPrecMoney
 countFullFareOfParamsDetails = \case
   DFParams.ProgressiveDetails det -> (fromMaybe 0.0 det.extraKmFare, det.deadKmFare, 0.0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
   DFParams.SlabDetails det -> (0.0, 0.0, fromMaybe 0.0 det.platformFee + fromMaybe 0.0 det.sgst + fromMaybe 0.0 det.cgst)
-  DFParams.RentalDetails det -> (0.0, det.distBasedFare + det.timeBasedFare, 0.0)
+  DFParams.RentalDetails det -> (0.0, det.distBasedFare + det.timeBasedFare + det.deadKmFare, 0.0)
   DFParams.InterCityDetails det -> (0.0, det.pickupCharge + det.distanceFare + det.timeFare + det.extraDistanceFare + det.extraTimeFare, 0.0)
 
 addMaybes :: Num a => Maybe a -> Maybe a -> Maybe a
