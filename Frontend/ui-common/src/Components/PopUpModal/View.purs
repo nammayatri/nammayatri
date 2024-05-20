@@ -14,7 +14,7 @@
 -}
 module Components.PopUpModal.View where
 
-import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=),  not, (<<<), bind, discard, show, pure, map, when, mod, void)
+import Prelude 
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, rippleColor, lottieAnimationView)
 import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig)
@@ -34,7 +34,7 @@ import Engineering.Helpers.Commons (os, getNewIDWithTag)
 import Data.Array ((!!), mapWithIndex, null, length, findIndex)
 import Data.Maybe (Maybe(..),fromMaybe)
 import Control.Monad.Trans.Class (lift)
-import JBridge (setYoutubePlayer, supportsInbuildYoutubePlayer, addMediaPlayer, startLottieProcess, lottieAnimationConfig)
+import JBridge 
 import Animation (fadeIn) as Anim
 import Data.String (replaceAll, Replacement(..), Pattern(..))
 import Data.Function.Uncurried (runFn5)
@@ -210,6 +210,25 @@ view push state =
                     ][]
                   ]
                 ]
+         
+        , linearLayout[
+            height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER
+          ] [
+            PrestoAnim.animationSet [ Anim.fadeInWithDelay 10 true ] $ lottieAnimationView [ 
+              id state.coverLottie.id
+            , background state.coverLottie.background
+            , cornerRadius state.coverLottie.cornerRadius
+            , height state.coverLottie.height
+            , padding state.coverLottie.padding
+            , width state.coverLottie.width
+            , visibility state.coverLottie.visibility
+            , margin state.coverLottie.margin
+            , gravity CENTER_HORIZONTAL
+            , onAnimationEnd (\_-> void $ pure $ startLottieProcess state.coverLottie.config )(const NoAction)
+            ]
+          ]
         , linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
