@@ -232,21 +232,18 @@ let cacConfig =
       , tenant = "test"
       , retryConnection = False
       , cacExpTime = +86400
+      , enablePolling = True
       }
 
 let cacTenants = [ "dev", "test" ]
 
 let superPositionConfig =
-        { host = "http://localhost:8080"
-        , interval = 10
-        , tenants = [ "dev", "test" ]
-        , retryConnection = False
-        }
-      : { host : Text
-        , interval : Natural
-        , tenants : List Text
-        , retryConnection : Bool
-        }
+      { host = "http://localhost:8080"
+      , interval = 10
+      , tenants = [ "dev", "test" ]
+      , retryConnection = False
+      , enablePolling = True
+      }
 
 let maxMessages
     : Text
