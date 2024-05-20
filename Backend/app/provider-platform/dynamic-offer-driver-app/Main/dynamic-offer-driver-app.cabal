@@ -413,6 +413,7 @@ library
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FarePolicy
       Storage.CachedQueries.FareProduct
+      Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
       Storage.CachedQueries.GoHomeConfig
       Storage.CachedQueries.KioskLocation
       Storage.CachedQueries.KioskLocationTranslation

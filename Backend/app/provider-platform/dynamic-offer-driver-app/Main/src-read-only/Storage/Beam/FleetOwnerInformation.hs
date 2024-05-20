@@ -17,6 +17,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     enabled :: B.C f Kernel.Prelude.Bool,
     fleetOwnerPersonId :: B.C f Kernel.Prelude.Text,
     fleetType :: B.C f Domain.Types.FleetOwnerInformation.FleetType,
+    gstImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gstNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f Kernel.Prelude.Text,
     verified :: B.C f Kernel.Prelude.Bool,

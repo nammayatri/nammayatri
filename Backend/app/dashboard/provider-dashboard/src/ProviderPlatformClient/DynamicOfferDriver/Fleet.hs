@@ -43,13 +43,15 @@ data FleetOperationsAPIs = FleetOperationsAPIs
     fleetUnlinkVehicle :: Text -> Id Driver.Driver -> Text -> Euler.EulerClient APISuccess,
     fleetRemoveVehicle :: Text -> Text -> Euler.EulerClient APISuccess,
     fleetRemoveDriver :: Text -> Id Driver.Driver -> Euler.EulerClient APISuccess,
-    fleetTotalEarning :: Text -> Euler.EulerClient Driver.FleetTotalEarningResponse,
-    fleetVehicleEarning :: Text -> Text -> Maybe (Id Driver.Driver) -> Euler.EulerClient Driver.FleetEarningRes,
-    fleetDriverEarning :: Text -> Id Driver.Driver -> Euler.EulerClient Driver.FleetEarningRes,
-    getFleetDriverVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
-    getFleetDriverAssociation :: Text -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
-    getFleetVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Maybe Text -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
-    setVehicleDriverRcStatusForFleet :: Id Driver.Driver -> Text -> Driver.RCStatusReq -> Euler.EulerClient APISuccess
+    fleetTotalEarning :: Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Driver.FleetTotalEarningResponse,
+    fleetVehicleEarning :: Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Driver.FleetEarningListRes,
+    fleetDriverEarning :: Text -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Driver.FleetEarningListRes,
+    getFleetDriverVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
+    getFleetDriverAssociation :: Text -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Driver.DriverMode -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
+    getFleetVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Driver.FleetVehicleStatus -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
+    setVehicleDriverRcStatusForFleet :: Id Driver.Driver -> Text -> Driver.RCStatusReq -> Euler.EulerClient APISuccess,
+    updateFleetOwnerInfo :: Id Driver.Driver -> Driver.UpdateFleetOwnerInfoReq -> Euler.EulerClient APISuccess,
+    getFleetOwnerInfo :: Id Driver.Driver -> Euler.EulerClient Driver.FleetOwnerInfoRes
   }
 
 data FleetRegistrationAPIs = FleetRegistrationAPIs
@@ -85,7 +87,9 @@ mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
       :<|> getFleetDriverVehicleAssociation
       :<|> getFleetDriverAssociation
       :<|> getFleetVehicleAssociation
-      :<|> setVehicleDriverRcStatusForFleet = fleetOperationsClient
+      :<|> setVehicleDriverRcStatusForFleet
+      :<|> updateFleetOwnerInfo
+      :<|> getFleetOwnerInfo = fleetOperationsClient
 
     fleetOwnerLogin
       :<|> fleetOwnerVerify

@@ -55,6 +55,7 @@ data DocumentType
   | SocialSecurityNumber
   | VehicleInspectionForm
   | UploadProfile
+  | GSTCertificate
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SupportedVehicleClasses

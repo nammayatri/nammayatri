@@ -200,6 +200,22 @@ updatePersonEmail personId encEmail = do
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
 
+updatePerson :: BeamFlow m r => Id Person -> Person -> m ()
+updatePerson personId person = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.firstName $ person.firstName,
+      Se.Set BeamP.lastName $ person.lastName,
+      Se.Set BeamP.emailEncrypted $ person.email <&> (unEncrypted . (.encrypted)),
+      Se.Set BeamP.emailHash $ person.email <&> (.hash),
+      Se.Set BeamP.mobileNumberEncrypted $ unEncrypted (person.mobileNumber.encrypted),
+      Se.Set BeamP.mobileNumberHash $ person.mobileNumber.hash,
+      Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
+
 deletePerson :: BeamFlow m r => Id Person -> m ()
 deletePerson personId = deleteWithKV [Se.Is BeamP.id $ Se.Eq $ getId personId]
 

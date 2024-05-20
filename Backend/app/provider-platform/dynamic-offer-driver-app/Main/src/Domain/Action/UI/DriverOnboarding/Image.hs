@@ -40,6 +40,7 @@ import Servant.Multipart
 import SharedLogic.DriverOnboarding
 import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CFQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.FleetRCAssociationExtra as FRCA
@@ -151,8 +152,15 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
   Query.create imageEntity
 
   -- skipping validation for rc as validation not available in idfy
-  docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe Vehicle.CAR vehicleCategory)
-  if maybe True (.isImageValidationRequired) docConfigs
+  isImageValidationRequired <- case person.role of
+    Person.FLEET_OWNER -> do
+      --------------- Image validation for fleet
+      docConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType
+      return $ maybe True (.isImageValidationRequired) docConfigs
+    _ -> do
+      docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe Vehicle.CAR vehicleCategory)
+      return $ maybe True (.isImageValidationRequired) docConfigs
+  if isImageValidationRequired
     then do
       validationOutput <-
         Verification.validateImage merchantId merchantOpCityId $

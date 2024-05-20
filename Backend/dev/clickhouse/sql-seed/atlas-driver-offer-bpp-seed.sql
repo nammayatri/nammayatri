@@ -16,12 +16,16 @@ CREATE TABLE atlas_driver_offer_bpp.driver_fee(
 CREATE TABLE atlas_driver_offer_bpp.ride_details (
     `id` String,
     `vehicle_number` Nullable(String),
-    `fleet_owner_id` Nullable(String)
+    `fleet_owner_id` Nullable(String),
+    `created_at` DateTime DEFAULT now()
 ) ENGINE = MergeTree() PRIMARY KEY (id);
 
 CREATE TABLE atlas_driver_offer_bpp.ride (
     `id` String,
     `status` Nullable(String),
     `fare` Nullable(Int),
-    `driver_id` Nullable(String)
+    `driver_id` Nullable(String),
+    `chargeable_distance` Nullable(Int),
+    `created_at` DateTime DEFAULT now(),
+    `updated_at` DateTime DEFAULT now()
 ) ENGINE = MergeTree() PRIMARY KEY (id);
