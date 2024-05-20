@@ -31,6 +31,7 @@ import Environment
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -113,11 +114,28 @@ handler merchant req validatedQuote = do
       return $ mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
 
     handleRideOtpFlow isNewRider _ booking riderDetails = do
-      otpCode <- generateOTPCode
+      otpCode <- generateUniqueOTPCode booking.merchantOperatingCityId.getId (0 :: Integer)
       QRB.updateSpecialZoneOtpCode booking.id otpCode
       updateBookingDetails isNewRider booking riderDetails
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       return $ mkDConfirmResp Nothing uBooking riderDetails
+
+    generateUniqueOTPCode merchantOperatingCityId cnt = do
+      when (cnt == 100) $ throwError (InternalError "Please try again in some time") -- Avoiding infinite loop (Todo: fix with something like LRU later)
+      otpCode <- generateOTPCode
+      isUnique <- checkAndStoreOTP merchantOperatingCityId otpCode
+      if isUnique
+        then return otpCode
+        else generateUniqueOTPCode merchantOperatingCityId (cnt + 1)
+
+    checkAndStoreOTP merchantOperatingCityId otpCode = do
+      let otpKey = mkSpecialZoneOtpKey merchantOperatingCityId otpCode
+      isPresent :: Maybe Bool <- Redis.get otpKey
+      case isPresent of
+        Nothing -> do
+          Redis.setExp otpKey True 3600
+          return True
+        Just _ -> return False
 
     handleStaticOfferFlow isNewRider quote booking riderDetails = do
       updateBookingDetails isNewRider booking riderDetails
@@ -232,3 +250,6 @@ validateRequest subscriber transporterId req now = do
         SBooking.cancelBooking booking Nothing transporter
         throwError $ QuoteExpired quote.id.getId
       return quote
+
+mkSpecialZoneOtpKey :: Text -> Text -> Text
+mkSpecialZoneOtpKey merchantOperatingCityId otpCode = "SpecialZoneBooking:MerchantOperatingCityId:" <> show merchantOperatingCityId <> "Otp:" <> show otpCode

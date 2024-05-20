@@ -151,18 +151,10 @@ findStuckBookings merchant moCity bookingIds now = do
           ]
       ]
 
-findBookingBySpecialZoneOTP :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Text -> UTCTime -> Int -> m (Maybe Booking)
-findBookingBySpecialZoneOTP merchantId otpCode now specialZoneBookingOtpExpiry = do
-  bookingId <- findBookingIdBySpecialZoneOTP merchantId otpCode now specialZoneBookingOtpExpiry
-  maybe
-    (return Nothing)
-    findById
-    bookingId
-
-findBookingIdBySpecialZoneOTP :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Text -> UTCTime -> Int -> m (Maybe (Id Booking))
-findBookingIdBySpecialZoneOTP (Id merchantId) otpCode now bookingOtpExpiry = do
-  let otpExpiryCondition = addUTCTime (- (fromIntegral bookingOtpExpiry * 60) :: NominalDiffTime) now
-  (Domain.Types.Booking.id <$>) <$> findOneWithKV [Se.And [Se.Is BeamB.specialZoneOtpCode $ Se.Eq (Just otpCode), Se.Is BeamB.providerId $ Se.Eq merchantId, Se.Is BeamB.createdAt $ Se.GreaterThanOrEq otpExpiryCondition, Se.Is BeamB.status $ Se.Eq NEW]]
+findBookingBySpecialZoneOTP :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> UTCTime -> Int -> m (Maybe Booking)
+findBookingBySpecialZoneOTP cityId otpCode now specialZoneBookingOtpExpiry = do
+  let otpExpiryCondition = addUTCTime (- (fromIntegral specialZoneBookingOtpExpiry * 60) :: NominalDiffTime) now
+  findOneWithKV [Se.And [Se.Is BeamB.specialZoneOtpCode $ Se.Eq (Just otpCode), Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just cityId), Se.Is BeamB.createdAt $ Se.GreaterThanOrEq otpExpiryCondition, Se.Is BeamB.status $ Se.Eq NEW]]
 
 cancelBookings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Booking] -> UTCTime -> m ()
 cancelBookings bookingIds now =

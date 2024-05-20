@@ -159,7 +159,7 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   let rideOtp = specialZoneOtpCode
   transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverInfo.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now transporterConfig.specialZoneBookingOtpExpiry >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
+  booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP merchantOpCityId.getId rideOtp now transporterConfig.specialZoneBookingOtpExpiry >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
   ride <- DRide.otpRideCreate requestor rideOtp booking clientId
   let driverReq = RideStart.DriverStartRideReq {rideOtp, requestor, ..}
   shandle <- RideStart.buildStartRideHandle merchantId merchantOpCityId
