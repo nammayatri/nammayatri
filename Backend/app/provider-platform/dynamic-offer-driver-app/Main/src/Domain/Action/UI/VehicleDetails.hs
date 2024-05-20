@@ -9,7 +9,7 @@ import Data.List (nub)
 import Data.Maybe (fromMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleDetails
 import qualified Environment
@@ -25,7 +25,7 @@ import Tools.Error
 getVehicleMakes ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Environment.Flow API.Types.UI.VehicleDetails.VehicleMakesResp
   )
@@ -38,7 +38,7 @@ getVehicleMakes (_, _, _) = do
 postVehicleModels ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.VehicleDetails.VehicleModelsReq ->
     Environment.Flow API.Types.UI.VehicleDetails.VehicleModelsResp
@@ -51,7 +51,7 @@ postVehicleModels (_, _, _) (API.Types.UI.VehicleDetails.VehicleModelsReq make) 
 postVehicleDetails ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.VehicleDetails.VehicleDetailsReq ->
     Environment.Flow Domain.Types.VehicleDetails.VehicleDetails

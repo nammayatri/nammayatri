@@ -23,11 +23,11 @@ import Control.Applicative ((<|>))
 import Data.Time hiding (secondsToNominalDiffTime)
 import Domain.Types.Booking
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import Domain.Types.Merchant.TransporterConfig
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.Ride
 import qualified Domain.Types.RideRoute as RI
+import Domain.Types.TransporterConfig
 import Environment
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Maps

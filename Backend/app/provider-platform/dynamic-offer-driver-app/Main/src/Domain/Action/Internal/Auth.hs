@@ -16,7 +16,7 @@ module Domain.Action.Internal.Auth where
 
 import Data.OpenApi (ToSchema)
 import Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude

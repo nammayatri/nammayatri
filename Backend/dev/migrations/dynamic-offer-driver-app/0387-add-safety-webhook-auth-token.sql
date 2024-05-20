@@ -1,9 +1,7 @@
-ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN driver_background_verification_service character varying(30);
-ALTER TABLE atlas_driver_offer_bpp.merchant_service_config
-ALTER COLUMN service_name TYPE VARCHAR(50);
+-- UPDATE atlas_driver_offer_bpp.merchant_service_usage_config
+-- SET driver_background_verification_service = 'SafetyPortal';
 
-UPDATE atlas_driver_offer_bpp.merchant_service_usage_config
-SET driver_background_verification_service = 'SafetyPortal';
+
 INSERT INTO atlas_driver_offer_bpp.merchant_service_config (merchant_id, merchant_operating_city_id, service_name, config_json)
 SELECT
   m.id,

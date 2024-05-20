@@ -21,7 +21,7 @@ where
 import Data.HashMap.Strict as HMS
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import Kernel.Beam.Functions

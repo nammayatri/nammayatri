@@ -20,8 +20,8 @@ module Tools.Whatsapp
 where
 
 import Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Kernel.External.Types (ServiceFlow)
 import Kernel.External.Whatsapp.Interface as Reexport hiding
   ( whatsAppOptApi,

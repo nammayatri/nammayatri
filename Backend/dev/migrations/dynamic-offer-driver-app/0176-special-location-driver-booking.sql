@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.booking ADD column special_location_tag text;

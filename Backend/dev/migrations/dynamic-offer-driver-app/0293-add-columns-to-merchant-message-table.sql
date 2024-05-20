@@ -1,16 +1,7 @@
-ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN template_id character varying(255);
-ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN json_data json;
-ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN contains_url_button boolean DEFAULT false;
-
 UPDATE atlas_driver_offer_bpp.merchant_message SET contains_url_button = false;
-
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN volunteer_sms_sending_limit json;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_sms_receiving_limit json;
 
 UPDATE atlas_driver_offer_bpp.transporter_config set volunteer_sms_sending_limit = json_build_object ('sms', 500, 'whatsapp', 500, 'overlay', 500, 'alert', 500) ;
 UPDATE atlas_driver_offer_bpp.transporter_config set driver_sms_receiving_limit = json_build_object ('sms', 5, 'whatsapp', 5, 'overlay', 5, 'alert', 5) ;
-
-ALTER TABLE atlas_driver_offer_bpp.merchant_message ALTER COLUMN message TYPE text ;
 
 -- whatsapp messages
 

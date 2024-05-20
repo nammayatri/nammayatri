@@ -6,9 +6,8 @@
 module Storage.Beam.SubscriptionConfig where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantMessage
-import qualified Domain.Types.Merchant.MerchantServiceConfig
+import qualified Domain.Types.MerchantMessage
+import qualified Domain.Types.MerchantServiceConfig
 import qualified Domain.Types.Plan
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -25,9 +24,9 @@ data SubscriptionConfigT f = SubscriptionConfigT
     genericJobRescheduleTime :: B.C f Kernel.Types.Common.Seconds,
     isTriggeredAtEndRide :: B.C f Kernel.Prelude.Bool,
     maxRetryCount :: B.C f Kernel.Prelude.Int,
-    paymentLinkChannel :: B.C f Domain.Types.Merchant.MerchantMessage.MediaChannel,
+    paymentLinkChannel :: B.C f Domain.Types.MerchantMessage.MediaChannel,
     paymentLinkJobTime :: B.C f Kernel.Types.Common.Seconds,
-    paymentServiceName :: B.C f Domain.Types.Merchant.MerchantServiceConfig.ServiceName,
+    paymentServiceName :: B.C f Domain.Types.MerchantServiceConfig.ServiceName,
     sendDeepLink :: B.C f Kernel.Prelude.Bool,
     sendInAppFcmNotifications :: B.C f Kernel.Prelude.Bool,
     serviceName :: B.C f Domain.Types.Plan.ServiceNames,

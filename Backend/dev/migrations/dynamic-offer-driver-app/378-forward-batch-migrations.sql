@@ -3,4 +3,4 @@ update atlas_driver_offer_bpp.transporter_config set include_driver_currently_on
 update atlas_driver_offer_bpp.driver_pool_config set enable_forward_batching = true ;
 update atlas_driver_offer_bpp.driver_pool_config set on_ride_batch_split_config = '{"BatchSplitByPickupDistanceOnRide { batchSplitSize = 1, batchSplitDelay = 0 }","BatchSplitByPickupDistanceOnRide { batchSplitSize = 1, batchSplitDelay = 4 }"}';   ------ temporary change for testing
 ----------------------------------------------------------------------------------------------------------------------------
-alter table atlas_driver_offer_bpp.transporter_config add column use_silent_fcm_for_forward_batch boolean default false;
+--alter table atlas_driver_offer_bpp.transporter_config add column use_silent_fcm_for_forward_batch boolean default false;

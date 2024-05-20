@@ -8,7 +8,7 @@ import Data.OpenApi (ToSchema)
 import Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.OnUpdate as OU
 import qualified Domain.Types.Person
 import Domain.Types.RideRoute
@@ -35,7 +35,7 @@ import Tools.Auth
 postEditResult ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest ->
     API.Types.UI.EditBooking.EditBookingRespondAPIReq ->

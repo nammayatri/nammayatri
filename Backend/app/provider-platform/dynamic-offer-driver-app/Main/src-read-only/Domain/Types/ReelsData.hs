@@ -6,7 +6,7 @@ module Domain.Types.ReelsData where
 
 import Data.Aeson
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -22,7 +22,7 @@ data ReelsData = ReelsData
     id :: Kernel.Types.Id.Id Domain.Types.ReelsData.ReelsData,
     language :: Kernel.External.Types.Language,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     rank :: Kernel.Prelude.Int,
     reelKey :: Kernel.Prelude.Text,
     shareLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

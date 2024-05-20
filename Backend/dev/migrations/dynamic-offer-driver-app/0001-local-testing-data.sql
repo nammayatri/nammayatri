@@ -1,11 +1,28 @@
-INSERT INTO atlas_driver_offer_bpp.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, description, mobile_number, mobile_country_code, from_time, to_time, api_key, head_count, created_at, updated_at, info, unique_key_id) VALUES
-	('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'Juspay Gateway', 'JUSPAY.BG.1', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2022-04-12 15:15:42.213874+00', '2022-04-12 15:15:42.213874+00', NULL, 'FIXME'),
-	('0d7016d0-f9cd-4f9f-886f-bc4cbd6a86e5', 'NSDL Gateway', 'NSDL', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2022-04-12 15:15:42.215812+00', '2022-04-12 15:15:42.215812+00', NULL, 'FIXME'),
-	('505e4651-5340-4836-81a7-045394ba6dc3', 'Mobility BAP', 'NAMMA_YATRI_BAP', NULL, 'APPROVED', 'APP', 'MOBILITY', true, true, NULL, '9777777777', '+91', NULL, NULL, NULL, NULL, '2022-04-12 15:15:42.21825+00', '2022-04-12 15:15:42.21825+00', NULL, 'FIXME'),
-	('239ee68b-0818-4dba-ad31-032fe809cf71', 'NSDL Gateway', 'NSDL.BG.1', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2022-04-12 15:15:42.21902+00', '2022-04-12 15:15:42.21902+00', NULL, 'FIXME'),
-	('favorit0-0000-0000-0000-00000favorit', 'Driver-Offer-Provider #1', 'NAMMA_YATRI', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', true, true, NULL, '9888888888', '+91', NULL, NULL, NULL, NULL, '2022-04-12 15:15:42.216602+00', '2022-04-12 15:15:42.216602+00', NULL, 'juspay-mobility-bpp-1-key'),
-	('nearest-drivers-testing-organization', 'Driver-Offer-Provider #2', 'NAMMA_YATRI_2', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', true, true, NULL, '9888888777', '+91', NULL, NULL, NULL, NULL, '2022-04-12 15:15:42.216602+00', '2022-04-12 15:15:42.216602+00', NULL, 'juspay-mobility-bpp-1-key');
+--- ONLY FOR LOCAL SYNC | Dont run in master or prod
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN domain text;
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN type text;
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN api_key text;
+ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN origin_restriction DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN destination_restriction DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN short_id DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN state DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN country DROP NOT NULL;
 
+
+-- ONLY LOCAL SYNC
+INSERT INTO atlas_driver_offer_bpp.merchant (id, name, subscriber_id, gstin, status, type, domain, verified, enabled, description, mobile_number, mobile_country_code, from_time, to_time, api_key, head_count, created_at, updated_at, info, unique_key_id, internal_api_key) VALUES
+	('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'Juspay Gateway', 'JUSPAY.BG.1', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2022-04-12 15:15:42.213874+00', '2022-04-12 15:15:42.213874+00', NULL, 'FIXME','test-api-key-for-dev-env'),
+	('0d7016d0-f9cd-4f9f-886f-bc4cbd6a86e5', 'NSDL Gateway', 'NSDL', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2022-04-12 15:15:42.215812+00', '2022-04-12 15:15:42.215812+00', NULL, 'FIXME', 'test-api-key-for-dev-env'),
+	('505e4651-5340-4836-81a7-045394ba6dc3', 'Mobility BAP', 'NAMMA_YATRI_BAP', NULL, 'APPROVED', 'APP', 'MOBILITY', true, true, NULL, '9777777777', '+91', NULL, NULL, NULL, NULL, '2022-04-12 15:15:42.21825+00', '2022-04-12 15:15:42.21825+00', NULL, 'FIXME', 'test-api-key-for-dev-env'),
+	('239ee68b-0818-4dba-ad31-032fe809cf71', 'NSDL Gateway', 'NSDL.BG.1', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2022-04-12 15:15:42.21902+00', '2022-04-12 15:15:42.21902+00', NULL, 'FIXME', 'test-api-key-for-dev-env'),
+	('favorit0-0000-0000-0000-00000favorit', 'Driver-Offer-Provider #1', 'NAMMA_YATRI', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', true, true, NULL, '9888888888', '+91', NULL, NULL, NULL, NULL, '2022-04-12 15:15:42.216602+00', '2022-04-12 15:15:42.216602+00', NULL, 'juspay-mobility-bpp-1-key', 'test-api-key-for-dev-env'),
+	('nearest-drivers-testing-organization', 'Driver-Offer-Provider #2', 'NAMMA_YATRI_2', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', true, true, NULL, '9888888777', '+91', NULL, NULL, NULL, NULL, '2022-04-12 15:15:42.216602+00', '2022-04-12 15:15:42.216602+00', NULL, 'juspay-mobility-bpp-1-key', 'test-api-key-for-dev-env');
+
+-- ONLY FOR LOCAL
+UPDATE atlas_driver_offer_bpp.merchant SET
+  short_id = id;
+ALTER TABLE atlas_driver_offer_bpp.merchant
+  ALTER COLUMN short_id SET NOT NULL;
 
 
 

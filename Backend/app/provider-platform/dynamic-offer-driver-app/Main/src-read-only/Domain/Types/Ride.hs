@@ -12,7 +12,7 @@ import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
 import qualified Domain.Types.FareParameters
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.External.Maps
@@ -53,7 +53,7 @@ data Ride = Ride
     isAdvanceBooking :: Kernel.Prelude.Bool,
     isFreeRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     numberOfDeviation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     numberOfOsrmSnapToRoadCalls :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     numberOfSelfTuned :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

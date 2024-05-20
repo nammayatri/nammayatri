@@ -17,7 +17,7 @@ import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Feedback.Feedback (FeedbackBadge)
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DR

@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.driver_intelligent_pool_config ADD COLUMN actual_pickup_distance_weightage INT NOT NULL DEFAULT 0;

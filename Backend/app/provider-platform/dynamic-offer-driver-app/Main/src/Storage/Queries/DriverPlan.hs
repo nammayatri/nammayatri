@@ -20,7 +20,7 @@ import Domain.Types.DriverInformation (DriverAutoPayStatus)
 import Domain.Types.DriverPlan as Domain
 import Domain.Types.Mandate
 import Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as MOC
+import qualified Domain.Types.MerchantOperatingCity as MOC
 import Domain.Types.Person
 import qualified Domain.Types.Plan as DPlan
 import Kernel.Beam.Functions

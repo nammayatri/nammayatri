@@ -87,6 +87,7 @@ import qualified Data.Text as T
 import Data.Time (Day, diffDays, fromGregorian)
 import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
+import qualified Domain.Action.UI.Merchant as DM
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Action.UI.Plan as DAPlan
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
@@ -107,9 +108,8 @@ import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import Domain.Types.Merchant.TransporterConfig
-import Domain.Types.Person
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.Person (Person)
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as Plan
 import qualified Domain.Types.SearchRequest as DSR
@@ -117,6 +117,7 @@ import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DVST
+import Domain.Types.TransporterConfig
 import Domain.Types.Vehicle (VehicleAPIEntity)
 import qualified Domain.Types.Vehicle as SV
 import Environment
@@ -1233,7 +1234,7 @@ validate (personId, _, merchantOpCityId) phoneNumber = do
   runRequestValidation validationCheck phoneNumber
   mobileNumberHash <- getDbHash phoneNumber.alternateNumber
   merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-  mbPerson <- QPerson.findByMobileNumberAndMerchantAndRole phoneNumber.mobileCountryCode mobileNumberHash person.merchantId DRIVER
+  mbPerson <- QPerson.findByMobileNumberAndMerchantAndRole phoneNumber.mobileCountryCode mobileNumberHash person.merchantId SP.DRIVER
   deleteOldPersonCheck <- case mbPerson of
     Nothing -> return False
     Just oldPerson -> do

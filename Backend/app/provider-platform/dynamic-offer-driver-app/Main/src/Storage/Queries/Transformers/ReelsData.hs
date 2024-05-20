@@ -5,7 +5,7 @@ module Storage.Queries.Transformers.ReelsData where
 
 import qualified Data.Aeson
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ReelsData
 import Kernel.Beam.Functions
 import Kernel.External.Encryption

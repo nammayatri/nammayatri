@@ -25,7 +25,7 @@ import Control.Monad
 import Data.Text as Text
 import qualified Domain.Types.Cac as DTC
 import Domain.Types.GoHomeConfig
-import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Cac

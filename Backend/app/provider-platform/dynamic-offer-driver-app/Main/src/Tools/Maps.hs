@@ -31,9 +31,9 @@ module Tools.Maps
 where
 
 import Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DOSC
-import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
+import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantServiceConfig as DOSC
+import Domain.Types.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Utils as Reexport hiding
   ( autoComplete,

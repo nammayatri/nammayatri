@@ -29,11 +29,11 @@ import qualified Domain.Types.Invoice as INV
 import Domain.Types.Mandate (MandateStatus)
 import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantMessage as MessageKey
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
+import qualified Domain.Types.MerchantMessage as MessageKey
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as P
+import Domain.Types.TransporterConfig (TransporterConfig)
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B

@@ -9,12 +9,12 @@ import Domain.Types.DriverPlan as DPlan
 import qualified Domain.Types.Invoice as INV
 import Domain.Types.Mandate (Mandate)
 import Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
-import Domain.Types.Merchant.TransporterConfig
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.Notification as NTF
 import Domain.Types.Person as P
 import Domain.Types.Plan as Plan
 import qualified Domain.Types.SubscriptionConfig as DSC
+import Domain.Types.TransporterConfig
 import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq

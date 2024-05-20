@@ -22,6 +22,7 @@ import qualified API.UI.Select as AppSelect
 import Common
 import qualified "rider-app" Domain.Action.UI.Cancel as AppCancel
 import qualified "rider-app" Domain.Action.UI.Estimate as AppEstimate
+import qualified "dynamic-offer-driver-app" Domain.Action.UI.MerchantServiceConfig as TDMSC
 import qualified "rider-app" Domain.Action.UI.Quote as AppQuote
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.SearchRequestForDriver as DSRD
 import qualified "dynamic-offer-driver-app" Domain.Types.Booking as TRB
@@ -31,7 +32,7 @@ import qualified "rider-app" Domain.Types.CancellationReason as AppCR
 import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as TDrInfo
 import qualified "rider-app" Domain.Types.Estimate as AppEstimate
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as TDM
-import qualified "dynamic-offer-driver-app" Domain.Types.Merchant.MerchantServiceConfig as TDMSC
+import qualified "dynamic-offer-driver-app" Domain.Types.MerchantServiceConfig as TDMSC
 import "dynamic-offer-driver-app" Domain.Types.Person as TPerson
 import qualified "rider-app" Domain.Types.Quote as AppQuote
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as TRide

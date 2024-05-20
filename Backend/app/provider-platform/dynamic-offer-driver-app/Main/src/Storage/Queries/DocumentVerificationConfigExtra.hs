@@ -4,7 +4,7 @@
 module Storage.Queries.DocumentVerificationConfigExtra where
 
 import Domain.Types.DocumentVerificationConfig
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude

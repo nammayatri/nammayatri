@@ -17,7 +17,7 @@ module Storage.Queries.Message.Message where
 
 import qualified Data.Time as T
 import Domain.Types.Merchant (Merchant)
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Message.Message
 import Domain.Types.Message.MessageTranslation as DomainMT
 import Kernel.Beam.Functions

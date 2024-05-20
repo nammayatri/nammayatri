@@ -4,7 +4,7 @@ module Storage.Queries.Notification where
 
 import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)
 import qualified Domain.Types.DriverFee as DF
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Notification as Domain
 import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
 import Kernel.External.Payment.Interface.Types (MandateNotificationRes, NotificationStatus (NOTIFICATION_CREATED, NOTIFICATION_FAILURE, PENDING))

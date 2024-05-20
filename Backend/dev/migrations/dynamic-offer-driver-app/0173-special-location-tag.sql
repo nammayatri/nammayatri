@@ -1,8 +1,6 @@
 ALTER TABLE atlas_driver_offer_bpp.quote_special_zone ADD column special_location_tag text;
-ALTER TABLE atlas_driver_offer_bpp.search_request ADD column special_location_tag text;
-ALTER TABLE atlas_driver_offer_bpp.search_request ADD column "area" text;
 ALTER TABLE atlas_driver_offer_bpp.search_request_special_zone ADD column "area" text;
-ALTER TABLE atlas_driver_offer_bpp.booking ADD column "area" text;
+--ALTER TABLE atlas_driver_offer_bpp.booking ADD column "area" text;
 ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD column "description" text;
 CREATE TABLE atlas_driver_offer_bpp.special_location_priority (
   id character(36) NOT NULL PRIMARY KEY,

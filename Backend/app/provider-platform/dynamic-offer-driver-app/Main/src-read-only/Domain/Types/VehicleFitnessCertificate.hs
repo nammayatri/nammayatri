@@ -8,7 +8,7 @@ import Data.Aeson
 import qualified Domain.Types.IdfyVerification
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleRegistrationCertificate
 import Kernel.External.Encryption
@@ -30,15 +30,15 @@ data VehicleFitnessCertificateE e = VehicleFitnessCertificate
     receiptDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     verificationStatus :: Domain.Types.IdfyVerification.VerificationStatus,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)
 
-type VehicleFitnessCertificate = VehicleFitnessCertificateE ('AsEncrypted)
+type VehicleFitnessCertificate = VehicleFitnessCertificateE 'AsEncrypted
 
-type DecryptedVehicleFitnessCertificate = VehicleFitnessCertificateE ('AsUnencrypted)
+type DecryptedVehicleFitnessCertificate = VehicleFitnessCertificateE 'AsUnencrypted
 
 instance EncryptedItem VehicleFitnessCertificate where
   type Unencrypted VehicleFitnessCertificate = (DecryptedVehicleFitnessCertificate, HashSalt)

@@ -27,10 +27,10 @@ import Domain.Action.UI.Ride.CancelRide (driverDistanceToPickup)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.TransporterConfig as DTC
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.SearchTry as ST
+import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import EulerHS.Prelude
 import Kernel.External.Maps

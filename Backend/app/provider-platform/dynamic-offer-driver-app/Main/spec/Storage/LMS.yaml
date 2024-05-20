@@ -1,5 +1,5 @@
 imports:
-  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   UTCTime: Kernel.Prelude
   Merchant: Domain.Types.Merchant
   Language: Kernel.External.Types

@@ -8,11 +8,11 @@ import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.DriverInformation as DTDI
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Merchant.Overlay as DOverlay
-import Domain.Types.Merchant.TransporterConfig
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Overlay as DOverlay
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
+import Domain.Types.TransporterConfig
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Types
 import qualified Kernel.Storage.Esqueleto as Esq

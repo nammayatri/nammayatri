@@ -1,11 +1,8 @@
-CREATE TABLE atlas_driver_offer_bpp.merchant_message (
-    merchant_id character(36) NOT NULL REFERENCES atlas_driver_offer_bpp.merchant (id),
-    message_key character varying(255) NOT NULL,
-    message character varying(255) NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    PRIMARY KEY (merchant_id, message_key)
-);
+
+--ONLY FOR LOCAL SYNC
+ALTER TABLE atlas_driver_offer_bpp.merchant_message DROP CONSTRAINT merchant_message_pkey;
+ALTER TABLE atlas_driver_offer_bpp.merchant_message ALTER COLUMN merchant_operating_city_id DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD PRIMARY KEY (merchant_id, message_key);
 
 WITH MerchantMessages AS (
   SELECT T1.id, 'SEND_OTP', '<#> Your OTP for login to Yatri App is {#otp#} {#hash#}'

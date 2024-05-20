@@ -10,8 +10,8 @@ import qualified Database.Beam as B
 import Domain.Types.Exophone as DE (Exophone (..), ExophoneType (..))
 import qualified Domain.Types.Exophone
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import qualified Kernel.External.Call.Types

@@ -16,8 +16,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- BOOKING TABLE --
-ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN trip_category text;
-ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_scheduled boolean;
 -- atlas_driver_offer_bpp.drop_not_null_if_exists('atlas_driver_offer_bpp', 'booking', 'estimated_distance');
 -- atlas_driver_offer_bpp.drop_not_null_if_exists('atlas_driver_offer_bpp', 'booking', 'estimated_duration');
 
@@ -54,23 +52,12 @@ ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details_distance_buffers A
 
 ALTER TABLE atlas_driver_offer_bpp.fare_product ALTER COLUMN trip_category SET NOT NULL;
 
--- TRANSPORTER CONFIG --
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN can_switch_to_rental boolean default true;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN consider_drivers_for_search boolean default true;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN schedule_ride_buffer_time integer default 1800;
-
 -- QUOTE SPECIAL ZONE --
 ALTER TABLE atlas_driver_offer_bpp.quote_special_zone ADD COLUMN trip_category text;
 ALTER TABLE atlas_driver_offer_bpp.quote_special_zone ADD COLUMN fare_policy_id character varying(36);
 ALTER TABLE atlas_driver_offer_bpp.quote_special_zone ADD COLUMN is_scheduled boolean;
 -- atlas_driver_offer_bpp.drop_not_null_if_exists("atlas_driver_offer_bpp", "quote_special_zone", "distance");
 -- atlas_driver_offer_bpp.drop_not_null_if_exists("atlas_driver_offer_bpp", "quote_special_zone", "estimated_finish_time");
-
--- SEARCH REQUEST --
-ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN message_id character varying(36);
-ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN start_time TIMESTAMP WITH TIME ZONE;
-ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN valid_till TIMESTAMP WITH TIME ZONE;;
-ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN is_scheduled boolean;
 
 -- atlas_driver_offer_bpp.drop_not_null_if_exists("atlas_driver_offer_bpp", "search_request", "estimated_distance");
 -- atlas_driver_offer_bpp.drop_not_null_if_exists("atlas_driver_offer_bpp", "search_request", "estimated_duration");

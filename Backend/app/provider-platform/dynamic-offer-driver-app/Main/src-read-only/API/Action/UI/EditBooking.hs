@@ -8,7 +8,7 @@ import qualified Control.Lens
 import qualified Domain.Action.UI.EditBooking as Domain.Action.UI.EditBooking
 import qualified Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
@@ -34,7 +34,7 @@ handler = postEditResult
 postEditResult ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest ->
     API.Types.UI.EditBooking.EditBookingRespondAPIReq ->

@@ -1,5 +1,0 @@
--- Adding Columns in booking_cancellation_reason Table
-
-ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_distances_for_cancel_ride text;
-UPDATE atlas_driver_offer_bpp.merchant_service_usage_config SET get_distances_for_cancel_ride ='OSRM';
-ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ALTER COLUMN get_distances_for_cancel_ride SET NOT NULL;

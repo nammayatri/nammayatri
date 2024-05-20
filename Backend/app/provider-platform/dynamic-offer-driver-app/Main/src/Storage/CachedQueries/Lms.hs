@@ -19,7 +19,7 @@ import qualified Domain.Types.LmsModule as LmsModule
 import qualified Domain.Types.LmsModuleTranslation as DTLMT
 import qualified Domain.Types.LmsModuleVideoInformation as DTLMVI
 import qualified Domain.Types.LmsVideoTranslation as DTLVT
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.QuestionInformation as DTQI
 import qualified Domain.Types.QuestionModuleMapping as DTQMM
 import Kernel.Prelude

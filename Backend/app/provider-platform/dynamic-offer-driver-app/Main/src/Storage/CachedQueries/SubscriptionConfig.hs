@@ -2,7 +2,7 @@
 
 module Storage.CachedQueries.SubscriptionConfig where
 
-import qualified Domain.Types.Merchant.MerchantOperatingCity as MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity as MerchantOperatingCity
 import Domain.Types.Plan
 import Domain.Types.SubscriptionConfig
 import Kernel.Prelude

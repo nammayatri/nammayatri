@@ -18,7 +18,7 @@ import qualified Data.Aeson as A
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Mandate as DM
 import Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
 import Kernel.Prelude

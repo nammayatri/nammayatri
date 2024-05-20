@@ -15,7 +15,7 @@
 
 module Storage.CachedQueries.Toll where
 
-import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Toll
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq

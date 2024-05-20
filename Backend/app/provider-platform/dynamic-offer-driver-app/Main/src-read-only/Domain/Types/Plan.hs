@@ -9,7 +9,7 @@ import Data.Aeson
 import Domain.Types.Extra.Plan as ReExport
 import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -31,7 +31,7 @@ data Plan = Plan
     maxCreditLimit :: Kernel.Types.Common.HighPrecMoney,
     maxMandateAmount :: Kernel.Types.Common.HighPrecMoney,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOpCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
+    merchantOpCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     name :: Kernel.Prelude.Text,
     paymentMode :: Domain.Types.Plan.PaymentMode,
     planBaseAmount :: Domain.Types.Extra.Plan.PlanBaseAmount,

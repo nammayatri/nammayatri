@@ -7,7 +7,7 @@ module Domain.Types.Exophone where
 import Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.External.Call.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -20,7 +20,7 @@ data Exophone = Exophone
     id :: Kernel.Types.Id.Id Domain.Types.Exophone.Exophone,
     isPrimaryDown :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     primaryPhone :: Data.Text.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

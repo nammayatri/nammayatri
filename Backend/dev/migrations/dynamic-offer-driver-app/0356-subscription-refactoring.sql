@@ -75,8 +75,8 @@ where moc.merchant_short_id = 'NAMMA_YATRI_PARTNER' and not city = 'Bangalore' a
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -------- alter in merchant service config / update with adequete prod/master creds-----
-INSERT INTO atlas_driver_offer_bpp.merchant_service_config (merchant_id, service_name, config_json)
-SELECT m.id, 'RentalPayment_Juspay',
+INSERT INTO atlas_driver_offer_bpp.merchant_service_config (merchant_id, merchant_operating_city_id, service_name, config_json)
+SELECT m.merchant_id, m.id, 'RentalPayment_Juspay',
   json_build_object(
       'apiKey','0.1.0|2|aH69syF+qmjP8wpjdwy5KdrHqhsTd1s7lH6TupSUYwMAS5rpi4jGDsA6Nt1uqGPWZxdMshc18cDhmQ=='
     , 'returnUrl','dummyReturnUrl'
@@ -85,9 +85,7 @@ SELECT m.id, 'RentalPayment_Juspay',
     , 'username', 'dummyUsername'
     , 'password','0.1.0|0|MbGCmY0OMu39bi7dEokkZ4kvgN17S+whz29QJa+XXUy+mue72jMsAHfVGd4lM9AEWbCqRywCu2RTpA=='
   )
-FROM atlas_driver_offer_bpp.merchant m;
-
-Alter table atlas_driver_offer_bpp.merchant_service_config add column IF NOT EXISTS merchant_operating_city_id Text;
+FROM atlas_driver_offer_bpp.merchant_operating_city as m;
 
 update atlas_driver_offer_bpp.merchant_service_config as msc
 set merchant_operating_city_id = moc.id

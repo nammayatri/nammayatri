@@ -6,7 +6,7 @@ module Domain.Types.LeaderBoardConfigs where
 
 import Data.Aeson
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -19,7 +19,7 @@ data LeaderBoardConfigs = LeaderBoardConfigs
     leaderBoardLengthLimit :: Kernel.Prelude.Int,
     leaderBoardType :: Domain.Types.LeaderBoardConfigs.LeaderBoardType,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     numberOfSets :: Kernel.Prelude.Int,
     useOperatingCityBasedLeaderBoard :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     zScoreBase :: Kernel.Prelude.Int,

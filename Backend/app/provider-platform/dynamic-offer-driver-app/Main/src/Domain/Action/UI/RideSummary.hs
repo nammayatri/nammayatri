@@ -18,7 +18,7 @@ module Domain.Action.UI.RideSummary where
 import Data.Time (Day)
 import Domain.Types.DailyStats as DDS
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DM
+import qualified Domain.Types.MerchantOperatingCity as DM
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
 import Kernel.Types.Common

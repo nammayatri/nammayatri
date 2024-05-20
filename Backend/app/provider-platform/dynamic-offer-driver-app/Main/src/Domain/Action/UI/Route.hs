@@ -22,7 +22,7 @@ module Domain.Action.UI.Route
 where
 
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Types.Id

@@ -14,7 +14,7 @@
 module SharedLogic.Cac where
 
 import qualified Data.Aeson as DA
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common

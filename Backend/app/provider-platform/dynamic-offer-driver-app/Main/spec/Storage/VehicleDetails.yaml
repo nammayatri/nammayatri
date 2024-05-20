@@ -3,7 +3,7 @@ imports:
   Int: Kernel.Prelude
   Id: Kernel.Types.Id
   merchantId: Domain.Types.Merchant
-  merchantOperatingCityId: Domain.Types.Merchant.MerchantOperatingCity
+  merchantOperatingCityId: Domain.Types.MerchantOperatingCity
   Variant: Domain.Types.Vehicle
 
 VehicleDetails:
