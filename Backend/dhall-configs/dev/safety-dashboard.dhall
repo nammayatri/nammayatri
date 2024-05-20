@@ -70,6 +70,7 @@ let cacConfig =
       , tenant = "dev"
       , retryConnection = False
       , cacExpTime = +86400
+      , enablePolling = True
       }
 
 let kafkaProducerCfg =

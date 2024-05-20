@@ -62,6 +62,7 @@ let cacConfig =
       , interval = 10
       , tenants = "dev"
       , retryConnection = False
+      , enablePolling = True
       }
 
 in  { hedisCfg
