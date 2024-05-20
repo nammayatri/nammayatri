@@ -27,6 +27,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.Dr
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverBlockReason as DriverBlockReason
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverFee as DriverFee
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverInformation as DriverInformation
+import qualified "dynamic-offer-driver-app" Storage.Beam.DriverIntelligentPoolConfig as DriverIntelligentPoolConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverLicense as DriverLicense
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverPlan as DriverPlan
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverPoolConfig as DriverPoolConfig
@@ -60,12 +61,10 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.LocationMapping as Loca
 import qualified "dynamic-offer-driver-app" Storage.Beam.Mandate as Mandate
 import qualified "dynamic-offer-driver-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant as Merchant
-import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverIntelligentPoolConfig as DriverIntelligentPoolConfig
-import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantMessage as MerchantMessage
-import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantPaymentMethod as MerchantPaymentMethod
-import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantServiceConfig as MerchantServiceConfig
-import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
-import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.TransporterConfig as TransporterConfig
+import qualified "dynamic-offer-driver-app" Storage.Beam.MerchantMessage as MerchantMessage
+import qualified "dynamic-offer-driver-app" Storage.Beam.MerchantPaymentMethod as MerchantPaymentMethod
+import qualified "dynamic-offer-driver-app" Storage.Beam.MerchantServiceConfig as MerchantServiceConfig
+import qualified "dynamic-offer-driver-app" Storage.Beam.MerchantServiceUsageConfig as MerchantServiceUsageConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.Message as Message
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageReport as MessageReport
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageTranslation as MessageTranslation
@@ -82,6 +81,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.RiderDetails as RiderDe
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestForDriver as SearchRequestForDriver
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchTry as SearchTry
+import qualified "dynamic-offer-driver-app" Storage.Beam.TransporterConfig as TransporterConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Vehicle as Vehicle
 import qualified "dynamic-offer-driver-app" Storage.Beam.VehicleRegistrationCertificate as VehicleRegistrationCertificate
 import qualified "dynamic-offer-driver-app" Storage.Beam.Volunteer as Volunteer

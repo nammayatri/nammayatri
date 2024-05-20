@@ -1,7 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN verification_providers_priority_list text[] Not NULL DEFAULT '{"Idfy"}';
-
-UPDATE atlas_driver_offer_bpp.merchant_service_usage_config SET verification_providers_priority_list='{"GovtData", "Idfy"}'; -- Do not run this in prod (run for particular city only.. in prod)
-
 CREATE TABLE atlas_driver_offer_bpp.govt_data_r_c  (
     id VARCHAR(36) PRIMARY KEY,
     merchant_operating_city_id VARCHAR(36) NOT NULL,

@@ -8,7 +8,7 @@ module Domain.Types.DriverFee (module Domain.Types.DriverFee, module ReExport) w
 import Data.Aeson
 import Domain.Types.Extra.DriverFee as ReExport
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Plan
 import qualified Kernel.Beam.Lib.UtilsTH
@@ -35,7 +35,7 @@ data DriverFee = DriverFee
     govtCharges :: Kernel.Types.Common.HighPrecMoney,
     id :: Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     notificationRetryCount :: Kernel.Prelude.Int,
     numRides :: Kernel.Prelude.Int,
     offerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

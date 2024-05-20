@@ -22,7 +22,7 @@ import Data.Text as Text hiding (find)
 import qualified Domain.Types.Cac as DTC
 import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Beam.Functions as KBF
 import Kernel.Prelude as KP

@@ -6,8 +6,8 @@ module Domain.Action.UI.Tokenization where
 import qualified API.Types.UI.Tokenization
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DomainMSC
+import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantServiceConfig as DomainMSC
 import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -22,7 +22,7 @@ import Tools.Error
 getDriverSdkToken ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Int ->
     Tokenize.TokenizationService ->

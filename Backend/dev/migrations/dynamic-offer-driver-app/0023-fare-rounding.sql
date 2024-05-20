@@ -1,7 +1,6 @@
-ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN estimated_fare double precision;
-UPDATE atlas_driver_offer_bpp.booking SET estimated_fare = 0;
+-- ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN estimated_fare double precision;
+-- UPDATE atlas_driver_offer_bpp.booking SET estimated_fare = 0;
 UPDATE atlas_driver_offer_bpp.driver_quote SET estimated_fare = 0;
-ALTER TABLE atlas_driver_offer_bpp.booking ALTER COLUMN estimated_fare SET NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ALTER COLUMN estimated_fare SET NOT NULL;
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver
@@ -10,6 +9,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver
 
 ALTER TABLE atlas_driver_offer_bpp.fare_policy RENAME COLUMN base_distance TO base_distance_meters;
 
+
+-- is the rounding necessary?
 ALTER TABLE atlas_driver_offer_bpp.booking
   ALTER COLUMN estimated_distance SET DATA TYPE integer
   USING round(estimated_distance);
@@ -44,9 +45,9 @@ ALTER TABLE atlas_driver_offer_bpp.ride
   ALTER COLUMN fare SET DATA TYPE integer
   USING round(fare);
 
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver
-  ALTER COLUMN distance SET DATA TYPE integer
-  USING round(distance);
+-- ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver
+--   ALTER COLUMN distance SET DATA TYPE integer
+--   USING round(distance);
 
 ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN driver_min_extra_fee integer;
 ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN driver_max_extra_fee integer;

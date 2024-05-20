@@ -187,7 +187,10 @@ library
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
       Domain.Action.UI.LmsModule
+      Domain.Action.UI.Location
       Domain.Action.UI.Maps
+      Domain.Action.UI.Merchant
+      Domain.Action.UI.MerchantServiceConfig
       Domain.Action.UI.Message
       Domain.Action.UI.OnMessage
       Domain.Action.UI.OrgAdmin
@@ -217,8 +220,6 @@ library
       Domain.Action.UI.VehicleDetails
       Domain.Action.UI.Whatsapp
       Domain.Types.Beckn.Status
-      Domain.Types.Booking
-      Domain.Types.Booking.BookingLocation
       Domain.Types.Cac
       Domain.Types.CacType
       Domain.Types.City
@@ -232,6 +233,10 @@ library
       Domain.Types.DriverStats
       Domain.Types.Extra.DriverFee
       Domain.Types.Extra.FareProduct
+      Domain.Types.Extra.Location
+      Domain.Types.Extra.MerchantMessage
+      Domain.Types.Extra.MerchantPaymentMethod
+      Domain.Types.Extra.MerchantServiceConfig
       Domain.Types.Extra.Plan
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
@@ -252,19 +257,8 @@ library
       Domain.Types.KioskLocation
       Domain.Types.KioskLocationTranslation
       Domain.Types.LmsEnumTypes
-      Domain.Types.Location
-      Domain.Types.LocationMapping
       Domain.Types.Mandate
       Domain.Types.Maps.PlaceNameCache
-      Domain.Types.Merchant
-      Domain.Types.Merchant.DriverIntelligentPoolConfig
-      Domain.Types.Merchant.MerchantMessage
-      Domain.Types.Merchant.MerchantOperatingCity
-      Domain.Types.Merchant.MerchantPaymentMethod
-      Domain.Types.Merchant.MerchantServiceConfig
-      Domain.Types.Merchant.MerchantServiceUsageConfig
-      Domain.Types.Merchant.Overlay
-      Domain.Types.Merchant.TransporterConfig
       Domain.Types.Message.Message
       Domain.Types.Message.MessageReport
       Domain.Types.Message.MessageTranslation
@@ -276,7 +270,6 @@ library
       Domain.Types.RideDetails
       Domain.Types.RiderDetails
       Domain.Types.RideRoute
-      Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.ServiceTierType
       Domain.Types.UtilsTH
@@ -332,6 +325,7 @@ library
       SharedLogic.GoogleTranslate
       SharedLogic.LocationMapping
       SharedLogic.Merchant
+      SharedLogic.MerchantPaymentMethod
       SharedLogic.MessageBuilder
       SharedLogic.Payment
       SharedLogic.Person
@@ -343,8 +337,6 @@ library
       SharedLogic.TollsDetector
       SharedLogic.VehicleServiceTier
       Storage.Beam.BecknRequest
-      Storage.Beam.Booking
-      Storage.Beam.Booking.BookingLocation
       Storage.Beam.Coins.CoinHistory
       Storage.Beam.Coins.CoinsConfig
       Storage.Beam.Common
@@ -376,19 +368,8 @@ library
       Storage.Beam.IssueManagement
       Storage.Beam.KioskLocation
       Storage.Beam.KioskLocationTranslation
-      Storage.Beam.Location
-      Storage.Beam.LocationMapping
       Storage.Beam.Mandate
       Storage.Beam.Maps.PlaceNameCache
-      Storage.Beam.Merchant
-      Storage.Beam.Merchant.DriverIntelligentPoolConfig
-      Storage.Beam.Merchant.MerchantMessage
-      Storage.Beam.Merchant.MerchantOperatingCity
-      Storage.Beam.Merchant.MerchantPaymentMethod
-      Storage.Beam.Merchant.MerchantServiceConfig
-      Storage.Beam.Merchant.MerchantServiceUsageConfig
-      Storage.Beam.Merchant.Overlay
-      Storage.Beam.Merchant.TransporterConfig
       Storage.Beam.Message.Message
       Storage.Beam.Message.MessageReport
       Storage.Beam.Message.MessageTranslation
@@ -398,7 +379,6 @@ library
       Storage.Beam.RegistryMapFallback
       Storage.Beam.RideDetails
       Storage.Beam.RiderDetails
-      Storage.Beam.SearchRequest
       Storage.Beam.SearchRequest.SearchReqLocation
       Storage.Beam.SystemConfigs
       Storage.Cac.DriverIntelligentPoolConfig
@@ -456,10 +436,9 @@ library
       Storage.Clickhouse.DriverFee
       Storage.Clickhouse.Ride
       Storage.Clickhouse.RideDetails
-      Storage.Queries.Booking
-      Storage.Queries.Booking.BookingLocation
       Storage.Queries.Booking.Internal
       Storage.Queries.BookingCancellationReasonExtra
+      Storage.Queries.BookingExtra
       Storage.Queries.BusinessEventExtra
       Storage.Queries.CallStatusExtra
       Storage.Queries.Coins.CoinHistory
@@ -507,19 +486,13 @@ library
       Storage.Queries.Invoice
       Storage.Queries.KioskLocation
       Storage.Queries.KioskLocationTranslation
-      Storage.Queries.Location
-      Storage.Queries.LocationMapping
+      Storage.Queries.LocationExtra
+      Storage.Queries.LocationMappingExtra
       Storage.Queries.Mandate
       Storage.Queries.Maps.PlaceNameCache
-      Storage.Queries.Merchant
-      Storage.Queries.Merchant.DriverIntelligentPoolConfig
-      Storage.Queries.Merchant.MerchantMessage
-      Storage.Queries.Merchant.MerchantOperatingCity
-      Storage.Queries.Merchant.MerchantPaymentMethod
-      Storage.Queries.Merchant.MerchantServiceConfig
-      Storage.Queries.Merchant.MerchantServiceUsageConfig
-      Storage.Queries.Merchant.Overlay
-      Storage.Queries.Merchant.TransporterConfig
+      Storage.Queries.MerchantExtra
+      Storage.Queries.MerchantPaymentMethodExtra
+      Storage.Queries.MerchantServiceConfigExtra
       Storage.Queries.Message.Message
       Storage.Queries.Message.MessageReport
       Storage.Queries.Message.MessageTranslation
@@ -538,15 +511,22 @@ library
       Storage.Queries.RideDetails
       Storage.Queries.RideExtra
       Storage.Queries.RiderDetails
-      Storage.Queries.SearchRequest
       Storage.Queries.SearchRequest.SearchReqLocation
+      Storage.Queries.SearchRequestExtra
       Storage.Queries.SearchRequestForDriverExtra
       Storage.Queries.SearchTryExtra
       Storage.Queries.Status
+      Storage.Queries.Transformers.Booking
+      Storage.Queries.Transformers.BookingLocation
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.DocumentVerificationConfig
       Storage.Queries.Transformers.DriverFee
       Storage.Queries.Transformers.DriverQuote
+      Storage.Queries.Transformers.Location
+      Storage.Queries.Transformers.MerchantMessage
+      Storage.Queries.Transformers.MerchantPaymentMethod
+      Storage.Queries.Transformers.MerchantServiceConfig
+      Storage.Queries.Transformers.Overlay
       Storage.Queries.Transformers.Person
       Storage.Queries.Transformers.QuestionInformation
       Storage.Queries.Transformers.ReelsData
@@ -555,6 +535,7 @@ library
       Storage.Queries.Transformers.SearchRequestForDriver
       Storage.Queries.Transformers.SearchTry
       Storage.Queries.TranslationsExtra
+      Storage.Queries.TransporterConfigExtra
       Storage.Queries.Vehicle.Internal
       Storage.Queries.VehicleDetailsExtra
       Storage.Queries.VehicleExtra
@@ -603,7 +584,9 @@ library
       Domain.Types.BecknConfig
       Domain.Types.BlackListOrg
       Domain.Types.BlockedRoute
+      Domain.Types.Booking
       Domain.Types.BookingCancellationReason
+      Domain.Types.BookingLocation
       Domain.Types.BookingUpdateRequest
       Domain.Types.BusinessEvent
       Domain.Types.CallStatus
@@ -615,6 +598,7 @@ library
       Domain.Types.DriverBlockReason
       Domain.Types.DriverFee
       Domain.Types.DriverInformation
+      Domain.Types.DriverIntelligentPoolConfig
       Domain.Types.DriverLicense
       Domain.Types.DriverModuleCompletion
       Domain.Types.DriverPanCard
@@ -637,9 +621,18 @@ library
       Domain.Types.LmsModuleTranslation
       Domain.Types.LmsModuleVideoInformation
       Domain.Types.LmsVideoTranslation
+      Domain.Types.Location
+      Domain.Types.LocationMapping
+      Domain.Types.Merchant
+      Domain.Types.MerchantMessage
+      Domain.Types.MerchantOperatingCity
+      Domain.Types.MerchantPaymentMethod
+      Domain.Types.MerchantServiceConfig
+      Domain.Types.MerchantServiceUsageConfig
       Domain.Types.MerchantState
       Domain.Types.MetaData
       Domain.Types.ModuleCompletionInformation
+      Domain.Types.Overlay
       Domain.Types.Person
       Domain.Types.Plan
       Domain.Types.PlanTranslation
@@ -650,11 +643,13 @@ library
       Domain.Types.ReelsData
       Domain.Types.RegistrationToken
       Domain.Types.Ride
+      Domain.Types.SearchRequest
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
       Domain.Types.SubscriptionConfig
       Domain.Types.Toll
       Domain.Types.Translations
+      Domain.Types.TransporterConfig
       Domain.Types.ValueAddNP
       Domain.Types.Vehicle
       Domain.Types.VehicleDetails
@@ -673,7 +668,9 @@ library
       Storage.Beam.BecknConfig
       Storage.Beam.BlackListOrg
       Storage.Beam.BlockedRoute
+      Storage.Beam.Booking
       Storage.Beam.BookingCancellationReason
+      Storage.Beam.BookingLocation
       Storage.Beam.BookingUpdateRequest
       Storage.Beam.BusinessEvent
       Storage.Beam.CallStatus
@@ -685,6 +682,7 @@ library
       Storage.Beam.DriverBlockReason
       Storage.Beam.DriverFee
       Storage.Beam.DriverInformation
+      Storage.Beam.DriverIntelligentPoolConfig
       Storage.Beam.DriverLicense
       Storage.Beam.DriverModuleCompletion
       Storage.Beam.DriverPanCard
@@ -707,9 +705,18 @@ library
       Storage.Beam.LmsModuleTranslation
       Storage.Beam.LmsModuleVideoInformation
       Storage.Beam.LmsVideoTranslation
+      Storage.Beam.Location
+      Storage.Beam.LocationMapping
+      Storage.Beam.Merchant
+      Storage.Beam.MerchantMessage
+      Storage.Beam.MerchantOperatingCity
+      Storage.Beam.MerchantPaymentMethod
+      Storage.Beam.MerchantServiceConfig
+      Storage.Beam.MerchantServiceUsageConfig
       Storage.Beam.MerchantState
       Storage.Beam.MetaData
       Storage.Beam.ModuleCompletionInformation
+      Storage.Beam.Overlay
       Storage.Beam.Person
       Storage.Beam.Plan
       Storage.Beam.PlanTranslation
@@ -720,11 +727,13 @@ library
       Storage.Beam.ReelsData
       Storage.Beam.RegistrationToken
       Storage.Beam.Ride
+      Storage.Beam.SearchRequest
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchTry
       Storage.Beam.SubscriptionConfig
       Storage.Beam.Toll
       Storage.Beam.Translations
+      Storage.Beam.TransporterConfig
       Storage.Beam.ValueAddNP
       Storage.Beam.Vehicle
       Storage.Beam.VehicleDetails
@@ -743,7 +752,9 @@ library
       Storage.Queries.BecknConfig
       Storage.Queries.BlackListOrg
       Storage.Queries.BlockedRoute
+      Storage.Queries.Booking
       Storage.Queries.BookingCancellationReason
+      Storage.Queries.BookingLocation
       Storage.Queries.BookingUpdateRequest
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatus
@@ -755,6 +766,7 @@ library
       Storage.Queries.DriverBlockReason
       Storage.Queries.DriverFee
       Storage.Queries.DriverInformation
+      Storage.Queries.DriverIntelligentPoolConfig
       Storage.Queries.DriverLicense
       Storage.Queries.DriverModuleCompletion
       Storage.Queries.DriverPanCard
@@ -777,9 +789,18 @@ library
       Storage.Queries.LmsModuleTranslation
       Storage.Queries.LmsModuleVideoInformation
       Storage.Queries.LmsVideoTranslation
+      Storage.Queries.Location
+      Storage.Queries.LocationMapping
+      Storage.Queries.Merchant
+      Storage.Queries.MerchantMessage
+      Storage.Queries.MerchantOperatingCity
+      Storage.Queries.MerchantPaymentMethod
+      Storage.Queries.MerchantServiceConfig
+      Storage.Queries.MerchantServiceUsageConfig
       Storage.Queries.MerchantState
       Storage.Queries.MetaData
       Storage.Queries.ModuleCompletionInformation
+      Storage.Queries.OrphanInstances.Booking
       Storage.Queries.OrphanInstances.BookingCancellationReason
       Storage.Queries.OrphanInstances.BusinessEvent
       Storage.Queries.OrphanInstances.CallStatus
@@ -799,20 +820,27 @@ library
       Storage.Queries.OrphanInstances.FareProduct
       Storage.Queries.OrphanInstances.FleetRCAssociation
       Storage.Queries.OrphanInstances.Image
+      Storage.Queries.OrphanInstances.Location
+      Storage.Queries.OrphanInstances.LocationMapping
+      Storage.Queries.OrphanInstances.Merchant
+      Storage.Queries.OrphanInstances.MerchantPaymentMethod
+      Storage.Queries.OrphanInstances.MerchantServiceConfig
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.Plan
       Storage.Queries.OrphanInstances.PurchaseHistory
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
+      Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.SearchRequestForDriver
       Storage.Queries.OrphanInstances.SearchTry
       Storage.Queries.OrphanInstances.Translations
+      Storage.Queries.OrphanInstances.TransporterConfig
       Storage.Queries.OrphanInstances.Vehicle
       Storage.Queries.OrphanInstances.VehicleDetails
       Storage.Queries.OrphanInstances.VehicleRegistrationCertificate
-      Storage.Queries.OrphanInstances.Volunteer
       Storage.Queries.OrphanInstances.WhiteListOrg
+      Storage.Queries.Overlay
       Storage.Queries.Person
       Storage.Queries.Plan
       Storage.Queries.PlanTranslation
@@ -823,11 +851,13 @@ library
       Storage.Queries.ReelsData
       Storage.Queries.RegistrationToken
       Storage.Queries.Ride
+      Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
       Storage.Queries.SubscriptionConfig
       Storage.Queries.Toll
       Storage.Queries.Translations
+      Storage.Queries.TransporterConfig
       Storage.Queries.ValueAddNP
       Storage.Queries.Vehicle
       Storage.Queries.VehicleDetails

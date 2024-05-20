@@ -17,12 +17,12 @@
 module Mobility.ARDU.MapsConfig where
 
 import "dynamic-offer-driver-app" Domain.Types.Merchant
-import "dynamic-offer-driver-app" Domain.Types.Merchant.MerchantServiceConfig
+import "dynamic-offer-driver-app" Domain.Types.MerchantServiceConfig
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Mobility.ARDU.Fixtures as Fixtures
-import qualified "dynamic-offer-driver-app" Storage.Queries.Merchant.MerchantServiceConfig as QMSC
+import qualified "dynamic-offer-driver-app" Storage.Queries.MerchantServiceConfig as QMSC
 import Test.Hspec
 import "dynamic-offer-driver-app" Tools.Maps
 import Utils

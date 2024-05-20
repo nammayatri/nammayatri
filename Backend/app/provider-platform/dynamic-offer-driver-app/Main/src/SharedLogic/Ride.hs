@@ -20,7 +20,7 @@ import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DGetHomeRequest
 import Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DTMM
+import qualified Domain.Types.MerchantOperatingCity as DTMM
 import Domain.Types.Person
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide

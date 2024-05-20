@@ -23,7 +23,7 @@ import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Types.DriverPlan as DDPlan
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.Merchant.MerchantMessage as DMM
+import Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.Plan as DPlan
 import Environment
 import Kernel.Prelude

@@ -36,8 +36,8 @@ where
 
 import qualified Data.Map as M
 import qualified Data.Text as T
-import qualified Domain.Types.Merchant.MerchantMessage as DMM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantMessage as DMM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Message.Message as Message
 import qualified Domain.Types.Person as P
 import Environment

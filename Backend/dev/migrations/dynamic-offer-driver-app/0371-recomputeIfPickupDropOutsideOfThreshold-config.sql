@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN recompute_if_pickup_drop_not_outside_of_threshold boolean DEFAULT true;

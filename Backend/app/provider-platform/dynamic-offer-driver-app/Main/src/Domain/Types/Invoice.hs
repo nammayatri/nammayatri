@@ -2,7 +2,7 @@ module Domain.Types.Invoice where
 
 import Data.Aeson
 import qualified Domain.Types.DriverFee as DF
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
 import Domain.Types.Plan (ServiceNames)
 import Kernel.Prelude

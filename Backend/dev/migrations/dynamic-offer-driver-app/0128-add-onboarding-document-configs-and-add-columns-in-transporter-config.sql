@@ -1,12 +1,12 @@
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN onboarding_try_limit INTEGER ;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN onboarding_retry_timein_hours INTEGER ;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN check_image_extraction_for_dashboard BOOLEAN ;
+--ONLY LOCAL SYNC
 UPDATE atlas_driver_offer_bpp.transporter_config SET onboarding_try_limit=3;
-UPDATE atlas_driver_offer_bpp.transporter_config SET onboarding_retry_timein_hours=24;
+UPDATE atlas_driver_offer_bpp.transporter_config SET onboarding_retry_time_in_hours=24;
 UPDATE atlas_driver_offer_bpp.transporter_config SET check_image_extraction_for_dashboard=true;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN onboarding_try_limit SET NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN onboarding_retry_timein_hours SET NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN onboarding_retry_time_in_hours SET NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN check_image_extraction_for_dashboard SET NOT NULL;
+
+
 
 CREATE TABLE atlas_driver_offer_bpp.onboarding_document_configs (
 merchant_id character(36) NOT NULL REFERENCES atlas_driver_offer_bpp.merchant (id),

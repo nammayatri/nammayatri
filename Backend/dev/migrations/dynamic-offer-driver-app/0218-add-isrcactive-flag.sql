@@ -17,7 +17,4 @@ update atlas_driver_offer_bpp.driver_rc_association as T1 set associated_till = 
 ALTER TABLE atlas_driver_offer_bpp.call_status ALTER COLUMN entity_id SET DEFAULT 'UNKOWN';
 ALTER TABLE atlas_driver_offer_bpp.call_status ALTER COLUMN entity_id SET NOT NULL;
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD rc_limit integer DEFAULT 3 not null;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD automatic_r_c_activation_cut_off integer DEFAULT 432000 not null; -- 5 days
-
 ---- DROPS ----

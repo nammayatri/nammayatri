@@ -58,12 +58,12 @@ import qualified Data.List.NonEmpty.Extra as NE
 import Data.Tuple.Extra (snd3)
 import Domain.Action.UI.Route as DRoute
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
+import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
+import qualified Domain.Types.DriverIntelligentPoolConfig as DIPC
 import Domain.Types.DriverPoolConfig
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.Merchant.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
-import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DIPC
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Domain.Types.RiderDetails (RiderDetails)
 import Domain.Types.SearchRequest

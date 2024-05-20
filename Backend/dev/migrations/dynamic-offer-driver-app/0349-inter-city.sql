@@ -1,5 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN state text;
-
 -- Update state based on city
 UPDATE atlas_driver_offer_bpp.merchant_operating_city
 SET state = 'Karnataka'
@@ -46,8 +44,6 @@ SET state = 'Haryana'
 WHERE city = 'Gurugram';
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ALTER COLUMN state SET NOT NULL;
-
-ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN state text;
 
 -- Update state based on city
 UPDATE atlas_driver_offer_bpp.merchant

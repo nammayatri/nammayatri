@@ -24,7 +24,7 @@ import Domain.Action.UI.Person
 import Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import qualified Domain.Types.LeaderBoardConfigs as LConfig
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.Person as SP
 import GHC.Num.Integer (integerToInt)

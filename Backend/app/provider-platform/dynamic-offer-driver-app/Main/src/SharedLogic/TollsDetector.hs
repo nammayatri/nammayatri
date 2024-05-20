@@ -9,7 +9,7 @@
 
 module SharedLogic.TollsDetector where
 
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Toll
 import qualified Kernel.Beam.Functions as B

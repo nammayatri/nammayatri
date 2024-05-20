@@ -3,7 +3,7 @@ module API.UI.LeaderBoard where
 import Data.Time
 import qualified Domain.Action.UI.LeaderBoard as DLeaderBoard
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)

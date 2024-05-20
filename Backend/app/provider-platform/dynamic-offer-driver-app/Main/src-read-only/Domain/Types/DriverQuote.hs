@@ -56,8 +56,8 @@ data DriverQuote = DriverQuote
     vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
     vehicleVariant :: Domain.Types.Vehicle.Variant
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show)
 
 data DriverQuoteStatus = Active | Inactive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverQuoteStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverQuoteStatus)

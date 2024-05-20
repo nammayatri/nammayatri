@@ -29,14 +29,14 @@ where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
-import Domain.Types.Merchant.MerchantOperatingCity
-import Domain.Types.Merchant.TransporterConfig
+import Domain.Types.MerchantOperatingCity
+import Domain.Types.TransporterConfig
 import Kernel.Prelude as KP
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.Queries.Merchant.TransporterConfig as Queries
+import qualified Storage.Queries.TransporterConfig as Queries
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m ()
 create = Queries.create

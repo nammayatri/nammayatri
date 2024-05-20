@@ -16,7 +16,7 @@ module Domain.Action.UI.City where
 
 import qualified Domain.Types.City as DTC
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity (..))
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity (..))
 import Environment
 import EulerHS.Prelude hiding (id, state)
 import Kernel.Types.Id

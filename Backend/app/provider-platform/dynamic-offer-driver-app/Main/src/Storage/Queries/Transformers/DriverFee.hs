@@ -5,8 +5,8 @@ module Storage.Queries.Transformers.DriverFee where
 
 import Domain.Types.DriverFee
 import qualified Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -19,7 +19,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
 import qualified Storage.Queries.Person as QP
 
-getMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => (Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Text -> m (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity))
+getMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => (Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Text -> m (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity))
 getMerchantOperatingCityId merchantOperatingCityId driverId id = do
   merchantOperatingCityId' <- case merchantOperatingCityId of
     Nothing -> do

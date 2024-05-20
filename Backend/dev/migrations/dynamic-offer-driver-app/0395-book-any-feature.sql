@@ -1,5 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.transporter_config add column book_any_vehicle_downgrade_level int default -1;
-
 ALTER TABLE atlas_driver_offer_bpp.quote_special_zone add column vehicle_service_tier_name text;
 ALTER TABLE atlas_driver_offer_bpp.quote_special_zone add column driver_min_fee Int;
 ALTER TABLE atlas_driver_offer_bpp.quote_special_zone add column driver_max_fee Int;

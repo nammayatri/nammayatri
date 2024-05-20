@@ -7,7 +7,7 @@ import qualified API.Types.UI.SocialLogin
 import qualified Control.Lens
 import qualified Domain.Action.UI.SocialLogin as Domain.Action.UI.SocialLogin
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
@@ -43,7 +43,7 @@ postSocialLogin a1 = withFlowHandlerAPI $ Domain.Action.UI.SocialLogin.postSocia
 postSocialUpdateProfile ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.SocialLogin.SocialUpdateProfileReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess

@@ -19,7 +19,7 @@ import qualified Domain.Types.Booking as DBooking
 import Domain.Types.DriverQuote
 import qualified Domain.Types.Estimate as ES
 import Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSearchRequest

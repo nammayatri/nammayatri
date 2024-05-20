@@ -16,7 +16,7 @@
 module Storage.CachedQueries.BlockedRoute where
 
 import Domain.Types.BlockedRoute
-import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis

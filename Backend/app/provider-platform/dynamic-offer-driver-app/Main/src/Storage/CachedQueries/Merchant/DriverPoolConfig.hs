@@ -28,7 +28,7 @@ module Storage.CachedQueries.Merchant.DriverPoolConfig
 where
 
 import Domain.Types.DriverPoolConfig
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis

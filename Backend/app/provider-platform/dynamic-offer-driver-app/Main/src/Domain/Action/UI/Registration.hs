@@ -33,10 +33,10 @@ import Domain.Action.UI.DriverReferral
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Merchant.TransporterConfig as TC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
+import qualified Domain.Types.TransporterConfig as TC
 import qualified Email.AWS.Flow as Email
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)

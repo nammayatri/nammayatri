@@ -111,13 +111,13 @@ import qualified Domain.Types.IdfyVerification as IV
 import Domain.Types.Image (Image)
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.Merchant.MerchantMessage (MediaChannel (..), MessageKey (..))
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import Domain.Types.Merchant.TransporterConfig
+import Domain.Types.MerchantMessage (MediaChannel (..), MessageKey (..))
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Message.Message as Domain
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
 import qualified Domain.Types.Ride as SRide
+import Domain.Types.TransporterConfig
 import qualified Domain.Types.Vehicle as DVeh
 import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST

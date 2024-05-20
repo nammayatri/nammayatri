@@ -1,7 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_fee_calculation_time bigint; -- this gets added to endTime of window
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_fee_calculator_batch_size int;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_fee_calculator_batch_gap bigint;
-
 -- NAMMA YATRI ----
 
 UPDATE atlas_driver_offer_bpp.plan SET cgst_percentage = 0.09 where merchant_id = 'favorit0-0000-0000-0000-00000favorit';

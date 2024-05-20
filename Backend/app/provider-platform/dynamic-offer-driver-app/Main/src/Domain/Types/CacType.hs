@@ -4,6 +4,7 @@ import qualified Data.Aeson as A
 import Data.Text as Text
 import Domain.Types.UtilsTH
 import Kernel.Prelude
+import Storage.Beam.DriverIntelligentPoolConfig as DIPC
 import Storage.Beam.DriverPoolConfig as DPC
 import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as DEFB
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as FPFB
@@ -12,8 +13,7 @@ import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails as FPRD
 import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers as FPRDDB
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as FPSS
 import Storage.Beam.GoHomeConfig as GHC
-import Storage.Beam.Merchant.DriverIntelligentPoolConfig as DIPC
-import Storage.Beam.Merchant.TransporterConfig as MTC
+import Storage.Beam.TransporterConfig as MTC
 
 checkParseCommon :: (String, A.Value) -> Bool
 checkParseCommon (key, value) = do

@@ -19,18 +19,18 @@ module Storage.Cac.TransporterConfig where
 import qualified Client.Main as CM
 import Data.Aeson as A
 import qualified Domain.Types.Cac as DTC
-import Domain.Types.Merchant.MerchantOperatingCity
-import Domain.Types.Merchant.TransporterConfig
+import Domain.Types.MerchantOperatingCity
+import Domain.Types.TransporterConfig
 import Kernel.Beam.Functions as KBF
 import Kernel.Prelude as KP
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Cac
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Beam.Merchant.TransporterConfig as SBMT
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Beam.TransporterConfig as SBMT
 import Storage.CachedQueries.Merchant.TransporterConfig as CMTC
-import Storage.Queries.Merchant.TransporterConfig ()
+import Storage.Queries.TransporterConfig ()
 import qualified Utils.Common.CacUtils as CCU
 
 getConfigFromMemory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)

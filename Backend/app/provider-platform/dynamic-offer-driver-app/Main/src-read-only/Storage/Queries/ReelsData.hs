@@ -4,8 +4,7 @@
 
 module Storage.Queries.ReelsData where
 
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ReelsData
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -27,7 +26,7 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityIdLanguageAndKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Types.Language -> Kernel.Prelude.Text -> m [Domain.Types.ReelsData.ReelsData])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Types.Language -> Kernel.Prelude.Text -> m [Domain.Types.ReelsData.ReelsData])
 findAllByMerchantOpCityIdLanguageAndKey (Kernel.Types.Id.Id merchantOperatingCityId) language reelKey = do
   findAllWithKV
     [ Se.And
