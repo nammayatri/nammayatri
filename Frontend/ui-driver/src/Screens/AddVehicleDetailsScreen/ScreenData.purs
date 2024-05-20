@@ -19,7 +19,7 @@ import Data.Maybe
 import Screens.Types
 import Foreign (Foreign)
 import Foreign.Object (Object, empty)
-import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
+import MerchantConfig.DefaultConfig (dummyCityConfig)
 import ConfigProvider
 import Screens.Types as ST
 import Data.Eq.Generic (genericEq)

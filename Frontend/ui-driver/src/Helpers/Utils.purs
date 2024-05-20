@@ -106,6 +106,7 @@ import Data.Argonaut.Core as AC
 import Data.Argonaut.Decode.Parser as ADP
 import Common.Types.Config as CTC
 import Common.Resources.Constants (assetDomain)
+import MerchantConfig.DefaultConfig as DC
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -643,56 +644,7 @@ contactSupportNumber supportType = do
 
 
 getCityConfig :: Array CityConfig -> String -> CityConfig
-getCityConfig cityConfig cityName = do
-  let dummyCityConfig = {
-                          cityName : "",
-                          mapImage : "",
-                          cityCode : "",
-                          showSubscriptions : false,
-                          cityLat : 0.0,
-                          cityLong : 0.0,
-                          supportNumber : "",
-                          supportMail: "",
-                          languageKey : "",
-                          enableYatriCoins : false,
-                          showDriverReferral : false,
-                          showCustomerReferral : false,
-                          uploadRCandDL : true,
-                          vehicleNSImg : "",
-                          registration : { 
-                            callSupport : false,
-                            supportWAN : "", 
-                            whatsappSupport : false,
-                            emailSupport : false,
-                            defVariantList : [],
-                            enableDataOfIssue: true,
-                            enableAc: true
-                          },
-                          variantSubscriptionConfig : {
-                            enableVariantBasedSubscription : true,
-                            variantList : ["AutoCategory"],
-                            enableCabsSubscriptionView : false,
-                            staticViewPlans : []
-                          },
-                          showEarningSection: true,
-                          referral : {
-                              domain : ""
-                            , customerAppId : ""
-                            , driverAppId : ""
-                          },
-                          waitingCharges : 1.50,
-                          waitingChargesConfig : {
-                            cab : {
-                              freeSeconds : 5,
-                              perMinCharges : 1.0
-                            },
-                            auto : {
-                              freeSeconds : 3,
-                              perMinCharges : 1.50
-                            }
-                          }
-                        }
-  fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig
+getCityConfig cityConfig cityName = fromMaybe DC.dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig
   
 formatSecIntoMinSecs :: Int -> String
 formatSecIntoMinSecs seconds = 

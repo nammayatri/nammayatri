@@ -686,3 +686,53 @@ defWaitingChargesConfig = {
     perMinCharges : 1.50
   }
 }
+
+dummyCityConfig :: CTC.CityConfig
+dummyCityConfig = {
+  cityName : "",
+  mapImage : "",
+  cityCode : "",
+  showSubscriptions : false,
+  cityLat : 0.0,
+  cityLong : 0.0,
+  supportNumber : "",
+  supportMail: "",
+  languageKey : "",
+  showDriverReferral : false,
+  showCustomerReferral : false,
+  uploadRCandDL : true,
+  enableYatriCoins : false,
+  vehicleNSImg : "",
+  registration : { 
+    callSupport : false,
+    supportWAN : "", 
+    whatsappSupport : false,
+    emailSupport : false,
+    enableAc: true,
+    enableDataOfIssue: true,
+    defVariantList : []
+  },
+  variantSubscriptionConfig : {
+    enableVariantBasedSubscription : true,
+    variantList : ["AutoCategory"],
+    enableCabsSubscriptionView : false,
+    staticViewPlans : []
+  },
+  showEarningSection: true,
+  referral : {
+      domain : ""
+    , customerAppId : ""
+    , driverAppId : ""
+  },
+  waitingCharges : 1.50,
+  waitingChargesConfig : {
+    cab : {
+      freeSeconds : 5,
+      perMinCharges : 1.0
+    },
+    auto : {
+      freeSeconds : 3,
+      perMinCharges : 1.50
+    }
+  }
+}

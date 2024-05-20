@@ -17,7 +17,9 @@ window.getMerchantConfig = function () {
                    "HUNDRED_PERCENT_FARE_GOES_TO_YOU" ,
                    "FARE_SHOWN_IS_FARE_YOU_GET" ,
                    "BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION" ,
-                   "OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT"],
+                   "OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT",
+                   "VEHICLE_REGISTRATION_NUMBER",
+                   "RE_ENTER_VEHICLE_REGISTRATION_NUMBER"],
     "fontType": "Assets",
     "currency": "₹",
     "isGradient" : "false",
@@ -50,7 +52,9 @@ window.getMerchantConfig = function () {
       "HUNDRED_PERCENT_FARE_GOES_TO_YOU" : "Happy Drivers, Happy\nJourneys!",
       "FARE_SHOWN_IS_FARE_YOU_GET" : "Fair wages for you and fair prices for\n your customers. 100% transparent!",
       "BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION" : "Connecting Minneapolis!",
-      "OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT" : "App by the Drivers, for the People.\n People before profits, always!"
+      "OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT" : "App by the Drivers, for the People.\n People before profits, always!",
+      "VEHICLE_REGISTRATION_NUMBER": "Vehicle Number Plate",
+      "RE_ENTER_VEHICLE_REGISTRATION_NUMBER": "Re-enter Vehicle Number Plate"
     },
     "hindiStrings": {
       "NEED_IT_TO_ENABLE_LOCATION": "नम्मा यात्री पार्टनर ड्राइवर के लोकेशन की निगरानी के लिए अपना स्थान साझा करने के लिए लोकेशन डेटा एकत्र करता है, तब भी जब ऐप बंद हो या उपयोग में न हो।",

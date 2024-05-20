@@ -355,7 +355,7 @@ listItem push item state =
     , orientation HORIZONTAL
     , padding $ Padding 12 12 12 12
     , cornerRadius 8.0
-    , visibility $ boolToVisibility $ compVisibility item
+    , visibility $ boolToVisibility $ not item.isHidden
     , stroke $ componentStroke state item
     , background $ compBg state item
     , clickable $ compClickable state item

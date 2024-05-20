@@ -16,7 +16,7 @@ module Screens.DocumentCaptureScreen.ScreenData where
 
 import Screens.Types as ST
 import Data.Maybe(Maybe(..))
-import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
+import MerchantConfig.DefaultConfig (dummyCityConfig)
 
 initData :: ST.DocumentCaptureScreenState
 initData =

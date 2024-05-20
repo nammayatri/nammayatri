@@ -199,7 +199,6 @@ makeTriggerOTPReq state (LatLon lat lng _) = TriggerOTPReq
         latitude = mkLatLon lat
         longitude = mkLatLon lng
         config = getAppConfig appConfig
-        cityConfig = config.flowConfig.chooseCity
     in
     {
       mobileNumber      : if config.enterMobileNumberScreen.emailAuth then Nothing else Just state.data.mobileNumber,
@@ -1528,7 +1527,6 @@ makeSocialLogin state (LatLon lat lng _) =
         latitude = mkLatLon lat
         longitude = mkLatLon lng
         config = getAppConfig appConfig
-        cityConfig = config.flowConfig.chooseCity
     in
     SocialLoginReq {
         email : state.data.email,

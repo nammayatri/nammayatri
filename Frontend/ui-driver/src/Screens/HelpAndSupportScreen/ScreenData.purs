@@ -20,7 +20,7 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Screens.Types as ST
 import Common.Types.Config (CityConfig)
-import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
+import MerchantConfig.DefaultConfig (dummyCityConfig)
 import Screens as Screen
 
 

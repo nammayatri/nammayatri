@@ -60,11 +60,17 @@ view carouselItem push state =
         , padding $ PaddingVertical safeMarginTop $ safeMarginBottomWithDefault 24
         ][
           linearLayout[weight 1.0, width MATCH_PARENT][]  
-          , imageView
-            [ height $ V 50
-            , width $ V 147
-            , imageWithFallback $ HU.fetchImage HU.FF_ASSET $ if (getMerchant Common.FunctionCall) == BRIDGE then "ny_ic_bridge_logo" else "ic_namma_yatri_logo"
-            ]
+          , linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , gravity CENTER
+              ]
+              [ imageView
+                  [ height $ V 50
+                  , width $ V 147
+                  , imageWithFallback $ HU.fetchImage HU.FF_ASSET $ if (getMerchant Common.FunctionCall) == BRIDGE then "ny_ic_bridge_logo" else "ic_namma_yatri_logo"
+                  ]
+              ]
             , carouselView carouselItem config state push list
             , linearLayout[weight 1.0, width MATCH_PARENT][]
             , scrollIndicator state push list

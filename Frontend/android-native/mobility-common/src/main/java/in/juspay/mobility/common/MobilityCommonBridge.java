@@ -2828,17 +2828,21 @@ public class MobilityCommonBridge extends HyperBridge {
                     }
                 });
 
-                switch (label) {
-                    case DatePickerLabels.MINIMUM_EIGHTEEN_YEARS:
-                        Calendar maxDateDOB = Calendar.getInstance();
-                        maxDateDOB.set(Calendar.DAY_OF_MONTH, mDate);
-                        maxDateDOB.set(Calendar.MONTH, mMonth);
-                        maxDateDOB.set(Calendar.YEAR, mYear - 18);
-                        datePickerDialog.getDatePicker().setMaxDate(maxDateDOB.getTimeInMillis());
-                        break;
-                    case DatePickerLabels.MAXIMUM_PRESENT_DATE:
-                        datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis() - 1000);
-                        break;
+                if (label.equals(DatePickerLabels.MINIMUM_EIGHTEEN_YEARS)) {
+                    Calendar maxDateDOB = Calendar.getInstance();
+                    maxDateDOB.set(Calendar.DAY_OF_MONTH, mDate);
+                    maxDateDOB.set(Calendar.MONTH, mMonth);
+                    maxDateDOB.set(Calendar.YEAR, mYear - 18);
+                    datePickerDialog.getDatePicker().setMaxDate(maxDateDOB.getTimeInMillis());
+                } else if (label.equals(DatePickerLabels.MAXIMUM_PRESENT_DATE)) {
+                    datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis() - 1000);
+                } else if (label.contains(DatePickerLabels.MINIMUM_YEARS)) {
+                    String[] strArray = label.split(",");
+                    Calendar maxDateDOB = Calendar.getInstance();
+                    maxDateDOB.set(Calendar.DAY_OF_MONTH, mDate);
+                    maxDateDOB.set(Calendar.MONTH, mMonth);
+                    maxDateDOB.set(Calendar.YEAR, mYear - Integer.parseInt(strArray[1]));
+                    datePickerDialog.getDatePicker().setMaxDate(maxDateDOB.getTimeInMillis());
                 }
                 if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N)
                     datePickerDialog.setTitle(bridgeComponents.getContext().getString(R.string.select_date));
@@ -3513,6 +3517,7 @@ public class MobilityCommonBridge extends HyperBridge {
     private static class DatePickerLabels {
         private static final String MAXIMUM_PRESENT_DATE = "MAXIMUM_PRESENT_DATE";
         private static final String MINIMUM_EIGHTEEN_YEARS = "MINIMUM_EIGHTEEN_YEARS";
+        private static final String MINIMUM_YEARS = "MINIMUM_YEARS";
         private static final String MIN_EIGHTEEN_MAX_SIXTY_YEARS = "MIN_EIGHTEEN_MAX_SIXTY_YEARS";
         private static final String MAX_THIRTY_DAYS_FROM_CURRENT_DATE = "MAX_THIRTY_DAYS_FROM_CURRENT_DATE";
     }

@@ -33,7 +33,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, map, pure, unit, not, ($), (/), (==), (<>), (<<<), (&&), (||), (<), (/=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, progressBar, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, progressBar, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width, progressBarColor)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (StageStatus(..), ValidationStatus(..))
 import Styles.Colors as Color
@@ -73,9 +73,9 @@ view push state =
               , height WRAP_CONTENT
               , gravity CENTER
               ][  progressBar
-                  [ width WRAP_CONTENT
-                  , height WRAP_CONTENT
-                  , stroke $ (if EHC.os == "IOS" then "0," else "") <> Color.grey900
+                  [ width $ V 28
+                  , height $ V 28
+                  , progressBarColor Color.white900
                   , visibility if state.verificationStatus == InProgress then VISIBLE else GONE
                   ]
                 , textView

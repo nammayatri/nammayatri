@@ -301,7 +301,7 @@ vehicleRegistrationNumber state push =
           ][  textView
               ([ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text (getString VEHICLE_REGISTRATION_NUMBER)
+              , text $ getString $ VEHICLE_REGISTRATION_NUMBER "VEHICLE_REGISTRATION_NUMBER"
               , color Color.greyTextColor
               , margin (MarginBottom 12)
               ] <> FontStyle.body3 TypoGraphy)
@@ -373,7 +373,7 @@ vehicleRegistrationNumber state push =
               ][  textView
                   ([ width WRAP_CONTENT
                   , height WRAP_CONTENT
-                  , text (getString RE_ENTER_VEHICLE_REGISTRATION_NUMBER)
+                  , text $ getString $ RE_ENTER_VEHICLE_REGISTRATION_NUMBER "RE_ENTER_VEHICLE_REGISTRATION_NUMBER"
                   , color Color.greyTextColor
                   , margin (MarginVertical 10 10)
                   ] <> FontStyle.body3 TypoGraphy)
@@ -820,8 +820,8 @@ rightWrongView isRight =
   , margin $ MarginBottom 16
   ][ imageView
     [ width $ V 120
-    , height $ V if isRight then 80 else 100
-    , imageWithFallback $ fetchImage FF_ASSET if isRight then "ny_ic_upload_right" else "ny_ic_image_wrong"
+    , height $ V 100
+    , imageWithFallback $ fetchImage FF_ASSET if isRight then "ny_ic_upload_rc_right" else "ny_ic_upload_rc_wrong"
     ]
   , linearLayout
     [ width MATCH_PARENT
