@@ -52,6 +52,7 @@ import Kernel.Prelude (roundToIntegral)
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
+import Kernel.Types.Confidence
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
@@ -351,11 +352,11 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                     let distanceCalculationFailure = distanceCalculationFailed || (maybe False (> 0) updRide.numberOfSelfTuned)
                         driverDeviationToTollRoute = fromMaybe False updRide.driverDeviatedToTollRoute
                     if (isJust updRide.tollCharges && driverDeviationToTollRoute && distanceCalculationFailure)
-                      then (updRide.tollCharges, updRide.tollNames, Just DRide.Neutral)
+                      then (updRide.tollCharges, updRide.tollNames, Just Neutral)
                       else
                         if (isJust updRide.estimatedTollCharges || isJust updRide.tollCharges) && distanceCalculationFailure
-                          then (Nothing, Nothing, Just DRide.Unsure)
-                          else (updRide.tollCharges, updRide.tollNames, Just DRide.Sure)
+                          then (Nothing, Nothing, Just Unsure)
+                          else (updRide.tollCharges, updRide.tollNames, Just Sure)
 
               let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollConfidence = tollConfidence}
 

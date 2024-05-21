@@ -19,6 +19,7 @@ imports:
   DeviceType: Kernel.Types.Version
   Version: Kernel.Types.Version
   TripCategory: Domain.Types.Common
+  Confidence: Kernel.Types.Confidence
 
 Ride:
   tableName: ride
@@ -32,9 +33,6 @@ Ride:
       derive: "Eq"
     RideStatus:
       enum: "NEW,INPROGRESS,COMPLETED,CANCELLED"
-      derive: "'ListInstance,HttpInstance"
-    Confidence:
-      enum: "Sure,Unsure,Neutral"
       derive: "'ListInstance,HttpInstance"
   fields:
     id: Id Ride

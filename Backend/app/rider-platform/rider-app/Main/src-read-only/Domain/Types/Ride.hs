@@ -15,6 +15,7 @@ import qualified Domain.Types.VehicleVariant
 import qualified Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Confidence
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import Kernel.Utils.TH
@@ -59,6 +60,7 @@ data Ride = Ride
     startOdometerReading :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     status :: Domain.Types.Ride.RideStatus,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
+    tollConfidence :: Kernel.Prelude.Maybe Kernel.Types.Confidence.Confidence,
     totalFare :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     trackingUrl :: Kernel.Prelude.Maybe Kernel.Types.Common.BaseUrl,
     traveledDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
@@ -108,6 +110,6 @@ data RideAPIEntity = RideAPIEntity
 
 data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
 
-$(mkHttpInstancesForEnum ''RideStatus)
+$(mkHttpInstancesForEnum (''RideStatus))

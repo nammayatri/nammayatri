@@ -61,6 +61,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common hiding (mkPrice)
 import qualified Kernel.Types.Common as Common
+import Kernel.Types.Confidence
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (mkPrice)
 import SharedLogic.DriverPool.Types
@@ -661,6 +662,35 @@ mkOdometerTagGroupV2 startOdometerReading' =
                             descriptorShortDesc = Nothing
                           },
                     tagValue = Just $ show startOdometerReading
+                  }
+              ]
+        }
+    ]
+
+mkTollConfidenceTagGroupV2 :: Maybe Confidence -> Maybe [Spec.TagGroup]
+mkTollConfidenceTagGroupV2 tollConfidence' =
+  tollConfidence' <&> \tollConfidence ->
+    [ Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.TOLL_CONFIDENCE_INFO,
+                  descriptorName = Just "Toll Confidence Info",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDisplay = Just False,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.TOLL_CONFIDENCE,
+                            descriptorName = Just "Toll Confidence (Sure/Unsure/Neutral)",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ show tollConfidence
                   }
               ]
         }
