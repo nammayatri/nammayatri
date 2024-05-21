@@ -72,7 +72,6 @@
         <service
             android:name=".LocationUpdateService"
             android:exported="false"
-            android:foregroundServiceType="location"
             android:largeHeap="true"
             android:stopWithTask="false" />
         <service
@@ -125,7 +124,6 @@
         <service
             android:name=".GpsListeningService"
             android:exported="false"
-            android:foregroundServiceType="location"
             android:stopWithTask="false" />
         <service
             android:name=".ChatService"
