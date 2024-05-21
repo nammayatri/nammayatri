@@ -4,11 +4,11 @@ plugins {
 
 android {
     namespace 'in.juspay.mobility.driver'
-    compileSdk 34
+    compileSdk 33
 
     defaultConfig {
         minSdk 23
-        targetSdk 34
+        targetSdk 33
         versionName "1.2.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
