@@ -656,6 +656,9 @@ buildDriverLocationListItem f = do
 mobileIndianCode :: Text
 mobileIndianCode = "+91"
 
+appendPlusInMobileCountryCode :: Maybe Text -> Maybe Text
+appendPlusInMobileCountryCode = fmap (\code -> if "+" `T.isPrefixOf` code then code else "+" <> code)
+
 driverInfo :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> Flow Common.DriverInfoRes
 driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber fleetOwnerId mbFleet = do
   when mbFleet $ do
@@ -669,7 +672,7 @@ driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNu
   driverWithRidesCount <- case (mbMobileNumber, mbVehicleNumber, mbDlNumber, mbRcNumber) of
     (Just mobileNumber, Nothing, Nothing, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
-      let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
+      let mobileCountryCode = fromMaybe mobileIndianCode (appendPlusInMobileCountryCode mbMobileCountryCode)
       B.runInReplica $
         QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing
           >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
@@ -1991,7 +1994,7 @@ getOperatingCity merchantShortId _ mbMobileCountryCode mbMobileNumber mbRideId =
       return $ Common.GetOperatingCityResp {operatingCity = city.city}
     (_, Just mobileNumber) -> do
       mobileNumberHash <- getDbHash mobileNumber
-      driver <- QPerson.findByMobileNumberAndMerchantAndRole (fromMaybe "+91" mbMobileCountryCode) mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
+      driver <- QPerson.findByMobileNumberAndMerchantAndRole (fromMaybe "+91" (appendPlusInMobileCountryCode mbMobileCountryCode)) mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
       let operatingCityId = driver.merchantOperatingCityId
       city <- CQMOC.findById operatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId)
       return $ Common.GetOperatingCityResp {operatingCity = city.city}
