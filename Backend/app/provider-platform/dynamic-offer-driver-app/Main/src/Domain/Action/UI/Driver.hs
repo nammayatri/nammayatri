@@ -1029,6 +1029,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             { farePolicy = farePolicy,
               actualDistance = searchReq.estimatedDistance,
               rideTime = sReqFD.startTime,
+              returnTime = searchReq.returnTime,
+              roundTrip = fromMaybe False searchReq.roundTrip,
               waitingTime = Nothing,
               actualRideDuration = Nothing,
               avgSpeedOfVehicle = Nothing,
@@ -1038,7 +1040,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               customerCancellationDues = searchReq.customerCancellationDues,
               tollCharges = searchReq.tollCharges,
               estimatedRideDuration = Nothing,
-              nightShiftOverlapChecking = DTC.isRentalTrip searchTry.tripCategory,
+              nightShiftOverlapChecking = DTC.isFixedNightCharge searchTry.tripCategory,
               estimatedDistance = Nothing,
               timeDiffFromUtc = Nothing,
               currency = searchReq.currency,
@@ -1096,6 +1098,7 @@ getStats (driverId, _, merchantOpCityId) date = do
               ProgressiveDetails det -> Just (deadKmFare det)
               SlabDetails _ -> Nothing
               RentalDetails _ -> Nothing
+              InterCityDetails det -> Just (pickupCharge det)
           )
           fareParameters
   let bonusEarning = GHCL.sum driverSelFares + GHCL.sum customerExtFees + GHCL.sum deadKmFares

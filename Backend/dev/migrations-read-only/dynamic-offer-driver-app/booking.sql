@@ -50,3 +50,9 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN currency character varying
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN estimate_id character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN round_trip boolean ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN return_time timestamp with time zone ;

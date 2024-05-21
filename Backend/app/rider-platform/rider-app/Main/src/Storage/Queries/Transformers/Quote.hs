@@ -28,6 +28,7 @@ import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverOffer as QueryDO
+import Storage.Queries.InterCityDetails as QueryICD
 import Storage.Queries.RentalDetails as QueryRD
 import Storage.Queries.SpecialZoneQuote as QuerySZQ
 import qualified Storage.Queries.TripTerms as QTT
@@ -76,8 +77,11 @@ getQuoteDetails fareProductType distanceToNearestDriver rentalDetailsId driverOf
       maybe (pure Nothing) (pure . Just . DQ.OneWaySpecialZoneDetails) res
 
     getInterCityQuote specialZoneQuoteId' = do
-      res <- maybe (pure Nothing) (QuerySZQ.findById . Id) specialZoneQuoteId'
-      maybe (pure Nothing) (pure . Just . DQ.InterCityDetails) res
+      case specialZoneQuoteId' of
+        Just quoteId -> do
+          mbInterCityDetails <- QueryICD.findById (Id quoteId)
+          maybe (pure Nothing) (pure . Just . DQ.InterCityDetails) mbInterCityDetails
+        Nothing -> pure Nothing
 
 getTripTerms :: (CoreMetrics m, MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, MonadReader r m) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms))
 getTripTerms tripTermsId = if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing

@@ -29,7 +29,7 @@ where
 import qualified BecknV2.OnDemand.Enums as Enums
 import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant hiding (NightShiftChargeAPIEntity (..), Variant (..), WaitingChargeAPIEntity (..))
 import qualified Data.List.NonEmpty as NE
-import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
+import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import Domain.Types.Common
 import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as DFParams
@@ -37,7 +37,7 @@ import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.ServiceTierType
 import Domain.Types.TransporterConfig (AvgSpeedOfVechilePerKm)
-import EulerHS.Prelude hiding (id, map)
+import EulerHS.Prelude hiding (id, map, sum)
 import Kernel.Prelude
 import Kernel.Utils.Common hiding (isTimeWithinBounds, mkPrice)
 
@@ -108,6 +108,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       DFParams.ProgressiveDetails det -> mkFPProgressiveDetailsBreakupList dayPartRate det
       DFParams.SlabDetails det -> mkFPSlabDetailsBreakupList det
       DFParams.RentalDetails det -> mkFPRentalDetailsBreakupList det
+      DFParams.InterCityDetails det -> mkFPInterCityDetailsBreakupList det
 
     mkFPProgressiveDetailsBreakupList dayPartRate det = do
       let deadKmFareCaption = show Enums.DEAD_KILOMETER_FARE
@@ -135,6 +136,24 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
           distBasedCaption = show Enums.DIST_BASED_FARE
           mbDistBasedFare = mkBreakupItem distBasedCaption (mkPrice det.distBasedFare)
       catMaybes [Just mbTimeBasedFare, Just mbDistBasedFare]
+
+    mkFPInterCityDetailsBreakupList det = do
+      let deadKmFareCaption = show Enums.DEAD_KILOMETER_FARE
+          deadKmFareItem = mkBreakupItem deadKmFareCaption (mkPrice det.pickupCharge)
+
+          timeBasedFareCaption = show Enums.TIME_BASED_FARE
+          mbTimeBasedFare = mkBreakupItem timeBasedFareCaption (mkPrice det.timeFare)
+
+          distBasedCaption = show Enums.DIST_BASED_FARE
+          mbDistBasedFare = mkBreakupItem distBasedCaption (mkPrice det.distanceFare)
+
+          extraDistanceCaption = show Enums.EXTRA_DISTANCE_FARE
+          extraDistanceFareItem = mkBreakupItem extraDistanceCaption (mkPrice det.extraDistanceFare)
+
+          extraTimeCaption = show Enums.EXTRA_TIME_FARE
+          extraTimeFareItem = mkBreakupItem extraTimeCaption (mkPrice det.extraTimeFare)
+
+      catMaybes [Just deadKmFareItem, Just mbTimeBasedFare, Just mbDistBasedFare, Just extraDistanceFareItem, Just extraTimeFareItem]
 
 -- TODO: make some tests for it
 
@@ -174,6 +193,8 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     actualDistance :: Maybe Meters,
     rideTime :: UTCTime,
     waitingTime :: Maybe Minutes,
+    returnTime :: Maybe UTCTime,
+    roundTrip :: Bool,
     actualRideDuration :: Maybe Seconds,
     avgSpeedOfVehicle :: Maybe AvgSpeedOfVechilePerKm,
     driverSelectedFare :: Maybe HighPrecMoney,
@@ -197,7 +218,8 @@ calculateFareParameters params = do
   let fp = params.farePolicy
   id <- generateGUID
   now <- getCurrentTime
-  let isNightShiftChargeIncluded = if params.nightShiftOverlapChecking then Just $ isNightAllowanceApplicable fp.nightShiftBounds params.rideTime now (fromMaybe 19800 params.timeDiffFromUtc) else isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime
+  let localTimeZoneSeconds = fromMaybe 19800 params.timeDiffFromUtc
+  let isNightShiftChargeIncluded = if params.nightShiftOverlapChecking then Just $ isNightAllowanceApplicable fp.nightShiftBounds params.rideTime now localTimeZoneSeconds else isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime
       (baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
       (partOfNightShiftCharge, notPartOfNightShiftCharge, _) = countFullFareOfParamsDetails fareParametersDetails
       fullRideCost {-without govtCharges, serviceCharge, platformFee, waitingCharge, notPartOfNightShiftCharge and nightShift-} =
@@ -243,9 +265,10 @@ calculateFareParameters params = do
                   (DFP.findFPSlabsDetailsSlabByDistance (fromMaybe 0 params.actualDistance) det.slabs & (.platformFeeInfo))
                   params.currency
                   fareParametersDetails
-              DFP.RentalDetails _ -> fareParametersDetails,
+              DFP.RentalDetails _ -> fareParametersDetails
+              DFP.InterCityDetails _ -> fareParametersDetails,
             customerCancellationDues = params.customerCancellationDues,
-            tollCharges = if isTollApplicable fp.vehicleServiceTier then params.tollCharges else Nothing,
+            tollCharges = addMaybes fp.tollCharges (if isTollApplicable fp.vehicleServiceTier then params.tollCharges else Nothing),
             updatedAt = now,
             currency = params.currency,
             ..
@@ -257,6 +280,42 @@ calculateFareParameters params = do
       DFP.ProgressiveDetails det -> processFPProgressiveDetails det
       DFP.SlabsDetails det -> processFPSlabsDetailsSlab $ DFP.findFPSlabsDetailsSlabByDistance (fromMaybe 0 params.actualDistance) det.slabs
       DFP.RentalDetails det -> processFPRentalDetails det
+      DFP.InterCityDetails det -> processFPInterCityDetails det
+
+    processFPInterCityDetails DFP.FPInterCityDetails {..} = do
+      let estimatedDuration = maybe 0 (.getSeconds) params.estimatedRideDuration
+          actualDuration = maybe estimatedDuration (.getSeconds) params.actualRideDuration
+          estimatedDurationInHr = estimatedDuration `div` 3600
+          perDayMaxHourAllowanceInHr = perDayMaxHourAllowance.getMinutes `div` 60
+          allowanceHours' = maybe 0 (\rt -> (calculateAllowanceHours (fromMaybe 19800 params.timeDiffFromUtc) perDayMaxHourAllowanceInHr params.rideTime rt) - estimatedDurationInHr) params.returnTime
+          defaultWaitTimeAtDestinationInHrs = defaultWaitTimeAtDestination.getMinutes `div` 60
+          allowanceHours = if params.roundTrip then max defaultWaitTimeAtDestinationInHrs allowanceHours' else 0
+          extraMins = max 0 (actualDuration - estimatedDuration) `div` 60
+          extraTimeFare = HighPrecMoney $ toRational extraMins * perExtraMinRate.getHighPrecMoney
+          fareByTime = HighPrecMoney $ toRational (estimatedDurationInHr + allowanceHours) * perHourCharge.getHighPrecMoney
+
+      let perKmRate = if params.roundTrip then perKmRateRoundTrip else perKmRateOneWay
+          estimatedDistance = maybe 0 (.getMeters) params.estimatedDistance
+          estimatedDistanceInKm = estimatedDistance `div` 1000
+          actualDistance = (.getMeters) <$> params.actualDistance
+          actualDistanceInKm = fromMaybe estimatedDistanceInKm actualDistance `div` 1000
+          extraDist = max 0 (actualDistanceInKm - estimatedDistanceInKm)
+          extraDistanceFare = HighPrecMoney $ toRational extraDist * perExtraKmRate.getHighPrecMoney
+          fareByDist = HighPrecMoney $ toRational (((allowanceHours - defaultWaitTimeAtDestinationInHrs) * kmPerPlannedExtraHour.getKilometers) + estimatedDistanceInKm) * perKmRate.getHighPrecMoney
+
+      ( baseFare,
+        nightShiftCharge,
+        Nothing,
+        DFParams.InterCityDetails $
+          DFParams.FParamsInterCityDetails
+            { timeFare = fareByTime,
+              distanceFare = fareByDist,
+              pickupCharge = deadKmFare,
+              extraDistanceFare,
+              extraTimeFare,
+              currency = params.currency
+            }
+        )
 
     processFPRentalDetails DFP.FPRentalDetails {..} = do
       let estimatedDuration = maybe 0 (.getSeconds) params.estimatedRideDuration
@@ -354,6 +413,7 @@ calculateFareParameters params = do
     countPlatformFee fullCompleteRideCost platformFeeInfo currency = \case
       (DFParams.ProgressiveDetails det) -> DFParams.ProgressiveDetails det -- should be impossible anyway
       (DFParams.RentalDetails det) -> DFParams.RentalDetails det
+      (DFParams.InterCityDetails det) -> DFParams.InterCityDetails det
       (DFParams.SlabDetails det) ->
         DFParams.SlabDetails $ maybe (FParamsSlabDetails Nothing Nothing Nothing det.currency) countPlatformFeeMath platformFeeInfo
       where
@@ -398,6 +458,12 @@ countFullFareOfParamsDetails = \case
   DFParams.ProgressiveDetails det -> (fromMaybe 0.0 det.extraKmFare, det.deadKmFare, 0.0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
   DFParams.SlabDetails det -> (0.0, 0.0, fromMaybe 0.0 det.platformFee + fromMaybe 0.0 det.sgst + fromMaybe 0.0 det.cgst)
   DFParams.RentalDetails det -> (0.0, det.distBasedFare + det.timeBasedFare, 0.0)
+  DFParams.InterCityDetails det -> (0.0, det.pickupCharge + det.distanceFare + det.timeFare + det.extraDistanceFare + det.extraTimeFare, 0.0)
+
+addMaybes :: Num a => Maybe a -> Maybe a -> Maybe a
+addMaybes Nothing y = y
+addMaybes x Nothing = x
+addMaybes (Just x) (Just y) = Just (x + y)
 
 isNightShift ::
   NightShiftBounds ->
@@ -444,3 +510,36 @@ isNightShiftOverlap rideEndDate nightShiftStartTime nightShiftEndTime localTripS
 
 timeOfDayToDiffTime :: TimeOfDay -> DiffTime
 timeOfDayToDiffTime (TimeOfDay h m s) = secondsToDiffTime $ fromIntegral (h * 3600 + m * 60 + floor s)
+
+-- Converts UTC time to Local(IST) time
+utcToIst :: Minutes -> UTCTime -> LocalTime
+utcToIst timeZoneDiff utcTime = utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes) utcTime -- IST is UTC + 5:30
+
+-- Calculates hours for a partial day
+hoursInDay :: UTCTime -> UTCTime -> LocalTime -> LocalTime -> Day -> Int
+hoursInDay startUtc endUtc start end day
+  | startDay == endDay = if startDay == day then diffHours else 0
+  | otherwise =
+    if day == startDay
+      then 24 - todHour startTod
+      else
+        if day == endDay
+          then todHour endTod
+          else 24
+  where
+    startDay = localDay start
+    endDay = localDay end
+    startTod = localTimeOfDay start
+    endTod = localTimeOfDay end
+    diffSeconds = nominalDiffTimeToSeconds $ diffUTCTime endUtc startUtc
+    diffHours = diffSeconds.getSeconds `div` 3600
+
+-- Main function to calculate total hours with 14-hour daily cap
+calculateAllowanceHours :: Seconds -> Int -> UTCTime -> UTCTime -> Int
+calculateAllowanceHours timeDiffFromUtc perDayMaxHourAllowance startTime endTime =
+  sum $ map (min perDayMaxHourAllowance . hoursInDay startTime endTime startIST endIST) [startDay .. endDay]
+  where
+    startIST = utcToIst (secondsToMinutes timeDiffFromUtc) startTime
+    endIST = utcToIst (secondsToMinutes timeDiffFromUtc) endTime
+    startDay = localDay startIST
+    endDay = localDay endIST

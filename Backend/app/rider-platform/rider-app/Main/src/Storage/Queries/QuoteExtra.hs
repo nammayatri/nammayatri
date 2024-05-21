@@ -20,6 +20,7 @@ import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverOffer as QueryDO
+import Storage.Queries.InterCityDetails as QueryICD
 import Storage.Queries.OrphanInstances.Quote
 import Storage.Queries.RentalDetails as QueryRD
 import Storage.Queries.SpecialZoneQuote as QuerySZQ
@@ -32,10 +33,10 @@ createQuote = createWithKV
 createDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => QuoteDetails -> m ()
 createDetails = \case
   OneWayDetails _ -> pure ()
-  RentalDetails rentalDetails -> QueryRD.createRentalDetails rentalDetails
+  RentalDetails rentalDetails -> QueryRD.create rentalDetails
   DriverOfferDetails driverOffer -> QueryDO.create driverOffer
   OneWaySpecialZoneDetails specialZoneQuote -> QuerySZQ.create specialZoneQuote
-  InterCityDetails specialZoneQuote -> QuerySZQ.create specialZoneQuote
+  InterCityDetails interCityDetails -> QueryICD.create interCityDetails
 
 createQuote' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Quote -> m ()
 createQuote' quote = do

@@ -345,11 +345,13 @@ library
       Storage.Beam.DriverPlan
       Storage.Beam.DriverStats
       Storage.Beam.FareParameters
+      Storage.Beam.FareParameters.FareParametersInterCityDetails
       Storage.Beam.FareParameters.FareParametersProgressiveDetails
       Storage.Beam.FareParameters.FareParametersRentalDetails
       Storage.Beam.FareParameters.FareParametersSlabDetails
       Storage.Beam.FarePolicy
       Storage.Beam.FarePolicy.DriverExtraFeeBounds
+      Storage.Beam.FarePolicy.FarePolicyInterCityDetails
       Storage.Beam.FarePolicy.FarePolicyProgressiveDetails
       Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Beam.FarePolicy.FarePolicyRentalDetails
@@ -385,6 +387,7 @@ library
       Storage.Cac.DriverPoolConfig
       Storage.Cac.FarePolicy
       Storage.Cac.FarePolicy.DriverExtraFeeBounds
+      Storage.Cac.FarePolicy.FarePolicyInterCityDetails
       Storage.Cac.FarePolicy.FarePolicyProgressiveDetails
       Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Cac.FarePolicy.FarePolicyRentalDetails
@@ -464,11 +467,13 @@ library
       Storage.Queries.DriverStats
       Storage.Queries.ExophoneExtra
       Storage.Queries.FareParameters
+      Storage.Queries.FareParameters.FareParametersInterCityDetails
       Storage.Queries.FareParameters.FareParametersProgressiveDetails
       Storage.Queries.FareParameters.FareParametersRentalDetails
       Storage.Queries.FareParameters.FareParametersSlabDetails
       Storage.Queries.FarePolicy
       Storage.Queries.FarePolicy.DriverExtraFeeBounds
+      Storage.Queries.FarePolicy.FarePolicyInterCityDetails
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Queries.FarePolicy.FarePolicyRentalDetails

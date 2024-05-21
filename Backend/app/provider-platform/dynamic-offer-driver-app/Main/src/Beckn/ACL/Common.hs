@@ -159,12 +159,28 @@ filterRequiredBreakups fParamsType breakup = do
                  "CANCELLATION_CHARGES",
                  "PARKING_CHARGE"
                ]
+    DFParams.InterCity ->
+      title
+        `elem` [ "BASE_FARE",
+                 "SERVICE_CHARGE",
+                 "DEAD_KILOMETER_FARE",
+                 "DIST_BASED_FARE",
+                 "TIME_BASED_FARE",
+                 "NIGHT_SHIFT_CHARGE",
+                 "DRIVER_SELECTED_FARE",
+                 "CUSTOMER_SELECTED_FARE",
+                 "TOTAL_FARE",
+                 "WAITING_OR_PICKUP_CHARGES",
+                 "EXTRA_TIME_FARE",
+                 "EXTRA_DISTANCE_FARE",
+                 "CANCELLATION_CHARGES",
+                 "PARKING_CHARGE"
+               ]
 
 -- Fix these tage properly
 mkFulfillmentType :: DCT.TripCategory -> Text
 mkFulfillmentType = \case
   DCT.OneWay DCT.OneWayRideOtp -> "RIDE_OTP"
-  DCT.RoundTrip DCT.RideOtp -> "RIDE_OTP"
   DCT.RideShare DCT.RideOtp -> "RIDE_OTP"
   DCT.Rental _ -> "RENTAL"
   DCT.InterCity _ -> "INTER_CITY"

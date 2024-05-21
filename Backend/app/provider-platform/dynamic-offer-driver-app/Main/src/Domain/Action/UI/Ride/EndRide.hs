@@ -427,6 +427,8 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
           actualDistance = Just recalcDistance,
           estimatedDistance = Just oldDistance,
           rideTime = booking.startTime,
+          returnTime = booking.returnTime,
+          roundTrip = fromMaybe False booking.roundTrip,
           waitingTime = secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> ride.driverArrivalTime),
           actualRideDuration = roundToIntegral <$> (diffUTCTime <$> Just tripEndTime <*> ride.tripStartTime),
           estimatedRideDuration = booking.estimatedDuration,
@@ -435,7 +437,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
           customerExtraFee = booking.fareParams.customerExtraFee,
           nightShiftCharge = booking.fareParams.nightShiftCharge,
           customerCancellationDues = booking.fareParams.customerCancellationDues,
-          nightShiftOverlapChecking = DTC.isRentalTrip booking.tripCategory,
+          nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
           timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,
           tollCharges = ride.tollCharges,
           currency = booking.currency
