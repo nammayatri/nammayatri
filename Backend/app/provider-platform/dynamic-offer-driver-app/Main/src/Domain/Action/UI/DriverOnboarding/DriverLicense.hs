@@ -67,11 +67,11 @@ import Utils.Common.Cac.KeyNameConstants
 data DriverDLReq = DriverDLReq
   { driverLicenseNumber :: Text,
     operatingCity :: Text,
-    driverDateOfBirth :: UTCTime,
+    driverDateOfBirth :: UTCTime, --updatable
     vehicleCategory :: Maybe Category,
     imageId1 :: Id Image.Image,
     imageId2 :: Maybe (Id Image.Image),
-    dateOfIssue :: Maybe UTCTime
+    dateOfIssue :: Maybe UTCTime --updatable
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 

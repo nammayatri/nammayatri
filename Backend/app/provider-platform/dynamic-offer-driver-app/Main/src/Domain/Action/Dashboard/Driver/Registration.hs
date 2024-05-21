@@ -37,7 +37,6 @@ import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.FleetDriverAssociation as FDV
-import qualified Domain.Types.IdfyVerification as VerificationT
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
