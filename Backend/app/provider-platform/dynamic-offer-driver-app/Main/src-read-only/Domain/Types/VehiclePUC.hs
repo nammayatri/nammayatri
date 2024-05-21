@@ -5,13 +5,13 @@
 module Domain.Types.VehiclePUC where
 
 import Data.Aeson
-import qualified Domain.Types.IdfyVerification
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleRegistrationCertificate
 import Kernel.Prelude
+import qualified Kernel.Types.Documents
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
@@ -21,7 +21,7 @@ data VehiclePUC = VehiclePUC
     id :: Kernel.Types.Id.Id Domain.Types.VehiclePUC.VehiclePUC,
     pucExpiry :: Kernel.Prelude.UTCTime,
     rcId :: Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate,
-    verificationStatus :: Domain.Types.IdfyVerification.VerificationStatus,
+    verificationStatus :: Kernel.Types.Documents.VerificationStatus,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

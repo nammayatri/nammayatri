@@ -72,6 +72,15 @@ data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIR
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DriverVehicleDetails = DriverVehicleDetails
+  { vehicleManufacturer :: Text,
+    vehicleModel :: Text,
+    vehicleColour :: Text,
+    vehicleDoors :: Maybe Int,
+    vehicleSeatBelts :: Maybe Int
+  }
+  deriving (Generic, ToSchema, Show, ToJSON, FromJSON)
+
 data Summary = Summary
   { totalCount :: Int, --TODO add db indexes
     count :: Int

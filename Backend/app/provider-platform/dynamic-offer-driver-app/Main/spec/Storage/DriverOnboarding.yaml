@@ -11,7 +11,7 @@ imports:
   DocumentType: Domain.Types.DocumentVerificationConfig
   Image: Domain.Types.Image
   DriverOnboardingError: Tools.Error
-  VerificationStatus: Domain.Types.IdfyVerification
+  VerificationStatus: Kernel.Types.Documents
 
 IdfyVerification:
   tableName: idfy_verification
@@ -37,8 +37,6 @@ IdfyVerification:
   types:
     ImageExtractionValidation:
       enum: "Success,Skipped,Failed"
-    VerificationStatus:
-      enum: "PENDING,VALID,INVALID,MANUAL_VERIFICATION_REQUIRED"
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
@@ -297,6 +295,7 @@ Image:
     isValid: Bool
     failureReason: Maybe DriverOnboardingError
     rcId: Maybe Text
+    verificationStatus: Maybe VerificationStatus
   excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey
@@ -309,10 +308,6 @@ Image:
       kvFunction: findAllWithKV
       where:
         and: [merchantId, personId, imageType]
-    updateToValid:
-      kvFunction: updateWithKV
-      params: [isValid]
-      where: id
     findByMerchantId:
       kvFunction: findAllWithKV
       where: merchantId

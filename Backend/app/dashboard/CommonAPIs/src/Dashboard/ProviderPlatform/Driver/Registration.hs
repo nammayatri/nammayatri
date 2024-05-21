@@ -293,7 +293,8 @@ data RegisterRCReq = RegisterRCReq
     operatingCity :: Text,
     dateOfRegistration :: Maybe UTCTime,
     airConditioned :: Maybe Bool,
-    multipleRC :: Maybe Bool
+    multipleRC :: Maybe Bool,
+    vehicleDetails :: Maybe DriverVehicleDetails
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

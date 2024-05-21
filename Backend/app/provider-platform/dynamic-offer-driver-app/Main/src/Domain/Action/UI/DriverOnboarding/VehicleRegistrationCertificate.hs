@@ -55,6 +55,7 @@ import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude hiding (find)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
@@ -94,11 +95,11 @@ data DriverRCReq = DriverRCReq
   { vehicleRegistrationCertNumber :: Text,
     imageId :: Id Image.Image,
     operatingCity :: Text,
-    dateOfRegistration :: Maybe UTCTime,
+    dateOfRegistration :: Maybe UTCTime, -- updatable
     vehicleCategory :: Maybe Vehicle.Category,
     airConditioned :: Maybe Bool,
     multipleRC :: Maybe Bool,
-    vehicleDetails :: Maybe DriverVehicleDetails
+    vehicleDetails :: Maybe DriverVehicleDetails -- updatable
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -131,7 +132,7 @@ validateDriverRCReq DriverRCReq {..} =
 prefixMatchedResult :: Text -> [Text] -> Bool
 prefixMatchedResult rcNumber = DL.any (`T.isPrefixOf` rcNumber)
 
-verifyRC ::
+verifyRC :: --
   Bool ->
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -312,7 +313,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           -- update vehicle details too if exists
           mbVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
           whenJust mbVehicle $ \vehicle -> do
-            when (rc.verificationStatus == Domain.VALID && isJust rc.vehicleVariant) $ do
+            when (rc.verificationStatus == Documents.VALID && isJust rc.vehicleVariant) $ do
               driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
               driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
               vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
@@ -370,7 +371,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             reviewedAt = Nothing,
             reviewRequired = Nothing,
             insuranceValidity = input.insuranceValidity,
-            verificationStatus = DIV.MANUAL_VERIFICATION_REQUIRED,
+            verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
             fleetOwnerId = input.fleetOwnerId,
             merchantId = Just merchantId,
             merchantOperatingCityId = Just merchantOperatingCityId,
@@ -396,7 +397,7 @@ linkRCStatus (driverId, merchantId, merchantOpCityId) req@RCStatusReq {..} = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError (RCActivationFailedPaymentDue driverId.getId)
   rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
-  unless (rc.verificationStatus == Domain.VALID) $ throwError (InvalidRequest "Can't perform activate/inactivate operations on invalid RC!")
+  unless (rc.verificationStatus == Documents.VALID) $ throwError (InvalidRequest "Can't perform activate/inactivate operations on invalid RC!")
   now <- getCurrentTime
   if req.isActivate
     then do

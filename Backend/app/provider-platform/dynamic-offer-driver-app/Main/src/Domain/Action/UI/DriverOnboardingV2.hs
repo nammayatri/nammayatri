@@ -13,7 +13,6 @@ import Domain.Types.DriverInformation
 import qualified Domain.Types.DriverPanCard as Domain
 import Domain.Types.DriverSSN
 import Domain.Types.FarePolicy
-import qualified Domain.Types.IdfyVerification as DIV
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -31,6 +30,7 @@ import Kernel.External.Types (Language (..))
 import qualified Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
@@ -339,7 +339,7 @@ postDriverRegisterSsn (mbPersonId, _, _) API.Types.UI.DriverOnboardingV2.SSNReq 
         { id = id',
           driverId = driverId',
           ssn = ssn',
-          verificationStatus = DIV.MANUAL_VERIFICATION_REQUIRED,
+          verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
           rejectReason = Nothing
         }
 
@@ -392,7 +392,7 @@ buildPanCard merchantId person API.Types.UI.DriverOnboardingV2.DriverPanReq {..}
         failedRules = [],
         id = id,
         panCardNumber = encryptedPan,
-        verificationStatus = DIV.PENDING,
+        verificationStatus = Documents.PENDING,
         merchantId = Just merchantId,
         createdAt = now,
         updatedAt = now

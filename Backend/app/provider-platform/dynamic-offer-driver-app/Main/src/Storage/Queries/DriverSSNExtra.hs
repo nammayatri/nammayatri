@@ -4,11 +4,11 @@
 module Storage.Queries.DriverSSNExtra where
 
 import Domain.Types.DriverSSN
-import Domain.Types.IdfyVerification
 import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Types.Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -37,7 +37,7 @@ findBySSN ssn = do findOneWithKV [Se.Is Beam.ssnHash $ Se.Eq ssn]
 
 updateVerificationStatusAndReasonBySSN ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.IdfyVerification.VerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.External.Encryption.DbHash -> m ())
+  (Kernel.Types.Documents.VerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.External.Encryption.DbHash -> m ())
 updateVerificationStatusAndReasonBySSN verificationStatus rejectReason ssn = do
   updateOneWithKV
     [ Se.Set Beam.verificationStatus verificationStatus,
