@@ -33,3 +33,8 @@ SELECT
     CURRENT_TIMESTAMP AS updated_at,
     TRUE AS use_operating_city_based_leader_board
 FROM unique_merchant_cities;
+
+-- UPDATING THE ZSCOREBASE FOR DAILY LEADERBOARD
+UPDATE atlas_driver_offer_bpp.leader_board_configs
+SET z_score_base = 1000000000
+WHERE leader_board_type = 'DAILY';

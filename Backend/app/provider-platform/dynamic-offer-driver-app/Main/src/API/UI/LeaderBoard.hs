@@ -18,6 +18,7 @@ type API =
     :> ( TokenAuth
            :> "daily"
            :> MandatoryQueryParam "date" Day
+           :> QueryParam "fillData" Bool
            :> Get '[JSON] DLeaderBoard.LeaderBoardRes
            :<|> TokenAuth
            :> "weekly"
@@ -27,6 +28,7 @@ type API =
            :<|> TokenAuth
            :> "monthly"
            :> MandatoryQueryParam "month" Int
+           :> QueryParam "fillData" Bool
            :> Get '[JSON] DLeaderBoard.LeaderBoardRes
        )
 
@@ -36,11 +38,11 @@ handler =
     :<|> getWeeklyDriverLeaderBoard
     :<|> getMonthlyDriverLeaderBoard
 
-getDailyDriverLeaderBoard :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> FlowHandler DLeaderBoard.LeaderBoardRes
-getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) date = withFlowHandlerAPI $ DLeaderBoard.getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) date
+getDailyDriverLeaderBoard :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Maybe Bool -> FlowHandler DLeaderBoard.LeaderBoardRes
+getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) date fillData = withFlowHandlerAPI $ DLeaderBoard.getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) date fillData
 
 getWeeklyDriverLeaderBoard :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> FlowHandler DLeaderBoard.LeaderBoardRes
 getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toDate = withFlowHandlerAPI $ DLeaderBoard.getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toDate
 
-getMonthlyDriverLeaderBoard :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Int -> FlowHandler DLeaderBoard.LeaderBoardRes
-getMonthlyDriverLeaderBoard (personId, merchantId, merchantOpCityId) month = withFlowHandlerAPI $ DLeaderBoard.getMonthlyDriverLeaderBoard (personId, merchantId, merchantOpCityId) month
+getMonthlyDriverLeaderBoard :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Int -> Maybe Bool -> FlowHandler DLeaderBoard.LeaderBoardRes
+getMonthlyDriverLeaderBoard (personId, merchantId, merchantOpCityId) month fillData = withFlowHandlerAPI $ DLeaderBoard.getMonthlyDriverLeaderBoard (personId, merchantId, merchantOpCityId) month fillData
