@@ -5,13 +5,13 @@
 module Domain.Types.VehicleRegistrationCertificate where
 
 import Data.Aeson
-import qualified Domain.Types.IdfyVerification
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Types.Documents
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
@@ -41,7 +41,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     vehicleSeatBelts :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant,
-    verificationStatus :: Domain.Types.IdfyVerification.VerificationStatus,
+    verificationStatus :: Kernel.Types.Documents.VerificationStatus,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

@@ -6,11 +6,11 @@
 module Storage.Beam.VehiclePermit where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.IdfyVerification
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Documents
 import Tools.Beam.UtilsTH
 
 data VehiclePermitT f = VehiclePermitT
@@ -25,7 +25,7 @@ data VehiclePermitT f = VehiclePermitT
     purposeOfJourney :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     rcId :: B.C f Kernel.Prelude.Text,
     regionCovered :: B.C f Kernel.Prelude.Text,
-    verificationStatus :: B.C f Domain.Types.IdfyVerification.VerificationStatus,
+    verificationStatus :: B.C f Kernel.Types.Documents.VerificationStatus,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

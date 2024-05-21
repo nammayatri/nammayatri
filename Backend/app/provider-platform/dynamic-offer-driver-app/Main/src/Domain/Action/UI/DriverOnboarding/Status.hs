@@ -44,6 +44,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Types
 import Kernel.Prelude
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -322,10 +323,13 @@ getProcessedVehicleDocuments docType driverId vehicleRC =
 
 checkImageValidity :: DVC.DocumentType -> Id SP.Person -> Flow (Maybe ResponseStatus)
 checkImageValidity docType driverId = do
-  images <- IQuery.findValidImageByPersonIdAndImageType driverId docType
-  if null images
-    then return Nothing
-    else return (Just MANUAL_VERIFICATION_REQUIRED)
+  validImages <- IQuery.findImageByPersonIdAndImageTypeAndVerificationStatus driverId docType [Documents.VALID, Documents.MANUAL_VERIFICATION_REQUIRED]
+  checkValidity validImages
+  where
+    checkValidity validImages
+      | any (\img -> img.verificationStatus == (Just Documents.VALID)) validImages = return (Just VALID)
+      | any (\img -> img.verificationStatus == (Just Documents.MANUAL_VERIFICATION_REQUIRED)) validImages = return (Just MANUAL_VERIFICATION_REQUIRED)
+      | otherwise = return Nothing
 
 getInProgressDriverDocuments :: DVC.DocumentType -> Id SP.Person -> Int -> Flow (ResponseStatus, Maybe Text)
 getInProgressDriverDocuments docType driverId onboardingTryLimit =
@@ -438,7 +442,7 @@ getRCAndStatus driverId merchantOpCityId onboardingTryLimit multipleRC language 
               msg <- toVerificationMessage NoDcoumentFound language
               return (NO_DOC_AVAILABLE, Nothing, msg)
         else do
-          let mValidVehicleRC = find (\rc -> rc.verificationStatus == IV.VALID) vehicleRCs
+          let mValidVehicleRC = find (\rc -> rc.verificationStatus == Documents.VALID) vehicleRCs
           case mValidVehicleRC of
             Just validVehicleRC -> do
               msg <- toVerificationMessage DocumentValid language
@@ -454,12 +458,12 @@ getRCAndStatus driverId merchantOpCityId onboardingTryLimit multipleRC language 
                   msg <- toVerificationMessage NoDcoumentFound language
                   return (NO_DOC_AVAILABLE, Nothing, msg)
 
-mapStatus :: IV.VerificationStatus -> ResponseStatus
+mapStatus :: Documents.VerificationStatus -> ResponseStatus
 mapStatus = \case
-  IV.PENDING -> PENDING
-  IV.MANUAL_VERIFICATION_REQUIRED -> MANUAL_VERIFICATION_REQUIRED
-  IV.VALID -> VALID
-  IV.INVALID -> INVALID
+  Documents.PENDING -> PENDING
+  Documents.MANUAL_VERIFICATION_REQUIRED -> MANUAL_VERIFICATION_REQUIRED
+  Documents.VALID -> VALID
+  Documents.INVALID -> INVALID
 
 verificationStatusCheck :: ResponseStatus -> Language -> DVC.DocumentType -> Flow Text
 verificationStatusCheck status language img = do
