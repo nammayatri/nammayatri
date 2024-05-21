@@ -22,8 +22,6 @@ import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverRCAssociation
-import Domain.Types.IdfyVerification
-import qualified Domain.Types.IdfyVerification as DIV
 import qualified Domain.Types.Image as Domain
 import qualified Domain.Types.Merchant as DTM
 import qualified Domain.Types.Merchant.MerchantMessage as DMM
@@ -38,6 +36,8 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
+import Kernel.Types.Documents
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -343,16 +343,16 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNu
       updatedAt = now
     }
 
-validateRCStatus :: CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> (DIV.VerificationStatus, Maybe Bool, Maybe Variant, Maybe Text)
+validateRCStatus :: CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> (Documents.VerificationStatus, Maybe Bool, Maybe Variant, Maybe Text)
 validateRCStatus input rcconfigs now expiry = do
   case rcconfigs.supportedVehicleClasses of
-    DVC.RCValidClasses [] -> (DIV.INVALID, Nothing, Nothing, Nothing)
+    DVC.RCValidClasses [] -> (Documents.INVALID, Nothing, Nothing, Nothing)
     DVC.RCValidClasses vehicleClassVariantMap -> do
       let validCOVsCheck = rcconfigs.vehicleClassCheckType
       let (isCOVValid, reviewRequired, variant, mbVehicleModel) = maybe (False, Nothing, Nothing, Nothing) (isValidCOVRC input.vehicleClassCategory input.seatingCapacity input.manufacturer input.bodyType input.manufacturerModel vehicleClassVariantMap validCOVsCheck) (input.vehicleClass <|> input.vehicleClassCategory)
       let validInsurance = True -- (not rcInsurenceConfigs.checkExpiry) || maybe False (now <) insuranceValidity
-      if ((not rcconfigs.checkExpiry) || now < expiry) && isCOVValid && validInsurance then (DIV.VALID, reviewRequired, variant, mbVehicleModel) else (DIV.INVALID, reviewRequired, variant, mbVehicleModel)
-    _ -> (DIV.INVALID, Nothing, Nothing, Nothing)
+      if ((not rcconfigs.checkExpiry) || now < expiry) && isCOVValid && validInsurance then (Documents.VALID, reviewRequired, variant, mbVehicleModel) else (Documents.INVALID, reviewRequired, variant, mbVehicleModel)
+    _ -> (Documents.INVALID, Nothing, Nothing, Nothing)
 
 isValidCOVRC :: Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> [DVC.VehicleClassVariantMap] -> DVC.VehicleClassCheckType -> Text -> (Bool, Maybe Bool, Maybe Variant, Maybe Text)
 isValidCOVRC mVehicleCategory capacity manufacturer bodyType manufacturerModel vehicleClassVariantMap validCOVsCheck cov = do

@@ -6,10 +6,10 @@
 module Storage.Beam.VehiclePUC where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.IdfyVerification
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Documents
 import Tools.Beam.UtilsTH
 
 data VehiclePUCT f = VehiclePUCT
@@ -18,7 +18,7 @@ data VehiclePUCT f = VehiclePUCT
     id :: B.C f Kernel.Prelude.Text,
     pucExpiry :: B.C f Kernel.Prelude.UTCTime,
     rcId :: B.C f Kernel.Prelude.Text,
-    verificationStatus :: B.C f Domain.Types.IdfyVerification.VerificationStatus,
+    verificationStatus :: B.C f Kernel.Types.Documents.VerificationStatus,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

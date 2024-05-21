@@ -6,11 +6,11 @@
 module Storage.Beam.VehicleFitnessCertificate where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.IdfyVerification
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Documents
 import Tools.Beam.UtilsTH
 
 data VehicleFitnessCertificateT f = VehicleFitnessCertificateT
@@ -26,7 +26,7 @@ data VehicleFitnessCertificateT f = VehicleFitnessCertificateT
     nextInspectionDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     rcId :: B.C f Kernel.Prelude.Text,
     receiptDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    verificationStatus :: B.C f Domain.Types.IdfyVerification.VerificationStatus,
+    verificationStatus :: B.C f Kernel.Types.Documents.VerificationStatus,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

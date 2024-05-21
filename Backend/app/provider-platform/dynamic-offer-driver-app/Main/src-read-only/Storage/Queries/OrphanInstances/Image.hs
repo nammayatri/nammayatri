@@ -25,6 +25,7 @@ instance FromTType' Beam.Image Domain.Types.Image.Image where
             personId = Kernel.Types.Id.Id personId,
             rcId = rcId,
             s3Path = s3Path,
+            verificationStatus = verificationStatus,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -40,6 +41,7 @@ instance ToTType' Beam.Image Domain.Types.Image.Image where
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.rcId = rcId,
         Beam.s3Path = s3Path,
+        Beam.verificationStatus = verificationStatus,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
