@@ -18,6 +18,7 @@ import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Confidence
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import Kernel.Utils.TH
@@ -68,7 +69,7 @@ data Ride = Ride
     status :: Domain.Types.Ride.RideStatus,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    tollConfidence :: Kernel.Prelude.Maybe Domain.Types.Ride.Confidence,
+    tollConfidence :: Kernel.Prelude.Maybe Kernel.Types.Confidence.Confidence,
     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     trackingUrl :: Kernel.Types.Common.BaseUrl,
     traveledDistance :: Kernel.Types.Common.HighPrecMeters,
@@ -85,8 +86,6 @@ data Ride = Ride
   }
   deriving (Generic, Show)
 
-data Confidence = Sure | Unsure | Neutral deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
 data OdometerReading = OdometerReading {fileId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile), value :: Kernel.Types.Common.Centesimal}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
@@ -94,12 +93,8 @@ data RideEndedBy = Driver | Dashboard | CallBased | CronJob deriving (Eq, Ord, S
 
 data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Confidence)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideEndedBy))
 
-$(mkHttpInstancesForEnum ''Confidence)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
-
-$(mkHttpInstancesForEnum ''RideStatus)
+$(mkHttpInstancesForEnum (''RideStatus))

@@ -41,6 +41,7 @@ import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Confidence
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
@@ -122,6 +123,7 @@ data RideCompletedReq = RideCompletedReq
     fareBreakups :: [DFareBreakup],
     chargeableDistance :: Maybe Distance,
     traveledDistance :: Maybe Distance,
+    tollConfidence :: Maybe Confidence,
     paymentUrl :: Maybe Text,
     tripEndLocation :: Maybe LatLong,
     endOdometerReading :: Maybe Centesimal,
@@ -136,6 +138,7 @@ data ValidatedRideCompletedReq = ValidatedRideCompletedReq
     fareBreakups :: [DFareBreakup],
     chargeableDistance :: Maybe Distance,
     traveledDistance :: Maybe Distance,
+    tollConfidence :: Maybe Confidence,
     paymentUrl :: Maybe Text,
     tripEndLocation :: Maybe LatLong,
     endOdometerReading :: Maybe Centesimal,
@@ -280,6 +283,7 @@ rideAssignedReqHandler req = do
             backendAppVersion = Just deploymentVersion.getDeploymentVersion,
             driversPreviousRideDropLoc = previousRideEndPos,
             showDriversPreviousRideDropLoc = isJust previousRideEndPos,
+            tollConfidence = Nothing,
             ..
           }
 
@@ -356,6 +360,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              fare = Just fare,
              totalFare = Just totalFare,
              chargeableDistance,
+             tollConfidence,
              rideEndTime,
              endOdometerReading
             }
