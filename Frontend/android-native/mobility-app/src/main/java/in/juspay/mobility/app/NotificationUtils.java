@@ -49,6 +49,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -162,6 +163,8 @@ public class NotificationUtils {
                 expTime = entity_payload.getString("searchRequestValidTill");
             }catch(Exception e){
                 Log.i("SHOW_ALLOCATION", "notification_id field not present in " + notificationType);
+                Exception exception = new Exception("Error in notificationID not persent " + e);
+                FirebaseCrashlytics.getInstance().recordException(exception);
             }
 
             if(!notificationIdString.equals("null")){
@@ -265,6 +268,8 @@ public class NotificationUtils {
 
                     System.out.println(entity_payload);
                 } catch (Exception e) {
+                    Exception exception = new Exception("Error in parse overlay data " + e);
+                    FirebaseCrashlytics.getInstance().recordException(exception);
                     System.out.println("exception_parsing_overlay_data" + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID", "null"));
                     Bundle overlayExceptionParams = new Bundle();
                     overlayExceptionParams.putString("search_request_id", searchRequestId);
@@ -335,6 +340,8 @@ public class NotificationUtils {
                                     startMediaPlayer(context, R.raw.allocation_request, true);
                                     RideRequestUtils.createRideRequestNotification(context);
                                 } catch (Exception e) {
+                                    Exception exception = new Exception("Error in onCreate ride req activity " + e);
+                                    FirebaseCrashlytics.getInstance().recordException(exception);
                                     params.putString("exception", e.toString());
                                     mFirebaseAnalytics.logEvent("exception_in_opening_ride_req_activity", params);
                                 }
@@ -375,6 +382,8 @@ public class NotificationUtils {
         } catch (Exception e) {
             Log.i("SHOW_ALLOCATION", "error occurred" + e);
             e.printStackTrace();
+            Exception exception = new Exception("Error in showAllocationNotification " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             if (mFirebaseAnalytics!=null) mFirebaseAnalytics.logEvent("exception_in_showAllocationNotification", new Bundle());
         }
     }
@@ -703,6 +712,8 @@ public class NotificationUtils {
                 }
             }
         } catch (Exception e) {
+            Exception exception = new Exception("Error in Create Notification Channel " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             e.printStackTrace();
         }
     }
@@ -741,6 +752,8 @@ public class NotificationUtils {
             try {
                 context.startService(widgetService);
             } catch (Exception e) {
+                Exception exception = new Exception("Error in WidgetServiceStart " + e);
+                FirebaseCrashlytics.getInstance().recordException(exception);
                 e.printStackTrace();
             }
         }

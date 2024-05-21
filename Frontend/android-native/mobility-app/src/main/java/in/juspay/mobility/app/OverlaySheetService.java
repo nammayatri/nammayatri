@@ -53,6 +53,7 @@ import com.airbnb.lottie.LottieAnimationView;
 import com.facebook.shimmer.ShimmerFrameLayout;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -368,6 +369,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         Toast.makeText(getApplicationContext(), getString(R.string.ride_rejected), Toast.LENGTH_SHORT).show();
                     });
                 } catch (Exception e) {
+                    Exception exception = new Exception("Error in RejectButton " + e);
+                    FirebaseCrashlytics.getInstance().recordException(exception);
                     firebaseLogEventWithParams("exception_reject_button_click", "reject_button_click", String.valueOf(e));
                     System.out.println("reject exception: " + e);
                 }
@@ -428,6 +431,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         });
                     }
                 } catch (Exception e) {
+                    Exception exception = new Exception("Error in RequestButton " + e);
+                    FirebaseCrashlytics.getInstance().recordException(exception);
                     firebaseLogEventWithParams("exception_request_button_click", "request_button_click", String.valueOf(e));
                     cleanUp();
                 }
@@ -493,6 +498,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 return null;
             }
         } catch (Exception e) {
+            Exception exception = new Exception("Error in FetchingPinCode " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             e.printStackTrace();
             return null;
         }
@@ -529,6 +536,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 }
             });
         } catch (Exception e) {
+            Exception exception = new Exception("Error in RemovingCard " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             firebaseLogEventWithParams("exception_in_remove_card", "remove_card", String.valueOf(e));
             e.printStackTrace();
         }
@@ -578,6 +587,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             NotificationUtils.listData = new ArrayList<>();
             this.stopSelf();
         } catch (Exception e) {
+            Exception exception = new Exception("Error in CleanUp " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             firebaseLogEventWithParams("exception_in_clean_up", "clean_up", String.valueOf(e));
             Log.e("EXCEPTION", e.toString());
         }
@@ -593,6 +604,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 mediaPlayer.setOnPreparedListener(mp -> mediaPlayer.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK));
             }
         } catch (Exception e) {
+            Exception exception = new Exception("Error in onBind " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             firebaseLogEventWithParams("exception_in_on_bind", "on_bind", String.valueOf(e));
             e.printStackTrace();
         }
@@ -732,6 +745,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 });
             }), (rideRequestBundle.getInt("keepHiddenForSeconds", 0) * 1000L));
         } catch (Exception e) {
+            Exception exception = new Exception("Error in add_to_list " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             firebaseLogEventWithParams("exception_in_add_to_list", "add_to_list", String.valueOf(e));
             e.printStackTrace();
         }
@@ -833,6 +848,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 cleanUp();
             }
         } catch (Exception e){
+            Exception exception = new Exception("Error in addPagerLayoutToWindow " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             for (View windowView : new ArrayList<>(Arrays.asList(floatyView, progressDialog, apiLoader))) {
                 if (windowView != null && windowView.isAttachedToWindow()) {
                     windowManager.removeView(windowView);
@@ -930,6 +947,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         try {
                             Toast.makeText(getApplicationContext(), errorPayload.getString(getString(R.string.ERROR_MESSAGE)), Toast.LENGTH_SHORT).show();
                         } catch (JSONException e) {
+                            Exception exception = new Exception("Error in response respondAPI " + e);
+                            FirebaseCrashlytics.getInstance().recordException(exception);
                             e.printStackTrace();
                         }
                     });
@@ -940,9 +959,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             }
             return false;
         } catch (SocketTimeoutException e) {
+            Exception exception = new Exception("Error in SocketTimeOut " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             handler.post(() -> Toast.makeText(getApplicationContext(), "Request Timeout", Toast.LENGTH_SHORT).show());
             return false;
         } catch (Exception e) {
+            Exception exception = new Exception("Error in OverALLRespondAPI " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             firebaseLogEventWithParams("exception_in_driver_respond_api", "driver_respond_api", String.valueOf(e));
             return false;
         }
@@ -1016,6 +1039,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 }
             }.start();
         } catch (Exception e) {
+            Exception exception = new Exception("Error in StartLoader " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             firebaseLogEventWithParams("exception_in_start_loader", "start_loader", String.valueOf(e));
             cleanUp();
             e.printStackTrace();
@@ -1078,6 +1103,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 windowManager.addView(apiLoader, params);
             }
         } catch (Exception e) {
+            Exception exception = new Exception("Error in startAPILoader " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             firebaseLogEventWithParams("exception_in_start_api_loader", "start_api_loader", String.valueOf(e));
             e.printStackTrace();
         }
@@ -1091,6 +1118,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             try{
                 audio.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (maxVolume * 0.9), AudioManager.ADJUST_SAME);
             }catch (Exception e){
+                Exception exception = new Exception("Error in increaseVolume " + e);
+                FirebaseCrashlytics.getInstance().recordException(exception);
                 RideRequestUtils.firebaseLogEventWithParams("exception_in_increase_volume", "increase_volume", String.valueOf(e), this);
             }
         }
@@ -1266,6 +1295,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 }
             }
         } catch (Exception e) {
+            Exception exception = new Exception("Error in UpdateProgress " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             mFirebaseAnalytics.logEvent("Exception_in_updateProgressBars", null);
             Log.e("OverlaySheetService", "Error in updateProgressBars " + e);
         }
@@ -1279,6 +1310,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 }
             }
         } catch (Exception e) {
+            Exception exception = new Exception("Error in findCardById " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             mFirebaseAnalytics.logEvent("Exception_in_findCardById", null);
             Log.e("OverlaySheetService", "Error in findCardById " + e);
             return false;

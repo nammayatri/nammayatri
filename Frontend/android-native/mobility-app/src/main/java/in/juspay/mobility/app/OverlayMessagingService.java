@@ -76,6 +76,7 @@ import androidx.annotation.Nullable;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -183,6 +184,8 @@ public class OverlayMessagingService extends Service {
             try {
                 setDataToMediaView(data);
             } catch (Exception e){
+                Exception exception = new Exception("Error in SetDataToView " + e);
+                FirebaseCrashlytics.getInstance().recordException(exception);
                 RideRequestUtils.firebaseLogEventWithParams("exception_in_construct_media_view", "CONSTRUCT_MEDIA_VIEW", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
             }
             Boolean showContactSupport = supportPhoneNumber != null;
@@ -194,6 +197,8 @@ public class OverlayMessagingService extends Service {
             }
 
         } catch (Exception e) {
+            Exception exception = new Exception("Error in ConstructView " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             RideRequestUtils.firebaseLogEventWithParams("exception_construct_view", "CONSTRUCT_VIEW", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
             stopSelf();
         }
