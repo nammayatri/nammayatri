@@ -27,7 +27,7 @@ import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
-import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -47,7 +47,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
+import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -157,7 +157,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
                 dghReqId <- fromMaybeM (InternalError "Status active but goHomeRequestId not found") dghInfo.driverGoHomeRequestId
                 driverGoHomeReq <- QDGR.findById dghReqId >>= fromMaybeM (InternalError "DriverGoHomeRequestId present but DriverGoHome Request Entry not found")
                 let cancelCnt = driverGoHomeReq.numCancellation + 1
-                QDGR.updateCancellationCount driverGoHomeReq.id cancelCnt
+                QDGR.updateCancellationCount cancelCnt driverGoHomeReq.id
                 when (cancelCnt == goHomeConfig.cancellationCnt) $
                   CQDGR.deactivateDriverGoHomeRequest booking.merchantOperatingCityId driverId DDGR.SUCCESS dghInfo (Just False)
                 return (Just cancelCnt, Just $ cancelCnt == goHomeConfig.cancellationCnt)

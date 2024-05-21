@@ -15,7 +15,7 @@
 module Domain.Action.Internal.FeedbackForm where
 
 import Data.Foldable ()
-import qualified Domain.Types.Feedback.Feedback as DFeedback
+import qualified Domain.Types.Feedback as DFeedback
 import Domain.Types.Feedback.FeedbackForm (FeedbackAnswer (FeedbackAnswer), FeedbackFormReq)
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
@@ -27,7 +27,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
-import qualified Storage.Queries.Feedback.Feedback as QFeedback
+import qualified Storage.Queries.Feedback as QFeedback
 import qualified Storage.Queries.Feedback.FeedbackBadge as QFeedbackBadge
 import qualified Storage.Queries.Ride as QRide
 

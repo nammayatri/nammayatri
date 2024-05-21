@@ -52,7 +52,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.Image as Query
-import qualified Storage.Queries.Message.Message as MessageQuery
+import qualified Storage.Queries.Message as MessageQuery
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC

@@ -15,7 +15,7 @@ module Domain.Action.UI.DriverProfileSummary where
 
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.DriverInformation as DriverInfo
-import Domain.Types.Feedback.Feedback (FeedbackBadge)
+import Domain.Types.Feedback (FeedbackBadge)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person

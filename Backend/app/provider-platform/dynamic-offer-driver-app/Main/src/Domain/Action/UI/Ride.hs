@@ -37,11 +37,12 @@ import qualified Data.Text as T hiding (count, map)
 import Data.Time (Day)
 import Domain.Action.Dashboard.Ride
 import qualified Domain.Action.UI.Location as DLoc
+import qualified Domain.Action.UI.RideDetails as RD
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Common as DTC
-import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Location as DLoc

@@ -18,6 +18,7 @@ import qualified Data.List as DL
 import Data.Maybe (listToMaybe)
 import Data.Time (Day, UTCTime (utctDay))
 import qualified Domain.Types.DriverFee as DDF
+import qualified Domain.Types.Invoice as Domain
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.MerchantOperatingCity as MOC
 import Domain.Types.Person (Person)
@@ -75,7 +76,7 @@ groupDriverFeeByInvoices currency driverFees_ = do
 
     getInvoiceIdForPendingFees :: (EsqDBReplicaFlow m r, EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [DDF.DriverFee] -> m (Id INV.Invoice)
     getInvoiceIdForPendingFees pendingFees = do
-      invoices <- (runInReplica . QINV.findActiveManualInvoiceByFeeId . (.id)) `mapM` pendingFees
+      invoices <- mapM (\fee -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.ACTIVE_INVOICE)) pendingFees
       let sortedInvoices = mergeSortAndRemoveDuplicate invoices
       let createNewInvoice = or (null <$> invoices)
       if createNewInvoice

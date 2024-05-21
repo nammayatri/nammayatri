@@ -16,7 +16,7 @@
 module Storage.Queries.Feedback.FeedbackBadge where
 
 import Data.Text
-import Domain.Types.Feedback.Feedback
+import Domain.Types.Feedback
 import Domain.Types.Person (Person)
 import Kernel.Beam.Functions
 import Kernel.Types.Id

@@ -19,7 +19,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Message.Message as Domain
+import qualified Domain.Types.Message as Domain
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -31,8 +31,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
 import Storage.Beam.IssueManagement ()
-import qualified Storage.Queries.Message.Message as MQ
-import qualified Storage.Queries.Message.MessageReport as MRQ
+import qualified Storage.Queries.Message as MQ
+import qualified Storage.Queries.MessageReport as MRQ
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 

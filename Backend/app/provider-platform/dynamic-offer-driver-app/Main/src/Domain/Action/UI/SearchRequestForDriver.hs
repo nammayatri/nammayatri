@@ -16,11 +16,11 @@ module Domain.Action.UI.SearchRequestForDriver where
 
 import qualified Domain.Types.BapMetadata as DSM
 import Domain.Types.Common as DTC
-import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeRequest)
+import Domain.Types.DriverGoHomeRequest (DriverGoHomeRequest)
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DLoc
+import qualified Domain.Types.SearchReqLocation as DSSL
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DSSL
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DVST

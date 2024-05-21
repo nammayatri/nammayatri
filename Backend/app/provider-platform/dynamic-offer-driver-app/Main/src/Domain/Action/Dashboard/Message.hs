@@ -25,8 +25,8 @@ import qualified Data.Text as T
 import Data.Tuple.Extra (secondM)
 import qualified Data.Vector as V
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Message.Message as Domain
-import qualified Domain.Types.Message.MessageReport as Domain
+import qualified Domain.Types.Message as Domain
+import qualified Domain.Types.MessageReport as Domain
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
@@ -46,8 +46,8 @@ import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.Message.Message as MQuery
-import qualified Storage.Queries.Message.MessageReport as MRQuery
+import qualified Storage.Queries.Message as MQuery
+import qualified Storage.Queries.MessageReport as MRQuery
 import System.Environment (lookupEnv)
 import Tools.Error
 

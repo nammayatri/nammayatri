@@ -30,7 +30,7 @@ newtype PerformanceRes = PerformanceRes
 getDriverPerformance :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m PerformanceRes
 getDriverPerformance (driverId, _, _) = do
   _ <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  allRefferedCustomers <- QRD.findAllReferredByDriverId driverId
+  allRefferedCustomers <- QRD.findAllReferredByDriverId (Just driverId)
   let ridesTakenList = filter (.hasTakenValidRide) allRefferedCustomers
   di <- B.runInReplica (DriverInformation.findById driverId) >>= fromMaybeM DriverInfoNotFound
   let totalReferredDrivers = fromMaybe 0 di.totalReferred

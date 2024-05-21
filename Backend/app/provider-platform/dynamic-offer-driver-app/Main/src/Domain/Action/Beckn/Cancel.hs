@@ -172,7 +172,7 @@ customerCancellationChargesCalculation transporterConfig booking disToPickup = d
     when isChargable $ do
       riderId <- booking.riderId & fromMaybeM (RiderDetailsDoNotExist "BOOKING" booking.id.getId)
       rider <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
-      QRD.updateCancellationDues riderId (rider.cancellationDues + transporterConfig.cancellationFee)
+      QRD.updateCancellationDues (rider.cancellationDues + transporterConfig.cancellationFee) riderId
 
 cancelSearch ::
   ( CacheFlow m r,

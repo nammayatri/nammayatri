@@ -100,7 +100,7 @@ handler merchant req validatedQuote = do
   now <- getCurrentTime
 
   (riderDetails, isNewRider) <- SRD.getRiderDetails booking.currency merchant.id req.customerMobileCountryCode req.customerPhoneNumber now req.nightSafetyCheck
-  unless isNewRider $ QRD.updateNightSafetyChecks riderDetails.id req.nightSafetyCheck
+  unless isNewRider $ QRD.updateNightSafetyChecks req.nightSafetyCheck riderDetails.id
 
   case validatedQuote of
     DriverQuote driver driverQuote -> handleDynamicOfferFlow isNewRider driver driverQuote booking riderDetails

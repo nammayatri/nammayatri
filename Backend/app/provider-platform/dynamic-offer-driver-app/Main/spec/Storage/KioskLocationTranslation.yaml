@@ -1,0 +1,31 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Language: Kernel.External.Types
+  KioskLocation: Domain.Types.KioskLocation
+
+KioskLocationTranslation:
+  tableName: kiosk_location_translation
+
+  fields:
+    kioskLocationId : Id KioskLocation
+    language : Language
+    landmark : Text
+    address : Text
+
+
+  constraints:
+    kioskLocationId: PrimaryKey
+    language: SecondaryKey
+
+
+  queries:
+    findByKioskLocationIdAndLanguage:
+      kvFunction: findOneWithKV
+      where:
+        and: [kioskLocationId, language]
+
+  sqlType:
+    landmark: character varying (255)
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

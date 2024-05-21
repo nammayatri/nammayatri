@@ -18,7 +18,7 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Client as DC
-import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DGetHomeRequest
+import qualified Domain.Types.DriverGoHomeRequest as DGetHomeRequest
 import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DTMM
@@ -78,7 +78,7 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
         case riderDetails.otpCode of
           Nothing -> do
             otpCode <- generateOTPCode
-            QRiderD.updateOtpCode riderDetails.id otpCode
+            QRiderD.updateOtpCode (Just otpCode) riderDetails.id
             pure otpCode
           Just otp -> pure otp
   ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True

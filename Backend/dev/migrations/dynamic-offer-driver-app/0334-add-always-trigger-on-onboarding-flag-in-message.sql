@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.message ADD COLUMN always_trigger_on_onboarding boolean;

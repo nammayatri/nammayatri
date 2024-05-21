@@ -1,0 +1,48 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  AddressResp: Domain.Action.UI.PlaceNameCache
+
+PlaceNameCache:
+  tableName: place_name_cache
+
+  fields:
+    id : Id PlaceNameCache
+    formattedAddress : Maybe Text
+    plusCode : Maybe Text
+    lat : Double
+    lon : Double
+    placeId : Maybe Text
+    addressComponents : "[AddressResp]"
+    geoHash : Maybe Text
+    createdAt : UTCTime
+
+  constraints:
+    id: PrimaryKey
+    placeId: SecondaryKey
+    geoHash: SecondaryKey
+
+  queries:
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+    findPlaceByPlaceId:
+      kvFunction: findAllWithKV
+      where: placeId
+
+    findPlaceByGeoHash:
+      kvFunction: findAllWithKV
+      where: geoHash
+
+
+
+  sqlType:
+    placeId: character varying(255)
+    addressComponents: text []
+
+  default:
+    addressComponents: "ARRAY[]::TEXT[]"
+
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

@@ -1,0 +1,141 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Plan: Domain.Types.Plan
+  PaymentMode: Domain.Types.Plan
+  Mandate: Domain.Types.Mandate
+  DriverAutoPayStatus: Domain.Types.DriverInformation
+  ServiceNames: Domain.Types.Plan
+  SubscriptionServiceRelatedData: Domain.Types.Extra.DriverPlan
+
+DriverPlan:
+  tableName: driver_plan
+  derives: "Generic, Show, Eq, Ord"
+
+  fields:
+    driverId : Id Person
+    planId : Id Plan
+    planType : PaymentMode
+    mandateId : Maybe (Id Mandate)
+    mandateSetupDate : Maybe UTCTime
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    coinCovertedToCashLeft : HighPrecMoney
+    totalCoinsConvertedCash : HighPrecMoney
+    payerVpa : Maybe Text
+    autoPayStatus : Maybe DriverAutoPayStatus
+    serviceName : ServiceNames
+    lastPaymentLinkSentAtIstDate : Maybe UTCTime
+    enableServiceUsageCharge : Bool
+    merchantId : Id Merchant
+    merchantOpCityId : Id MerchantOperatingCity
+    subscriptionServiceRelatedData : SubscriptionServiceRelatedData
+
+  beamFields:
+    subscriptionServiceRelatedData:
+      rentedVehicleNumber: Maybe Text
+
+  beamType:
+    enableServiceUsageCharge: Maybe Bool
+    merchantId: Maybe Text
+    merchantOpCityId: Maybe Text
+    serviceName: Maybe ServiceNames
+
+  fromTType:
+    enableServiceUsageCharge: Kernel.Prelude.fromMaybe False enableServiceUsageCharge|E
+    serviceName: Kernel.Prelude.fromMaybe Domain.Types.Plan.YATRI_SUBSCRIPTION serviceName|E
+    subscriptionServiceRelatedData: Storage.Queries.Transformers.DriverPlan.getSubscriptionServiceRelatedData rentedVehicleNumber|EM
+    merchantOpCityId: Storage.Queries.Transformers.DriverPlan.getMerchantOpCityId merchantOpCityId driverId serviceName|EM
+    merchantId: Storage.Queries.Transformers.DriverPlan.getMerchantId merchantId driverId serviceName|EM
+
+  toTType:
+    enableServiceUsageCharge: Kernel.Prelude.Just|I
+    serviceName: Kernel.Prelude.Just|I
+    merchantId: Kernel.Prelude.Just (Kernel.Types.Id.getId merchantId)|E
+    merchantOpCityId: Kernel.Prelude.Just (Kernel.Types.Id.getId merchantOpCityId)|E
+    rentedVehicleNumber: Storage.Queries.Transformers.DriverPlan.getCommodityData subscriptionServiceRelatedData|E
+  constraints:
+    driverId: PrimaryKey
+    mandateId: SecondaryKey
+
+
+
+  queries:
+
+    findByDriverIdWithServiceName:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, serviceName]
+
+    # findAllByDriverIdsPaymentModeAndServiceName:
+    #   kvFunction: findAllWithKV
+    #   where:
+    #     and:
+    #      -  eq: [planType, enableServiceUsageCharge, autoPayStatus, serviceName]
+    #      -  in: [driverId]
+
+    findByMandateIdAndServiceName:
+      kvFunction: findOneWithKV
+      where:
+        and: [mandateId, serviceName]
+
+    # findAllDriversEligibleForService:
+    #   kvFunction: findAllWithKV
+    #   where:
+    #     and: [merchantId, merchantOpCityId, serviceName, enableServiceUsageCharge]
+
+    updateLastPaymentLinkSentAtDateByDriverIdAndServiceName:
+      kvFunction: updateOneWithKV
+      params: [lastPaymentLinkSentAtIstDate, updatedAt]
+      where:
+        and: [driverId, serviceName]
+
+    updateEnableServiceUsageChargeByDriverIdAndServiceName:
+      kvFunction: updateOneWithKV
+      params: [enableServiceUsageCharge, updatedAt]
+      where:
+        and: [driverId, serviceName]
+
+    # updatePlanIdByDriverIdAndServiceName:
+    #   kvFunction: updateOneWithKV
+    #   params: [planId, updatedAt]
+    #   where:
+    #     and: [driverId, serviceName]
+
+    updateMandateIdByDriverIdAndServiceName:
+      kvFunction: updateOneWithKV
+      params: [mandateId, updatedAt]
+      where:
+        and: [driverId, serviceName]
+
+    updatePaymentModeByDriverIdAndServiceName:
+      kvFunction: updateOneWithKV
+      params: [planType, updatedAt]
+      where:
+        and: [driverId, serviceName]
+
+    updateMandateSetupDateByDriverIdAndServiceName:
+      kvFunction: updateOneWithKV
+      params: [mandateSetupDate, updatedAt]
+      where:
+        and: [driverId, serviceName]
+  sqlType:
+    mandateId: text
+    merchantId:  text
+    merchantOpCityId: text
+
+
+  default:
+    coinCovertedToCashLeft: "0"
+    totalCoinsConvertedCash: "0"
+    serviceName: "'YATRI_SUBSCRIPTION'"
+    enableServiceUsageCharge: "true"
+
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_QUERY_FILE
+
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

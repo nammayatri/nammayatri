@@ -5,7 +5,7 @@
 module Domain.Types.SearchRequestForDriver where
 
 import Data.Aeson
-import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
+import qualified Domain.Types.DriverGoHomeRequest
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -46,7 +46,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     driverStepFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     durationToPickup :: Kernel.Types.Common.Seconds,
     estimateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    goHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest.DriverGoHomeRequest),
+    goHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest),
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver,
     isForwardRequest :: Kernel.Prelude.Bool,
     isPartOfIntelligentPool :: Kernel.Prelude.Bool,

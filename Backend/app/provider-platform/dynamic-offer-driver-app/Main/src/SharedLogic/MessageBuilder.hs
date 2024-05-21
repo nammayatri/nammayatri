@@ -40,7 +40,7 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Message.Message as Message
+import qualified Domain.Types.Message as Message
 import qualified Domain.Types.Person as P
 import Environment
 import Kernel.Beam.Functions as B
@@ -49,7 +49,7 @@ import Kernel.Streaming.Kafka.Producer
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
-import qualified Storage.Queries.Message.MessageTranslation as MTQuery
+import qualified Storage.Queries.MessageTranslation as MTQuery
 import Tools.Error
 
 templateText :: Text -> Text

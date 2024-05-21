@@ -1,15 +1,7 @@
 
  --- alter in driver plan table --
 
-Alter table atlas_driver_offer_bpp.driver_plan add column auto_pay_status Text;
-Alter table atlas_driver_offer_bpp.driver_plan add column service_name Text DEFAULT 'YATRI_SUBSCRIPTION';
-Alter table atlas_driver_offer_bpp.driver_plan add column enable_service_usage_charge boolean DEFAULT true;
 Alter table atlas_driver_offer_bpp.driver_plan add column vehicle_number Text;
-Alter table atlas_driver_offer_bpp.driver_plan add column merchant_id Text;
-Alter table atlas_driver_offer_bpp.driver_plan add column merchant_op_city_id Text;
-Alter table atlas_driver_offer_bpp.driver_plan add column payer_vpa Text;
-Alter table atlas_driver_offer_bpp.driver_plan add column rented_vehicle_number Text;
-Alter table atlas_driver_offer_bpp.driver_plan add PRIMARY KEY(driver_id, service_name);
 
 --- alter in driver fee ---
 
@@ -19,8 +11,6 @@ Alter table atlas_driver_offer_bpp.driver_fee alter column collected_at SET DATA
 ---------------------------------- -------------------------------    -------------------
 -------- alter in invoice ---
 
-Alter table atlas_driver_offer_bpp.invoice add column service_name Text DEFAULT 'YATRI_SUBSCRIPTION';
-Alter table atlas_driver_offer_bpp.invoice add column merchant_operating_city_id Text;
 
 ----- alter in plan table ----
 
@@ -103,10 +93,6 @@ ON CONFLICT (service_name, merchant_operating_city_id)
 DO NOTHING;
 
 ---- add coins to cash and total coins left in driver stats table ----
-
-ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN coin_coverted_to_cash_left double precision DEFAULT 0;
-
-Alter Table atlas_driver_offer_bpp.driver_stats ADD COLUMN total_coins_converted_cash double precision DEFAULT 0;
 
 ---- backfill coin feilds in driver stats table ----
 

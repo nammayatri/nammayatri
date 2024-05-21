@@ -6,7 +6,7 @@ imports:
   Money: Kernel.Types.Common
   Variant: Domain.Types.Vehicle
   ServiceTierType: Domain.Types.ServiceTierType
-  DriverGoHomeRequest: Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
+  DriverGoHomeRequest: Domain.Types.DriverGoHomeRequest
   Version: Kernel.Types.Version
   Device: Kernel.Types.Version
   Person: Domain.Types.Person

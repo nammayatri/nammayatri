@@ -19,8 +19,8 @@ import Kernel.Prelude (Generic)
 import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
 import Storage.Beam.CallStatus
-import Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
 import Storage.Beam.DriverFee
+import Storage.Beam.DriverGoHomeRequest
 import Storage.Beam.DriverInformation
 import Storage.Beam.DriverLicense
 import Storage.Beam.DriverRCAssociation
@@ -31,9 +31,9 @@ import Storage.Beam.Geometry
 import Storage.Beam.IdfyVerification
 import Storage.Beam.Image
 import Storage.Beam.Invoice
-import Storage.Beam.Message.Message
-import Storage.Beam.Message.MessageReport
-import Storage.Beam.Message.MessageTranslation
+import Storage.Beam.Message
+import Storage.Beam.MessageReport
+import Storage.Beam.MessageTranslation
 import Storage.Beam.Notification
 import Storage.Beam.Person
 import Storage.Beam.Quote

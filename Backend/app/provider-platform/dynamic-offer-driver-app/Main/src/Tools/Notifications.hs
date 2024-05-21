@@ -25,7 +25,7 @@ import Domain.Types.Location
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
-import Domain.Types.Message.Message as Message
+import Domain.Types.Message as Message
 import qualified Domain.Types.Overlay as DTMO
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken

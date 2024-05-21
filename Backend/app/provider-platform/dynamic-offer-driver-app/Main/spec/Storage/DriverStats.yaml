@@ -1,0 +1,110 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  Driver: Domain.Types.Person
+  Currency: Kernel.Types.Common
+  DistanceUnit: Kernel.Types.Common
+
+DriverStats:
+  tableName: driver_stats
+
+
+  fields:
+    driverId : Id Driver
+    idleSince : UTCTime
+    totalRides : Int
+    totalEarnings : HighPrecMoney
+    bonusEarned : HighPrecMoney
+    lateNightTrips : Int
+    earningsMissed : HighPrecMoney
+    totalDistance : Meters
+    ridesCancelled : Maybe Int
+    totalRidesAssigned : Maybe Int
+    coinCovertedToCashLeft : HighPrecMoney
+    totalCoinsConvertedCash : HighPrecMoney
+    currency : Currency
+    distanceUnit: DistanceUnit
+    updatedAt : UTCTime
+
+  beamFields:
+    totalEarnings:
+      totalEarnings: Money
+      totalEarningsAmount: Maybe HighPrecMoney
+
+    bonusEarned:
+      bonusEarned: Money
+      bonusEarnedAmount: Maybe HighPrecMoney
+
+    earningsMissed:
+      earningsMissed: Money
+      earningsMissedAmount: Maybe HighPrecMoney
+
+    currency:
+      currency: Maybe Currency
+
+  beamType:
+    totalDistance: Double
+    coinCovertedToCashLeft: Maybe HighPrecMoney
+    totalCoinsConvertedCash: Maybe HighPrecMoney
+    distanceUnit: Maybe DistanceUnit
+
+  fromTType:
+    totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
+    bonusEarned: Kernel.Types.Common.mkAmountWithDefault bonusEarnedAmount bonusEarned|E
+    earningsMissed: Kernel.Types.Common.mkAmountWithDefault earningsMissedAmount earningsMissed|E
+    coinCovertedToCashLeft: Kernel.Prelude.fromMaybe 0|I
+    totalCoinsConvertedCash: Kernel.Prelude.fromMaybe 0|I
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+    totalDistance: Kernel.Types.Common.Meters $ GHC.Float.double2Int totalDistance|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit|E
+
+  toTType:
+    totalDistance: getTotalDistance
+    totalEarnings: Kernel.Prelude.roundToIntegral totalEarnings|E
+    currency: Kernel.Prelude.Just|I
+    bonusEarned: Kernel.Prelude.roundToIntegral bonusEarned|E
+    totalEarningsAmount: Kernel.Prelude.Just|I
+    bonusEarnedAmount: Kernel.Prelude.Just|I
+    earningsMissed: Kernel.Prelude.roundToIntegral earningsMissed|E
+    earningsMissedAmount: Kernel.Prelude.Just|I
+    coinCovertedToCashLeft: Kernel.Prelude.Just|I
+    totalCoinsConvertedCash: Kernel.Prelude.Just|I
+    distanceUnit: Kernel.Prelude.Just|I
+
+  constraints:
+    driverId: PrimaryKey
+
+
+  queries:
+
+    deleteById:
+      kvFunction: deleteWithKV
+      where: driverId
+
+    # setMissedEarnings: -- beam Field checkUp DSL Fix needed
+    #   kvFunction: updateOneWithKV
+    #   params: [earningsMissedAmount,earningsMissed]
+    #   where: driverId
+  sqlType:
+    totalEarnings: double precision
+    earningsMissed: double precision
+    totalDistance: double precision
+    bonusEarned: double precision
+
+
+  default:
+    totalRides: "0"
+    totalDistance: "0"
+    totalEarnings: "0"
+    bonusEarned: "0"
+    lateNightTrips: "0"
+    earningsMissed: "0"
+    coinCovertedToCashLeft: "0"
+    totalCoinsConvertedCash: "0"
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

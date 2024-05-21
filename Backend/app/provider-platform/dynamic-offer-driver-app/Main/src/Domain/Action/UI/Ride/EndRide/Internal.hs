@@ -175,7 +175,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
               return 0
             else do
               return $ round (customerCancellationDues / thresholdConfig.cancellationFee)
-        QRD.updateDisputeChancesUsedAndCancellationDues riderDetails.id (max 0 (riderDetails.disputeChancesUsed - calDisputeChances)) 0 >> QCC.create cancellationCharges
+        QRD.updateDisputeChancesUsedAndCancellationDues (max 0 (riderDetails.disputeChancesUsed - calDisputeChances)) 0 (riderDetails.id) >> QCC.create cancellationCharges
       _ -> logWarning $ "Unable to update customer cancellation dues as RiderDetailsId is NULL with rideId " <> ride.id.getId
 
 sendReferralFCM ::
@@ -191,6 +191,7 @@ sendReferralFCM ::
   m ()
 sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId = do
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
+  now <- getCurrentTime
   let shouldUpdateRideComplete =
         case minTripDistanceForReferralCfg of
           Just distance -> (metersToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenValidRide)) mbRiderDetails
@@ -198,7 +199,7 @@ sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId = do
   when shouldUpdateRideComplete $
     fork "REFERRAL_ACTIVATED FCM to Driver" $ do
       whenJust mbRiderDetails $ \riderDetails -> do
-        QRD.updateHasTakenValidRide riderDetails.id
+        QRD.updateHasTakenValidRide True (Just now) riderDetails.id
         case riderDetails.referredByDriver of
           Just referredDriverId -> do
             let referralMessage = "Congratulations!"

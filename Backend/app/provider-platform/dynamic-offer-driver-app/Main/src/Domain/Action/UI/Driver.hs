@@ -91,6 +91,8 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time (Day, diffDays, fromGregorian)
 import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
+import qualified Domain.Action.UI.DriverGoHomeRequest as DDGR
+import qualified Domain.Action.UI.DriverHomeLocation as DDHL
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
 import qualified Domain.Action.UI.Merchant as DM
 import qualified Domain.Action.UI.Person as SP
@@ -99,9 +101,9 @@ import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Common as DTC
-import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
-import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
 import qualified Domain.Types.DriverFee as DDF
+import qualified Domain.Types.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.DriverHomeLocation as DDHL
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
@@ -111,6 +113,7 @@ import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy
+import qualified Domain.Types.Invoice as Domain
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -195,9 +198,9 @@ import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QBooking
-import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
-import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.DriverGoHomeRequest as QDGR
+import qualified Storage.Queries.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
@@ -1531,7 +1534,7 @@ clearDriverDues ::
   m ClearDuesRes
 clearDriverDues (personId, _merchantId, opCityId) serviceName mbDeepLinkData = do
   dueDriverFees <- QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] serviceName
-  invoices <- (runInReplica . QINV.findActiveManualInvoiceByFeeId . (.id)) `mapM` dueDriverFees
+  invoices <- mapM (\fee -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.ACTIVE_INVOICE)) dueDriverFees
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)

@@ -19,7 +19,7 @@ import Database.Beam.Postgres
 import Domain.Types.Booking as Booking
 import Domain.Types.Booking as DBooking
 import Domain.Types.Common as DTC
-import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverInformation
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant

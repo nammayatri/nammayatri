@@ -11,7 +11,7 @@ imports:
   Booking: Domain.Types.Booking
   Person: Domain.Types.Person
   FareParameters: Domain.Types.FareParameters
-  DriverGoHomeRequest: Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
+  DriverGoHomeRequest: Domain.Types.DriverGoHomeRequest
   Client: Domain.Types.Client
   Double: Kernel.Prelude
   Int: Kernel.Prelude
