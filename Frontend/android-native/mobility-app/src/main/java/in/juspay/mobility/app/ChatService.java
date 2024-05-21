@@ -9,7 +9,7 @@
 package in.juspay.mobility.app;
 
 import static in.juspay.mobility.app.NotificationUtils.startMediaPlayer;
-import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING;
+//import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -29,6 +29,7 @@ import androidx.core.app.NotificationCompat;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.firebase.firestore.DocumentChange;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
@@ -109,11 +110,13 @@ public class ChatService extends Service {
         sharedPrefs = context.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         try{
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING);
+                this.startForeground(serviceNotificationID, createNotification());
             }else {
                 this.startForeground(serviceNotificationID, createNotification());
             }
         }catch (Exception e){
+            Exception exception = new Exception("Error in onCreate startForeground " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             Log.e(LOG_TAG, "Error in onCreate ", e);
         }
         if (sharedPrefs != null) {
@@ -128,11 +131,13 @@ public class ChatService extends Service {
         if (!isChatServiceRunning) {
             try{
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING);
+                    this.startForeground(serviceNotificationID, createNotification());
                 }else {
                     this.startForeground(serviceNotificationID, createNotification());
                 }
             }catch (Exception e){
+                Exception exception = new Exception("Error in !isChatServiceRunning " + e);
+                FirebaseCrashlytics.getInstance().recordException(exception);
                 Log.e(LOG_TAG, "Error in onCreate -> ", e);
             }
             FirebaseUser user = firebaseAuth.getCurrentUser();
@@ -149,11 +154,13 @@ public class ChatService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         try{
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING);
+                this.startForeground(serviceNotificationID, createNotification());
             }else {
                 this.startForeground(serviceNotificationID, createNotification());
             }
         }catch (Exception e){
+            Exception exception = new Exception("Error in onStartCommand " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             Log.e(LOG_TAG, "Error in onStartCommand ", e);
         }
         handleMessages();

@@ -35,6 +35,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
+
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.concurrent.ExecutorService;
@@ -69,6 +71,8 @@ public class GpsListeningService extends Service {
                 this.startService(locationUpdateService);
             }
         }catch(Exception e){
+            Exception exception = new Exception("Error in onCreate startLocationService " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             Log.e(LOG_TAG, "Error in startLocationService ", e);
         }
     }
@@ -82,6 +86,8 @@ public class GpsListeningService extends Service {
                 startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
             }
         }catch (Exception e){
+            Exception exception = new Exception("Error in onStartCommand " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             Log.e(LOG_TAG, "Error in onStartCommand -> ", e);
         }
         IntentFilter intentFilter = new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION);
@@ -105,6 +111,8 @@ public class GpsListeningService extends Service {
                 startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
             }
         }catch (Exception e){
+            Exception exception = new Exception("Error in onCreate gpsForegroundServiceId " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             Log.e(LOG_TAG, "Error in onCreate -> ", e);
         }
     }
