@@ -27,6 +27,7 @@ SearchRequest:
     id: Id SearchRequest
     startTime: UTCTime
     returnTime: Maybe UTCTime
+    roundTrip: Maybe Bool
     validTill: UTCTime
     riderId: Id Person
     clientId: Maybe (Id Client)

@@ -379,7 +379,6 @@ castCancellationSource = \case
 castTripCategory :: DTC.TripCategory -> Common.TripCategory
 castTripCategory = \case
   DTC.OneWay _ -> Common.OneWay
-  DTC.RoundTrip _ -> Common.RoundTrip
   DTC.Rental _ -> Common.Rental
   DTC.RideShare _ -> Common.RideShare
   DTC.InterCity _ -> Common.InterCity
@@ -605,4 +604,13 @@ makeFareParam (DFP.RentalDetails DFP.FParamsRentalDetails {..}) =
         timeBasedFareWithCurrency = PriceAPIEntity timeBasedFare currency,
         distBasedFareWithCurrency = PriceAPIEntity distBasedFare currency,
         ..
+      }
+makeFareParam (DFP.InterCityDetails DFP.FParamsInterCityDetails {..}) =
+  Common.InterCityDetails
+    Common.FParamsInterCityDetails
+      { timeFare = PriceAPIEntity timeFare currency,
+        distanceFare = PriceAPIEntity distanceFare currency,
+        pickupCharge = PriceAPIEntity pickupCharge currency,
+        extraDistanceFare = PriceAPIEntity extraDistanceFare currency,
+        extraTimeFare = PriceAPIEntity extraTimeFare currency
       }

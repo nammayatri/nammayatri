@@ -156,6 +156,7 @@ data QuoteBreakupTitle
   | PLATFORM_FEE -- should this be in quote breakup?
   | TIME_BASED_FARE
   | DIST_BASED_FARE
+  | EXTRA_DISTANCE_FARE
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data CancellationReasonId

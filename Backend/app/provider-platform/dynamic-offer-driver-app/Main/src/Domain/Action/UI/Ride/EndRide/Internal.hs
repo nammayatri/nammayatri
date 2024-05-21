@@ -416,6 +416,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
         DFare.ProgressiveDetails _ -> (0, 0, 0)
         DFare.SlabDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst)
         DFare.RentalDetails _ -> (0, 0, 0)
+        DFare.InterCityDetails _ -> (0, 0, 0)
   let totalDriverFee = govtCharges + platformFee + cgst + sgst
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   lastDriverFee <- QDF.findLatestFeeByDriverIdAndServiceName driverId serviceName

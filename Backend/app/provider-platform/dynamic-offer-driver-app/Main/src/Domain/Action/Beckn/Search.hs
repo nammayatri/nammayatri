@@ -91,6 +91,8 @@ data DSearchReq = DSearchReq
     bapUri :: BaseUrl,
     bapCountry :: Context.Country,
     customerPhoneNum :: Maybe Text,
+    returnTime :: Maybe UTCTime,
+    roundTrip :: Bool,
     pickupLocation :: LatLong,
     pickupTime :: UTCTime,
     pickupAddress :: Maybe BA.Address,
@@ -199,8 +201,8 @@ handler ValidatedDSearchReq {..} sReq = do
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
   void $ QSR.createDSReq searchReq
 
-  let buildEstimateHelper = buildEstimate merchantOpCityId currency searchReq.id possibleTripOption.schedule possibleTripOption.isScheduled mbDistance specialLocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute
-  let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled mbDistance mbDuration specialLocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute
+  let buildEstimateHelper = buildEstimate merchantOpCityId currency searchReq.id possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance specialLocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute
+  let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration specialLocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute
   (estimates, quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies
   QEst.createMany estimates
   for_ quotes QQuote.create
@@ -236,6 +238,7 @@ handler ValidatedDSearchReq {..} sReq = do
       case fp.tripCategory of
         DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> (buildEstimateHelper False) fp >>= \est -> pure (est : estimates, quotes)
         DTC.Rental _ -> (buildQuoteHelper True) fp >>= \quote -> pure (estimates, quote : quotes)
+        DTC.InterCity _ -> (buildQuoteHelper True) fp >>= \quote -> pure (estimates, quote : quotes)
         _ -> (buildQuoteHelper False) fp >>= \quote -> pure (estimates, quote : quotes)
 
     buildDSearchResp fromLocation toLocation specialLocationTag searchMetricsMVar quotes estimates = do
@@ -375,6 +378,7 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverEx
         pickupZoneGateId = mbSpecialZoneGateId,
         customerCancellationDues = Nothing,
         currency,
+        roundTrip = Just roundTrip,
         ..
       }
 
@@ -389,6 +393,8 @@ buildQuote ::
   Id DM.Merchant ->
   UTCTime ->
   Bool ->
+  Maybe UTCTime ->
+  Bool ->
   Maybe Meters ->
   Maybe Seconds ->
   Maybe Text ->
@@ -399,7 +405,7 @@ buildQuote ::
   Bool ->
   DFP.FullFarePolicy ->
   m DQuote.Quote
-buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled mbDistance mbDuration specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute nightShiftOverlapChecking fullFarePolicy = do
+buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled returnTime roundTrip mbDistance mbDuration specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute nightShiftOverlapChecking fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance
   fareParams <-
     calculateFareParameters
@@ -407,6 +413,8 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled m
         { farePolicy = fullFarePolicy,
           actualDistance = Just dist,
           rideTime = pickupTime,
+          returnTime,
+          roundTrip,
           waitingTime = Nothing,
           actualRideDuration = Nothing,
           avgSpeedOfVehicle = Nothing,
@@ -455,6 +463,8 @@ buildEstimate ::
   Id DSR.SearchRequest ->
   UTCTime ->
   Bool ->
+  Maybe UTCTime ->
+  Bool ->
   Maybe Meters ->
   Maybe Text ->
   Maybe HighPrecMoney ->
@@ -464,7 +474,7 @@ buildEstimate ::
   Bool ->
   DFP.FullFarePolicy ->
   m DEst.Estimate
-buildEstimate merchantOpCityId currency searchReqId startTime isScheduled mbDistance specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute nightShiftOverlapChecking fullFarePolicy = do
+buildEstimate merchantOpCityId currency searchReqId startTime isScheduled returnTime roundTrip mbDistance specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute nightShiftOverlapChecking fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance -- TODO: Fix Later
   fareParams <-
     calculateFareParameters
@@ -472,6 +482,8 @@ buildEstimate merchantOpCityId currency searchReqId startTime isScheduled mbDist
         { farePolicy = fullFarePolicy,
           actualDistance = Just dist,
           rideTime = startTime,
+          returnTime,
+          roundTrip,
           waitingTime = Nothing,
           actualRideDuration = Nothing,
           avgSpeedOfVehicle = Nothing,
@@ -559,14 +571,14 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity = do
               then do
                 if isCrossCity
                   then do
-                    [DTC.CrossCity DTC.OneWayOnDemandStaticOffer, DTC.RoundTrip DTC.OnDemandStaticOffer, DTC.Rental DTC.OnDemandStaticOffer]
-                      <> (if not isScheduled then [DTC.CrossCity DTC.OneWayRideOtp, DTC.CrossCity DTC.OneWayOnDemandDynamicOffer, DTC.RoundTrip DTC.RideOtp, DTC.Rental DTC.RideOtp] else [])
+                    [DTC.CrossCity DTC.OneWayOnDemandStaticOffer, DTC.Rental DTC.OnDemandStaticOffer]
+                      <> (if not isScheduled then [DTC.CrossCity DTC.OneWayRideOtp, DTC.CrossCity DTC.OneWayOnDemandDynamicOffer, DTC.Rental DTC.RideOtp] else [])
                   else do
-                    [DTC.InterCity DTC.OneWayOnDemandStaticOffer, DTC.RoundTrip DTC.OnDemandStaticOffer, DTC.Rental DTC.OnDemandStaticOffer]
-                      <> (if not isScheduled then [DTC.InterCity DTC.OneWayRideOtp, DTC.InterCity DTC.OneWayOnDemandDynamicOffer, DTC.RoundTrip DTC.RideOtp, DTC.Rental DTC.RideOtp] else [])
+                    [DTC.InterCity DTC.OneWayOnDemandStaticOffer, DTC.Rental DTC.OnDemandStaticOffer]
+                      <> (if not isScheduled then [DTC.InterCity DTC.OneWayRideOtp, DTC.InterCity DTC.OneWayOnDemandDynamicOffer, DTC.Rental DTC.RideOtp] else [])
               else do
-                [DTC.OneWay DTC.OneWayOnDemandStaticOffer, DTC.RoundTrip DTC.OnDemandStaticOffer, DTC.Rental DTC.OnDemandStaticOffer]
-                  <> (if not isScheduled then [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer, DTC.RoundTrip DTC.RideOtp, DTC.Rental DTC.RideOtp] else [])
+                [DTC.OneWay DTC.OneWayOnDemandStaticOffer, DTC.Rental DTC.OnDemandStaticOffer]
+                  <> (if not isScheduled then [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer, DTC.Rental DTC.RideOtp] else [])
           Nothing ->
             [DTC.Rental DTC.OnDemandStaticOffer]
               <> [DTC.Rental DTC.RideOtp | not isScheduled]

@@ -83,7 +83,7 @@ data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | COMPLET
   deriving stock (Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data TripCategory = OneWay | RoundTrip | Rental | RideShare | InterCity | CrossCity
+data TripCategory = OneWay | Rental | RideShare | InterCity | CrossCity
   deriving stock (Eq, Ord, Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
@@ -549,7 +549,7 @@ data FareBreakUp = FareBreakUp
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails | RentalDetails FParamsRentalDetails
+data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails | RentalDetails FParamsRentalDetails | InterCityDetails FParamsInterCityDetails
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -580,6 +580,16 @@ data FParamsRentalDetails = FParamsRentalDetails
     distBasedFareWithCurrency :: PriceAPIEntity,
     extraDistance :: Meters,
     extraDuration :: Seconds
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FParamsInterCityDetails = FParamsInterCityDetails
+  { timeFare :: PriceAPIEntity,
+    distanceFare :: PriceAPIEntity,
+    pickupCharge :: PriceAPIEntity,
+    extraDistanceFare :: PriceAPIEntity,
+    extraTimeFare :: PriceAPIEntity
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

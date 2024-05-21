@@ -186,6 +186,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
       FarePolicyD.ProgressiveDetails det -> mkAdditionalProgressiveBreakups det
       FarePolicyD.SlabsDetails det -> mkAdditionalSlabBreakups $ FarePolicyD.findFPSlabsDetailsSlabByDistance (fromMaybe 0 mbDistance) det.slabs
       FarePolicyD.RentalDetails det -> mkAdditionalRentalBreakups det
+      FarePolicyD.InterCityDetails det -> mkAdditionalInterCityBreakups det
 
     mkAdditionalRentalBreakups det = do
       let minFareCaption = show Tags.MIN_FARE
@@ -207,6 +208,38 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
           plannedPerKmRateItem = mkBreakupItem plannedPerKmRateCaption . mkValue $ show det.plannedPerKmRate
 
       [minFareItem, perHourChargeItem, perExtraMinRateItem, perExtraKmRateItem, includedKmPerHrItem, plannedPerKmRateItem]
+        <> (oldNightShiftChargeBreakups det.nightShiftCharge)
+        <> (newNightShiftChargeBreakups det.nightShiftCharge)
+
+    mkAdditionalInterCityBreakups det = do
+      let minFareCaption = show Tags.MIN_FARE
+          minFareItem = mkBreakupItem minFareCaption . mkValue $ show det.baseFare
+
+          perHourChargeCaption = show Tags.PER_HOUR_CHARGE
+          perHourChargeItem = mkBreakupItem perHourChargeCaption . mkValue $ show det.perHourCharge
+
+          perExtraMinRateCaption = show Tags.PER_MINUTE_CHARGE
+          perExtraMinRateItem = mkBreakupItem perExtraMinRateCaption . mkValue $ show det.perExtraMinRate
+
+          perExtraKmRateCaption = show Tags.UNPLANNED_PER_KM_CHARGE
+          perExtraKmRateItem = mkBreakupItem perExtraKmRateCaption . mkValue $ show det.perExtraKmRate
+
+          includedKmPerHrCaption = show Tags.PER_HOUR_DISTANCE_KM
+          includedKmPerHrItem = mkBreakupItem includedKmPerHrCaption . mkValue $ show det.kmPerPlannedExtraHour
+
+          plannedPerKmRateCaption = show Tags.PLANNED_PER_KM_CHARGE
+          plannedPerKmRateItem = mkBreakupItem plannedPerKmRateCaption . mkValue $ show det.perKmRateOneWay
+
+          plannedPerKmRateRoundCaption = show Tags.PLANNED_PER_KM_CHARGE_ROUND_TRIP
+          plannedPerKmRateRoundItem = mkBreakupItem plannedPerKmRateRoundCaption . mkValue $ show det.perKmRateRoundTrip
+
+          perDayMaxHourAllowanceCaption = show Tags.PER_DAY_MAX_HOUR_ALLOWANCE
+          perDayMaxHourAllowanceItem = mkBreakupItem perDayMaxHourAllowanceCaption . mkValue $ show det.perDayMaxHourAllowance
+
+          pickupChargeCaption = show Tags.DEAD_KILOMETER_FARE
+          pickupChargeBreakup = mkBreakupItem pickupChargeCaption (mkValue $ show det.deadKmFare)
+
+      [minFareItem, pickupChargeBreakup, perHourChargeItem, perExtraMinRateItem, perExtraKmRateItem, includedKmPerHrItem, plannedPerKmRateItem, plannedPerKmRateRoundItem, perDayMaxHourAllowanceItem]
         <> (oldNightShiftChargeBreakups det.nightShiftCharge)
         <> (newNightShiftChargeBreakups det.nightShiftCharge)
 

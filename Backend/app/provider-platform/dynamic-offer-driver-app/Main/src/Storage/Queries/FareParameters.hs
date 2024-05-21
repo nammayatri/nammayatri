@@ -23,6 +23,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareParameters as BeamFP
+import Storage.Queries.FareParameters.FareParametersInterCityDetails as QFPICD
+import qualified Storage.Queries.FareParameters.FareParametersInterCityDetails as BeamFPICD
 import Storage.Queries.FareParameters.FareParametersProgressiveDetails as QFPPD
 import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as BeamFPPD
 import Storage.Queries.FareParameters.FareParametersRentalDetails as QFPRD
@@ -37,6 +39,7 @@ create fareParameters = do
     ProgressiveDetails fppdt -> QFPPD.create (fareParameters.id, fppdt)
     SlabDetails fpsdt -> QFPSD.create (fareParameters.id, fpsdt)
     RentalDetails fprdt -> QFPRD.create (fareParameters.id, fprdt)
+    InterCityDetails fpicdt -> QFPICD.create (fareParameters.id, fpicdt)
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FareParameters -> m (Maybe FareParameters)
 findById (Id fareParametersId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq fareParametersId]
@@ -101,6 +104,11 @@ instance FromTType' BeamFP.FareParameters FareParameters where
           mFullFPRD <- BeamFPRD.findById' (Id id)
           case mFullFPRD of
             Just (_, fPRD) -> return (Just $ RentalDetails fPRD)
+            Nothing -> return Nothing
+        InterCity -> do
+          mFullFPICD <- BeamFPICD.findById' (Id id)
+          case mFullFPICD of
+            Just (_, fPICD) -> return (Just $ InterCityDetails fPICD)
             Nothing -> return Nothing
     now <- getCurrentTime
     case mFareParametersDetails of

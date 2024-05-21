@@ -182,6 +182,8 @@ handler merchantId req validatedReq = do
             distanceToPickup = distanceToPickup,
             stopLocationId = (.id) <$> toLocation,
             startTime = searchRequest.startTime,
+            returnTime = searchRequest.returnTime,
+            roundTrip = searchRequest.roundTrip,
             tollNames = if isTollApplicableForServiceTier then searchRequest.tollNames else Nothing,
             estimateId = Just $ Id req.estimateId,
             ..

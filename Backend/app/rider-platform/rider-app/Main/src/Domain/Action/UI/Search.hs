@@ -296,6 +296,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
       (metersToDistance <$> shortestRouteDistance)
       startTime
       returnTime
+      roundTrip
       bundleVersion
       clientVersion
       clientConfigVersion
@@ -350,6 +351,7 @@ buildSearchRequest ::
   Maybe Distance ->
   UTCTime ->
   Maybe UTCTime ->
+  Bool ->
   Maybe Version ->
   Maybe Version ->
   Maybe Version ->
@@ -358,7 +360,7 @@ buildSearchRequest ::
   Maybe Seconds ->
   SearchRequest.RiderPreferredOption ->
   Flow SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime bundleVersion clientVersion clientConfigVersion device disabilityTag duration riderPreferredOption = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration riderPreferredOption = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)
@@ -367,6 +369,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
       { id = searchRequestId,
         startTime,
         returnTime,
+        roundTrip = Just roundTrip,
         validTill = validTill,
         riderId = person.id,
         fromLocation = pickup,

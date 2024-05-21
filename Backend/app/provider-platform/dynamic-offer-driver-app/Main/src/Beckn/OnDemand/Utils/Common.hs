@@ -220,7 +220,6 @@ castVariant Variant.BIKE = (show Enums.BIKE, "BIKE")
 mkFulfillmentType :: DCT.TripCategory -> Text
 mkFulfillmentType = \case
   DCT.OneWay DCT.OneWayRideOtp -> show Enums.RIDE_OTP
-  DCT.RoundTrip DCT.RideOtp -> show Enums.RIDE_OTP
   DCT.RideShare DCT.RideOtp -> show Enums.RIDE_OTP
   DCT.Rental _ -> show Enums.RENTAL
   DCT.InterCity _ -> show Enums.INTER_CITY
@@ -878,6 +877,7 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
+        DFParams.InterCity -> True
 
 type MerchantShortId = Text
 
@@ -967,7 +967,6 @@ convertQuoteToPricing (DQuote.Quote {..}, serviceTier, mbDriverLocations) =
     }
   where
     mapToFulfillmentType (DTC.OneWay DTC.OneWayRideOtp) = show Enums.RIDE_OTP
-    mapToFulfillmentType (DTC.RoundTrip DTC.RideOtp) = show Enums.RIDE_OTP
     mapToFulfillmentType (DTC.RideShare DTC.RideOtp) = show Enums.RIDE_OTP
     mapToFulfillmentType (DTC.Rental _) = show Enums.RENTAL
     mapToFulfillmentType (DTC.InterCity _) = show Enums.INTER_CITY

@@ -196,11 +196,9 @@ validateRequest subscriber transporterId req now = do
   case booking.tripCategory of
     DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
     DTC.OneWay DTC.OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
-    DTC.RoundTrip DTC.RideOtp -> getRideOtpQuoteDetails booking transporter
     DTC.Rental DTC.RideOtp -> getRideOtpQuoteDetails booking transporter
     DTC.RideShare DTC.RideOtp -> getRideOtpQuoteDetails booking transporter
     DTC.OneWay DTC.OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
-    DTC.RoundTrip DTC.OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     DTC.Rental DTC.OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     DTC.RideShare DTC.OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     DTC.InterCity DTC.OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter

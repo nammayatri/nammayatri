@@ -35,3 +35,9 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN toll_names text[] ;
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN transaction_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN valid_till timestamp with time zone ;
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN round_trip boolean ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN return_time timestamp with time zone ;

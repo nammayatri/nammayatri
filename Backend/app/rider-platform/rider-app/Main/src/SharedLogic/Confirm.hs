@@ -124,7 +124,7 @@ confirm DConfirmReq {..} = do
           throwError $ QuoteExpired quote.id.getId
         pure (Just driverOffer.bppQuoteId)
       DQuote.OneWaySpecialZoneDetails details -> pure (Just details.quoteId)
-      DQuote.InterCityDetails details -> pure (Just details.quoteId)
+      DQuote.InterCityDetails details -> pure (Just details.id.getId)
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
   activeBooking <- QRideB.findLatestByRiderId personId
   scheduledBookings <- QRideB.findByRiderIdAndStatus personId [DRB.CONFIRMED]
@@ -194,7 +194,7 @@ confirm DConfirmReq {..} = do
       case quoteDetails of
         DQuote.OneWayDetails _ -> pure ConfirmOneWayDetails
         DQuote.RentalDetails DRental.RentalDetails {id} -> pure $ ConfirmRentalDetails id.getId
-        DQuote.InterCityDetails details -> pure $ ConfirmInterCityDetails details.quoteId
+        DQuote.InterCityDetails details -> pure $ ConfirmInterCityDetails details.id.getId
         DQuote.DriverOfferDetails _ -> do
           bppQuoteId <- fulfillmentId & fromMaybeM (InternalError "FulfillmentId not found in Init. this error should never come.")
           pure $ ConfirmAutoDetails bppQuoteId
@@ -241,6 +241,8 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         providerUrl = quote.providerUrl,
         bppEstimateId = quote.itemId,
         startTime = searchRequest.startTime,
+        returnTime = searchRequest.returnTime,
+        roundTrip = searchRequest.roundTrip,
         riderId = searchRequest.riderId,
         fromLocation = fromLoc,
         initialPickupLocation = fromLoc,

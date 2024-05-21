@@ -154,6 +154,8 @@ Booking:
     bppEstimateId: Text
     primaryExophone: Text
     startTime: UTCTime
+    returnTime: Maybe UTCTime
+    roundTrip: Maybe Bool
     riderId: Id Person
     fromLocation: Location
     initialPickupLocation: Location|NoRelation
