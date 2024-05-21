@@ -98,6 +98,11 @@ getValueFromRedis key = do
   redisToUse <- getRedisName
   L.rGet redisToUse key
 
+deleteKeyFromRedis :: Text -> Flow ()
+deleteKeyFromRedis key = do
+  redisToUse <- getRedisName
+  void $ L.runKVDB redisToUse $ L.del [DTE.encodeUtf8 key]
+
 setValueInRedis :: ToJSON v => Text -> v -> Flow (Either ET.KVDBReply ET.KVDBStatus)
 setValueInRedis key value = do
   redisToUse <- getRedisName
