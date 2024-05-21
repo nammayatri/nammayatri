@@ -24,7 +24,7 @@ data FPInterCityDetailsD (s :: UsageSafety) = FPInterCityDetails
     perExtraMinRate :: HighPrecMoney,
     kmPerPlannedExtraHour :: Kilometers,
     deadKmFare :: HighPrecMoney,
-    perDayMaxHourCharge :: HighPrecMoney,
+    perDayMaxHourAllowance :: Minutes,
     defaultWaitTimeAtDestination :: Minutes,
     currency :: Currency,
     nightShiftCharge :: Maybe Domain.NightShiftCharge

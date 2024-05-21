@@ -862,6 +862,7 @@ updateFarePolicy _ _ farePolicyId req = do
             allowedTripDistanceBounds = req.allowedTripDistanceBounds <|> allowedTripDistanceBounds,
             govtCharges = req.govtCharges <|> govtCharges,
             perMinuteRideExtraTimeCharge = (req.perMinuteRideExtraTimeChargeWithCurrency <&> (.amount)) <|> req.perMinuteRideExtraTimeCharge <|> perMinuteRideExtraTimeCharge,
+            tollCharges = req.tollCharges <|> tollCharges,
             farePolicyDetails = fPDetails,
             congestionChargeMultiplier = FarePolicy.mkCongestionChargeMultiplier <$> req.congestionChargeMultiplier <|> congestionChargeMultiplier,
             description = req.description <|> description,
@@ -875,6 +876,7 @@ updateFarePolicy _ _ farePolicyId req = do
           pure $ FarePolicy.ProgressiveDetails $ mkUpdatedFPProgressiveDetails fPProgressiveDetails
         FarePolicy.SlabsDetails _ -> pure fPDetails
         FarePolicy.RentalDetails _ -> pure fPDetails
+        FarePolicy.InterCityDetails _ -> pure fPDetails
 
     mkUpdatedFPProgressiveDetails FarePolicy.FPProgressiveDetails {..} =
       FarePolicy.FPProgressiveDetails

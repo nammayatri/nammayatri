@@ -58,3 +58,8 @@ ALTER TABLE atlas_app.search_request DROP COLUMN bundle_version;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.search_request ADD COLUMN return_time timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN round_trip boolean ;

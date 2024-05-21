@@ -98,7 +98,6 @@ RentalDetails:
   excludedFields: [updatedAt,createdAt,merchantId,merchantOperatingCityId]
 
   excludedDefaultQueries:
-    - create
     - createMany
     - updateByPrimaryKey
     - findByPrimaryKey
@@ -112,5 +111,4 @@ RentalDetails:
     id: PrimaryKey
 
   extraOperations:
-    - EXTRA_QUERY_FILE
     - EXTRA_DOMAIN_TYPE_FILE

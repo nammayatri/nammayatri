@@ -29,6 +29,7 @@ import Kernel.Utils.Common
 import qualified Storage.Beam.FarePolicy as BeamFP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.FarePolicy.DriverExtraFeeBounds as CQueriesDEFB
+import qualified Storage.Cac.FarePolicy.FarePolicyInterCityDetails as CQueriesFPICD
 import qualified Storage.Cac.FarePolicy.FarePolicyProgressiveDetails as CQueriesFPPD
 import qualified Storage.Cac.FarePolicy.FarePolicyRentalDetails as CQueriesFPRD
 import qualified Storage.Cac.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as CQueriesFPSDS
@@ -88,5 +89,6 @@ mkCacFarePolicyHandler (_farePolicy, context, tenant, id', toss) =
     { findAllDriverExtraFeeBounds = CQueriesDEFB.getDriverExtraFeeBoundsFromCAC context tenant id' toss,
       findProgressiveDetails = CQueriesFPPD.getFPProgressiveDetailsFromCAC context tenant id' toss,
       findAllSlabDetailsSlabs = CQueriesFPSDS.getFarePolicySlabsDetailsSlabFromCAC context tenant id' toss,
-      findRentalDetails = CQueriesFPRD.findFarePolicyRentalDetailsFromCAC context tenant id' toss
+      findRentalDetails = CQueriesFPRD.findFarePolicyRentalDetailsFromCAC context tenant id' toss,
+      findInterCityDetails = CQueriesFPICD.findFarePolicyInterCityDetailsFromCAC context tenant id' toss
     }

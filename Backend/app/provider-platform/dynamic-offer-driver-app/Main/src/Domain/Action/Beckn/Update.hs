@@ -205,6 +205,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
               { farePolicy,
                 actualDistance = Just estimatedDistance,
                 rideTime = booking.startTime,
+                returnTime = booking.returnTime,
+                roundTrip = fromMaybe False booking.roundTrip,
                 waitingTime = Nothing,
                 actualRideDuration = Nothing,
                 avgSpeedOfVehicle = Nothing,

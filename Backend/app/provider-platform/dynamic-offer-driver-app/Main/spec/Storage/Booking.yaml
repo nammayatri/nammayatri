@@ -64,6 +64,8 @@ Booking:
     paymentUrl: Maybe Text
     stopLocationId: Maybe (Id Location)
     distanceToPickup: Maybe Meters
+    returnTime: Maybe UTCTime
+    roundTrip: Maybe Bool
     isScheduled: Bool
     estimateId: Maybe (Id Estimate)
 

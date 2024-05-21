@@ -136,6 +136,23 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.CANCELLATION_CHARGES),
                      Just (show Enums.PARKING_CHARGE)
                    ]
+        DFParams.InterCity ->
+          title
+            `elem` [ Just (show Enums.BASE_FARE),
+                     Just (show Enums.SERVICE_CHARGE),
+                     Just (show Enums.DEAD_KILOMETER_FARE),
+                     Just (show Enums.DIST_BASED_FARE),
+                     Just (show Enums.TIME_BASED_FARE),
+                     Just (show Enums.DRIVER_SELECTED_FARE),
+                     Just (show Enums.CUSTOMER_SELECTED_FARE),
+                     Just (show Enums.TOTAL_FARE),
+                     Just (show Enums.WAITING_OR_PICKUP_CHARGES),
+                     Just (show Enums.NIGHT_SHIFT_CHARGE),
+                     Just (show Enums.EXTRA_TIME_FARE),
+                     Just (show Enums.EXTRA_DISTANCE_FARE),
+                     Just (show Enums.CANCELLATION_CHARGES),
+                     Just (show Enums.PARKING_CHARGE)
+                   ]
 
 mkPaymentParams :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC.BecknConfig -> DRB.Booking -> Spec.Payment
 mkPaymentParams _paymentMethodInfo _paymentUrl merchant bppConfig booking = do

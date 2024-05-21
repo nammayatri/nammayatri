@@ -186,6 +186,7 @@ library
       Domain.Action.UI.FRFSTicketService
       Domain.Action.UI.Frontend
       Domain.Action.UI.HotSpot
+      Domain.Action.UI.InterCityDetails
       Domain.Action.UI.Invoice
       Domain.Action.UI.Location
       Domain.Action.UI.Maps
@@ -216,6 +217,7 @@ library
       Domain.Types.Extra.Booking
       Domain.Types.Extra.CancellationReason
       Domain.Types.Extra.FeedbackForm
+      Domain.Types.Extra.InterCityDetails
       Domain.Types.Extra.MerchantMessage
       Domain.Types.Extra.MerchantPaymentMethod
       Domain.Types.Extra.MerchantServiceConfig
@@ -315,7 +317,6 @@ library
       Storage.Queries.PlaceBasedServiceConfigExtra
       Storage.Queries.QuoteExtra
       Storage.Queries.RegistrationTokenExtra
-      Storage.Queries.RentalDetailsExtra
       Storage.Queries.RideExtra
       Storage.Queries.SavedReqLocationExtra
       Storage.Queries.SearchRequestExtra
@@ -416,6 +417,7 @@ library
       Domain.Types.FRFSTicketBookingPayment
       Domain.Types.FRFSTrip
       Domain.Types.HotSpotConfig
+      Domain.Types.InterCityDetails
       Domain.Types.Issue
       Domain.Types.Location
       Domain.Types.LocationMapping
@@ -494,6 +496,7 @@ library
       Storage.Beam.FRFSTicketBookingPayment
       Storage.Beam.FRFSTrip
       Storage.Beam.HotSpotConfig
+      Storage.Beam.InterCityDetails
       Storage.Beam.Issue
       Storage.Beam.Location
       Storage.Beam.LocationMapping
@@ -572,6 +575,7 @@ library
       Storage.Queries.FRFSTicketBookingPayment
       Storage.Queries.FRFSTrip
       Storage.Queries.HotSpotConfig
+      Storage.Queries.InterCityDetails
       Storage.Queries.Issue
       Storage.Queries.Location
       Storage.Queries.LocationMapping
@@ -608,7 +612,6 @@ library
       Storage.Queries.OrphanInstances.PlaceBasedServiceConfig
       Storage.Queries.OrphanInstances.Quote
       Storage.Queries.OrphanInstances.RegistrationToken
-      Storage.Queries.OrphanInstances.RentalDetails
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.SavedReqLocation
       Storage.Queries.OrphanInstances.SearchRequest

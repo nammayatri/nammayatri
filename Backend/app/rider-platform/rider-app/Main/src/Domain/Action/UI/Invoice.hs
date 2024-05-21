@@ -46,6 +46,7 @@ getInvoice (mbPersonId, merchantId) from to = do
                   ("SERVICE_CHARGE", "Service Charge"),
                   ("TIME_BASED_FARE", "Time Based Fare"),
                   ("DIST_BASED_FARE", "Distance Based Fare"),
+                  ("EXTRA_DISTANCE_FARE", "Extra Distance Fare"),
                   ("WAITING_OR_PICKUP_CHARGES", "Wating Charge"),
                   ("PARKING_CHARGE", "Parking Charge")
                 ]

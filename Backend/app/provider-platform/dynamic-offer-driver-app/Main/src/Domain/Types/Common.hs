@@ -28,7 +28,7 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data UsageSafety = Safe | Unsafe
 
-data TripCategory = OneWay OneWayMode | RoundTrip RoundTripMode | Rental RentalMode | RideShare RideShareMode | InterCity OneWayMode | CrossCity OneWayMode
+data TripCategory = OneWay OneWayMode | Rental RentalMode | RideShare RideShareMode | InterCity OneWayMode | CrossCity OneWayMode
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, PrettyShow, ToJSON, ToSchema)
 
@@ -43,8 +43,6 @@ data OneWayMode = OneWayRideOtp | OneWayOnDemandStaticOffer | OneWayOnDemandDyna
   deriving anyclass (FromJSON, ToJSON, ToSchema)
   deriving (PrettyShow) via Showable OneWayMode
 
-type RoundTripMode = TripMode
-
 type RentalMode = TripMode
 
 type RideShareMode = TripMode
@@ -58,7 +56,6 @@ $(mkBeamInstancesForEnum ''TripCategory)
 
 instance Show TripCategory where
   show (OneWay s) = "OneWay_" <> show s
-  show (RoundTrip s) = "RoundTrip_" <> show s
   show (Rental s) = "Rental_" <> show s
   show (RideShare s) = "RideShare_" <> show s
   show (InterCity s) = "InterCity_" <> show s
@@ -73,10 +70,6 @@ instance Read TripCategory where
             | r1 <- stripPrefix "OneWay_" r,
               (v1, r2) <- readsPrec (app_prec + 1) r1
           ]
-            ++ [ (RoundTrip v1, r2)
-                 | r1 <- stripPrefix "RoundTrip_" r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
-               ]
             ++ [ (Rental v1, r2)
                  | r1 <- stripPrefix "Rental_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -97,7 +90,6 @@ instance Read TripCategory where
 isRideOtpBooking :: TripCategory -> Bool
 isRideOtpBooking (OneWay OneWayRideOtp) = True
 isRideOtpBooking (Rental RideOtp) = True
-isRideOtpBooking (RoundTrip RideOtp) = True
 isRideOtpBooking (RideShare RideOtp) = True
 isRideOtpBooking _ = False
 
@@ -126,6 +118,9 @@ isRentalTrip :: TripCategory -> Bool
 isRentalTrip tripCategory = case tripCategory of
   Rental _ -> True
   _ -> False
+
+isFixedNightCharge :: TripCategory -> Bool
+isFixedNightCharge tripCategory = isRentalTrip tripCategory || isInterCityTrip tripCategory
 
 isInterCityTrip :: TripCategory -> Bool
 isInterCityTrip tripCategory = case tripCategory of

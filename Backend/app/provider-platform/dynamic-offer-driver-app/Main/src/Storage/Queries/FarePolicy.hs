@@ -35,10 +35,12 @@ import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy as BeamFP
+import qualified Storage.Beam.FarePolicy.FarePolicyInterCityDetails as BeamFPICD
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails as BeamFPRD
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QueriesDEFB
+import qualified Storage.Queries.FarePolicy.FarePolicyInterCityDetails as QueriesFPICD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QueriesFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicyRentalDetails as QueriesFPRD
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QueriesFPSDS
@@ -56,6 +58,7 @@ update' farePolicy = do
       Se.Set BeamFP.minAllowedTripDistance $ (.minAllowedTripDistance) <$> farePolicy.allowedTripDistanceBounds,
       Se.Set BeamFP.govtCharges $ farePolicy.govtCharges,
       Se.Set BeamFP.serviceCharge $ roundToIntegral <$> farePolicy.serviceCharge,
+      Se.Set BeamFP.tollCharges $ farePolicy.tollCharges,
       Se.Set BeamFP.serviceChargeAmount $ farePolicy.serviceCharge,
       Se.Set BeamFP.currency $ Just farePolicy.currency,
       Se.Set BeamFP.perMinuteRideExtraTimeCharge $ farePolicy.perMinuteRideExtraTimeCharge,
@@ -81,6 +84,7 @@ update' farePolicy = do
         [Se.Is BeamFPPD.farePolicyId (Se.Eq $ getId farePolicy.id)]
     SlabsDetails (FPSlabsDetails _slabs) -> pure ()
     RentalDetails _ -> pure ()
+    InterCityDetails _ -> pure ()
 
 update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FarePolicy -> m ()
 update farePolicy = do
@@ -130,6 +134,22 @@ update farePolicy = do
           Se.Set BeamFPRD.nightShiftCharge $ fPRD.nightShiftCharge
         ]
         [Se.Is BeamFPRD.farePolicyId (Se.Eq $ getId farePolicy.id)]
+    InterCityDetails fPICD ->
+      updateOneWithKV
+        [ Se.Set BeamFPICD.baseFare $ fPICD.baseFare,
+          Se.Set BeamFPICD.currency $ fPICD.currency,
+          Se.Set BeamFPICD.perHourCharge $ fPICD.perHourCharge,
+          Se.Set BeamFPICD.perExtraMinRate $ fPICD.perExtraMinRate,
+          Se.Set BeamFPICD.perExtraKmRate $ fPICD.perExtraKmRate,
+          Se.Set BeamFPICD.nightShiftCharge $ fPICD.nightShiftCharge,
+          Se.Set BeamFPICD.perKmRateOneWay $ fPICD.perKmRateOneWay,
+          Se.Set BeamFPICD.perKmRateRoundTrip $ fPICD.perKmRateRoundTrip,
+          Se.Set BeamFPICD.kmPerPlannedExtraHour $ fPICD.kmPerPlannedExtraHour,
+          Se.Set BeamFPICD.deadKmFare $ fPICD.deadKmFare,
+          Se.Set BeamFPICD.perDayMaxHourAllowance $ fPICD.perDayMaxHourAllowance,
+          Se.Set BeamFPICD.defaultWaitTimeAtDestination $ fPICD.defaultWaitTimeAtDestination
+        ]
+        [Se.Is BeamFPICD.farePolicyId (Se.Eq $ getId farePolicy.id)]
   where
     create'' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FarePolicy -> FPSlabsDetailsSlab -> m ()
     create'' id' slab = createWithKV (id', slab)
@@ -141,6 +161,7 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
         BeamFP.serviceCharge = roundToIntegral <$> serviceCharge,
         BeamFP.serviceChargeAmount = serviceCharge,
         BeamFP.parkingCharge = parkingCharge,
+        BeamFP.tollCharges = tollCharges,
         BeamFP.currency = Just currency,
         BeamFP.nightShiftStart = (.nightShiftStart) <$> nightShiftBounds,
         BeamFP.nightShiftEnd = (.nightShiftEnd) <$> nightShiftBounds,
@@ -162,7 +183,8 @@ data FarePolicyHandler m = FarePolicyHandler
   { findAllDriverExtraFeeBounds :: m [Domain.FullDriverExtraFeeBounds],
     findProgressiveDetails :: m (Maybe Domain.FullFarePolicyProgressiveDetails),
     findAllSlabDetailsSlabs :: m [BeamFPSS.FullFarePolicySlabsDetailsSlab],
-    findRentalDetails :: m (Maybe Domain.FullFarePolicyRentalDetails)
+    findRentalDetails :: m (Maybe Domain.FullFarePolicyRentalDetails),
+    findInterCityDetails :: m (Maybe Domain.FullFarePolicyInterCityDetails)
   }
 
 mkBeamFarePolicyHandler ::
@@ -174,7 +196,8 @@ mkBeamFarePolicyHandler BeamFP.FarePolicyT {..} =
     { findAllDriverExtraFeeBounds = QueriesDEFB.findAll' (Id id),
       findProgressiveDetails = QueriesFPPD.findById' (Id id),
       findAllSlabDetailsSlabs = QueriesFPSDS.findAll' (Id id),
-      findRentalDetails = QueriesFPRD.findById' (Id id)
+      findRentalDetails = QueriesFPRD.findById' (Id id),
+      findInterCityDetails = QueriesFPICD.findById' (Id id)
     }
 
 fromTTypeFarePolicy ::
@@ -203,6 +226,11 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
         case mFPRD of
           Just (_, fPRD) -> return $ Just (RentalDetails fPRD)
           Nothing -> return Nothing
+      InterCity -> do
+        mFPICD <- handler.findInterCityDetails
+        case mFPICD of
+          Just (_, fPICD) -> return $ Just (InterCityDetails fPICD)
+          Nothing -> return Nothing
   case mFarePolicyDetails of
     Just farePolicyDetails -> do
       return $
@@ -211,6 +239,7 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
             { id = Id id,
               serviceCharge = mkAmountWithDefault serviceChargeAmount <$> serviceCharge,
               parkingCharge = parkingCharge,
+              tollCharges = tollCharges,
               currency = fromMaybe INR currency,
               nightShiftBounds = DPM.NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
               allowedTripDistanceBounds =
