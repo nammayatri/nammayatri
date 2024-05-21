@@ -5,12 +5,12 @@
 module Domain.Types.DriverPanCard where
 
 import Data.Aeson
-import qualified Domain.Types.IdfyVerification
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Types.Documents
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
@@ -25,7 +25,7 @@ data DriverPanCardE e = DriverPanCard
     failedRules :: [Kernel.Prelude.Text],
     id :: Kernel.Types.Id.Id Domain.Types.DriverPanCard.DriverPanCard,
     panCardNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
-    verificationStatus :: Domain.Types.IdfyVerification.VerificationStatus,
+    verificationStatus :: Kernel.Types.Documents.VerificationStatus,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

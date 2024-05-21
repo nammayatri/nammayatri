@@ -32,6 +32,7 @@ import EulerHS.Types (base64Encode)
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Types.Common
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -146,18 +147,20 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
 
   imagePath <- createPath personId.getId merchantId.getId imageType
   void $ fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
-  imageEntity <- mkImage personId merchantId imagePath imageType False mbRcId
+  imageEntity <- mkImage personId merchantId imagePath imageType False mbRcId -- is valid is false when making image
   Query.create imageEntity
 
   -- skipping validation for rc as validation not available in idfy
   docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe Vehicle.CAR vehicleCategory)
-  when (maybe True (.isImageValidationRequired) docConfigs) $ do
-    validationOutput <-
-      Verification.validateImage merchantId merchantOpCityId $
-        Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
-    when validationOutput.validationAvailable $ do
-      checkErrors imageEntity.id imageType validationOutput.detectedImage
-  Query.updateToValid True imageEntity.id
+  if maybe True (.isImageValidationRequired) docConfigs
+    then do
+      validationOutput <-
+        Verification.validateImage merchantId merchantOpCityId $
+          Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
+      when validationOutput.validationAvailable $ do
+        checkErrors imageEntity.id imageType validationOutput.detectedImage
+      Query.updateVerificationStatus Documents.VALID imageEntity.id
+    else Query.updateVerificationStatus Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
   return $ ImageValidateResponse {imageId = imageEntity.id}
   where
     checkErrors id_ _ Nothing = throwImageError id_ ImageValidationFailed
@@ -208,6 +211,7 @@ mkImage personId_ merchantId s3Path documentType_ isValid mbRcId = do
         s3Path,
         imageType = documentType_,
         isValid,
+        verificationStatus = Just Documents.PENDING,
         failureReason = Nothing,
         rcId = getId <$> mbRcId,
         createdAt = now,

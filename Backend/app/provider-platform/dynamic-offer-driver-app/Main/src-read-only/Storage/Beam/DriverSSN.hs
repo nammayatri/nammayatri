@@ -6,11 +6,11 @@
 module Storage.Beam.DriverSSN where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.IdfyVerification
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Documents
 import Tools.Beam.UtilsTH
 
 data DriverSSNT f = DriverSSNT
@@ -19,7 +19,7 @@ data DriverSSNT f = DriverSSNT
     rejectReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     ssnEncrypted :: B.C f Kernel.Prelude.Text,
     ssnHash :: B.C f Kernel.External.Encryption.DbHash,
-    verificationStatus :: B.C f Domain.Types.IdfyVerification.VerificationStatus
+    verificationStatus :: B.C f Kernel.Types.Documents.VerificationStatus
   }
   deriving (Generic, B.Beamable)
 

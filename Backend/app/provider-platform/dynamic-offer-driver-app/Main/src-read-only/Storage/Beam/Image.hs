@@ -10,6 +10,7 @@ import qualified Domain.Types.DocumentVerificationConfig
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Documents
 import Tools.Beam.UtilsTH
 import qualified Tools.Error
 
@@ -22,6 +23,7 @@ data ImageT f = ImageT
     personId :: B.C f Kernel.Prelude.Text,
     rcId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     s3Path :: B.C f Kernel.Prelude.Text,
+    verificationStatus :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Documents.VerificationStatus),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
