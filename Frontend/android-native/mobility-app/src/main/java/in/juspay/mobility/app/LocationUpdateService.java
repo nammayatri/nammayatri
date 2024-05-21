@@ -59,6 +59,7 @@ import com.google.android.gms.location.Priority;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.firebase.perf.metrics.AddTrace;
 
 import org.json.JSONArray;
@@ -173,11 +174,13 @@ public class LocationUpdateService extends Service {
         isLocationUpdating = false;
         try{
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                this.startForeground(notificationServiceId, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+                this.startForeground(notificationServiceId, createNotification());
             } else{
                 this.startForeground(notificationServiceId, createNotification());
             }
         }catch (Exception e) {
+            Exception exception = new Exception("Error in onCreate onCreate LocationUpdateService " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             Log.e(LOG_TAG, "Error in onCreate -> ", e);
         }
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
@@ -228,11 +231,13 @@ public class LocationUpdateService extends Service {
         Log.i("LOCATION_UPDATE_WORKER", "Location update service is started");
         try{
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(notificationServiceId, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+                startForeground(notificationServiceId, createNotification());
             }else {
                 startForeground(notificationServiceId, createNotification());
             }
         }catch (Exception e){
+            Exception exception = new Exception("Error in onStartCommand NotificationService " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             Log.e(LOG_TAG, "Error in onStartCommand -> ",e);
         }
 
@@ -272,6 +277,8 @@ public class LocationUpdateService extends Service {
                 context.startService(grpcServiceIntent);
             }
         } catch(Exception e){
+            Exception exception = new Exception("Error in onCreate Start GRPC Service " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             Log.i("SERVICE", "Error in starting the GRPC service from onStartCommand of location update service " + e );
         }
 
@@ -427,6 +434,8 @@ public class LocationUpdateService extends Service {
                 context.stopService(grpcServiceIntent);
             }
         } catch(Exception e){
+            Exception exception = new Exception("Error in onCreate StopGRPSService " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             Log.i("SERVICE", "Error in stopping the GRPC service from OnDestroy of location update service " + e );
         }
 
@@ -484,6 +493,8 @@ public class LocationUpdateService extends Service {
                 }
                 executor.shutdown();
             } catch (Exception error) {
+                Exception exception = new Exception("Error in updateDriverStatus " + error);
+                FirebaseCrashlytics.getInstance().recordException(exception);
                 Log.d(LOG_TAG, "Catch in updateDriverStatus : " + error);
             }
         });
@@ -616,6 +627,8 @@ public class LocationUpdateService extends Service {
                     if (pointsToRemove > 1000000) pointsToRemove = 1;
                 }
             } catch (JSONException e) {
+                Exception exception = new Exception("Error in buffered locations " + e);
+                FirebaseCrashlytics.getInstance().recordException(exception);
                 e.printStackTrace();
                 Log.d(LOG_TAG, "Unable to parse buffered Locations from sharedPref" + e);
                 locationPayload = new JSONArray();
@@ -935,6 +948,8 @@ public class LocationUpdateService extends Service {
                 this.startService(gpsListeningService);
             }
         } catch (Exception e) {
+            Exception exception = new Exception("Error in startGPSLIsteningService " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             FirebaseAnalytics.getInstance(this).logEvent("Exception_in_startGPSListeningService", null);
             Log.e(LOG_TAG, "Error in startGPSListeningService : " + e);
         }
@@ -1081,6 +1096,8 @@ public class LocationUpdateService extends Service {
             timerTask = null;
             isLocationUpdating = false;
         } catch (Exception e) {
+            Exception exception = new Exception("Error in cancelTimer " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             FirebaseAnalytics.getInstance(this).logEvent("Exception_in_cancelTimer", null);
             Log.e(LOG_TAG, "Error in cancelTimer " + e);
         }
@@ -1149,6 +1166,8 @@ public class LocationUpdateService extends Service {
                     }
                 }
             } catch (Exception e) {
+                Exception exception = new Exception("Error in CheckNearByPickupZones " + e);
+                FirebaseCrashlytics.getInstance().recordException(exception);
                 e.printStackTrace();
             }
      }
@@ -1169,6 +1188,8 @@ public class LocationUpdateService extends Service {
                 startService(widgetService);
             }
         } catch (Exception e) {
+            Exception exception = new Exception("Error in ShowWidget " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             e.printStackTrace();
         }
     }

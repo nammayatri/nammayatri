@@ -31,6 +31,7 @@ import com.clevertap.android.sdk.pushnotification.NotificationInfo;
 import com.clevertap.android.sdk.pushnotification.fcm.CTFcmMessageHandler;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
@@ -296,6 +297,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                     NotificationUtils.firebaseLogEventWithParams(this, "unable_to_update_bundle", "reason", "Main Activity instance is null");
                                 }
                             } catch (Exception e) {
+                                Exception exception = new Exception("Error in BUNDLE_UPDATE " + e);
+                                FirebaseCrashlytics.getInstance().recordException(exception);
                                 e.printStackTrace();
                                 NotificationUtils.firebaseLogEventWithParams(this, "exception_in_bundle_update _fcm", "exception", e.toString());
                             }
@@ -341,6 +344,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                 RideRequestUtils.callAPIViaFCM(endPoint, reqBody, method, this);
 
                             } catch (Exception e) {
+                                Exception exception = new Exception("Error in CALL_API " + e);
+                                FirebaseCrashlytics.getInstance().recordException(exception);
                                 Log.e(LOG_TAG, "Error in CALL_API " + e);
                             }
                         case NotificationTypes.CHAT_MESSAGE :
@@ -351,6 +356,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                     NotificationUtils.createChatNotification(title,body,getApplicationContext());
                                 }
                             } catch (Exception e) {
+                                Exception exception = new Exception("Error in ChatMessage " + e);
+                                FirebaseCrashlytics.getInstance().recordException(exception);
                                 Log.e("MyFirebaseMessagingService", "Error in CHAT_MESSAGE " + e);
                             }
                             break;
@@ -366,6 +373,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                 NotificationUtils.showNotification(this, title, body, payload, imageUrl);
                                 sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "false").apply();
                             } catch (Exception e) {
+                                Exception exception = new Exception("Error in REALLOCATE_PRODUCT " + e);
+                                FirebaseCrashlytics.getInstance().recordException(exception);
                                 e.printStackTrace();
                             }
                             break;
@@ -400,6 +409,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                     fcmBundle.putExtra("payload",remoteMessage.getData().get("bundle_payload"));
                                     startService(fcmBundle);
                                 }catch (Exception e){
+                                    Exception exception = new Exception("Error in FCM_UPDATE_BUNDLE " + e);
+                                    FirebaseCrashlytics.getInstance().recordException(exception);
                                     startFCMBundleUpdateService(remoteMessage, merchantType);
                                 }
                             }
@@ -416,6 +427,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 }
             }
         } catch (Exception e) {
+            Exception exception = new Exception("Error in exception_in_notification " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             NotificationUtils.firebaseLogEventWithParams(this, "exception_in_notification", "remoteMessage", remoteMessage.getData().toString());
         }
     }
@@ -439,6 +452,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 remoteAssetsDownloader.updateBundle(null, new JSONObject(payload), getApplicationContext());
             }
         } catch (Exception e) {
+            Exception exception = new Exception("Error in startFCMBundleUpdateService " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             Log.e("FCMBundleUpdateService", "Failed to start BundleUpdateService : " + e);
         }
     }
@@ -471,6 +486,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             driverPayloadJsonObject.put("editlon", editLon);
             showOverlayMessage(driverPayloadJsonObject);
         }catch (Exception e){
+            Exception exception = new Exception("Error in addUpdateStop " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             e.printStackTrace();
             NotificationUtils.firebaseLogEventWithParams(this, "exception_in_add_or_edit_stop_fcm", "exception", e.toString());
         }
@@ -489,11 +506,15 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     showMessage.putExtra("payload", payload.toString());
                     startService(showMessage);
                 } catch (Exception e) {
+                    Exception exception = new Exception("Error in showOverlayMessage " + e);
+                    FirebaseCrashlytics.getInstance().recordException(exception);
                     Log.e(LOG_TAG, e.getMessage());
                 }
             }, delay * 1000);
 
         } catch (Exception e) {
+            Exception exception = new Exception("Error in showOverlayMessage " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             e.printStackTrace();
         }
     }
@@ -554,6 +575,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 Log.i(LOG_TAG, "in result : " + result);
 
             } catch (Exception e) {
+                Exception exception = new Exception("Error in updateFCMToken " + e);
+                FirebaseCrashlytics.getInstance().recordException(exception);
                 Log.e(LOG_TAG, "Catch in updateFCMToken : " + e);
             }
             handler.post(() -> {
@@ -577,6 +600,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             try {
                 getApplicationContext().startActivity(intent);
             } catch (Exception e) {
+                Exception exception = new Exception("Error in startMainActivity " + e);
+                FirebaseCrashlytics.getInstance().recordException(exception);
                 NotificationUtils.firebaseLogEventWithParams(this, "exception_in_startMainActivity", "startMainActivity", String.valueOf(e));
             }
         }
@@ -593,6 +618,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 Intent overlayService = new Intent(this, MessageOverlayService.class);
                 this.stopService(overlayService);
             } catch (Exception e) {
+                Exception exception = new Exception("Error in stopChatService " + e);
+                FirebaseCrashlytics.getInstance().recordException(exception);
                 Log.e("MyFirebaseMessagingService", "Error in stopChatService : " + e);
             }
         }
@@ -631,6 +658,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             NotificationUtils.showNotification(this, notificationTitle, notificationBody, payload, imageUrl);
         }
         catch (Exception e) {
+            Exception exception = new Exception("Error in showSafetyAlert " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             e.printStackTrace();
         }
     }

@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    compileSdk 34
+    compileSdk 33
     // publishNonDefault true
     namespace "in.juspay.mobility.app"
 
     defaultConfig {
         minSdk 23
-        targetSdk 34
+        targetSdk 33
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -99,9 +99,9 @@ dependencies {
     implementation 'com.google.mlkit:translate:17.0.1'
     implementation("com.google.firebase:firebase-crashlytics-ndk")
     implementation 'com.google.firebase:firebase-perf'
-    implementation "androidx.media3:media3-exoplayer:1.2.0"
-    implementation "androidx.media3:media3-exoplayer-dash:1.2.0"
-    implementation "androidx.media3:media3-ui:1.2.0"
+    implementation "androidx.media3:media3-exoplayer:1.1.1"
+    implementation "androidx.media3:media3-exoplayer-dash:1.1.1"
+    implementation "androidx.media3:media3-ui:1.1.1"
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
     implementation 'androidx.camera:camera-view:1.0.0-alpha25'
     implementation 'androidx.appcompat:appcompat:1.4.1'
