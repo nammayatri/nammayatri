@@ -219,6 +219,8 @@ process dbStreamKey count = do
 
 startDBSync :: Flow ()
 startDBSync = do
+  EL.logInfo ("Starting the driver drainer" :: Text) "Starting the driver drainer"
+  deleteKeyFromRedis C.drainerStopKey
   sessionId <- EL.runIO genSessionId
   EL.setLoggerContext "session-id" (DTE.decodeUtf8 sessionId)
   readinessFlag <- EL.runIO newEmptyMVar

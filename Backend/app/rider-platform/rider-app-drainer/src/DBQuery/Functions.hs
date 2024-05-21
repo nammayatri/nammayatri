@@ -7,6 +7,7 @@ import Data.Pool (Pool, withResource)
 import qualified Data.Text as T
 import qualified Database.PostgreSQL.Simple as Pg
 import EulerHS.Prelude hiding (id)
+import System.Posix.Signals (raiseSignal, sigKILL)
 import Text.Casing (quietSnake)
 
 currentSchemaName :: String
@@ -64,8 +65,21 @@ executeQueryUsingConnectionPool :: Pool Pg.Connection -> Pg.Query -> IO ()
 executeQueryUsingConnectionPool pool query' = do
   res <- try $ withResource pool $ \conn -> Pg.execute_ conn query'
   case res of
-    Left (e :: SomeException) -> throwIO $ QueryError $ "Query execution failed: " <> T.pack (show e)
+    Left (e :: SomeException) -> do
+      errorText <- handleSqlError e
+      throwIO $ QueryError errorText
     Right _ -> return ()
+
+handleSqlError :: SomeException -> IO T.Text
+handleSqlError e = case fromException e of
+  Just (sqlError :: Pg.SqlError) -> return $ "Query execution failed: SqlError => " <> T.pack (show sqlError)
+  _ -> do
+    let errorString = show e
+    if "libpq: failed" `T.isInfixOf` T.pack errorString
+      then do
+        raiseSignal sigKILL
+        return $ "Query execution failed: " <> T.pack errorString
+      else return $ "Query execution failed: " <> T.pack errorString
 
 textToSnakeCaseText :: Text -> Text
 textToSnakeCaseText = T.pack . quietSnake . T.unpack
