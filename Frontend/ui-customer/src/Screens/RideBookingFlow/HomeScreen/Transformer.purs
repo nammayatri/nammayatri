@@ -33,7 +33,7 @@ import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Control.Monad.Except.Trans (lift)
 import Data.Array (mapWithIndex, filter, head, find)
 import Data.Array as DA
-import Data.Function.Uncurried (runFn1)
+import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Int (toNumber, round)
 import Data.Lens ((^.), view)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
@@ -41,7 +41,7 @@ import Data.String (Pattern(..), drop, indexOf, length, split, trim, null)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
 import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage,fetchImage, FetchImageFrom(..))
-import JBridge (fromMetersToKm, getLatLonFromAddress)
+import JBridge (fromMetersToKm, getLatLonFromAddress, differenceBetweenTwoUTCInMinutes)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Types (EstimateAndQuoteConfig)
@@ -488,6 +488,8 @@ getTripDetailsState (RideBookingRes ride) state = do
                     "RENTAL" -> RideType.RENTAL_RIDE
                     "INTER_CITY" -> RideType.INTERCITY
                     _ -> RideType.NORMAL_RIDE
+      endTime = fromMaybe "" rideDetails.rideEndTime
+      startTime = fromMaybe "" rideDetails.rideStartTime
   state {
     data {
       tripId = rideDetails.shortRideId,
@@ -521,7 +523,8 @@ getTripDetailsState (RideBookingRes ride) state = do
                         <> (if (isHaveFare "WAITING_OR_PICKUP_CHARGES" updatedFareList) then "\n\n" <> (getEN WAITING_CHARGE_DESCRIPTION) else "")
                         <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" (updatedFareList)) then "\n\n" <> (getEN EARLY_END_RIDE_CHARGES_DESCRIPTION) else "")
                         <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" ((updatedFareList))) then "\n\n" <> (getEN CUSTOMER_TIP_DESCRIPTION) else ""),
-        merchantExoPhone = ride.merchantExoPhone
+        merchantExoPhone = ride.merchantExoPhone,
+        totalTime = show (runFn2 differenceBetweenTwoUTCInMinutes endTime startTime) <> " min"
       },
       vehicleVariant = fetchVehicleVariant rideDetails.vehicleVariant
     }

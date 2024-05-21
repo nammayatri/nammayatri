@@ -103,6 +103,7 @@ tripDetailsLayout state push =
           ][ tripDetailsView state
            , separatorView
            , tripIdView push state
+           , distanceAndTimeTaken state
            , SourceToDestination.view (push <<< SourceToDestinationActionController) (sourceToDestinationConfig state)
            , ratingAndInvoiceView state push
            ]
@@ -137,7 +138,7 @@ tripIdView push state =
   ][  linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT
-      , width WRAP_CONTENT
+      , width $ V (EHC.screenWidth unit/ 2)
       , visibility if state.data.tripId == "" then GONE else VISIBLE
       ][  textView $
           [ text $ getString RIDE_ID
@@ -168,7 +169,7 @@ tripIdView push state =
     , linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT
-      , width WRAP_CONTENT
+      , width $ V (EHC.screenWidth unit/ 2)
       -- , weight 1.0
       , visibility if isJust state.data.vehicleVariant && (getMerchant FunctionCall) == YATRISATHI then VISIBLE else GONE
       ][  textView $
@@ -185,6 +186,52 @@ tripIdView push state =
           ] <> FontStyle.paragraphText LanguageStyle
       ]
    ]
+
+distanceAndTimeTaken :: forall w . ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
+distanceAndTimeTaken state =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , margin $ MarginBottom 16
+  , orientation HORIZONTAL
+  , visibility $ boolToVisibility $ state.data.selectedItem.status /= "CANCELLED"
+  ][  linearLayout
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
+      , width $ V (EHC.screenWidth unit/ 2)
+      , visibility $ boolToVisibility $ not $ DS.null state.data.selectedItem.baseDistance
+      ][  textView $
+          [ text $ getString TRIP_DISTANCE
+          , accessibilityHint $ "Trip Distance :" <> state.data.selectedItem.baseDistance
+          , accessibility ENABLE
+          , color Color.black700
+          ] <> FontStyle.body1 LanguageStyle
+        , textView $
+          [ text state.data.selectedItem.baseDistance
+          , width WRAP_CONTENT
+          , color Color.black900
+          , accessibility DISABLE_DESCENDANT
+          ] <> FontStyle.paragraphText LanguageStyle
+      ]
+    , linearLayout
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
+      , width $ V (EHC.screenWidth unit/ 2)
+      , visibility $ boolToVisibility $ not $ DS.null state.data.selectedItem.totalTime
+      ][  textView $
+          [ text $ getString TIME_TAKEN
+          , accessibilityHint $ "Time Taken :" <> state.data.selectedItem.totalTime
+          , accessibility ENABLE
+          , color Color.black700
+          ] <> FontStyle.body1 LanguageStyle
+        , textView $
+          [ text state.data.selectedItem.totalTime
+          , width WRAP_CONTENT
+          , color Color.black900
+          ] <> FontStyle.paragraphText LanguageStyle
+      ]
+   ]
+
 
 ---------------------- tripDetails ---------------------------
 tripDetailsView ::  forall w . ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w

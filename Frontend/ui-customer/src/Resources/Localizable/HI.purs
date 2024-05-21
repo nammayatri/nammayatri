@@ -1012,3 +1012,5 @@ getHI stringKey =
         RENTAL_POLICY_DESC_1 -> "आप बुकिंग की पुष्टि करने से पहले अगली स्क्रीन पर अभी भी अपने किराए की समीक्षा कर सकते हैं।"
         RENTALS_INTERCITY_AVAILABLE -> "रेंटल और इंटरसिटी ट्रिप, अब Yatri साथी पर उपलब्ध"
         CHECK_IT_OUT -> "इसे चेक करें"
+        TIME_TAKEN -> "सवारी की अवधि"
+        TRIP_DISTANCE -> "यात्रा की दूरी"
