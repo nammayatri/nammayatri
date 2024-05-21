@@ -315,6 +315,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       clientConfigVersion = Nothing
       clientDevice = Nothing
       clientSdkVersion = Nothing
+      tollConfidence = Nothing
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::

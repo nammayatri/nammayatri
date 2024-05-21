@@ -109,6 +109,7 @@ updateMultiple rideId ride = do
       Se.Set BeamR.endOtp ride.endOtp,
       Se.Set BeamR.startOdometerReading ride.startOdometerReading,
       Se.Set BeamR.endOdometerReading ride.endOdometerReading,
+      Se.Set BeamR.tollConfidence ride.tollConfidence,
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
