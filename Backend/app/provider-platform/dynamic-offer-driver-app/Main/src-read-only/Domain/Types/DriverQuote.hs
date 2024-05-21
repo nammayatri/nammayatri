@@ -7,7 +7,7 @@ module Domain.Types.DriverQuote where
 import Data.Aeson
 import qualified Domain.Types.Client
 import qualified Domain.Types.Common
-import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
+import qualified Domain.Types.DriverGoHomeRequest
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.FareParameters
 import qualified Domain.Types.Merchant
@@ -44,7 +44,7 @@ data DriverQuote = DriverQuote
     estimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,
     estimatedFare :: Kernel.Types.Common.HighPrecMoney,
     fareParams :: Domain.Types.FareParameters.FareParameters,
-    goHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest.DriverGoHomeRequest),
+    goHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest),
     id :: Kernel.Types.Id.Id Domain.Types.DriverQuote.DriverQuote,
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

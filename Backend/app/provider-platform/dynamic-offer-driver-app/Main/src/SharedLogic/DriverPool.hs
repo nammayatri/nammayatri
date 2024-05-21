@@ -57,7 +57,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.List.NonEmpty.Extra as NE
 import Data.Tuple.Extra (snd3)
 import Domain.Action.UI.Route as DRoute
-import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
 import qualified Domain.Types.DriverIntelligentPoolConfig as DIPC
 import Domain.Types.DriverPoolConfig
@@ -91,7 +91,7 @@ import Storage.Cac.DriverPoolConfig as Reexport
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
-import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
+import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.GetNearestDrivers as QPG
 import Tools.Maps as Maps

@@ -93,16 +93,16 @@ import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.Dashboard.Merchant as DashboardMerchant
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.Driver as Driver
+import Domain.Action.UI.DriverGoHomeRequest (CachedGoHomeRequest (..))
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))
 import qualified Domain.Action.UI.DriverOnboarding.Status as St
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
-import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (CachedGoHomeRequest (..))
-import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
 import qualified Domain.Types.DriverBlockReason as DBR
 import Domain.Types.DriverFee
+import qualified Domain.Types.DriverHomeLocation as DDHL
 import qualified Domain.Types.DriverInformation as DrInfo
 import Domain.Types.DriverLicense
 import qualified Domain.Types.DriverPlan as DDPlan
@@ -116,7 +116,7 @@ import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage (MediaChannel (..), MessageKey (..))
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Message.Message as Domain
+import qualified Domain.Types.Message as Domain
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
 import qualified Domain.Types.Ride as SRide
@@ -166,9 +166,9 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.AadhaarVerification as AV
-import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import Storage.Queries.DriverFee (findPendingFeesByDriverIdAndServiceName)
 import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverPanCard as DPC
@@ -179,8 +179,8 @@ import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import Storage.Queries.FleetRCAssociationExtra as FRAE
 import qualified Storage.Queries.Invoice as QINV
-import qualified Storage.Queries.Message.Message as MQuery
-import qualified Storage.Queries.Message.MessageTranslation as MTQuery
+import qualified Storage.Queries.Message as MQuery
+import qualified Storage.Queries.MessageTranslation as MTQuery
 import qualified Storage.Queries.Person as QPerson
 import Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.RegistrationToken as QR
@@ -955,7 +955,7 @@ addVehicleForFleet merchantShortId opCity reqDriverPhoneNo mbMobileCountryCode f
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist driver.id.getId)
   rc <- RCQuery.findLastVehicleRCWrapper req.registrationNo
   whenJust rc $ \rcert -> checkRCAssociationForFleet fleetOwnerId rcert
-  isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId
+  isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId True
   case isFleetDriver of
     Nothing -> throwError (InvalidRequest "Driver is not part of this fleet, add this driver to the fleet before adding a vehicle with them")
     Just fleetDriver -> do
@@ -1029,7 +1029,7 @@ checkRCAssociationForFleet fleetOwnerId vehicleRC = do
   activeAssociationsOfRC <- DRCAE.findAllActiveAssociationByRCId vehicleRC.id
   let rcAssociatedDriverIds = map (.driverId) activeAssociationsOfRC
   forM_ rcAssociatedDriverIds $ \driverId -> do
-    isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId
+    isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId True
     when (isNothing isFleetDriver) $ throwError (InvalidRequest "Vehicle is associated with a driver who is not part of this fleet, First Unlink the vehicle from that driver and then try again")
 
 ---------------------------------------------------------------------
@@ -1040,7 +1040,7 @@ setVehicleDriverRcStatusForFleet merchantShortId opCity reqDriverId fleetOwnerId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId personId fleetOwnerId
+  isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId personId fleetOwnerId True
   when (isNothing isFleetDriver) $ throwError (InvalidRequest "Driver is not the  part of this fleet")
   -- merchant access checking
   let merchantId = driver.merchantId
@@ -1281,7 +1281,7 @@ getListOfDrivers mbCountryCode mbDriverPhNo fleetOwnerId merchantId mbIsActive m
       mobileNumberHash <- getDbHash driverPhNo
       let countryCode = fromMaybe "+91" mbCountryCode
       driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchantId DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
-      fleetDriverAssociation <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId
+      fleetDriverAssociation <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId True
       pure $ maybeToList fleetDriverAssociation
     Nothing -> do
       let limit = min 10 $ fromMaybe 5 mbLimit
@@ -1322,7 +1322,7 @@ fleetUnlinkVehicle merchantShortId fleetOwnerId reqDriverId vehicleNo = do
   driver <-
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId personId fleetOwnerId
+  isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId personId fleetOwnerId True
   case isFleetDriver of
     Nothing -> throwError (InvalidRequest "Driver is not part of this fleet, add this driver to the fleet before unlinking a vehicle with them")
     Just fleetDriver -> do
@@ -1355,7 +1355,7 @@ toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanT
         Just DrInfo.ACTIVE -> pure ()
         _ -> callSubscribeFlowForDriver planToAssign
       QDP.updatesubscriptionServiceRelatedDataInDriverPlan driverId (DDPlan.RentedVehicleNumber vehicleNo) serviceName
-      QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName driverId toToggle serviceName
+      QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName toToggle driverId serviceName
       fork "notify rental event" $ do
         notifyYatriRentalEventsToDriver vehicleNo WHATSAPP_VEHICLE_LINKED_MESSAGE driverId transporterConfig Nothing WHATSAPP
     else do
@@ -1363,7 +1363,7 @@ toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanT
             Just (DDPlan.RentedVehicleNumber vNo) -> Just vNo
             _ -> Nothing
       when (isJust driverPlan && vehicleLinkedWithDPlan == Just vehicleNo) $ do
-        QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName driverId toToggle serviceName
+        QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName toToggle driverId serviceName
         fork "track service toggle" $ do
           case driverPlan of
             Just dp -> SEVT.trackServiceUsageChargeToggle dp Nothing
@@ -1823,13 +1823,13 @@ fleetRemoveVehicle _merchantShortId opCity fleetOwnerId_ vehicleNo = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   whenJust vehicle $ \veh -> do
-    isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId veh.driverId fleetOwnerId_
+    isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId veh.driverId fleetOwnerId_ True
     when (isJust isFleetDriver) $ throwError (InvalidRequest "Vehicle is linked to fleet driver , first unlink then try")
   vehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleNo >>= fromMaybeM (VehicleDoesNotExist vehicleNo)
   unless (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId == Just fleetOwnerId_) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId_)
   associations <- QRCAssociation.findAllActiveAssociationByRCId vehicleRC.id ----- Here ending all the association of the vehicle with the fleet drivers
   forM_ associations $ \assoc -> do
-    isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId assoc.driverId fleetOwnerId_
+    isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId assoc.driverId fleetOwnerId_ True
     when (isJust isFleetDriver) $ QRCAssociation.endAssociationForRC assoc.driverId vehicleRC.id
   RCQuery.upsert (updatedVehicleRegistrationCertificate vehicleRC)
   FRAE.endAssociationForRC (Id fleetOwnerId_ :: Id DP.Person) vehicleRC.id
@@ -2105,7 +2105,7 @@ setServiceChargeEligibleFlagInDriverPlan merchantShortId opCity driverId req = d
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let mbEnableServiceUsageCharge = driverPlan <&> (.enableServiceUsageCharge)
   when (mbEnableServiceUsageCharge /= Just req.serviceChargeEligibility) $ do
-    QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName personId req.serviceChargeEligibility serviceName
+    QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName req.serviceChargeEligibility personId serviceName
     fork "track service toggle" $ do
       case driverPlan of
         Just dp -> SEVT.trackServiceUsageChargeToggle dp (show <$> req.reason)

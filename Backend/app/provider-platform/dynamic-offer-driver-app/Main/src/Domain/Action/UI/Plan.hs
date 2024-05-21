@@ -25,6 +25,7 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
+import qualified Domain.Types.Invoice as Domain
 import qualified Domain.Types.Invoice as INV
 import Domain.Types.Mandate (MandateStatus)
 import qualified Domain.Types.Mandate as DM
@@ -453,8 +454,8 @@ planSuspendGeneric serviceName isDashboard (driverId, _merchantId, merchantOpCit
     (Just DI.ACTIVE, Just driverPlan) -> do
       mandate <- validateActiveMandateExists driverId driverPlan
       Redis.whenWithLockRedis (DF.mandateProcessingLockKey mandate.id.getId) 60 $ do
-        QM.updateStatus mandate.id DM.INACTIVE
-        QDPlan.updatePaymentModeByDriverIdAndServiceName (cast driverPlan.driverId) MANUAL serviceName
+        QM.updateStatus DM.INACTIVE mandate.id
+        QDPlan.updatePaymentModeByDriverIdAndServiceName MANUAL (cast driverPlan.driverId) serviceName
         updateSubscriptionStatus serviceName (driverId, _merchantId, merchantOpCityId) (Just DI.SUSPENDED) Nothing
         QDF.updateAllExecutionPendingToManualOverdueByDriverIdForServiceName (cast driverId) serviceName
         QINV.inActivateAllAutopayActiveInvoices (cast driverId) serviceName
@@ -466,14 +467,15 @@ planSuspendGeneric serviceName isDashboard (driverId, _merchantId, merchantOpCit
 -- This API is to make Mandate Active and switch to Autopay plan type. If an only if an Auto Pay plan was paused/cancelled by driver from App.
 planResumeGeneric :: ServiceNames -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow APISuccess
 planResumeGeneric serviceName (driverId, _merchantId, _merchantOpCityId) = do
+  now <- getCurrentTime
   autoPayStatusAndDplan <- getSubcriptionStatusWithPlan serviceName driverId
   case autoPayStatusAndDplan of
     (Just DI.SUSPENDED, Just driverPlan) -> do
       mandate <- validateInActiveMandateExists driverId driverPlan
       Redis.whenWithLockRedis (DF.mandateProcessingLockKey mandate.id.getId) 60 $ do
-        QM.updateStatus mandate.id DM.ACTIVE
-        QDPlan.updateMandateSetupDateByDriverIdAndServiceName (cast driverPlan.driverId) serviceName
-        QDPlan.updatePaymentModeByDriverIdAndServiceName (cast driverPlan.driverId) AUTOPAY serviceName
+        QM.updateStatus DM.ACTIVE mandate.id
+        QDPlan.updateMandateSetupDateByDriverIdAndServiceName (Just now) (cast driverPlan.driverId) serviceName
+        QDPlan.updatePaymentModeByDriverIdAndServiceName AUTOPAY (cast driverPlan.driverId) serviceName
         updateSubscriptionStatus serviceName (driverId, _merchantId, _merchantOpCityId) (Just DI.ACTIVE) Nothing
     (Just _, Just _) -> throwError InvalidAutoPayStatus
     (_, _) -> throwError $ NoCurrentPlanForDriver driverId.getId
@@ -552,7 +554,7 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
       registerFee' <- QDF.findLatestRegisterationFeeByDriverIdAndServiceName (cast driverId) serviceName
       case registerFee' of
         Just registerFee -> do
-          invoices <- QINV.findActiveMandateSetupInvoiceByFeeId registerFee.id
+          invoices <- QINV.findActiveMandateSetupInvoiceByFeeId registerFee.id Domain.MANDATE_SETUP_INVOICE Domain.ACTIVE_INVOICE
           mbInvoiceToReuse <- do
             case invoices of
               [] -> pure Nothing

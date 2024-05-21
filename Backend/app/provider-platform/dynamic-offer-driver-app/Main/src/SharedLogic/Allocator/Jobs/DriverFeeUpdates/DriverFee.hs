@@ -649,10 +649,10 @@ processAndSendManualPaymentLink driverPlansToProccess subscriptionConfigs mercha
                   payload = resp.orderResp.sdk_payload.payload
                   mbAmount = readMaybe (T.unpack payload.amount) :: Maybe HighPrecMoney
               whatsAppResp <- try @_ @SomeException $ SPayment.sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount (Just subscriptionConfigs.paymentLinkChannel) allowDeepLink WHATSAPP_SEND_MANUAL_PAYMENT_LINK
-              errorCatchAndHandle driverId whatsAppResp subscriptionConfigs endTime now (\_ -> QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName driverId serviceName endTime)
+              errorCatchAndHandle driverId whatsAppResp subscriptionConfigs endTime now (\_ -> QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName (Just endTime) driverId serviceName)
           )
       else do
-        QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName driverId serviceName endTime
+        QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName (Just endTime) driverId serviceName
 
 errorCatchAndHandle ::
   (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig) =>
@@ -669,7 +669,7 @@ errorCatchAndHandle driverId resp' subscriptionConfig endTime _ function = do
       eligibleForRetryInNextBatch <- isEligibleForRetryInNextBatch (mkManualLinkErrorTrackingByDriverIdKey driverId) subscriptionConfig.maxRetryCount
       if eligibleForRetryInNextBatch
         then return ()
-        else QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName driverId subscriptionConfig.serviceName endTime
+        else QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName (Just endTime) driverId subscriptionConfig.serviceName
     Right resp -> function resp
 
 isEligibleForRetryInNextBatch :: (MonadFlow m, CacheFlow m r) => Text -> Int -> m Bool

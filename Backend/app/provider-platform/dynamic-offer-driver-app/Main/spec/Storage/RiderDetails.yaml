@@ -1,0 +1,111 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  EncryptedHashedField: Kernel.External.Encryption
+  DriverReferral: Domain.Types.DriverReferral
+  Person: Domain.Types.Person
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+
+
+RiderDetails:
+  tableName: rider_details
+
+  types:
+
+
+  fields:
+    id : Id RiderDetails
+    mobileCountryCode : Text
+    mobileNumber : EncryptedHashedField e Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    referralCode : Maybe (Id DriverReferral)
+    referredByDriver : Maybe (Id Person)
+    referredAt : Maybe UTCTime
+    hasTakenValidRide : Bool
+    hasTakenValidRideAt : Maybe UTCTime
+    cancellationDues : HighPrecMoney
+    currency : Currency
+    disputeChancesUsed : Int
+    merchantId : Id Merchant
+    otpCode : Maybe Text
+    nightSafetyChecks : Bool
+
+  fromTType:
+    currency: fromMaybe Kernel.Types.Common.INR currency|E
+
+  toTType:
+    currency: Kernel.Prelude.Just|I
+
+  beamType:
+    currency: Maybe Currency
+  constraints:
+    id: PrimaryKey
+    mobileNumberHash: SecondaryKey
+    merchantId: SecondaryKey
+
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    updateHasTakenValidRide:
+      kvFunction: updateOneWithKV
+      params: [hasTakenValidRide, hasTakenValidRideAt]
+      where: id
+
+    updateOtpCode:
+      kvFunction: updateOneWithKV
+      params: [otpCode]
+      where: id
+
+    findAllReferredByDriverId:
+      kvFunction: findAllWithDb
+      where: referredByDriver
+
+    # findByMobileNumberHashAndMerchant:
+    #   kvFunction: findOneWithKV
+    #   where:
+    #     and: [mobileNumberHash, merchantId]
+
+    # updateReferralInfo:
+    #   kvFunction: updateWithKV
+    #   params: [referralCode, referredByDriver, referredAt]
+    #   where:
+    #     and: [mobileNumberHash, merchantId]
+
+    updateNightSafetyChecks:
+      kvFunction: updateOneWithKV
+      params: [nightSafetyChecks]
+      where: id
+
+    updateCancellationDues:
+      kvFunction: updateOneWithKV
+      params: [cancellationDues]
+      where: id
+
+    updateDisputeChancesUsed:
+      kvFunction: updateOneWithKV
+      params: [disputeChancesUsed]
+      where: id
+
+    updateDisputeChancesUsedAndCancellationDues:
+      kvFunction: updateOneWithKV
+      params: [disputeChancesUsed, cancellationDues]
+      where: id
+
+  sqlType:
+    mobileCountryCode: character varying(255)
+    mobileNumberEncrypted: character varying(255)
+    mobileNumberHash: bytea
+    referralCode: character varying(15)
+    referredByDriver: character varying(255)
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

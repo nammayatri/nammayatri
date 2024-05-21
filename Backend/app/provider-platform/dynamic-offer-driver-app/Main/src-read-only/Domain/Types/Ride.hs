@@ -8,7 +8,7 @@ import Data.Aeson
 import qualified Domain.Types.Booking
 import qualified Domain.Types.Client
 import qualified Domain.Types.Common
-import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
+import qualified Domain.Types.DriverGoHomeRequest
 import qualified Domain.Types.FareParameters
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
@@ -42,7 +42,7 @@ data Ride = Ride
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverDeviatedFromRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverDeviatedToTollRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    driverGoHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest.DriverGoHomeRequest),
+    driverGoHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest),
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     enableFrequentLocationUpdates :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     endOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,

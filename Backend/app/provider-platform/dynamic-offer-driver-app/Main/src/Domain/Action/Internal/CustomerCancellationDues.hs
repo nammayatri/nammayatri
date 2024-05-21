@@ -85,14 +85,14 @@ disputeCancellationDues merchantId merchantCity apiKey CancellationDuesReq {..} 
   when (riderDetails.disputeChancesUsed >= transporterConfig.cancellationFeeDisputeLimit) $ do
     throwError (DisputeChancesLimitNotMet riderDetails.id.getId (show riderDetails.disputeChancesUsed) (show transporterConfig.cancellationFeeDisputeLimit))
   let disputeChancesLeft = transporterConfig.cancellationFeeDisputeLimit - riderDetails.disputeChancesUsed
-      disputeAmount = min (transporterConfig.cancellationFee * fromIntegral disputeChancesLeft) riderDetails.cancellationDues
+      disputeAmount = min (transporterConfig.cancellationFee * fromIntegral disputeChancesLeft) (riderDetails.cancellationDues)
   disputeChances <-
     if transporterConfig.cancellationFee == 0.0
       then do
         logWarning "Unable to calculate dispute chances used"
         return 0
       else return $ round $ disputeAmount / transporterConfig.cancellationFee
-  QRD.updateDisputeChancesUsedAndCancellationDues riderDetails.id (riderDetails.disputeChancesUsed + disputeChances) (riderDetails.cancellationDues - disputeAmount)
+  QRD.updateDisputeChancesUsedAndCancellationDues (riderDetails.disputeChancesUsed + disputeChances) (riderDetails.cancellationDues - disputeAmount) riderDetails.id
   pure Success
 
 getCancellationDuesDetails ::
@@ -176,11 +176,11 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
             logWarning "Unable to calculate dispute chances used"
             return 0
           else return $ round $ amountPaid / transporterConfig.cancellationFee
-      QRD.updateDisputeChancesUsedAndCancellationDues riderDetails.id (max 0 (riderDetails.disputeChancesUsed - disputeChances)) (riderDetails.cancellationDues - amountPaid)
+      QRD.updateDisputeChancesUsedAndCancellationDues (max 0 (riderDetails.disputeChancesUsed - disputeChances)) (riderDetails.cancellationDues - amountPaid) riderDetails.id
     (Nothing, Just disputeChancesUsedReq) -> do
       when (disputeChancesUsedReq > transporterConfig.cancellationFeeDisputeLimit || disputeChancesUsedReq < 0) $ do
         throwError (DisputeChancesLimitNotMet riderDetails.id.getId (show disputeChancesUsedReq) (show transporterConfig.cancellationFeeDisputeLimit))
       when (riderDetails.disputeChancesUsed >= disputeChancesUsedReq) $ do
-        QRD.updateDisputeChancesUsed riderDetails.id disputeChancesUsedReq
+        QRD.updateDisputeChancesUsed disputeChancesUsedReq riderDetails.id
     (_, _) -> throwError DisputeChancesOrCancellationDuesHasToBeNull
   return Success

@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN night_safety_checks boolean NOT NULL default true;

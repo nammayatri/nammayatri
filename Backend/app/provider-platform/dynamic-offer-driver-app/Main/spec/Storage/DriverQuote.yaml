@@ -10,7 +10,7 @@ imports:
   Person: Domain.Types.Person
   ServiceTierType: Domain.Types.ServiceTierType
   FareParameters: Domain.Types.FareParameters
-  DriverGoHomeRequest: Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
+  DriverGoHomeRequest: Domain.Types.DriverGoHomeRequest
   Version: Kernel.Types.Version
   Device: Kernel.Types.Version
   Variant: Domain.Types.Vehicle

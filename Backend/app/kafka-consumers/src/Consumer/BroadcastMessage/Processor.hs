@@ -18,14 +18,14 @@ module Consumer.BroadcastMessage.Processor
 where
 
 import qualified Data.Map as HM
-import "dynamic-offer-driver-app" Domain.Types.Message.Message as Types
-import "dynamic-offer-driver-app" Domain.Types.Message.MessageReport as Types
+import "dynamic-offer-driver-app" Domain.Types.Message as Types
+import "dynamic-offer-driver-app" Domain.Types.MessageReport as Types
 import Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Types.Id
 import Kernel.Types.Time
-import "dynamic-offer-driver-app" Storage.Queries.Message.MessageReport as MRQuery
+import "dynamic-offer-driver-app" Storage.Queries.MessageReport as MRQuery
 import "dynamic-offer-driver-app" Storage.Queries.Person as Person
 import "dynamic-offer-driver-app" Tools.Notifications (sendMessageToDriver)
 

@@ -34,10 +34,10 @@ import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
+import qualified Domain.Action.UI.FleetDriverAssociation as FDV
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.DriverLicense as DDL
-import qualified Domain.Types.FleetDriverAssociation as FDV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -271,7 +271,7 @@ verify authId mbFleet fleetOwnerId req = do
           whatsappNotificationEnroll = Nothing
         }
   when mbFleet $ do
-    checkAssoc <- runInReplica $ QFDV.findByDriverIdAndFleetOwnerId res.person.id fleetOwnerId
+    checkAssoc <- runInReplica $ QFDV.findByDriverIdAndFleetOwnerId res.person.id fleetOwnerId True
     when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
     assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFDV.create assoc

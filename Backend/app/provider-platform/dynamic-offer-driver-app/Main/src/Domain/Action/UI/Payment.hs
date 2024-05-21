@@ -129,6 +129,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
   let commonPersonId = cast @DP.Person @DPayment.Person personId
       orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId -- api call
   order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  now <- getCurrentTime
   invoices <- QIN.findById (cast orderId)
   let firstInvoice = listToMaybe invoices
   let mbServiceName = firstInvoice <&> (.serviceName)
@@ -156,12 +157,12 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
           unless (status /= Payment.CHARGED) $ do
             processPayment merchantId driver order.id (shouldSendSuccessNotification mandateStatus) (serviceName, serviceConfig) invoices
           processMandate (serviceName, serviceConfig) (personId, merchantId, merchantOperatingCityId) mandateStatus (Just mandateStartDate) (Just mandateEndDate) (Id mandateId) mandateMaxAmount payerVpa upi --- needs refactoring ----
-          QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
+          QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
           notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing bankErrorCode False (serviceName, serviceConfig)
         DPayment.PaymentStatus {..} -> do
           unless (status /= Payment.CHARGED) $ do
             processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
-          QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
+          QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
           notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing Nothing False (serviceName, serviceConfig)
         DPayment.PDNNotificationStatusResp {..} -> do
           notification <- QNTF.findByShortId notificationId >>= fromMaybeM (InternalError "notification not found")
@@ -181,6 +182,7 @@ juspayWebhookHandler ::
   Flow AckResponse
 juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
   merchant <- findMerchantByShortId merchantShortId
+  now <- getCurrentTime
   merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant mbOpCity
   let merchantId = merchant.id
       serviceName' = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
@@ -206,7 +208,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
         unless (transactionStatus /= Payment.CHARGED) $ do
           processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
         notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode True (serviceName, serviceConfig)
-        QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
+        QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
     Payment.MandateOrderStatusResp {..} -> do
       order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
       (invoices, serviceName, serviceConfig, driver) <- getInvoicesAndServiceWithServiceConfigByOrderId order
@@ -215,7 +217,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
           processPayment merchantId driver order.id (shouldSendSuccessNotification mandateStatus) (serviceName, serviceConfig) invoices
         processMandate (serviceName, serviceConfig) (cast order.personId, merchantId, driver.merchantOperatingCityId) mandateStatus mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa upi
         notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode True (serviceName, serviceConfig)
-        QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
+        QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
     Payment.MandateStatusResp {..} -> do
       order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
       (_, serviceName, serviceConfig, driver) <- getInvoicesAndServiceWithServiceConfigByOrderId order
@@ -419,7 +421,7 @@ processNotification merchantOpCityId notification notificationStatus respCode re
           QDF.updateManualToAutoPay driverFeeId
         QDF.updateAutopayPaymentStageById (Just EXECUTION_SCHEDULED) (Just now) driverFeeId
       _ -> pure ()
-    QNTF.updateNotificationStatusAndResponseInfoById notification.id notificationStatus respCode respMessage
+    QNTF.updateNotificationStatusAndResponseInfoById notificationStatus respCode respMessage notification.id
 
 processMandate ::
   (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, EventStreamFlow m r) =>
@@ -439,6 +441,7 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
       mandatePaymentFlow = upiDetails >>= (.txnFlowType)
   mbExistingMandate <- QM.findById mandateId
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
+  now <- getCurrentTime
   when (isNothing mbExistingMandate) $ QM.create =<< mkMandate currency payerApp payerAppName mandatePaymentFlow
   when (mandateStatus == Payment.ACTIVE) $ do
     Redis.withWaitOnLockRedisWithExpiry (mandateProcessingLockKey driverId.getId) 60 60 $ do
@@ -446,10 +449,10 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
       (autoPayStatus, mbDriverPlan) <- ADPlan.getSubcriptionStatusWithPlan serviceName driverId
       let toUpdatePayerVpa = checkToUpdatePayerVpa mbExistingMandate autoPayStatus
       let payerVpa' = if toUpdatePayerVpa then payerVpa else Nothing
-      QDP.updateMandateIdByDriverIdAndServiceName driverId mandateId serviceName
+      QDP.updateMandateIdByDriverIdAndServiceName (Just mandateId) driverId serviceName
       QM.updateMandateDetails mandateId DM.ACTIVE payerVpa' payerApp payerAppName mandatePaymentFlow
-      QDP.updatePaymentModeByDriverIdAndServiceName (cast driverId) DP.AUTOPAY serviceName
-      QDP.updateMandateSetupDateByDriverIdAndServiceName (cast driverId) serviceName
+      QDP.updatePaymentModeByDriverIdAndServiceName DP.AUTOPAY (cast driverId) serviceName
+      QDP.updateMandateSetupDateByDriverIdAndServiceName (Just now) (cast driverId) serviceName
       mbPlan <- getPlan mbDriverPlan serviceName merchantOpCityId
       let subcribeToggleAllowed = maybe False (.subscribedFlagToggleAllowed) mbPlan
       when subcribeToggleAllowed $ QDI.updateSubscription True (cast driverId)
@@ -460,11 +463,11 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
     driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
     Redis.withWaitOnLockRedisWithExpiry (mandateProcessingLockKey driverId.getId) 60 60 $ do
       QM.updateMandateDetails mandateId DM.INACTIVE Nothing payerApp Nothing mandatePaymentFlow --- should we store driver Id in mandate table ?
-      mbDriverPlan <- QDP.findByMandateIdAndServiceName mandateId serviceName
+      mbDriverPlan <- QDP.findByMandateIdAndServiceName (Just mandateId) serviceName
       case mbDriverPlan of
         Just driverPlan -> do
           ADPlan.updateSubscriptionStatus serviceName (driverId, merchantId, merchantOpCityId) (castAutoPayStatus mandateStatus) Nothing
-          QDP.updatePaymentModeByDriverIdAndServiceName (cast driverPlan.driverId) DP.MANUAL serviceName
+          QDP.updatePaymentModeByDriverIdAndServiceName DP.MANUAL (cast driverPlan.driverId) serviceName
           when (mandateStatus == Payment.PAUSED) $ do
             QDF.updateAllExecutionPendingToManualOverdueByDriverIdForServiceName (cast driver.id) serviceName
             QIN.inActivateAllAutopayActiveInvoices (cast driver.id) serviceName

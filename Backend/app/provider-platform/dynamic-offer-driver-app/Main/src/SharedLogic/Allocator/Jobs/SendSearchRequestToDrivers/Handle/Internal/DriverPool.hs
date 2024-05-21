@@ -27,7 +27,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Map as Map
 import Domain.Types.Common
-import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
+import Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverIntelligentPoolConfig
 import Domain.Types.DriverPoolConfig

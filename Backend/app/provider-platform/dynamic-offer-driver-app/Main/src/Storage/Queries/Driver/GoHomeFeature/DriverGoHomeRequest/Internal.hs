@@ -15,15 +15,15 @@
 
 module Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal where
 
-import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
-import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as Domain
+import Domain.Types.DriverGoHomeRequest as DDGR
+import Domain.Types.DriverGoHomeRequest as Domain
 import Domain.Types.Person (Driver)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (Value)
 import qualified Sequelize as Se
-import qualified Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest as BeamDDGR
+import qualified Storage.Beam.DriverGoHomeRequest as BeamDDGR
 
 getDriverGoHomeReqNearby :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Driver] -> m [DriverGoHomeRequest]
 getDriverGoHomeReqNearby driverIds = do

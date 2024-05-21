@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.driver_plan
         updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
     );
 ALTER TABLE atlas_driver_offer_bpp.driver_plan OWNER TO atlas_driver_offer_bpp_user;
-ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN mandate_setup_date timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
 
 CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.mandate
     (   id text NOT NULL PRIMARY KEY,
@@ -20,8 +19,6 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.mandate
         updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
     );
 ALTER TABLE atlas_driver_offer_bpp.mandate OWNER TO atlas_driver_offer_bpp_user;
-ALTER TABLE atlas_driver_offer_bpp.mandate ADD COLUMN payer_app Text;
-ALTER TABLE atlas_driver_offer_bpp.mandate ADD COLUMN payer_app_name Text;
 
 
 CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.plan
@@ -51,7 +48,6 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.invoice
         PRIMARY KEY(id, driver_fee_id)
     );
 ALTER TABLE atlas_driver_offer_bpp.invoice OWNER TO atlas_driver_offer_bpp_user;
-ALTER TABLE atlas_driver_offer_bpp.invoice ADD COLUMN max_mandate_amount integer;
 
 INSERT INTO atlas_driver_offer_bpp.plan (id, merchant_id, payment_mode, frequency, plan_base_amount, name, description, max_amount, registration_amount, is_offer_applicable, max_credit_limit, free_ride_count, plan_type, cgst_percentage, max_mandate_amount, merchant_op_city_id, sgst_percentage) VALUES
     ('a35ffc7c-de0d-4dcc-83a8-e36a5a29cc1c', 'favorit0-0000-0000-0000-00000favorit', 'MANUAL', 'DAILY', 'DAILY_25.0', 'DAILY UNLIMITED' , 'Enjoy UNLIMITED rides, every day!', 25, 1, true, 100, 1, 'SUBSCRIPTION', 0.09, 35.0, 'mOpCityId', 0.09), -- Keep same in prod and master for daily unlimited plan, frontend has hardcoded
@@ -75,6 +71,3 @@ ALTER TABLE atlas_driver_offer_bpp.payment_transaction ADD COLUMN mandate_end_da
 ---------------------------------- DROP ---------------------------------------
 -------------------------------------------------------------------------------
 ALTER TABLE atlas_driver_offer_bpp.driver_fee DROP COLUMN IF EXISTS short_id;
-
-UPDATE atlas_driver_offer_bpp.driver_plan as dp
-SET mandate_setup_date = (SELECT updated_at FROM atlas_driver_offer_bpp.driver_fee as df WHERE df.driver_id = dp.driver_id AND df.fee_type = 'MANDATE_REGISTRATION' AND df.status = 'CLEARED' order by updated_at desc limit 1);

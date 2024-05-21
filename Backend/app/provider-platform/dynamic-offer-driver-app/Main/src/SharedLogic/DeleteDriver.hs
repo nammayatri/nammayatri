@@ -35,7 +35,7 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriverAssociation
 import qualified Storage.Queries.IdfyVerification as QIV
 import qualified Storage.Queries.Image as QImage
-import qualified Storage.Queries.Message.MessageReport as QMessage
+import qualified Storage.Queries.MessageReport as QMessage
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Ride as QRide

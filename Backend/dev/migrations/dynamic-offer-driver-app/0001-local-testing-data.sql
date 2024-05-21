@@ -53,12 +53,12 @@ INSERT INTO atlas_driver_offer_bpp.driver_location (driver_id, lat, lon, point, 
 	('favorit-auto1-0000000000000000000000', 10.0739, 76.2733, '0101000020E6100000CC7F48BF7D1153403B598638D6252440', '2022-04-12 15:15:42.27825+00', now()),
 	('favorit-auto2-0000000000000000000000', 10.0739, 76.2733, '0101000020E6100000CC7F48BF7D1153402B598638D6252440', '2022-04-12 15:15:42.27825+00', now());
 
-INSERT INTO atlas_driver_offer_bpp.driver_stats (driver_id, idle_since) VALUES
-	('favorit-suv-000000000000000000000000', '2022-04-12 15:15:42.283174+00'),
-	('favorit-sedan-0000000000000000000000', '2022-04-12 15:15:42.283174+00'),
-	('favorit-hatchback-000000000000000000', '2022-04-12 15:15:42.283174+00'),
-	('favorit-auto1-0000000000000000000000', '2022-04-12 15:15:42.283174+00'),
-	('favorit-auto2-0000000000000000000000', '2022-04-12 15:15:42.283174+00');
+INSERT INTO atlas_driver_offer_bpp.driver_stats (driver_id, idle_since, bonus_earned, earnings_missed,late_night_trips, total_distance,total_earnings,total_rides) VALUES
+	('favorit-suv-000000000000000000000000', '2022-04-12 15:15:42.283174+00', 0,0,0,0,0,0),
+	('favorit-sedan-0000000000000000000000', '2022-04-12 15:15:42.283174+00', 0,0,0,0,0,0),
+	('favorit-hatchback-000000000000000000', '2022-04-12 15:15:42.283174+00', 0,0,0,0,0,0),
+	('favorit-auto1-0000000000000000000000', '2022-04-12 15:15:42.283174+00', 0,0,0,0,0,0),
+	('favorit-auto2-0000000000000000000000', '2022-04-12 15:15:42.283174+00', 0,0,0,0,0,0);
 
 
 INSERT INTO atlas_driver_offer_bpp.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, info, created_at, updated_at, merchant_id) VALUES

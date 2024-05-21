@@ -32,7 +32,7 @@ import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import Domain.Action.UI.Route as DMaps
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Common as DTC
-import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.FareParameters as Fare
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
@@ -76,7 +76,7 @@ import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as MerchantS
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.Queries.Booking as QRB
-import Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
+import Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as TM

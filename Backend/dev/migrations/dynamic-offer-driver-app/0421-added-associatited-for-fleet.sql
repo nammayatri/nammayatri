@@ -1,6 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN associated_on TIMESTAMP WITH TIME ZONE;
-ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN associated_till TIMESTAMP WITH TIME ZONE;
-
 ------------- Query to backfill data in fleet_rc_association table ----------------------------
 
 INSERT INTO atlas_driver_offer_bpp.fleet_rc_association (id, rc_id, fleet_owner_id, merchant_id, merchant_operating_city_id, associated_on, associated_till, created_at, updated_at)

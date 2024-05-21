@@ -31,7 +31,7 @@ module SharedLogic.DriverPool.Types
 where
 
 import qualified Domain.Types.Common as DTC
-import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores)
 import Domain.Types.DriverPoolConfig (DriverPoolConfig)

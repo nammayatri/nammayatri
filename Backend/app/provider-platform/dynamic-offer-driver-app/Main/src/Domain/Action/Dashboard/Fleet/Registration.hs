@@ -20,9 +20,9 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Regist
 import Data.OpenApi (ToSchema)
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
+import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocumentVerificationConfig as DVC
-import qualified Domain.Types.FleetDriverAssociation as FDA
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as DMerchant
@@ -272,7 +272,7 @@ verifyFleetJoiningOtp merchantShortId _ fleetOwnerId req = do
   let key = makeFleetDriverOtpKey (req.mobileCountryCode <> req.mobileNumber)
   otp <- Redis.get key >>= fromMaybeM (InvalidRequest "OTP not found")
   when (otp /= req.otp) $ throwError (InvalidRequest "Invalid OTP")
-  checkAssoc <- B.runInReplica $ QFDV.findByDriverIdAndFleetOwnerId person.id fleetOwnerId
+  checkAssoc <- B.runInReplica $ QFDV.findByDriverIdAndFleetOwnerId person.id fleetOwnerId True
   when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
   assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
   QFDV.create assoc

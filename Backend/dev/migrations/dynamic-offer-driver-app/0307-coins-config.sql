@@ -68,10 +68,6 @@ CREATE TABLE atlas_driver_offer_bpp.coin_purchase_history (
 
 -- Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN coin_conversion_rate double precision NOT NULL DEFAULT 0.4;
 
-Alter Table atlas_driver_offer_bpp.driver_plan ADD COLUMN coin_coverted_to_cash_left double precision NOT NULL DEFAULT 0;
-
-Alter Table atlas_driver_offer_bpp.driver_plan ADD COLUMN total_coins_converted_cash double precision NOT NULL DEFAULT 0;
-
 -- Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_time_diff INT NOT NULL DEFAULT 120;
 
 -- Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_dist_diff INT NOT NULL DEFAULT 50;
