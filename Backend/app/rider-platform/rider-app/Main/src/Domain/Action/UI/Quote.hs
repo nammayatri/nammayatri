@@ -32,6 +32,7 @@ import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.DriverOffer as UDriverOffer
 import Domain.Action.UI.Estimate as UEstimate
+import qualified Domain.Action.UI.InterCityDetails as DInterCityDetails
 import qualified Domain.Action.UI.Location as DL
 import qualified Domain.Action.UI.MerchantPaymentMethod as DMPM
 import qualified Domain.Action.UI.RentalDetails as DRentalDetails
@@ -144,7 +145,7 @@ mkQuoteAPIDetails tollCharges = \case
         rating' = rating <|> Just (toCentesimal 500) -- TODO::remove this default value
      in DQuote.DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickupWithUnit', durationToPickup = durationToPickup', rating = rating', ..}
   DQuote.OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> DQuote.OneWaySpecialZoneAPIDetails USpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
-  DQuote.InterCityDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> DQuote.InterCityAPIDetails USpecialZoneQuote.InterCityQuoteAPIEntity {..}
+  DQuote.InterCityDetails details -> DQuote.InterCityAPIDetails $ DInterCityDetails.mkInterCityDetailsAPIEntity details tollCharges
 
 mkQAPIEntityList :: [Quote] -> [DBppDetails.BppDetails] -> [Bool] -> [QuoteAPIEntity]
 mkQAPIEntityList (q : qRemaining) (bpp : bppRemaining) (isValueAddNP : remVNP) =

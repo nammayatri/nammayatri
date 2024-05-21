@@ -47,6 +47,8 @@ SearchRequest:
     pickupZoneGateId: Maybe Text
     isCustomerPrefferedSearchRoute: Maybe Bool
     isBlockedRoute: Maybe Bool
+    returnTime: Maybe UTCTime
+    roundTrip: Maybe Bool
     startTime: UTCTime
     createdAt: UTCTime
 

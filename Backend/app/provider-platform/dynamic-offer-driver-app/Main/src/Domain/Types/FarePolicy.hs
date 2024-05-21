@@ -21,6 +21,7 @@ import Data.List.NonEmpty
 import Data.Text as Text
 import qualified Domain.Types.Common as DTC
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
+import Domain.Types.FarePolicy.FarePolicyInterCityDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicyRentalDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport
@@ -40,6 +41,7 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
     allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
+    tollCharges :: Maybe HighPrecMoney,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
     farePolicyDetails :: FarePolicyDetailsD s,
@@ -61,7 +63,7 @@ instance FromJSON (FarePolicyD 'DTC.Safe)
 -- FIXME remove
 instance ToJSON (FarePolicyD 'DTC.Safe)
 
-data FarePolicyDetailsD (s :: DTC.UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s) | RentalDetails (FPRentalDetailsD s)
+data FarePolicyDetailsD (s :: DTC.UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s) | RentalDetails (FPRentalDetailsD s) | InterCityDetails (FPInterCityDetailsD s)
   deriving (Generic, Show)
 
 type FarePolicyDetails = FarePolicyDetailsD 'DTC.Safe
@@ -82,7 +84,7 @@ data CongestionChargeMultiplier
 
 $(mkBeamInstancesForJSON ''CongestionChargeMultiplier)
 
-data FarePolicyType = Progressive | Slabs | Rental
+data FarePolicyType = Progressive | Slabs | Rental | InterCity
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -100,6 +102,7 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
     allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
+    tollCharges :: Maybe HighPrecMoney,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
     farePolicyDetails :: FarePolicyDetailsD s,
@@ -125,6 +128,8 @@ type FullFarePolicyProgressiveDetails = (Id FarePolicy, FPProgressiveDetails)
 
 type FullFarePolicyRentalDetails = (Id FarePolicy, FPRentalDetails)
 
+type FullFarePolicyInterCityDetails = (Id FarePolicy, FPInterCityDetails)
+
 mkCongestionChargeMultiplier :: DPM.CongestionChargeMultiplierAPIEntity -> CongestionChargeMultiplier
 mkCongestionChargeMultiplier (DPM.BaseFareAndExtraDistanceFare charge) = BaseFareAndExtraDistanceFare charge
 mkCongestionChargeMultiplier (DPM.ExtraDistanceFare charge) = ExtraDistanceFare charge
@@ -142,3 +147,4 @@ getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of
   ProgressiveDetails _ -> Progressive
   SlabsDetails _ -> Slabs
   RentalDetails _ -> Rental
+  InterCityDetails _ -> InterCity

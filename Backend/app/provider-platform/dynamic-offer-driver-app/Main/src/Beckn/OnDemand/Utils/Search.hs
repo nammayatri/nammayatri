@@ -85,6 +85,18 @@ getDuration req = do
   let tagValue = Utils.getTagV2 Tag.ROUTE_INFO Tag.DURATION_INFO_IN_S tagGroups
   Just . Seconds =<< readMaybe . T.unpack =<< tagValue
 
+getReturnTime :: Spec.SearchReqMessage -> Maybe Data.Time.UTCTime
+getReturnTime req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
+  let tagValue = Utils.getTagV2 Tag.ROUTE_INFO Tag.RETURN_TIME tagGroups
+  readMaybe . T.unpack =<< tagValue
+
+getRoundTrip :: Spec.SearchReqMessage -> Maybe Bool
+getRoundTrip req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
+  let tagValue = Utils.getTagV2 Tag.ROUTE_INFO Tag.ROUND_TRIP tagGroups
+  readMaybe . T.unpack =<< tagValue
+
 buildCustomerLanguage :: Spec.SearchReqMessage -> Maybe Language
 buildCustomerLanguage req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)

@@ -8,6 +8,7 @@ import Data.Aeson
 import qualified Domain.Action.UI.DriverOffer
 import qualified Domain.Action.UI.SpecialZoneQuote
 import qualified Domain.Types.DriverOffer
+import qualified Domain.Types.InterCityDetails
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.RentalDetails
@@ -67,7 +68,7 @@ data OneWaySpecialZoneQuoteAPIDetails = OneWaySpecialZoneQuoteAPIDetails {distan
 
 data QuoteAPIDetails
   = OneWayAPIDetails Domain.Types.Quote.OneWayQuoteAPIDetails
-  | InterCityAPIDetails Domain.Action.UI.SpecialZoneQuote.InterCityQuoteAPIEntity
+  | InterCityAPIDetails Domain.Types.InterCityDetails.InterCityDetailsAPIEntity
   | RentalAPIDetails Domain.Types.RentalDetails.RentalDetailsAPIEntity
   | DriverOfferAPIDetails Domain.Action.UI.DriverOffer.DriverOfferAPIEntity
   | OneWaySpecialZoneAPIDetails Domain.Action.UI.SpecialZoneQuote.SpecialZoneQuoteAPIEntity
@@ -75,7 +76,7 @@ data QuoteAPIDetails
 
 data QuoteDetails
   = OneWayDetails Domain.Types.Quote.OneWayQuoteDetails
-  | InterCityDetails Domain.Types.SpecialZoneQuote.SpecialZoneQuote
+  | InterCityDetails Domain.Types.InterCityDetails.InterCityDetails
   | RentalDetails Domain.Types.RentalDetails.RentalDetails
   | DriverOfferDetails Domain.Types.DriverOffer.DriverOffer
   | OneWaySpecialZoneDetails Domain.Types.SpecialZoneQuote.SpecialZoneQuote

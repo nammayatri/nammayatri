@@ -36,6 +36,7 @@ where
 import qualified Domain.Action.UI.Quote as DQ (estimateBuildLockKey)
 import Domain.Types.BppDetails
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.InterCityDetails as DInterCityDetails
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.PersonFlowStatus as DPFS
@@ -175,8 +176,18 @@ newtype OneWaySpecialZoneQuoteDetails = OneWaySpecialZoneQuoteDetails
   { quoteId :: Text
   }
 
-newtype InterCityQuoteDetails = InterCityQuoteDetails
-  { quoteId :: Text
+data InterCityQuoteDetails = InterCityQuoteDetails
+  { quoteId :: Text,
+    baseFare :: Price,
+    perHourCharge :: Price,
+    perExtraMinRate :: Price,
+    perExtraKmRate :: Price,
+    kmPerPlannedExtraHour :: Distance, -- it was Kilometers
+    plannedPerKmRateOneWay :: Price,
+    plannedPerKmRateRoundTrip :: Price,
+    perDayMaxHourAllowance :: Minutes,
+    deadKmFare :: Price,
+    nightShiftInfo :: Maybe NightShiftInfo
   }
 
 data RentalQuoteDetails = RentalQuoteDetails
@@ -384,13 +395,18 @@ buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
       updatedAt = now
   pure DSpecialZoneQuote.SpecialZoneQuote {..}
 
-buildInterCityQuoteDetails :: MonadFlow m => InterCityQuoteDetails -> m DSpecialZoneQuote.SpecialZoneQuote
+buildInterCityQuoteDetails :: MonadFlow m => InterCityQuoteDetails -> m DInterCityDetails.InterCityDetails
 buildInterCityQuoteDetails InterCityQuoteDetails {..} = do
-  id <- generateGUID
+  let id = Id quoteId
   now <- getCurrentTime
   let createdAt = now
       updatedAt = now
-  pure DSpecialZoneQuote.SpecialZoneQuote {..}
+      nightShiftinfo' =
+        ( \nightShiftInfo'' ->
+            DRentalDetails.NightShiftInfo nightShiftInfo''.nightShiftCharge Nothing nightShiftInfo''.nightShiftStart nightShiftInfo''.nightShiftEnd
+        )
+          <$> nightShiftInfo
+  pure DInterCityDetails.InterCityDetails {nightShiftInfo = nightShiftinfo', ..}
 
 buildRentalDetails :: MonadFlow m => RentalQuoteDetails -> m DRentalDetails.RentalDetails
 buildRentalDetails RentalQuoteDetails {..} = do

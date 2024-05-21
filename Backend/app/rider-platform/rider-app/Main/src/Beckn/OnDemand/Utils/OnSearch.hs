@@ -205,41 +205,58 @@ getNightShiftEnd tagGroups = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.NIGHT_SHIFT_END_TIME tagGroups
   readMaybe $ T.unpack tagValue
 
-getRentalBaseFare :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
-getRentalBaseFare tagGroups currency = do
+getBaseFare :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getBaseFare tagGroups currency = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.MIN_FARE tagGroups
   baseFare <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency baseFare
 
-getRentalPerHourCharge :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
-getRentalPerHourCharge tagGroups currency = do
+getPerHourCharge :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getPerHourCharge tagGroups currency = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_HOUR_CHARGE tagGroups
   perHourCharge <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency perHourCharge
 
-getRentalPerExtraMinRate :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
-getRentalPerExtraMinRate tagGroups currency = do
+getPerExtraMinRate :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getPerExtraMinRate tagGroups currency = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_MINUTE_CHARGE tagGroups
   perExtraMinRate <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency perExtraMinRate
 
-getRentalPerExtraKmRate :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
-getRentalPerExtraKmRate tagGroups currency = do
+getPerExtraKmRate :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getPerExtraKmRate tagGroups currency = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.UNPLANNED_PER_KM_CHARGE tagGroups
   perExtraKmRate <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency perExtraKmRate
 
-getRentalIncludedKmPerHr :: Maybe [Spec.TagGroup] -> Maybe Distance
-getRentalIncludedKmPerHr tagGroups = do
+getIncludedKmPerHr :: Maybe [Spec.TagGroup] -> Maybe Distance
+getIncludedKmPerHr tagGroups = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_HOUR_DISTANCE_KM tagGroups
   includedKmPerHr <- DecimalValue.valueFromString tagValue
   Just . metersToDistance . kilometersToMeters . Kilometers $ roundToIntegral includedKmPerHr
 
-getRentalPlannedPerKmRate :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
-getRentalPlannedPerKmRate tagGroups currency = do
+getPlannedPerKmRate :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getPlannedPerKmRate tagGroups currency = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PLANNED_PER_KM_CHARGE tagGroups
   plannedPerKmRate <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency plannedPerKmRate
+
+getPlannedPerKmRateRoundTrip :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getPlannedPerKmRateRoundTrip tagGroups currency = do
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PLANNED_PER_KM_CHARGE_ROUND_TRIP tagGroups
+  plannedPerKmRateRoundTrip <- DecimalValue.valueFromString tagValue
+  Just $ decimalValueToPrice currency plannedPerKmRateRoundTrip
+
+getPerDayMaxHourAllowance :: Maybe [Spec.TagGroup] -> Maybe Minutes
+getPerDayMaxHourAllowance tagGroups = do
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_DAY_MAX_HOUR_ALLOWANCE tagGroups
+  readMaybe $ T.unpack tagValue
+
+getDeadKilometerFare :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getDeadKilometerFare tagGroups currency = do
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.DEAD_KILOMETER_FARE tagGroups
+  deadKmFare <- DecimalValue.valueFromString tagValue
+  Just $ decimalValueToPrice currency deadKmFare
 
 buildWaitingChargeInfo' :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 buildWaitingChargeInfo' tagGroups currency = do

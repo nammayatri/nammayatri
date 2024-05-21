@@ -22,9 +22,3 @@ data SpecialZoneQuoteAPIEntity = SpecialZoneQuoteAPIEntity
     tollCharges :: Maybe PriceAPIEntity
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
-data InterCityQuoteAPIEntity = InterCityQuoteAPIEntity
-  { quoteId :: Text,
-    tollCharges :: Maybe PriceAPIEntity
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

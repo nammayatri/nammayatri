@@ -54,3 +54,9 @@ ALTER TABLE atlas_app.booking ADD COLUMN client_config_version text ;
 ALTER TABLE atlas_app.booking ADD COLUMN client_bundle_version text ;
 ALTER TABLE atlas_app.booking ADD COLUMN backend_config_version text ;
 ALTER TABLE atlas_app.booking ADD COLUMN backend_app_version text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN round_trip boolean ;
+ALTER TABLE atlas_app.booking ADD COLUMN return_time timestamp with time zone ;

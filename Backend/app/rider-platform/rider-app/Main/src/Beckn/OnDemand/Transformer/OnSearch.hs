@@ -43,14 +43,30 @@ buildRentalQuoteInfo :: BecknV2.OnDemand.Types.Item -> Text -> Currency -> Maybe
 buildRentalQuoteInfo item quoteId_ currency = do
   let itemTags = item.itemTags
   let id = quoteId_
-  baseFare <- Beckn.OnDemand.Utils.OnSearch.getRentalBaseFare itemTags currency
-  perHourCharge <- Beckn.OnDemand.Utils.OnSearch.getRentalPerHourCharge itemTags currency
-  perExtraMinRate <- Beckn.OnDemand.Utils.OnSearch.getRentalPerExtraMinRate itemTags currency
-  perExtraKmRate <- Beckn.OnDemand.Utils.OnSearch.getRentalPerExtraKmRate itemTags currency
-  includedDistancePerHr <- Beckn.OnDemand.Utils.OnSearch.getRentalIncludedKmPerHr itemTags
-  plannedPerKmRate <- Beckn.OnDemand.Utils.OnSearch.getRentalPlannedPerKmRate itemTags currency
+  baseFare <- Beckn.OnDemand.Utils.OnSearch.getBaseFare itemTags currency
+  perHourCharge <- Beckn.OnDemand.Utils.OnSearch.getPerHourCharge itemTags currency
+  perExtraMinRate <- Beckn.OnDemand.Utils.OnSearch.getPerExtraMinRate itemTags currency
+  perExtraKmRate <- Beckn.OnDemand.Utils.OnSearch.getPerExtraKmRate itemTags currency
+  includedDistancePerHr <- Beckn.OnDemand.Utils.OnSearch.getIncludedKmPerHr itemTags
+  plannedPerKmRate <- Beckn.OnDemand.Utils.OnSearch.getPlannedPerKmRate itemTags currency
   let nightShiftInfo = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item currency
   Just $ Domain.Action.Beckn.OnSearch.RentalQuoteDetails {..}
+
+buildInterCityQuoteInfo :: BecknV2.OnDemand.Types.Item -> Text -> Currency -> Maybe Domain.Action.Beckn.OnSearch.InterCityQuoteDetails
+buildInterCityQuoteInfo item quoteId_ currency = do
+  let itemTags = item.itemTags
+  let quoteId = quoteId_
+  baseFare <- Beckn.OnDemand.Utils.OnSearch.getBaseFare itemTags currency
+  perHourCharge <- Beckn.OnDemand.Utils.OnSearch.getPerHourCharge itemTags currency
+  perExtraMinRate <- Beckn.OnDemand.Utils.OnSearch.getPerExtraMinRate itemTags currency
+  perExtraKmRate <- Beckn.OnDemand.Utils.OnSearch.getPerExtraKmRate itemTags currency
+  kmPerPlannedExtraHour <- Beckn.OnDemand.Utils.OnSearch.getIncludedKmPerHr itemTags
+  plannedPerKmRateOneWay <- Beckn.OnDemand.Utils.OnSearch.getPlannedPerKmRate itemTags currency
+  plannedPerKmRateRoundTrip <- Beckn.OnDemand.Utils.OnSearch.getPlannedPerKmRateRoundTrip itemTags currency
+  perDayMaxHourAllowance <- Beckn.OnDemand.Utils.OnSearch.getPerDayMaxHourAllowance itemTags
+  deadKmFare <- Beckn.OnDemand.Utils.OnSearch.getDeadKilometerFare itemTags currency
+  let nightShiftInfo = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item currency
+  Just $ Domain.Action.Beckn.OnSearch.InterCityQuoteDetails {..}
 
 tfQuotesInfo :: (Monad m, Kernel.Types.App.MonadFlow m) => BecknV2.OnDemand.Types.Provider -> [BecknV2.OnDemand.Types.Fulfillment] -> Kernel.Prelude.UTCTime -> BecknV2.OnDemand.Types.Item -> m (Either Domain.Action.Beckn.OnSearch.EstimateInfo Domain.Action.Beckn.OnSearch.QuoteInfo)
 tfQuotesInfo provider fulfillments validTill item = do
@@ -80,7 +96,8 @@ tfQuotesInfo provider fulfillments validTill item = do
       let quoteDetails_ = Domain.Action.Beckn.OnSearch.OneWaySpecialZoneDetails (Domain.Action.Beckn.OnSearch.OneWaySpecialZoneQuoteDetails {quoteId = quoteOrEstId_})
       pure $ Right $ Domain.Action.Beckn.OnSearch.QuoteInfo {descriptions = descriptions_, discount = discount_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, quoteDetails = quoteDetails_, specialLocationTag = specialLocationTag_, vehicleVariant = vehicleVariant_, validTill, serviceTierName = mbServiceTierName, serviceTierType = mbServiceTierType, serviceTierShortDesc = mbServiceTierShortDesc, isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_, isBlockedRoute = isBlockedRoute_, tollChargesInfo = tollChargesInfo_}
     "INTER_CITY" -> do
-      let quoteDetails_ = Domain.Action.Beckn.OnSearch.InterCityDetails (Domain.Action.Beckn.OnSearch.InterCityQuoteDetails {quoteId = quoteOrEstId_})
+      interCityQuoteInfo <- buildInterCityQuoteInfo item quoteOrEstId_ currency & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing rental quote details")
+      let quoteDetails_ = Domain.Action.Beckn.OnSearch.InterCityDetails interCityQuoteInfo
       pure $ Right $ Domain.Action.Beckn.OnSearch.QuoteInfo {descriptions = descriptions_, discount = discount_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, quoteDetails = quoteDetails_, specialLocationTag = specialLocationTag_, vehicleVariant = vehicleVariant_, validTill, serviceTierName = mbServiceTierName, serviceTierType = mbServiceTierType, serviceTierShortDesc = mbServiceTierShortDesc, isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_, isBlockedRoute = isBlockedRoute_, tollChargesInfo = tollChargesInfo_}
     _ -> do
       let bppEstimateId_ = Id quoteOrEstId_
