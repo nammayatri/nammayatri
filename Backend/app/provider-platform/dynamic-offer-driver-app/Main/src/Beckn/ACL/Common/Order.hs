@@ -289,9 +289,10 @@ tfCompleteReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideCompletedReq -
 tfCompleteReqToOrder Common.DRideCompletedReq {..} mbFarePolicy becknConfig = do
   let Common.BookingDetails {..} = bookingDetails
   let personTag = if isValueAddNP then Utils.mkLocationTagGroupV2 tripEndLocation else Nothing
-  let arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
+      arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
+      tollConfidence = if isValueAddNP then Utils.mkTollConfidenceTagGroupV2 ride.tollConfidence else Nothing
   distanceTagGroup <- if isValueAddNP then UtilsOU.mkDistanceTagGroup ride else return Nothing
-  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (arrivalTimeTagGroup <> distanceTagGroup) personTag False False (Just $ show EventEnum.RIDE_ENDED) isValueAddNP
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (arrivalTimeTagGroup <> distanceTagGroup <> tollConfidence) personTag False False (Just $ show EventEnum.RIDE_ENDED) isValueAddNP
   quote <- UtilsOU.mkRideCompletedQuote ride fareParams
   let farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
   let items = Utils.tfItems booking merchant.shortId.getShortId Nothing farePolicy Nothing

@@ -42,6 +42,7 @@ data TagGroup
   | AUTO_ASSIGN_ENABLED
   | SAFETY_ALERT
   | RIDE_ODOMETER_DETAILS
+  | TOLL_CONFIDENCE_INFO
   | DRIVER_NEW_MESSAGE
   | PREVIOUS_CANCELLATION_REASONS
   | UPDATE_DETAILS
@@ -204,4 +205,6 @@ data Tag
   | -- Forward batching request info tags
     PREVIOUS_RIDE_DROP_LOCATION_LAT
   | PREVIOUS_RIDE_DROP_LOCATION_LON
+  | -- Toll related info tags
+    TOLL_CONFIDENCE
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

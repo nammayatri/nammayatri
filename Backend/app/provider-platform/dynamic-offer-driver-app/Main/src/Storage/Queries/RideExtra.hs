@@ -338,6 +338,9 @@ updateAll rideId ride = do
       Se.Set BeamR.distanceCalculationFailed ride.distanceCalculationFailed,
       Se.Set BeamR.pickupDropOutsideOfThreshold ride.pickupDropOutsideOfThreshold,
       Se.Set BeamR.endOdometerReadingValue (ride.endOdometerReading <&> (.value)),
+      Se.Set BeamR.tollCharges ride.tollCharges,
+      Se.Set BeamR.tollNames ride.tollNames,
+      Se.Set BeamR.tollConfidence ride.tollConfidence,
       Se.Set BeamR.updatedAt now,
       Se.Set BeamR.rideEndedBy ride.rideEndedBy
     ]
