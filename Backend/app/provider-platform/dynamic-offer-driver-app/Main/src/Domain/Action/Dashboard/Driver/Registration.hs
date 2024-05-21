@@ -37,7 +37,6 @@ import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.FleetDriverAssociation as FDV
-import qualified Domain.Types.IdfyVerification as VerificationT
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -54,6 +53,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -160,6 +160,8 @@ registerRC merchantShortId opCity driverId_ Common.RegisterRCReq {..} = do
         }
     )
 
+--make a separate function casting the driverVehiclereq
+
 generateAadhaarOtp :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.GenerateAadhaarOtpReq -> Flow Common.GenerateAadhaarOtpRes
 generateAadhaarOtp merchantShortId opCity driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
@@ -243,15 +245,15 @@ approveAndUpdateRC req = do
   let udpatedRC =
         rc
           { DRC.vehicleVariant = (castVehicleVariant <$> req.vehicleVariant) <|> rc.vehicleVariant,
-            DRC.verificationStatus = VerificationT.VALID
+            DRC.verificationStatus = VALID
           }
   QRC.updateByPrimaryKey udpatedRC
-  QImage.updateToValid True imageId
+  QImage.updateVerificationStatus VALID imageId
 
 approveAndUpdateInsurance :: Common.VInsuranceApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
-  QImage.updateToValid True imageId
+  QImage.updateVerificationStatus VALID imageId
   policyNo <- encrypt req.policyNumber
   vinsurance <- QVI.findByImageId imageId
   now <- getCurrentTime
@@ -266,7 +268,7 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
                 DVI.policyExpiry = req.policyExpiry,
                 DVI.policyNumber = policyNo,
                 DVI.policyProvider = req.policyProvider,
-                DVI.verificationStatus = VerificationT.VALID
+                DVI.verificationStatus = VALID
               }
       QVI.updateByPrimaryKey updatedInsurance
     Nothing -> do
@@ -280,7 +282,7 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
                 id = uuid,
                 policyNumber = policyNo,
                 rcId = rc.id,
-                verificationStatus = VerificationT.VALID,
+                verificationStatus = VALID,
                 createdAt = now,
                 updatedAt = now,
                 merchantId = Just mId,
@@ -292,7 +294,7 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
 approveAndUpdateFitnessCertificate :: Common.FitnessApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
-  QImage.updateToValid True imageId
+  QImage.updateVerificationStatus VALID imageId
   mbFitnessCert <- QFC.findByImageId imageId
   applicationNo <- encrypt req.applicationNumber
   now <- getCurrentTime
@@ -308,7 +310,7 @@ approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOp
                 DFC.inspectingOn = req.inspectingOn <|> certificate.inspectingOn,
                 DFC.nextInspectionDate = req.nextInspectionDate <|> certificate.nextInspectionDate,
                 DFC.receiptDate = req.receiptDate <|> certificate.receiptDate,
-                DFC.verificationStatus = VerificationT.VALID
+                DFC.verificationStatus = VALID
               }
       QFC.updateByPrimaryKey updatedFitnessCert
     Nothing -> do
@@ -322,7 +324,7 @@ approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOp
                 driverId = certificateImage.personId,
                 id = uuid,
                 rcId = rc.id,
-                verificationStatus = VerificationT.VALID,
+                verificationStatus = VALID,
                 createdAt = now,
                 updatedAt = now,
                 merchantId = Just mId,
@@ -337,14 +339,14 @@ handleApproveRequest approveReq merchantId merchantOperatingCityId = do
     Common.RC rcApproveReq -> approveAndUpdateRC rcApproveReq
     Common.VehicleInsurance vInsuranceReq -> approveAndUpdateInsurance vInsuranceReq merchantId merchantOperatingCityId
     Common.VehicleFitnessCertificate fitnessReq -> approveAndUpdateFitnessCertificate fitnessReq merchantId merchantOperatingCityId
-    Common.UploadProfile imageId -> QImage.updateToValid True (Id imageId.getId)
-    Common.ProfilePhoto imageId -> QImage.updateToValid True (Id imageId.getId)
+    Common.UploadProfile imageId -> QImage.updateVerificationStatus VALID (Id imageId.getId)
+    Common.ProfilePhoto imageId -> QImage.updateVerificationStatus VALID (Id imageId.getId)
     Common.DL imageId -> do
-      QDL.updateVerificationStatus VerificationT.VALID (Id imageId.getId)
-      QImage.updateToValid True (Id imageId.getId)
+      QDL.updateVerificationStatus VALID (Id imageId.getId)
+      QImage.updateVerificationStatus VALID (Id imageId.getId)
     Common.SSNApprove ssnNum -> do
       ssnEnc <- encrypt ssnNum
-      QSSN.updateVerificationStatusAndReasonBySSN VerificationT.VALID Nothing (ssnEnc & hash)
+      QSSN.updateVerificationStatusAndReasonBySSN VALID Nothing (ssnEnc & hash)
     _ -> throwError (InternalError "Unknown Config in approve update document")
 
 handleRejectRequest :: Common.RejectDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
@@ -357,20 +359,24 @@ handleRejectRequest rejectReq _ merchantOperatingCityId = do
       case image.imageType of
         Domain.ProfilePhoto -> QImage.updateIsValidAndFailureReason False (Just $ ImageNotValid imageRejectReq.reason) imageId
         Domain.UploadProfile -> QImage.updateIsValidAndFailureReason False (Just $ ImageNotValid imageRejectReq.reason) imageId
-        Domain.DriverLicense -> QDL.updateVerificationStatus VerificationT.INVALID imageId
-        Domain.VehicleRegistrationCertificate -> QRC.updateVerificationStatus VerificationT.INVALID imageId
-        Domain.VehicleFitnessCertificate -> QFC.updateVerificationStatus VerificationT.INVALID imageId
-        Domain.VehicleInsurance -> QVI.updateVerificationStatus VerificationT.INVALID imageId
+        Domain.DriverLicense -> do
+          QDL.updateVerificationStatus INVALID imageId
+          QImage.updateVerificationStatus INVALID imageId
+        Domain.VehicleRegistrationCertificate -> do
+          QRC.updateVerificationStatus INVALID imageId
+          QImage.updateVerificationStatus INVALID imageId
+        Domain.VehicleFitnessCertificate -> QFC.updateVerificationStatus INVALID imageId
+        Domain.VehicleInsurance -> QVI.updateVerificationStatus INVALID imageId
         _ -> throwError (InternalError "Unknown Config in reject update document")
       driver <- QDriver.findById image.personId >>= fromMaybeM (PersonNotFound image.personId.getId)
       Notify.notifyDriver merchantOperatingCityId notificationType (notificationTitle (show image.imageType)) (message (show image.imageType)) driver driver.deviceToken
   where
-    notificationType = FCM.TRIGGER_SERVICE
+    notificationType = FCM.DOCUMENT_INVALID
     notificationTitle obj = "Attention: Your " <> obj <> " is invalid."
     message obj = "Kindly reapply or reupload your " <> obj
     rejectSSNAndSendNotification req merchantOpCityId = do
       ssnEnc <- encrypt req.ssn
-      QSSN.updateVerificationStatusAndReasonBySSN VerificationT.INVALID (Just req.reason) (ssnEnc & hash)
+      QSSN.updateVerificationStatusAndReasonBySSN INVALID (Just req.reason) (ssnEnc & hash)
       ssnEntry <- QSSN.findBySSN (ssnEnc & hash) >>= fromMaybeM (InternalError "SSN not found by ssn no")
       driver <- QDriver.findById ssnEntry.driverId >>= fromMaybeM (PersonNotFound ssnEntry.driverId.getId)
       Notify.notifyDriver merchantOpCityId notificationType (notificationTitle "SSN") (message "SSN") driver driver.deviceToken

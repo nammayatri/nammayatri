@@ -6,12 +6,12 @@
 module Storage.Beam.VehicleRegistrationCertificate where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.IdfyVerification
 import qualified Domain.Types.Vehicle
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Documents
 import Tools.Beam.UtilsTH
 
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
@@ -41,7 +41,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     vehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     vehicleSeatBelts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant),
-    verificationStatus :: B.C f Domain.Types.IdfyVerification.VerificationStatus,
+    verificationStatus :: B.C f Kernel.Types.Documents.VerificationStatus,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

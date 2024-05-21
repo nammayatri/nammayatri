@@ -3,13 +3,13 @@
 
 module Storage.Queries.VehicleRegistrationCertificateExtra where
 
-import qualified Domain.Types.IdfyVerification as IV
 import Domain.Types.Vehicle as Vehicle
 import Domain.Types.VehicleRegistrationCertificate
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -61,7 +61,7 @@ updateVehicleVariant (Id vehicleRegistrationCertificateId) variant reviewDone re
         <> [Se.Set BeamVRC.reviewedAt (Just now) | isJust reviewDone]
         <> [Se.Set BeamVRC.reviewRequired reviewRequired | isJust reviewRequired]
         <> [Se.Set BeamVRC.vehicleVariant variant | isJust variant]
-        <> [Se.Set BeamVRC.verificationStatus IV.VALID | isJust variant]
+        <> [Se.Set BeamVRC.verificationStatus Documents.VALID | isJust variant]
     )
     [Se.Is BeamVRC.id (Se.Eq vehicleRegistrationCertificateId)]
 

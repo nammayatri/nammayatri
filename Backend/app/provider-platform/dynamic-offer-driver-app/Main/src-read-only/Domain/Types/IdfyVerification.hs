@@ -109,8 +109,4 @@ instance EncryptedItem' IdfyVerification where
 
 data ImageExtractionValidation = Success | Skipped | Failed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ImageExtractionValidation)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VerificationStatus)
