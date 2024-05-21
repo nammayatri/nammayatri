@@ -5,10 +5,10 @@
 module Domain.Types.DriverSSN where
 
 import Data.Aeson
-import qualified Domain.Types.IdfyVerification
 import qualified Domain.Types.Person
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Types.Documents
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
@@ -17,7 +17,7 @@ data DriverSSNE e = DriverSSN
     id :: Kernel.Types.Id.Id Domain.Types.DriverSSN.DriverSSN,
     rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ssn :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
-    verificationStatus :: Domain.Types.IdfyVerification.VerificationStatus
+    verificationStatus :: Kernel.Types.Documents.VerificationStatus
   }
   deriving (Generic)
 

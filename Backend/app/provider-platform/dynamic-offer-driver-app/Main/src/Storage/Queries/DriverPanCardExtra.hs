@@ -4,11 +4,11 @@
 module Storage.Queries.DriverPanCardExtra where
 
 import Domain.Types.DriverPanCard
-import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -28,6 +28,6 @@ findByPanNumberAndNotInValid personId = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq personId.getId,
-          Se.Is Beam.verificationStatus $ Se.In [Domain.VALID, Domain.PENDING]
+          Se.Is Beam.verificationStatus $ Se.In [Documents.VALID, Documents.PENDING]
         ]
     ]

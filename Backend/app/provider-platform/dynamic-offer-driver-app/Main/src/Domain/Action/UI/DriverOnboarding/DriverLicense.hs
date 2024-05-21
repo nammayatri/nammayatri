@@ -43,6 +43,7 @@ import Kernel.External.Verification.SafetyPortal.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
@@ -66,11 +67,11 @@ import Utils.Common.Cac.KeyNameConstants
 data DriverDLReq = DriverDLReq
   { driverLicenseNumber :: Text,
     operatingCity :: Text,
-    driverDateOfBirth :: UTCTime,
+    driverDateOfBirth :: UTCTime, --updatable
     vehicleCategory :: Maybe Category,
     imageId1 :: Id Image.Image,
     imageId2 :: Maybe (Id Image.Image),
-    dateOfIssue :: Maybe UTCTime
+    dateOfIssue :: Maybe UTCTime --updatable
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -145,8 +146,8 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
     Just driverLicense -> do
       unless (driverLicense.driverId == personId) $ throwImageError imageId1 DLAlreadyLinked
       unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
-      when (driverLicense.verificationStatus == Domain.INVALID) $ throwError DLInvalid
-      when (driverLicense.verificationStatus == Domain.VALID) $ throwError DLAlreadyUpdated
+      when (driverLicense.verificationStatus == Documents.INVALID) $ throwError DLInvalid
+      when (driverLicense.verificationStatus == Documents.VALID) $ throwError DLAlreadyUpdated
       if documentVerificationConfig.doStrictVerifcation
         then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard req.vehicleCategory
         else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnCard
@@ -290,7 +291,7 @@ createDL merchantId configs driverId covDetails name dob id imageId1 imageId2 na
   let verificationStatus =
         if configs.doStrictVerifcation
           then validateDLStatus configs expiry classOfVehicles now
-          else Domain.MANUAL_VERIFICATION_REQUIRED
+          else Documents.MANUAL_VERIFICATION_REQUIRED
   let verifiedName = (\n -> if '*' `T.elem` n then Nothing else Just n) =<< name
   let driverName = verifiedName <|> nameOnCard
   Domain.DriverLicense
@@ -312,15 +313,15 @@ createDL merchantId configs driverId covDetails name dob id imageId1 imageId2 na
       consentTimestamp = now
     }
 
-validateDLStatus :: DTO.DocumentVerificationConfig -> UTCTime -> [Text] -> UTCTime -> Domain.VerificationStatus
+validateDLStatus :: DTO.DocumentVerificationConfig -> UTCTime -> [Text] -> UTCTime -> Documents.VerificationStatus
 validateDLStatus configs expiry cov now = do
   case configs.supportedVehicleClasses of
-    DTO.DLValidClasses [] -> Domain.INVALID
+    DTO.DLValidClasses [] -> Documents.INVALID
     DTO.DLValidClasses validCOVs -> do
       let validCOVsCheck = configs.vehicleClassCheckType
       let isCOVValid = foldr' (\x acc -> isValidCOVDL validCOVs validCOVsCheck x || acc) False cov
-      if ((not configs.checkExpiry) || now < expiry) && isCOVValid then Domain.VALID else Domain.INVALID
-    _ -> Domain.INVALID
+      if ((not configs.checkExpiry) || now < expiry) && isCOVValid then Documents.VALID else Documents.INVALID
+    _ -> Documents.INVALID
 
 isValidCOVDL :: [Text] -> DTO.VehicleClassCheckType -> Text -> Bool
 isValidCOVDL validCOVs validCOVsCheck cov =

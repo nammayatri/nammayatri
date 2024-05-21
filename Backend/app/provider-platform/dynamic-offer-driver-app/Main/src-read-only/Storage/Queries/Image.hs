@@ -12,6 +12,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Documents
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -57,9 +58,6 @@ updateIsValidAndFailureReason isValid failureReason (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.isValid isValid, Se.Set Beam.failureReason failureReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-updateToValid :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
-updateToValid isValid (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.isValid isValid, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
-
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.Image.Image))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
@@ -74,6 +72,7 @@ updateByPrimaryKey (Domain.Types.Image.Image {..}) = do
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.rcId rcId,
       Se.Set Beam.s3Path s3Path,
+      Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]

@@ -132,6 +132,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
@@ -805,12 +806,12 @@ buildVehicleRCAPIEntity VehicleRegistrationCertificate {..} = do
         ..
       }
 
-castVerificationStatus :: IV.VerificationStatus -> Common.VerificationStatus
+castVerificationStatus :: Documents.VerificationStatus -> Common.VerificationStatus
 castVerificationStatus = \case
-  IV.PENDING -> Common.PENDING
-  IV.VALID -> Common.VALID
-  IV.MANUAL_VERIFICATION_REQUIRED -> Common.MANUAL_VERIFICATION_REQUIRED
-  IV.INVALID -> Common.INVALID
+  Documents.PENDING -> Common.PENDING
+  Documents.VALID -> Common.VALID
+  Documents.MANUAL_VERIFICATION_REQUIRED -> Common.MANUAL_VERIFICATION_REQUIRED
+  Documents.INVALID -> Common.INVALID
 
 ---------------------------------------------------------------------
 deleteDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
@@ -909,7 +910,7 @@ addVehicle merchantShortId opCity reqDriverId req = do
   mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput
   case mbNewRC of
     Just newRC -> do
-      when (newRC.verificationStatus == IV.INVALID) $ do throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")
+      when (newRC.verificationStatus == Documents.INVALID) $ do throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")
       RCQuery.upsert newRC
       mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId newRC.id now
       when (isNothing mbAssoc) $ do
