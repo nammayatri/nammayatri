@@ -58,6 +58,7 @@ import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverIntelligentPoolConfig as DDIPC
 import qualified Domain.Types.DriverPoolConfig as DDPC
 import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.Extra.TimeBound as DTB
 import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DFPEFB
 import qualified Domain.Types.FareProduct as DFareProduct
@@ -425,6 +426,7 @@ buildDriverPoolConfig merchantId merchantOpCityId tripDistance area vehicleVaria
         onRideBatchSplitConfig = map castOnRideSplitByPickupDistance onRideBatchSplitConfig,
         onRideRadiusConfig = map castOnRideRadiusConfig onRideRadiusConfig,
         batchSizeOnRide = batchSizeOnRide,
+        timeBounds = DTB.Unbounded, -- Add option for bounded later if this is used
         ..
       }
 

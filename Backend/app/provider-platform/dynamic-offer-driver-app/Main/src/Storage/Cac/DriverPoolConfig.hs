@@ -47,12 +47,13 @@ getSearchDriverPoolConfig ::
   (CacheFlow m r, EsqDBFlow m r) =>
   Id MerchantOperatingCity ->
   Maybe Meters ->
+  Maybe Seconds ->
   SL.Area ->
   m (Maybe DriverPoolConfig)
-getSearchDriverPoolConfig merchantOpCityId mbDist area = do
+getSearchDriverPoolConfig merchantOpCityId mbDist mbDuration area = do
   let serviceTier = Nothing
       tripCategory = "All"
-  getdriverPoolConfigCond merchantOpCityId serviceTier tripCategory mbDist area Nothing
+  getdriverPoolConfigCond merchantOpCityId serviceTier tripCategory mbDist area mbDuration Nothing
 
 getDriverPoolConfigFromCAC ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -61,9 +62,10 @@ getDriverPoolConfigFromCAC ::
   String ->
   Meters ->
   SL.Area ->
+  Maybe Seconds ->
   Maybe CacKey ->
   m (Maybe DriverPoolConfig)
-getDriverPoolConfigFromCAC merchantOpCityId st tc dist area stickyKey = do
+getDriverPoolConfigFromCAC merchantOpCityId st tc dist area duration stickyKey = do
   let dpcCond =
         [ (MerchantOperatingCityId, toJSON (getId merchantOpCityId)),
           (TripDistance, toJSON (getMeters dist)),
@@ -76,7 +78,7 @@ getDriverPoolConfigFromCAC merchantOpCityId st tc dist area stickyKey = do
     CCU.getConfigFromCacOrDB inMemConfig dpcCond stickyKey (KBF.fromCacType @SBMDPC.DriverPoolConfig) CCU.DriverPoolConfig
       |<|>| ( do
                 logDebug $ "DriverPoolConfig not found in memory, fetching from DB for context: " <> show dpcCond
-                DPC.getDriverPoolConfigFromDB merchantOpCityId st tc area (Just dist)
+                DPC.getDriverPoolConfigFromDB merchantOpCityId st tc area (Just dist) duration -- disable CAC for this table for now
             )
   setConfigInMemory merchantOpCityId st tc dist config
 
@@ -90,16 +92,17 @@ getdriverPoolConfigCond ::
   String ->
   Maybe Meters ->
   SL.Area ->
+  Maybe Seconds ->
   Maybe CacKey ->
   m (Maybe DriverPoolConfig)
-getdriverPoolConfigCond merchantOpCityId serviceTier tripCategory dist' area stickeyKey = do
+getdriverPoolConfigCond merchantOpCityId serviceTier tripCategory dist' area duration stickeyKey = do
   let dist = fromMaybe 0 dist'
-  getDriverPoolConfigFromCAC merchantOpCityId serviceTier tripCategory dist area stickeyKey
-    |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier tripCategory dist SL.Default stickeyKey
-    |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier "All" dist area stickeyKey
-    |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier "All" dist SL.Default stickeyKey
-    |<|>| getDriverPoolConfigFromCAC merchantOpCityId Nothing "All" dist area stickeyKey
-    |<|>| getDriverPoolConfigFromCAC merchantOpCityId Nothing "All" dist SL.Default stickeyKey
+  getDriverPoolConfigFromCAC merchantOpCityId serviceTier tripCategory dist area duration stickeyKey
+    |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier tripCategory dist SL.Default duration stickeyKey
+    |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier "All" dist area duration stickeyKey
+    |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier "All" dist SL.Default duration stickeyKey
+    |<|>| getDriverPoolConfigFromCAC merchantOpCityId Nothing "All" dist area duration stickeyKey
+    |<|>| getDriverPoolConfigFromCAC merchantOpCityId Nothing "All" dist SL.Default duration stickeyKey
 
 -- TODO :: Need To Handle `area` Properly In CAC
 getConfigFromInMemory ::
@@ -134,10 +137,11 @@ getDriverPoolConfig ::
   DTC.TripCategory ->
   SL.Area ->
   Maybe Meters ->
+  Maybe Seconds ->
   Maybe CacKey ->
   m DriverPoolConfig
-getDriverPoolConfig merchantOpCityId serviceTier tripCategory area tripDistance srId = do
-  config <- getdriverPoolConfigCond merchantOpCityId (Just serviceTier) (show tripCategory) tripDistance area srId
+getDriverPoolConfig merchantOpCityId serviceTier tripCategory area tripDistance tripDuration srId = do
+  config <- getdriverPoolConfigCond merchantOpCityId (Just serviceTier) (show tripCategory) tripDistance area tripDuration srId
   when (isNothing config) do
     logError $ "Could not find the config for merchantOpCityId:" <> getId merchantOpCityId <> " and serviceTier:" <> show serviceTier <> " and tripCategory:" <> show tripCategory <> " and tripDistance:" <> show tripDistance
     throwError $ InvalidRequest $ "DriverPool Configs not found for MerchantOperatingCity: " <> merchantOpCityId.getId

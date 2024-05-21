@@ -7,7 +7,7 @@ module Storage.Beam.FareProduct where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Common
-import qualified Domain.Types.Extra.FareProduct
+import qualified Domain.Types.Extra.TimeBound
 import qualified Domain.Types.FareProduct
 import qualified Domain.Types.ServiceTierType
 import Kernel.External.Encryption
@@ -24,7 +24,7 @@ data FareProductT f = FareProductT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     searchSource :: B.C f Domain.Types.FareProduct.SearchSource,
-    timeBounds :: B.C f Domain.Types.Extra.FareProduct.TimeBound,
+    timeBounds :: B.C f Domain.Types.Extra.TimeBound.TimeBound,
     tripCategory :: B.C f Domain.Types.Common.TripCategory,
     vehicleVariant :: B.C f Domain.Types.ServiceTierType.ServiceTierType
   }

@@ -24,18 +24,20 @@ module SharedLogic.DriverPool.Config
 where
 
 import Control.Applicative ((<|>))
-import Data.Text as Text hiding (find)
+import Data.Text as Text hiding (filter, find, foldl)
+import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import Domain.Types.DriverPoolConfig
+import qualified Domain.Types.Extra.TimeBound as DTB
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
-import Kernel.Utils.Error
+import Kernel.Utils.Common
 import qualified Lib.Types.SpecialLocation as SL
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Cac.TransporterConfig as CTC
 import Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 
 getDriverPoolConfigFromDB ::
@@ -45,12 +47,19 @@ getDriverPoolConfigFromDB ::
   String ->
   SL.Area ->
   Maybe Meters ->
+  Maybe Seconds ->
   m (Maybe DriverPoolConfig)
-getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist = do
+getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist mbDuration = do
   let distance = fromMaybe 0 mbDist
   configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc -- bounds, all these params, timeDiffFromUTC
+  let longestConfig = case (mbDuration, transporterConfig.interCityAdvancedPoolingDurationThreshold) of
+        (Just duration, Just threshold) -> (secondsToNominalDiffTime duration) >= threshold
+        _ -> False
   let mbApplicableConfig =
-        find (filterByDistAndDvehAndArea serviceTier (Text.pack tripCategory) distance area) configs
+        findBoundedConfigByDistVehAndArea serviceTier (Text.pack tripCategory) distance longestConfig area configs localTime -- Need to disable CAC for this table till we can handle findAll
+          <|> find (filterByDistAndDvehAndArea serviceTier (Text.pack tripCategory) distance area) configs
           <|> find (filterByDistAndDvehAndArea serviceTier (Text.pack tripCategory) distance SL.Default) configs
   case configs of
     [] -> throwError $ InvalidRequest $ "DriverPool Configs not found for MerchantOperatingCity: " <> merchantOpCityId.getId
@@ -68,6 +77,12 @@ getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist 
 filterByDistAndDvehAndArea :: Maybe DVST.ServiceTierType -> Text -> Meters -> SL.Area -> DriverPoolConfig -> Bool
 filterByDistAndDvehAndArea serviceTier tripCategory dist area cfg =
   dist >= cfg.tripDistance && cfg.vehicleVariant == serviceTier && cfg.tripCategory == tripCategory && cfg.area == area
+
+findBoundedConfigByDistVehAndArea :: Maybe DVST.ServiceTierType -> Text -> Meters -> Bool -> SL.Area -> [DriverPoolConfig] -> UTCTime -> Maybe DriverPoolConfig
+findBoundedConfigByDistVehAndArea serviceTier tripCategory dist longestConfig area configs localTime = do
+  let suitableConfigs = filter (\cfg -> cfg.vehicleVariant == serviceTier && cfg.tripCategory == tripCategory && cfg.area == area) configs
+      filteredConfigs = if (longestConfig && tripCategory == "InterCity_OnDemandStaticOffer") then suitableConfigs else filter (\cfg -> dist >= cfg.tripDistance) suitableConfigs
+  DTB.findBoundedDomain filteredConfigs localTime
 
 findDriverPoolConfig :: (EsqDBFlow m r) => [DriverPoolConfig] -> Maybe DVST.ServiceTierType -> Text -> Meters -> SL.Area -> m DriverPoolConfig
 findDriverPoolConfig configs serviceTier tripCategory dist area = do

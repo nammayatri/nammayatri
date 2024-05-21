@@ -4,7 +4,7 @@
 module Storage.Queries.FareProductExtra where
 
 import Domain.Types.Common
-import qualified Domain.Types.Extra.FareProduct as Domain
+import qualified Domain.Types.Extra.TimeBound as Domain
 import Domain.Types.FareProduct
 import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.MerchantOperatingCity as DMOC

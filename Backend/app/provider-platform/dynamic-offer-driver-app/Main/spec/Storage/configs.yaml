@@ -1,6 +1,7 @@
 imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  TimeBound : Domain.Types.Extra.TimeBound
   BatchSplitByPickupDistance: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   BatchSplitByPickupDistanceOnRide: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   OnRideRadiusConfig: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
@@ -24,6 +25,7 @@ DriverPoolConfig:
     driverPositionInfoExpiry: Maybe Seconds
     actualDistanceThreshold: Maybe Meters
     maxDriverQuotesRequired: Int
+    timeBounds: TimeBound
     driverQuoteLimit: Int
     driverRequestCountLimit: Int
     driverBatchSize: Int
@@ -61,6 +63,7 @@ DriverPoolConfig:
     distanceBasedBatchSplit: text[]
     onRideRadiusConfig: text[]
     scheduleTryTimes: integer[]
+    timeBounds: Text
     onRideBatchSplitConfig: text[]
 
   default:
@@ -68,6 +71,7 @@ DriverPoolConfig:
     area: "'Default'"
     distanceBasedBatchSplit: "Array ['BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 4 }']"
     scheduleTryTimes: "'{1800, 900, 300}'"
+    timeBounds: "'Unbounded'"
     batchSizeOnRide: "10"
     onRideRadiusConfig: "ARRAY[]::TEXT[]"
     currentRideTripCategoryValidForForwardBatching: "Array ['OneWay_OneWayOnDemandDynamicOffer']"
@@ -80,6 +84,9 @@ DriverPoolConfig:
       kvFunction: findAllWithOptionsKV
       where: merchantOperatingCityId
       orderBy: tripDistance
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 MerchantState:
   tableName: merchant_state

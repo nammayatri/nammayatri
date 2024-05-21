@@ -63,6 +63,7 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.orderAndNotificationStatusCheckTimeLimit (Kernel.Utils.Common.nominalDiffTimeToSeconds orderAndNotificationStatusCheckTimeLimit),
       Se.Set Beam.snapToRoadConfidenceThreshold snapToRoadConfidenceThreshold,
       Se.Set Beam.useWithSnapToRoadFallback useWithSnapToRoadFallback,
+      Se.Set Beam.interCityAdvancedPoolingDurationThreshold (Kernel.Utils.Common.nominalDiffTimeToSeconds <$> interCityAdvancedPoolingDurationThreshold),
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]

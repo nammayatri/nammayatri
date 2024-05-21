@@ -765,6 +765,7 @@ TransporterConfig:
     useSilentFCMForForwardBatch: Bool
     fareRecomputeDailyExtraKmsThreshold: HighPrecMeters
     fareRecomputeWeeklyExtraKmsThreshold: HighPrecMeters
+    interCityAdvancedPoolingDurationThreshold: Maybe NominalDiffTime
   beamType:
     currency: Maybe Currency
     driverPaymentCycleBuffer: Seconds
@@ -796,6 +797,7 @@ TransporterConfig:
     arrivedPickupThreshold: Maybe HighPrecMeters
     dummyToLocation: Maybe Value
     scheduleRideBufferTime: Seconds
+    interCityAdvancedPoolingDurationThreshold: Maybe Seconds
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -835,6 +837,7 @@ TransporterConfig:
     arrivedPickupThreshold: Just arrivedPickupThreshold|E
     dummyToLocation: Just $ toJSON dummyToLocation|E
     scheduleRideBufferTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    interCityAdvancedPoolingDurationThreshold: Kernel.Utils.Common.nominalDiffTimeToSeconds <$> interCityAdvancedPoolingDurationThreshold|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -876,6 +879,7 @@ TransporterConfig:
     dummyToLocation: |-
       fromMaybe Domain.Types.Location.dummyToLocationData ((\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< dummyToLocation)|E
     scheduleRideBufferTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
+    interCityAdvancedPoolingDurationThreshold: Kernel.Utils.Common.secondsToNominalDiffTime <$> interCityAdvancedPoolingDurationThreshold|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -925,6 +929,7 @@ TransporterConfig:
     arrivedPickupThreshold: double precision
     variantsToEnableForSubscription: "text[]"
     crossTravelCities: "text[]"
+    interCityAdvancedPoolingDurationThreshold: bigint
 
   default:
     mediaFileUrlPattern: |-
@@ -1032,6 +1037,7 @@ TransporterConfig:
     useSilentFCMForForwardBatch: "false"
     fareRecomputeDailyExtraKmsThreshold: "5000"
     fareRecomputeWeeklyExtraKmsThreshold: "20000"
+    interCityAdvancedPoolingDurationThreshold: "36000"
 
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -1076,6 +1082,7 @@ TransporterConfig:
         - orderAndNotificationStatusCheckTimeLimit
         - snapToRoadConfidenceThreshold
         - useWithSnapToRoadFallback
+        - interCityAdvancedPoolingDurationThreshold
   extraOperations:
     - EXTRA_QUERY_FILE
 

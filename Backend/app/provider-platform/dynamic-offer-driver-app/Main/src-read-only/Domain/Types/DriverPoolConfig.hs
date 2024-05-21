@@ -5,6 +5,7 @@
 module Domain.Types.DriverPoolConfig where
 
 import Data.Aeson
+import qualified Domain.Types.Extra.TimeBound
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceTierType
@@ -47,6 +48,7 @@ data DriverPoolConfig = DriverPoolConfig
     scheduleTryTimes :: [Kernel.Prelude.Int],
     singleBatchProcessTime :: Kernel.Types.Common.Seconds,
     thresholdToIgnoreActualDistanceThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    timeBounds :: Domain.Types.Extra.TimeBound.TimeBound,
     tripCategory :: Kernel.Prelude.Text,
     tripDistance :: Kernel.Types.Common.Meters,
     updatedAt :: Kernel.Prelude.UTCTime,

@@ -16,7 +16,7 @@
 module Storage.CachedQueries.FareProduct where
 
 import qualified Domain.Types.Common as DTC
-import qualified Domain.Types.Extra.FareProduct as Domain
+import qualified Domain.Types.Extra.TimeBound as Domain
 import Domain.Types.FareProduct
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.ServiceTierType as DVST

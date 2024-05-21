@@ -234,12 +234,12 @@ library
       Domain.Types.DriverPlan
       Domain.Types.DriverStats
       Domain.Types.Extra.DriverFee
-      Domain.Types.Extra.FareProduct
       Domain.Types.Extra.Location
       Domain.Types.Extra.MerchantMessage
       Domain.Types.Extra.MerchantPaymentMethod
       Domain.Types.Extra.MerchantServiceConfig
       Domain.Types.Extra.Plan
+      Domain.Types.Extra.TimeBound
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
       Domain.Types.FarePolicy.DriverExtraFeeBounds
@@ -462,6 +462,7 @@ library
       Storage.Queries.DriverLocation.Internal
       Storage.Queries.DriverPanCardExtra
       Storage.Queries.DriverPlan
+      Storage.Queries.DriverPoolConfigExtra
       Storage.Queries.DriverQuote.Internal
       Storage.Queries.DriverQuoteExtra
       Storage.Queries.DriverRCAssociationExtra
@@ -820,6 +821,7 @@ library
       Storage.Queries.OrphanInstances.DriverInformation
       Storage.Queries.OrphanInstances.DriverLicense
       Storage.Queries.OrphanInstances.DriverPanCard
+      Storage.Queries.OrphanInstances.DriverPoolConfig
       Storage.Queries.OrphanInstances.DriverQuote
       Storage.Queries.OrphanInstances.DriverRCAssociation
       Storage.Queries.OrphanInstances.DriverReferral

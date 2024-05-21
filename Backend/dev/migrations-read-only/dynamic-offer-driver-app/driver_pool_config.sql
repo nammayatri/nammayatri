@@ -35,6 +35,13 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN area text NOT NULL default 'Default';
 
 
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN time_bounds Text NOT NULL default 'Unbounded';
+
+
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN on_ride_radius_config text[] NOT NULL default ARRAY[]::TEXT[];

@@ -98,6 +98,7 @@ data TransporterConfigT f = TransporterConfigT
     fcmUrl :: B.C f Kernel.Prelude.Text,
     freeTrialDays :: B.C f Kernel.Prelude.Int,
     includeDriverCurrentlyOnRide :: B.C f Kernel.Prelude.Bool,
+    interCityAdvancedPoolingDurationThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
     isPlanMandatory :: B.C f Kernel.Prelude.Bool,
     kaptureDisposition :: B.C f Kernel.Prelude.Text,

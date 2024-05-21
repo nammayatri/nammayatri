@@ -97,6 +97,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     fcmConfig :: Kernel.External.Notification.FCM.Types.FCMConfig,
     freeTrialDays :: Kernel.Prelude.Int,
     includeDriverCurrentlyOnRide :: Kernel.Prelude.Bool,
+    interCityAdvancedPoolingDurationThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.NominalDiffTime,
     isAvoidToll :: Kernel.Prelude.Bool,
     isPlanMandatory :: Kernel.Prelude.Bool,
     kaptureDisposition :: Kernel.Prelude.Text,
