@@ -162,7 +162,7 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
     getImage :: Id Image.Image -> Flow Text
     getImage imageId = do
       imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
-      unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId.getId)
+      unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId.getId)
       unless (imageMetadata.imageType == DTO.DriverLicense) $
         throwError (ImageInvalidType (show DTO.DriverLicense) (show imageMetadata.imageType))
