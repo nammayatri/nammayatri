@@ -546,50 +546,44 @@ enterMobileNumberScreenFlow = do
   flow <- UI.enterMobileNumberScreen
   case flow of
     GoToAccountSetUp state -> do
-      void $ lift $ lift $ loaderText (getString STR.VERIFYING_OTP) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- TODO : Handlde Loader in IOS Side
-      void $ lift $ lift $ toggleLoader true
-      let
-        generatedID = "generated_" <> (generateSessionId unit)
-      (resp) <- lift $ lift $ Remote.verifyToken (Remote.makeVerifyOTPReq state.data.otp generatedID) state.data.tokenId
-      case resp of
-        Right resp -> do
-          void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_verify_otp"
-          modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { props { enterOTP = false } })
-          let
-            (VerifyTokenResp response) = resp
-
-            customerId = ((response.person) ^. _id)
-          if (customerId == "__failed") then do
-            void $ lift $ lift $ setLogField "customer_id" $ encode ("null")
-            pure unit
-          else do
-            void $ lift $ lift $ setLogField "customer_id" $ encode (customerId)
-            pure unit
-          setValueToLocalStore CUSTOMER_ID customerId
-          void $ liftFlowBT $ setCleverTapUserData "Identity" customerId
-          setValueToLocalStore REGISTERATION_TOKEN response.token
-          setValueToLocalStore USER_NAME $ (fromMaybe "" $ response.person ^. _firstName) <> " " <> (fromMaybe "" $ response.person ^. _middleName) <> " " <> (fromMaybe "" $ response.person ^. _lastName)
-          if isNothing (response.person ^. _firstName) then currentFlowStatus else handleDeepLinks Nothing false
-        Left err -> do
-          pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
-          let
-            errResp = err.response
-
-            codeMessage = decodeError errResp.errorMessage "errorCode"
-          if (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
-            void $ pure $ toast (getString STR.OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN)
-            modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber { data { otp = "" }, props { enterOTP = false, wrongOTP = false } })
-          else if (err.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do
-            let
-              attemptsLeft = decodeError errResp.errorMessage "errorPayload"
-            modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber { props { wrongOTP = true, btnActiveOTP = false, attemptLeft = attemptsLeft }, data { otp = "" } })
-          else if (err.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
-            pure $ toast (getString STR.TOO_MANY_LOGIN_ATTEMPTS_PLEASE_TRY_AGAIN_LATER)
-            modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { props { enterOTP = false, wrongOTP = false }, data { otp = "" } })
-          else do
-            pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
-            modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { props { enterOTP = false, wrongOTP = false }, data { otp = "" } })
-          enterMobileNumberScreenFlow
+            void $ lift $ lift $ loaderText (getString STR.VERIFYING_OTP) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
+            void $ lift $ lift $ toggleLoader true
+            let generatedID = "generated_" <> (generateSessionId unit)
+            (resp) <- lift $ lift $  Remote.verifyToken (Remote.makeVerifyOTPReq state.data.otp generatedID) state.data.tokenId
+            case resp of
+              Right resp -> do
+                    void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_verify_otp"
+                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {props {enterOTP = false}})
+                    let (VerifyTokenResp response) = resp
+                        customerId = ((response.person)^. _id)
+                    if (customerId == "__failed") then do
+                      void $ lift $ lift $ setLogField "customer_id" $ encode ("null")
+                      pure unit
+                      else do
+                        void $ lift $ lift $ setLogField "customer_id" $ encode (customerId)
+                        pure unit
+                    setValueToLocalStore CUSTOMER_ID customerId
+                    void $ liftFlowBT $ setCleverTapUserData "Identity" customerId
+                    setValueToLocalStore REGISTERATION_TOKEN response.token
+                    setValueToLocalStore USER_NAME $ (fromMaybe "" $ response.person ^. _firstName) <> " " <> (fromMaybe "" $ response.person ^. _middleName) <> " " <> (fromMaybe "" $ response.person ^. _lastName)
+                    if isNothing (response.person ^. _firstName) then currentFlowStatus else handleDeepLinks Nothing false
+              Left err -> do
+                pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
+                let errResp = err.response
+                    codeMessage = decodeError errResp.errorMessage "errorCode"
+                if ( err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
+                    void $ pure $ toast (getString STR.OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN)
+                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{data{otp=""}, props{enterOTP = false, wrongOTP = false}})
+                else if ( err.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do
+                    let attemptsLeft = decodeError errResp.errorMessage "errorPayload"
+                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{props{wrongOTP = true, btnActiveOTP = false, attemptLeft = attemptsLeft}, data{otp=""}})
+                else if ( err.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
+                    pure $ toast (getString STR.TOO_MANY_LOGIN_ATTEMPTS_PLEASE_TRY_AGAIN_LATER)
+                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {props {enterOTP = false, wrongOTP = false}, data{otp=""}})
+                else do
+                    pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {props {enterOTP = false,wrongOTP = false}, data{otp=""}})
+                enterMobileNumberScreenFlow
     GoToOTP state -> do
       when ((getValueToLocalStore MOBILE_NUMBER) /= state.data.mobileNumber)
         $ do
@@ -980,7 +974,7 @@ homeScreenFlow = do
         Nothing -> do
           logInfo "auto_complete_search_predictions" input
           (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input state.props.sourceLat state.props.sourceLong (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey) "" cityConfig.geoCodeConfig state.props.rideSearchProps.autoCompleteType state.props.rideSearchProps.sessionId)
-          let
+          let 
             sortedByDistanceList = sortPredictionByDistance searchLocationResp.predictions
 
             predictionList = getLocationList sortedByDistanceList

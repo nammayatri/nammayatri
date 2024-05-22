@@ -3,7 +3,7 @@ module Resources.Localizable.TA where
 import Language.Types (STR(..))
 import Prelude ((<>))
 
-getTA :: STR -> String
+getTA :: STR -> String 
 getTA stringKey =
     case stringKey of
         INACCURATE_DATE_AND_TIME -> "துல்லியமற்ற தேதி & நேரம்!"
@@ -1380,3 +1380,8 @@ getTA stringKey =
         VARIANTS_ARE_SWITCHED -> "உங்கள் விருப்பினர் ஏசி வகைகள் மீண்டும் இயக்கப்பட்டுள்ளன"
         NON_AC_ARE_SWITCHED -> "நான்-ஏசி மினி இயக்கப்பட்டுள்ளது"
         TOP_AC_DRIVER -> "நம்ம யாத்ரியில் சிறந்த ஏசி டிரைவராக எப்படி இருக்க வேண்டும் என்பதைப் பார்க்கவும்"
+        NETWORK_ERROR -> "நெட்வொர்க் பிழை"
+        SERVER_ERROR  -> "சர்வர் பிழை"
+        UNKNOWN_ERROR -> "அறியப்படாத பிழை"
+        CONNECTION_REFUSED -> "இணைப்பு மறுக்கப்பட்டது"
+        TIMEOUT -> "நேரம் முடிந்தது"

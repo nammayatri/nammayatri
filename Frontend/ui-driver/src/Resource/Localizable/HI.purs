@@ -1380,3 +1380,8 @@ getHI stringKey =
         VARIANTS_ARE_SWITCHED -> "आपकी पसंदीदा एसी वेरिएंट्स फिर से सक्षम हैं"
         NON_AC_ARE_SWITCHED -> "डिफ़ॉल्ट रूप से Non-AC mini गाड़ी चालू है"
         TOP_AC_DRIVER -> "देखें कि नम्मा यात्री पर शीर्ष AC ड्राइवर कैसे बनें"
+        NETWORK_ERROR -> "नेटवर्क त्रुटि"
+        SERVER_ERROR -> "सर्वर त्रुटि"
+        UNKNOWN_ERROR -> "अज्ञात त्रुटि"
+        CONNECTION_REFUSED -> "कनेक्शन नहीं हो सका"
+        TIMEOUT -> "समय समाप्त"
