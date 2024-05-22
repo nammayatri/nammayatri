@@ -19,6 +19,7 @@ import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DGetHomeRequest
+import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DTMM
 import Domain.Types.Person
@@ -266,9 +267,23 @@ multipleRouteKeySoftUpdate id = "multiple-routes-SoftUpdate-" <> id
 isOnRideWithAdvRideConditionKey :: Text -> Text
 isOnRideWithAdvRideConditionKey driverId = "Driver:SetOnRide:" <> driverId
 
-updateOnRideStatusWithAdvancedRideCheck :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> m ()
-updateOnRideStatusWithAdvancedRideCheck personId = do
-  Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey personId.getId) 4 4 $ do
-    hasAdvancedRide <- QDI.findById (cast personId) <&> maybe False (.hasAdvanceBooking)
-    unless hasAdvancedRide $ QDI.updateOnRide False (cast personId)
-    QDI.updateHasAdvancedRide (cast personId) False
+lockRide :: Text -> Text
+lockRide rideId = "D:C:Rd-" <> rideId
+
+updateOnRideStatusWithAdvancedRideCheck :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Maybe DRide.Ride -> m ()
+updateOnRideStatusWithAdvancedRideCheck personId mbRide = do
+  lockAcquired <- case mbRide of
+    Just ride -> Redis.tryLockRedis (lockRide (ride.id.getId)) 10
+    Nothing -> pure True
+  if lockAcquired
+    then do
+      Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey personId.getId) 4 4 $ do
+        hasAdvancedRide <- QDI.findById (cast personId) <&> maybe False (.hasAdvanceBooking)
+        unless hasAdvancedRide $ QDI.updateOnRide False (cast personId)
+        QDI.updateHasAdvancedRide (cast personId) False
+    else throwError $ DriverTransactionTryAgain personId.getId
+
+throwErrorOnRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> DDI.DriverInformation -> m ()
+throwErrorOnRide includeDriverCurrentlyOnRide driverInfo = do
+  let checkOnRide = if includeDriverCurrentlyOnRide then driverInfo.hasAdvanceBooking else driverInfo.onRide
+  when checkOnRide $ throwError DriverOnRide

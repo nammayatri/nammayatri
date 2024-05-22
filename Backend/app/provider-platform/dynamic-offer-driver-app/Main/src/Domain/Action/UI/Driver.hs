@@ -910,7 +910,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
     merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantDoesNotExist searchReq.providerId.getId)
     driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
-    when driverInfo.hasAdvanceBooking $ throwError DriverOnRide
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo
     mSReqFD <- QSRD.findByDriverAndSearchTryId driverId searchTry.id
     sReqFD <-
       case mSReqFD of
