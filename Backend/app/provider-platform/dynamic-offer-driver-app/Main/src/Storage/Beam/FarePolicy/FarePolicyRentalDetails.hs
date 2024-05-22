@@ -34,7 +34,9 @@ data FarePolicyRentalDetailsT f = FarePolicyRentalDetailsT
     plannedPerKmRateAmount :: B.C f (Maybe HighPrecMoney),
     currency :: B.C f (Maybe Currency),
     maxAdditionalKmsLimit :: B.C f Kilometers,
-    totalAdditionalKmsLimit :: B.C f Kilometers
+    totalAdditionalKmsLimit :: B.C f Kilometers,
+    freeWaitingTime :: B.C f (Maybe Minutes),
+    waitingCharge :: B.C f (Maybe Domain.WaitingCharge)
   }
   deriving (Generic, B.Beamable)
 

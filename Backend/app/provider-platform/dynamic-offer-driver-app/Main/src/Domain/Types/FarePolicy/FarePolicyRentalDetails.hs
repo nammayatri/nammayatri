@@ -32,7 +32,8 @@ data FPRentalDetailsD (s :: UsageSafety) = FPRentalDetails
     currency :: Currency,
     maxAdditionalKmsLimit :: Kilometers,
     totalAdditionalKmsLimit :: Kilometers,
-    nightShiftCharge :: Maybe Domain.NightShiftCharge
+    nightShiftCharge :: Maybe Domain.NightShiftCharge,
+    waitingChargeInfo :: Maybe Domain.WaitingChargeInfo
   }
   deriving (Generic, Show)
 

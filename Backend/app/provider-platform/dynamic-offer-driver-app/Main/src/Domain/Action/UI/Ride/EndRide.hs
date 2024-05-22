@@ -429,7 +429,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
           rideTime = booking.startTime,
           returnTime = booking.returnTime,
           roundTrip = fromMaybe False booking.roundTrip,
-          waitingTime = secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> ride.driverArrivalTime),
+          waitingTime = if isNothing ride.driverArrivalTime then Nothing else fmap (max 0) (secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> (liftA2 max ride.driverArrivalTime (Just booking.startTime)))),
           actualRideDuration = roundToIntegral <$> (diffUTCTime <$> Just tripEndTime <*> ride.tripStartTime),
           estimatedRideDuration = booking.estimatedDuration,
           avgSpeedOfVehicle = thresholdConfig.avgSpeedOfVehicle,
