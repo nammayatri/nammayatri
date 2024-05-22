@@ -52,6 +52,7 @@ types:
     availableSeats: Maybe Int
     allowedSeats: Maybe Int
     bookedSeats: Int
+    isClosed: Bool
     peopleCategories: [PeopleCategoriesResp]
 
   PeopleCategoriesResp:
