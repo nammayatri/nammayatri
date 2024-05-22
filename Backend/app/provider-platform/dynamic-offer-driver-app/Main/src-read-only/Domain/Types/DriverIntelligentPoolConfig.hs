@@ -18,6 +18,7 @@ data DriverIntelligentPoolConfigD (s :: UsageSafety) = DriverIntelligentPoolConf
   { acceptanceRatioWeightage :: Kernel.Prelude.Int,
     acceptanceRatioWindowOption :: Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
     actualPickupDistanceWeightage :: Kernel.Prelude.Int,
+    actualPickupDurationWeightage :: Kernel.Prelude.Int,
     availabilityTimeWeightage :: Kernel.Prelude.Int,
     availabilityTimeWindowOption :: Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
     cancellationAndRideFrequencyRatioWindowOption :: Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
@@ -39,11 +40,20 @@ data DriverIntelligentPoolConfigD (s :: UsageSafety) = DriverIntelligentPoolConf
   }
   deriving (Generic, Show)
 
-data IntelligentFactors = AcceptanceRatio | CancellationRatio | AvailableTime | DriverSpeed | ActualPickupDistance | RideFrequency deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+data IntelligentFactors
+  = AcceptanceRatio
+  | CancellationRatio
+  | AvailableTime
+  | DriverSpeed
+  | ActualPickupDistance
+  | ActualPickupDuration
+  | RideFrequency
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data IntelligentScores = IntelligentScores
   { acceptanceRatio :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     actualPickupDistanceScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    actualPickupDurationScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     availableTime :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     cancellationRatio :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     driverSpeed :: Kernel.Prelude.Maybe Kernel.Prelude.Double,

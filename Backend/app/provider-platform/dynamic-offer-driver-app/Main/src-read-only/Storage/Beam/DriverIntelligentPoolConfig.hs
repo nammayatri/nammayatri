@@ -18,6 +18,7 @@ data DriverIntelligentPoolConfigT f = DriverIntelligentPoolConfigT
   { acceptanceRatioWeightage :: B.C f Kernel.Prelude.Int,
     acceptanceRatioWindowOption :: B.C f Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
     actualPickupDistanceWeightage :: B.C f Kernel.Prelude.Int,
+    actualPickupDurationWeightage :: B.C f Kernel.Prelude.Int,
     availabilityTimeWeightage :: B.C f Kernel.Prelude.Int,
     availabilityTimeWindowOption :: B.C f Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
     cancellationAndRideFrequencyRatioWindowOption :: B.C f Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,

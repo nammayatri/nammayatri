@@ -506,7 +506,7 @@ DriverIntelligentPoolConfig:
   derives: Generic,Show,'UsageSafety
   types:
     IntelligentFactors:
-      enum: AcceptanceRatio,CancellationRatio,AvailableTime,DriverSpeed,ActualPickupDistance,RideFrequency
+      enum: AcceptanceRatio,CancellationRatio,AvailableTime,DriverSpeed,ActualPickupDistance,ActualPickupDuration,RideFrequency
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     IntelligentScores:
       acceptanceRatio: Maybe Double
@@ -514,6 +514,7 @@ DriverIntelligentPoolConfig:
       availableTime: Maybe Double
       driverSpeed: Maybe Double
       actualPickupDistanceScore: Maybe Double
+      actualPickupDurationScore: Maybe Double
       rideFrequency: Maybe Double
       rideRequestPopupDelayDuration: Seconds
       derive': Generic, Show, ToJSON, FromJSON, Read
@@ -521,6 +522,7 @@ DriverIntelligentPoolConfig:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     actualPickupDistanceWeightage: Int
+    actualPickupDurationWeightage: Int
     availabilityTimeWeightage: Int
     availabilityTimeWindowOption: SlidingWindowOptions
     acceptanceRatioWeightage: Int
@@ -596,6 +598,7 @@ DriverIntelligentPoolConfig:
     minLocationUpdates: "3"
     defaultDriverSpeed: "27.0"
     actualPickupDistanceWeightage: "0"
+    actualPickupDurationWeightage: "0"
     numRidesWeightage: "2"
     maxNumRides: "336"
     cancellationAndRideFrequencyRatioWindowOption: "'{\"period\":7, \"periodType\":\"Days\"}'"
