@@ -90,7 +90,7 @@ cancel req merchant booking mbActiveSearchTry = do
     mbRide <- QRide.findActiveByRBId req.bookingId
     whenJust mbRide $ \ride -> do
       void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
-      updateOnRideStatusWithAdvancedRideCheck ride.driverId
+      updateOnRideStatusWithAdvancedRideCheck ride.driverId mbRide
       void $ LF.rideDetails ride.id SRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
       QRide.updateStatus ride.id SRide.CANCELLED
 
