@@ -17,6 +17,7 @@ module API.Beckn.Rating (API, handler) where
 import qualified Beckn.ACL.Rating as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Rating as Rating
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.Rating as DRating
 import Domain.Types.Merchant (Merchant)
 import Environment

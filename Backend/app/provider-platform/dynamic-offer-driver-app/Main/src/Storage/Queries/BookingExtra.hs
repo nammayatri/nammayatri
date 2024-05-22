@@ -71,6 +71,10 @@ findByTransactionId txnId =
     (Just (Se.Desc BeamB.createdAt))
     <&> listToMaybe
 
+findByTransactionIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> BookingStatus -> m (Maybe Booking)
+findByTransactionIdAndStatus txnId status =
+  findOneWithKV [Se.And [Se.Is BeamB.transactionId $ Se.Eq txnId, Se.Is BeamB.status $ Se.Eq status]]
+
 updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do
   now <- getCurrentTime

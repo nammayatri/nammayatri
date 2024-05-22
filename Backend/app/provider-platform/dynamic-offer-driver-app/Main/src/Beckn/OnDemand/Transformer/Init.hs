@@ -7,6 +7,7 @@ import qualified Beckn.OnDemand.Utils.Init
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified Data.Aeson as A
+import qualified Data.Maybe
 import qualified Data.Text
 import qualified Domain.Action.Beckn.Init
 import EulerHS.Prelude hiding (id)
@@ -18,9 +19,10 @@ import qualified Kernel.Types.Registry.Subscriber
 import Kernel.Utils.Common (type (:::))
 import qualified Kernel.Utils.Common
 import qualified Kernel.Utils.Text
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 
-buildDInitReq :: (Kernel.Types.App.MonadFlow m) => Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.InitReq -> m Domain.Action.Beckn.Init.InitReq
-buildDInitReq subscriber req = do
+buildDInitReq :: (Kernel.Types.App.MonadFlow m) => Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.InitReq -> Bool -> m Domain.Action.Beckn.Init.InitReq
+buildDInitReq subscriber req isValueAddNP = do
   let bapId_ = subscriber.subscriber_id
   let bapUri_ = subscriber.subscriber_url
   bapCityText <- req.initReqContext.contextLocation >>= (.locationCity) >>= (.cityCode) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Couldn't find City")
@@ -28,7 +30,7 @@ buildDInitReq subscriber req = do
   bapCountryText <- req.initReqContext.contextLocation >>= (.locationCountry) >>= (.countryCode) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Couldn't find Country")
   bapCountry_ <- A.decode (A.encode bapCountryText) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Couldn't parse Country")
   fulfillmentId__ <- req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentId) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
-  fulfillmentType_ <- req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentType) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "FulfillmentType not found")
+  fulfillmentType_ <- if isValueAddNP then req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentType) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "FulfillmentType not found") else pure (req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentType) & Data.Maybe.fromMaybe "DELIVERY")
   let fulfillmentId_ = case fulfillmentType_ of
         "DELIVERY" -> Domain.Action.Beckn.Init.DriverQuoteId (Kernel.Types.Id.Id fulfillmentId__)
         "RIDE_OTP" -> Domain.Action.Beckn.Init.QuoteId (Kernel.Types.Id.Id fulfillmentId__)
