@@ -18,7 +18,6 @@ data Image = Image
   { failureReason :: Kernel.Prelude.Maybe Tools.Error.DriverOnboardingError,
     id :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     imageType :: Domain.Types.DocumentVerificationConfig.DocumentType,
-    isValid :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     rcId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

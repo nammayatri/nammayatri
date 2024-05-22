@@ -147,7 +147,7 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
 
   imagePath <- createPath personId.getId merchantId.getId imageType
   void $ fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
-  imageEntity <- mkImage personId merchantId imagePath imageType False mbRcId -- is valid is false when making image
+  imageEntity <- mkImage personId merchantId imagePath imageType mbRcId
   Query.create imageEntity
 
   -- skipping validation for rc as validation not available in idfy
@@ -197,10 +197,9 @@ mkImage ::
   Id DM.Merchant ->
   Text ->
   DVC.DocumentType ->
-  Bool ->
   Maybe (Id DVRC.VehicleRegistrationCertificate) ->
   m Domain.Image
-mkImage personId_ merchantId s3Path documentType_ isValid mbRcId = do
+mkImage personId_ merchantId s3Path documentType_ mbRcId = do
   id <- generateGUID
   now <- getCurrentTime
   return $
@@ -210,7 +209,6 @@ mkImage personId_ merchantId s3Path documentType_ isValid mbRcId = do
         merchantId,
         s3Path,
         imageType = documentType_,
-        isValid,
         verificationStatus = Just Documents.PENDING,
         failureReason = Nothing,
         rcId = getId <$> mbRcId,
