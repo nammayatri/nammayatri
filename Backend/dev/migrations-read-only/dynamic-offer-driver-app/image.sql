@@ -20,3 +20,8 @@ ALTER TABLE atlas_driver_offer_bpp.image ADD COLUMN rc_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.image ADD COLUMN verification_status text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.image DROP COLUMN is_valid;
