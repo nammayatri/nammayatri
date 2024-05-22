@@ -157,16 +157,6 @@ parseLatLong a =
        in return $ Maps.LatLong lat lon
     _ -> throwError . InvalidRequest $ "Unable to parse LatLong"
 
-getTransactionId :: MonadFlow m => Spec.Context -> m Text
-getTransactionId context = do
-  transactionUuid <- context.contextTransactionId & fromMaybeM (InvalidRequest "Missing transaction_id")
-  pure $ T.pack $ show transactionUuid
-
-getMessageId :: MonadFlow m => Spec.Context -> m Text
-getMessageId context = do
-  messageUuid <- context.contextMessageId & fromMaybeM (InvalidRequest "Missing message_id")
-  pure $ T.pack $ show messageUuid
-
 getContextCity :: MonadFlow m => Spec.Context -> m Context.City
 getContextCity context = do
   location <- context.contextLocation & fromMaybeM (InvalidRequest "Missing contextLocation")

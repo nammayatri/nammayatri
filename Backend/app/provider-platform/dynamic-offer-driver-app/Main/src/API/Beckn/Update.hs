@@ -17,6 +17,7 @@ module API.Beckn.Update (API, handler) where
 import qualified Beckn.ACL.Update as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Update as Update
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.Update as DUpdate
 import Domain.Types.Merchant (Merchant)
 import Environment

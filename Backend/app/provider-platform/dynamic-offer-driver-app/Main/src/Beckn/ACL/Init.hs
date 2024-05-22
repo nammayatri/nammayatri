@@ -32,8 +32,9 @@ buildInitReqV2 ::
   ) =>
   Subscriber.Subscriber ->
   Init.InitReqV2 ->
+  Bool ->
   m DInit.InitReq
-buildInitReqV2 subscriber req = do
+buildInitReqV2 subscriber req isValueAddNP = do
   let context = req.initReqContext
   Utils.validateContext Context.INIT context
   bap_id <- context.contextBapId & fromMaybeM (InvalidRequest "Missing bap_id")
@@ -47,4 +48,4 @@ buildInitReqV2 subscriber req = do
     [_it] -> return ()
     _ -> throwError $ InvalidRequest "There must be exactly one item in init request"
 
-  TInit.buildDInitReq subscriber req
+  TInit.buildDInitReq subscriber req isValueAddNP

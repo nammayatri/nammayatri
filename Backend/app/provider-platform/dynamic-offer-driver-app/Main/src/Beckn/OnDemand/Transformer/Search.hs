@@ -61,7 +61,7 @@ buildSearchReq messageId subscriber req context = do
   dropLocation_ <- tfLatLong `mapM` Beckn.OnDemand.Utils.Search.getDropOffLocationGps req
   pickupAddress_ <- Beckn.OnDemand.Utils.Search.getPickUpLocation req >>= (tfAddress . Just)
   pickupLocation_ <- Beckn.OnDemand.Utils.Search.getPickUpLocationGps req >>= tfLatLong
-  transactionId_ <- Beckn.OnDemand.Utils.Common.getTransactionId context
+  transactionId_ <- BecknV2.OnDemand.Utils.Common.getTransactionId context
   pure $
     Domain.Action.Beckn.Search.DSearchReq
       { bapCountry = bapCountry_,
