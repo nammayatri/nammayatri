@@ -23,7 +23,7 @@ data InterCityDetailsT f = InterCityDetailsT
     nightShiftCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     nightShiftEnd :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
     nightShiftStart :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
-    perDayMaxHourAllowance :: B.C f Kernel.Types.Common.Minutes,
+    perDayMaxHourAllowance :: B.C f Kernel.Types.Common.Hours,
     perExtraKmRate :: B.C f Kernel.Types.Common.HighPrecMoney,
     perExtraMinRate :: B.C f Kernel.Types.Common.HighPrecMoney,
     perHourCharge :: B.C f Kernel.Types.Common.HighPrecMoney,

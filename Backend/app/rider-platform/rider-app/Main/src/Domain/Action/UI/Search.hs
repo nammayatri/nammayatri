@@ -238,6 +238,9 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
           InterCitySearch interCityReq ->
             (SearchRequest.InterCity, interCityReq.origin, interCityReq.roundTrip, fromMaybe [] interCityReq.stops, interCityReq.isSourceManuallyMoved, interCityReq.isSpecialLocation, interCityReq.startTime, interCityReq.returnTime, interCityReq.isReallocationEnabled)
 
+  whenJust returnTime $ \rt -> do
+    when (rt <= startTime) $ throwError (InvalidRequest "Return time should be greater than start time")
+
   unless ((120 `addUTCTime` startTime) >= now) $ throwError (InvalidRequest "Ride time should only be future time") -- 2 mins buffer
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber

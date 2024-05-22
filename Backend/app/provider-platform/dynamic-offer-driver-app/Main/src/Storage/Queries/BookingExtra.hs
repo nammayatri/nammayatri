@@ -4,6 +4,7 @@
 module Storage.Queries.BookingExtra where
 
 import qualified Data.Text as T
+import qualified Data.Time as DT -- (Day, UTCTime (UTCTime), DT.secondsToDiffTime, utctDay, DT.addDays)
 import Domain.Types.Booking
 import qualified Domain.Types.BookingLocation as DBBL
 import qualified Domain.Types.Common as DTC
@@ -14,13 +15,14 @@ import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.ServiceTierType as DVST
 import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (UTCTime)
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
@@ -74,6 +76,31 @@ findByTransactionId txnId =
 findByTransactionIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> BookingStatus -> m (Maybe Booking)
 findByTransactionIdAndStatus txnId status =
   findOneWithKV [Se.And [Se.Is BeamB.transactionId $ Se.Eq txnId, Se.Is BeamB.status $ Se.Eq status]]
+
+findByStatusTripCatSchedulingAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Integer -> Maybe Integer -> Maybe DT.Day -> BookingStatus -> Maybe DTC.TripCategory -> [DVST.ServiceTierType] -> Bool -> Id DMOC.MerchantOperatingCity -> Seconds -> m [Booking]
+findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbDay status mbTripCategory serviceTiers isScheduled (Id merchanOperatingCityId) timeDiffFromUtc = do
+  let limitVal = maybe 5 fromInteger mbLimit
+      offsetVal = maybe 0 fromInteger mbOffset
+  (from, to) <- case mbDay of
+    Just day -> pure (DT.UTCTime (DT.addDays (-1) day) (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)), DT.UTCTime day (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)))
+    Nothing -> do
+      now <- getLocalCurrentTime timeDiffFromUtc
+      let day_ = DT.utctDay now
+      pure (DT.UTCTime (DT.addDays (-1) day_) (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)), DT.UTCTime day_ (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)))
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamB.startTime $ Se.GreaterThanOrEq from,
+          Se.Is BeamB.startTime $ Se.LessThanOrEq to,
+          Se.Is BeamB.vehicleVariant $ Se.In serviceTiers,
+          Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just merchanOperatingCityId),
+          Se.Is BeamB.isScheduled $ Se.Eq (Just isScheduled),
+          Se.Is BeamB.tripCategory $ Se.Eq mbTripCategory,
+          Se.Is BeamB.status $ Se.Eq status
+        ]
+    ]
+    (Se.Desc BeamB.startTime)
+    (Just limitVal)
+    (Just offsetVal)
 
 updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do

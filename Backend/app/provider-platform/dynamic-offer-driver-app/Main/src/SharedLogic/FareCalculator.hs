@@ -292,7 +292,7 @@ calculateFareParameters params = do
       let estimatedDuration = maybe 0 (.getSeconds) params.estimatedRideDuration
           actualDuration = maybe estimatedDuration (.getSeconds) params.actualRideDuration
           estimatedDurationInHr = estimatedDuration `div` 3600
-          perDayMaxHourAllowanceInHr = perDayMaxHourAllowance.getMinutes `div` 60
+          perDayMaxHourAllowanceInHr = perDayMaxHourAllowance.getHours
           allowanceHours' = maybe 0 (\rt -> (calculateAllowanceHours (fromMaybe 19800 params.timeDiffFromUtc) perDayMaxHourAllowanceInHr params.rideTime rt) - estimatedDurationInHr) params.returnTime
           defaultWaitTimeAtDestinationInHrs = defaultWaitTimeAtDestination.getMinutes `div` 60
           allowanceHours = if params.roundTrip then max defaultWaitTimeAtDestinationInHrs allowanceHours' else 0
@@ -307,7 +307,7 @@ calculateFareParameters params = do
           actualDistanceInKm = fromMaybe estimatedDistanceInKm actualDistance `div` 1000
           extraDist = max 0 (actualDistanceInKm - estimatedDistanceInKm)
           extraDistanceFare = HighPrecMoney $ toRational extraDist * perExtraKmRate.getHighPrecMoney
-          fareByDist = HighPrecMoney $ toRational (((allowanceHours - defaultWaitTimeAtDestinationInHrs) * kmPerPlannedExtraHour.getKilometers) + estimatedDistanceInKm) * perKmRate.getHighPrecMoney
+          fareByDist = HighPrecMoney $ toRational (((max 0 (allowanceHours - defaultWaitTimeAtDestinationInHrs)) * kmPerPlannedExtraHour.getKilometers) + estimatedDistanceInKm) * perKmRate.getHighPrecMoney
 
       ( baseFare,
         nightShiftCharge,

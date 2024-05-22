@@ -187,7 +187,7 @@ data InterCityQuoteDetails = InterCityQuoteDetails
     kmPerPlannedExtraHour :: Distance, -- it was Kilometers
     plannedPerKmRateOneWay :: Price,
     plannedPerKmRateRoundTrip :: Price,
-    perDayMaxHourAllowance :: Minutes,
+    perDayMaxHourAllowance :: Hours,
     deadKmFare :: Price,
     nightShiftInfo :: Maybe NightShiftInfo
   }
