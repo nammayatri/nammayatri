@@ -2966,9 +2966,9 @@ nearByPickUpPointsView state push =
   where 
     getPickUpViewHeight nearByPickUpPoints =
       let 
-        menuBtnHeight = 56 -- Update Menu Button Height
+        menuBtnHeight = 70 -- Update Menu Button Height
         padding = 28
-        len = if (length nearByPickUpPoints > 3) then 3 else length nearByPickUpPoints
+        len = if (length nearByPickUpPoints > 2) then 2 else length nearByPickUpPoints
         removeExtraPadding = if len > 1 then padding else 0
         pickUpPointViewHeight = len * menuBtnHeight + len * padding - removeExtraPadding
         finalHeight = if os == "IOS" 
