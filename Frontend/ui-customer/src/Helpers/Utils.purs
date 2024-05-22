@@ -679,7 +679,7 @@ getVehicleVariantImage variant viewType =
                               Kochi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
                               Chennai -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
                               Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
-                              Delhi -> fetchImage FF_ASSET "ny_ic_auto_shadow"
+                              Delhi -> variantConfig.autoRickshaw.image
                               _ -> variantConfig.autoRickshaw.image
           "BOOK_ANY"      -> case getMerchant FunctionCall of 
                               YATRISATHI -> variantConfig.bookAny.image
@@ -687,7 +687,7 @@ getVehicleVariantImage variant viewType =
                                       Hyderabad -> fetchImage COMMON_ASSET "ny_ic_cab_auto_yellow"
                                       Chennai -> fetchImage COMMON_ASSET "ny_ic_cab_auto_yellow"
                                       Kochi -> fetchImage COMMON_ASSET "ny_ic_cab_auto_black"
-                                      Delhi -> fetchImage COMMON_ASSET "ny_ic_cab_auto_green"
+                                      Delhi -> variantConfig.bookAny.image
                                       _ -> variantConfig.bookAny.image
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
@@ -907,7 +907,7 @@ getAllServices dummy =
     Bangalore -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     Tumakuru -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     Hyderabad -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
-    Delhi -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
+    Delhi -> ["Hatchback", "Sedan", "Auto", "SUV"]
     Chennai -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
     Mysore -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     Kolkata -> ["Non-AC", "Hatchback", "Sedan", "SUV"]

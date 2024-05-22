@@ -488,11 +488,11 @@ metroBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config 
 metroBannerConfig state action =
   let
     config = BannerCarousel.config action
-
+    appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
     config' =
       config
         { backgroundColor = Color.blue600'
-        , title = getString BOOK_METRO_WITH_NY_NOW
+        , title = getString $ METRO_BANNER_TITLE appName
         , titleColor = Color.blue800
         , actionText = getString BOOK_NOW
         , actionTextColor = Color.blue700

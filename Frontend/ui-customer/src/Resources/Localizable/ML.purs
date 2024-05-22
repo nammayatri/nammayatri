@@ -1027,7 +1027,7 @@ getML stringKey =
         BOOK_ROUND_TRIP -> "ബുക്ക് റൗണ്ട് ട്രിപ്പ്"
         BY_PROCEEDING_YOU_AGREE -> "തുടർന്നുകൊണ്ട്, നിങ്ങൾ അംഗീകരിക്കുന്നു "
         TERMS_AND_CONDITIONS_FULL -> "നിബന്ധനകളും വ്യവസ്ഥകളും"
-        EXPERIENCE_HASSLE_FREE_METRO_BOOKING -> "നമ്മ യാത്രയിൽ തടസ്സമില്ലാത്ത മെട്രോ ബുക്കിംഗ് അനുഭവിക്കൂ"
+        EXPERIENCE_HASSLE_FREE_METRO_BOOKING appName -> "ഹാസിൽ-ഫ്രീ മെട്രോ ബുക്കിംഗ് അനുഭവിക്കുക " <> appName
         KOCHI_METRO_TERM_1 -> "എല്ലാ ദിവസവും രാവിലെ 5:00 മുതൽ 11:45 PM വരെ ടിക്കറ്റുകൾ വാങ്ങാം."
         KOCHI_METRO_TERM_2 -> "പ്രവേശനം ചെയ്തുകഴിഞ്ഞാൽ, യാത്രക്കാർ ലക്ഷ്യസ്ഥാനത്ത് നിന്ന് 120 മിനിറ്റിനുള്ളിൽ പുറത്തുകടക്കണം."
         KOCHI_METRO_TIME -> "എല്ലാ ദിവസവും രാവിലെ 5:00 മുതൽ രാത്രി 11:45 വരെ QR ടിക്കറ്റ് വാങ്ങാൻ കൊച്ചി മെട്രോ അനുവദിക്കുന്നു."
@@ -1275,3 +1275,4 @@ getML stringKey =
         COLLECT_TOLL_SEP -> "ദയവായി അത് ഉപഭോക്താവിൽ നിന്ന് പ്രത്യേകം ശേഖരിക്കുക <b>ഒരു ടോൾ മറികടന്നാൽ മാത്രം</b>"
         FINAL_FARE_EXCLUDES_TOLL -> "അന്തിമ നിരക്ക് ടോൾ നിരക്കുകൾ ഒഴിവാക്കുന്നു"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "ടോൾ നിരക്കുകൾ ബാധകമായേക്കാം"
+        METRO_BANNER_TITLE appName -> "മെട്രോ ടിക്കറ്റുകൾ ബുക്ക് ചെയ്യുക \n" <> appName <> " ഇപ്പോൾ!"

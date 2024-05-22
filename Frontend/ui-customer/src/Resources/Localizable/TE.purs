@@ -1041,7 +1041,7 @@ getTE stringKey =
     BOOK_ROUND_TRIP -> "బుక్ రౌండ్ ట్రిప్"
     BY_PROCEEDING_YOU_AGREE -> "కొనసాగించడం ద్వారా, మీరు అంగీకరిస్తున్నారు "
     TERMS_AND_CONDITIONS_FULL -> "నిబంధనలు & షరతులు"
-    EXPERIENCE_HASSLE_FREE_METRO_BOOKING -> "నమ్మ యాత్రిలో అవాంతరాలు లేని మెట్రో బుకింగ్‌లను అనుభవించండి"
+    EXPERIENCE_HASSLE_FREE_METRO_BOOKING appName -> "అనుభవించండి హాసల్ ఫ్రీ మెట్రో బుకింగ్లను " <> appName
     KOCHI_METRO_TERM_1 -> "టికెట్లను అన్ని రోజులలో 5:00 AM నుండి 11:45 PM మధ్య కొనుగోలు చేయవచ్చు."
     KOCHI_METRO_TERM_2 -> "ప్రవేశం పూర్తయిన తర్వాత, ప్రయాణీకులు గమ్యస్థానం నుండి 120 నిమిషాలలోపు నిష్క్రమించాలి."
     KOCHI_METRO_TIME -> "కొచ్చి మెట్రో అన్ని రోజులలో 5:00 AM నుండి 11:45 PM వరకు QR టిక్కెట్ కొనుగోలును అనుమతిస్తుంది."
@@ -1288,3 +1288,4 @@ getTE stringKey =
     COLLECT_TOLL_SEP -> "దయచేసి <b>సుంకం దాటితే మాత్రమే</b> కస్టమర్ నుండి విడిగా సేకరించండి"
     FINAL_FARE_EXCLUDES_TOLL -> "తుది ఛార్జీ టోల్ ఛార్జీలను మినహాయిస్తుంది"
     TOLL_CHARGES_MAYBE_APPLICABLE -> "టోల్ ఛార్జీలు వర్తించవచ్చు"
+    METRO_BANNER_TITLE appName -> "మీరు ఇప్పుడు మెట్రో టికెట్లను బుక్ చేయవచ్చు \n" <> appName <> " తో!"

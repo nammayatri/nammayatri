@@ -483,6 +483,16 @@ config =
               , perMinCharges = 0.75
               }
             }
+          },
+        defaultCityConfig
+          { cityName = "Kochi",
+            cityCode = "std:0484",
+            waitingChargeConfig {
+              auto {
+                freeMinutes = 3.0
+              , perMinCharges = 1.0
+              }
+            }
           }
       ]
   , bannerCarousel : defaultBannerCarousel
