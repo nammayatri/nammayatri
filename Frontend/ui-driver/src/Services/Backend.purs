@@ -663,7 +663,7 @@ makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> Maybe ST.Vehic
 makeDriverRCReq regNo imageId dateOfRegistration multipleRc category = DriverRCReq
     {
       "vehicleRegistrationCertNumber" : regNo,
-      "operatingCity" : "BANGALORE",
+      "operatingCity" : "KOLKATA",
       "imageId" : imageId,
       "dateOfRegistration" : dateOfRegistration,
       "vehicleCategory" : mkCategory category
@@ -674,6 +674,7 @@ mkCategory category =
     case category of 
         Just ST.AutoCategory -> Just "AUTO_CATEGORY"
         Just ST.CarCategory -> Just "CAR"
+        Just ST.BikeCategory -> Just "MOTORCYCLE"
         _ -> case (getValueToLocalStore VEHICLE_CATEGORY) of
                 "CarCategory" -> Just "CAR"
                 "AutoCategory" -> Just "AUTO_CATEGORY"

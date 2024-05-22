@@ -710,8 +710,9 @@ variantListView push state =
               , height $ V 80
               , imageWithFallback $ fetchImage FF_ASSET 
                   case item of
-                    ST.AutoCategory -> "ny_ic_auto_side"
+                    ST.AutoCategory -> "ny_ic_auto_side_view"
                     ST.CarCategory -> "ny_ic_sedan_side"
+                    ST.BikeCategory -> "ny_ic_bike_side"
               ]
             , textView $
               [ width WRAP_CONTENT
@@ -719,6 +720,7 @@ variantListView push state =
               , text case item of
                         ST.AutoCategory -> getString AUTO_RICKSHAW
                         ST.CarCategory -> getString CAR
+                        ST.BikeCategory -> "BIKE"
               , color Color.black800
               , margin $ MarginLeft 20
               ] <> FontStyle.subHeading1 TypoGraphy

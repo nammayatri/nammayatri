@@ -1352,3 +1352,4 @@ getEN stringKey =
         VEHICLE_PUC_STR -> "Vehicle PUC"
         RC_MANDATORY -> "RC is mandatory for this document"
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "Document uploaded successfully"
+        REGISTER_YOUR_BIKE -> "Register your bike"

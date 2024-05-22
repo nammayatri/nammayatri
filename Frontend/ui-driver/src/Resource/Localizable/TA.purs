@@ -1352,3 +1352,4 @@ getTA stringKey =
         VEHICLE_PUC_STR -> "வாகன PUC"
         RC_MANDATORY -> "இந்த ஆவணத்திற்கு RC கட்டாயம்"
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "ஆவணம் வெற்றிகரமாக பதிவேற்றப்பட்டது"
+        REGISTER_YOUR_BIKE -> "உங்கள் பைக் பதிவு செய்யவும்"

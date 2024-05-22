@@ -61,6 +61,7 @@ appOnboardingNavBarConfig state =
       text = case state.data.vehicleCategory of
               Just ST.CarCategory -> getString REGISTER_YOUR_CAR
               Just ST.AutoCategory -> getString REGISTER_YOUR_AUTO
+              Just ST.BikeCategory -> getString REGISTER_YOUR_BIKE
               Nothing -> getString REGISTRATION
       },
     rightButton = AppOnboardingNavBar.config.rightButton{

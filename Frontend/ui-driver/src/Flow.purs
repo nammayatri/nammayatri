@@ -528,8 +528,9 @@ onBoardingFlow = do
       uiCurrentCategory = RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY
       registerationStepsCabs = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.cabs) updatedGs.globalProps.onBoardingDocs
       registerationStepsAutos = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.autos) updatedGs.globalProps.onBoardingDocs
+      registerationStepsBike = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.bikes) updatedGs.globalProps.onBoardingDocs
       checkAvailability field = maybe false (\(API.OnboardingDocsRes mbDoc) -> isJust (field mbDoc)) updatedGs.globalProps.onBoardingDocs
-      variantList = (if checkAvailability _.autos then [ST.AutoCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else [])
+      variantList = (if checkAvailability _.autos then [ST.AutoCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else []) <> (if checkAvailability _.bikes then [ST.BikeCategory] else [])
       mismatchLogic vehicleDocument = (uiCurrentCategory == (RC.transformVehicleType $ Just vehicleDocument.userSelectedVehicleCategory)) && isJust vehicleDocument.verifiedVehicleCategory && (Just vehicleDocument.userSelectedVehicleCategory /= vehicleDocument.verifiedVehicleCategory)
       vehicleTypeMismatch = any (\(API.VehicleDocumentItem item) -> mismatchLogic item) driverRegistrationResp.vehicleDocuments
       documentStatusList = mkStatusList (DriverRegistrationStatusResp driverRegistrationResp)
@@ -547,6 +548,7 @@ onBoardingFlow = do
                       enteredRC = getValueToLocalStore ENTERED_RC,
                       registerationStepsCabs = registerationStepsCabs,
                       registerationStepsAuto = registerationStepsAutos,
+                      registerationStepsBike = registerationStepsBike,
                       documentStatusList = documentStatusList,
                       variantList = variantList,
                       linkedRc = linkedRC,
@@ -586,7 +588,7 @@ onBoardingFlow = do
       modifyScreenState $ PermissionsScreenStateType $ \permissionsScreen -> permissionsScreen { data {driverMobileNumber = state.data.phoneNumber}}
       permissionsScreenFlow Nothing Nothing
     LOGOUT_FROM_REGISTERATION_SCREEN -> logoutFlow
-    GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN -> getDriverInfoFlow Nothing Nothing Nothing false
+    GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN -> getDriverInfoFlow Nothing Nothing
     REFRESH_REGISTERATION_SCREEN -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> registerScreen { props { refreshAnimation = false}})
       onBoardingFlow

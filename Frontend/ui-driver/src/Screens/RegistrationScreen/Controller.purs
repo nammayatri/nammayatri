@@ -253,10 +253,10 @@ eval (ContinueButtonAction PrimaryButtonController.OnClick) state = do
       case (state.data.variantList) DA.!! index of
         Mb.Just vehicleType -> do
           void $ pure $ setValueToLocalStore VEHICLE_CATEGORY $ show vehicleType
-          void $ pure $ setValueToLocalStore SHOW_SUBSCRIPTIONS 
-            $ if DA.elem (show vehicleType) state.data.cityConfig.variantSubscriptionConfig.variantList 
-                then "true"
-              else "false"
+          -- void $ pure $ setValueToLocalStore SHOW_SUBSCRIPTIONS 
+          --   $ if DA.elem (show vehicleType) state.data.cityConfig.variantSubscriptionConfig.variantList 
+          --       then "true"
+          --     else "false"
           continue state { data { vehicleCategory = Mb.Just vehicleType } }
         Mb.Nothing -> continue state
 
@@ -278,6 +278,8 @@ getStatusValue value = case value of
 getCategoryFromVariant :: String -> Mb.Maybe ST.VehicleCategory
 getCategoryFromVariant variant = case variant of
   "AUTO_RICKSHAW" -> Mb.Just ST.AutoCategory
+  "CAR" -> Mb.Just ST.CarCategory
+  "MOTORCYCLE" -> Mb.Just ST.BikeCategory
   _ -> Mb.Just ST.CarCategory
 
 getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus

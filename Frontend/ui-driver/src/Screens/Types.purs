@@ -260,6 +260,7 @@ type RegistrationScreenData = {
   activeIndex :: Int,
   registerationStepsAuto :: Array StepProgress,
   registerationStepsCabs :: Array StepProgress,
+  registerationStepsBike :: Array StepProgress,
   phoneNumber :: String,
   drivingLicenseStatus :: StageStatus,
   vehicleDetailsStatus :: StageStatus,
@@ -2486,3 +2487,9 @@ type DocumentCaptureScreenProps = {
   menuOptions :: Boolean,
   confirmChangeVehicle :: Boolean
 } 
+
+data VehicleCategory = AutoCategory | CarCategory | BikeCategory
+
+derive instance genericVehicleCategory :: Generic VehicleCategory _
+instance eqVehicleCategory :: Eq VehicleCategory where eq = genericEq
+instance showVehicleCategory :: Show VehicleCategory where show = genericShow

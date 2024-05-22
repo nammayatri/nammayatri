@@ -1352,3 +1352,4 @@ getHI stringKey =
         VEHICLE_PUC_STR -> "वाहन पीयूसी"
         RC_MANDATORY -> "इस दस्तावेज़ के लिए RC अनिवार्य है"
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "दस्तावेज़ सफलतापूर्वक अपलोड किया गया"
+        REGISTER_YOUR_BIKE -> "अपनी बाइक पंजीकृत करें"

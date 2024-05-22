@@ -1353,3 +1353,4 @@ getML stringKey =
         VEHICLE_PUC_STR -> "വാഹന PUC"
         RC_MANDATORY -> "ഈ പ്രമാണത്തിന് RC നിർബന്ധമാണ്"
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "പ്രമാണം വിജയകരമായി അപ്‌ലോഡ് ചെയ്തു"
+        REGISTER_YOUR_BIKE -> "നിങ്ങളുടെ ബൈക്ക് രജിസ്റ്റർ ചെയ്യുക"

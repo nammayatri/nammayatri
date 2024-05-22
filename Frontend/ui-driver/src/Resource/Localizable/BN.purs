@@ -1353,3 +1353,4 @@ getBN stringKey =
         VEHICLE_PUC_STR -> "গাড়ির PUC"
         RC_MANDATORY -> "আরসি এই নথির জন্য বাধ্যতামূলক"
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "নথিপত্র সফলভাবে আপলোড হয়েছে"
+        REGISTER_YOUR_BIKE -> "আপনার বাইক নিবন্ধন করুন"
