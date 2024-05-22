@@ -90,12 +90,13 @@ prepareDriverPoolBatch ::
   m DriverPoolWithActualDistResultWithFlags
 prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails startingbatchNum goHomeConfig = withLogTag ("startingbatchNum- (" <> show startingbatchNum <> ")") $ do
   previousBatchesDrivers <- getPreviousBatchesDrivers Nothing
+  previousBatchesDriversOnRide <- getPreviousBatchesDrivers (Just True)
   let merchantOpCityId = searchReq.merchantOperatingCityId
   logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
   PrepareDriverPoolBatchEntity {..} <- prepareDriverPoolBatch' previousBatchesDrivers startingbatchNum True merchantOpCityId searchReq.transactionId
   let finalPool = currentDriverPoolBatch <> currentDriverPoolBatchOnRide
   incrementDriverRequestCount finalPool searchTry.id
-  pure $ buildDriverPoolWithActualDistResultWithFlags finalPool poolType nextScheduleTime previousBatchesDrivers
+  pure $ buildDriverPoolWithActualDistResultWithFlags finalPool poolType nextScheduleTime (previousBatchesDrivers <> previousBatchesDriversOnRide)
   where
     buildDriverPoolWithActualDistResultWithFlags finalPool poolType nextScheduleTime prevBatchDrivers =
       DriverPoolWithActualDistResultWithFlags

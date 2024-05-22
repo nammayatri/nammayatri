@@ -47,6 +47,7 @@ import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Ride (throwErrorOnRide)
 import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
@@ -129,19 +130,19 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = ride.driverId
   driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  when driverInfo.hasAdvanceBooking $ throwError DriverOnRide
+  booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  (openMarketAllow, includeDriverCurrentlyOnRide) <-
+    maybe
+      (pure (False, False))
+      ( \_ -> do
+          transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
+          pure $ (transporterConfig.openMarketUnBlocked, transporterConfig.includeDriverCurrentlyOnRide)
+      )
+      driverInfo.merchantId
+  throwErrorOnRide includeDriverCurrentlyOnRide driverInfo
   let driverKey = makeStartRideIdKey driverId
   Redis.setExp driverKey ride.id 60
   rateLimitStartRide driverId ride.id -- do we need it for dashboard?
-  booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  openMarketAllow <-
-    maybe
-      (pure False)
-      ( \_ -> do
-          transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
-          pure $ transporterConfig.openMarketUnBlocked
-      )
-      driverInfo.merchantId
   unless (driverInfo.subscribed || openMarketAllow) $ throwError DriverUnsubscribed
   case req of
     DriverReq driverReq -> do
