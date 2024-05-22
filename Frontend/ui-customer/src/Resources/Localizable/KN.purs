@@ -1029,7 +1029,7 @@ getKN stringKey =
         BOOK_ROUND_TRIP -> "ಪುಸ್ತಕ ರೌಂಡ್ ಟ್ರಿಪ್"
         BY_PROCEEDING_YOU_AGREE -> "ಮುಂದುವರೆಯುವ ಮೂಲಕ, ನೀವು ಒಪ್ಪುತ್ತೀರಿ "
         TERMS_AND_CONDITIONS_FULL -> "ನಿಯಮ ಮತ್ತು ಶರತ್ತುಗಳು"
-        EXPERIENCE_HASSLE_FREE_METRO_BOOKING -> "ನಮ್ಮ ಯಾತ್ರಿಯಲ್ಲಿ ತೊಂದರೆ-ಮುಕ್ತ ಮೆಟ್ರೋ ಬುಕಿಂಗ್ ಅನ್ನು ಅನುಭವಿಸಿ"
+        EXPERIENCE_HASSLE_FREE_METRO_BOOKING appName -> "ಅನುಭವಿಸಿ ತುರ್ತು ಹಾಗೂ ಸುಲಭ ಮೆಟ್ರೋ ಬುಕಿಂಗ್ಗಳನ್ನು " <> appName <> " ನಲ್ಲಿ"
         KOCHI_METRO_TERM_1 -> "ಟಿಕೆಟ್‌ಗಳನ್ನು ಎಲ್ಲಾ ದಿನಗಳಲ್ಲಿ 5:00 AM ನಿಂದ 11:45 PM ನಡುವೆ ಖರೀದಿಸಬಹುದು."
         KOCHI_METRO_TERM_2 -> "ಒಮ್ಮೆ ಪ್ರವೇಶ ಮುಗಿದ ನಂತರ, ಪ್ರಯಾಣಿಕರು ಗಮ್ಯಸ್ಥಾನದಿಂದ 120 ನಿಮಿಷಗಳಲ್ಲಿ ನಿರ್ಗಮಿಸಬೇಕು."
         KOCHI_METRO_TIME -> "ಕೊಚ್ಚಿ ಮೆಟ್ರೋ ಎಲ್ಲಾ ದಿನಗಳಲ್ಲಿ 5:00 AM ನಿಂದ 11:45 PM ವರೆಗೆ QR ಟಿಕೆಟ್ ಖರೀದಿಸಲು ಅನುಮತಿಸುತ್ತದೆ."
@@ -1275,3 +1275,4 @@ getKN stringKey =
         FINAL_FARE_EXCLUDES_TOLL -> "ಅಂತಿಮ ದರವು ಟೋಲ್ ಶುಲ್ಕಗಳನ್ನು ಹೊರತುಪಡಿಸಿ"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "ಟೋಲ್ ಶುಲ್ಕಗಳು ಅನ್ವಯವಾಗಬಹುದು"
         
+        METRO_BANNER_TITLE appName -> "ಈಗ " <> appName <> " ನೊಂದಿಗೆ ಮೆಟ್ರೋ ಟಿಕೆಟ್ಗಳನ್ನು ಬುಕ್ ಮಾಡಿ!"

@@ -1028,7 +1028,7 @@ getHI stringKey =
         BOOK_ROUND_TRIP -> "राउंड ट्रिप बुक करें"
         BY_PROCEEDING_YOU_AGREE -> "आगे बढ़ते हुए, आप इससे सहमत हैं "
         TERMS_AND_CONDITIONS_FULL -> "नियम एवं शर्तें"
-        EXPERIENCE_HASSLE_FREE_METRO_BOOKING -> "नम्मा यात्री पर परेशानी मुक्त मेट्रो बुकिंग का अनुभव लें"
+        EXPERIENCE_HASSLE_FREE_METRO_BOOKING appName -> appName <> " पर हैसल-फ्री मेट्रो बुकिंग का अनुभव"
         KOCHI_METRO_TERM_1 -> "टिकट सभी दिन सुबह 5:00 बजे से रात 11:45 बजे के बीच खरीदे जा सकते हैं।"
         KOCHI_METRO_TERM_2 -> "एक बार प्रवेश हो जाने के बाद, यात्रियों को गंतव्य से 120 मिनट के भीतर बाहर निकल जाना चाहिए।"
         KOCHI_METRO_TIME -> "कोच्चि मेट्रो सभी दिन सुबह 5:00 बजे से रात 11:45 बजे तक क्यूआर टिकट खरीदने की अनुमति देता है।"
@@ -1273,3 +1273,4 @@ getHI stringKey =
         COLLECT_TOLL_SEP -> "कृपया इसे ग्राहक से अलग से वसूल करें <b>केवल तभी जब टोल पार किया गया हो</b>"
         FINAL_FARE_EXCLUDES_TOLL -> "अंतिम किराये में टोल शुल्क शामिल नहीं है"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "टोल शुल्क लागू हो सकता है"
+        METRO_BANNER_TITLE appName -> "अब मेट्रो टिकट बुक करें \n" <> appName <> " से!"

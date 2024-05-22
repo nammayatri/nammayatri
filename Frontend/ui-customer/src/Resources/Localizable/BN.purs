@@ -1026,7 +1026,7 @@ getBN stringKey =
         BOOK_ROUND_TRIP -> "রাউন্ড ট্রিপ বুক করুন"
         BY_PROCEEDING_YOU_AGREE -> "এগিয়ে যাওয়ার মাধ্যমে, আপনি সম্মত হন "
         TERMS_AND_CONDITIONS_FULL -> "শর্তাবলী"
-        EXPERIENCE_HASSLE_FREE_METRO_BOOKING -> "নম্মা যাত্রীতে ঝামেলামুক্ত মেট্রো বুকিংয়ের অভিজ্ঞতা নিন"
+        EXPERIENCE_HASSLE_FREE_METRO_BOOKING appName -> "এখন কোচি মেট্রো টিকিট বুক করুন " <> appName <> " এর সাথে"
         KOCHI_METRO_TERM_1 -> "সারাদিন সকাল 5:00 AM থেকে 11:45 PM পর্যন্ত টিকিট কেনা যাবে।"
         KOCHI_METRO_TERM_2 -> "একবার প্রবেশ করা হয়ে গেলে, যাত্রীদের গন্তব্য থেকে 120 মিনিটের মধ্যে প্রস্থান করতে হবে।"
         KOCHI_METRO_TIME -> "কোচি মেট্রো সমস্ত দিন সকাল 5:00 AM থেকে 11:45 PM পর্যন্ত QR টিকেট কেনার অনুমতি দেয়।"
@@ -1273,3 +1273,4 @@ getBN stringKey =
         COLLECT_TOLL_SEP -> "অনুগ্রহ করে এটি গ্রাহকের কাছ থেকে আলাদাভাবে সংগ্রহ করুন <b>শুধুমাত্র যদি একটি টোল অতিক্রম করা হয়</b>"
         FINAL_FARE_EXCLUDES_TOLL -> "চূড়ান্ত ভাড়া টোল চার্জ ব্যতীত"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "টোল চার্জ প্রযোজ্য হতে পারে"
+        METRO_BANNER_TITLE appName -> "এখন কোচি মেট্রো টিকিট বুক করুন " <> appName <> " এর সাথে"
