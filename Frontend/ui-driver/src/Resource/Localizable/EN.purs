@@ -1380,3 +1380,8 @@ getEN stringKey =
         VARIANTS_ARE_SWITCHED -> "Your preferred AC variants are enabled again"
         NON_AC_ARE_SWITCHED -> "Non-AC mini is enabled by default"
         TOP_AC_DRIVER -> "See how to be a top AC driver on Namma Yatri"
+        NETWORK_ERROR -> "Network Error"
+        SERVER_ERROR -> "Server Error"
+        UNKNOWN_ERROR -> "Unknown Error"
+        CONNECTION_REFUSED -> "Connection Refused"
+        TIMEOUT -> "Timeout"

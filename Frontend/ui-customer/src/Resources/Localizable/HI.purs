@@ -1253,3 +1253,8 @@ getHI stringKey =
         TOLL_CHARGES_DESCRIPTION -> "लागू टोल शुल्क अंतिम किराये में जोड़ा जाएगा"
         WILL_BE_ADDED_TO_FINAL_FARE -> "अंतिम किराये में जोड़ा जाएगा"
         EXTRA_DISTANCE_FARE -> "अतिरिक्त दूरी का किराया"
+        NETWORK_ERROR -> "नेटवर्क त्रुटि"
+        SERVER_ERROR -> "सर्वर त्रुटि"
+        UNKNOWN_ERROR -> "अज्ञात त्रुटि"
+        CONNECTION_REFUSED -> "कनेक्शन नहीं हो सका"
+        TIMEOUT -> "समय समाप्त"

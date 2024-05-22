@@ -1255,3 +1255,8 @@ getFR stringKey =
         TOLL_CHARGES_DESCRIPTION -> "Les frais de péage applicables seront ajoutés au tarif final"
         WILL_BE_ADDED_TO_FINAL_FARE -> "Sera ajouté au tarif final"
         EXTRA_DISTANCE_FARE -> "tarif distance supplémentaire"
+        NETWORK_ERROR -> "Erreur réseau"
+        SERVER_ERROR -> "Erreur du serveur"
+        UNKNOWN_ERROR -> "Erreur inconnue"
+        CONNECTION_REFUSED -> " Connexion rejetée"
+        TIMEOUT -> "TEMPS MORT"

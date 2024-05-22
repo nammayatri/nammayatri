@@ -1255,3 +1255,8 @@ getEN stringKey =
         TOLL_CHARGES_DESCRIPTION -> "Applicable toll charges will be added to the final fare"
         WILL_BE_ADDED_TO_FINAL_FARE -> "Will be added to final fare"
         EXTRA_DISTANCE_FARE -> "Extra Distance Fare"
+        NETWORK_ERROR -> "Network Error"
+        SERVER_ERROR -> "Server Error"
+        UNKNOWN_ERROR -> "Unknown Error"
+        CONNECTION_REFUSED -> "Connection Refused"
+        TIMEOUT -> "Timeout"

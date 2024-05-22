@@ -1253,3 +1253,8 @@ getBN stringKey =
         TOLL_CHARGES_DESCRIPTION -> "প্রযোজ্য টোল চার্জ চেক শেষ ভাড়ায় যোগ করা হবে"
         WILL_BE_ADDED_TO_FINAL_FARE -> "চেক শেষ ভাড়ায় যোগ করা হবে"
         EXTRA_DISTANCE_FARE -> "অতিরিক্ত দূরত্ব ভাড়া"
+        NETWORK_ERROR -> "নেটওয়ার্ক ত্রুটি"
+        SERVER_ERROR -> "সার্ভার সমস্যা"
+        UNKNOWN_ERROR -> "অজানা ত্রুটি"
+        CONNECTION_REFUSED  -> "সংযোগ প্রত্যাখ্যাত"
+        TIMEOUT -> "সময় শেষ"

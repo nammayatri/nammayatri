@@ -1268,3 +1268,8 @@ getTE stringKey =
     TOLL_CHARGES_DESCRIPTION -> "ప్రయోజనాలు ఉన్న టోల్ చార్జులు చివరి భాడాకు జోడించబడుతుంది"
     WILL_BE_ADDED_TO_FINAL_FARE -> "చివరి భాడానికి చేరింది"
     EXTRA_DISTANCE_FARE -> "అదనపు దూరం ఛార్జ్"
+    NETWORK_ERROR -> "నెట్వర్క్ లోపం"
+    SERVER_ERROR -> "సర్వర్ లోపం"
+    UNKNOWN_ERROR -> "మీకు స్వాగతం"
+    CONNECTION_REFUSED -> "కనెక్షన్ నిరాకరించబడింది"
+    TIMEOUT -> "సమయం ముగిసినది"
