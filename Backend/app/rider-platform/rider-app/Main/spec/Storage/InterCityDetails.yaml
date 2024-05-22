@@ -11,7 +11,7 @@ imports:
   Distance: Kernel.Types.Common
   DistanceUnit: Kernel.Types.Common
   HighPrecDistance: Kernel.Types.Common
-  Minutes: Kernel.Types.Common
+  Hours: Kernel.Types.Common
 
 InterCityDetails:
   tableName: inter_city_details
@@ -28,7 +28,7 @@ InterCityDetails:
     kmPerPlannedExtraHour: Distance
     plannedPerKmRateOneWay: Price
     plannedPerKmRateRoundTrip: Price
-    perDayMaxHourAllowance: Minutes
+    perDayMaxHourAllowance: Hours
     nightShiftInfo: Maybe NightShiftInfo
 
   sqlType:

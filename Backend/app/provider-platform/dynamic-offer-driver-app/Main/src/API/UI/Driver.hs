@@ -31,12 +31,16 @@ module API.UI.Driver
     DDriver.MetaDataReq (..),
     API,
     handler,
+    listScheduledBookings,
+    acceptScheduledBooking,
   )
 where
 
 import Data.Time (Day)
 import qualified Domain.Action.UI.Driver as DDriver
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Client as DC
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
 import Domain.Types.DriverFee (DriverFeeStatus)
 import Domain.Types.DriverInformation as DI
@@ -198,6 +202,20 @@ type API =
              :> ( TokenAuth
                     :> Get '[JSON] APISuccess
                 )
+           :<|> "scheduledBooking"
+             :> "list"
+             :> TokenAuth
+             :> QueryParam "limit" Integer
+             :> QueryParam "offset" Integer
+             :> QueryParam "day" Day
+             :> QueryParam "tripCategory" DTC.TripCategory
+             :> Get '[JSON] DDriver.ScheduledBookingRes
+           :<|> "accept"
+             :> "scheduledBooking"
+             :> TokenAuth
+             :> Header "client-id" (Id DC.Client)
+             :> MandatoryQueryParam "bookingId" (Id DRB.Booking)
+             :> Post '[JSON] APISuccess
        )
 
 handler :: FlowServer API
@@ -232,6 +250,8 @@ handler =
     :<|> getCity
     :<|> getDownloadInvoiceData
     :<|> getDummyRideRequest
+    :<|> listScheduledBookings -- add vehicle also in both, handle reallocation, onRide
+    :<|> acceptScheduledBooking
 
 getInformation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> FlowHandler DDriver.DriverInformationRes
 getInformation (personId, driverId, merchantOpCityId) = withFlowHandlerAPI . DDriver.getInformation (personId, driverId, merchantOpCityId)
@@ -328,3 +348,9 @@ getDownloadInvoiceData (personId, merchantId, merchantOpCityId) fromDate = withF
 
 getDummyRideRequest :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 getDummyRideRequest = withFlowHandlerAPI . DDriver.getDummyRideRequest
+
+listScheduledBookings :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Integer -> Maybe Integer -> Maybe Day -> Maybe DTC.TripCategory -> FlowHandler DDriver.ScheduledBookingRes
+listScheduledBookings (personId, merchantId, merchantOpCityId) mbLimit mbOffset mbDay mbTripCategory = withFlowHandlerAPI $ DDriver.listScheduledBookings (personId, merchantId, merchantOpCityId) mbLimit mbOffset mbDay mbTripCategory
+
+acceptScheduledBooking :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe (Id DC.Client) -> Id DRB.Booking -> FlowHandler APISuccess
+acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId = withFlowHandlerAPI $ DDriver.acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId
