@@ -41,6 +41,7 @@ data CategoriesResp = CategoriesResp
     availableSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     bookedSeats :: Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
+    isClosed :: Kernel.Prelude.Bool,
     name :: Data.Text.Text,
     peopleCategories :: [API.Types.UI.TicketService.PeopleCategoriesResp]
   }
