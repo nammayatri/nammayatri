@@ -2046,6 +2046,25 @@ isAcWorkingPopupConfig state = PopUpModal.config {
     }
   }
 
+appUpdateBannerConfig :: forall a. ST.HomeScreenState -> (BannerCarousel.Action -> a) -> BannerCarousel.Config  (BannerCarousel.Action -> a)
+appUpdateBannerConfig state action =
+  let
+    config = BannerCarousel.config action
+    config' = config
+      {
+        backgroundColor = Color.blue600
+      , title = (getString APP_UPDATE_AVAILABLE)
+      , titleColor = Color.blue800
+      , actionText = (getString UPDATE_NOW)
+      , actionTextColor = Color.white900
+      , actionTextBackgroundColour = Color.blue800
+      , actionIconUrl = "ny_ic_appupdate_banner_icon"
+      , actionIconVisibility = true
+      , imageUrl = "ny_ic_appupdate_banner_img"
+      , type = BannerCarousel.ShowAppUpdate
+      }
+  in config'
+
 topAcDriverPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
 topAcDriverPopUpConfig state = let 
   config' = PopUpModal.config

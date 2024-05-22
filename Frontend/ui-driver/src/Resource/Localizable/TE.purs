@@ -1379,4 +1379,6 @@ getTE stringKey =
         SET_THE_AC_ON_TO_ENABLE name -> name <> "ను సక్రియం చేయండి"
         VARIANTS_ARE_SWITCHED -> "మీ ఆదరిత AC వేరియంట్‌లు మళ్ళీ సక్రియం చేయబడింది"
         NON_AC_ARE_SWITCHED -> "నాన్-AC మినీ డిఫాల్ట్‌గా సక్రియం చేయబడింది"
+        APP_UPDATE_AVAILABLE -> "కొత్త, ఆహ్లాదకరమైన అనుభవం కోసం మీ యాప్‌ను ఇప్పుడే నవీకరించండి! ✨"
+        UPDATE_APP -> "యాప్‌ను నవీకరించండి"
         TOP_AC_DRIVER -> "నమ్మ యాత్రిలో టాప్ AC డ్రైవర్ ఎలా ఉండాలో చూడండి"

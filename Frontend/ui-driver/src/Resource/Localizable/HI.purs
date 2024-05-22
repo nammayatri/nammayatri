@@ -1379,4 +1379,6 @@ getHI stringKey =
         SET_THE_AC_ON_TO_ENABLE name -> name <> " को सक्षम करने के लिए एसी चालू करें"
         VARIANTS_ARE_SWITCHED -> "आपकी पसंदीदा एसी वेरिएंट्स फिर से सक्षम हैं"
         NON_AC_ARE_SWITCHED -> "डिफ़ॉल्ट रूप से Non-AC mini गाड़ी चालू है"
+        APP_UPDATE_AVAILABLE -> "नए, आनंददायक अनुभव के लिए अभी अपना ऐप अपडेट करें! ✨"
+        UPDATE_APP -> "ऐप अपडेट करें"
         TOP_AC_DRIVER -> "देखें कि नम्मा यात्री पर शीर्ष AC ड्राइवर कैसे बनें"

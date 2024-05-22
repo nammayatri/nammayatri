@@ -79,6 +79,7 @@ window.getMerchantConfig = function () {
       "auto" : false,
       "cabs" : true
     },
+    "appId" : "6451491581",
     "showChargeDesc" : false,
     "isShareAppEnabled": "true",
     "apiLoaderLottie": "primary_button_loader.json",

@@ -15,7 +15,7 @@
 
 module Common.Types.App where
 
-import Prelude (class Eq, class Show, ($))
+import Prelude (class Eq, class Show, ($), (<>))
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 
 import Data.Generic.Rep (class Generic)
@@ -25,7 +25,11 @@ import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Eq.Generic (genericEq)
 import Foreign (Foreign)
-import Presto.Core.Types.API (standardEncode,class StandardEncode)
+import Foreign.Class (class Decode, class Encode, decode, encode)
+import Foreign.Generic (decodeJSON)
+import Prelude (class Show, class Eq, show, ($), (<$>), (>>=))
+import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode, defaultMakeRequestString)
+import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Foreign.Generic (class Decode, class Encode)
 import Control.Monad.Free (Free)
 import Control.Monad.Except.Trans (ExceptT)
@@ -554,7 +558,6 @@ type Price = {
     amount :: Number
   , currency :: String
 }
-
 type WaitingTimeInfo = {
   freeMinutes :: String,
   charge :: String

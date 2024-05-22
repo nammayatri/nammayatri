@@ -205,6 +205,8 @@
       "ny_ic_app_referral_qr" : true,
       "ny_ic_app_related_issue" : true,
       "ny_ic_app_share" : true,
+      "ny_ic_appupdate_banner_icon" : true,
+      "ny_ic_appupdate_banner_img" : true,
       "ny_ic_arrow_down_filled" : true,
       "ny_ic_arrow_right" : true,
       "ny_ic_arrow_right_blue" : true,

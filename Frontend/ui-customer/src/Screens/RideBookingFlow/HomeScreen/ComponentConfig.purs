@@ -41,6 +41,7 @@ import Components.MessagingView as MessagingView
 import Components.PopUpModal as PopUpModal
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import Components.PrimaryButton as PrimaryButton
+import Components.AppUpdate as AppUpdate
 import Components.QuoteListModel as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
@@ -2427,3 +2428,17 @@ scheduledRideExistsPopUpConfig state =
 
   formatDateInHHMM :: String -> String
   formatDateInHHMM timeUTC = EHC.convertUTCtoISC timeUTC "HH" <> ":" <> EHC.convertUTCtoISC timeUTC "mm"
+
+
+appUpdateConfig :: ST.HomeScreenState -> AppUpdate.Config
+appUpdateConfig state =
+  let
+    config = AppUpdate.config
+    appUpdateConfig' =
+      config
+        { 
+          titleText = getString APP_UPDATE_AVAILABLE,
+          actionText = getString UPDATE_APP
+        }
+  in
+    appUpdateConfig'

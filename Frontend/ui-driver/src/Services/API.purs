@@ -4622,3 +4622,39 @@ instance standardEncodeUpdateAirConditionUpdateResponse :: StandardEncode Update
 instance showUpdateAirConditionUpdateResponse :: Show UpdateAirConditionUpdateResponse where show = genericShow
 instance decodeUpdateAirConditionUpdateResponse :: Decode UpdateAirConditionUpdateResponse where decode = defaultDecode
 instance encodeUpdateAirConditionUpdateResponse  :: Encode UpdateAirConditionUpdateResponse where encode = defaultEncode
+
+
+data GetVersionNameReq = GetVersionNameReq String
+
+newtype GetVersionNameRes = GetVersionNameRes {
+  results :: Array VersionName
+}
+
+newtype VersionName = VersionName {
+  version :: String
+}
+
+instance makeGetVersionNameReq :: RestEndpoint GetVersionNameReq GetVersionNameRes where
+ makeRequest reqBody@(GetVersionNameReq appId) headers = defaultMakeRequest GET (EP.getIosVersionName appId) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericGetVersionNameRes :: Generic GetVersionNameRes _
+derive instance newtypeGetVersionNameRes :: Newtype GetVersionNameRes _
+instance standardEncodeGetVersionNameRes :: StandardEncode GetVersionNameRes where standardEncode (GetVersionNameRes body) = standardEncode body
+instance showGetVersionNameRes :: Show GetVersionNameRes where show = genericShow
+instance decodeGetVersionNameRes :: Decode GetVersionNameRes where decode = defaultDecode
+instance encodeGetVersionNameRes  :: Encode GetVersionNameRes where encode = defaultEncode
+
+derive instance genericVersionName :: Generic VersionName _
+derive instance newtypeVersionName :: Newtype VersionName _
+instance standardEncodeVersionName :: StandardEncode VersionName where standardEncode (VersionName body) = standardEncode body
+instance showVersionName :: Show VersionName where show = genericShow
+instance decodeVersionName :: Decode VersionName where decode = defaultDecode
+instance encodeVersionName  :: Encode VersionName where encode = defaultEncode
+
+derive instance genericGetVersionNameReq :: Generic GetVersionNameReq _
+instance standardEncodeGetVersionNameReq :: StandardEncode GetVersionNameReq where standardEncode (GetVersionNameReq body) = standardEncode body
+instance showGetVersionNameReq :: Show GetVersionNameReq where show = genericShow
+instance decodeGetVersionNameReq :: Decode GetVersionNameReq where decode = defaultDecode
+instance encodeGetVersionNameReq  :: Encode GetVersionNameReq where encode = defaultEncode

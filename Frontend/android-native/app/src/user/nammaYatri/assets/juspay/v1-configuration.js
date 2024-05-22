@@ -26,6 +26,26 @@ function getAppLink(os) {
   }
 }
 
+function getAppId(os) {
+  let sessionInfo = JSON.parse(JBridge.getSessionInfo());
+  if (sessionInfo.app_name.toLowerCase().includes("namma")) {
+    if (os == "ANDROID") {
+      return "";
+    }
+    else {
+      return "1637429831";
+    }
+  }
+  else if (sessionInfo.app_name.toLowerCase().includes("mana")) {
+    if (os == "ANDROID") {
+      return "";
+    }
+    else {
+      return "6477922432";
+    }
+  }
+}
+
 window.getMerchantConfig = function () {
   return JSON.stringify({
     "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM","LOCATION_PERMISSION_SUBTITLE_NEW_USER","CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "YOUR_FEEDBACK_HELPS_US", "LEARN_HOW_TEXT", "REPORT_ISSUE_CHAT_PLACEHOLDER", "CALL_SUPPORT_DESCRIPTION", "FARE_INFO_TEXT", "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE", "PLEASE_ENABLE_LOCATION_PERMISSION", "TAXI_FROM_ZONE", "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN", "WE_HOPE_THE_ISSUE_IS_RESOLVED"],
@@ -60,6 +80,7 @@ window.getMerchantConfig = function () {
     "quoteListModelBackground": "#2C2F3A",
     "confirmPickUpLocationBorder": "#E5E7EB",
     "currency": "₹",
+    "appId" : getAppId(window.__OS),
     "alertDialogPrimaryColor": "#2194FF",
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"],
     "primaryButtonCornerRadius" : 8.0,

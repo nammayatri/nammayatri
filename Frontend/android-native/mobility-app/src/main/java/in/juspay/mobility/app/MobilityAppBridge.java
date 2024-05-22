@@ -91,6 +91,7 @@ import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.carousel.VPAdapter;
 import in.juspay.mobility.app.carousel.ViewPagerItem;
 import in.juspay.mobility.app.reels.ReelController;
+import in.juspay.mobility.app.services.MobilityAppUpdate;
 
 public class MobilityAppBridge extends HyperBridge {
 
@@ -135,6 +136,8 @@ public class MobilityAppBridge extends HyperBridge {
 
     private static final ArrayList<SendMessageCallBack> sendMessageCallBacks = new ArrayList<>();
     private CallBack callBack;
+
+    private MobilityAppUpdate mobilityAppUpdate;
 
     private HashMap<String, SliderComponent> sliderComponentHashMap = new HashMap<>();
     public MobilityAppBridge(BridgeComponents bridgeComponents) {
@@ -1170,6 +1173,16 @@ public class MobilityAppBridge extends HyperBridge {
                 break;
         }
         return super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @JavascriptInterface
+    public boolean isUpdateAvailable() {
+        return MobilityAppUpdate.getInstance(bridgeComponents.getContext()).checkForUpdates();
+    }
+
+    @JavascriptInterface
+    public void startAppUpdateModal(String appId, String callback) {
+        MobilityAppUpdate.getInstance(bridgeComponents.getContext()).startFlexibleUpdate(bridgeComponents, callback);
     }
 
     @JavascriptInterface

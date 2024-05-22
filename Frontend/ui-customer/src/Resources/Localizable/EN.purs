@@ -1255,3 +1255,5 @@ getEN stringKey =
         TOLL_CHARGES_DESCRIPTION -> "Applicable toll charges will be added to the final fare"
         WILL_BE_ADDED_TO_FINAL_FARE -> "Will be added to final fare"
         EXTRA_DISTANCE_FARE -> "Extra Distance Fare"
+        APP_UPDATE_AVAILABLE -> "Update your app now for a new, delightful experience! ✨"
+        UPDATE_APP -> "Update App"

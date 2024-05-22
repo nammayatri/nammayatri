@@ -333,3 +333,6 @@ uploadOdometerImage rideId = (getBaseUrl "") <> "/driver/ride/"<>rideId<>"/uploa
 
 updateAirConditioned :: String -> String
 updateAirConditioned _ = (getBaseUrl "") <> "/driver/updateAirCondition"
+
+getIosVersionName :: String -> String
+getIosVersionName appId = "https://itunes.apple.com/in/lookup?id=" <> appId

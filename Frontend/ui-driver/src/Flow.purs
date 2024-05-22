@@ -36,7 +36,7 @@ import Constants as Constants
 import Control.Monad.Except (runExceptT, runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (any, concat, cons, elem, elemIndex, filter, find, foldl, head, last, length, mapWithIndex, null, snoc, sortBy, (!!))
+import Data.Array (any, concat, cons, elem, elemIndex, filter, find, foldl, head, last, length, mapWithIndex, null, snoc, sortBy, (!!), replicate, zip, foldl)
 import Data.Array as DA
 import Data.Either (Either(..), either, isRight)
 import Data.Function (on)
@@ -76,7 +76,7 @@ import Foreign.Class (class Encode, encode, decode)
 import Helpers.API (callApiBT, callApi)
 import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus)
 import Helpers.Utils as HU
-import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
+import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, isAppUpdateAvailable, getVersionName)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -84,7 +84,7 @@ import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Types (AppConfig(..), Language)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import PaymentPage (checkPPInitiateStatus, consumeBP, initiatePP, paymentPageUI, PayPayload(..), PaymentPagePayload(..), getAvailableUpiApps, getPaymentPageLangKey, initiatePaymentPage)
-import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<), const)
+import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, max, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<), const)
 import Presto.Core.Types.API (ErrorResponse(..))
 import Presto.Core.Types.Language.Flow (delay, setLogField, getLogFields, doAff, fork, Flow)
 import PrestoDOM (initUI)
@@ -145,6 +145,9 @@ import Helpers.API as HelpersAPI
 import Engineering.Helpers.API as EHA
 import LocalStorage.Cache (getValueFromCache)
 import Effect.Unsafe (unsafePerformEffect)
+import Services.API (GetVersionNameReq(..), GetVersionNameRes(..), VersionName(..))
+import Data.Ordering (Ordering(..))
+import Log (printLog, logStatus)
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -3379,6 +3382,10 @@ checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) = do
 updateBannerAndPopupFlags :: FlowBT String Unit
 updateBannerAndPopupFlags = do
   (GlobalState allState) <- getState
+  if isNothing allState.globalProps.isUpdateAvailable then do
+    void $ lift $ lift $ fork $ runExceptT $ runBackT $ checkForAppUpdate allState.homeScreen
+    pure unit
+  else pure unit
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState allState) false
   appConfig <- getAppConfigFlowBT Constants.appConfig
   let
@@ -3465,6 +3472,7 @@ updateBannerAndPopupFlags = do
                 , showAcWorkingPopup = if isNothing allState.homeScreen.props.showAcWorkingPopup
                                           then getDriverInfoResp.checkIfACWorking
                                        else allState.homeScreen.props.showAcWorkingPopup
+                , isAppUpdateAvailable = fromMaybe false allState.globalProps.isUpdateAvailable
                 }
               }
         )
@@ -3909,3 +3917,34 @@ getSrcDestConfig state =
       source : state.data.activeRide.source,
       destination : fromMaybe "" state.data.activeRide.destination
   }
+
+checkForAppUpdate :: HomeScreenState -> FlowBT String Unit
+checkForAppUpdate state = do
+  (GlobalState globalState) <- getState
+  if os == "IOS" then do
+    resp <- lift $ lift $  HelpersAPI.callApi $ GetVersionNameReq state.data.config.appId
+    case resp of
+      Left err -> pure $ printLog "api error " err
+      Right (GetVersionNameRes json) -> do
+        let results = json.results  
+        let version = results !! 0
+        case version of 
+          Just (VersionName versionObj) -> do
+            currentVersion <- liftFlowBT $ getVersionName
+            pure $ unit
+            if (compareVersions versionObj.version currentVersion) then do
+              void $ modifyScreenState $ GlobalPropsType (\globalProps -> globalProps{ isUpdateAvailable = Just true})
+              void $ modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { isAppUpdateAvailable = true } })
+            else do
+              void $ modifyScreenState $ GlobalPropsType (\globalProps -> globalProps{ isUpdateAvailable = Just false})
+          Nothing -> do
+            let _ =  spy "Error getting version" 
+            pure unit
+    pure unit
+    
+  else do
+    isUpdateAvailable <- liftFlowBT $ isAppUpdateAvailable unit
+    when isUpdateAvailable do
+      void $ modifyScreenState $ GlobalPropsType (\globalProps -> globalProps{ isUpdateAvailable = Just true})
+      void $ modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { isAppUpdateAvailable = true } })
+      pure unit

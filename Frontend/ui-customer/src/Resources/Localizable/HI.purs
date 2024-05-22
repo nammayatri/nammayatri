@@ -1144,6 +1144,8 @@ getHI stringKey =
         TIP_CAN_BE_ADDED maxTip -> "राइड किराये में उपेक्ष्य ₹" <> maxTip <> " तक की टिप जोड़ी जा सकती है।"
         RUSH_HOURS_DESC charges -> "*व्यस्त घंटों के दौरान, उच्च यातायात के समय ड्राइवर के समय को भरने के लिए अतिरिक्त "<> charges <>"% की भाड़ लागू होती है।"
         AC_TURNED_OFF -> "एसी बंद था"
+        APP_UPDATE_AVAILABLE -> "नए, आनंददायक अनुभव के लिए अभी अपना ऐप अपडेट करें! ✨"
+        UPDATE_APP -> "ऐप अपडेट करें"
         ESTIMATES_EXPIRY_ERROR -> "अनुमान समाप्त हो गया है। कृपया पुनः प्रयास करें।"
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "अनुमान समाप्त हो गया है। फिर से ले रहे हैं, कृपया कुछ क्षण"
         PAY_YOUR_DRIVER_BY_CASH_OR_UPI -> "कैश या UPI से अपने ड्राइवर को भुगतान करें"

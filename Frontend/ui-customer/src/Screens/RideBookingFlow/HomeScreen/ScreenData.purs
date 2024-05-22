@@ -350,6 +350,7 @@ initData = {
                                }
     , showAcWorkingPopup : false
     , repeateRideTimerStoped : false
+    , isAppUpdateAvailable : false
     , currentEstimateHeight : 184
     , showEndOTP : false
     , rideDurationTimer : ""

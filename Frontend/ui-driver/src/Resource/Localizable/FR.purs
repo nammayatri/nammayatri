@@ -990,3 +990,5 @@ getFR stringKey =
         YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(Vous pouvez toujours modifier cela depuis votre profil)"
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "Votre voiture est-elle allumée et la climatisation fonctionne-t-elle ?"
         _ -> ""
+        APP_UPDATE_AVAILABLE -> "Mettez à jour votre application maintenant pour une nouvelle expérience délicieuse ! ✨"
+        UPDATE_APP -> "Mettre à jour l'application"

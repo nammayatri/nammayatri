@@ -32,7 +32,7 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Control.Transformers.Back.Trans as App
-import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat, all, elemIndex, mapWithIndex, elem, nubByEq)
+import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat, all, elemIndex, mapWithIndex, elem, nubByEq, replicate, zip, foldl)
 import Data.Array as Arr
 import Data.Either (Either(..), either)
 import Data.Function.Uncurried (runFn3, runFn2, runFn1)
@@ -61,7 +61,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, timeValidity, removeMarker)
+import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, timeValidity, removeMarker, isAppUpdateAvailable, getVersionName)
 import JBridge as JB
 import Helpers.Utils (compareDate, convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getCityFromString, getMetroConfigFromAppConfig, encodeBookingTimeList, decodeBookingTimeList, bufferTimePerKm, invalidBookingTime, getAndRemoveLatestNotificationType)
 import Language.Strings (getString)
@@ -71,10 +71,10 @@ import Log (logInfo, logStatus)
 import MerchantConfig.Types (AppConfig(..), MetroConfig(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils as MU
-import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, identity, otherwise, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*), max)
+import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, identity, otherwise, max, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*), max)
 import Mobility.Prelude (capitalize)
 import ModifyScreenState (modifyScreenState, updateRepeatRideDetails, FlowState(..))
-import Presto.Core.Types.Language.Flow (doAff, fork, setLogField)
+import Presto.Core.Types.Language.Flow (Flow,doAff, fork, setLogField,modifyState)
 import Helpers.Pooling (delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Screens (getScreen)
@@ -201,6 +201,9 @@ import Helpers.Referral (applyReferralCode)
 import Helpers.SpecialZoneAndHotSpots
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Screens.HelpAndSupportScreen.Transformer (getUpdatedIssueList, getApiIssueList)
+import Services.API (GetVersionNameReq(..), GetVersionNameRes(..), VersionName(..))
+import Data.Ordering (Ordering(..))
+import Log (printLog, logStatus)
 import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduledScreenData
 import Helpers.API (callApiBT)
 import Effect.Unsafe (unsafePerformEffect)
@@ -684,6 +687,10 @@ homeScreenFlow = do
   liftFlowBT $ markPerformance "HOME_SCREEN_FLOW"
   logField_ <- lift $ lift $ getLogFields
   (GlobalState currentState) <- getState
+  if isNothing currentState.globalProps.isUpdateAvailable then do
+    void $ lift $ lift $ fork $ runExceptT $ runBackT $ checkForAppUpdate currentState.homeScreen
+    pure unit
+  else pure unit
   void $ checkAndUpdateSavedLocations currentState.homeScreen
   let
     isRideCompleted = getAndRemoveLatestNotificationType unit == "TRIP_FINISHED"
@@ -712,7 +719,7 @@ homeScreenFlow = do
     $ HomeScreenStateType
         ( \homeScreen ->
             homeScreen
-              { props { scheduledRidePollingDelay = diffInSeconds, hasTakenRide = (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE"), isReferred = (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") }
+              { props { scheduledRidePollingDelay = diffInSeconds, hasTakenRide = (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE"), isReferred = (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") , isAppUpdateAvailable = fromMaybe false currentState.globalProps.isUpdateAvailable}
               , data { currentCityConfig = currentCityConfig }
               }
         )
@@ -3181,6 +3188,37 @@ checkAndUpdateSavedLocations state = do
         fetchAndModifyLocationLists $ AddNewAddress.getSavedLocations savedLocationResp.list
         pure unit
   pure unit
+
+checkForAppUpdate :: HomeScreenState -> FlowBT String Unit
+checkForAppUpdate state = do
+  (GlobalState globalState) <- getState
+  if os == "IOS" then do
+    resp <- lift $ lift $  HelpersAPI.callApi $ GetVersionNameReq state.data.config.appId
+    case resp of
+      Left err -> pure $ printLog "api error " err
+      Right (GetVersionNameRes json) -> do
+        let results = json.results  
+        let version = results !! 0
+        case version of 
+          Just (VersionName versionObj) -> do
+            currentVersion <- liftFlowBT $ getVersionName
+            pure $ unit
+            if (compareVersions versionObj.version currentVersion) then do
+              void $ modifyScreenState $ GlobalPropsType (\globalProps -> globalProps{ isUpdateAvailable = Just true})
+              void $ modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { isAppUpdateAvailable = true } })
+            else do
+              void $ modifyScreenState $ GlobalPropsType (\globalProps -> globalProps{ isUpdateAvailable = Just false})
+          Nothing -> do
+            let _ =  spy "Error getting version" 
+            pure unit
+    pure unit
+    
+  else do
+    isUpdateAvailable <- liftFlowBT $ isAppUpdateAvailable unit
+    when isUpdateAvailable do
+      void $ modifyScreenState $ GlobalPropsType (\globalProps -> globalProps{ isUpdateAvailable = Just true})
+      void $ modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { isAppUpdateAvailable = true } })
+      pure unit
 
 addLocationToRecents :: LocationListItemState -> HomeScreenState -> Boolean -> Boolean -> FlowBT String Unit
 addLocationToRecents item state srcServiceable destServiceable = do

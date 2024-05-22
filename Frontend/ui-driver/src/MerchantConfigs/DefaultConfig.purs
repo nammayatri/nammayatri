@@ -21,6 +21,7 @@ config =
   , leaderBoard :{
     isMaskedName : true
   }
+  , appId : ""
   , rideCompletedCardConfig : {
       showSavedCommission : false,
       lottieQRAnim : false

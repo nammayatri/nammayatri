@@ -70,7 +70,7 @@ import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion, getExpiryTime,liftFlow)
 import Engineering.Helpers.Commons as EHC
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig, startAppUpdate)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion)
 import Engineering.Helpers.Utils (saveObject)
@@ -126,6 +126,7 @@ import Foreign (unsafeToForeign)
 import SessionCache (getValueFromWindow)
 import Timers as TF
 import Data.Ord (abs)
+import Effect.Uncurried (runEffectFn3)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -419,7 +420,9 @@ data Action = NoAction
             | OnAudioCompleted String
             | ACExpController PopUpModal.Action
             | OpenLink String
-            
+            | ShowAppUpdateBanner
+            | AppUpdateBannerAC 
+            | AppUpdateStatus String
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -1240,6 +1243,9 @@ eval (BannerCarousal (BannerCarousel.OnClick index)) state =
           BannerCarousel.Gender -> pure (GenderBannerModal (Banner.OnClick))
           BannerCarousel.Disability -> pure (AccessibilityBannerAction (Banner.OnClick))
           BannerCarousel.AutoPay -> pure (AutoPayBanner (Banner.OnClick))
+          BannerCarousel.ShowAppUpdate -> do
+            let _ = runFn2 EHC.updatePushInIdMap "bannerCarousel" true
+            pure $ AppUpdateBannerAC
           BannerCarousel.Remote link -> do
             void $ openUrlInApp link
             pure NoAction
@@ -1261,6 +1267,18 @@ eval (AutoPayBanner (Banner.OnClick)) state = do
   exit $ SubscriptionScreen state
 
 eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
+
+eval ShowAppUpdateBanner state = continue state { props {isAppUpdateAvailable = true} }
+
+eval AppUpdateBannerAC state = do 
+  continueWithCmd state[do 
+    push <- getPushFn Nothing "HomeScreen"
+    void $ runEffectFn3 startAppUpdate (state.data.config.appId) push AppUpdateStatus
+    pure $ NoAction
+    ]
+
+eval (AppUpdateStatus status) state = do
+   continue state
 
 eval (ToggleBonusPopup) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = not state.props.showBonusInfo } }
 
@@ -1627,6 +1645,7 @@ getBannerConfigs state =
   (if state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER 
     then [autpPayBannerCarousel state BannerCarousal] 
     else [])
+  <> (if state.props.isAppUpdateAvailable then [appUpdateBannerConfig state BannerCarousal] else [])
   -- <> (if getValueToLocalStore IS_BANNER_ACTIVE == "True" then [genderBannerConfig state BannerCarousal] else []) NOTE::- Deprecated the complete profile banner for now
   <> (if state.props.currentStage == ST.HomeScreen && state.data.config.purpleRideConfig.showPurpleVideos then [accessbilityBannerConfig state BannerCarousal] else [])
   <> getRemoteBannerConfigs

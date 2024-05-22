@@ -185,6 +185,8 @@
       "ny_ic_ambulance" : true,
       "ny_ic_anonymous_call" : true,
       "ny_ic_app_related_issue" : true,
+      "ny_ic_appupdate_banner_icon" : true,
+      "ny_ic_appupdate_banner_img" : true,
       "ny_ic_arrow_left_black" : true,
       "ny_ic_arrow_right_black" : true,
       "ny_ic_arrow_right_blue" : true,

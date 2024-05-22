@@ -41,6 +41,7 @@ data BannerType = AutoPay
   | Safety
   | MetroTicket
   | CabLaunch
+  | ShowAppUpdate
   | RentalsAndIntercity
 
 type CarouselConfig a = {

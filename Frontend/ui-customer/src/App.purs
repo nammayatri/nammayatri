@@ -160,7 +160,8 @@ defaultGlobalProps :: GlobalProps
 defaultGlobalProps = {
   savedLocations : [] ,
   recentSearches : [] ,
-  cachedSearches : []
+  cachedSearches : [] , 
+  isUpdateAvailable : Nothing
 }
 
 defaultGlobalFlowCache :: GlobalFlowCache

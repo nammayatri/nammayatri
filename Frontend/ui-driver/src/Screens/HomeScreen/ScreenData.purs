@@ -261,6 +261,7 @@ initData =
       , odometerImageUploading: false
       , showAcWorkingPopup: Nothing
       , acExplanationPopup : false
+      , isAppUpdateAvailable: false
       }
   }
 

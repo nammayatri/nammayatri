@@ -76,6 +76,7 @@ type AppConfigCustomer a =
   , tipEnabledCities :: Array String
   , referral :: ReferalConfig
   , safety :: Safety
+  , appId :: String
   , enableBookAny :: Boolean
   , acPopupConfig :: AcPopupConfig
   , showCheckoutRentalBanner :: Boolean

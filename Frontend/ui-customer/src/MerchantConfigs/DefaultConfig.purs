@@ -109,6 +109,7 @@ config =
   , fontType: "Assets"
   , languageList : []
   , confirmPickUpLocationBorder: "#E5E7EB"
+  , appId : ""
   , bannerConfig : {
         backgroundColor : "#F0FAF0"
       , title : "Complete your profile for a personalised ride experience"

@@ -2637,3 +2637,20 @@ export const getFromUTC = (timestamp) => (val) => {
       return date.getUTCDate();
   }
 }
+
+
+export const isAppUpdateAvailable = (unit) => () =>  {
+  if (JBridge.isUpdateAvailable) {
+    return JBridge.isUpdateAvailable()
+  }
+  return false;
+}
+
+export const startAppUpdate = function (appId, cb, action) {
+  if (JBridge.startAppUpdateModal) {
+    const callback = callbackMapper.map(function (status) {
+      cb(action(status))();
+    });
+    JBridge.startAppUpdateModal(appId, callback);
+  }
+}

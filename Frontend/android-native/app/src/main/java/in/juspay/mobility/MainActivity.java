@@ -320,8 +320,8 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
-        MobilityAppUpdate mobilityAppUpdate = new MobilityAppUpdate(this);
-        mobilityAppUpdate.checkAndUpdateApp(remoteConfigs);
+        MobilityAppUpdate mobilityAppUpdate = MobilityAppUpdate.getInstance(context);
+        mobilityAppUpdate.checkAndUpdateApp(remoteConfigs, context);
 
         updateConfigURL();
 

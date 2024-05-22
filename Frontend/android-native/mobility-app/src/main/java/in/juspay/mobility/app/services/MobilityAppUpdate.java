@@ -14,6 +14,7 @@ import android.content.Context;
 import android.content.IntentSender;
 import android.graphics.Color;
 import android.util.Log;
+import java.util.Locale;
 
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.snackbar.Snackbar;
@@ -25,25 +26,33 @@ import com.google.android.play.core.install.model.AppUpdateType;
 import com.google.android.play.core.install.model.InstallStatus;
 import com.google.android.play.core.install.model.UpdateAvailability;
 
+import javax.annotation.Nullable;
+
+import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 
 public class MobilityAppUpdate {
 
     private final AppUpdateManager appUpdateManager;
+    private static MobilityAppUpdate mobilityAppUpdate;
     private static int updateType;
-
-
+    @Nullable
+    private AppUpdateInfo updateInfo;
     private static final int REQUEST_CODE_UPDATE_APP = 587;
-    private final String LOG_TAG = "MobilityAppUpdate";
+    private static final String LOG_TAG = "MobilityAppUpdate";
 
-    Context context;
-
-    public MobilityAppUpdate(Context context) {
-        this.context =context;
+    private MobilityAppUpdate(Context context) {
         appUpdateManager = AppUpdateManagerFactory.create(context);
     }
 
-    public void checkAndUpdateApp(MobilityRemoteConfigs remoteConfigs) {
+    public static MobilityAppUpdate getInstance(Context context) {
+        if (mobilityAppUpdate == null) {
+            mobilityAppUpdate = new MobilityAppUpdate(context);
+        }
+        return mobilityAppUpdate;
+    }
+
+    public void checkAndUpdateApp(MobilityRemoteConfigs remoteConfigs, Context context) {
         // Returns an intent object that you use to check for an update.
         Task<AppUpdateInfo> appUpdateInfoTask = appUpdateManager.getAppUpdateInfo();
 
@@ -55,12 +64,13 @@ public class MobilityAppUpdate {
 
         InstallStateUpdatedListener listener = state -> {
             if (state.installStatus() == InstallStatus.DOWNLOADED) {
-                popupSnackbarForCompleteUpdate();
+                popupSnackbarForCompleteUpdate(context);
             }
         };
         appUpdateManager.registerListener(listener);
 
         appUpdateInfoTask.addOnSuccessListener(appUpdateInfo -> {
+            updateInfo = appUpdateInfo;
             if (appUpdateInfo.installStatus() == InstallStatus.DOWNLOADED) {
                 appUpdateManager.unregisterListener(listener);
                 appUpdateManager.completeUpdate();
@@ -76,12 +86,12 @@ public class MobilityAppUpdate {
                             // Or 'AppUpdateType.FLEXIBLE' for flexible updates.
                             updateType,
                             // The current activity making the update request.
-                            (Activity) this.context,
+                            (Activity) context,
                             // Include a request code to later monitor this update request.
                             REQUEST_CODE_UPDATE_APP
                     );
                 } catch (IntentSender.SendIntentException e) {
-                    e.printStackTrace();
+                    Log.e("Error in updating app",e.toString());
                 }
                 Log.d(LOG_TAG, "Update available");
             } else {
@@ -91,18 +101,69 @@ public class MobilityAppUpdate {
         });
     }
 
-    private void popupSnackbarForCompleteUpdate() {
+    private void popupSnackbarForCompleteUpdate(Context context) {
         try{
             Snackbar snackbar =
                     Snackbar.make(
-                            ((Activity) this.context).findViewById(android.R.id.content),
+                            ((Activity) context).findViewById(android.R.id.content),
                             "An update has just been downloaded.",
                             Snackbar.LENGTH_INDEFINITE);
             snackbar.setAction("RESTART", view -> appUpdateManager.completeUpdate());
             snackbar.setActionTextColor(Color.parseColor("#FCC32C"));
             snackbar.show();
         }catch (Exception e){
-            e.printStackTrace();
+            Log.e("Exception in snack bar",e.toString());
         }
+    }
+
+    public boolean checkForUpdates() {
+        if (updateInfo != null) {
+            return updateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE;
+        } else {
+            return false;
+        }
+    }
+
+    public void startFlexibleUpdate(BridgeComponents bridgeComponents, String callback) {
+        Context context = bridgeComponents.getContext();
+        //Returns an intent object
+        Task<AppUpdateInfo> appUpdateInfoTask = appUpdateManager.getAppUpdateInfo();
+
+        InstallStateUpdatedListener listener = state -> {
+            if (state.installStatus() == InstallStatus.DOWNLOADED) {
+                popupSnackbarForCompleteUpdate(context);
+            }
+        };
+
+        appUpdateManager.registerListener(listener);
+
+        appUpdateInfoTask.addOnSuccessListener(appUpdateInfo -> {
+            if (appUpdateInfo.installStatus() == InstallStatus.DOWNLOADED) {
+                appUpdateManager.unregisterListener(listener);
+                appUpdateManager.completeUpdate();
+            }
+             Log.d(LOG_TAG, "inside update");
+            try {
+                appUpdateManager.startUpdateFlowForResult(
+                        // Pass the intent that is returned by 'getAppUpdateInfo()'.
+                        appUpdateInfo,
+                        // Or 'AppUpdateType.FLEXIBLE' for flexible updates.
+                        AppUpdateType.FLEXIBLE,
+                        // The current activity making the update request.
+                        (Activity) context,
+                        // Include a request code to later monitor this update request.
+                        REQUEST_CODE_UPDATE_APP
+                );
+                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                    callback, "Success");
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+            }
+            catch (IntentSender.SendIntentException e) {
+                Log.e(LOG_TAG, "Error starting update", e);
+                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                    callback, "Failure");
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+            }
+        });
     }
 }

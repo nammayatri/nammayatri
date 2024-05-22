@@ -1379,4 +1379,6 @@ getEN stringKey =
         SET_THE_AC_ON_TO_ENABLE name -> "Set the AC on to enable " <> name
         VARIANTS_ARE_SWITCHED -> "Your preferred AC variants are enabled again"
         NON_AC_ARE_SWITCHED -> "Non-AC mini is enabled by default"
+        APP_UPDATE_AVAILABLE -> "Update your app now for a new, delightful experience! ✨"
+        UPDATE_APP -> "Update App"
         TOP_AC_DRIVER -> "See how to be a top AC driver on Namma Yatri"

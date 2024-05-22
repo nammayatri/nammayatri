@@ -269,6 +269,8 @@ foreign import askRequestedPermissionsWithCallback :: forall action. Array Strin
 foreign import setupCamera :: String -> Boolean -> Unit
 foreign import startRecord :: forall action. (action -> Effect Unit)  -> (String -> String -> action) -> Effect Unit
 foreign import stopRecord :: Unit -> Effect Unit
+foreign import isAppUpdateAvailable :: Unit -> Effect Boolean
+foreign import startAppUpdate :: forall action. EffectFn3 String (action -> Effect Unit) (String -> action) Unit
 
 foreign import clearAudioPlayer :: String -> Unit
 foreign import pauseAudioPlayer :: String -> Unit

@@ -188,7 +188,8 @@ defaultGlobalProps = {
   gotoPopupType : NO_POPUP_VIEW,
   addTimestamp : true,
   bgLocPopupShown : false,
-  onBoardingDocs : Nothing
+  onBoardingDocs : Nothing,
+  isUpdateAvailable : Nothing
 }
 
 data ScreenType =

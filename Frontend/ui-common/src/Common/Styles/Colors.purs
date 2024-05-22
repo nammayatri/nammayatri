@@ -364,3 +364,9 @@ transparentWhite = "#30FFFFFF"
 
 greyDark :: Color
 greyDark = "#D8D8D8"
+
+darkGreyGunmetal :: Color
+darkGreyGunmetal = "#282B35"
+
+spanishYellow :: Color
+spanishYellow = "#0DFCBA0B"

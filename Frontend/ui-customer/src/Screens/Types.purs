@@ -878,6 +878,7 @@ type HomeScreenStateProps =
   , referralComponentProps :: ReferralComponentState
   , showAcWorkingPopup :: Boolean
   , repeateRideTimerStoped :: Boolean
+  , isAppUpdateAvailable :: Boolean
   , currentEstimateHeight :: Int
   , showEndOTP :: Boolean
   , rideDurationTimer :: String
@@ -2109,6 +2110,7 @@ type GlobalProps =
   { savedLocations :: Array LocationListItemState
   , recentSearches :: Array LocationListItemState
   , cachedSearches :: Array LocationListItemState
+  , isUpdateAvailable :: Maybe Boolean
   }
 
 type LocationInfo = 
