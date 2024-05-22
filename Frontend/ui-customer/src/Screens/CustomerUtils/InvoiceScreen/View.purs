@@ -24,7 +24,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Language.Strings (getString)
+import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (&&), (/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Screen, afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, accessibilityHint, accessibility)
@@ -32,10 +32,11 @@ import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig,
 import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Helpers.Utils (isHaveFare, getCityFromString, formatFareType)
+import Helpers.Utils (isHaveFare, getCityFromString, formatFareType, getCityConfig)
 import MerchantConfig.Utils (getMerchant, Merchant (..))
 import Mobility.Prelude
 import Storage
+import Data.Maybe (Maybe(..))
 
 screen :: ST.InvoiceScreenState -> Screen Action ST.InvoiceScreenState ScreenOutput
 screen initialState =
@@ -106,13 +107,20 @@ view push state =
 
 referenceList :: ST.InvoiceScreenState -> Array String
 referenceList state =
-  let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  let cityStr = getValueToLocalStore CUSTOMER_LOCATION
+      city = getCityFromString cityStr
       nightChargeFrom = if city == ST.Delhi then "11 PM" else "10 PM"
       nightChargeTill = "5 AM"
+      cityConfig = getCityConfig state.data.config.cityConfig cityStr
+      waitingCharges = 
+        if state.data.selectedItem.vehicleVariant == Just ST.AUTO_RICKSHAW then
+            cityConfig.waitingChargeConfig.auto
+        else 
+            cityConfig.waitingChargeConfig.cabs
   in
   (if (state.data.selectedItem.nightCharges ) then [ "1.5" <> (getString $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill) ] else [])
     <> (if (isHaveFare "DRIVER_SELECTED_FARE" state.data.selectedItem.faresList) then [(getString DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) ] else [])
-    <> (if (isHaveFare "WAITING_OR_PICKUP_CHARGES" state.data.selectedItem.faresList) then [ (getString WAITING_CHARGE_DESCRIPTION) ] else [])
+    <> (if (isHaveFare "WAITING_OR_PICKUP_CHARGES" state.data.selectedItem.faresList) then [ (getVarString WAITING_CHARGE_DESCRIPTION [show waitingCharges.freeMinutes, show waitingCharges.perMinCharges] ) ] else [])
     <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" state.data.selectedItem.faresList) then [ (getString EARLY_END_RIDE_CHARGES_DESCRIPTION) ] else [])
     <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" state.data.selectedItem.faresList) then [ (getString CUSTOMER_TIP_DESCRIPTION) ] else [])
     <> (if (isHaveFare "TOLL_CHARGES" state.data.selectedItem.faresList) then [ "⁺" <> (getString TOLL_CHARGES_DESC) ] else [])

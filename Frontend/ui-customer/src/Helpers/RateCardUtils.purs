@@ -80,7 +80,7 @@ getFareBreakupList (EstimateAPIEntity estimate) maxTip =
   fareInfoDescription = 
     [ getString TOTAL_FARE_MAY_CHANGE_DUE_TO_CHANGE_IN_ROUTE
     ]
-    <> (if nightShiftRate.amount > 1.0 then [getString $ DAYTIME_CHARGES_APPLIED_AT_NIGHT (toStringWith (fixed 1) (1.0 + nightShiftRate.amount/100.0)) (EHC.convertUTCtoISC nightShiftStart "hh a") (EHC.convertUTCtoISC nightShiftEnd "hh a")] else [])
+    <> (if nightShiftRate.amount > 1.0 then [getString $ DAYTIME_CHARGES_APPLIED_AT_NIGHT (toStringWith (fixed 2) (1.0 + nightShiftRate.amount/100.0)) (EHC.convertUTCtoISC nightShiftStart "hh a") (EHC.convertUTCtoISC nightShiftEnd "hh a")] else []) -- 
     <> (if maxTip > 0 then [getString $ TIP_CAN_BE_ADDED $ show maxTip] else [])
     <> (if congestionCharges.amount > 0.0 then [getString $ RUSH_HOURS_DESC $ EHU.getFixedTwoDecimals congestionCharges.amount] else [])
 

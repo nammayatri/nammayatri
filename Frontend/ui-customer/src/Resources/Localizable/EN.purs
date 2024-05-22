@@ -262,7 +262,7 @@ getEN stringKey =
         DAY_TIMES_OF -> ""
         DAYTIME_CHARGES_APPLICABLE_AT_NIGHT from till -> "x of daytime charges applicable at night from "<> from <>" to " <> till
         NIGHT_TIMES_OF -> ""
-        DAYTIME_CHARGES_APPLIED_AT_NIGHT percentage from till -> percentage <> "x of daytime charges applied to fare at night (🌙) from "<> from <>" to " <> till
+        DAYTIME_CHARGES_APPLIED_AT_NIGHT percentage from till -> percentage <> "x of daytime charges will be applicable at night (🌙) from "<> from <>" to " <> till
         DRIVERS_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC -> "* Driver may optionally request 10% of base fare (rounded to nearest Rs.10) to cover for traffic, chance of return trip etc."
         GOT_IT -> "Got It!"
         DAY_TIME_CHARGES from till -> "Daytime Charges ("<> from <> " to " <> till <> ")"
@@ -1029,7 +1029,7 @@ getEN stringKey =
         BOOK_ROUND_TRIP -> "Book round trip"
         BY_PROCEEDING_YOU_AGREE -> "By proceeding, you agree to the "
         TERMS_AND_CONDITIONS_FULL -> "Terms & Conditions"
-        EXPERIENCE_HASSLE_FREE_METRO_BOOKING -> "Experience hassle-free metro bookings on Namma Yatri"
+        EXPERIENCE_HASSLE_FREE_METRO_BOOKING appName -> "Experience hassle-free metro bookings on " <> appName
         KOCHI_METRO_TERM_1 -> "The tickets can be purchased between 5:00 AM to 11:45 PM on all days."
         KOCHI_METRO_TERM_2 -> "Once Entry is done, passengers should exit within 120 mins from the destination."
         KOCHI_METRO_TIME -> "Kochi Metro allows QR ticket purchase from 5:00 AM to 11:45 PM on all days. "
@@ -1078,11 +1078,11 @@ getEN stringKey =
         NAMMA_SERVICES -> "Yatri Services"
         LAST_CHOSEN_VARIANT_NOT_AVAILABLE -> "Last chosen ride type not available. Please choose an alternate ride option."
         TOLL_CHARGES -> "Toll Charges"
-        TOLL_CHARGES_DESC -> "Any toll charge accrued during the trip is included in your fare."
+        TOLL_CHARGES_DESC -> "Any toll charges accrued during the trip are included in your fare."
         TOLL_CHARGES_INCLUDING amount -> "Toll charges " <> amount <> " included in the fare"
         TOLL_ROAD_CHANGED -> "Toll charges not applicable"
         PARKING_CHARGES -> "Parking Charges"
-        PARKING_CHARGES_DESC -> "Parking charges accrued by the driver is not included in the fare. This is to be settled post ride between driver and passenger."
+        PARKING_CHARGES_DESC -> "Parking charges accrued by the driver are not included in the fare. These are to be settled after the ride between driver and passenger."
         TOLL_OR_PARKING_CHARGES -> "^Toll/ Parking Charges"
         TOLL_CHARGES_ESTIMATED -> "Toll Charges (Estimated)^"
         ADD_TIP -> "Add Tip"
@@ -1149,3 +1149,4 @@ getEN stringKey =
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "Estimates has been expired. Fetching again, Please wait a moment and check again."
         PAY_YOUR_DRIVER_BY_CASH_OR_UPI -> "Pay your driver using Cash / UPI"
         TRIP_DELAYED -> "Trip Delayed"
+        METRO_BANNER_TITLE appName -> "Book metro tickets with \n" <> appName <> " Now!"

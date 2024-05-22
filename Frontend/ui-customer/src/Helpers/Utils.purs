@@ -649,7 +649,7 @@ getVehicleVariantImage variant =
                                   Hyderabad -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
                                   Chennai -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
                                   Kochi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
-                                  Delhi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
+                                  Delhi -> variantConfig.bookAny.image
                                   _ -> variantConfig.bookAny.image
       _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
@@ -869,7 +869,7 @@ getAllServices dummy =
     Bangalore -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
     Tumakuru -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
     Hyderabad -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
-    Delhi -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+    Delhi -> ["Hatchback", "Sedan", "Auto", "SUV"]
     Chennai -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
     Mysore -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
     Kolkata -> ["Non-AC", "Hatchback", "Sedan", "SUV"]

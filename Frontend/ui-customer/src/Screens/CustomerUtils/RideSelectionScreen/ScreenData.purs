@@ -22,6 +22,8 @@ import Foreign.Object (empty)
 import Common.Types.App 
 import Screens.Types
 import Data.Maybe
+import ConfigProvider (appConfig, getAppConfig)
+import MerchantConfig.Types (AppConfig(..))
 
 -- ############################### Types ###############################
 type RideSelectionScreenState =
@@ -38,7 +40,8 @@ type RideSelectionScreenState =
 type RideSelectionScreenData = {
     offsetValue :: Int,
     loadMoreText :: Boolean,
-    isSrcServiceable :: Boolean
+    isSrcServiceable :: Boolean,
+    config :: AppConfig
   }
 
 type RideSelectionScreenProps = {
@@ -70,6 +73,7 @@ initData =
       { offsetValue: 0
       , loadMoreText: true
       , isSrcServiceable : true
+      , config : getAppConfig appConfig
       }
   , prestoListArrayItems: []
   , selectedCategory : {

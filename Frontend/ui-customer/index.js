@@ -193,7 +193,10 @@ window.onMerchantEvent = function (_event, globalPayload) {
       merchant = merchant.toUpperCase();
       window.merchantID = "MOBILITY_" + merchant.charAt(0) + merchant.charAt(merchant.length - 1);
     }
-    console.log(window.merchantID);
+    if (window.merchantID == "YATRI") {
+      window.merchantID = "NAMMAYATRI";
+    }
+    console.log("MID",window.merchantID);
     try {
       if (
         clientPaylod.hasOwnProperty("onCreateTimeStamp") &&
@@ -381,10 +384,12 @@ if (typeof window.JOS != "undefined") {
 }
 
 const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
-if(sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging")){
+const enableLogs = JBridge.fetchRemoteConfigBool && JBridge.fetchRemoteConfigBool("enable_logs")
+if (sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging") || enableLogs) {
   logger.enableLogger();
-}else{
+  Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;", "null");
+} else {
   logger.disableLogger();
-  Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;","null");
+  Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;", "null");
 }
 console.log("APP_PERF INDEX_BUNDLE_END : ", new Date().getTime());

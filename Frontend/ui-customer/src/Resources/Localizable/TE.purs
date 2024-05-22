@@ -1035,7 +1035,7 @@ getTE stringKey =
     BOOK_ROUND_TRIP -> "బుక్ రౌండ్ ట్రిప్"
     BY_PROCEEDING_YOU_AGREE -> "కొనసాగించడం ద్వారా, మీరు అంగీకరిస్తున్నారు "
     TERMS_AND_CONDITIONS_FULL -> "నిబంధనలు & షరతులు"
-    EXPERIENCE_HASSLE_FREE_METRO_BOOKING -> "నమ్మ యాత్రిలో అవాంతరాలు లేని మెట్రో బుకింగ్‌లను అనుభవించండి"
+    EXPERIENCE_HASSLE_FREE_METRO_BOOKING appName -> "అనుభవించండి హాసల్ ఫ్రీ మెట్రో బుకింగ్లను " <> appName
     KOCHI_METRO_TERM_1 -> "టికెట్లను అన్ని రోజులలో 5:00 AM నుండి 11:45 PM మధ్య కొనుగోలు చేయవచ్చు."
     KOCHI_METRO_TERM_2 -> "ప్రవేశం పూర్తయిన తర్వాత, ప్రయాణీకులు గమ్యస్థానం నుండి 120 నిమిషాలలోపు నిష్క్రమించాలి."
     KOCHI_METRO_TIME -> "కొచ్చి మెట్రో అన్ని రోజులలో 5:00 AM నుండి 11:45 PM వరకు QR టిక్కెట్ కొనుగోలును అనుమతిస్తుంది."
@@ -1164,3 +1164,4 @@ getTE stringKey =
     ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "అంచనాలు కాలము గడిచింది. మళ్ళీ తీసుకుంటున్నాము, దయచేసి కొన్ని క్షణాల వేళ వీణ్డి మరియు మళ్ళీ తనిఖీ చేయండి."
     PAY_YOUR_DRIVER_BY_CASH_OR_UPI -> "డ్రైవర్‌ను క్యాష్ లేదా UPI ద్వారా చెల్లించండి"
     TRIP_DELAYED -> "ప్రయాణం ఆలస్యమైంది"
+    METRO_BANNER_TITLE appName -> "మీరు ఇప్పుడు మెట్రో టికెట్లను బుక్ చేయవచ్చు \n" <> appName <> " తో!"

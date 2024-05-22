@@ -407,7 +407,12 @@ config =
               { radius = 50000,
                 strictBounds = true
               },
-            enableCabs = true
+            enableCabs = true,
+            waitingChargeConfig {
+                auto {
+                  perMinCharges = 1.0
+                }
+            }
           },
         defaultCityConfig
           { cityName = "Hyderabad",
@@ -418,7 +423,13 @@ config =
               },
             dashboardUrl = "https://www.manayatri.in/open?source=in-app",
             appLogoLight = "ny_ic_logo_light_my,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_logo_light_my.png",
-            appLogo = "ic_namma_yatri_logo,https://assets.moving.tech/beckn/nammayatri/user/images/ic_namma_yatri_logo.png"
+            appLogo = "ic_namma_yatri_logo,https://assets.moving.tech/beckn/nammayatri/user/images/ic_namma_yatri_logo.png",
+            waitingChargeConfig {
+              auto {
+                freeMinutes = 3.0
+              , perMinCharges = 2.0
+              }
+            }
           },
         defaultCityConfig
           { cityName = "Kolkata",
@@ -427,6 +438,26 @@ config =
               { domain = "https://www.yatrisathi.in",
                 customerAppId = "in.juspay.jatrisaathi"
               }
+          },
+        defaultCityConfig
+          { cityName = "Delhi",
+            cityCode = "std:011",
+            waitingChargeConfig {
+              auto {
+                freeMinutes = 3.0
+              , perMinCharges = 0.75
+              }
+            }
+          },
+        defaultCityConfig
+          { cityName = "Kochi",
+            cityCode = "std:0484",
+            waitingChargeConfig {
+              auto {
+                freeMinutes = 3.0
+              , perMinCharges = 1.0
+              }
+            }
           }
       ]
   , bannerCarousel : defaultBannerCarousel
@@ -480,5 +511,15 @@ defaultCityConfig =
     appLogo : "",
     dashboardUrl : "",
     appLogoLight : "",
-    enableAcViews : false
+    enableAcViews : false,
+    waitingChargeConfig : {
+      auto : {
+        freeMinutes : 3.0
+      , perMinCharges : 1.5
+      },
+      cabs : {
+        freeMinutes : 5.0
+      , perMinCharges : 1.0
+      }
+    }
   }

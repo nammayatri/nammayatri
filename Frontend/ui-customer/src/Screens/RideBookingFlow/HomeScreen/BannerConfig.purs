@@ -18,6 +18,9 @@ import Data.String (null, take, toLower)
 import Prelude (not, show, ($), (&&), (<>), (==))
 import Locale.Utils (getLanguageLocale)
 import SessionCache (getValueFromWindow)
+import Data.Maybe (fromMaybe, Maybe(..))
+import Data.Function.Uncurried (runFn3)
+import DecodeUtil (getAnyFromWindow)
 import RemoteConfig as RC
 import Debug
 
@@ -128,10 +131,11 @@ metroBannerConfig state action =
   let
     config = BannerCarousel.config action
     (CityMetroConfig cityConfig) = getMetroConfigFromCity state.props.city 
+    appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
     config' = config
       {
         backgroundColor = Color.blue600'
-      , title = getString BOOK_METRO_WITH_NY_NOW
+      , title = getString $ METRO_BANNER_TITLE appName
       , titleColor = Color.blue800
       , actionText = getString BOOK_NOW
       , actionTextBackgroundColour = Color.blue800

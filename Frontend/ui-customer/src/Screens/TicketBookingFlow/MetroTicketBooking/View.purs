@@ -167,7 +167,7 @@ infoSelectioView state push city cityMetroConfig metroConfig =
           , width MATCH_PARENT
           , orientation VERTICAL
           ]
-          [ bannerView push cityMetroConfig
+          [ bannerView push cityMetroConfig state
           , linearLayout
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
@@ -205,14 +205,14 @@ infoSelectioView state push city cityMetroConfig metroConfig =
           ]
       ]
 
-bannerView :: forall w . (Action -> Effect Unit) ->  CityMetroConfig -> PrestoDOM (Effect Unit) w
-bannerView push cityMetroConfig = 
+bannerView :: forall w . (Action -> Effect Unit) ->  CityMetroConfig -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
+bannerView push cityMetroConfig state = 
   linearLayout[
     width MATCH_PARENT
   , height WRAP_CONTENT
   , cornerRadius 8.0  
   , margin $ (Margin 16 0 16 0)
-  ][ Banner.view (push <<< const NoAction) (metroBannerConfig cityMetroConfig)
+  ][ Banner.view (push <<< const NoAction) (metroBannerConfig cityMetroConfig state)
   ]
 
 roundTripCheckBox :: (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> MetroConfig -> forall w . PrestoDOM (Effect Unit) w

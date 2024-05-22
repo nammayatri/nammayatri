@@ -465,10 +465,11 @@ metroBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config 
 metroBannerConfig state action =
   let
     config = BannerCarousel.config action
+    appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
     config' = config
       {
         backgroundColor = Color.blue600'
-      , title = getString BOOK_METRO_WITH_NY_NOW
+      , title = getString $ METRO_BANNER_TITLE appName
       , titleColor = Color.blue800
       , actionText = getString BOOK_NOW
       , actionTextColor = Color.blue700
@@ -508,10 +509,11 @@ metroTicketBannerConfig :: ST.HomeScreenState -> Banner.Config
 metroTicketBannerConfig state = 
   let
     config = Banner.config
+    appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
     config' = config
       {
         backgroundColor = Color.blue600'
-      , title = "Book metro tickets with \nNamma Yatri Now!"
+      , title = getString $ METRO_BANNER_TITLE appName
       , titleColor = Color.blue800
       , actionText = "Book Now"
       , actionTextColor = Color.white900
@@ -914,7 +916,7 @@ rateCardConfig state =
           {key : "TOLL_CHARGES_DESC", val : (getString TOLL_CHARGES_DESC)},
           {key : "PARKING_CHARGES", val : (getString PARKING_CHARGES)},
           {key : "PARKING_CHARGES_DESC", val : (getString PARKING_CHARGES_DESC)}]
-          <> if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" && state.data.config.searchLocationConfig.showChargeDesc then [{key : "CHARGE_DESCRIPTION", val : (getString ERNAKULAM_LIMIT_CHARGE)}] else []
+          <> if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" && state.data.config.searchLocationConfig.showChargeDesc && city == Kochi then [{key : "CHARGE_DESCRIPTION", val : (getString ERNAKULAM_LIMIT_CHARGE)}] else []
         }
   in
     rateCardConfig'

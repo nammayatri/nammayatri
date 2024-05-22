@@ -158,7 +158,7 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
   case status of
     "success" -> do
                   let bufferCardDataPrestoList = ((myRideListTransformerProp (rideList ^. _list)))
-                  let bufferCardData = myRideListTransformer state.data.isSrcServiceable (rideList  ^. _list)
+                  let bufferCardData = myRideListTransformer state.data.isSrcServiceable (rideList  ^. _list) state.data.config
                   void $ pure $ setRefreshing "2000031" false
                   let loaderBtnDisabled = length (rideList ^. _list )== 0
                   continue $ state {shimmerLoader = AnimatedOut ,prestoListArrayItems = union (state.prestoListArrayItems) (bufferCardDataPrestoList), itemsRides = unionBy matchRidebyId (state.itemsRides) (bufferCardData),props{loadMoreDisabled = loaderBtnDisabled, receivedResponse = true}}

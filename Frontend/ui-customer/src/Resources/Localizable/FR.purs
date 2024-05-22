@@ -1033,7 +1033,7 @@ getFR stringKey =
         BOOK_ROUND_TRIP -> "Réserver un aller-retour"
         BY_PROCEEDING_YOU_AGREE -> "En poursuivant, vous acceptez le "
         TERMS_AND_CONDITIONS_FULL -> "Termes et conditions"
-        EXPERIENCE_HASSLE_FREE_METRO_BOOKING -> "Faites l'expérience de réservations de métro sans tracas sur Namma Yatri"
+        EXPERIENCE_HASSLE_FREE_METRO_BOOKING appName -> "Faites l'expérience de réservations de métro sans tracas sur Namma Yatri"
         KOCHI_METRO_TERM_1 -> "Les billets peuvent être achetés entre 5h00 et 23h45 tous les jours."
         KOCHI_METRO_TERM_2 -> "Une fois l'entrée effectuée, les passagers doivent sortir dans les 120 minutes suivant la destination."
         KOCHI_METRO_TIME -> "Le métro de Kochi autorise l'achat de billets QR de 5h00 à 23h45 tous les jours."
@@ -1153,3 +1153,4 @@ getFR stringKey =
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "Estimates has been expired. Fetching again, Please wait a moment and check again."
         PAY_YOUR_DRIVER_BY_CASH_OR_UPI -> "Payez votre chauffeur en espèces ou par UPI"
         TRIP_DELAYED -> "Trajet retardé"
+        METRO_BANNER_TITLE appName -> "Réservez des billets de métro avec \n" <> appName <> " maintenant !"

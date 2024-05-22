@@ -62,7 +62,7 @@ window.getMerchantConfig = function () {
     "isChatEnabled": "true",
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
-    "showCorporateAddress" : false,
+    "showCorporateAddress" : true,
     "gradient": [],
     "loaderColor": "",
     "showHamMenu" : true,
@@ -229,10 +229,10 @@ window.getMerchantConfig = function () {
       , "titleColor" : "#21C179"
       , "actionText" : "Update now"
       , "actionTextColor" : "#27AE5F"
-      , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
+      , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
     },
     "terminateBtnConfig" : {
-      "visibility" : false, 
+      "visibility" : false,
       "title" : "Namma Yatri",
       "imageUrl" : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
     }
@@ -248,8 +248,8 @@ window.getMerchantConfig = function () {
     , "metroTicketingConfig" : [
       { "cityName" : "kochi"
       , "cityCode" : "std:0484"
-      , "customEndTime" : "23:59:59" 
-      , "customDates" : ["03/05/2024", "04/05/2024", "05/05/2024", "06/05/2024", "07/05/2024", "08/05/2024", "09/05/2024", "10/05/2024","11/05/2024"]    
+      , "customEndTime" : "23:59:59"
+      , "customDates" : ["03/05/2024", "04/05/2024", "05/05/2024", "06/05/2024", "07/05/2024", "08/05/2024", "09/05/2024", "10/05/2024","11/05/2024"]
       , "metroStationTtl" : 10080
       , "bookingStartTime" : "05:45:00"
       , "bookingEndTime" : "22:30:00"
@@ -259,9 +259,9 @@ window.getMerchantConfig = function () {
     }
       },
       { "cityName" : "chennai"
-      , "cityCode" : "std:040" 
-      , "customEndTime" : "01:00:00" 
-      , "customDates" : ["23/04/2024","28/04/2024","01/05/2024","12/05/2024"] 
+      , "cityCode" : "std:040"
+      , "customEndTime" : "01:00:00"
+      , "customDates" : ["23/04/2024","28/04/2024","01/05/2024","12/05/2024"]
       , "metroStationTtl" : 10080
       , "bookingStartTime" : "04:30:00"
       , "bookingEndTime" : "22:30:00"
@@ -279,37 +279,39 @@ window.getMerchantConfig = function () {
     , "SUPPORT_EMAIL" : "support@nammayatri.in"
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
     , "showDisabilityBanner" : false
-  
+    
     , "estimateAndQuoteConfig" : {
       "enableBookingPreference" : false,
+      "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ],
+      "variantOrder" : ["AUTO_RICKSHAW", "BOOK_ANY"],
       "variantInfo" : {
         "hatchback" : {
           "name" : "Hatchback",
-          "image" : "ic_hatchback,https://assets.juspay.in/beckn/yatri/user/images/ic_hatchback.png"
+          "image" : "ic_hatchback_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_hatchback_ac.png"
           },
         "taxiPlus" : {
           "name" : "AC Taxi",
-          "image" : "ic_sedan_ac,https://assets.juspay.in/beckn/yatri/user/images/ic_sedan_ac.png"
+          "image" : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png"
         },
         "sedan" : {
           "name" : "Sedan",
-          "image" : "ic_sedan,https://assets.juspay.in/beckn/yatri/user/images/ic_sedan.png"
+          "image" : "ny_ic_sedan_ac_new,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png"
         },
         "taxi" : {
           "name" : "Non-AC Taxi",
-          "image" : "ic_sedan,https://assets.juspay.in/beckn/yatri/user/images/ic_sedan.png"
+          "image" : "ic_taxi,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_taxi.png"
         },
         "suv" : {
           "name" : "SUV",
-          "image" : "ic_suv,https://assets.juspay.in/beckn/yatri/user/images/ic_suv.png"
+          "image" : "ic_suv_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_suv_ac.png"
         },
         "autoRickshaw" : {
           "name" : "Auto Rickshaw",
-          "image" : "ny_ic_single_estimate_auto_black,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_single_estimate_auto_black.png"
+          "image" : "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png"
         },
         "bookAny" : {
           "name" : "Book Any",
-          "image" : "ny_ic_auto_cab_black,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_auto_cab_black.png"
+          "image" : "ny_ic_auto_cab_green,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_cab_green.png"
         },
       }
     }

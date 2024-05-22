@@ -34,6 +34,8 @@ import Resources.Localizable.EN
 import Language.Types
 import Helpers.Utils (CityMetroConfig(..))
 import Components.Banner as Banner
+import DecodeUtil (getAnyFromWindow)
+import Data.Function.Uncurried (runFn3)
 
 metroTicketBookingHeaderConfig :: ST.MetroTicketBookingScreenState -> GenericHeader.Config
 metroTicketBookingHeaderConfig state = let
@@ -76,10 +78,11 @@ updateButtonConfig state = let
         }
     in updateButtonConfig'
 
-metroBannerConfig :: CityMetroConfig -> Banner.Config
-metroBannerConfig (CityMetroConfig cityMetroConfig) =
+metroBannerConfig :: CityMetroConfig -> ST.MetroTicketBookingScreenState -> Banner.Config
+metroBannerConfig (CityMetroConfig cityMetroConfig) state =
   let
     config = Banner.config
+    appName = fromMaybe state.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
     config' = config
       {
         backgroundColor = cityMetroConfig.bannerBackgroundColor
@@ -88,7 +91,7 @@ metroBannerConfig (CityMetroConfig cityMetroConfig) =
       , imageWidth = V 124
       , margin = MarginVertical 12 12
       , imagePadding = PaddingVertical 0 0
-      , title = getString EXPERIENCE_HASSLE_FREE_METRO_BOOKING
+      , title = getString $ EXPERIENCE_HASSLE_FREE_METRO_BOOKING appName
       , titleColor = cityMetroConfig.bannerTextColor
       , padding = PaddingLeft 5
       , actionTextVisibility = false
