@@ -86,7 +86,11 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 else cancelRideTransactionForNonReallocation Nothing (Just searchTry.estimateId)
             Left _ -> cancelRideTransactionForNonReallocation Nothing (Just searchTry.estimateId)
         else cancelRideTransactionForNonReallocation Nothing (Just searchTry.estimateId)
-    DTC.Rental DTC.OnDemandStaticOffer -> do
+    DTC.Rental DTC.OnDemandStaticOffer -> reallocateStaticOffer now
+    DTC.InterCity DTC.OneWayOnDemandStaticOffer -> reallocateStaticOffer now
+    _ -> cancelRideTransactionForNonReallocation Nothing Nothing
+  where
+    reallocateStaticOffer now = do
       quote <- QQuote.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
       searchTry <- QST.findLastByRequestId quote.searchRequestId >>= fromMaybeM (SearchTryNotFound quote.searchRequestId.getId)
@@ -127,8 +131,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 else cancelRideTransactionForNonReallocation (Just newBooking) Nothing
             Left _ -> cancelRideTransactionForNonReallocation (Just newBooking) Nothing
         else cancelRideTransactionForNonReallocation Nothing Nothing
-    _ -> cancelRideTransactionForNonReallocation Nothing Nothing
-  where
+
     createQuoteDetails searchReq searchTry estimateId = do
       estimate <- QEst.findById (Id estimateId) >>= fromMaybeM (EstimateNotFound estimateId)
       let mbDriverExtraFeeBounds = ((,) <$> estimate.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> estimate.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
