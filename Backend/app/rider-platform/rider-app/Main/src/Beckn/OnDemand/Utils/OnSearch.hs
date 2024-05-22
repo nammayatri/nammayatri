@@ -253,7 +253,7 @@ getPlannedPerKmRateRoundTrip tagGroups currency = do
   plannedPerKmRateRoundTrip <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency plannedPerKmRateRoundTrip
 
-getPerDayMaxHourAllowance :: Maybe [Spec.TagGroup] -> Maybe Minutes
+getPerDayMaxHourAllowance :: Maybe [Spec.TagGroup] -> Maybe Hours
 getPerDayMaxHourAllowance tagGroups = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_DAY_MAX_HOUR_ALLOWANCE tagGroups
   readMaybe $ T.unpack tagValue

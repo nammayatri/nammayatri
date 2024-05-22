@@ -36,7 +36,7 @@ insert into atlas_driver_offer_bpp.fare_policy
 values ('86a96e7a-10a4-40bf-b9cd-5eb6cc5f40ae', '22:00:00', '06:00:00', now(), now(), 0, 1000000, null, null, 'InterCity', 'Inter City Fare Policy Bangalore (Non-AC mini)', null, null, null, 'INR', null, null, null);
 
 insert into atlas_driver_offer_bpp.fare_policy_inter_city_details(fare_policy_id, base_fare, per_hour_charge, per_km_rate_one_way, per_km_rate_round_trip, per_extra_km_rate, per_extra_min_rate, km_per_planned_extra_hour, dead_km_fare, per_day_max_hour_allowance, default_wait_time_at_destination, currency, night_shift_charge)
-values ('86a96e7a-10a4-40bf-b9cd-5eb6cc5f40ae', 0, 60, 9, 10.8, 9.5, 2.2, 10, 25, 840, 60, 'INR', '{"contents": 200, "tag": "ConstantNightShiftCharge"}');
+values ('86a96e7a-10a4-40bf-b9cd-5eb6cc5f40ae', 0, 60, 9, 10.8, 9.5, 2.2, 10, 25, 14, 60, 'INR', '{"contents": 200, "tag": "ConstantNightShiftCharge"}');
 
 -- AC mini
 insert into atlas_driver_offer_bpp.fare_policy
@@ -44,7 +44,7 @@ insert into atlas_driver_offer_bpp.fare_policy
 values ('86a96e7a-10a4-40bf-b9cd-5eb6cc5f40af', '22:00:00', '06:00:00', now(), now(), 0, 1000000, null, null, 'InterCity', 'Inter City Fare Policy Bangalore (AC mini)', null, null, null, 'INR', null, null, null);
 
 insert into atlas_driver_offer_bpp.fare_policy_inter_city_details(fare_policy_id, base_fare, per_hour_charge, per_km_rate_one_way, per_km_rate_round_trip, per_extra_km_rate, per_extra_min_rate, km_per_planned_extra_hour, dead_km_fare, per_day_max_hour_allowance, default_wait_time_at_destination, currency, night_shift_charge)
-values ('86a96e7a-10a4-40bf-b9cd-5eb6cc5f40af', 0, 60, 10, 12, 10.5, 2.5, 10, 30, 840, 60, 'INR', '{"contents": 250, "tag": "ConstantNightShiftCharge"}');
+values ('86a96e7a-10a4-40bf-b9cd-5eb6cc5f40af', 0, 60, 10, 12, 10.5, 2.5, 10, 30, 14, 60, 'INR', '{"contents": 250, "tag": "ConstantNightShiftCharge"}');
 
 -- Sedan
 insert into atlas_driver_offer_bpp.fare_policy
@@ -52,7 +52,7 @@ insert into atlas_driver_offer_bpp.fare_policy
 values ('86a96e7a-10a4-40bf-b9cd-5eb6cc5f40ag', '22:00:00', '06:00:00', now(), now(), 0, 1000000, null, null, 'InterCity', 'Inter City Fare Policy Bangalore (Sedan)', null, null, null, 'INR', null, null, null);
 
 insert into atlas_driver_offer_bpp.fare_policy_inter_city_details(fare_policy_id, base_fare, per_hour_charge, per_km_rate_one_way, per_km_rate_round_trip, per_extra_km_rate, per_extra_min_rate, km_per_planned_extra_hour, dead_km_fare, per_day_max_hour_allowance, default_wait_time_at_destination, currency, night_shift_charge)
-values ('86a96e7a-10a4-40bf-b9cd-5eb6cc5f40ag', 0, 60, 11, 13.2, 11.5, 2.85, 10, 35, 840, 60, 'INR', '{"contents": 300, "tag": "ConstantNightShiftCharge"}');
+values ('86a96e7a-10a4-40bf-b9cd-5eb6cc5f40ag', 0, 60, 11, 13.2, 11.5, 2.85, 10, 35, 14, 60, 'INR', '{"contents": 300, "tag": "ConstantNightShiftCharge"}');
 
 -- SUV
 insert into atlas_driver_offer_bpp.fare_policy
@@ -60,7 +60,7 @@ insert into atlas_driver_offer_bpp.fare_policy
 values ('86a96e7a-10a4-40bf-b9cd-5eb6cc5f40ah', '22:00:00', '06:00:00', now(), now(), 0, 1000000, null, null, 'InterCity', 'Inter City Fare Policy Bangalore (SUV)', null, null, null, 'INR', null, null, null);
 
 insert into atlas_driver_offer_bpp.fare_policy_inter_city_details(fare_policy_id, base_fare, per_hour_charge, per_km_rate_one_way, per_km_rate_round_trip, per_extra_km_rate, per_extra_min_rate, km_per_planned_extra_hour, dead_km_fare, per_day_max_hour_allowance, default_wait_time_at_destination, currency, night_shift_charge)
-values ('86a96e7a-10a4-40bf-b9cd-5eb6cc5f40ah', 0, 60, 15, 18, 15.5, 3.2, 10, 40, 840, 60, 'INR', '{"contents": 350, "tag": "ConstantNightShiftCharge"}');
+values ('86a96e7a-10a4-40bf-b9cd-5eb6cc5f40ah', 0, 60, 15, 18, 15.5, 3.2, 10, 40, 14, 60, 'INR', '{"contents": 350, "tag": "ConstantNightShiftCharge"}');
 
 --- Banglore city fare product (only for local and master) ---
 INSERT INTO atlas_driver_offer_bpp.fare_product ( area,enabled,fare_policy_id,id,merchant_id,merchant_operating_city_id,time_bounds,trip_category,vehicle_variant)

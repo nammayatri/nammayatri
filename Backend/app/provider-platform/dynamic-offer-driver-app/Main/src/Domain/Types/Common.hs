@@ -18,11 +18,18 @@
 
 module Domain.Types.Common where
 
+import Control.Lens.Operators
+import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as List
+import Data.OpenApi hiding (name)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import Domain.Types.ServiceTierType
 import EulerHS.Prelude hiding (length)
 import Kernel.Prelude
 import Kernel.Utils.GenericPretty
+import Servant
 import qualified Text.Show
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
@@ -52,6 +59,36 @@ data TripMode = RideOtp | OnDemandStaticOffer
   deriving anyclass (FromJSON, ToJSON, ToSchema)
   deriving (PrettyShow) via Showable TripMode
 
+instance FromHttpApiData TripMode where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData TripMode where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
+
+instance FromHttpApiData OneWayMode where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData OneWayMode where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
+
+instance FromHttpApiData TripCategory where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData TripCategory where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
+
 $(mkBeamInstancesForEnum ''TripCategory)
 
 instance Show TripCategory where
@@ -60,6 +97,29 @@ instance Show TripCategory where
   show (RideShare s) = "RideShare_" <> show s
   show (InterCity s) = "InterCity_" <> show s
   show (CrossCity s) = "CrossCity_" <> show s
+
+instance ToParamSchema TripCategory where
+  toParamSchema _ =
+    mempty
+      & title ?~ "TripCategory"
+      & type_ ?~ OpenApiString
+      & enum_
+        ?~ [ "OneWay_RideOtp",
+             "OneWay_OnDemandStaticOffer",
+             "OneWay_OnDemandDynamicOffer",
+             "RoundTrip_RideOtp",
+             "RoundTrip_OnDemandStaticOffer",
+             "Rental_RideOtp",
+             "Rental_OnDemandStaticOffer",
+             "RideShare_RideOtp",
+             "RideShare_OnDemandStaticOffer",
+             "InterCity_RideOtp",
+             "InterCity_OnDemandStaticOffer",
+             "InterCity_OnDemandDynamicOffer",
+             "CrossCity_RideOtp",
+             "CrossCity_OnDemandStaticOffer",
+             "CrossCity_OnDemandDynamicOffer"
+           ]
 
 instance Read TripCategory where
   readsPrec d' =

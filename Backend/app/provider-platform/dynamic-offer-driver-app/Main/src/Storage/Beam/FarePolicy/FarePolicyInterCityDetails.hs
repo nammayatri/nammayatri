@@ -28,7 +28,7 @@ data FarePolicyInterCityDetailsT f = FarePolicyInterCityDetailsT
     perExtraMinRate :: B.C f HighPrecMoney,
     kmPerPlannedExtraHour :: B.C f Kilometers,
     deadKmFare :: B.C f HighPrecMoney,
-    perDayMaxHourAllowance :: B.C f Minutes,
+    perDayMaxHourAllowance :: B.C f Hours,
     defaultWaitTimeAtDestination :: B.C f Minutes,
     currency :: B.C f Currency,
     nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)

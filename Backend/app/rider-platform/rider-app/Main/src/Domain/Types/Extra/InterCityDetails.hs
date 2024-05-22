@@ -23,7 +23,7 @@ data InterCityDetailsAPIEntity = InterCityDetailsAPIEntity
     plannedPerKmRateRoundTrip :: PriceAPIEntity,
     kmPerPlannedExtraHour :: Distance,
     nightShiftInfo :: Maybe NightShiftInfoAPIEntity,
-    perDayMaxHourAllowance :: Minutes,
+    perDayMaxHourAllowance :: Hours,
     tollCharges :: Maybe PriceAPIEntity
   }
   deriving (Generic, FromJSON, Show, ToSchema)
