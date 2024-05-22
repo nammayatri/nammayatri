@@ -30,6 +30,7 @@ import Data.Array (singleton)
 import Data.Maybe (maybe, Maybe(..))
 import Data.Either (Either(..))
 
+
 data CustomerDefaultErrorHandler = CustomerDefaultErrorHandler
 instance defaultApiErrorHandler :: ApiErrorHandler CustomerDefaultErrorHandler GlobalState where
   handleAllErrors = defaultHandleAllErrors
@@ -121,7 +122,7 @@ callApiBT :: forall a b.
   a ->
   FlowBT String b
 callApiBT payload = 
-  callApiBTWithOptions payload [] CustomerDefaultErrorHandler
+  callApiBTWithOptions payload []  CustomerDefaultErrorHandler
 
 callGzipApiBTWithOptions :: forall a b e.
   ApiErrorHandler e GlobalState =>

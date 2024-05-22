@@ -1380,3 +1380,8 @@ getTE stringKey =
         VARIANTS_ARE_SWITCHED -> "మీ ఆదరిత AC వేరియంట్‌లు మళ్ళీ సక్రియం చేయబడింది"
         NON_AC_ARE_SWITCHED -> "నాన్-AC మినీ డిఫాల్ట్‌గా సక్రియం చేయబడింది"
         TOP_AC_DRIVER -> "నమ్మ యాత్రిలో టాప్ AC డ్రైవర్ ఎలా ఉండాలో చూడండి"
+        NETWORK_ERROR -> "నెట్వర్క్ లోపం"
+        SERVER_ERROR -> "సర్వర్ లోపం"
+        UNKNOWN_ERROR -> "మీకు స్వాగతం"
+        CONNECTION_REFUSED -> "కనెక్షన్ నిరాకరించబడింది"
+        TIMEOUT -> "సమయం ముగిసినది"

@@ -1271,3 +1271,8 @@ getTA stringKey =
     TOLL_CHARGES_DESCRIPTION -> "பொருந்தும் நேரிடு கட்டணங்கள் கடைசி கட்டணத்திற்கு சேர்க்கப்படும்"
     WILL_BE_ADDED_TO_FINAL_FARE -> "கடைசி கட்டணத்தில் சேர்க்கப்படும்"
     EXTRA_DISTANCE_FARE -> "கூடுதல் தூரக் கட்டணம்"
+    NETWORK_ERROR -> "நெட்வொர்க் பிழை"
+    SERVER_ERROR  -> "சர்வர் பிழை"
+    UNKNOWN_ERROR -> "அறியப்படாத பிழை"
+    CONNECTION_REFUSED -> "இணைப்பு மறுக்கப்பட்டது"
+    TIMEOUT -> "நேரம் முடிந்தது"

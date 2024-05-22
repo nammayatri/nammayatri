@@ -1381,3 +1381,8 @@ getBN stringKey =
         VARIANTS_ARE_SWITCHED -> "আপনার পছন্দনীয় এসি ভেরিয়েন্টগুলি আবার সক্রিয় করা হয়েছে"
         NON_AC_ARE_SWITCHED -> "এসি ছাড়া মিনি ডিফল্টভাবে সক্রিয় করা হয়েছে"
         TOP_AC_DRIVER -> "দেখুন কীভাবে নম্মা যাত্রীতে শীর্ষ এসি ড্রাইভার হতে হয়"
+        NETWORK_ERROR -> "নেটওয়ার্ক ত্রুটি"
+        SERVER_ERROR -> "সার্ভার সমস্যা"
+        UNKNOWN_ERROR -> "অজানা ত্রুটি"
+        CONNECTION_REFUSED  -> "সংযোগ প্রত্যাখ্যাত"
+        TIMEOUT -> "সময় শেষ"

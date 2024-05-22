@@ -1379,3 +1379,8 @@ getKN stringKey =
         VARIANTS_ARE_SWITCHED -> "ನಿಮ್ಮ ಆದ್ಯತೆಯ AC ವ್ಯಾರಿಯಂಟ್‌ಗಳನ್ನು ಮರುಸ್ಥಾಪಿಸಲಾಗಿದೆ"
         NON_AC_ARE_SWITCHED -> "ನಿಮ್ಮ ಆದ್ಯತೆಯ Non-AC ವ್ಯಾರಿಯಂಟ್‌ಗಳನ್ನು ಮರುಸ್ಥಾಪಿಸಲಾಗಿದೆ"
         TOP_AC_DRIVER -> "ನಮ್ಮ ಯಾತ್ರಿಯಲ್ಲಿ ಉನ್ನತ AC ಡ್ರೈವರ್ ಆಗುವುದು ಹೇಗೆ ಎಂದು ನೋಡಿ"
+        NETWORK_ERROR -> "ನೆಟ್‌ವರ್ಕ್ ದೋಷ"
+        SERVER_ERROR -> "ಸರ್ವರ್ ದೋಷ"
+        UNKNOWN_ERROR -> "ಅಜ್ಞಾತ ದೋಷ"
+        CONNECTION_REFUSED -> "ಸಂಪರ್ಕ ತಿರಸ್ಕರಿಸಲಾಗಿದೆ"
+        TIMEOUT -> "ಟೈಮ್ಔಟ್"
