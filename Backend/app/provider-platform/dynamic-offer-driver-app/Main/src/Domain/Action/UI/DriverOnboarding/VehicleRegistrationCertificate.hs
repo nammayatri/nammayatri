@@ -184,7 +184,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
     getImage :: Id Image.Image -> Flow Text
     getImage imageId_ = do
       imageMetadata <- ImageQuery.findById imageId_ >>= fromMaybeM (ImageNotFound imageId_.getId)
-      unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId_.getId)
+      unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId_.getId)
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId_.getId)
       unless (imageMetadata.imageType == ODC.VehicleRegistrationCertificate) $
         throwError (ImageInvalidType (show ODC.VehicleRegistrationCertificate) (show imageMetadata.imageType))
