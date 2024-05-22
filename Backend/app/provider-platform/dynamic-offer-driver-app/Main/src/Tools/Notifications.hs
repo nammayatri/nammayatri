@@ -796,7 +796,7 @@ sendSearchRequestToDriverNotification ::
   Id DMOC.MerchantOperatingCity ->
   Notification.NotificationReq SearchRequestForDriverAPIEntity EmptyDynamicParam ->
   m ()
-sendSearchRequestToDriverNotification merchantId merchantOpCityId req = Notification.notifyPersonWithAllProviders handler req False
+sendSearchRequestToDriverNotification merchantId merchantOpCityId req = Notification.notifyPersonWithAllProviders handler req True
   where
     handler = Notification.NotficationServiceHandler {..}
 
