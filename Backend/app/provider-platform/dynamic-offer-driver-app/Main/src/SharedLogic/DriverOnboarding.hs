@@ -387,7 +387,7 @@ isValidCOVRC mVehicleCategory capacity manufacturer bodyType manufacturerModel v
       let manufacturerMatched = manufacturerCheckFunction obj.manufacturer manufacturer
       let manufacturerModelMatched = manufacturerModelCheckFunction obj.manufacturerModel manufacturerModel
       let bodyTypeMatched = bodyTypeCheckFunction obj.bodyType bodyType
-      (classMatched || categoryMatched) && capacityMatched && manufacturerMatched && manufacturerModelMatched && bodyTypeMatched
+      (classMatched || categoryMatched) && (obj.vehicleVariant == BIKE || (capacityMatched && manufacturerMatched && manufacturerModelMatched && bodyTypeMatched)) -- For BIKE, only class/category match is enough
 
 -- capacityCheckFunction validCapacity rcCapacity
 capacityCheckFunction :: Maybe Int -> Maybe Int -> Bool
