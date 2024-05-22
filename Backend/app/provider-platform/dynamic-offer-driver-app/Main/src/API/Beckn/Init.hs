@@ -21,7 +21,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import qualified BecknV2.OnDemand.Types as Spec
-import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Merchant as DM
@@ -41,6 +41,7 @@ import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.FarePolicy as SFP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import TransactionLogs.PushLogs
 
 type API =
@@ -61,7 +62,6 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "Init APIV2 Flow" "Reached"
     (dInitReq, bapUri, bapId, msgId, city, country, bppId, bppUri) <- do
-      dInitReq <- ACL.buildInitReqV2 subscriber reqV2
       let context = reqV2.initReqContext
       callbackUrl <- Utils.getContextBapUri context
       bppUri <- Utils.getContextBppUri context
@@ -69,6 +69,8 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
       bapId <- Utils.getContextBapId context
       city <- Utils.getContextCity context
       country <- Utils.getContextCountry context
+      isValueAddNP <- CQVAN.isValueAddNP bapId
+      dInitReq <- ACL.buildInitReqV2 subscriber reqV2 isValueAddNP
       pure (dInitReq, callbackUrl, bapId, messageId, city, country, context.contextBppId, bppUri)
 
     let txnId = Just transactionId

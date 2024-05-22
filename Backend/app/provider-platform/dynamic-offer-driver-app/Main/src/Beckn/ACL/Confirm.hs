@@ -22,22 +22,28 @@ import qualified BecknV2.OnDemand.Utils.Context as Utils
 import qualified BecknV2.Utils as Utils
 import qualified Data.Text as T
 import Domain.Action.Beckn.Confirm as DConfirm
+import Domain.Types.Booking (BookingStatus (NEW))
 import Kernel.Prelude
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Field
-import Kernel.Types.Id
-import Kernel.Utils.Error.Throwing
+import Kernel.Utils.Common
+import qualified Storage.Queries.Booking as QB
 
 buildConfirmReqV2 ::
-  (HasFlowEnv m r '["_version" ::: Text]) =>
+  ( HasFlowEnv m r '["_version" ::: Text],
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
   Spec.ConfirmReq ->
   Bool ->
   m DConfirm.DConfirmReq
 buildConfirmReqV2 req isValueAddNP = do
   Utils.validateContext Context.CONFIRM req.confirmReqContext
-  bookingId <- fmap Id req.confirmReqMessage.confirmReqMessageOrder.orderId & fromMaybeM (InvalidRequest "orderId not found")
+  transactionId <- Utils.getTransactionId req.confirmReqContext
+  booking <- QB.findByTransactionIdAndStatus transactionId NEW >>= fromMaybeM (InvalidRequest "Booking not found")
+  let bookingId = booking.id
   fulfillment <- req.confirmReqMessage.confirmReqMessageOrder.orderFulfillments >>= listToMaybe & fromMaybeM (InvalidRequest "Fulfillment not found")
   customerPhoneNumber <- fulfillment.fulfillmentCustomer >>= (.customerContact) >>= (.contactPhone) & fromMaybeM (InvalidRequest "Customer Phone not found")
   let customerMobileCountryCode = "+91" -- TODO: check how to get countrycode via ONDC
