@@ -159,7 +159,7 @@ view push state =
     , afterRender push (const AfterRender)
     , background Color.white900
     , padding $ PaddingBottom EHC.safeMarginBottom
-    ]
+    ] $
     [ relativeLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
@@ -222,7 +222,6 @@ view push state =
     , if DS.null state.props.showCoinsRedeemedAnim then dummyView else lottieView state push
     , if (state.props.subView == ST.YATRI_COINS_VIEW && isJust state.props.showCoinsEarnedAnim) then (lottieCoinDifference state push) else dummyView
     , if state.props.popupType /= ST.NO_POPUP then PopUpModal.view (push <<< PopUpModalAC) (earningsPopupConfig state) else dummyView
-    , if state.props.calendarState.calendarPopup then Calendar.view (push <<< CalendarAC) (calendarConfig state) else dummyView
     , if state.props.showCoinsUsagePopup then coinsUsagePopup push state else dummyView
     , linearLayout
         [ height WRAP_CONTENT
@@ -231,7 +230,7 @@ view push state =
         , visibility $ boolToVisibility (any (_ == state.props.subView) [ ST.YATRI_COINS_VIEW, ST.EARNINGS_VIEW ])
         ]
         [ BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.DRIVER_EARNINGS_SCREEN state.data.config.bottomNavConfig) ]
-    ]
+    ] <> if state.props.calendarState.calendarPopup then [Calendar.view (push <<< CalendarAC) (calendarConfig state)] else []
   where
   cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
 
@@ -432,7 +431,7 @@ totalEarningsView push state =
             [ imageView
                 $ [ width (V 32)
                   , height (V 32)
-                  , imageWithFallback $ fetchImage FF_ASSET $ if state.props.weekIndex == 0 then "ny_ic_chevron_left_light_grey" else "ny_ic_chevron_left_light"
+                  , imageWithFallback $ fetchImage FF_ASSET $ if state.props.weekIndex == 0  then "ny_ic_chevron_left_grey" else "ny_ic_chevron_left_black"
                   , onClick push $ const $ LeftChevronClicked state.props.weekIndex
                   , clickable $ state.props.weekIndex > 0
                   ]
@@ -473,7 +472,7 @@ totalEarningsView push state =
             [ imageView
                 $ [ width $ V 32
                   , height $ V 32
-                  , imageWithFallback $ fetchImage FF_ASSET $ if state.props.weekIndex == 3 then "ny_ic_chevron_right_light_grey" else "ny_ic_chevron_right"
+                  , imageWithFallback $ fetchImage FF_ASSET $ if state.props.weekIndex == 3 then "ny_ic_chevron_right_grey" else "ny_ic_chevron_right_black"
                   , gravity RIGHT
                   , onClick push $ const $ RightChevronClicked state.props.weekIndex
                   , clickable $ state.props.weekIndex < 3
@@ -1162,7 +1161,7 @@ calendarView push state =
     linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , cornerRadius 100.0
+      , cornerRadius 12.0
       , background Color.white900
       , gravity CENTER_VERTICAL
       , stroke $ "1," <> Color.grey900

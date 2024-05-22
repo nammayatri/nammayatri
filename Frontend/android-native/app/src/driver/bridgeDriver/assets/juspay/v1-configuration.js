@@ -157,11 +157,11 @@ window.getMerchantConfig = function () {
           "showNew": false
         },
         "rideHistory": {
-          "isVisible": true,
+          "isVisible": false,
           "showNew": false
         },
         "driverEarnings": {
-          "isVisible": false,
+          "isVisible": true,
           "showNew": false
         },
         "subscription": {
