@@ -180,6 +180,10 @@ getTicketPlacesServices _ placeId mbDate = do
 
     mkServiceCategories bDate_ serviceCatId = do
       serviceCategory <- QSC.findById serviceCatId >>= fromMaybeM (ServiceCategoryNotFound serviceCatId.getId)
+      isClosed <-
+        QSO.findBySplDayAndEntityIdAndDate Domain.Types.SpecialOccasion.Closed (serviceCatId.getId) (Just bDate_) >>= \case
+          Just _ -> pure True
+          Nothing -> pure False
       mBeatManagement <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId bDate_
       peopleCategories <- mapM mkPeopleCategoriesRes serviceCategory.peopleCategory
       pure $
@@ -189,7 +193,8 @@ getTicketPlacesServices _ placeId mbDate = do
             availableSeats = serviceCategory.availableSeats,
             bookedSeats = maybe 0 (.booked) mBeatManagement,
             allowedSeats = calcAllowedSeats serviceCategory mBeatManagement,
-            peopleCategories
+            peopleCategories,
+            isClosed = isClosed
           }
 
     mkPeopleCategoriesRes pCatId = do

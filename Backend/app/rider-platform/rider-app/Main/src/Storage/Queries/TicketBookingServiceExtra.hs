@@ -43,6 +43,6 @@ findByVisitDateAndStatusAndServiceIdAndBtype visitDate status (Id.Id ticketServi
           Se.Is BeamR.status $ Se.Eq status,
           Se.Is BeamR.ticketServiceId $ Se.Eq ticketServiceId,
           Se.Is BeamR.btype $ Se.Eq btype,
-          Se.Is BeamR.expiryDate $ Se.LessThan expiryDate
+          Se.Is BeamR.expiryDate $ Se.GreaterThanOrEq expiryDate
         ]
     ]
