@@ -292,7 +292,6 @@ Image:
     merchantId: Id Merchant
     s3Path: Text
     imageType: DocumentType
-    isValid: Bool
     failureReason: Maybe DriverOnboardingError
     rcId: Maybe Text
     verificationStatus: Maybe VerificationStatus
@@ -318,10 +317,6 @@ Image:
     deleteByPersonId:
       kvFunction: deleteWithKV
       where: personId
-    updateIsValidAndFailureReason:
-      kvFunction: updateWithKV
-      params: [isValid, failureReason]
-      where: id
   extraOperations:
     - EXTRA_QUERY_FILE
 

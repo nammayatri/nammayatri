@@ -357,8 +357,8 @@ handleRejectRequest rejectReq _ merchantOperatingCityId = do
       let imageId = Id imageRejectReq.documentImageId.getId
       image <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
       case image.imageType of
-        Domain.ProfilePhoto -> QImage.updateIsValidAndFailureReason False (Just $ ImageNotValid imageRejectReq.reason) imageId
-        Domain.UploadProfile -> QImage.updateIsValidAndFailureReason False (Just $ ImageNotValid imageRejectReq.reason) imageId
+        Domain.ProfilePhoto -> QImage.updateVerificationStatusAndFailureReason INVALID (Just $ ImageNotValid imageRejectReq.reason) imageId
+        Domain.UploadProfile -> QImage.updateVerificationStatusAndFailureReason INVALID (Just $ ImageNotValid imageRejectReq.reason) imageId
         Domain.DriverLicense -> do
           QDL.updateVerificationStatus INVALID imageId
           QImage.updateVerificationStatus INVALID imageId

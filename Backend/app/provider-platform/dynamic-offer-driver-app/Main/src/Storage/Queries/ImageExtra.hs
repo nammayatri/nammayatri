@@ -54,3 +54,10 @@ updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kern
 updateVerificationStatus verificationStatus (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
   updateWithKV [Se.Set BeamI.verificationStatus (Just verificationStatus), Se.Set BeamI.updatedAt _now] [Se.Is BeamI.id $ Se.Eq id]
+
+updateVerificationStatusAndFailureReason ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Documents.VerificationStatus -> Kernel.Prelude.Maybe DriverOnboardingError -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
+updateVerificationStatusAndFailureReason verificationStatus failureReason (Kernel.Types.Id.Id id) = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set BeamI.verificationStatus (Just verificationStatus), Se.Set BeamI.failureReason failureReason, Se.Set BeamI.updatedAt _now] [Se.Is BeamI.id $ Se.Eq id]
