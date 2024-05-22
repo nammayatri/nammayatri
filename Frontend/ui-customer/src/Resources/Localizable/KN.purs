@@ -1254,3 +1254,8 @@ getKN stringKey =
         TOLL_CHARGES_DESCRIPTION -> "ಅನ್ವಯಗೊಳ್ಳುವ ಟೋಲ್ ಶುಲ್ಕಗಳು ಕೊನೆಯ ವಾಯಿತುಗೆ ಸೇರಿಸಲಾಗುತ್ತವೆ"
         WILL_BE_ADDED_TO_FINAL_FARE -> "ಕೊನೆಯ ವಾಯಿತುಗಿನಲ್ಲಿ ಸೇರಿಸಲಾಗುತ್ತದೆ"
         EXTRA_DISTANCE_FARE -> "ಹೆಚ್ಚುವರಿ ಅಂತರದ ಭಾಡಿ"
+        NETWORK_ERROR -> "ನೆಟ್‌ವರ್ಕ್ ದೋಷ"
+        SERVER_ERROR -> "ಸರ್ವರ್ ದೋಷ"
+        UNKNOWN_ERROR -> "ಅಜ್ಞಾತ ದೋಷ"
+        CONNECTION_REFUSED -> "ಸಂಪರ್ಕ ತಿರಸ್ಕರಿಸಲಾಗಿದೆ"
+        TIMEOUT -> "ಟೈಮ್ಔಟ್"
