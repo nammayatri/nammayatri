@@ -338,7 +338,7 @@ calculateFareParameters params = do
           baseFare_ = HighPrecMoney (toRational estimatedDurationInHr * perHourCharge.getHighPrecMoney) + extraPlannedKmFare
       ( baseFare_,
         nightShiftCharge,
-        Nothing,
+        waitingChargeInfo,
         DFParams.RentalDetails $
           DFParams.FParamsRentalDetails
             { timeBasedFare = fareByTime,

@@ -48,6 +48,12 @@ fromTTypeFarePolicyRentalDetails BeamFPRD.FarePolicyRentalDetailsT {..} fPRDB =
         maxAdditionalKmsLimit = maxAdditionalKmsLimit,
         totalAdditionalKmsLimit = totalAdditionalKmsLimit,
         distanceBuffers = snd <$> fPRDB,
+        waitingChargeInfo =
+          ((,) <$> waitingCharge <*> freeWaitingTime) <&> \(waitingCharge', freeWaitingTime') ->
+            Domain.WaitingChargeInfo
+              { waitingCharge = waitingCharge',
+                freeWaitingTime = freeWaitingTime'
+              },
         currency = fromMaybe INR currency
       }
   )
@@ -70,5 +76,7 @@ instance ToTType' BeamFPRD.FarePolicyRentalDetails Domain.FullFarePolicyRentalDe
         totalAdditionalKmsLimit = totalAdditionalKmsLimit,
         plannedPerKmRate = roundToIntegral plannedPerKmRate,
         plannedPerKmRateAmount = Just plannedPerKmRate,
+        freeWaitingTime = (.freeWaitingTime) <$> waitingChargeInfo,
+        waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
         currency = Just currency
       }
