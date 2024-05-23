@@ -1231,3 +1231,21 @@ instance IsHTTPError TokenizationResponseError where
     ServiceConfigError _ -> E500
 
 instance IsAPIError TokenizationResponseError
+
+-------- forward batching errors ------------
+data ForwardBatchingErrors = CurrentRideInprogress Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''ForwardBatchingErrors
+
+instance IsBaseError ForwardBatchingErrors where
+  toMessage = \case
+    CurrentRideInprogress driverId -> Just $ "Can't start advanced ride till current inprogress " <> driverId
+
+instance IsHTTPError ForwardBatchingErrors where
+  toErrorCode = \case
+    CurrentRideInprogress _ -> "CURRENT_RIDE_INPROGRESS"
+  toHttpCode = \case
+    CurrentRideInprogress _ -> E500
+
+instance IsAPIError ForwardBatchingErrors
