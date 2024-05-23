@@ -430,6 +430,11 @@ config =
             , featureConfig {
                 enableCabBanner = false
               }
+            , waitingChargeConfig {
+                auto {
+                  perMinCharges = 1.0
+                }
+            }
           },
         defaultCityConfig
           { cityName = "Hyderabad",
@@ -440,7 +445,13 @@ config =
               },
             dashboardUrl = "https://www.manayatri.in/open?source=in-app",
             appLogoLight = "ny_ic_logo_light_my,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_logo_light_my.png",
-            appLogo = "ic_namma_yatri_logo,https://assets.moving.tech/beckn/nammayatri/user/images/ic_namma_yatri_logo.png"
+            appLogo = "ic_namma_yatri_logo,https://assets.moving.tech/beckn/nammayatri/user/images/ic_namma_yatri_logo.png",
+            waitingChargeConfig {
+              auto {
+                freeMinutes = 3.0
+              , perMinCharges = 2.0
+              }
+            }
           },
         defaultCityConfig
           { cityName = "Kolkata",
@@ -462,6 +473,16 @@ config =
             , featureConfig {
                 enableCabBanner = true
               }
+          },
+        defaultCityConfig
+          { cityName = "Delhi",
+            cityCode = "std:011",
+            waitingChargeConfig {
+              auto {
+                freeMinutes = 3.0
+              , perMinCharges = 0.75
+              }
+            }
           }
       ]
   , bannerCarousel : defaultBannerCarousel
@@ -517,5 +538,15 @@ defaultCityConfig =
     appLogoLight : "",
     enableAcViews : false,
     enableRentals : false,
-    enableIntercity : false
+    enableIntercity : false, 
+    waitingChargeConfig : {
+      auto : {
+        freeMinutes : 3.0
+      , perMinCharges : 1.5
+      },
+      cabs : {
+        freeMinutes : 5.0
+      , perMinCharges : 1.0
+      }
+    }
   }

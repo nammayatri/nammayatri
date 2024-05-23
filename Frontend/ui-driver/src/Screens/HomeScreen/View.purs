@@ -777,7 +777,7 @@ offlineView push state =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       ][ linearLayout
-          [ height $ V 340
+          [ height $ V if isBookingPreferenceVisible then 340 else 280
           , width MATCH_PARENT
           , gravity CENTER_HORIZONTAL
           ][ lottieAnimationView
@@ -794,7 +794,7 @@ offlineView push state =
         , width MATCH_PARENT
         , gravity BOTTOM
         ][ linearLayout
-            [ height $ V 205
+            [ height $ V if isBookingPreferenceVisible then 205 else 140
             , width MATCH_PARENT
             , gravity BOTTOM
             , orientation VERTICAL
@@ -809,8 +809,9 @@ offlineView push state =
               , text $ getString if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then GO_ONLINE_PROMPT_PAYMENT_PENDING
                                  else if state.data.paymentState.driverBlocked then GO_ONLINE_PROMPT_SUBSCRIBE
                                  else GO_ONLINE_PROMPT
+              , margin $ MarginBottom if isBookingPreferenceVisible then 0 else 10
               ] <> FontStyle.paragraphText TypoGraphy
-              , if state.data.linkedVehicleCategory /= "AUTO_RICKSHAW" && state.props.driverStatusSet == ST.Offline then bookingPreferenceNavView push state else dummyTextView
+              , if isBookingPreferenceVisible then bookingPreferenceNavView push state else dummyTextView
             ]
         ]
     , linearLayout
@@ -846,6 +847,8 @@ offlineView push state =
       ]
     ]
   ]
+  where
+    isBookingPreferenceVisible = state.data.linkedVehicleCategory /= "AUTO_RICKSHAW" && state.props.driverStatusSet == ST.Offline
 
 popupModelSilentAsk :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 popupModelSilentAsk push state =
