@@ -172,7 +172,8 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
               logDebug $ "SpecialPickupZonePoolBatch goHomeDriversInQueue -" <> show goHomeDriversInQueue
               let goHomeDriversInQueueId = map (\d -> d.driverPoolResult.driverId) goHomeDriversInQueue
               let normalDriversInQueue = filter (\d -> not (d.driverPoolResult.driverId `elem` goHomeDriversInQueueId)) driversInQueue
-              normalDriversInQueueBatch <- mkDriverPoolBatch merchantOpCityId_ (take driverPoolCfg.driverBatchSize normalDriversInQueue) intelligentPoolConfig transporterConfig batchSize False
+              let normalDriversInQueue' = bookAnyFilters transporterConfig normalDriversInQueue []
+              normalDriversInQueueBatch <- mkDriverPoolBatch merchantOpCityId_ (take driverPoolCfg.driverBatchSize normalDriversInQueue') intelligentPoolConfig transporterConfig batchSize False
               let (finalNormalDriversInQueue, scheduleIn) =
                     if notNull goHomeDriversInQueue
                       then (addKeepHiddenInSeconds goHomeConfig.goHomeBatchDelay normalDriversInQueueBatch, Seconds 2 * goHomeConfig.goHomeBatchDelay)
@@ -247,12 +248,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
           let normalDriverPoolWithSpecialDriverFilter = filterSpecialDrivers transporterConfig.specialDrivers normalDriverPool
           allNearbyNonGoHomeDrivers <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId mOCityId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) normalDriverPoolWithSpecialDriverFilter
           let allNearbyDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` blockListedDrivers) allNearbyNonGoHomeDrivers
-          let onlyNewNormalDriversWithMultipleSeriveTier = filter (\dpr -> (dpr.driverPoolResult.driverId, dpr.driverPoolResult.serviceTier) `notElem` previousBatchesDrivers') allNearbyDrivers
-          let onlyNewNormalDrivers =
-                if isBookAny (tripQuoteDetails <&> (.vehicleServiceTier))
-                  then do selectMinDowngrade transporterConfig.bookAnyVehicleDowngradeLevel onlyNewNormalDriversWithMultipleSeriveTier
-                  else do onlyNewNormalDriversWithMultipleSeriveTier
-          pure onlyNewNormalDrivers
+          pure $ bookAnyFilters transporterConfig allNearbyDrivers previousBatchesDrivers'
 
         calculateNormalBatch mOCityId transporterConfig intelligentPoolConfig normalDriverPool radiusStep blockListedDrivers txnId' poolType = do
           logDebug $ "NormalDriverPool-" <> show normalDriverPool
@@ -304,6 +300,12 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
             else pure []
 
         filterSpecialDrivers specialDrivers = filter (\dpr -> not ((getId dpr.driverPoolResult.driverId) `elem` specialDrivers))
+
+        bookAnyFilters transporterConfig allNearbyDrivers previousBatchesDrivers' = do
+          let onlyNewNormalDriversWithMultipleSeriveTier = filter (\dpr -> (dpr.driverPoolResult.driverId, dpr.driverPoolResult.serviceTier) `notElem` previousBatchesDrivers') allNearbyDrivers
+          if isBookAny (tripQuoteDetails <&> (.vehicleServiceTier))
+            then do selectMinDowngrade transporterConfig.bookAnyVehicleDowngradeLevel onlyNewNormalDriversWithMultipleSeriveTier
+            else do onlyNewNormalDriversWithMultipleSeriveTier
 
         -- This function takes a list of DriverPoolWithActualDistResult and returns a list with unique driverId entries with the minimum serviceTierDowngradeLevel.
         selectMinDowngrade :: Int -> [DriverPoolWithActualDistResult] -> [DriverPoolWithActualDistResult]
