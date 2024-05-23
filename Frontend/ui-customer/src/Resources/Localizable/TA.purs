@@ -1317,3 +1317,4 @@ getTA stringKey =
     PUNE -> "புனே"
     MYSORE -> "மைசூர்"
     TUMAKURU -> "தும்கூர்"
+    FARE_BREAKUP_HEADING -> "உங்கள் சவாரி பற்றிய சில தகவல்கள் இதோ."

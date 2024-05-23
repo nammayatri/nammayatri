@@ -37,6 +37,8 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Data.Function.Uncurried (runFn1)
 import Mobility.Prelude (boolToVisibility)
 import Effect.Uncurried (runEffectFn1, runEffectFn7)
+import Language.Strings (getString)
+import Language.Types (STR(FARE_BREAKUP_HEADING))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -459,7 +461,7 @@ chatComponentView state push config nextConfig isLastItem userType index =
                                 , orientation VERTICAL
                                 , gravity chatConfig.gravity
                                 ][ textView $ 
-                                    [ text $ "Here is some information about your ride."
+                                    [ text (getString FARE_BREAKUP_HEADING)
                                     , singleLine false
                                     , margin $ MarginTop $ if state.languageKey == "KN_IN" then 6 else 0
                                     , color chatConfig.textColor

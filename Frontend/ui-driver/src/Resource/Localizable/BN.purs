@@ -1469,4 +1469,5 @@ getBN stringKey =
         ONLY_3_MORE_RIDES_FOR_100_COINS -> "শুধুমাত্র ৩ টি আরও রাইড নিন এবং ১০০ কয়েন পান"
         ONLY_3_MORE_RIDES_FOR_50_COINS -> "শুধুমাত্র ৩ টি আরও রাইড নিন এবং ৫০ কয়েন পান"
         YOU_GOT_50_COINS -> "আপনি ৫০ কয়েন পেয়েছেন"
-        YOU_GOT_10_COINS -> "আপনি ১০ কয়েন পেয়েছেন"
+        YOU_GOT_10_COINS -> "আপনি ১০ কয়েন পেয়েছেন"        
+        FARE_BREAKUP_HEADING -> "এখানে আপনার যাত্রা সম্পর্কে কিছু তথ্য আছে।"

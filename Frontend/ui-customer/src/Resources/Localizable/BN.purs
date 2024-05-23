@@ -1298,4 +1298,5 @@ getBN stringKey =
         GOA -> "গোয়া"
         PUNE -> "পুণে"
         MYSORE -> "মাইসুর"
-        TUMAKURU -> "তুমাকুরু"
+        TUMAKURU -> "তুমাকুরু"        
+        FARE_BREAKUP_HEADING -> "এখানে আপনার যাত্রা সম্পর্কে কিছু তথ্য আছে।"

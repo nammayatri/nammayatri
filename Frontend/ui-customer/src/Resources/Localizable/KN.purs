@@ -1300,3 +1300,4 @@ getKN stringKey =
         PUNE -> "ಪುಣೆ"
         MYSORE -> "ಮೈಸೂರು"
         TUMAKURU -> "ತುಮಕೂರು"
+        FARE_BREAKUP_HEADING -> "ನಿಮ್ಮ ಸವಾರಿಯ ಕುರಿತು ಕೆಲವು ಮಾಹಿತಿ ಇಲ್ಲಿದೆ."

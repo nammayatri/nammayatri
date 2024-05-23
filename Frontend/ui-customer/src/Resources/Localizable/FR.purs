@@ -1300,4 +1300,5 @@ getFR stringKey =
         GOA -> "Goa"
         PUNE -> "Pune"
         MYSORE -> "Mysore"
-        TUMAKURU -> "Tumakuru"
+        TUMAKURU -> "Tumakuru"        
+        FARE_BREAKUP_HEADING -> "Voici quelques informations sur votre trajet."

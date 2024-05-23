@@ -40,7 +40,6 @@ import JBridge
 import Language.Strings
 import Language.Types
 import Services.Config
-import Debug (spy)
 import Screens.HomeScreen.ScreenData (dummyRideBooking) as HSD
 import Helpers.API (callApiBT) 
 
@@ -74,12 +73,11 @@ selectIssueOptionHandler :: ReportIssueChatScreenState -> FlowBT String FlowStat
 selectIssueOptionHandler updatedState = do 
 
   modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> updatedState )
-  (GlobalState globalState) <- getState 
-  resp <- case globalState.rideSelectionScreen.selectedItem of
+  resp <- case updatedState.data.selectedRide of
                     Just item -> 
                       callApiBT (RideBookingReq item.bookingId)
                     Nothing -> 
-                      pure $ HSD.dummyRideBooking 
+                      pure $ HSD.dummyRideBooking
 
   let 
     selectedOptionId = fromMaybe "" $ map (\option -> option.issueOptionId) updatedState.data.selectedOption

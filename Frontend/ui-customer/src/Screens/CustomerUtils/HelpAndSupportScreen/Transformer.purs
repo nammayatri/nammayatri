@@ -52,6 +52,7 @@ import Services.Backend as Remote
 import Data.Int as INT
 import Data.Number (fromString)
 import Foreign (unsafeToForeign)
+import Data.Ord (abs)
 
 reportIssueMessageTransformer :: String -> String
 reportIssueMessageTransformer message =
@@ -70,41 +71,22 @@ rideInfoTransformer :: RideBookingRes -> String -> String
 rideInfoTransformer (RideBookingRes resp) message =
   let
     config = getAppConfig appConfig
-
     (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
-
     (RideBookingDetails contents) = bookingDetails.contents
-
     (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
-
-    differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 ride.chargeableRideDistance)
-
     timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
-
     nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
-
     estimatedDistance = fromMaybe 0 contents.estimatedDistance / 1000
-
     finalDistance = fromMaybe 0 ride.chargeableRideDistance / 1000
-
-    distanceDifference = differenceOfDistance / 1000
-
+    distanceDifference = abs $ finalDistance - estimatedDistance 
     estimatedFare = resp.estimatedFare
-
     finalFare = INT.round $ fromMaybe 0.0 $ fromString (show (fromMaybe 0 ride.computedPrice))
-
-    fareDifference = resp.estimatedFare - finalFare
-
+    fareDifference = abs $ finalFare - estimatedFare
     fareBreakup = resp.fareBreakup
-
     tollCharges = getFareFromArray fareBreakup "TOLL_CHARGES"
-
     driverPickupCharges = getFareFromArray fareBreakup "DEAD_KILOMETER_FARE"
-
     tipAdded = getFareFromArray fareBreakup "CUSTOMER_SELECTED_FARE"
-
     driverAdditions = getFareFromArray fareBreakup "DRIVER_SELECTED_FARE"
-
     currency = getCurrency appConfig
 
     keyValuePairs =

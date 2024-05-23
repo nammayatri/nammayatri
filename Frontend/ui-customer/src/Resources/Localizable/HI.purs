@@ -1299,3 +1299,4 @@ getHI stringKey =
         PUNE -> "पुणे"
         MYSORE -> "मैसूर"
         TUMAKURU -> "तुमकूरु"
+        FARE_BREAKUP_HEADING -> "यहां आपकी सवारी के बारे में कुछ जानकारी दी गई है|"

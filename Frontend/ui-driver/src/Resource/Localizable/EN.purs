@@ -1469,3 +1469,4 @@ getEN stringKey =
         ONLY_3_MORE_RIDES_FOR_50_COINS -> "Only 3 more rides for 50 coins"
         YOU_GOT_50_COINS -> "You got 50 coins"
         YOU_GOT_10_COINS -> "You got 10 coins"
+        FARE_BREAKUP_HEADING -> "Here is some information about your ride."

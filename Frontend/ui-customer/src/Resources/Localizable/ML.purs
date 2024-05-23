@@ -1301,3 +1301,4 @@ getML stringKey =
         PUNE -> "പൂന"
         MYSORE -> "മൈസൂരു"
         TUMAKURU -> "തുമകൂരു"
+        FARE_BREAKUP_HEADING -> "നിങ്ങളുടെ യാത്രയെക്കുറിച്ചുള്ള ചില വിവരങ്ങൾ ഇതാ."

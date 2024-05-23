@@ -1314,3 +1314,4 @@ getTE stringKey =
     PUNE -> "పూణే"
     MYSORE -> "మైసూరు"
     TUMAKURU -> "తుమకూరు"
+    FARE_BREAKUP_HEADING -> "మీ రైడ్ గురించి ఇక్కడ కొంత సమాచారం ఉంది."

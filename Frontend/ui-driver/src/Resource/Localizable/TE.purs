@@ -1471,3 +1471,4 @@ getTE stringKey =
         ONLY_3_MORE_RIDES_FOR_50_COINS -> "మాత్రమే 3 రైడ్‌లు మరియు 50 నాణేలు"
         YOU_GOT_50_COINS -> "మీకు 50 నాణేలు వచ్చాయి"
         YOU_GOT_10_COINS -> "మీకు 10 నాణేలు వచ్చాయి"
+        FARE_BREAKUP_HEADING -> "మీ రైడ్ గురించి ఇక్కడ కొంత సమాచారం ఉంది."

@@ -1475,4 +1475,4 @@ data STR = LETS_GET_STARTED
         | ONLY_3_MORE_RIDES_FOR_50_COINS
         | YOU_GOT_50_COINS
         | YOU_GOT_10_COINS
-        
+        | FARE_BREAKUP_HEADING
