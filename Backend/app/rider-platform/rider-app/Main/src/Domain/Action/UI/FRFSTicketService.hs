@@ -13,6 +13,7 @@ import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import Control.Monad.Extra hiding (fromMaybeM)
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.FRFS.Common as Common
 import qualified Domain.Action.Beckn.FRFS.OnConfirm as DACFOC
 import Domain.Types.BecknConfig
@@ -32,7 +33,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Station as Station
 import qualified Environment
-import EulerHS.Prelude hiding (all, and, id, map)
+import EulerHS.Prelude hiding (all, and, id, map, readMaybe)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface
@@ -41,9 +42,10 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Common as Common
 import Kernel.Types.Error (MerchantError (MerchantOperatingCityNotFound))
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (mkPrice)
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -61,6 +63,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
@@ -268,6 +271,8 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
       let paymentBookingStatus = makeTicketBookingPaymentAPIStatus paymentStatusResp.status
       when (paymentBookingStatus == FRFSTicketService.FAILURE) do
         void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.FAILED booking.id
+        let mPrice = Common.mkPrice (Just booking'.price.currency) (HighPrecMoney $ toRational (0 :: Int))
+        void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById mPrice mPrice booking.id
       when (paymentBookingStatus == FRFSTicketService.SUCCESS) do
         void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
       buildFRFSTicketBookingStatusAPIRes booking Nothing
@@ -333,7 +338,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
               let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing
               buildFRFSTicketBookingStatusAPIRes updatedBooking paymentFailed
             else
-              if (paymentBookingStatus == FRFSTicketService.SUCCESS)
+              if paymentBookingStatus == FRFSTicketService.SUCCESS
                 then do
                   -- Add default TTL of 1 min or the value provided in the config
                   let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
@@ -362,8 +367,12 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                               paymentOrder = paymentOrder_
                             }
                   buildFRFSTicketBookingStatusAPIRes booking paymentObj
-    DFRFSTicketBooking.CANCELLED -> buildFRFSTicketBookingStatusAPIRes booking Nothing
-    DFRFSTicketBooking.COUNTER_CANCELLED -> buildFRFSTicketBookingStatusAPIRes booking Nothing
+    DFRFSTicketBooking.CANCELLED -> do
+      updateTotalOrderValueAndSettlementAmount booking bapConfig
+      buildFRFSTicketBookingStatusAPIRes booking Nothing
+    DFRFSTicketBooking.COUNTER_CANCELLED -> do
+      updateTotalOrderValueAndSettlementAmount booking bapConfig
+      buildFRFSTicketBookingStatusAPIRes booking Nothing
   where
     paymentSuccess =
       Just $
@@ -416,6 +425,16 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
         [] -> throwError $ InvalidRequest "No successful transaction found"
         [transaction] -> return transaction.id
         _ -> throwError $ InvalidRequest "Multiple successful transactions found"
+
+updateTotalOrderValueAndSettlementAmount :: DFRFSTicketBooking.FRFSTicketBooking -> BecknConfig -> Environment.Flow ()
+updateTotalOrderValueAndSettlementAmount booking bapConfig = do
+  paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+  let finderFee :: Price = Common.mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee
+      finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational booking.quantity)
+  tOrderPrice <- DACFOC.totalOrderValue paymentBooking.status booking
+  let tOrderValue = modifyPrice tOrderPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational booking.quantity)
+  settlementAmount <- tOrderValue `subtractPrice` finderFeeForEachTicket
+  void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById settlementAmount tOrderValue booking.id
 
 callBPPStatus :: DFRFSTicketBooking.FRFSTicketBooking -> BecknConfig -> Context.City -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Environment.Flow ()
 callBPPStatus booking bapConfig city merchantId = do
