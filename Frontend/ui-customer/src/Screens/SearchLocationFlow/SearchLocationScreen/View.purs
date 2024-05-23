@@ -89,6 +89,7 @@ import Effect.Class (liftEffect)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Screens.SearchLocationScreen.ScreenData (dummyQuote)
 import Helpers.TipConfig
+import Components.LocationListItem (dummyAddress)
 
 searchLocationScreen :: SearchLocationScreenState -> GlobalProps -> Screen Action SearchLocationScreenState ScreenOutput
 searchLocationScreen initialState globalProps = 
@@ -440,6 +441,7 @@ locateOnMapView push state globalProps = let
         ][ recenterButtonView push state
           , PrimaryButton.view (push <<< PrimaryButtonAC)(primaryButtonConfig state)]
 
+inputView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> Boolean -> GlobalProps -> PrestoDOM (Effect Unit) w
 inputView push state isEditable globalProps = 
   InputView.view (push <<< InputViewAC globalProps ) $ mapInputViewConfig state isEditable
 
@@ -594,13 +596,17 @@ searchLocationView push state globalProps = let
   where 
 
     findPlaceConfig :: SearchLocationScreenState -> InfoState
-    findPlaceConfig state = let 
-      appName = MB.fromMaybe state.appConfig.appData.name $ runFn3 getAnyFromWindow "appName" MB.Nothing MB.Just
-      in
-      { descImg : "ny_ic_empty_suggestions"
-      , viewVisibility : boolToVisibility $ DA.null state.data.locationList 
-      , headerText : getVarString WELCOME_TEXT [appName] 
-      , descText : getString START_TYPING_TO_SEARCH_PLACES}
+    findPlaceConfig state =
+      let appName = MB.fromMaybe state.appConfig.appData.name $ runFn3 getAnyFromWindow "appName" MB.Nothing MB.Just
+      in { 
+        descImg : "ny_ic_empty_suggestions"
+      , viewVisibility : boolToVisibility $ 
+                          case state.props.actionType of 
+                              MetroStationSelectionAction -> DA.null state.data.updatedMetroStations
+                              _ -> DA.null state.data.locationList
+      , headerText : (getVarString WELCOME_TEXT [appName]) <> "!"
+      , descText : getString START_TYPING_TO_SEARCH_PLACES
+        }
 
     locUnserviceableConfig :: SearchLocationScreenState -> InfoState
     locUnserviceableConfig state = 
@@ -619,10 +625,15 @@ locationTagsView state push globalProps =
     , gravity CENTER
     ][  LocationTagBar.view (push <<< LocationTagBarAC globalProps.savedLocations) (locationTagBarConfig state globalProps )]
     
+
 predictionsView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps ->  PrestoDOM (Effect Unit) w
 predictionsView push state globalProps = let 
-  viewVisibility = boolToVisibility $ (not DA.null state.data.locationList) && (not state.props.locUnserviceable)
+  viewVisibility = boolToVisibility $ 
+    case state.props.actionType of 
+      MetroStationSelectionAction -> not $ DA.null state.data.updatedMetroStations
+      _ -> (not DA.null state.data.locationList) && (not state.props.locUnserviceable)
   headerText = if state.props.isAutoComplete then (getString SEARCH_RESULTS)
+                else if state.props.actionType == MetroStationSelectionAction then "Metro Stations"
                 else 
                   MB.maybe "" (\ currField -> if currField == SearchLocPickup then (getString PAST_SEARCHES) else (getString SUGGESTED_DESTINATION)) state.props.focussedTextField
   in
@@ -644,7 +655,7 @@ predictionsView push state globalProps = let
               , color Color.black700
               , margin $ MarginVertical 14 8
               ] <> FontStyle.body3 TypoGraphy
-          , predictionArrayView state.data.locationList
+          , predictionArrayView $ if state.props.actionType == MetroStationSelectionAction then metroStationsArray state.data.updatedMetroStations else state.data.locationList
           , footerView
         ]
       ]
@@ -666,36 +677,36 @@ predictionsView push state globalProps = let
               (\index item -> locationListItemView item index ) 
               if (DA.null locList && state.props.actionType /= MetroStationSelectionAction) then globalProps.cachedSearches else locList )
 
-    -- metroStationsArray:: Array Station -> Array LocationListItemState
-    -- metroStationsArray metroStations = 
-    --   map (\item -> { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
-    --           , postfixImageUrl : ""
-    --           , postfixImageVisibility : false
-    --           , title : item.stationName
-    --           , subTitle : ""
-    --           , placeId : MB.Nothing
-    --           , lat : MB.Nothing
-    --           , lon : MB.Nothing
-    --           , description : ""
-    --           , tag : item.stationCode -- Needs refactor
-    --           , tagType : MB.Nothing
-    --           , cardType : MB.Nothing
-    --           , address : ""
-    --           , tagName : ""
-    --           , isEditEnabled : true
-    --           , savedLocation : ""
-    --           , placeName : ""
-    --           , isClickable : true
-    --           , alpha : 1.0
-    --           , fullAddress : dummyAddress
-    --           , locationItemType : MB.Nothing
-    --           , distance : MB.Nothing
-    --           , showDistance : MB.Just false
-    --           , actualDistance : MB.Nothing
-    --           , frequencyCount : MB.Nothing
-    --           , recencyDate : MB.Nothing
-    --           , locationScore : MB.Nothing
-    --           }) metroStations
+    metroStationsArray:: Array Station -> Array LocationListItemState
+    metroStationsArray metroStations = 
+      map (\item -> { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
+              , postfixImageUrl : ""
+              , postfixImageVisibility : false
+              , title : item.stationName
+              , subTitle : ""
+              , placeId : MB.Nothing
+              , lat : MB.Nothing
+              , lon : MB.Nothing
+              , description : ""
+              , tag : item.stationCode -- Needs refactor
+              , tagType : MB.Nothing
+              , cardType : MB.Nothing
+              , address : ""
+              , tagName : ""
+              , isEditEnabled : true
+              , savedLocation : ""
+              , placeName : ""
+              , isClickable : true
+              , alpha : 1.0
+              , fullAddress : dummyAddress
+              , locationItemType : MB.Nothing
+              , distance : MB.Nothing
+              , showDistance : MB.Just false
+              , actualDistance : MB.Nothing
+              , frequencyCount : MB.Nothing
+              , recencyDate : MB.Nothing
+              , locationScore : MB.Nothing
+              }) metroStations
 
     locationListItemView :: LocationListItemState -> Int -> PrestoDOM (Effect Unit) w
     locationListItemView item index = let 
