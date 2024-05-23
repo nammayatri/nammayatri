@@ -191,7 +191,7 @@ getActiveAdvancedRideByDriverId (Id personId) = findOneWithKV [Se.And [Se.Is Bea
 getInProgressOrNewRideIdAndStatusByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [(Id Ride, RideStatus)]
 getInProgressOrNewRideIdAndStatusByDriverId (Id driverId) = do
   ride' <- findAllWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
-  let rideData = map (\ride -> (ride.id, ride.status)) ride
+  let rideData = map (\ride -> (ride.id, ride.status)) ride'
   pure rideData
 
 getActiveByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)

@@ -47,7 +47,6 @@ import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import SharedLogic.Ride (throwErrorOnRide)
 import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
@@ -139,7 +138,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
           pure $ (transporterConfig.openMarketUnBlocked, transporterConfig.includeDriverCurrentlyOnRide)
       )
       driverInfo.merchantId
-  throwErrorOnRide includeDriverCurrentlyOnRide driverInfo
+  when (includeDriverCurrentlyOnRide && driverInfo.hasAdvanceBooking) do throwError $ CurrentRideInprogress driverId.getId
   let driverKey = makeStartRideIdKey driverId
   Redis.setExp driverKey ride.id 60
   rateLimitStartRide driverId ride.id -- do we need it for dashboard?
