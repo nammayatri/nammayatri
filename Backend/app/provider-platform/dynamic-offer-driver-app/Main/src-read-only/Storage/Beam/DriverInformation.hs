@@ -46,6 +46,7 @@ data DriverInformationT f = DriverInformationT
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredByDriverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     subscribed :: B.C f Kernel.Prelude.Bool,
+    tollRelatedIssueCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalReferred :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     verified :: B.C f Kernel.Prelude.Bool,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
