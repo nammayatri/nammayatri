@@ -687,7 +687,7 @@ getVehicleVariantImage variant viewType =
                                       Hyderabad -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
                                       Chennai -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
                                       Kochi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
-                                      Delhi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
+                                      Delhi -> variantConfig.bookAny.image
                                       _ -> variantConfig.bookAny.image
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         

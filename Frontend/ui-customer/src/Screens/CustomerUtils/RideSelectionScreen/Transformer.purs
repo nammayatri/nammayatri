@@ -23,7 +23,7 @@ import Data.Lens ((^.))
 import Data.Maybe 
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (convertUTCtoISC, os)
-import Helpers.Utils (FetchImageFrom(..), fetchImage, isHaveFare, withinTimeRange, getCityFromString, getVehicleVariantImage)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, isHaveFare, withinTimeRange, getCityFromString, getVehicleVariantImage, getCityConfig)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (map, show, ($), (&&), (+), (-), (/=), (<>), (==), (||))
@@ -43,6 +43,8 @@ import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getFareProductType)
 import Services.API (FareBreakupAPIEntity, RideAPIEntity(..), RideBookingRes(..), RideBookingAPIDetails(..))
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.Types (FareProductType(..)) as FPT
+import Language.Strings (getVarString)
+import MerchantConfig.Types (AppConfig(..))
 
 myRideListTransformerProp :: Array RideBookingRes  -> Array ItemState
 myRideListTransformerProp listRes =  filter (\item -> elem item.status $ map toPropValue ["COMPLETED", "CANCELLED", "CONFIRMED"]) (map (\(RideBookingRes ride) -> 
@@ -87,8 +89,8 @@ myRideListTransformerProp listRes =  filter (\item -> elem item.status $ map toP
    listRes)
 
 
-myRideListTransformer :: Boolean -> Array RideBookingRes -> Array IndividualRideCardState
-myRideListTransformer isSrcServiceable listRes = filter (\item -> any (_ == item.status) ["COMPLETED", "CANCELLED", "CONFIRMED"]) (map (\(RideBookingRes ride) ->
+myRideListTransformer :: Boolean -> Array RideBookingRes -> AppConfig -> Array IndividualRideCardState
+myRideListTransformer isSrcServiceable listRes config = filter (\item -> any (_ == item.status) ["COMPLETED", "CANCELLED", "CONFIRMED"]) (map (\(RideBookingRes ride) ->
   let
     (RideBookingAPIDetails rideApiDetails) = ride.bookingDetails
     fares = getFares ride.fareBreakup
@@ -98,12 +100,19 @@ myRideListTransformer isSrcServiceable listRes = filter (\item -> any (_ == item
     nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
     updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
     specialTags = getSpecialTag ride.specialLocationTag
-    city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+    cityStr = getValueToLocalStore CUSTOMER_LOCATION
+    city = getCityFromString cityStr    
+    cityConfig = getCityConfig config.cityConfig cityStr
+    waitingCharges = 
+      if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
+          cityConfig.waitingChargeConfig.auto
+      else 
+          cityConfig.waitingChargeConfig.cabs
     nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
     nightChargeTill = "5 AM"
     referenceString' = (if nightChargesVal && (getMerchant CTP.FunctionCall) /= YATRI then "1.5" <> (getEN $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill) else "")
                         <> (if isHaveFare "DRIVER_SELECTED_FARE" updatedFareList then "\n\n" <> getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO else "")
-                        <> (if isHaveFare "WAITING_CHARGES" updatedFareList then "\n\n" <> getEN WAITING_CHARGE_DESCRIPTION else "")
+                        <> (if isHaveFare "WAITING_CHARGES" updatedFareList then "\n\n" <> getVarString WAITING_CHARGE_DESCRIPTION [show waitingCharges.freeMinutes, show waitingCharges.perMinCharges] else "")
                         <> (if isHaveFare "EARLY_END_RIDE_PENALTY" updatedFareList then "\n\n" <> getEN EARLY_END_RIDE_CHARGES_DESCRIPTION else "")
                         <> (if isHaveFare "CUSTOMER_SELECTED_FARE" updatedFareList then "\n\n" <> getEN CUSTOMER_TIP_DESCRIPTION else "")
                         <> (if isHaveFare "TOLL_CHARGES" updatedFareList then "\n\n" <> "⁺" <> getEN TOLL_CHARGES_DESC else "")

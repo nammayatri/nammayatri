@@ -410,7 +410,8 @@ type CityConfig = {
   dashboardUrl :: String,
   appLogo :: String,
   appLogoLight :: String,
-  enableAcViews :: Boolean
+  enableAcViews :: Boolean,
+  waitingChargeConfig :: WaitingChargeConfig
 }
 
 type CityBasedFeatures = {
@@ -448,4 +449,14 @@ type AcPopupConfig = {
   enableAcPopup :: Boolean,
   enableNonAcPopup :: Boolean,
   showAfterTime :: Int
+}
+
+type WaitingChargeConfig = {
+  auto :: WaitingCharge,
+  cabs :: WaitingCharge
+}
+
+type WaitingCharge = {
+  freeMinutes :: Number,
+  perMinCharges :: Number
 }
