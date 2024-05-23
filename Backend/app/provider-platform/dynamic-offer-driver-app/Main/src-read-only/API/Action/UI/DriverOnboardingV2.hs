@@ -6,6 +6,7 @@ module API.Action.UI.DriverOnboardingV2 where
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified Control.Lens
 import qualified Domain.Action.UI.DriverOnboardingV2 as Domain.Action.UI.DriverOnboardingV2
+import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -96,10 +97,30 @@ type API =
       :> Get
            '[JSON]
            API.Types.UI.DriverOnboardingV2.BankAccountResp
+      :<|> TokenAuth
+      :> "driver"
+      :> "register"
+      :> "getLiveSelfie"
+      :> MandatoryQueryParam
+           "status"
+           Domain.Types.Image.SelfieFetchStatus
+      :> Get
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.GetLiveSelfieResp
+      :<|> TokenAuth
+      :> "driver"
+      :> "register"
+      :> "aadhaarCard"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.AadhaarCardReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getOnboardingConfigs :<|> getDriverRateCard :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus
+handler = getOnboardingConfigs :<|> getDriverRateCard :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard
 
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -188,3 +209,23 @@ getDriverRegisterBankAccountStatus ::
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.BankAccountResp
   )
 getDriverRegisterBankAccountStatus a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRegisterBankAccountStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+
+getDriverRegisterGetLiveSelfie ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Domain.Types.Image.SelfieFetchStatus ->
+    Environment.FlowHandler API.Types.UI.DriverOnboardingV2.GetLiveSelfieResp
+  )
+getDriverRegisterGetLiveSelfie a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRegisterGetLiveSelfie (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postDriverRegisterAadhaarCard ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.AadhaarCardReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postDriverRegisterAadhaarCard a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterAadhaarCard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

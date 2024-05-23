@@ -31,3 +31,19 @@ findByPanNumberAndNotInValid personId = do
           Se.Is Beam.verificationStatus $ Se.In [Documents.VALID, Documents.PENDING]
         ]
     ]
+
+upsertPanRecord :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => DriverPanCard -> m ()
+upsertPanRecord a@DriverPanCard {..} =
+  findOneWithKV [Se.Is Beam.driverId $ Se.Eq driverId.getId] >>= \case
+    Just _ ->
+      updateOneWithKV
+        [ Se.Set Beam.consentTimestamp consentTimestamp,
+          Se.Set Beam.driverDob driverDob,
+          Se.Set Beam.driverName driverName,
+          Se.Set Beam.documentImageId1 documentImageId1.getId,
+          Se.Set Beam.panCardNumberHash (panCardNumber & hash),
+          Se.Set Beam.updatedAt updatedAt,
+          Se.Set Beam.verificationStatus verificationStatus
+        ]
+        [Se.Is Beam.driverId $ Se.Eq driverId.getId]
+    Nothing -> createWithKV a

@@ -129,7 +129,7 @@ verifyAadhaarOtp :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) 
 verifyAadhaarOtp (personId, _, merchantOpCityId) = withFlowHandlerAPI . AV.verifyAadhaarOtp Nothing personId merchantOpCityId
 
 unVerifiedAadhaarData :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> AV.UnVerifiedDataReq -> FlowHandler APISuccess
-unVerifiedAadhaarData (personId, _, _) = withFlowHandlerAPI . AV.unVerifiedAadhaarData personId
+unVerifiedAadhaarData (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . AV.unVerifiedAadhaarData personId merchantId merchantOpCityId
 
 addReferral :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.ReferralReq -> FlowHandler DriverOnboarding.ReferralRes
 addReferral (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DriverOnboarding.addReferral (personId, merchantId, merchantOpCityId)

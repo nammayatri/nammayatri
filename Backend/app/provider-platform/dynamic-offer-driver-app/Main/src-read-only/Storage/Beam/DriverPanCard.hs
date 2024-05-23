@@ -6,6 +6,7 @@
 module Storage.Beam.DriverPanCard where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.DriverPanCard
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
@@ -23,9 +24,11 @@ data DriverPanCardT f = DriverPanCardT
     driverName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     failedRules :: B.C f [Kernel.Prelude.Text],
     id :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     panCardNumberEncrypted :: B.C f Kernel.Prelude.Text,
     panCardNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     verificationStatus :: B.C f Kernel.Types.Documents.VerificationStatus,
+    verifiedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverPanCard.VerifiedBy),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

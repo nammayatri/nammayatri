@@ -5,9 +5,12 @@ module Domain.Action.UI.DriverOnboardingV2 where
 
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as APITypes
+import qualified AWS.S3 as S3
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Time as DT
+import qualified Domain.Action.UI.DriverOnboarding.Image as Image
+import qualified Domain.Types.AadhaarCard
 import Domain.Types.Common
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DTO
@@ -24,6 +27,7 @@ import Domain.Types.ServiceTierType
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.Vehicle as DTV
 import Domain.Types.VehicleServiceTier
+import Environment
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Prelude
@@ -40,6 +44,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Error.Throwing
 import Servant hiding (throwError)
 import SharedLogic.DriverOnboarding
 import SharedLogic.FareCalculator
@@ -50,11 +55,11 @@ import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QDPC
-import qualified Storage.Queries.DriverPanCardExtra as SQDPC
 import qualified Storage.Queries.DriverSSN as QDriverSSN
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as PersonQuery
@@ -78,8 +83,8 @@ stringToPrice currency value = do
 
 mkDocumentVerificationConfigAPIEntity :: Language -> Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig -> Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity
 mkDocumentVerificationConfigAPIEntity language Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} = do
-  mbTitle <- MTQuery.findByErrorAndLanguage ((show documentType) <> "_Title") language
-  mbDescription <- MTQuery.findByErrorAndLanguage ((show documentType) <> "_Description") language
+  mbTitle <- MTQuery.findByErrorAndLanguage (show documentType <> "_Title") language
+  mbDescription <- MTQuery.findByErrorAndLanguage (show documentType <> "_Description") language
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity
       { title = maybe title (.message) mbTitle,
@@ -370,22 +375,25 @@ postDriverRegisterPancard ::
     API.Types.UI.DriverOnboardingV2.DriverPanReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postDriverRegisterPancard (mbPersonId, merchantId, _) req = do
+postDriverRegisterPancard (mbPersonId, merchantId, merchantOpCityId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbPanInfo <- SQDPC.findByPanNumber req.panNumber
   getImage req.imageId1 personId ------- Just checking whether the image exists or not
-  case mbPanInfo of
-    Just pan -> unless (pan.driverId == personId) $ throwImageError req.imageId1 PanAlreadyLinked
-    Nothing -> do
-      panCard <- buildPanCard merchantId person req
-      QDPC.create panCard
+  let verificationStatus = maybe Documents.PENDING Image.convertValidationStatusToVerificationStatus req.validationStatus
+  mbPanInfo <- QDPC.findByPanNumber req.panNumber
+  whenJust mbPanInfo $ \panInfo -> do
+    when (panInfo.driverId /= personId) $
+      throwError PanAlreadyLinked
+    when (panInfo.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
+      throwError $ DocumentUnderManualReview "PAN"
+    when (panInfo.verificationStatus == Documents.VALID) $
+      throwError $ DocumentAlreadyValidated "PAN"
+  QDPC.upsertPanRecord =<< buildPanCard merchantId person req verificationStatus (Just merchantOpCityId)
   return Success
   where
     getImage :: Kernel.Types.Id.Id Image.Image -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow ()
     getImage imageId personId = do
       imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
-      unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId.getId)
       unless (imageMetadata.imageType == DTO.PanCard) $
         throwError (ImageInvalidType (show DTO.PanCard) (show imageMetadata.imageType))
@@ -394,28 +402,78 @@ buildPanCard ::
   Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
   Domain.Types.Person.Person ->
   API.Types.UI.DriverOnboardingV2.DriverPanReq ->
+  Documents.VerificationStatus ->
+  Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
   Environment.Flow Domain.DriverPanCard
-buildPanCard merchantId person API.Types.UI.DriverOnboardingV2.DriverPanReq {..} = do
+buildPanCard merchantId person API.Types.UI.DriverOnboardingV2.DriverPanReq {..} verificationStatus merchantOperatingCityId = do
   now <- getCurrentTime
   id <- generateGUID
   encryptedPan <- encrypt panNumber
   return
     Domain.DriverPanCard
-      { consent = consent,
-        consentTimestamp = now,
+      { consentTimestamp = fromMaybe now consentTimestamp,
         documentImageId1 = imageId1,
         documentImageId2 = imageId2,
-        driverDob = Nothing,
+        driverDob = dateOfBirth,
         driverId = person.id,
-        driverName = Just person.firstName,
+        driverName = Just $ fromMaybe person.firstName nameOnCard,
         failedRules = [],
         id = id,
         panCardNumber = encryptedPan,
-        verificationStatus = Documents.PENDING,
         merchantId = Just merchantId,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        verificationStatus = verificationStatus,
+        ..
       }
+
+getDriverRegisterGetLiveSelfie ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Image.SelfieFetchStatus ->
+    Environment.Flow API.Types.UI.DriverOnboardingV2.GetLiveSelfieResp
+  )
+getDriverRegisterGetLiveSelfie (mbPersonId, _, _) requiredStatus = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  imageEntity <- ImageQuery.findByPersonIdImageTypeAndValidationStatus personId DTO.ProfilePhoto requiredStatus >>= fromMaybeM (ImageNotFound $ "Selfie image with requiredStatus = " <> show requiredStatus <> " for personId = " <> show personId)
+  image <- S3.get $ T.unpack imageEntity.s3Path
+  return $ API.Types.UI.DriverOnboardingV2.GetLiveSelfieResp image
+
+postDriverRegisterAadhaarCard ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.AadhaarCardReq ->
+    Environment.Flow APISuccess
+  )
+postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.AadhaarCardReq {..} = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  prevTry <- QAadhaarCard.findByPrimaryKey personId
+  whenJust prevTry $ \aadhaarEntity -> do
+    when (aadhaarEntity.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
+      throwError $ DocumentUnderManualReview "Aadhaar"
+    when (aadhaarEntity.verificationStatus == Documents.VALID) $
+      throwError $ DocumentAlreadyValidated "Aadhaar"
+  QAadhaarCard.upsertAadhaarRecord =<< makeAadhaarCardEntity personId
+  return Success
+  where
+    makeAadhaarCardEntity personId = do
+      currTime <- getCurrentTime
+      let verificationStatus = Image.convertValidationStatusToVerificationStatus validationStatus
+      return $
+        Domain.Types.AadhaarCard.AadhaarCard
+          { driverId = personId,
+            createdAt = currTime,
+            updatedAt = currTime,
+            aadhaarNumberHash = Nothing,
+            driverGender = Nothing,
+            driverImage = Nothing,
+            driverImagePath = Nothing,
+            ..
+          }
 
 getDriverRegisterBankAccountLink ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

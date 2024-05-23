@@ -16,3 +16,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD COLUMN merchant_id charac
 ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD COLUMN verified_by text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD COLUMN merchant_operating_city_id character varying(36) ;

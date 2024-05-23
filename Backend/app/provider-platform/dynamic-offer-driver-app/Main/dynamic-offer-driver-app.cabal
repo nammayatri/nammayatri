@@ -180,6 +180,7 @@ library
       Domain.Action.UI.DriverHomeLocation
       Domain.Action.UI.DriverOnboarding.AadhaarVerification
       Domain.Action.UI.DriverOnboarding.DriverLicense
+      Domain.Action.UI.DriverOnboarding.HyperVergeWebhook
       Domain.Action.UI.DriverOnboarding.IdfyWebhook
       Domain.Action.UI.DriverOnboarding.Image
       Domain.Action.UI.DriverOnboarding.Referral
@@ -420,6 +421,7 @@ library
       Storage.Clickhouse.DriverFee
       Storage.Clickhouse.Ride
       Storage.Clickhouse.RideDetails
+      Storage.Queries.AadhaarCardExtra
       Storage.Queries.Booking.Internal
       Storage.Queries.BookingCancellationReasonExtra
       Storage.Queries.BookingExtra
@@ -564,9 +566,9 @@ library
       API.Types.UI.SocialLogin
       API.Types.UI.Tokenization
       API.Types.UI.VehicleDetails
+      Domain.Types.AadhaarCard
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
-      Domain.Types.AadhaarVerification
       Domain.Types.BapMetadata
       Domain.Types.BecknConfig
       Domain.Types.BlackListOrg
@@ -672,9 +674,9 @@ library
       Domain.Types.VehicleServiceTier
       Domain.Types.Volunteer
       Domain.Types.WhiteListOrg
+      Storage.Beam.AadhaarCard
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
-      Storage.Beam.AadhaarVerification
       Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
       Storage.Beam.BlackListOrg
@@ -780,9 +782,9 @@ library
       Storage.Beam.VehicleServiceTier
       Storage.Beam.Volunteer
       Storage.Beam.WhiteListOrg
+      Storage.Queries.AadhaarCard
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
-      Storage.Queries.AadhaarVerification
       Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig
       Storage.Queries.BlackListOrg
@@ -852,6 +854,7 @@ library
       Storage.Queries.MetaData
       Storage.Queries.ModuleCompletionInformation
       Storage.Queries.Notification
+      Storage.Queries.OrphanInstances.AadhaarCard
       Storage.Queries.OrphanInstances.Booking
       Storage.Queries.OrphanInstances.BookingCancellationReason
       Storage.Queries.OrphanInstances.BusinessEvent

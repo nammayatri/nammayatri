@@ -24,8 +24,10 @@ instance FromTType' Beam.Image Domain.Types.Image.Image where
             merchantId = Kernel.Types.Id.Id merchantId,
             personId = Kernel.Types.Id.Id personId,
             rcId = rcId,
+            reviewerEmail = reviewerEmail,
             s3Path = s3Path,
             verificationStatus = verificationStatus,
+            workflowTransactionId = workflowTransactionId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -40,8 +42,10 @@ instance ToTType' Beam.Image Domain.Types.Image.Image where
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.rcId = rcId,
+        Beam.reviewerEmail = reviewerEmail,
         Beam.s3Path = s3Path,
         Beam.verificationStatus = verificationStatus,
+        Beam.workflowTransactionId = workflowTransactionId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

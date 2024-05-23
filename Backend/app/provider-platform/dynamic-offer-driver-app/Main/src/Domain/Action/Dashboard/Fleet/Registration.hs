@@ -117,7 +117,7 @@ fleetOwnerRegister req = do
     createPanInfo person.id merchant.id merchantOpCityId req.panImageId1 req.panImageId2 req.panNumber
   fork "Uploading GST Image" $ do
     whenJust req.gstCertificateImage $ \gstImage -> do
-      let req' = Image.ImageValidateRequest {imageType = DVC.GSTCertificate, image = gstImage, rcNumber = Nothing, vehicleCategory = Nothing}
+      let req' = Image.ImageValidateRequest {imageType = DVC.GSTCertificate, image = gstImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing}
       image <- Image.validateImage True (person.id, merchant.id, merchantOpCityId) req'
       QFOI.updateGstImageId (Just image.imageId.getId) person.id
   return $ FleetOwnerRegisterRes {personId = person.id.getId}
@@ -132,9 +132,9 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
 
 createPanInfo :: Id DP.Person -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ()
 createPanInfo personId merchantId merchantOperatingCityId (Just img1) _ (Just panNo) = do
-  let req' = Image.ImageValidateRequest {imageType = DVC.PanCard, image = img1, rcNumber = Nothing, vehicleCategory = Nothing}
+  let req' = Image.ImageValidateRequest {imageType = DVC.PanCard, image = img1, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing}
   image <- Image.validateImage True (personId, merchantId, merchantOperatingCityId) req'
-  let panReq = DO.DriverPanReq {panNumber = panNo, imageId1 = image.imageId, imageId2 = Nothing, consent = True}
+  let panReq = DO.DriverPanReq {panNumber = panNo, imageId1 = image.imageId, imageId2 = Nothing, consent = True, nameOnCard = Nothing, dateOfBirth = Nothing, consentTimestamp = Nothing, validationStatus = Nothing, verifiedBy = Nothing}
   void $ Registration.postDriverRegisterPancard (Just personId, merchantId, merchantOperatingCityId) panReq
 createPanInfo _ _ _ _ _ _ = pure () --------- currently we can have it like this as Pan info is optional
 

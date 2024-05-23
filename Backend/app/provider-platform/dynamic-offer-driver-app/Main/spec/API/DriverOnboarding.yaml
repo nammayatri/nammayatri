@@ -6,15 +6,23 @@ imports:
   AirConditionedRestrictionType: Domain.Types.DriverInformation
   APISuccess: Kernel.Types.APISuccess
   Centesimal: Kernel.Types.Common
+  UTCTime: Kernel.Prelude
+  Image: Domain.Types.Image
+  Person: Domain.Types.Person
   PriceAPIEntity: Kernel.Types.Common
   Money: Kernel.Types.Common
   Driver: Domain.Types.Person
   TripCategory: Domain.Types.Common
   Image: Domain.Types.Image
+  VerifiedBy: Domain.Types.DriverPanCard
+  SelfieFetchStatus: Domain.Types.Image
   BaseUrl: Servant.Client.Core
 
 module: DriverOnboardingV2
 types:
+  ValidationStatus:
+    enum: "APPROVED,DECLINED,AUTO_APPROVED,AUTO_DECLINED,NEEDS_REVIEW"
+    derive: "Read"
   DocumentVerificationConfigList:
     autos: Maybe [DocumentVerificationConfigAPIEntity]
     cabs: Maybe [DocumentVerificationConfigAPIEntity]
@@ -79,6 +87,24 @@ types:
     imageId1 : Id Image
     imageId2 : Maybe (Id Image)
     consent: Bool
+    nameOnCard: Maybe Text
+    dateOfBirth: Maybe UTCTime
+    consentTimestamp: Maybe UTCTime
+    validationStatus: Maybe ValidationStatus
+    verifiedBy: Maybe VerifiedBy
+  GetLiveSelfieResp:
+    recordType: NewType
+    image: Text
+  AadhaarCardReq:
+    aadhaarFrontImageId: Maybe (Id Image)
+    aadhaarBackImageId: Maybe (Id Image)
+    maskedAadhaarNumber: Maybe Text
+    nameOnCard: Maybe Text
+    dateOfBirth: Maybe Text
+    address: Maybe Text
+    consent: Bool
+    consentTimestamp: UTCTime
+    validationStatus: ValidationStatus
   BankAccountLinkResp:
     chargesEnabled: Bool
     detailsSubmitted: Bool
@@ -147,3 +173,21 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: BankAccountResp
+
+  # GET /driver/register/getLiveSelfie
+  - GET:
+      endpoint: /driver/register/getLiveSelfie
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        status: SelfieFetchStatus
+      response:
+        type: GetLiveSelfieResp
+
+  # POST /driver/register/aadhaarCard
+  - POST:
+      endpoint: /driver/register/aadhaarCard
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: AadhaarCardReq
+      response:
+        type: APISuccess

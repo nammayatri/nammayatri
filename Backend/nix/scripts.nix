@@ -200,6 +200,21 @@ _:
         '';
       };
 
+      apply-hlint-staged = {
+        category = "Backend";
+        description = ''
+          Apply hlint hints about redundant paranthesis to the staged files.
+        '';
+        exec = ''
+          set -x
+          for word in $(git diff --staged --name-only | grep .hs| grep .hs)
+          do
+            echo "''$word"
+            hlint --refactor --only="Redundant bracket" --refactor-options="--inplace" "''$word"
+          done
+        '';
+      };
+
       run-integration-tests = {
         category = "Backend";
         description = ''

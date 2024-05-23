@@ -1106,6 +1106,12 @@ data DriverOnboardingError
   | RCActivationFailedPaymentDue Text
   | DLInvalid
   | VehicleServiceTierNotFound Text
+  | DocumentUnderManualReview Text
+  | DocumentAlreadyValidated Text
+  | InvalidWebhookPayload Text Text
+  | InvalidReviewStatus Text Text
+  | InvalidImageType Text Text
+  | ImageNotFoundForWorkflowId Text
   | PanAlreadyLinked
   | RCNotLinkedWithFleet
   | RCAssociationNotFound
@@ -1143,6 +1149,12 @@ instance IsBaseError DriverOnboardingError where
     RCActivationFailedPaymentDue id_ -> Just $ "cannot activate RC for person \"" <> id_ <> "\" Due to paymentDue."
     DLInvalid -> Just "Contact Customer Support, class of vehicles is not supported"
     VehicleServiceTierNotFound serviceTier -> Just $ "Service tier config not found for vehicle service tier \"" <> serviceTier <> "\"."
+    DocumentUnderManualReview docName -> Just $ "Your " <> docName <> " is under manual review."
+    DocumentAlreadyValidated docName -> Just $ "Your " <> docName <> " is already validated."
+    InvalidWebhookPayload svcName errMsg -> Just $ "Unable to parse webhook payload from  " <> svcName <> ". Error: " <> errMsg
+    InvalidReviewStatus svcName status -> Just $ "Invalid review status from svc : " <> svcName <> ". Value : " <> status
+    InvalidImageType svcName imageType -> Just $ "Invalid image type from svc : " <> svcName <> ". Value : " <> imageType
+    ImageNotFoundForWorkflowId workflowId -> Just $ "Image not found for workflowId : " <> workflowId
     PanAlreadyLinked -> Just "PAN already linked with driver."
     RCNotLinkedWithFleet -> Just "Vehicle Registration Certificate is not linked with Fleet."
     RCAssociationNotFound -> Just "RC association not found."
@@ -1179,6 +1191,12 @@ instance IsHTTPError DriverOnboardingError where
     RCActivationFailedPaymentDue _ -> "RC_ACTIVATION_FAILED_PAYMENT_DUE"
     DLInvalid -> "DL_INVALID"
     VehicleServiceTierNotFound _ -> "VEHICLE_SERVICE_TIER_NOT_FOUND"
+    DocumentUnderManualReview _ -> "DOCUMENT_UNDER_MANUAL_REVIEW"
+    DocumentAlreadyValidated _ -> "DOCUMENT_ALREADY_VALIDATED"
+    InvalidWebhookPayload _ _ -> "INVALID_WEBHOOK_PAYLOAD"
+    InvalidReviewStatus _ _ -> "INVALID_REVIEW_STATUS"
+    InvalidImageType _ _ -> "INVALID_IMAGE_TYPE"
+    ImageNotFoundForWorkflowId _ -> "IMAGE_NOT_FOUND_FOR_WORKFLOW_ID"
     PanAlreadyLinked -> "PAN_ALREADY_LINKED"
     RCNotLinkedWithFleet -> "RC_NOT_LINKED_WITH_FLEET"
     RCAssociationNotFound -> "RC_ASSOCIATION_NOT_FOUND"
@@ -1213,6 +1231,12 @@ instance IsHTTPError DriverOnboardingError where
     RCActivationFailedPaymentDue _ -> E400
     DLInvalid -> E400
     VehicleServiceTierNotFound _ -> E500
+    DocumentUnderManualReview _ -> E400
+    DocumentAlreadyValidated _ -> E400
+    InvalidWebhookPayload _ _ -> E400
+    InvalidReviewStatus _ _ -> E400
+    InvalidImageType _ _ -> E400
+    ImageNotFoundForWorkflowId _ -> E400
     PanAlreadyLinked -> E400
     RCNotLinkedWithFleet -> E400
     RCAssociationNotFound -> E400

@@ -19,6 +19,16 @@ ALTER TABLE atlas_driver_offer_bpp.image ADD COLUMN rc_id text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.image ADD COLUMN workflow_transaction_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.image ADD COLUMN reviewer_email text ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.image ADD COLUMN verification_status text ;
 
 

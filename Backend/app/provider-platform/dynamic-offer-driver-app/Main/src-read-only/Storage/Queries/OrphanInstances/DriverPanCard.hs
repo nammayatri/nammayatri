@@ -26,8 +26,10 @@ instance FromTType' Beam.DriverPanCard Domain.Types.DriverPanCard.DriverPanCard 
             driverName = driverName,
             failedRules = failedRules,
             id = Kernel.Types.Id.Id id,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             panCardNumber = EncryptedHashed (Encrypted panCardNumberEncrypted) panCardNumberHash,
             verificationStatus = verificationStatus,
+            verifiedBy = verifiedBy,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -45,9 +47,11 @@ instance ToTType' Beam.DriverPanCard Domain.Types.DriverPanCard.DriverPanCard wh
         Beam.driverName = driverName,
         Beam.failedRules = failedRules,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.panCardNumberEncrypted = panCardNumber & unEncrypted . encrypted,
         Beam.panCardNumberHash = panCardNumber & hash,
         Beam.verificationStatus = verificationStatus,
+        Beam.verifiedBy = verifiedBy,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
