@@ -13,6 +13,7 @@ import qualified API.Internal.DriverReferee as DriverReferee
 import qualified API.Internal.FavouriteDrivers as FavouriteDrivers
 import qualified API.Internal.FeedbackForm as FeedbackForm
 import qualified API.Internal.ReportACIssue as ReportACIssue
+import qualified API.Internal.ReportIssue as ReportIssue
 import Environment
 import Servant
 import Tools.Auth ()
@@ -21,7 +22,8 @@ type API =
   "internal"
     :> ( DriverReferee.API
            :<|> FeedbackForm.API
-           :<|> ReportACIssue.API
+           :<|> ReportACIssue.API -- Deprecated
+           :<|> ReportIssue.API
            :<|> Auth.API
            :<|> BulkLocUpdate.API
            :<|> CancellationDues.API
@@ -35,6 +37,7 @@ handler =
   DriverReferee.handler
     :<|> FeedbackForm.handler
     :<|> ReportACIssue.handler
+    :<|> ReportIssue.handler
     :<|> Auth.handler
     :<|> BulkLocUpdate.handler
     :<|> CancellationDues.handler

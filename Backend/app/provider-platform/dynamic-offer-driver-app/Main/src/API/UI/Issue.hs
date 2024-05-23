@@ -63,7 +63,8 @@ driverIssueHandle =
       createTicket = castCreateTicket,
       updateTicket = castUpdateTicket,
       findMerchantConfig = buildMerchantConfig,
-      mbReportACIssue = Nothing
+      mbReportACIssue = Nothing,
+      mbReportIssue = Nothing
     }
 
 castPersonById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Person -> m (Maybe Common.Person)

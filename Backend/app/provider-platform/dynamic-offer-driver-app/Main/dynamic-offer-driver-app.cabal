@@ -73,6 +73,7 @@ library
       API.Internal.FavouriteDrivers
       API.Internal.FeedbackForm
       API.Internal.ReportACIssue
+      API.Internal.ReportIssue
       API.UI
       API.UI.Call
       API.UI.CallEvent
@@ -167,6 +168,7 @@ library
       Domain.Action.Internal.FavouriteDrivers
       Domain.Action.Internal.FeedbackForm
       Domain.Action.Internal.ReportACIssue
+      Domain.Action.Internal.ReportIssue
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent

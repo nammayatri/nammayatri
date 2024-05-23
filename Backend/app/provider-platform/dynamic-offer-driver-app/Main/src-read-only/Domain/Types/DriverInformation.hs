@@ -48,6 +48,7 @@ data DriverInformation = DriverInformation
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     subscribed :: Kernel.Prelude.Bool,
+    tollRelatedIssueCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalReferred :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     verified :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),

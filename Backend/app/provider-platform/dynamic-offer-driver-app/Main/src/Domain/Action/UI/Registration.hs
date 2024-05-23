@@ -255,7 +255,8 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             acRestrictionLiftCount = 0,
             acUsageRestrictionType = DriverInfo.NoRestriction,
             lastACStatusCheckedAt = Nothing,
-            hasAdvanceBooking = False
+            hasAdvanceBooking = False,
+            tollRelatedIssueCount = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency driverId
   QD.create driverInfo

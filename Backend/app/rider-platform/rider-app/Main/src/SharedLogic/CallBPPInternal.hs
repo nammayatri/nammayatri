@@ -4,6 +4,7 @@ import API.Types.UI.FavouriteDriver
 import qualified Data.HashMap.Strict as HM
 import Domain.Types.FeedbackForm
 import EulerHS.Types (EulerClient, client)
+import IssueManagement.Common (IssueReportType)
 import Kernel.External.Slack.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess
@@ -264,6 +265,7 @@ customerCancellationDuesSync apiKey internalUrl merchantId phoneNumber countryCo
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (customerCancellationDuesSyncClient merchantId merchantCity (Just apiKey) (CustomerCancellationDuesSyncReq phoneNumber countryCode cancellationCharges cancellationChargesWithCurrency disputeChancesUsed paymentMadeToDriver)) "CustomerCancellationDuesSync" customerCancellationDuesSyncApi
 
+-- DEPRECATED
 type ReportACIssueAPI =
   "internal"
     :> Capture "rideId" Text
@@ -289,3 +291,31 @@ reportACIssue ::
 reportACIssue apiKey internalUrl bppRideId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (reportACIssueClient bppRideId (Just apiKey)) "ReportACIssue" reportACIssueApi
+
+type ReportIssueAPI =
+  "internal"
+    :> Capture "rideId" Text
+    :> "reportIssue"
+    :> MandatoryQueryParam "issueType" IssueReportType
+    :> Header "token" Text
+    :> Post '[JSON] APISuccess
+
+reportIssueClient :: Text -> IssueReportType -> Maybe Text -> EulerClient APISuccess
+reportIssueClient = client reportIssueApi
+
+reportIssueApi :: Proxy ReportIssueAPI
+reportIssueApi = Proxy
+
+reportIssue ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  IssueReportType ->
+  m APISuccess
+reportIssue apiKey internalUrl bppRideId issueReportType = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (reportIssueClient bppRideId issueReportType (Just apiKey)) "ReportACIssue" reportACIssueApi
