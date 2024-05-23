@@ -29,3 +29,19 @@ ALTER TABLE atlas_driver_offer_bpp.plan ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.plan DROP COLUMN merchant_operating_city_id;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN variant text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.plan ALTER COLUMN variant DROP NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN vehicle_variant text ;
+ALTER TABLE atlas_driver_offer_bpp.plan DROP COLUMN variant;

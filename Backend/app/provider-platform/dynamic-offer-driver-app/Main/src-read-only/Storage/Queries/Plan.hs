@@ -6,9 +6,11 @@ module Storage.Queries.Plan (module Storage.Queries.Plan, module ReExport) where
 
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Plan
+import qualified Domain.Types.Vehicle
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -43,6 +45,19 @@ findByMerchantOpCityIdAndTypeWithServiceName (Kernel.Types.Id.Id merchantOpCityI
         [ Se.Is Beam.merchantOpCityId $ Se.Eq merchantOpCityId,
           Se.Is Beam.planType $ Se.Eq planType,
           Se.Is Beam.serviceName $ Se.Eq serviceName
+        ]
+    ]
+
+findByMerchantOpCityIdAndTypeWithServiceNameAndVariant ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant -> m [Domain.Types.Plan.Plan])
+findByMerchantOpCityIdAndTypeWithServiceNameAndVariant (Kernel.Types.Id.Id merchantOpCityId) paymentMode serviceName vehicleVariant = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOpCityId $ Se.Eq merchantOpCityId,
+          Se.Is Beam.paymentMode $ Se.Eq paymentMode,
+          Se.Is Beam.serviceName $ Se.Eq serviceName,
+          Se.Is Beam.vehicleVariant $ Se.Eq vehicleVariant
         ]
     ]
 
@@ -83,6 +98,7 @@ updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
       Se.Set Beam.registrationAmount registrationAmount,
       Se.Set Beam.serviceName serviceName,
       Se.Set Beam.sgstPercentage sgstPercentage,
-      Se.Set Beam.subscribedFlagToggleAllowed subscribedFlagToggleAllowed
+      Se.Set Beam.subscribedFlagToggleAllowed subscribedFlagToggleAllowed,
+      Se.Set Beam.vehicleVariant vehicleVariant
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
