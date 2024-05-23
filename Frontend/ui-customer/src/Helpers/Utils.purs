@@ -586,6 +586,7 @@ getScreenFromStage stage = case stage of
   ChangeToRideAccepted -> "change_to_ride_accepted"
   ChangeToRideStarted -> "change_to_ride_started"
   ConfirmingQuotes -> "confirming_quotes"
+  GoToRoundTrip -> "go_to_round_trip"
 
 getGlobalPayload :: String -> Maybe GlobalPayload
 getGlobalPayload key = do

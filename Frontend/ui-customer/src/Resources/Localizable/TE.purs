@@ -1273,3 +1273,5 @@ getTE stringKey =
     UNKNOWN_ERROR -> "మీకు స్వాగతం"
     CONNECTION_REFUSED -> "కనెక్షన్ నిరాకరించబడింది"
     TIMEOUT -> "సమయం ముగిసినది"
+    ROUND_TRIP_INVALID_MESSAGE -> "రౌండ్ ట్రిప్ అంచనా వేయబడిన ప్రయాణ సమయం కన్నా తక్కువగా నిర్ణయించబడదు"
+    PICKUP_TIME_NOT_SELECTED -> "దయచేసి పికప్ సమయం ఎంచుకోండి"

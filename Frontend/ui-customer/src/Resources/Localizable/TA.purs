@@ -1276,3 +1276,5 @@ getTA stringKey =
     UNKNOWN_ERROR -> "அறியப்படாத பிழை"
     CONNECTION_REFUSED -> "இணைப்பு மறுக்கப்பட்டது"
     TIMEOUT -> "நேரம் முடிந்தது"
+    ROUND_TRIP_INVALID_MESSAGE -> "சுற்றுப்பயணம் மதிப்பீடு செய்யப்பட்ட பயண நேரத்திற்கு கீழே திட்டமிட முடியாது"
+    PICKUP_TIME_NOT_SELECTED -> "தயவுசெய்து பிக்அப் நேரத்தைத் தேர்ந்தெடுக்கவும்"

@@ -523,6 +523,7 @@ view push state =
             , if state.props.currentStage == RideCompleted || state.props.currentStage == RideRating then rideCompletedCardView push state else emptyTextView state
             , if state.props.currentStage == RideRating then rideRatingCardView state push else emptyTextView state
             , if state.props.showRateCard then (rateCardView push state) else emptyTextView state
+            , if state.props.currentStage == GoToRoundTrip then (selectTripView2 push state) else emptyTextView state
             -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
@@ -4369,3 +4370,16 @@ intercityInSpecialZonePopupView push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   ][PopUpModal.view (push <<< IntercitySpecialZone) (intercityInSpecialZonePopupConfig state)]
+
+
+
+--- select Trip view 
+
+selectTripView2 :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+selectTripView2 push state = 
+  linearLayout [
+    width MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  , background  Color.red
+][ SearchLocationModel.selectTripView (push <<< SearchLocationModelActionController) $ searchLocationModelViewState state]

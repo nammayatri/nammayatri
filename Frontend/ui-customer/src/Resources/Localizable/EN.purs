@@ -1260,3 +1260,5 @@ getEN stringKey =
         UNKNOWN_ERROR -> "Unknown Error"
         CONNECTION_REFUSED -> "Connection Refused"
         TIMEOUT -> "Timeout"
+        ROUND_TRIP_INVALID_MESSAGE -> "Round Trip cannot be scheduled below estimated trip time"
+        PICKUP_TIME_NOT_SELECTED -> "Please Select Pickup Time"

@@ -767,6 +767,8 @@ homeScreenFlow = do
       myProfileScreenFlow
     GO_TO_FIND_ESTIMATES updatedState -> do
       findEstimates updatedState
+    GO_TO_ROUND_TRIP updatedState -> do 
+      roundTripFlow updatedState
     RETRY_FINDING_QUOTES showLoader -> do
       void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- TODO : Handled Loader in IOS Side
       void $ lift $ lift $ toggleLoader showLoader
@@ -2034,9 +2036,8 @@ homeScreenFlow = do
           homeScreenFlow
     _ -> homeScreenFlow
 
-findEstimates :: HomeScreenState -> FlowBT String Unit
-findEstimates updatedState = do
-  void $ liftFlowBT $ setMapPadding 0 0 0 0
+roundTripFlow :: HomeScreenState -> FlowBT String Unit 
+roundTripFlow updatedState = do
   logField_ <- lift $ lift $ getLogFields
   if updatedState.data.source == getString STR.CURRENT_LOCATION then do
     fullAddress <- getPlaceName updatedState.props.sourceLat updatedState.props.sourceLong HomeScreenData.dummyLocation true
@@ -2051,14 +2052,34 @@ findEstimates updatedState = do
     state = globalState.homeScreen
   liftFlowBT $ logEventWithTwoParams logField_ "ny_user_source_and_destination" "ny_user_enter_source" (take 99 (state.data.source)) "ny_user_enter_destination" (take 99 (state.data.destination))
   (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq state.props.sourceLat state.props.sourceLong) ORIGIN
-  if (not sourceServiceabilityResp.serviceable || (state.data.fareProductType == FPT.INTER_CITY)) then do
+  if (not sourceServiceabilityResp.serviceable) then do
     updateLocalStage SearchLocationModel
     setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { showIntercityUnserviceablePopUp = true, currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = false, isSource = Just true, isRideServiceable = false, city = getCityNameFromCode sourceServiceabilityResp.city } })
     homeScreenFlow
   else
-    pure unit
+    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { srcCity = sourceServiceabilityResp.currentCity} })
+  
+  (ServiceabilityRes sourceServiceabilityRespDest) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq state.props.destinationLat state.props.destinationLong) DESTINATION
   let
+    isIntercity = any (_ == (Just "*")) [ sourceServiceabilityResp.currentCity, sourceServiceabilityRespDest.currentCity ] || (isJust sourceServiceabilityResp.currentCity && isJust sourceServiceabilityRespDest.currentCity && sourceServiceabilityResp.currentCity /= sourceServiceabilityRespDest.currentCity)
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { fareProductType = if isIntercity then FPT.INTER_CITY else homeScreen.data.fareProductType, destCity = sourceServiceabilityRespDest.currentCity } })
+  if (isIntercity) then do
+    routeObj <- getRouteInfo state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong 
+    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage= GoToRoundTrip , isSearchLocation = SelectTripType ,searchLocationModelProps { totalRideDistance = INT.toNumber $ routeObj.estDistance, totalRideDuration = routeObj.estDuration } },data { destCity = sourceServiceabilityRespDest.currentCity ,srcCity = sourceServiceabilityResp.currentCity}})
+    updateLocalStage GoToRoundTrip
+    homeScreenFlow
+  else findEstimates state
+
+findEstimates :: HomeScreenState -> FlowBT String Unit
+findEstimates updatedState = do
+  void $ liftFlowBT $ setMapPadding 0 0 0 0
+  logField_ <- lift $ lift $ getLogFields
+
+  (GlobalState globalState) <- getState
+  let
+    state = globalState.homeScreen
+    
     currentTime = (convertUTCtoISC (getCurrentUTC "") "h:mm:ss A")
 
     currentDate = getCurrentDate ""
@@ -2074,26 +2095,23 @@ findEstimates updatedState = do
     srcMarkerConfig = defaultMarkerConfig { pointerIcon = markers.srcMarker, primaryText = sourceAddress, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = zoneLabelIcon state.props.zoneType.sourceTag }
 
     destMarkerConfig = defaultMarkerConfig { pointerIcon = markers.destMarker, primaryText = state.data.destination, labelImage = zoneLabelIcon state.props.zoneType.destinationTag }
+  -- when (state.data.fareProductType == FPT.INTER_CITY && (fromMaybe "1" state.data.srcCity) /= (fromMaybe "" state.data.destCity)) $ do
+  --   modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData { props { showIntercityUnserviceablePopUp = true } })
+  --   updateLocalStage HomeScreen
+  --   homeScreenFlow
+  when (state.data.startTimeUTC /= "" && state.data.fareProductType /= FPT.INTER_CITY ) do
+    modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData { props { showNormalRideNotSchedulablePopUp = true } })
+    updateLocalStage HomeScreen
+    homeScreenFlow
+  
   void $ pure
     $ setCleverTapUserProp
         [ { key: "Latest Search From", value: unsafeToForeign ("lat: " <> (show updatedState.props.sourceLat) <> " long: " <> (show updatedState.props.sourceLong)) }
         , { key: "Latest Search", value: (unsafeToForeign $ currentDate <> " " <> currentTime) }
         ]
-  (ServiceabilityRes sourceServiceabilityRespDest) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq state.props.destinationLat state.props.destinationLong) DESTINATION
-  let
-    isIntercity = any (_ == (Just "*")) [ sourceServiceabilityResp.currentCity, sourceServiceabilityRespDest.currentCity ] || (isJust sourceServiceabilityResp.currentCity && isJust sourceServiceabilityRespDest.currentCity && sourceServiceabilityResp.currentCity /= sourceServiceabilityRespDest.currentCity)
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> state { data { fareProductType = if isIntercity then FPT.INTER_CITY else homeScreen.data.fareProductType } })
-  when ((fromMaybe "1" sourceServiceabilityResp.currentCity) /= (fromMaybe "" sourceServiceabilityRespDest.currentCity)) do
-    modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData { props { showIntercityUnserviceablePopUp = true } })
-    updateLocalStage HomeScreen
-    homeScreenFlow
-  when (state.data.startTimeUTC /= "" && not isIntercity) do
-    modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData { props { showNormalRideNotSchedulablePopUp = true } })
-    updateLocalStage HomeScreen
-    homeScreenFlow
-  let
-    startTimeUTC = if (isIntercity && state.data.startTimeUTC /= "") then state.data.startTimeUTC else (getCurrentUTC "")
-  (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress startTimeUTC state.props.rideSearchProps.sourceManuallyMoved state.props.rideSearchProps.destManuallyMoved state.props.rideSearchProps.sessionId state.props.isSpecialZone)
+  let startTimeUTC = if (state.data.fareProductType == FPT.INTER_CITY && state.data.startTimeUTC /= "") then state.data.startTimeUTC else (getCurrentUTC "")
+  let searchReq = if (state.data.fareProductType == FPT.INTER_CITY && state.data.returnTimeUTC /= "") then Remote.makeRoundTripReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress startTimeUTC state.data.returnTimeUTC true else Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress startTimeUTC state.props.rideSearchProps.sourceManuallyMoved state.props.rideSearchProps.destManuallyMoved state.props.rideSearchProps.sessionId state.props.isSpecialZone
+  (SearchRes rideSearchRes) <- Remote.rideSearchBT $ searchReq
   void $ pure $ setValueToLocalStore STARTED_ESTIMATE_SEARCH "FALSE"
   routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong srcMarkerConfig destMarkerConfig "NORMAL" rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig)
   logStatus "ride_search" rideSearchRes
@@ -2153,6 +2171,14 @@ findEstimates updatedState = do
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { searchId = rideSearchRes.searchId, currentStage = FindingEstimate, rideRequestFlow = true, selectedQuote = Nothing, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, findingQuotesProgress = 0.0 }, data { nearByDrivers = Nothing } })
   updateLocalStage FindingEstimate
   homeScreenFlow
+
+getRouteInfo::  Number -> Number -> Number -> Number ->  FlowBT String {estDistance :: Int , estDuration :: Int}
+getRouteInfo srcLat srcLong destLat destLng = do 
+  (GetRouteResp routeResponse) <- Remote.getRouteBT "pickup" (Remote.makeGetRouteReq srcLat srcLong destLat destLng)
+  case (head routeResponse) of 
+    Just (Route route) -> do 
+          pure $ { estDistance : route.distance , estDuration : route.duration }
+    Nothing -> pure $ {estDistance : 0, estDuration :0} 
 
 updateFollower :: Boolean -> Boolean -> Maybe String -> FlowBT String Unit
 updateFollower callFollowersApi callInitUi eventType = do

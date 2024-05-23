@@ -480,7 +480,7 @@ newtype SearchReq = SearchReq {
   fareProductType :: String
 }
 
-data ContentType = OneWaySearchRequest OneWaySearchReq | RentalSearchRequest RentalSearchReq
+data ContentType = OneWaySearchRequest OneWaySearchReq | RentalSearchRequest RentalSearchReq | RoundTripSearchRequest RoundTripSearchReq
 
 newtype OneWaySearchReq = OneWaySearchReq {
   origin :: SearchReqLocation,
@@ -531,17 +531,36 @@ newtype RentalSearchReq = RentalSearchReq {
   isReallocationEnabled :: Maybe Boolean
 }
 
+newtype RoundTripSearchReq = RoundTripSearchReq {
+  origin :: SearchReqLocation,
+  stops :: Maybe (Array SearchReqLocation),
+  startTime :: String,
+  returnTime :: String,
+  roundTrip :: Boolean,
+  isReallocationEnabled ::  Maybe Boolean
+}
+
 derive instance genericContentType :: Generic ContentType _
 instance standardEncodeContentType :: StandardEncode ContentType where
   standardEncode (OneWaySearchRequest body) = standardEncode body
   standardEncode (RentalSearchRequest body) = standardEncode body
+  standardEncode (RoundTripSearchRequest body) = standardEncode body
 instance showContentType :: Show ContentType where show = genericShow
 instance decodeContentType :: Decode ContentType
   where
-    decode body = (OneWaySearchRequest <$> decode body) <|> (RentalSearchRequest <$> decode body) <|> (fail $ ForeignError "Unknown response")
+    decode body = (OneWaySearchRequest <$> decode body) <|> (RentalSearchRequest <$> decode body) <|> (RoundTripSearchRequest  <$> decode body)<|>(fail $ ForeignError "Unknown response")
 instance encodeContentType  :: Encode ContentType where
   encode (OneWaySearchRequest body) = encode body
   encode (RentalSearchRequest body) = encode body
+  encode (RoundTripSearchRequest body) = encode body
+
+derive instance genericRoundTripSearchReq :: Generic RoundTripSearchReq _
+derive instance newtypeRoundTripSearchReq :: Newtype RoundTripSearchReq _
+instance standardEncodeRoundTripSearchReq :: StandardEncode RoundTripSearchReq where standardEncode (RoundTripSearchReq body) = standardEncode body
+instance showRoundTripSearchReq :: Show RoundTripSearchReq where show = genericShow
+instance decodeRoundTripSearchReq :: Decode RoundTripSearchReq where decode = defaultDecode
+instance encodeRoundTripSearchReq  :: Encode RoundTripSearchReq where encode = defaultEncode
+
 
 derive instance genericRentalSearchReq :: Generic RentalSearchReq _
 derive instance newtypeRentalSearchReq :: Newtype RentalSearchReq _

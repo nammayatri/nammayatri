@@ -1259,3 +1259,5 @@ getKN stringKey =
         UNKNOWN_ERROR -> "ಅಜ್ಞಾತ ದೋಷ"
         CONNECTION_REFUSED -> "ಸಂಪರ್ಕ ತಿರಸ್ಕರಿಸಲಾಗಿದೆ"
         TIMEOUT -> "ಟೈಮ್ಔಟ್"
+        ROUND_TRIP_INVALID_MESSAGE -> "ರೌಂಡ್ ಟ್ರಿಪ್ ಅನ್ನು ಅಂದಾಜು ಮಾಡಿದ ಪ್ರಯಾಣ ಸಮಯಕ್ಕಿಂತ ಕಡಿಮೆ ವೇಳೆಗೆ ನಿಗದಿ ಮಾಡಲಾಗುವುದಿಲ್ಲ"
+        PICKUP_TIME_NOT_SELECTED -> "ದಯವಿಟ್ಟು ಪಿಕಪ್ ಸಮಯವನ್ನು ಆಯ್ಕೆಮಾಡಿ"

@@ -1258,3 +1258,5 @@ getBN stringKey =
         UNKNOWN_ERROR -> "অজানা ত্রুটি"
         CONNECTION_REFUSED  -> "সংযোগ প্রত্যাখ্যাত"
         TIMEOUT -> "সময় শেষ"
+        ROUND_TRIP_INVALID_MESSAGE -> "রাউন্ড ট্রিপ আনুমানিক যাত্রার সময়ের নিচে নির্ধারণ করা যাবে না"
+        PICKUP_TIME_NOT_SELECTED -> "দয়া করে পিকআপ সময় নির্বাচন করুন"

@@ -1258,3 +1258,5 @@ getHI stringKey =
         UNKNOWN_ERROR -> "अज्ञात त्रुटि"
         CONNECTION_REFUSED -> "कनेक्शन नहीं हो सका"
         TIMEOUT -> "समय समाप्त"
+        ROUND_TRIP_INVALID_MESSAGE -> "राउंड ट्रिप को अनुमानित यात्रा समय से नीचे निर्धारित नहीं किया जा सकता"
+        PICKUP_TIME_NOT_SELECTED -> "कृपया पिकअप समय चुनें"

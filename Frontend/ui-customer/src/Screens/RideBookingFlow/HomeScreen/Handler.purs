@@ -245,3 +245,6 @@ homeScreen = do
     StayInHomeScreenSO state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
       App.BackT $ App.NoBack <$> (pure $ STAY_IN_HOME_SCREEN)
+    GoToRoundTripScreen state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_ROUND_TRIP state)

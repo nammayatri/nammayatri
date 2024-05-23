@@ -262,6 +262,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_RIDE_SEARCH_FLOW 
                         | CONFIRM_RENTAL_RIDE
                         | STAY_IN_HOME_SCREEN
+                        | GO_TO_ROUND_TRIP HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

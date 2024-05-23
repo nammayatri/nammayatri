@@ -1260,3 +1260,5 @@ getFR stringKey =
         UNKNOWN_ERROR -> "Erreur inconnue"
         CONNECTION_REFUSED -> " Connexion rejetée"
         TIMEOUT -> "TEMPS MORT"
+        ROUND_TRIP_INVALID_MESSAGE -> "Le voyage aller-retour ne peut pas être programmé en dessous du temps de trajet estimé"
+        PICKUP_TIME_NOT_SELECTED -> "Veuillez sélectionner l'heure de ramassage"

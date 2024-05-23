@@ -557,12 +557,13 @@ data Stage = HomeScreen
            | ChangeToRideAccepted
            | ChangeToRideStarted
            | ConfirmingQuotes
+           | GoToRoundTrip
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
 instance showStage :: Show Stage where show = genericShow
 
-data SearchLocationModelType = SearchLocation | LocateOnMap | NoView
+data SearchLocationModelType = SearchLocation | LocateOnMap | NoView | SelectTripType
 
 data PopupType = Logout | ConfirmBack | NoPopUp | ActiveQuotePopUp | TipsPopUp | CancelConfirmingQuotes
 
@@ -648,6 +649,7 @@ type HomeScreenStateData =
   , vehicleVariant :: String
   , hotSpotInfo :: Array HotSpotData
   , startTimeUTC :: String
+  , returnTimeUTC :: String
   , selectedDateTimeConfig :: DateTimeConfig
   , fareProductType :: FareProductType
   , invalidBookingId :: Maybe String
@@ -657,6 +659,9 @@ type HomeScreenStateData =
   , rateCardCache :: Maybe RateCard
   , maxEstimatedDuration :: Int
   , invalidBookingPopUpConfig :: Maybe InvalidBookingPopUpConfig
+  , tripTypeDataConfig :: TripTypeConfig
+  , destCity :: Maybe String 
+  , srcCity :: Maybe String
   }
 
 type InteroperabilityState = {
@@ -940,6 +945,20 @@ type SearchLocationModelProps = {
   , showLoader :: Boolean
   , crossBtnSrcVisibility :: Boolean
   , crossBtnDestVisibility :: Boolean
+  , tripType :: TicketType
+  , totalRideDistance :: Number
+  , totalRideDuration :: Int
+}
+
+type TripTypeConfig = {
+  tripPickupData :: Maybe TripTypeData,
+  tripReturnData :: Maybe TripTypeData
+}
+
+type TripTypeData =  {
+  tripDateTimeConfig :: DateTimeConfig,
+  tripDateUTC :: String,
+  tripDateReadableString :: String 
 }
 
 type SearchLocationModelData = {

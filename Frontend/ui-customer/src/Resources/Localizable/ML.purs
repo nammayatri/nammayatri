@@ -1260,3 +1260,5 @@ getML stringKey =
         UNKNOWN_ERROR -> "അജ്ഞാത പിശക്"
         CONNECTION_REFUSED -> "കണക്ഷൻ നിരസിച്ചു"
         TIMEOUT -> "ടൈം ഔട്ട്"
+        ROUND_TRIP_INVALID_MESSAGE -> "റൗണ്ട് ട്രിപ്പ് കണക്കാക്കിയ യാത്രാ സമയത്തെക്കാൾ താഴെ നിശ്ചയിക്കാനാവില്ല"
+        PICKUP_TIME_NOT_SELECTED -> "ദയവായി പിക്കപ്പ് സമയം തിരഞ്ഞെടുക്കുക"
