@@ -83,4 +83,6 @@
     <string name="new_distance">New Distance :</string>
     <string name="new_fare">New fare :</string>
     <string name="no_change">No Change</string>
+    <string name="no_additional_fare_tips_and_waiting_charges">"No additional fare. No tips. No waiting charges."</string>
+    <string name="third_party_booking">"Third Party Booking"</string>
 </resources>

@@ -88,6 +88,7 @@ window.getMerchantConfig = function () {
     ],
     "engilshInNative" : "ইংরেজি",
     "englishStrings": {
+      "MERCHANT_NAME" : "Yatri Sathi",
       "NEED_IT_TO_ENABLE_LOCATION": "Yatri Sathi Driver collect location data to enable share your location to monitor driver current location, even when the app is closed or not in use.",
       "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "Currently,We allow only West Bengal registered number",
       "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "You are about to place a call to the Yatri Sathi Support Team. Do you want to proceed?",
@@ -128,6 +129,7 @@ window.getMerchantConfig = function () {
       "REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_COINS" : "Refer Yatri Sathi app to customers and earn coins"
     },
     "hindiStrings": {
+      "MERCHANT_NAME" : "यात्री साथी",
       "NEED_IT_TO_ENABLE_LOCATION": "Yatri Sathi partner ड्राइवर के लोकेशन की निगरानी के लिए अपना स्थान साझा करने के लिए लोकेशन डेटा एकत्र करता है, तब भी जब ऐप बंद हो या उपयोग में न हो।",
       "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "Currently,We allow only West Bengal registered number",
       "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "आप जात्री साथी सपोर्ट टीम को कॉल करने वाले हैं। क्या आपकी आगे बढ़ने की इच्छा है?",
@@ -168,6 +170,7 @@ window.getMerchantConfig = function () {
       "REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_COINS" : "ग्राहकों को यात्री साथी ऐप साझा करें और सिक्के अर्जित करें"
     },
     "bengaliStrings": {
+      "MERCHANT_NAME" : "যাত্রী সাথী",
       "NEED_IT_TO_ENABLE_LOCATION": "জাটি সাথি ড্রাইভার ড্রাইভারের বর্তমান অবস্থান নিরীক্ষণের জন্য আপনার অবস্থানটি ভাগ করে নিতে সক্ষম করতে অবস্থানের ডেটা সংগ্রহ করে, এমনকি অ্যাপটি বন্ধ থাকলেও বা ব্যবহার না করা হয়।",
       "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "বর্তমানে, আমরা শুধুমাত্র পশ্চিমবঙ্গ নিবন্ধিত নম্বর অনুমোদন করি",
       "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "আপনি জাত্রি সাথি সমর্থন দলকে কল করতে চলেছেন। আপনি কি এগিয়ে যেতে চান?",

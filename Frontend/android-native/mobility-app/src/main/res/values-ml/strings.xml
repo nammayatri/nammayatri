@@ -69,4 +69,6 @@
     <string name="new_distance">പുതിയ ദൂരം :</string>
     <string name="new_fare">പുതിയ തുക :</string>
     <string name="no_change">മാറ്റമില്ല</string>
+    <string name="no_additional_fare_tips_and_waiting_charges">"അതിരിക്കുകയുമില്ല. ടിപ്സുകളുമില്ല. കാത്തിരിക്കൽ ചാർജും ഇല്ല."</string>
+    <string name="third_party_booking">"മൂന്നാംകക്ഷി ബുക്കിംഗ്"</string>
 </resources>

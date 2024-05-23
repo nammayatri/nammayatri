@@ -352,7 +352,8 @@
         android:background="#2C2F3A"
         android:orientation="horizontal"
         android:layout_alignParentBottom="true"
-        android:padding="15dp">
+        android:padding="15dp"
+        android:id="@+id/merchant_bottom_tag">
 
         <LinearLayout
             android:layout_width="match_parent"

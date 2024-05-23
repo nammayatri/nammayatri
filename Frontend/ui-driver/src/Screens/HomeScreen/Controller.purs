@@ -429,7 +429,8 @@ data Action = NoAction
             | TollChargesPopUpAC PopUpModal.Action
             | TollChargesAmbigousPopUpAC PopUpModal.Action
             | SwitchBookingStage BookingTypes
-            
+            | AccessibilityHeaderAction
+            | PopUpModalInterOperableAction PopUpModal.Action
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -1421,6 +1422,14 @@ eval (GoToEarningsScreen showCoinsView) state = do
 eval (DriverStats driverStats) state = do
   exit $ DriverStatsUpdate driverStats state
 
+eval AccessibilityHeaderAction state = 
+  if state.data.activeRide.bookingFromOtherPlatform then
+    continue state{ props{ showInterOperablePopUp = true } }
+  else update state
+
+eval (PopUpModalInterOperableAction PopUpModal.OnButton2Click) state =
+  continue state{ props{ showInterOperablePopUp = false } }
+
 eval (IsAcWorkingPopUpAction PopUpModal.OnButton1Click) state = exit $ UpdateAirConditioned state true
 
 eval (IsAcWorkingPopUpAction PopUpModal.OnButton2Click) state = exit $ UpdateAirConditioned state false
@@ -1577,7 +1586,9 @@ activeRideDetail state (RidesInfo ride) =
   capacity : ride.vehicleCapacity,
   hasToll :  maybe false (\charge -> charge /= 0.0) ride.estimatedTollCharges,
   estimatedTollCharge : ride.estimatedTollCharges,
-  acRide : ride.isVehicleAirConditioned
+  acRide : ride.isVehicleAirConditioned,
+  bapName : transformBapName ride.bapName,
+  bookingFromOtherPlatform : not ride.isValueAddNP
 }
   where 
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String
@@ -1664,7 +1675,7 @@ getPeekHeight state =
       contentLayout = runFn1 JB.getLayoutBounds $ getNewIDWithTag "rideActionLayout"
       pixels = runFn1 HU.getPixels ""
       density = (runFn1 HU.getDeviceDefaultDensity "")/  defaultDensity
-      currentPeekHeight = headerLayout.height  + contentLayout.height + (if RideActionModal.isSpecialRide (rideActionModalConfig state) then (labelLayout.height + 6) else 0)
+      currentPeekHeight = headerLayout.height  + contentLayout.height + (if RideActionModal.showTag (rideActionModalConfig state) then (labelLayout.height + 6) else 0)
       requiredPeekHeight = ceil (((toNumber currentPeekHeight) /pixels) * density)
     in if requiredPeekHeight == 0 then 470 else requiredPeekHeight
   

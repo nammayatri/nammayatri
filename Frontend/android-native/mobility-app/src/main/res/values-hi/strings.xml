@@ -74,4 +74,6 @@
     <string name="new_distance">नई दूरी :</string>
     <string name="new_fare">नया किराया :</string>
     <string name="no_change">कोई बदलाव नहीं</string>
+    <string name="no_additional_fare_tips_and_waiting_charges">"कोई अतिरिक्त किराया नहीं। कोई सुझाव नहीं। कोई प्रतीक्षा शुल्क नहीं।"</string>
+    <string name="third_party_booking">"तीसरे पक्ष की बुकिंग"</string>
 </resources>

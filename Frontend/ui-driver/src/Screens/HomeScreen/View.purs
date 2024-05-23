@@ -78,7 +78,7 @@ import MerchantConfig.Utils as MU
 import PaymentPage (consumeBP)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shadow, clipChildren)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shadow, clipChildren, textFromHtml)
 import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
@@ -190,7 +190,7 @@ screen initialState (GlobalState globalState) =
                                 if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "2000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "5.0"
-                                if (not initialState.props.chatcallbackInitiated) then do
+                                if (not initialState.props.chatcallbackInitiated && not initialState.data.activeRide.bookingFromOtherPlatform) then do
                                   _ <- JB.clearChatMessages
                                   _ <- JB.storeCallBackMessageUpdated push initialState.data.activeRide.id "Driver" UpdateMessages AllChatsLoaded
                                   _ <- JB.storeCallBackOpenChatScreen push OpenChatScreen
@@ -304,6 +304,7 @@ view push state =
       ][ Anim.screenAnimationFadeInOut $
           driverMapsHeaderView push state
         , rideActionModelView push state
+        -- , if state.data.activeRide.bookingFromOtherPlatform then RideActionModal.bottomPlatformInfoBar VISIBLE else dummyTextView
         ]
       -- , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]       Disabled ProfileDemoView
       , if state.data.paymentState.makePaymentModal && (not $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideCompleted]) then makePaymentModal push state else dummyTextView
@@ -346,6 +347,7 @@ view push state =
       , if state.props.showAcWorkingPopup == Just true then isAcWorkingPopupView push state else dummyTextView 
       , if state.props.currentStage == RideAccepted && state.data.activeRide.hasToll && state.props.toll.showTollChargePopup then PopUpModal.view (push <<< TollChargesPopUpAC) (PopUpConfig.tollChargesIncluded state) else dummyTextView
       , if state.props.currentStage == RideCompleted && state.data.endRideData.tollAmbigous && state.props.toll.showTollChargeAmbigousPopup then PopUpModal.view (push <<< TollChargesAmbigousPopUpAC) (PopUpConfig.finalFareExcludesToll state) else dummyTextView
+      , if state.props.showInterOperablePopUp then interOperableInfoPopUpView push state else dummyTextView
   ]
   where 
     showPopups = (DA.any (_ == true )
@@ -359,6 +361,70 @@ view push state =
       ])
     onRide = DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted]
     showEnterOdometerReadingModalView = state.data.activeRide.tripType == ST.Rental && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
+
+
+interOperableInfoPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+interOperableInfoPopUpView push state =
+  let config = interOperableInfoPopup state
+  in
+  linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , background Color.black800
+  ][PopUpModal.view (push <<< PopUpModalInterOperableAction) config{ layout = Just interOperableInfoLayout }]
+
+interOperableInfoLayout :: forall w. PopUpModal.LayoutConfig -> PrestoDOM (Effect Unit) w
+interOperableInfoLayout config = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , gravity CENTER
+  , margin $ Margin 16 0 16 16
+  , padding $ PaddingVertical 12 24
+  , cornerRadius 12.0
+  , background Color.blue600
+  , orientation VERTICAL
+  ][  interOperableInfo "" "ic_namma_yatri_logo" "Other Apps"
+    , interOperableInfo (getString CUSTOMER_CALLING_AND_MESSAGING) "ny_ic_green_check" "-"
+    , interOperableInfo (getString WAITING_CHARGES) "ny_ic_green_check" "-"
+    , interOperableInfo (getString CUSTOMER_TIPS) "ny_ic_green_check" "-"
+    , interOperableInfo (getString CANCELLATION_CHARGES) "ny_ic_green_check" "-"
+    , interOperableInfo (getString $ MERCHANT_COINS (getString $ MERCHANT_NAME "")) "ny_ic_green_check" "-"
+   ]
+
+interOperableInfo :: forall w. String -> String -> String -> PrestoDOM (Effect Unit) w
+interOperableInfo text1 image1 text2 =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , padding $ Padding 12 12 12 0
+  , orientation HORIZONTAL
+  , gravity CENTER
+  ][  textView $
+      [ width $ V ((EHC.screenWidth unit)/3)
+      , height WRAP_CONTENT
+      , color Color.black800
+      , text text1
+      , margin $ MarginRight 5
+      , padding $ PaddingRight 5
+      , gravity RIGHT
+      ] <> FontStyle.body1 TypoGraphy
+    , imageView
+      [ width $ V 20
+      , height $ V 20
+      , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET image1
+      , margin $ MarginHorizontal 10 10
+      , weight 1.0
+      ]
+    , textView $
+      [ width $ V 30
+      , height WRAP_CONTENT
+      , text text2
+      , gravity CENTER
+      , weight 1.0
+      ] <> FontStyle.body1 TypoGraphy
+   ]
+
 
 blockerPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 blockerPopUpView push state = 
@@ -926,7 +992,7 @@ driverDetail push state =
       , cornerRadius 50.0
       , alpha if rideAccStage then 0.5 else 1.0
       , margin (Margin 0 10 10 10)
-      , visibility $ boolToVisibility $ isNothing state.data.activeRide.disabilityTag
+      , visibility $ boolToVisibility $ not $ isJust state.data.activeRide.disabilityTag || state.data.activeRide.bookingFromOtherPlatform
       ](DA.mapWithIndex (\index item ->
           driverStatusPill item push state index
         ) driverStatusIndicators
@@ -1048,12 +1114,14 @@ accessibilityHeaderView push state accessibilityHeaderconfig =
   linearLayout
   [ weight 1.0
   , height MATCH_PARENT
-    , gravity LEFT
-  , visibility $ boolToVisibility $ isJust state.data.activeRide.disabilityTag && not (isJust state.data.advancedRideData)
+  , gravity LEFT
+  , visibility $ boolToVisibility $ (isJust state.data.activeRide.disabilityTag && not (isJust state.data.advancedRideData)) || state.data.activeRide.bookingFromOtherPlatform
   , margin (Margin 10 10 10 10)
   , background accessibilityHeaderconfig.background
   , cornerRadius 50.0
-  , padding (Padding 8 8 8 8)
+  , clickable accessibilityHeaderconfig.clickable
+  , onClick push $ const AccessibilityHeaderAction
+  , padding (Padding 14 8 8 8)
   ][
     imageView
     [ width $ V 25
@@ -1069,12 +1137,13 @@ accessibilityHeaderView push state accessibilityHeaderconfig =
         [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , padding $ PaddingRight 4
-            , text accessibilityHeaderconfig.primaryText
+            , textFromHtml accessibilityHeaderconfig.primaryText
             , color accessibilityHeaderconfig.textColor
         ] <> FontStyle.body1 TypoGraphy
       , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
+        , visibility $ boolToVisibility $ not $ DS.null accessibilityHeaderconfig.secondaryText
         , text accessibilityHeaderconfig.secondaryText
         , color accessibilityHeaderconfig.textColor
         ] <> FontStyle.body4 TypoGraphy
@@ -1546,7 +1615,7 @@ savedLocationListView push state =
               , stroke $ "1," <> Color.grey900
               , cornerRadius 8.0
               , gravity CENTER_VERTICAL
-              , visibility if showAddGoto then VISIBLE else GONE
+              , visibility $ boolToVisibility showAddGoto
               , onClick push $ const AddNewLocation
               ][  imageView
                   [ width $ V 24
@@ -1659,7 +1728,7 @@ showOfflineStatus push state =
   , orientation VERTICAL
   , background Color.black9000
   , gravity BOTTOM
-  , visibility if state.props.statusOnline then GONE else VISIBLE
+  , visibility $ boolToVisibility $ not state.props.statusOnline
   ][ PrestoAnim.animationSet
     [ Anim.translateYAnim AnimConfig.translateYAnimConfig
     ] $

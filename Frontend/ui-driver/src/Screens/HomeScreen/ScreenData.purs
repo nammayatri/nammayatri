@@ -226,6 +226,7 @@ initData =
       , showAcWorkingPopup: Nothing
       , acExplanationPopup : false
       , toll : initialTollState
+      , showInterOperablePopUp : false
       }
   }
 
@@ -292,4 +293,6 @@ dummyRideData = {
       , hasToll: false
       , estimatedTollCharge : Nothing
       , acRide : Nothing
+      , bapName : ""
+      , bookingFromOtherPlatform : false
       }

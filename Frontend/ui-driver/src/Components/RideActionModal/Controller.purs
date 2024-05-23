@@ -76,7 +76,9 @@ type Config = {
   capacity :: Mb.Maybe Int,
   serviceTierAndAC :: String,
   acRide :: Mb.Maybe Boolean,
-  isAdvanced :: Boolean
+  isAdvanced :: Boolean,
+  bookingFromOtherPlatform :: Boolean,
+  bapName :: String
   }
 
 type AddressConfig = {
@@ -126,5 +128,7 @@ config = {
   capacity : Mb.Nothing,
   serviceTierAndAC : "",
   acRide : Mb.Nothing,
-  isAdvanced : false
+  isAdvanced : false,
+  bookingFromOtherPlatform : false,
+  bapName : ""
 }
