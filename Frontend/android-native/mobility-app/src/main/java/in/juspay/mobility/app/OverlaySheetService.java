@@ -660,10 +660,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String rideStartTime = rideRequestBundle.getString("rideStartTime");
                     String rideStartDate= rideRequestBundle.getString("rideStartDate");
                     String notificationSource= rideRequestBundle.getString("notificationSource");
-                   
+                    boolean isThirdPartyBooking = rideRequestBundle.getBoolean("isThirdPartyBooking");
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
-
                     }
                     SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                             distanceTobeCovered,
@@ -705,7 +704,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             rideDistance,
                             rideStartTime,
                             rideStartDate,
-                            notificationSource);
+                            notificationSource,
+                            isThirdPartyBooking);
 
                     if (floatyView == null) {
                         startTimer();

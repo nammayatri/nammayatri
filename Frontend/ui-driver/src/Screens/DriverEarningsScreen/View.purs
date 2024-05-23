@@ -15,15 +15,21 @@
 module Screens.DriverEarningsScreen.View where
 
 import Common.Types.App
+import Data.Maybe
 import Debug
+import Helpers.Utils
+import JBridge
+import Locale.Utils
+import Mobility.Prelude
+import Prelude
 import Screens.DriverEarningsScreen.ComponentConfig
-import Engineering.Helpers.BackTrack (liftFlowBT)
+
 import Animation (fadeIn, translateInYAnim)
 import Animation as Anim
 import Animation.Config (Direction(..), animConfig)
+import Common.Types.App (YoutubeData(..))
 import Components.BottomNavBar as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
-import Data.Function.Uncurried (runFn1, runFn2, runFn5)
 import Components.Calendar.View as Calendar
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader.Controller as GenericHeaderConfig
@@ -36,49 +42,45 @@ import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (length, (..), foldl, filter, (!!), null, last, mapWithIndex, any, head)
 import Data.Either (Either(..), either)
+import Data.Function.Uncurried (runFn1, runFn2, runFn5)
 import Data.Int (ceil, floor, fromNumber, toNumber, fromString)
-import Data.Maybe
-import Data.Tuple as DT
 import Data.String as DS
+import Data.Tuple (Tuple(..))
+import Data.Tuple as DT
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn7)
+import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (getCurrentUTC, flowRunner, getFormattedDate, getNewIDWithTag, screenHeight, getVideoID, getDayName, safeMarginBottom, screenWidth, convertUTCtoISC, liftFlow, formatCurrencyWithCommas)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getFixedTwoDecimals)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils 
-import JBridge 
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude
 import Presto.Core.Types.Language.Flow (doAff, Flow)
 import PrestoDOM (textFromHtml, scrollView, frameLayout, shimmerFrameLayout, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, lottieAnimationView, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha, singleLine, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Events (globalOnScroll)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Services.API (GetRidesHistoryResp(..), GetRidesSummaryListResp(..), DriverProfileSummaryRes(..))
 import Screens as ScreenNames
 import Screens.DriverEarningsScreen.Controller (Action(..), ScreenOutput, eval, fetchWeekyEarningData, dummyQuestions, tableData)
 import Screens.DriverEarningsScreen.ScreenData (dummyDateItem)
 import Screens.Types (DriverEarningsScreenState)
 import Screens.Types as ST
+import Services.API (GetRidesHistoryResp(..), GetRidesSummaryListResp(..), DriverProfileSummaryRes(..))
 import Services.API as API
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
-import Types.App (defaultGlobalState, GlobalState(..))
-import Data.Tuple (Tuple(..))
-import Common.Types.App (YoutubeData(..))
-import PrestoDOM.Elements.Keyed as Keyed
-import Mobility.Prelude
 import Timers (startTimer)
 import Locale.Utils
 import Effect.Uncurried (runEffectFn3)
+import Types.App (defaultGlobalState, GlobalState(..))
 
 screen :: ST.DriverEarningsScreenState -> Screen Action ST.DriverEarningsScreenState ScreenOutput
 screen initialState =
@@ -1884,7 +1886,16 @@ historyViewItemForEarnings push item state index =
                     , margin $ MarginRight 5
                     , imageWithFallback $ fetchImage FF_ASSET $ getVehicleVariantImage item.vehicleVariant
                     ]
-                , linearLayout
+                  , textView $
+                    [ color Color.black700
+                    , background $ Color.grey900
+                    , text $ getString (BOOKING_FROM item.bapName)
+                    , padding $ Padding 10 4 10 4
+                    , cornerRadius 26.0
+                    , visibility $ boolToVisibility $ not item.isValueAddNP
+                    , margin $ MarginRight 5
+                    ] <> FontStyle.body17 TypoGraphy
+                  , linearLayout
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
                     , background $ Color.grey900

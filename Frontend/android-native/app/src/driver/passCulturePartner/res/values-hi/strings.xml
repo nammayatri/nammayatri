@@ -44,4 +44,6 @@
     <string name="new_ride_available_for_offering">पेशकश के लिए उपलब्ध नई सवारी</string>
     <string name="and">और</string>
     <string name="no_enabled_browser">आपके डिवाइस में कोई सक्षम ब्राउज़र नहीं मिला, कृपया ब्राउज़र को सक्षम या स्थापित करें</string>
+    <string name="no_additional_fare_tips_and_waiting_charges">"कोई अतिरिक्त किराया नहीं। कोई सुझाव नहीं। कोई प्रतीक्षा शुल्क नहीं।"</string>
+    <string name="third_party_booking">"तीसरे पक्ष की बुकिंग"</string>
 </resources>

@@ -16,17 +16,18 @@
 module Components.PopUpModal.Controller where
 
 import Common.Styles.Colors as Color
-import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..))
+import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..), PrestoDOM)
 import Font.Size as FontSize
 import Font.Style (Style(..))
 import Common.Types.App as Common
 import PrestoDOM.Types.DomAttributes (Corners(..)) as PTD
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Prelude ((<>))
+import Prelude ((<>), Unit)
 import Data.Maybe as Mb
 import Components.TipsView as TipsView
 import JBridge
+import Effect (Effect)
 
 data Action = OnButton1Click
             | OnButton2Click
@@ -87,8 +88,13 @@ type Config = {
     isVisible :: Boolean,
     isTipPopup :: Boolean,
     coverLottieConfig :: LottieConfig,
-    showRetry :: Boolean
-, coverLottie :: CoverLottie
+    showRetry :: Boolean,
+    coverLottie :: CoverLottie,
+    layout :: forall w. Mb.Maybe (LayoutConfig -> PrestoDOM (Effect Unit) w)
+}
+
+type LayoutConfig = {
+  visibility :: Visibility
 }
 
 type CoverMediaConfig = {
@@ -644,6 +650,7 @@ config = {
     },
     gravity : CENTER
   }
+  , layout : Mb.Nothing
 }
 
 

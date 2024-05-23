@@ -31,7 +31,7 @@ public class SheetModel {
 
     private final Boolean disabilityTag;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha, distanceToBeCovered;
-    private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated, specialZonePickup, downgradeEnabled;
+    private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated, specialZonePickup, downgradeEnabled, isThirdPartyBooking;
     private double srcLat, srcLng, destLat, destLng;
 
     public SheetModel(String pickUpDistance,
@@ -74,7 +74,8 @@ public class SheetModel {
                       String rideDistance,
                       String rideStartTime,
                       String rideStartDate,
-                      String notificationSource){
+                      String notificationSource,
+                      Boolean isThirdPartyBooking){
 
         this.srcLat = srcLat;
         this.srcLng = srcLng;
@@ -123,6 +124,7 @@ public class SheetModel {
         this.rideStartTime = rideStartTime;
         this.rideStartDate = rideStartDate;
         this.notificationSource = notificationSource;
+        this.isThirdPartyBooking = isThirdPartyBooking;
     }
 
     public String getVehicleServiceTier() {
@@ -187,6 +189,8 @@ public class SheetModel {
     public int getCustomerTip() {return customerExtraFee;}
 
     public Boolean getDisabilityTag() {return disabilityTag; }
+
+    public Boolean isThirdPartyBooking() {return isThirdPartyBooking;}
 
     public void setOfferedPrice(double offeredPrice) {
         this.offeredPrice = offeredPrice;

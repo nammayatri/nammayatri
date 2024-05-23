@@ -181,6 +181,7 @@
       "ny_ic_add_unfilled" : true,
       "ny_ic_alarm" : true,
       "ny_ic_alarm_new" : true,
+      "ny_ic_alert_hexagon_red" : true,
       "ny_ic_alert_triangle_white" : true,
       "ny_ic_ambulance" : true,
       "ny_ic_anonymous_call" : true,

@@ -265,6 +265,7 @@ public class NotificationUtils {
                     sheetData.putString("rideStartTime", rideStartTime);
                     sheetData.putString("rideStartDate", rideStartDate);
                     sheetData.putString("notificationSource", source);
+                    sheetData.putBoolean("isThirdPartyBooking", entity_payload.has("isValueAddNP") && !entity_payload.optBoolean("isValueAddNP", true));
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
 

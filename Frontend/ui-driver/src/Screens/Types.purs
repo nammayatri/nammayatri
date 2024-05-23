@@ -1155,7 +1155,9 @@ type ActiveRide = {
   capacity :: Maybe Int,
   hasToll :: Boolean,
   estimatedTollCharge :: Maybe Number,
-  acRide :: Maybe Boolean
+  acRide :: Maybe Boolean,
+  bapName :: String,
+  bookingFromOtherPlatform :: Boolean
 }
 
 type HomeScreenProps =  {
@@ -1233,7 +1235,8 @@ type HomeScreenProps =  {
   acExplanationPopup :: Boolean,
   toll :: TollState,
   bookingStage :: BookingTypes,
-  showAdvancedRidePopUp :: Boolean
+  showAdvancedRidePopUp :: Boolean,
+  showInterOperablePopUp :: Boolean
  }
 
 type TollState = {
@@ -2542,7 +2545,9 @@ type CoinHistoryItem = {
   status :: Maybe String,
   tagImages :: Array String,
   cash :: Number,
-  vehicleVariant :: String
+  vehicleVariant :: String,
+  isValueAddNP :: Boolean,
+  bapName :: String
 }
 
 type TableItem = {

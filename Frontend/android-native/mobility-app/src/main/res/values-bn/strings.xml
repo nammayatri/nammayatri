@@ -68,4 +68,6 @@
     <string name="new_distance">নতুন দূরত্ব :</string>
     <string name="new_fare">নতুন ভাড়া :</string>
     <string name="no_change">কোনো পরিবর্তন নেই</string>
+    <string name="no_additional_fare_tips_and_waiting_charges">"অতিরিক্ত ভাড়া নেই। টিপস নেই। অপেক্ষা চার্জ নেই।"</string>
+    <string name="third_party_booking">"তৃতীয় পক্ষের বুকিং"</string>
 </resources>

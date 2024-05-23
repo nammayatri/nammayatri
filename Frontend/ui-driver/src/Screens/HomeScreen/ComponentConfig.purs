@@ -134,7 +134,9 @@ rideActionModalConfig state =
     serviceTierAndAC = state.data.activeRide.serviceTier,
     capacity = state.data.activeRide.capacity,
     acRide = state.data.activeRide.acRide,
-    isAdvanced = (state.props.bookingStage == ADVANCED)
+    isAdvanced = (state.props.bookingStage == ADVANCED),
+    bookingFromOtherPlatform = state.data.activeRide.bookingFromOtherPlatform,
+    bapName = state.data.activeRide.bapName
     }
     in rideActionModalConfig'
 
@@ -1209,7 +1211,8 @@ type ContentConfig =
     mediaType :: String,
     videoId :: String,
     background :: String,
-    textColor :: String
+    textColor :: String,
+    clickable :: Boolean
   }
 
 
@@ -1280,7 +1283,7 @@ chatBlockerPopUpConfig state = let
   in popUpConfig'
 
 accessibilityConfig :: LazyCheck -> ContentConfig
-accessibilityConfig dummy = { title : "", coverMediaText : "", primaryText : getString CUSTOMER_MAY_NEED_ASSISTANCE, secondaryText : getString CUSTOMER_HAS_DISABILITY_PLEASE_ASSIST_THEM, videoUrl : "", imageUrl : fetchImage FF_ASSET "ny_ic_disability_illustration", mediaType : "", videoId : "", background : Color.lightPurple, textColor : Color.purple}
+accessibilityConfig dummy = { title : "", coverMediaText : "", primaryText : getString CUSTOMER_MAY_NEED_ASSISTANCE, secondaryText : getString CUSTOMER_HAS_DISABILITY_PLEASE_ASSIST_THEM, videoUrl : "", imageUrl : fetchImage FF_ASSET "ny_ic_disability_illustration", mediaType : "", videoId : "", background : Color.lightPurple, textColor : Color.purple, clickable : false}
 
 getAccessibilityPopupData :: ST.HomeScreenState -> Maybe ST.DisabilityType -> Boolean -> ContentConfig
 getAccessibilityPopupData state pwdtype isDriverArrived = 
@@ -1379,31 +1382,34 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
 getAccessibilityHeaderText :: ST.HomeScreenState -> ContentConfig
 getAccessibilityHeaderText state = 
   let config = accessibilityConfig Config
-    in if state.data.activeRide.status == NEW then 
-                        case state.data.activeRide.disabilityTag, state.data.activeRide.notifiedCustomer of   
-                          Just ST.HEAR_IMPAIRMENT, false -> config {primaryText = getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText = getString PLEASE_CHAT_AND_AVOID_CALLS, imageUrl = fetchImage FF_ASSET "ny_ic_poor_hearing"}
-                          Just ST.BLIND_AND_LOW_VISION, false -> config {primaryText = getString CUSTOMER_HAS_LOW_VISION, secondaryText = getString PLEASE_CALL_AND_AVOID_CHATS, imageUrl = fetchImage FF_ASSET "ic_accessibility_vision"}
-                          Just ST.LOCOMOTOR_DISABILITY, false -> config {primaryText = getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText = getString PLEASE_GO_TO_EXACT_PICKUP,  imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
-                          Just ST.OTHER_DISABILITY, false -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
-                          Nothing, false -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
-                      -- else if state.data.activeRide.isDriverArrived then
-                          -- case state.data.activeRide.disabilityTag of   
-                          Just ST.HEAR_IMPAIRMENT, true -> config {primaryText = getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText = getString MESSAGE_THEM_AT_PICKUP, imageUrl = fetchImage FF_ASSET "ny_ic_poor_hearing"}
-                          Just ST.BLIND_AND_LOW_VISION, true -> config {primaryText = getString CUSTOMER_HAS_LOW_VISION, secondaryText = getString SOUND_HORN_ONCE_AT_PICKUP, imageUrl = fetchImage FF_ASSET "ic_accessibility_vision"}
-                          Just ST.LOCOMOTOR_DISABILITY, true -> config {primaryText = getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText = getString HELP_WITH_THEIR_MOBILITY_AID, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
-                          Just ST.OTHER_DISABILITY, true -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
-                          Just ST.SAFETY, _ -> config {primaryText = getString CUSTOMER_SAFETY_FIRST, secondaryText = getString LETS_ENSURE_SAFE_RIDE, imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_sheild", background = Color.green100, textColor = Color.green900}
-                          Just ST.SPECIAL_ZONE_PICKUP, _ -> config {primaryText = getString SPECIAL_PICKUP_ZONE, secondaryText = getString PRIORITY_RIDE_EXPIERENCE, imageUrl = fetchImage COMMON_ASSET "ny_ic_sp_zone_green",background = Color.green100, textColor = Color.green900}
-                          Nothing, true -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
-                      else 
-                        case state.data.activeRide.disabilityTag of   
-                          Just ST.HEAR_IMPAIRMENT -> config {primaryText = getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_poor_hearing"}
-                          Just ST.BLIND_AND_LOW_VISION -> config {primaryText = getString CUSTOMER_HAS_LOW_VISION, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ic_accessibility_vision"}
-                          Just ST.LOCOMOTOR_DISABILITY -> config {primaryText = getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
-                          Just ST.OTHER_DISABILITY -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
-                          Just ST.SAFETY -> config {primaryText =  getString CUSTOMER_SAFETY_FIRST, secondaryText = getString LETS_ENSURE_SAFE_RIDE, imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_sheild", background = Color.green100, textColor = Color.green900}
-                          Just ST.SPECIAL_ZONE_PICKUP -> config {primaryText = getString SPECIAL_PICKUP_ZONE, secondaryText = getString PRIORITY_RIDE_EXPIERENCE, imageUrl = fetchImage COMMON_ASSET "ny_ic_sp_zone_green", background = Color.green100, textColor = Color.green900}
-                          Nothing -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+    in  if state.data.activeRide.bookingFromOtherPlatform then
+          config {primaryText = (getString $ SOME_FEATURE_ARE_NOT_AVAILABLE_WITH_THIS_PROVIDER (getString $ MERCHANT_NAME "")) <> ".&nbsp;<span style=\"color:#2194FF;\">" <> getString WHY <> "</span>&nbsp", secondaryText = "", imageUrl = fetchImage FF_ASSET "ny_ic_alert_hexagon", background = Color.grey900, textColor = Color.black700, clickable = true}
+        else
+          if state.data.activeRide.status == NEW then 
+            case state.data.activeRide.disabilityTag, state.data.activeRide.notifiedCustomer of   
+              Just ST.HEAR_IMPAIRMENT, false -> config {primaryText = getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText = getString PLEASE_CHAT_AND_AVOID_CALLS, imageUrl = fetchImage FF_ASSET "ny_ic_poor_hearing"}
+              Just ST.BLIND_AND_LOW_VISION, false -> config {primaryText = getString CUSTOMER_HAS_LOW_VISION, secondaryText = getString PLEASE_CALL_AND_AVOID_CHATS, imageUrl = fetchImage FF_ASSET "ic_accessibility_vision"}
+              Just ST.LOCOMOTOR_DISABILITY, false -> config {primaryText = getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText = getString PLEASE_GO_TO_EXACT_PICKUP,  imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+              Just ST.OTHER_DISABILITY, false -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+              Nothing, false -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+          -- else if state.data.activeRide.isDriverArrived then
+              -- case state.data.activeRide.disabilityTag of   
+              Just ST.HEAR_IMPAIRMENT, true -> config {primaryText = getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText = getString MESSAGE_THEM_AT_PICKUP, imageUrl = fetchImage FF_ASSET "ny_ic_poor_hearing"}
+              Just ST.BLIND_AND_LOW_VISION, true -> config {primaryText = getString CUSTOMER_HAS_LOW_VISION, secondaryText = getString SOUND_HORN_ONCE_AT_PICKUP, imageUrl = fetchImage FF_ASSET "ic_accessibility_vision"}
+              Just ST.LOCOMOTOR_DISABILITY, true -> config {primaryText = getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText = getString HELP_WITH_THEIR_MOBILITY_AID, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+              Just ST.OTHER_DISABILITY, true -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+              Just ST.SAFETY, _ -> config {primaryText = getString CUSTOMER_SAFETY_FIRST, secondaryText = getString LETS_ENSURE_SAFE_RIDE, imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_sheild", background = Color.green100, textColor = Color.green900}
+              Just ST.SPECIAL_ZONE_PICKUP, _ -> config {primaryText = getString SPECIAL_PICKUP_ZONE, secondaryText = getString PRIORITY_RIDE_EXPIERENCE, imageUrl = fetchImage COMMON_ASSET "ny_ic_sp_zone_green",background = Color.green100, textColor = Color.green900}
+              Nothing, true -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+          else 
+            case state.data.activeRide.disabilityTag of   
+              Just ST.HEAR_IMPAIRMENT -> config {primaryText = getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_poor_hearing"}
+              Just ST.BLIND_AND_LOW_VISION -> config {primaryText = getString CUSTOMER_HAS_LOW_VISION, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ic_accessibility_vision"}
+              Just ST.LOCOMOTOR_DISABILITY -> config {primaryText = getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+              Just ST.OTHER_DISABILITY -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+              Just ST.SAFETY -> config {primaryText =  getString CUSTOMER_SAFETY_FIRST, secondaryText = getString LETS_ENSURE_SAFE_RIDE, imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_sheild", background = Color.green100, textColor = Color.green900}
+              Just ST.SPECIAL_ZONE_PICKUP -> config {primaryText = getString SPECIAL_PICKUP_ZONE, secondaryText = getString PRIORITY_RIDE_EXPIERENCE, imageUrl = fetchImage COMMON_ASSET "ny_ic_sp_zone_green", background = Color.green100, textColor = Color.green900}
+              Nothing -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
 
 getRideCompletedConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
 getRideCompletedConfig state = let 
@@ -2017,15 +2023,11 @@ vehicleNotSupportedPopup state =
       , margin = Margin 16 0 16 15 },
       option1 {
         text = getString OKAY
-      , color = Color.yellow900
-      , background = Color.black900
-      , strokeColor = Color.transparent
-      , textStyle = FontStyle.SubHeading1
       , width = MATCH_PARENT
       },
       option2 {
       visibility = false
-    },
+      },
       cornerRadius = PTD.Corners 15.0 true true true true,
       coverImageConfig {
         imageUrl = fetchImage FF_ASSET cityConfig.vehicleNSImg
@@ -2083,6 +2085,54 @@ bgLocPopup state =
       }
     }
   
+interOperableInfoPopup :: ST.HomeScreenState -> PopUpModal.Config
+interOperableInfoPopup state = PopUpModal.config {
+      gravity = CENTER
+    , backgroundClickable = false
+    , optionButtonOrientation = "VERTICAL"
+    , buttonLayoutMargin = Margin 16 0 16 20
+    , margin = MarginHorizontal 25 25
+    , topTitle {
+        text = getString THIRD_PARTY_RIDES
+        , visibility = VISIBLE
+        , width = MATCH_PARENT
+        , height = WRAP_CONTENT 
+        , margin = Margin 16 20 16 0
+        , color = Color.black800
+        , gravity = CENTER
+        }
+    , primaryText {
+        text = getString THIRD_PARTY_RIDES_ARE_REQUESTED_WITH_BY_A_USERS_FROM_ANOTHER_APP
+      , color = Color.black700
+      , gravity = CENTER
+      , margin = Margin 16 8 16 0
+      , textStyle = Heading3
+      }
+    , secondaryText{
+        text = getString SOME_FEATURES_MAY_NOT_BE_AVAILABLE
+      , textStyle = Body5
+      , margin = Margin 16 8 16 15 
+      , color = Color.black700
+      }
+    , option1 {
+        text = getString CALL_SUPPORT
+      , width = V 1
+      , height = V 1      
+      }
+    , option2 {
+        text = getString GOT_IT
+      , margin = MarginHorizontal 0 0
+      , color = Color.black650
+      , background = Color.white900
+      , strokeColor = Color.black500
+      , width = MATCH_PARENT
+      }
+  , cornerRadius = PTD.Corners 15.0 true true true true
+  , coverMediaConfig {
+        visibility = VISIBLE
+      , height = WRAP_CONTENT
+    }
+  }  
     
 introducingCoinsPopup :: ST.HomeScreenState -> PopUpModal.Config
 introducingCoinsPopup state = PopUpModal.config {

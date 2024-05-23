@@ -629,7 +629,9 @@ newtype RidesInfo = RidesInfo
       isVehicleAirConditioned :: Maybe Boolean,
       vehicleCapacity :: Maybe Int,
       tollConfidence :: Maybe CTA.Confidence,
-      bookingType :: Maybe BookingTypes
+      bookingType :: Maybe BookingTypes,
+      bapName :: String,
+      isValueAddNP :: Boolean
   }
 
 newtype OdometerReading = OdometerReading

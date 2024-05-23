@@ -39,7 +39,7 @@ import Engineering.Helpers.Commons (getCurrentUTC, getFutureDate, getDayName, co
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (initializeCalendar, saveObject, getCurrentDay)
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (checkSpecialPickupZone, isYesterday, getcurrentdate, getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag)
+import Helpers.Utils (checkSpecialPickupZone, isYesterday, getcurrentdate, getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag, transformBapName)
 import JBridge (pauseYoutubeVideo)
 import Language.Strings (getString)
 import Language.Types
@@ -211,6 +211,8 @@ eval (CoinTransactionResponseAction (CoinTransactionRes resp)) state = do
             , status: Nothing
             , tagImages: []
             , vehicleVariant : ""
+            , isValueAddNP : false
+            , bapName : ""
             }
         )
         resp.coinTransactionHistory
@@ -247,6 +249,8 @@ eval (CoinUsageResponseAction (CoinsUsageRes resp)) state = do
             , status: Nothing
             , tagImages: []
             , vehicleVariant : ""
+            , isValueAddNP : false
+            , bapName : ""
             }
         )
         resp.coinUsageHistory
@@ -540,6 +544,8 @@ earningHistoryItemsListTransformer list =
           , tagImages: getTagImages (RidesInfo ride)
           , cash: 0.0
           , vehicleVariant : ride.vehicleServiceTier
+          , isValueAddNP : ride.isValueAddNP
+          , bapName : transformBapName ride.bapName
           }
       )
       list
@@ -745,7 +751,9 @@ dummyRideHistoryItem = RidesInfo {
       isVehicleAirConditioned : Nothing,
       vehicleCapacity : Nothing,
       tollConfidence : Nothing,
-      bookingType : Nothing
+      bookingType : Nothing,
+      bapName : "",
+      isValueAddNP : false
   }
 
 dummyLocationInfo :: LocationInfo

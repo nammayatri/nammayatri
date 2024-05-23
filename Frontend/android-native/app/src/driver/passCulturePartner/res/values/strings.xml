@@ -44,11 +44,12 @@
     <string name="chatting_is_enabled">Chatting is enabled</string>
     <string name="you_can_now_chat_with_driver">You can now chat with driver</string>
     <string name="you_can_now_chat_with_customer">You can now chat with customer</string>
-
     <string name="new_ride_req">New Ride Request</string>
     <string name="new_ride_available_for_offering">New ride available for offering</string>
     <string name="and">and</string>
     <string name="error_app_not_found">App not found</string>
     <string name="no_enabled_browser">No enabled browser found in your device, please enable or install a browser</string>
     <string name="merchant_id" translatable="false">passculture</string>
+    <string name="no_additional_fare_tips_and_waiting_charges">"No additional fare. No tips. No waiting charges."</string>
+    <string name="third_party_booking">"Third Party Booking"</string>
 </resources>

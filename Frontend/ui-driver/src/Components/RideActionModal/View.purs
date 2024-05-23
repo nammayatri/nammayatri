@@ -36,7 +36,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag, convertUTCtoISC)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getRideLabelData, getRequiredTag, getCurrentUTC, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (getRideLabelData, getRequiredTag, getCurrentUTC, fetchImage, FetchImageFrom(..), dummyLabelConfig)
 import Helpers.Utils (getRideTypeColor, getCategorizedVariant)
 import Helpers.Utils (getRideTypeColor, getVariantRideType)
 import Helpers.Utils as HU
@@ -48,7 +48,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Mobility.Prelude (boolToVisibility, boolToInvisibility)
 import Prelude ((<>), div, mod, Unit, bind, when, const, not, discard, pure, show, unit, void, ($), (<), (/=), (<>), (&&), (==), (-), (>), (||), (/), (*), (+), negate, (<$>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fillViewport, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, pivotY, relativeLayout, rippleColor, scrollBarX, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fillViewport, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, pivotY, relativeLayout, rippleColor, scrollBarX, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, alignParentBottom)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -63,6 +63,7 @@ import Common.Types.Config as CTC
 import Resource.Constants as RC
 import Debug
 import PrestoDOM.Elements.Keyed as Keyed
+import Data.String as DS
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = do
@@ -90,8 +91,9 @@ view push config = do
               ]
             ]
           ]
-    , if isSpecialRide config
-        then rideActionViewWithLabel push config else rideActionView (MarginTop 0) push config
+    , if showTag config then 
+        rideActionViewWithLabel push config 
+      else rideActionView (MarginTop 0) push config
     ]
 
 
@@ -105,16 +107,17 @@ messageButton push config =
   , visibility $ visibility'
   , padding $ Padding 20 16 20 16
   , margin $ MarginLeft 16
-  , background Color.white900
-  , stroke $ "1,"<> Color.black500
+  , background if config.bookingFromOtherPlatform then Color.grey700 else Color.white900
+  , stroke if config.bookingFromOtherPlatform then "1,"<> Color.grey900 else "1,"<> Color.black500
   , cornerRadius 30.0
   , afterRender push $ const $ LoadMessages
-  , onClick push $ const $  if config.accessibilityTag == Maybe.Just BLIND_AND_LOW_VISION then VisuallyImpairedCustomer else MessageCustomer
+  , onClick (\action -> if config.bookingFromOtherPlatform
+                          then void $ pure $ JB.toast $ getString SOME_FEATURES_ARE_NOT_AVAILABLE_FOR_THIRD_PARTY_RIDES
+                          else push action) $ const $ if config.accessibilityTag == Maybe.Just BLIND_AND_LOW_VISION then VisuallyImpairedCustomer else MessageCustomer
   , alpha if config.accessibilityTag == Maybe.Just BLIND_AND_LOW_VISION then 0.5 else 1.0
-  , clickable true
   , rippleColor Color.rippleShade
   ][  imageView
-      [ imageWithFallback $ fetchImage FF_ASSET $ if config.unReadMessages then "ic_chat_badge" else "ic_chat"
+      [ imageWithFallback $ if config.bookingFromOtherPlatform then fetchImage FF_COMMON_ASSET "ny_ic_chat_grey" else if config.unReadMessages then fetchImage FF_ASSET "ic_chat_badge" else fetchImage FF_ASSET "ic_chat"
       , height $ V 20
       , width $ V 20
       ]
@@ -161,12 +164,15 @@ callButton push config =
   
 rideActionViewWithLabel :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM ( Effect Unit) w
 rideActionViewWithLabel push config =
-  let specialZoneConfig = getRideLabelData config.specialLocationTag
+  let tagConfig = if config.bookingFromOtherPlatform then 
+                    dummyLabelConfig{ text = (getString THIRD_PARTY_BOOKING) <> ": " <> config.bapName, textColor = Color.black700, backgroundColor = Color.grey900 }
+                  else 
+                    getRideLabelData config.specialLocationTag
   in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , background $ specialZoneConfig.backgroundColor
+  , background $ tagConfig.backgroundColor
   , cornerRadii $ Corners 25.0 true true false false
   , orientation VERTICAL
   , padding $ PaddingTop 5
@@ -179,20 +185,21 @@ rideActionViewWithLabel push config =
       ][ imageView
           [ width $ V 18
           , height $ V 18
-          , imageWithFallback $ specialZoneConfig.imageUrl
+          , visibility if DS.null tagConfig.imageUrl then GONE else VISIBLE
+          , imageWithFallback $ tagConfig.imageUrl
           ]
         , textView $
           [ width WRAP_CONTENT
           , height MATCH_PARENT
-          , text $ specialZoneConfig.text
+          , text $ tagConfig.text
           , gravity CENTER_VERTICAL
-          , color Color.white900
+          , color tagConfig.textColor
           , margin $ MarginLeft 5
           ] <> FontStyle.getFontStyle FontStyle.Tags TypoGraphy
         , linearLayout
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , visibility if Maybe.isJust config.accessibilityTag then VISIBLE else GONE
+          , visibility if Maybe.isJust config.accessibilityTag && not (DS.null tagConfig.secondaryText) then VISIBLE else GONE
           ][  textView $ 
               [ width WRAP_CONTENT
               , height MATCH_PARENT
@@ -211,7 +218,7 @@ rideActionViewWithLabel push config =
               [ textView $ 
                   [ width WRAP_CONTENT
                   , height MATCH_PARENT
-                  , text $ specialZoneConfig.secondaryText
+                  , text $ tagConfig.secondaryText
                   , gravity CENTER_VERTICAL
                   , color Color.white900
                   ] <> FontStyle.getFontStyle FontStyle.Tags TypoGraphy
@@ -1106,8 +1113,8 @@ separatorConfig =
   , color : Color.black500
   }
 
-isSpecialRide :: Config -> Boolean
-isSpecialRide config = (Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag config.specialLocationTag)
+showTag :: Config -> Boolean
+showTag config = ((Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag config.specialLocationTag)) || config.bookingFromOtherPlatform
 
 getAnimationDelay :: Config -> Int
 getAnimationDelay config = 50
