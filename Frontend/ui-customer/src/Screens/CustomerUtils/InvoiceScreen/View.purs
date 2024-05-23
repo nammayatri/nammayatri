@@ -36,7 +36,7 @@ import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig,
 import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Helpers.Utils (isHaveFare, getCityFromString, formatFareType)
+import Helpers.Utils (isHaveFare, getCityFromString, formatFareType, getCityConfig)
 import MerchantConfig.Utils (getMerchant, Merchant (..))
 import Mobility.Prelude
 import Storage
@@ -113,13 +113,20 @@ view push state =
 
 referenceList :: ST.InvoiceScreenState -> Array String
 referenceList state =
-  let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  let cityStr = getValueToLocalStore CUSTOMER_LOCATION
+      city = getCityFromString cityStr
       nightChargeFrom = if city == ST.Delhi then "11 PM" else "10 PM"
       nightChargeTill = "5 AM"
+      cityConfig = getCityConfig state.data.config.cityConfig cityStr
+      waitingCharges = 
+        if state.data.selectedItem.vehicleVariant == Just VV.AUTO_RICKSHAW then
+            cityConfig.waitingChargeConfig.auto
+        else 
+            cityConfig.waitingChargeConfig.cabs
   in
   (if (state.data.selectedItem.nightCharges ) then [ "1.5" <> (getString $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill) ] else [])
     <> (if (isHaveFare "DRIVER_SELECTED_FARE" state.data.selectedItem.faresList) then [(getString DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) ] else [])
-    <> (if (isHaveFare "WAITING_OR_PICKUP_CHARGES" state.data.selectedItem.faresList) then [ (getVarString WAITING_CHARGE_DESCRIPTION $ if state.data.selectedItem.vehicleVariant == Just VV.AUTO_RICKSHAW then ["3", "1.5"] else ["5", "1"] ) ] else [])
+    <> (if (isHaveFare "WAITING_OR_PICKUP_CHARGES" state.data.selectedItem.faresList) then [ (getVarString WAITING_CHARGE_DESCRIPTION [show waitingCharges.freeMinutes, show waitingCharges.perMinCharges] ) ] else [])
     <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" state.data.selectedItem.faresList) then [ (getString EARLY_END_RIDE_CHARGES_DESCRIPTION) ] else [])
     <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" state.data.selectedItem.faresList) then [ (getString CUSTOMER_TIP_DESCRIPTION) ] else [])
     <> (if (isHaveFare "TOLL_CHARGES" state.data.selectedItem.faresList) then [ "⁺" <> (getString TOLL_CHARGES_DESC) ] else [])

@@ -2057,6 +2057,7 @@ eval (CancelSearchAction PopUpModal.OnButton1Click) state = do
 
 eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
   let isAcCab = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing
+                && state.data.currentCityConfig.enableAcViews
   continue state { props { isCancelRide = true, cancellationReasons = cancelReasons isAcCab, cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CancelRide infoCard)) state =
