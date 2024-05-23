@@ -1353,3 +1353,4 @@ getKN stringKey =
         RC_MANDATORY -> "ಈ ಡಾಕ್ಯುಮೆಂಟ್‌ಗೆ RC ಕಡ್ಡಾಯವಾಗಿದೆ"
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "ಡಾಕ್ಯುಮೆಂಟ್ ಯಶಸ್ವಿಯಾಗಿ ಅಪ್‌ಲೋಡ್ ಆಗಿದೆ"
         REGISTER_YOUR_BIKE -> "ನಿಮ್ಮ ಬೈಕನ್ನು ನೋಂದಣಿ ಮಾಡಿ"
+        BIKE_TAXI -> "ಬೈಕ್ ಟ್ಯಾಕ್ಸಿ"

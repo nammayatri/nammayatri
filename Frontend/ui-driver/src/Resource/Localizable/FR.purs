@@ -961,4 +961,5 @@ getFR stringKey =
         ARRIVED_AT_STOP -> "Arrivé à l'arrêt"
         END_ODO_READING_CANT_BE_MORE_THAN_300_START -> "La lecture du compteur kilométrique de fin ne peut pas dépasser 300 km à partir de la lecture du compteur kilométrique de départ"
         REGISTER_YOUR_BIKE -> "Enregistrez votre vélo"
+        BIKE_TAXI -> "Taxi Moto"
         _ -> ""

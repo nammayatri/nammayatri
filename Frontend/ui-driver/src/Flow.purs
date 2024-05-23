@@ -566,7 +566,7 @@ onBoardingFlow = do
       registerationStepsAutos = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.autos) updatedGs.globalProps.onBoardingDocs
       registerationStepsBike = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.bikes) updatedGs.globalProps.onBoardingDocs
       checkAvailability field = maybe false (\(API.OnboardingDocsRes mbDoc) -> isJust (field mbDoc)) updatedGs.globalProps.onBoardingDocs
-      variantList = (if checkAvailability _.autos then [ST.AutoCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else []) <> (if checkAvailability _.bikes then [ST.BikeCategory] else [])
+      variantList = (if checkAvailability _.cabs then [ST.CarCategory] else []) <> (if checkAvailability _.bikes then [ST.BikeCategory] else []) 
       mismatchLogic vehicleDocument = (uiCurrentCategory == (RC.transformVehicleType $ Just vehicleDocument.userSelectedVehicleCategory)) && isJust vehicleDocument.verifiedVehicleCategory && (Just vehicleDocument.userSelectedVehicleCategory /= vehicleDocument.verifiedVehicleCategory)
       vehicleTypeMismatch = any (\(API.VehicleDocumentItem item) -> mismatchLogic item) driverRegistrationResp.vehicleDocuments
       documentStatusList = mkStatusList (DriverRegistrationStatusResp driverRegistrationResp)
@@ -887,7 +887,7 @@ addVehicleDetailsflow addRcFromProf = do
   flow <- UI.addVehicleDetails
   case flow of
     VALIDATE_DETAILS state -> do
-      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.rc_base64 "VehicleRegistrationCertificate" Nothing state.data.vehicleCategory)
+      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.rc_base64 "VehicleRegistrationCertificate" (Just "WB01AP4884") state.data.vehicleCategory)
       case validateImageResp of
        Right (ValidateImageRes resp) -> do
         liftFlowBT $ logEvent logField_ "ny_driver_rc_photo_confirmed"
@@ -3530,7 +3530,7 @@ documentcaptureScreenFlow = do
       modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
       selectLanguageFlow
     TA.UPLOAD_DOC_API state imageType -> do
-      validateImageResp <- lift $ lift $ Remote.validateImage $ makeValidateImageReq state.data.imageBase64 imageType state.data.linkedRc state.data.vehicleCategory
+      validateImageResp <- lift $ lift $ Remote.validateImage $ makeValidateImageReq state.data.imageBase64 imageType (Just "WB01AP4884") state.data.vehicleCategory
       case validateImageResp of
         Right (ValidateImageRes resp) -> do
           void $ pure $ toast $ getString DOCUMENT_UPLOADED_SUCCESSFULLY

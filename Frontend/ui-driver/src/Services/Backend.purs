@@ -685,6 +685,7 @@ mkCategory category =
         _ -> case (getValueToLocalStore VEHICLE_CATEGORY) of
                 "CarCategory" -> Just "CAR"
                 "AutoCategory" -> Just "AUTO_CATEGORY"
+                "BikeCategory" -> Just "MOTORCYCLE"
                 _ -> Nothing
 
 registerDriverDLBT :: DriverDLReq -> FlowBT String  DriverDLResp

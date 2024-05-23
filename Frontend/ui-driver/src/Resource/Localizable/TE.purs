@@ -1353,3 +1353,4 @@ getTE stringKey =
         RC_MANDATORY -> "ఈ పత్రానికి RC తప్పనిసరి"
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "పత్రం విజయవంతంగా అప్‌లోడ్ చేయబడింది"
         REGISTER_YOUR_BIKE -> "మీ బైక్ నమోదు చేయండి"
+        BIKE_TAXI -> "బైక్ టాక్సీ"

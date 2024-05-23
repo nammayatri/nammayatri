@@ -136,7 +136,7 @@ eval BackPressed state = do
   else if state.data.vehicleTypeMismatch then continue state { data { vehicleTypeMismatch = false}}
   else if state.props.confirmChangeVehicle then continue state { props { confirmChangeVehicle = false}}
   else if state.props.contactSupportModal == ST.SHOW then continue state { props { contactSupportModal = ST.ANIMATING}}
-  else if DA.notElem state.data.vehicleDetailsStatus [COMPLETED, IN_PROGRESS] && Mb.isJust state.data.vehicleCategory then continue state { data {vehicleCategory = Mb.Nothing}}
+  else if DA.notElem state.data.vehicleDetailsStatus [COMPLETED, IN_PROGRESS] && Mb.isJust state.data.vehicleCategory then continue state -- { data {vehicleCategory = Mb.Nothing}}
   else do
       void $ pure $ JB.minimizeApp ""
       continue state
@@ -282,7 +282,7 @@ getCategoryFromVariant :: String -> Mb.Maybe ST.VehicleCategory
 getCategoryFromVariant variant = case variant of
   "AUTO_RICKSHAW" -> Mb.Just ST.AutoCategory
   "CAR" -> Mb.Just ST.CarCategory
-  "MOTORCYCLE" -> Mb.Just ST.BikeCategory
+  "BIKE" -> Mb.Just ST.BikeCategory
   _ -> Mb.Just ST.CarCategory
 
 getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus

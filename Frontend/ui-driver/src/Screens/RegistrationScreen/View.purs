@@ -85,6 +85,11 @@ view push state =
       completedStatusCount = length $ filter (\doc -> (getStatus doc.stage state) == ST.COMPLETED) documentList
       subScriptionStepCount = if showSubscriptionsOption && state.data.subscriptionStatus == IN_PROGRESS then 1 else 0
       progressPercent = floor $ (toNumber completedStatusCount - toNumber subScriptionStepCount) / toNumber (length documentList) * 100.0
+      variantImage = case state.data.vehicleCategory of
+        Just ST.CarCategory -> "ny_ic_sedan_side"
+        Just ST.AutoCategory -> "ny_ic_auto_side"
+        Just ST.BikeCategory -> "ny_ic_bike_side"
+        Nothing -> ""
   in
     Anim.screenAnimation
       $ relativeLayout
@@ -138,7 +143,7 @@ view push state =
                             [ width $ V 32
                             , height $ V 32
                             , margin $ MarginRight 4
-                            , imageWithFallback $ fetchImage FF_ASSET if state.data.vehicleCategory == Just ST.CarCategory then "ny_ic_sedan_side" else "ny_ic_auto_side"
+                            , imageWithFallback $ fetchImage FF_ASSET variantImage 
                             ]
                         , textView
                             $ [ width WRAP_CONTENT
@@ -739,7 +744,6 @@ variantListView push state =
                     ST.AutoCategory -> "ny_ic_auto_side_view"
                     ST.CarCategory -> "ny_ic_sedan_side"
                     ST.BikeCategory -> "ny_ic_bike_side"
-              -- , imageWithFallback $ fetchImage FF_ASSET item.vehicleImage
               ]
             , textView $
               [ width WRAP_CONTENT
@@ -747,8 +751,7 @@ variantListView push state =
               , text case item of
                         ST.AutoCategory -> getString AUTO_RICKSHAW
                         ST.CarCategory -> getString CAR
-                        ST.BikeCategory -> "BIKE"
-              -- , text item.vehicleName
+                        ST.BikeCategory -> getString BIKE_TAXI
               , color Color.black800
               , margin $ MarginLeft 20
               ] <> FontStyle.subHeading1 TypoGraphy

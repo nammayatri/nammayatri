@@ -297,8 +297,8 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : false
       },
       "variantSubscriptionConfig" : {
-        "enableVariantBasedSubscription" : false,
-        "variantList" : []
+        "enableVariantBasedSubscription" : true,
+        "variantList" : ["BikeCategory", "CarCategory"]
       }
     }
   ]

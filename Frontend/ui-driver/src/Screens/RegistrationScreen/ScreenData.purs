@@ -70,7 +70,7 @@ initData = {
         contactSupportView : true,
         contactSupportModal : ST.HIDE,
         selectedVehicleIndex : Nothing,
-        optionalDocsExpanded : true,
+        optionalDocsExpanded : false,
         confirmChangeVehicle : false,
         refreshAnimation : false,
         driverEnabled : false,
@@ -109,9 +109,3 @@ type VehicleInfo = {
   vehicleImage :: String,
   vehicleName :: String
 }
-
-variantsData :: Array VehicleInfo
-variantsData = [
-  { vehicleType : ST.AutoCategory, vehicleImage : "ny_ic_auto_side", vehicleName : getString AUTO_RICKSHAW },
-  { vehicleType : ST.CarCategory, vehicleImage : "ny_ic_sedan_side", vehicleName : getString CAR }
-]
