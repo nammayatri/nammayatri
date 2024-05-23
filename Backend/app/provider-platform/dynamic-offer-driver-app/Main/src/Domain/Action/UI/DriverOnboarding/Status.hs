@@ -29,7 +29,7 @@ import qualified Control.Monad.Extra as Extra
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DAPlan
-import Domain.Types.AadhaarVerification as AV
+import qualified Domain.Types.AadhaarCard as DAadhaarCard
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverLicense as DL
 import qualified Domain.Types.IdfyVerification as IV
@@ -53,9 +53,10 @@ import SharedLogic.DriverOnboarding
 import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
-import qualified Storage.Queries.AadhaarVerification as SAV
+import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverLicense as DLQuery
+import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.DriverSSN as QDSSN
 import qualified Storage.Queries.IdfyVerification as IVQuery
@@ -360,21 +361,18 @@ getProcessedDriverDocuments docType driverId =
       mbDL <- DLQuery.findByDriverId driverId -- add failure reason in dl and rc
       return (mapStatus <$> (mbDL <&> (.verificationStatus)), mbDL >>= (.rejectReason))
     DVC.AadhaarCard -> do
-      mbAadhaarCard <- SAV.findByDriverId driverId
-      return (boolToStatus <$> (mbAadhaarCard <&> (.isVerified)), Nothing)
+      mbAadhaarCard <- QAadhaarCard.findByPrimaryKey driverId
+      return (mapStatus . (.verificationStatus) <$> mbAadhaarCard, Nothing)
     DVC.Permissions -> return (Just VALID, Nothing)
     DVC.SocialSecurityNumber -> do
       mbSSN <- QDSSN.findByDriverId driverId
       return (mapStatus <$> (mbSSN <&> (.verificationStatus)), mbSSN >>= (.rejectReason))
     DVC.ProfilePhoto -> checkImageValidity DVC.ProfilePhoto driverId
     DVC.UploadProfile -> checkImageValidity DVC.UploadProfile driverId
-    DVC.PanCard -> checkImageValidity DVC.PanCard driverId
+    DVC.PanCard -> do
+      mbPanCard <- QDPC.findByDriverId driverId
+      return (mapStatus . (.verificationStatus) <$> mbPanCard, Nothing)
     _ -> return (Nothing, Nothing)
-  where
-    boolToStatus :: Bool -> ResponseStatus
-    boolToStatus = \case
-      True -> VALID
-      False -> MANUAL_VERIFICATION_REQUIRED
 
 getProcessedVehicleDocuments :: DVC.DocumentType -> Id SP.Person -> RC.VehicleRegistrationCertificate -> Flow (Maybe ResponseStatus, Maybe Text)
 getProcessedVehicleDocuments docType driverId vehicleRC =
@@ -420,7 +418,9 @@ getInProgressDriverDocuments docType driverId onboardingTryLimit =
     DVC.AadhaarCard -> checkIfImageUploadedOrInvalidated DVC.AadhaarCard driverId
     DVC.PanCard -> checkIfImageUploadedOrInvalidated DVC.PanCard driverId
     DVC.Permissions -> return (VALID, Nothing)
-    DVC.ProfilePhoto -> checkIfImageUploadedOrInvalidated DVC.ProfilePhoto driverId
+    DVC.ProfilePhoto -> do
+      mbImages <- IQuery.findRecentLatestByPersonIdAndImageType driverId DVC.ProfilePhoto
+      return (fromMaybe NO_DOC_AVAILABLE (mapStatus <$> (mbImages >>= (.verificationStatus))), Nothing)
     DVC.UploadProfile -> checkIfImageUploadedOrInvalidated DVC.UploadProfile driverId
     _ -> return (NO_DOC_AVAILABLE, Nothing)
 
@@ -495,12 +495,12 @@ documentStatusMessage status mbReason docType language = do
           | otherwise -> toVerificationMessage Other language
         Nothing -> toVerificationMessage Other language
 
-getAadhaarStatus :: Id SP.Person -> Flow (ResponseStatus, Maybe AV.AadhaarVerification)
+getAadhaarStatus :: Id SP.Person -> Flow (ResponseStatus, Maybe DAadhaarCard.AadhaarCard)
 getAadhaarStatus personId = do
-  mAadhaarCard <- SAV.findByDriverId personId
+  mAadhaarCard <- QAadhaarCard.findByPrimaryKey personId
   case mAadhaarCard of
     Just aadhaarCard -> do
-      if aadhaarCard.isVerified
+      if aadhaarCard.verificationStatus == Documents.VALID
         then return (VALID, Just aadhaarCard)
         else return (MANUAL_VERIFICATION_REQUIRED, Just aadhaarCard)
     Nothing -> return (NO_DOC_AVAILABLE, Nothing)

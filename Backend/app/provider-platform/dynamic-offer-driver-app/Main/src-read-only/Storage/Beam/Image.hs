@@ -22,8 +22,10 @@ data ImageT f = ImageT
     merchantId :: B.C f Kernel.Prelude.Text,
     personId :: B.C f Kernel.Prelude.Text,
     rcId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    reviewerEmail :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     s3Path :: B.C f Kernel.Prelude.Text,
     verificationStatus :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Documents.VerificationStatus),
+    workflowTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

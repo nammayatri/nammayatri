@@ -136,6 +136,7 @@ import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Documents as Documents
+import qualified Kernel.Types.Documents as KTD
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
@@ -165,7 +166,7 @@ import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
-import qualified Storage.Queries.AadhaarVerification as AV
+import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import Storage.Queries.DriverFee (findPendingFeesByDriverIdAndServiceName)
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverHomeLocation as QDHL
@@ -383,14 +384,14 @@ driverAadhaarInfo merchantShortId opCity driverId = do
   unless (merchant.id == driver.merchantId && driver.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
   driverInf <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
   unless (driverInf.aadhaarVerified) $ throwError $ InvalidRequest "Person aadhaar verification is pending"
-  res <- AV.findByDriverId personId
+  res <- QAadhaarCard.findByPrimaryKey personId
   case res of
     Just aadhaarData -> do
       pure
         Common.DriverAadhaarInfoRes
-          { driverName = aadhaarData.driverName,
-            driverGender = aadhaarData.driverGender,
-            driverDob = aadhaarData.driverDob,
+          { driverName = fromMaybe "Data Not available" aadhaarData.nameOnCard,
+            driverGender = fromMaybe "Data Not available" aadhaarData.driverGender,
+            driverDob = fromMaybe "Data Not available" aadhaarData.dateOfBirth,
             driverImage = aadhaarData.driverImage
           }
     Nothing -> throwError $ InvalidRequest "no aadhaar data is found"
@@ -1530,9 +1531,9 @@ unlinkAadhaar merchantShortId opCity driverId = do
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   let personId = cast @Common.Driver @DP.Person driverId
 
-  _ <- B.runInReplica $ AV.findByDriverId personId >>= fromMaybeM (InvalidRequest "can't unlink Aadhaar")
+  _ <- B.runInReplica $ QAadhaarCard.findByPrimaryKey personId >>= fromMaybeM (InvalidRequest "can't unlink Aadhaar")
 
-  AV.deleteByDriverId personId
+  QAadhaarCard.deleteByPersonId personId
   QDriverInfo.updateAadhaarVerifiedState False driverId_
   unless (transporterConfig.aadhaarVerificationRequired) $ QDriverInfo.updateEnabledVerifiedState driverId_ False (Just False)
   logTagInfo "dashboard -> unlinkAadhaar : " (show personId)
@@ -1785,14 +1786,14 @@ driverAadhaarInfoByPhone merchantShortId _ phoneNumber = do
   merchant <- findMerchantByShortId merchantShortId
   mobileNumberHash <- getDbHash phoneNumber
   driver <- QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
-  res <- AV.findByDriverId driver.id
+  res <- QAadhaarCard.findByPrimaryKey driver.id
   case res of
     Just aadhaarData -> do
       pure
         Common.DriverAadhaarInfoRes
-          { driverName = aadhaarData.driverName,
-            driverGender = aadhaarData.driverGender,
-            driverDob = aadhaarData.driverDob,
+          { driverName = fromMaybe "Data Not Available" aadhaarData.nameOnCard,
+            driverGender = fromMaybe "Data Not Available" aadhaarData.driverGender,
+            driverDob = fromMaybe "Data Not Available" aadhaarData.dateOfBirth,
             driverImage = aadhaarData.driverImage
           }
     Nothing -> throwError $ InvalidRequest "no aadhaar data is found"
@@ -1804,16 +1805,16 @@ updateByPhoneNumber :: ShortId DM.Merchant -> Context.City -> Text -> Common.Upd
 updateByPhoneNumber merchantShortId _ phoneNumber req = do
   mobileNumberHash <- getDbHash phoneNumber
   aadhaarNumberHash <- getDbHash req.driverAadhaarNumber
-  aadhaarInfo <- AV.findByAadhaarNumberHash (Just aadhaarNumberHash)
+  aadhaarInfo <- QAadhaarCard.findByAadhaarNumberHash (Just aadhaarNumberHash)
   when (isJust aadhaarInfo) $ throwError AadhaarAlreadyLinked
   merchant <- findMerchantByShortId merchantShortId
   driver <- QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
-  res <- AV.findByDriverId driver.id
+  res <- QAadhaarCard.findByPrimaryKey driver.id
   case res of
-    Just _ -> AV.findByPhoneNumberAndUpdate req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) req.isVerified driver.id
+    Just _ -> QAadhaarCard.findByPhoneNumberAndUpdate (Just req.driverName) (Just req.driverGender) (Just req.driverDob) (Just aadhaarNumberHash) (bool KTD.INVALID KTD.VALID req.isVerified) driver.id
     Nothing -> do
-      aadhaarEntity <- AVD.mkAadhaar driver.id req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) Nothing True Nothing
-      AV.create aadhaarEntity
+      aadhaarEntity <- AVD.mkAadhaar merchant.id driver.merchantOperatingCityId driver.id req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) Nothing True Nothing
+      QAadhaarCard.create aadhaarEntity
   QDriverInfo.updateAadhaarVerifiedState True (cast driver.id)
   pure Success
 

@@ -7,6 +7,7 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Common
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DriverInformation
+import qualified Domain.Types.DriverPanCard
 import qualified Domain.Types.Image
 import qualified Domain.Types.ServiceTierType
 import EulerHS.Prelude hiding (id)
@@ -16,6 +17,19 @@ import qualified Kernel.Types.Id
 import Servant
 import qualified Servant.Client.Core
 import Tools.Auth
+
+data AadhaarCardReq = AadhaarCardReq
+  { aadhaarBackImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
+    aadhaarFrontImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
+    address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    consent :: Kernel.Prelude.Bool,
+    consentTimestamp :: Kernel.Prelude.UTCTime,
+    dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    maskedAadhaarNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    validationStatus :: API.Types.UI.DriverOnboardingV2.ValidationStatus
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data AirConditionedTier = AirConditionedTier
   { isWorking :: Kernel.Prelude.Bool,
@@ -54,9 +68,14 @@ data DocumentVerificationConfigList = DocumentVerificationConfigList
 
 data DriverPanReq = DriverPanReq
   { consent :: Kernel.Prelude.Bool,
+    consentTimestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     imageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     imageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
-    panNumber :: Kernel.Prelude.Text
+    nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    panNumber :: Kernel.Prelude.Text,
+    validationStatus :: Kernel.Prelude.Maybe API.Types.UI.DriverOnboardingV2.ValidationStatus,
+    verifiedBy :: Kernel.Prelude.Maybe Domain.Types.DriverPanCard.VerifiedBy
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -87,6 +106,8 @@ data DriverVehicleServiceTiers = DriverVehicleServiceTiers
 
 data FarePolicyHour = Peak | NonPeak | Night deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
+newtype GetLiveSelfieResp = GetLiveSelfieResp {image :: Kernel.Prelude.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data RateCardItem = RateCardItem {price :: Kernel.Types.Common.Money, priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity, title :: Kernel.Prelude.Text}
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -104,3 +125,5 @@ data RateCardResp = RateCardResp
 data SSNReq = SSNReq {ssn :: Kernel.Prelude.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 newtype UpdateAirConditionUpdateRequest = UpdateAirConditionUpdateRequest {isAirConditioned :: Kernel.Prelude.Bool} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data ValidationStatus = APPROVED | DECLINED | AUTO_APPROVED | AUTO_DECLINED | NEEDS_REVIEW deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema, Read)

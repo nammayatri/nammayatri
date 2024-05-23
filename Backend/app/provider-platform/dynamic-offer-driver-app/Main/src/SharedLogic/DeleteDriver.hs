@@ -24,9 +24,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.IssueManagement ()
+import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AadhaarOtpReq as AadhaarReq
 import qualified Storage.Queries.AadhaarOtpVerify as AadhaarOtp
-import qualified Storage.Queries.AadhaarVerification as AV
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverQuote as QDriverQuote
@@ -72,7 +72,7 @@ deleteDriver merchantShortId reqDriverId = do
   QIssueReport.deleteByPersonId (cast reqDriverId)
   AadhaarReq.deleteByPersonId reqDriverId
   AadhaarOtp.deleteByPersonId reqDriverId
-  AV.deleteByDriverId reqDriverId
+  QAadhaarCard.deleteByPersonId reqDriverId
   QPerson.deleteById reqDriverId
   logTagInfo "deleteDriver : " (show reqDriverId)
   return Success

@@ -20,6 +20,7 @@ import qualified API.Internal as Internal
 import qualified API.UI as UI
 import qualified Data.ByteString as BS
 import Data.OpenApi
+import qualified Domain.Action.UI.DriverOnboarding.HyperVergeWebhook as HyperVergeResultWebhook
 import qualified Domain.Action.UI.DriverOnboarding.IdfyWebhook as DriverOnboarding
 import qualified Domain.Action.UI.Payment as Payment
 import qualified Domain.Action.UI.SafetyWebhook as SafetyWebhook
@@ -69,6 +70,7 @@ type MainAPI =
              :> Capture "city" Context.City
              :> SafetyWebhook.SafetyWebhookAPI
          )
+    :<|> HyperVergeResultWebhook.HyperVergeResultWebhookAPI
     :<|> Dashboard.API -- TODO :: Needs to be deprecated
     :<|> Dashboard.APIV2
     :<|> Internal.API
@@ -86,6 +88,7 @@ mainServer =
     :<|> juspayWebhookHandler
     :<|> juspayWebhookHandlerV2
     :<|> safetyWebhookHandler
+    :<|> hyperVergeResultWebhookHandler
     :<|> Dashboard.handler
     :<|> Dashboard.handlerV2
     :<|> Internal.handler
@@ -169,3 +172,9 @@ safetyWebhookHandler ::
   FlowHandler AckResponse
 safetyWebhookHandler merchantShortId mbOpCity secret =
   withFlowHandlerAPI . SafetyWebhook.safetyWebhookHandler merchantShortId mbOpCity secret
+
+hyperVergeResultWebhookHandler ::
+  Value ->
+  FlowHandler AckResponse
+hyperVergeResultWebhookHandler =
+  withFlowHandlerAPI . HyperVergeResultWebhook.hyperVergeResultWebhookHandler

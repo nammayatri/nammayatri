@@ -117,41 +117,6 @@ AadhaarOtpReq:
       kvFunction: deleteWithKV
       where: driverId
 
-AadhaarVerification:
-  tableName: aadhaar_verification
-  fields:
-    driverId: Id Person
-    driverName: Text
-    driverGender: Text
-    driverDob: Text
-    driverImage: Maybe Text
-    aadhaarNumberHash: Maybe DbHash
-    isVerified: Bool
-    driverImagePath: Maybe Text
-  excludedFields: [merchantOperatingCityId, merchantId]
-  derives: "Generic,Show,ToJSON,FromJSON"
-  constraints:
-    driverId: PrimaryKey
-    aadhaarNumberHash: SecondaryKey
-  queries:
-    findByDriverId:
-      kvFunction: findOneWithKV
-      where: driverId
-    deleteByDriverId:
-      kvFunction: deleteWithKV
-      where: driverId
-    findByAadhaarNumberHash:
-      kvFunction: findOneWithKV
-      where: aadhaarNumberHash
-    findByPhoneNumberAndUpdate:
-      kvFunction: updateWithKV
-      params: [driverName, driverGender, driverDob, aadhaarNumberHash, isVerified]
-      where: driverId
-    updateDriverImagePath:
-      kvFunction: updateOneWithKV
-      params: [driverImagePath]
-      where: driverId
-
 DriverLicense:
   tableName: driver_license
   fields:
@@ -313,6 +278,10 @@ DriverRCAssociation:
 
 Image:
   tableName: image
+  types:
+    SelfieFetchStatus:
+      enum: "APPROVED,NEEDS_REVIEW"
+      derive: "ToParamSchema"
   fields:
     id: Id Image
     personId: Id Person
@@ -322,6 +291,8 @@ Image:
     failureReason: Maybe DriverOnboardingError
     rcId: Maybe Text
     verificationStatus: Maybe VerificationStatus
+    workflowTransactionId: Maybe Text
+    reviewerEmail: Maybe Text
     documentExpiry: Maybe UTCTime
   excludedFields: [merchantOperatingCityId]
   constraints:
@@ -345,12 +316,21 @@ Image:
     deleteByPersonId:
       kvFunction: deleteWithKV
       where: personId
+    findByWrokflowTransactionId:
+      kvFunction: findAllWithKV
+      where: workflowTransactionId
+    updateVerificationStatus:
+      kvFunction: updateWithKV
+      params: [verificationStatus, reviewerEmail, updatedAt]
+      where: workflowTransactionId
     updateDocumentExpiry:
       kvFunction: updateOneWithKV
       params: [documentExpiry]
       where: id
   extraOperations:
     - EXTRA_QUERY_FILE
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SelfieFetchStatus>
 
 DocumentVerificationConfig:
   tableName: document_verification_config
@@ -570,6 +550,9 @@ DriverSSN:
 
 DriverPanCard:
   tableName: driver_pan_card
+  types:
+    VerifiedBy:
+      enum: "FRONTEND_SDK,DASHBOARD"
   fields:
     id: Id DriverPanCard
     driverId: Id Person
@@ -582,6 +565,8 @@ DriverPanCard:
     verificationStatus: VerificationStatus
     consent: Bool
     consentTimestamp: UTCTime
+    verifiedBy: Maybe Domain.Types.DriverPanCard.VerifiedBy
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
   excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey
@@ -596,6 +581,10 @@ DriverPanCard:
       where: driverId
     deleteByDriverId:
       kvFunction: deleteWithKV
+      where: driverId
+    updateVerificationStatus:
+      kvFunction: updateWithKV
+      params: [verificationStatus, updatedAt]
       where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -662,3 +651,50 @@ FleetOwnerDocumentVerificationConfig:
       orderBy:
         field: order
         order: asc
+
+
+AadhaarCard:
+  tableName: aadhaar_card
+  fields:
+    driverId: Id Person
+    aadhaarFrontImageId: Maybe (Id Image)
+    aadhaarBackImageId: Maybe (Id Image)
+    maskedAadhaarNumber: Maybe Text
+    aadhaarNumberHash: Maybe DbHash
+    nameOnCard: Maybe Text
+    driverGender: Maybe Text
+    dateOfBirth: Maybe Text
+    address: Maybe Text
+    consent: Bool
+    consentTimestamp: UTCTime
+    driverImage: Maybe Text
+    driverImagePath: Maybe Text
+    verificationStatus: VerificationStatus
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  derives: "Generic,Show,ToJSON,FromJSON"
+  constraints:
+    driverId: PrimaryKey
+  queries:
+    updateVerificationStatus:
+      kvFunction: updateWithKV
+      params: [verificationStatus, updatedAt]
+      where: driverId
+    deleteByPersonId:
+      kvFunction: deleteWithKV
+      where: driverId
+    findByAadhaarNumberHash:
+      kvFunction: findOneWithKV
+      where: aadhaarNumberHash
+    findByPhoneNumberAndUpdate:
+      kvFunction: updateWithKV
+      params: [nameOnCard, driverGender, dateOfBirth, aadhaarNumberHash, verificationStatus]
+      where: driverId
+    updateDriverImagePath:
+      kvFunction: updateOneWithKV
+      params: [driverImagePath]
+      where: driverId
+  extraOperations:
+    - EXTRA_QUERY_FILE

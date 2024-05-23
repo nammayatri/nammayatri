@@ -9,6 +9,7 @@ import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Types.Documents
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -31,6 +32,11 @@ findByDriverId (Kernel.Types.Id.Id driverId) = do findOneWithKV [Se.Is Beam.driv
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverPanCard.DriverPanCard -> m (Maybe Domain.Types.DriverPanCard.DriverPanCard))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
+updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateVerificationStatus verificationStatus (Kernel.Types.Id.Id driverId) = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverPanCard.DriverPanCard -> m (Maybe Domain.Types.DriverPanCard.DriverPanCard))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
@@ -46,9 +52,11 @@ updateByPrimaryKey (Domain.Types.DriverPanCard.DriverPanCard {..}) = do
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.driverName driverName,
       Se.Set Beam.failedRules failedRules,
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.panCardNumberEncrypted (panCardNumber & unEncrypted . encrypted),
       Se.Set Beam.panCardNumberHash (panCardNumber & hash),
       Se.Set Beam.verificationStatus verificationStatus,
+      Se.Set Beam.verifiedBy verifiedBy,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
