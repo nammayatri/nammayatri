@@ -91,6 +91,8 @@ data TransporterConfigT f = TransporterConfigT
     enableUdfForOffers :: B.C f Kernel.Prelude.Bool,
     fakeOtpEmails :: B.C f [Kernel.Prelude.Text],
     fakeOtpMobileNumbers :: B.C f [Kernel.Prelude.Text],
+    fareRecomputeDailyExtraKmsThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
+    fareRecomputeWeeklyExtraKmsThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
     fcmServiceAccount :: B.C f Kernel.Prelude.Text,
     fcmTokenKeyPrefix :: B.C f Kernel.Prelude.Text,
     fcmUrl :: B.C f Kernel.Prelude.Text,

@@ -763,6 +763,8 @@ TransporterConfig:
     emailOtpConfig: Maybe Email.Types.EmailOTPConfig
     crossTravelCities: "[Kernel.Types.Beckn.City.City]"
     useSilentFCMForForwardBatch: Bool
+    fareRecomputeDailyExtraKmsThreshold: HighPrecMeters
+    fareRecomputeWeeklyExtraKmsThreshold: HighPrecMeters
   beamType:
     currency: Maybe Currency
     driverPaymentCycleBuffer: Seconds
@@ -1028,6 +1030,8 @@ TransporterConfig:
     kaptureQueue: "''"
     orderAndNotificationStatusCheckFallBackTime: "43200"
     useSilentFCMForForwardBatch: "false"
+    fareRecomputeDailyExtraKmsThreshold: "5000"
+    fareRecomputeWeeklyExtraKmsThreshold: "20000"
 
   excludedDefaultQueries:
     - findByPrimaryKey

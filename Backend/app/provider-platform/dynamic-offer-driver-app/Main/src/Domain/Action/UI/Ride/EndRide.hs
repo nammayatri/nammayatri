@@ -49,14 +49,17 @@ import Kernel.External.Maps
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import Kernel.Prelude (roundToIntegral)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
-import Kernel.Types.Common
+import Kernel.Types.Common hiding (Days)
 import Kernel.Types.Confidence
 import Kernel.Types.Id
+import Kernel.Types.SlidingWindowCounters
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (Days)
 import Kernel.Utils.DatastoreLatencyCalculator
+import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.LocationUpdates as LocUpd
@@ -484,14 +487,16 @@ getDistanceDiff booking distance = do
   pure $ metersToHighPrecMeters rideDistanceDifference
 
 calculateFinalValuesForCorrectDistanceCalculations ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> DTConf.TransporterConfig -> m (Meters, HighPrecMoney, Maybe FareParameters)
+  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> DTConf.TransporterConfig -> m (Meters, HighPrecMoney, Maybe FareParameters)
 calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDistance pickupDropOutsideOfThreshold thresholdConfig = do
   distanceDiff <- getDistanceDiff booking (highPrecMetersToMeters ride.traveledDistance)
+  let thresholdChecks = distanceDiff > thresholdConfig.actualRideDistanceDiffThresholdIfWithinPickupDrop && thresholdConfig.recomputeIfPickupDropNotOutsideOfThreshold
+  (mbDailyExtraKms, mbWeeklyExtraKms) <- if thresholdChecks then handleExtraKmsRecomputation distanceDiff else return (Nothing, Nothing)
   let maxDistance = fromMaybe ride.traveledDistance mbMaxDistance + thresholdConfig.upwardsRecomputeBuffer
   let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix with rentals
   if not pickupDropOutsideOfThreshold
     then
-      if distanceDiff > thresholdConfig.actualRideDistanceDiffThresholdIfWithinPickupDrop && thresholdConfig.recomputeIfPickupDropNotOutsideOfThreshold
+      if thresholdChecks && checkExtraKmsThreshold mbDailyExtraKms mbWeeklyExtraKms
         then recalculateFareForDistance handle booking ride (roundToIntegral $ min ride.traveledDistance maxDistance) thresholdConfig
         else recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig
     else
@@ -501,6 +506,22 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
           if distanceDiff < thresholdConfig.actualRideDistanceDiffThreshold
             then recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig
             else recalculateFareForDistance handle booking ride (roundToIntegral ride.traveledDistance) thresholdConfig
+  where
+    makeDailyAndWeeklyExtraKmsKey personId = ("DailyExtraKms:PersonId-" <> personId, "WeeklyExtraKms:PersonId-" <> personId)
+
+    checkExtraKmsThreshold (Just dailyExtraKms) (Just weeklyExtraKms) = thresholdConfig.fareRecomputeDailyExtraKmsThreshold >= dailyExtraKms && thresholdConfig.fareRecomputeWeeklyExtraKmsThreshold >= weeklyExtraKms
+    checkExtraKmsThreshold _ _ = True
+
+    handleExtraKmsRecomputation distanceDiff = do
+      expirationPeriodForDay <- DC.getExpirationSeconds thresholdConfig.timeDiffFromUtc
+      let (dailyExtraKmsKey, weeklyExtraKmsKey) = makeDailyAndWeeklyExtraKmsKey ride.driverId.getId
+      prevDailyExtraKms <- Redis.get dailyExtraKmsKey
+      prevWeeklyExtraKms <- sum . catMaybes <$> SWC.getCurrentWindowValues weeklyExtraKmsKey SlidingWindowOptions {period = 7, periodType = Days}
+      let dailyExtraKms = fromMaybe 0 prevDailyExtraKms + distanceDiff
+          weeklyExtraKms = (prevWeeklyExtraKms :: HighPrecMeters) + distanceDiff
+      Redis.setExp dailyExtraKmsKey dailyExtraKms expirationPeriodForDay
+      SWC.incrementByValue (round distanceDiff) weeklyExtraKmsKey SlidingWindowOptions {period = 7, periodType = Days}
+      pure (Just dailyExtraKms, Just weeklyExtraKms)
 
 calculateFinalValuesForFailedDistanceCalculations ::
   (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> Bool -> DTConf.TransporterConfig -> m (Meters, HighPrecMoney, Maybe FareParameters)
