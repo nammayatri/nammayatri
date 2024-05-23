@@ -63,7 +63,8 @@ customerIssueHandle =
       createTicket = castCreateTicket,
       updateTicket = castUpdateTicket,
       findMerchantConfig = buildMerchantConfig,
-      mbReportACIssue = Just reportACIssue
+      mbReportACIssue = Just reportACIssue,
+      mbReportIssue = Just reportIssue
     }
 
 castPersonById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Person -> m (Maybe Common.Person)
@@ -146,6 +147,11 @@ castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merc
 reportACIssue :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => BaseUrl -> Text -> Text -> m APISuccess
 reportACIssue driverOfferBaseUrl driverOfferApiKey bppRideId = do
   void $ CallBPPInternal.reportACIssue driverOfferApiKey driverOfferBaseUrl bppRideId
+  return Success
+
+reportIssue :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => BaseUrl -> Text -> Text -> Common.IssueReportType -> m APISuccess
+reportIssue driverOfferBaseUrl driverOfferApiKey bppRideId issueReportType = do
+  void $ CallBPPInternal.reportIssue driverOfferApiKey driverOfferBaseUrl bppRideId issueReportType
   return Success
 
 buildMerchantConfig :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> Id Common.Person -> m MerchantConfig
