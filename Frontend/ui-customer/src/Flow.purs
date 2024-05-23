@@ -524,6 +524,7 @@ currentFlowStatus = do
       if any (_ == fareProductType) [ Just "ONE_WAY_SPECIAL_ZONE", Nothing ] then
         checkRideStatus false
       else if (fareProductType == Just "ONE_WAY") then do
+        hideLoaderFlow
         updateLocalStage ConfirmingRide
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp } })
         homeScreenFlow
@@ -1899,7 +1900,7 @@ homeScreenFlow = do
         true -> do
           let
             isRideCompleted = state.props.currentStage == RideCompleted
-          modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props { reportPastRide = isRideCompleted }, data { lastRideDetails = if isRideCompleted then Arr.head $ myRideListTransformer true [ state.data.ratingViewState.rideBookingRes ] else Nothing } })
+          modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props { reportPastRide = isRideCompleted }, data { lastRideDetails = if isRideCompleted then Arr.head $ myRideListTransformer true [ state.data.ratingViewState.rideBookingRes ] state.data.config else Nothing } })
           activateSafetyScreenFlow
         false -> safetySettingsFlow
     GO_TO_SAFETY_SETTING_SCREEN -> do
@@ -5687,7 +5688,7 @@ fcmHandler notification state = do
       setValueToLocalStore PICKUP_DISTANCE "0"
       (GlobalState updatedState) <- getState
       let
-        homeScreenState = updatedState.homeScreen { data { quoteListModelState = [] }, props { isBanner = state.props.isBanner, currentStage = ReAllocated, estimateId = updatedState.homeScreen.props.estimateId, reAllocation { showPopUp = true }, tipViewProps { isVisible = updatedState.homeScreen.props.tipViewProps.activeIndex >= 0 }, selectedQuote = Nothing, isCancelRide = false, cancelSearchCallDriver = false } }
+        homeScreenState = updatedState.homeScreen { data { quoteListModelState = [] }, props { isBanner = state.props.isBanner, currentStage = ReAllocated, estimateId = updatedState.homeScreen.props.estimateId, reAllocation { showPopUp = true }, tipViewProps { isVisible = updatedState.homeScreen.props.tipViewProps.activeIndex >= 0 }, selectedQuote = Nothing, isCancelRide = false, cancelSearchCallDriver = false, showRateCard = false } }
       let
         updatedState = case (getTipViewData "LazyCheck") of
           Just (TipViewData tipView) -> homeScreenState { props { tipViewProps { stage = tipView.stage, activeIndex = tipView.activeIndex, isVisible = tipView.activeIndex >= 0 } } }

@@ -1210,7 +1210,7 @@ export const updateSliderValue = function (config) {
   return function () {
     if (window.JBridge.updateSliderValue){
       window.JBridge.updateSliderValue(JSON.stringify(config));
-    };
+    }
   };
 };
 
@@ -2504,7 +2504,10 @@ export const displayBase64Image = (configObj) => {
     try{
       console.log("displayBase64Image error " + err);
       // Deprecated on 4th Jan 2024
-      return JBridge.renderBase64ImageFile(configObj.source, configObj.id, false, configObj.scaleType);
+      if (configObj.source.startsWith("http")) 
+        return JBridge.renderBase64Image(configObj.source, configObj.id, false, configObj.scaleType);
+      else
+        return JBridge.renderBase64ImageFile(configObj.source, configObj.id, false, configObj.scaleType);
     }catch(err2){
       console.log("displayBase64Image error " + err2);
     }
