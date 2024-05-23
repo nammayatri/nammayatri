@@ -206,7 +206,7 @@ window.getMerchantConfig = function () {
     , "homeScreen" : {
       "isServiceablePopupFullScreen" : true,
     }
-    , "tipEnabledCities" : ["Bangalore", "Hyderabad"]
+    , "tipEnabledCities" : ["Bangalore", "Hyderabad", "Chennai"]
     , "acPopupConfig" : {
         "enableAcPopup" : true,
         "enableNonAcPopup" : true,
