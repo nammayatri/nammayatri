@@ -221,13 +221,13 @@ planListV2 :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> DPlan.Servi
 planListV2 merchantShortId opCity driverId serviceName = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
   mOCityId <- withFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
-  withFlowHandlerAPI $ DTPlan.planList (cast driverId, m.id, mOCityId) serviceName (Just 0) (Just 50)
+  withFlowHandlerAPI $ DTPlan.planList (cast driverId, m.id, mOCityId) serviceName (Just 0) (Just 50) Nothing
 
 planList :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> FlowHandler DTPlan.PlanListAPIRes
 planList merchantShortId opCity driverId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
   mOCityId <- withFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
-  withFlowHandlerAPI $ DTPlan.planList (cast driverId, m.id, mOCityId) DPlan.YATRI_SUBSCRIPTION (Just 0) (Just 50)
+  withFlowHandlerAPI $ DTPlan.planList (cast driverId, m.id, mOCityId) DPlan.YATRI_SUBSCRIPTION (Just 0) (Just 50) Nothing
 
 planSelectV2 :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> Id DPlan.Plan -> DPlan.ServiceNames -> FlowHandler APISuccess
 planSelectV2 merchantShortId opCity driverId planId serviceName = do

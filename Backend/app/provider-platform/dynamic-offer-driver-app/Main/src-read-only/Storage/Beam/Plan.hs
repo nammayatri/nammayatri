@@ -8,6 +8,7 @@ module Storage.Beam.Plan where
 import qualified Database.Beam as B
 import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Plan
+import qualified Domain.Types.Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -36,7 +37,8 @@ data PlanT f = PlanT
     registrationAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
     serviceName :: B.C f Domain.Types.Plan.ServiceNames,
     sgstPercentage :: B.C f Kernel.Types.Common.HighPrecMoney,
-    subscribedFlagToggleAllowed :: B.C f Kernel.Prelude.Bool
+    subscribedFlagToggleAllowed :: B.C f Kernel.Prelude.Bool,
+    vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant)
   }
   deriving (Generic, B.Beamable)
 
