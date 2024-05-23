@@ -34,6 +34,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as P
 import Domain.Types.TransporterConfig (TransporterConfig)
+import qualified Domain.Types.Vehicle as Vehicle
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
@@ -287,11 +288,14 @@ planList ::
   ServiceNames ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Vehicle.Variant ->
   Flow PlanListAPIRes
-planList (driverId, _, merchantOpCityId) serviceName _mbLimit _mbOffset = do
+planList (driverId, _, merchantOpCityId) serviceName _mbLimit _mbOffset mbVariant = do
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   mDriverPlan <- B.runInReplica $ QDPlan.findByDriverIdWithServiceName driverId serviceName
-  plans <- QPD.findByMerchantOpCityIdAndPaymentModeWithServiceName merchantOpCityId (maybe AUTOPAY (.planType) mDriverPlan) serviceName (Just False)
+  plans <- case mbVariant of
+    Just _ -> QPD.findByMerchantOpCityIdAndTypeWithServiceNameAndVariant merchantOpCityId (maybe AUTOPAY (.planType) mDriverPlan) serviceName mbVariant (Just False)
+    Nothing -> QPD.findByMerchantOpCityIdAndPaymentModeWithServiceName merchantOpCityId (maybe AUTOPAY (.planType) mDriverPlan) serviceName (Just False)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getCurrentTime
   let mandateSetupDate = fromMaybe now ((.mandateSetupDate) =<< mDriverPlan)
