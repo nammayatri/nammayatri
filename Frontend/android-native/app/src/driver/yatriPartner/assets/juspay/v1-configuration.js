@@ -350,7 +350,7 @@ window.getMerchantConfig = function () {
       }
       },
       {
-        "cityName" : "Delhi",
+        "cityName" : "Delhi", 
         "mapImage" : "ny_ic_delhi_map",
         "cityCode" : "std:011",
         "showSubscriptions" : false,
@@ -746,6 +746,214 @@ window.getMerchantConfig = function () {
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_black"
       }
+    },
+      {
+        "cityName": "Jaipur",
+        "mapImage": "ny_ic_jaipur_map",
+        "cityCode": "std:0141",
+        "showSubscriptions": false,
+        "cityLat": 28.618978,
+        "cityLong": 77.207795,
+        "supportNumber": "+918069724848",
+        "languageKey": "HI_IN",
+        "showDriverReferral": true,
+        "showCustomerReferral": true,
+        "uploadRCandDL": true,
+        "enableYatriCoins": false,
+        "vehicleNSImg": "ny_ic_auto_image",
+        "registration": {
+          "supportWAN": "919625724848",
+          "callSupport": true,
+          "whatsappSupport": true
+        },
+        "variantSubscriptionConfig": {
+          "enableVariantBasedSubscription": true,
+          "variantList": [],
+          "enableCabsSubscriptionView": true,
+          "staticViewPlans": staticSubscriptionConfig
+        },
+        "showEarningSection": true,
+        "referral": {
+          "domain": "https://www.getyatri.com"
+          , "customerAppId": "net.openkochi.yatri"
+          , "driverAppId": "net.openkochi.yatripartner"
+        },
+        "waitingCharges": 0.75,
+        "waitingChargesConfig": {
+          "cab": {
+            "freeSeconds": 300,
+            "perMinCharges": 1.0
+          },
+          "auto": {
+            "freeSeconds": 180,
+            "perMinCharges": 0.75
+          }
+        },
+        "assets": {
+          "auto_image": "ic_auto_rickshaw",
+          "onboarding_auto_image": "ny_ic_auto_side"
+        }
+      },
+      {
+        "cityName": "Chandigarh",
+        "mapImage": "ny_ic_chandigarh_map",
+        "cityCode": "std:0172",
+        "showSubscriptions": false,
+        "cityLat": 28.618978,
+        "cityLong": 77.207795,
+        "supportNumber": "+918069724848",
+        "languageKey": "HI_IN",
+        "showDriverReferral": true,
+        "showCustomerReferral": true,
+        "uploadRCandDL": true,
+        "enableYatriCoins": false,
+        "vehicleNSImg": "ny_ic_auto_image",
+        "registration": {
+          "supportWAN": "919625724848",
+          "callSupport": true,
+          "whatsappSupport": true
+        },
+        "variantSubscriptionConfig": {
+          "enableVariantBasedSubscription": true,
+          "variantList": [],
+          "enableCabsSubscriptionView": true,
+          "staticViewPlans": staticSubscriptionConfig
+        },
+        "showEarningSection": true,
+        "referral": {
+          "domain": "https://www.getyatri.com"
+          , "customerAppId": "net.openkochi.yatri"
+          , "driverAppId": "net.openkochi.yatripartner"
+        },
+        "waitingCharges": 0.75,
+        "waitingChargesConfig": {
+          "cab": {
+            "freeSeconds": 300,
+            "perMinCharges": 1.0
+          },
+          "auto": {
+            "freeSeconds": 180,
+            "perMinCharges": 0.75
+          }
+        },
+        "assets": {
+          "auto_image": "ic_auto_rickshaw",
+          "onboarding_auto_image": "ny_ic_auto_side"
+        }
+      },
+      {
+        "cityName": "Thrissur",
+        "mapImage": "ny_ic_thrissur_map",
+        "cityCode": "std:0487",
+        "showSubscriptions": false,
+        "cityLat": 9.931233,
+        "cityLong": 76.267303,
+        "supportNumber": "08069724930",
+        "languageKey": "ML_IN",
+        "showDriverReferral": true,
+        "showCustomerReferral": true,
+        "uploadRCandDL": true,
+        "enableYatriCoins": false,
+        "vehicleNSImg": "ny_ic_auto_image",
+        "registration": {
+          "supportWAN": "918618963188",
+          "callSupport": true,
+          "whatsappSupport": false
+        },
+        "variantSubscriptionConfig": {
+          "enableVariantBasedSubscription": false,
+          "variantList": [],
+          "enableCabsSubscriptionView": false,
+          "staticViewPlans": staticSubscriptionConfig
+        },
+        "showEarningSection": true,
+        "referral": {
+          "domain": "https://www.getyatri.com"
+          , "customerAppId": "net.openkochi.yatri"
+          , "driverAppId": "net.openkochi.yatripartner"
+        },
+        "waitingCharges": 1.50,
+        "waitingChargesConfig": defWaitingChargesConfig,
+        "assets": {
+          "auto_image": "ny_ic_auto_side_view",
+          "onboarding_auto_image": "ny_ic_auto_right_side_black"
+        }
+      },
+      {
+        "cityName": "Trivandrum",
+        "mapImage": "ny_ic_trivandrum_map",
+        "cityCode": "std:0471",
+        "showSubscriptions": false,
+        "cityLat": 9.931233,
+        "cityLong": 76.267303,
+        "supportNumber": "08069724930",
+        "languageKey": "ML_IN",
+        "showDriverReferral": true,
+        "showCustomerReferral": true,
+        "uploadRCandDL": true,
+        "enableYatriCoins": false,
+        "vehicleNSImg": "ny_ic_auto_image",
+        "registration": {
+          "supportWAN": "918618963188",
+          "callSupport": true,
+          "whatsappSupport": false
+        },
+        "variantSubscriptionConfig": {
+          "enableVariantBasedSubscription": false,
+          "variantList": [],
+          "enableCabsSubscriptionView": false,
+          "staticViewPlans": staticSubscriptionConfig
+        },
+        "showEarningSection": true,
+        "referral": {
+          "domain": "https://www.getyatri.com"
+          , "customerAppId": "net.openkochi.yatri"
+          , "driverAppId": "net.openkochi.yatripartner"
+        },
+        "waitingCharges": 1.50,
+        "waitingChargesConfig": defWaitingChargesConfig,
+        "assets": {
+          "auto_image": "ny_ic_auto_side_view",
+          "onboarding_auto_image": "ny_ic_auto_right_side_black"
+        }
+      },
+      {
+        "cityName": "Kozhikode",
+        "mapImage": "ny_ic_kochi_map",
+        "cityCode": "std:0495",
+        "showSubscriptions": false,
+        "cityLat": 9.931233,
+        "cityLong": 76.267303,
+        "supportNumber": "08069724930",
+        "languageKey": "ML_IN",
+        "showDriverReferral": true,
+        "showCustomerReferral": true,
+        "uploadRCandDL": true,
+        "enableYatriCoins": false,
+        "vehicleNSImg": "ny_ic_auto_image",
+        "registration": {
+          "supportWAN": "918618963188",
+          "callSupport": true,
+          "whatsappSupport": false
+        },
+        "variantSubscriptionConfig": {
+          "enableVariantBasedSubscription": false,
+          "variantList": [],
+          "enableCabsSubscriptionView": false,
+          "staticViewPlans": staticSubscriptionConfig
+        },
+        "showEarningSection": true,
+        "referral": {
+          "domain": "https://www.getyatri.com"
+          , "customerAppId": "net.openkochi.yatri"
+          , "driverAppId": "net.openkochi.yatripartner"
+        },
+        "waitingCharges": 1.50,
+        "waitingChargesConfig": defWaitingChargesConfig,
+        "assets": {
+          "auto_image": "ny_ic_auto_side_view",
+          "onboarding_auto_image": "ny_ic_auto_right_side_black"
+        }
       }
   ]
   , "coinsConfig" : {
