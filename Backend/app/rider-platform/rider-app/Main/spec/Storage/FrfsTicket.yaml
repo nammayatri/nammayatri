@@ -378,6 +378,12 @@ FRFSRecon:
     providerId: Text
     providerName: Text
 
+  queries:
+    updateTOrderValueAndSettlementAmountById:
+      kvFunction: updateWithKV
+      params: [settlementAmount, totalOrderValue, updatedAt]
+      where: frfsTicketBookingId
+
   beamFields:
     fare:
       currency: Maybe Currency

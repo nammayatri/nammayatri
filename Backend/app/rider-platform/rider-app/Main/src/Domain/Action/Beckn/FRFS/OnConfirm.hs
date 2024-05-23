@@ -94,8 +94,9 @@ buildReconTable merchant booking _dOrder tickets = do
   now <- getCurrentTime
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "BPP Order Id not found in booking")
   let finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee -- FIXME
-  let finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational booking.quantity)
-  let tOrderValue = modifyPrice (totalOrderValue paymentBookingStatus booking) $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational quote.quantity)
+      finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational booking.quantity)
+  tOrderPrice <- totalOrderValue paymentBookingStatus booking
+  let tOrderValue = modifyPrice tOrderPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational quote.quantity)
   settlementAmount <- tOrderValue `subtractPrice` finderFeeForEachTicket
   let reconEntry =
         Recon.FRFSRecon
@@ -137,11 +138,13 @@ buildReconTable merchant booking _dOrder tickets = do
   reconEntries <- mapM (buildRecon reconEntry) tickets
   void $ QRecon.createMany reconEntries
 
-totalOrderValue :: DFRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus -> Booking.FRFSTicketBooking -> Price
+totalOrderValue :: DFRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus -> Booking.FRFSTicketBooking -> Flow Price
 totalOrderValue paymentBookingStatus booking =
-  if paymentBookingStatus == DFRFSTicketBookingPayment.REFUND_PENDING || paymentBookingStatus == DFRFSTicketBookingPayment.REFUNDED then refundAmountToPrice else booking.price
+  if paymentBookingStatus == DFRFSTicketBookingPayment.REFUND_PENDING || paymentBookingStatus == DFRFSTicketBookingPayment.REFUNDED
+    then booking.price `addPrice` refundAmountToPrice -- Here the `refundAmountToPrice` value is in Negative
+    else pure $ booking.price
   where
-    refundAmountToPrice = mkPrice (Just INR) (fromJust booking.refundAmount)
+    refundAmountToPrice = mkPrice (Just INR) (fromMaybe (HighPrecMoney $ toRational (0 :: Int)) booking.refundAmount)
 
 mkTicket :: Booking.FRFSTicketBooking -> DTicket -> Flow Ticket.FRFSTicket
 mkTicket booking dTicket = do
