@@ -184,15 +184,17 @@ eval (LocationListItemAC savedLocations (LocationListItemController.FavClick ite
     continue state
     else exit $ SaveFavLoc state{data{saveFavouriteCard{ address = item.description , selectedItem = item, tag = "", tagExists = false, isBtnActive = false }}} savedLocations
 
-eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do 
-  -- if state.props.actionType == MetroStationSelectionAction then do
-  --     let metroLocInfo = {stationName: item.title, stationCode : item.tag }
-  --     let updatedLoc = {placeId : MB.Nothing , address : item.title , lat : MB.Nothing , lon : MB.Nothing, city : MB.Nothing, addressComponents : dummyAddress, metroInfo : MB.Just metroLocInfo, stationCode : item.tag}
-  --         newState = if state.props.focussedTextField == MB.Just SearchLocPickup then 
-  --                         state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop }} 
-  --                         else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop} }
-  void $ pure $ hideKeyboardOnNavigation true
-  MB.maybe (continue state) (\currTextField -> predictionClicked currTextField) state.props.focussedTextField
+eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state =
+  if state.props.actionType == MetroStationSelectionAction then do
+      let metroLocInfo = {stationName: item.title, stationCode : item.tag }
+      let updatedLoc = {placeId : MB.Nothing , address : item.title , lat : MB.Nothing , lon : MB.Nothing, city : AnyCity, addressComponents : dummyAddress, metroInfo : MB.Just metroLocInfo, stationCode : item.tag}
+          newState = if state.props.focussedTextField == MB.Just SearchLocPickup then 
+                          state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop }} 
+                          else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop} }
+      updateAndExit newState $ PredictionClicked item newState
+    else do 
+      void $ pure $ hideKeyboardOnNavigation true
+      MB.maybe (continue state) (\currTextField -> predictionClicked currTextField) state.props.focussedTextField
   where 
     predictionClicked :: SearchLocationTextField -> Eval Action ScreenOutput SearchLocationScreenState
     predictionClicked currTextField = do 
@@ -494,21 +496,23 @@ removeDuplicates arr = DA.nubByEq (\item1 item2 -> (item1.lat == item2.lat && it
 
 
 handleBackPress state = do 
-  case state.props.searchLocStage of 
-    ConfirmLocationStage -> do 
-      void $ pure $ exitLocateOnMap ""
-      continue state {props {searchLocStage = PredictionsStage}, data{latLonOnMap = SearchLocationScreenData.dummyLocationInfo}}
-    PredictionsStage -> do 
-      void $ pure $ hideKeyboardOnNavigation true
-      if state.data.fromScreen == getScreen HOME_SCREEN then exit $ HomeScreen state 
-      else if state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN then exit $ RideScheduledScreen state
-      else exit $ RentalsScreen state 
-    AllFavouritesStage -> continue state{props{searchLocStage = PredictionsStage}}
-    LocateOnMapStage -> do 
-      void $ pure $ exitLocateOnMap ""
-      continue state{props{searchLocStage = PredictionsStage}}
-    ChooseYourRide -> exit $ RentalsScreen state
-    _ -> continue state
+  if state.data.fromScreen == getScreen METRO_TICKET_BOOKING_SCREEN then exit $ MetroTicketBookingScreen state 
+    else do
+      case state.props.searchLocStage of 
+        ConfirmLocationStage -> do 
+          void $ pure $ exitLocateOnMap ""
+          continue state {props {searchLocStage = PredictionsStage}, data{latLonOnMap = SearchLocationScreenData.dummyLocationInfo}}
+        PredictionsStage -> do 
+          void $ pure $ hideKeyboardOnNavigation true
+          if state.data.fromScreen == getScreen HOME_SCREEN then exit $ HomeScreen state 
+          else if state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN then exit $ RideScheduledScreen state
+          else exit $ RentalsScreen state 
+        AllFavouritesStage -> continue state{props{searchLocStage = PredictionsStage}}
+        LocateOnMapStage -> do 
+          void $ pure $ exitLocateOnMap ""
+          continue state{props{searchLocStage = PredictionsStage}}
+        ChooseYourRide -> exit $ RentalsScreen state
+        _ -> continue state
 
 findStationWithPrefix :: String -> Array Station -> Array Station
 findStationWithPrefix prefix arr = DA.filter (\station -> containString prefix station.stationName) arr
