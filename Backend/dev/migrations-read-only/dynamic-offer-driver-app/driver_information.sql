@@ -71,3 +71,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN ac_restriction_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN has_advance_booking boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN toll_related_issue_count integer ;
