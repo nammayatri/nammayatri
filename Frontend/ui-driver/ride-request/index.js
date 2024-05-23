@@ -63,8 +63,12 @@ window.onMerchantEvent = function (_event, payload) {
   window.__payload = clientPaylod
   if (_event == "initiate") {
     callInitiateResult();
+    window.callDecline = function(id) {
+      purescript.callDecline(id)()
+    }
   } else if (_event == "process") {
-    if (window.notificationCallBack || window.rideRequestCallBack) {
+
+    if (window.notificationCallBack && window.rideRequestCallBack) {
       purescript.checkAndPushRideRequest(window.rideRequestCallBack)(window.notificationCallBack)(getNotificationType())(getSearchRequestId())();
     } else {
       checkAndStart();

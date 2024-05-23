@@ -15,7 +15,6 @@
 module Helpers.Commons where
 
 import Prelude
-
 import Control.Monad.Except (runExcept, throwError)
 import Control.Monad.Rec.Class (class MonadRec, Step(Done, Loop), tailRecM)
 import Control.Monad.State as S
@@ -93,10 +92,16 @@ foreign import getRandomID :: Int -> String
 foreign import emitEvent :: EffectFn3 String String Foreign Unit
 
 foreign import hideLoader :: EffectFn1 String Unit
+
 foreign import storeNotifitionListener :: EffectFn1 (String -> String -> Effect Unit) Unit
+
 foreign import storeInWindow :: forall a. EffectFn2 String a Unit
+
 foreign import removeFromWindow :: EffectFn1 String Unit
+
 foreign import getSearchRequestId :: EffectFn1 String String
+
+foreign import callDecline :: EffectFn1 String Unit
 
 foreign import getExpiryTime :: String -> Int
 
@@ -254,4 +259,11 @@ getArray :: Int -> Array Int
 getArray count = if count == 0 then [ count ] else [ count ] <> (getArray (count - 1))
 
 getValueBtwRange :: forall a. EuclideanRing a => a -> a -> a -> a -> a -> a
-getValueBtwRange  x  in_min  in_max  out_min  out_max = (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+getValueBtwRange x in_min in_max out_min out_max = (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+
+meterToKm :: Int -> String
+meterToKm dis =
+  if dis < 1000 then
+    (show dis) <> " m"
+  else
+    show ((toNumber dis) / 1000.0) <> " km"

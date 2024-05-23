@@ -71,7 +71,7 @@ export const startTimerWithTimeV2Impl = function (time, cdTimerId, interval, cb)
   activeTimerIds.push(cdTimerId);
   if (JBridge.startCountDownTimerWithTimeV2) {
     const callback = callbackMapper.map(function (timerID, _time, diffTime) {
-      cb(timerID)(_time)(parseFloat(diffTime))();
+      cb(timerID)(parseInt(_time))(parseFloat(diffTime))();
     });
     return JBridge.startCountUpTimerV2(time, interval, cdTimerId, callback);
   }

@@ -16,3 +16,6 @@ module Constants where
 
 languageKey :: String
 languageKey = "languageKey"
+
+progressTime :: Number
+progressTime = 0.50

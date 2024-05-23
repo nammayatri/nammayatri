@@ -1375,7 +1375,7 @@ getRideCompletedConfig state = let
       finalAmount = state.data.endRideData.finalAmount,
       initalAmount = state.data.endRideData.finalAmount,
       fareUpdatedVisiblity = state.props.isFreeRide,
-      gradient =  ["#F5F8FF","#E2EAFF"],
+      gradient =  state.data.config.rideCompletedCardConfig.topCardGradient,
       infoPill {
         text = getString COLLECT_VIA_CASE_UPI,
         color = Color.white900,
@@ -1466,6 +1466,7 @@ getRideCompletedConfig state = let
     , textColor = if state.data.endRideData.actualTollCharge > 0.0 then Color.blue800 else Color.black600
     , imageVisibility = boolToVisibility $ state.data.endRideData.estimatedTollCharge > 0.0 && state.data.endRideData.actualTollCharge > 0.0
     }
+  , bottomBackground = state.data.config.rideCompletedCardConfig.bottomBackground
   }
   in config'
 

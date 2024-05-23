@@ -319,7 +319,7 @@ export const getExpiryTime = function (str1) {
     let diff = (expiry.getTime() - current.getTime()) / 1000;
     diff = Math.round(diff);
     if (diff >= 0)
-      return diff;
+      return parseInt(diff);
     else
       return 0;
   } catch (err) {
@@ -339,14 +339,20 @@ export const removeFromWindow = function (key) {
   window[key] = undefined;
 }
 
-
-
 export const getSearchRequestId = function () {
   if (window.__payload.payload && window.__payload.payload["rideData"]) {
     if (window.__payload.payload["rideData"]["entity_ids"]) return window.__payload.payload["rideData"]["entity_ids"];
     else {
       const data = JSON.parse(window.__payload.payload["rideData"]["entity_data"])
-      return data["searchRequestId"]; 
+      return data["searchRequestId"];
     }
   }
+}
+
+export const callDecline = function (id) {
+  setTimeout(() => {
+    if (window.callDecline) {
+      window.callDecline(id)
+    }
+  }, 5);
 }

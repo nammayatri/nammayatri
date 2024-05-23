@@ -27,6 +27,8 @@ config =
   , rideCompletedCardConfig : {
       showSavedCommission : false,
       lottieQRAnim : false
+    , topCardGradient : ["#F5F8FF","#E2EAFF"]
+    , bottomBackground : "#F4F4F6"
     }
   , subscriptionConfig : {
     enableBlocking : false,

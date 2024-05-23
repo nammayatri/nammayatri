@@ -73,8 +73,9 @@ type Config = {
   rentalRideConfig :: RentalRideConfig,
   rentalRideTextConfig :: RentalRideTextConfig,
   capacity :: Maybe Int,
-  serviceTierAndAC :: String
-, toll :: Toll
+  serviceTierAndAC :: String,
+  toll :: Toll,
+  bottomBackground :: String
 }
 
 data Theme = DARK | LIGHT
@@ -211,6 +212,7 @@ config = {
   },
   needHelpText : "",
   safetyTitle : "",
+  bottomBackground : Color.grey700,
   toll : {
     actualAmount : 0.0,
     text : "",

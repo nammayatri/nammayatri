@@ -22,15 +22,14 @@ data LazyCheck
 
 
 data Action
-  = NextClick
-  | BackClick
-  | Decline Int
-  | UpdateRideRequest (Array SearchRequest)
+  = Decline Int
+  | Accept Int
   | NoAction
   | NotificationLister String String
   | UpdateCarousel Int
   | AppendRequest (Array SearchRequest)
   | NotifyExpired (Array String)
+  | OnPageSelected String
 
 instance showAction :: Show Action where
   show _ = "BackClick"

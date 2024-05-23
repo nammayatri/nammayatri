@@ -7,12 +7,14 @@ import Prelude
 import Prelude
 import PrestoDOM
 import Screens.TopPriceView.Controller
+
 import Api.Types (NearBySearchRequestRes(..), SearchRequest(..))
 import Components.SeparatorView.View as SeparatorView
+import Constants (progressTime)
 import Data.Array (elem, foldMap, index, mapWithIndex)
 import Data.Either (Either(..))
 import Data.FoldableWithIndex (foldMapWithIndex)
-import Data.Int (ceil, fromNumber, toNumber)
+import Data.Int (ceil, floor, fromNumber, toNumber)
 import Data.Time (Millisecond)
 import Data.Time.Duration (Milliseconds(..))
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
@@ -28,6 +30,8 @@ import Helpers.Commons (screenWidth)
 import Helpers.Pooling (delayViaTimer)
 import Presto.Core.Types.Language.Flow (Flow)
 import Presto.Core.Types.Language.Interaction (request)
+import PrestoDOM.Animation (Interpolator(..), RepeatMode(..), animationSet)
+import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List (listDataV2, listItem, onClickHolder, textHolder, viewPager2)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -47,23 +51,25 @@ screen (OverlayData gState) =
   , globalEvents:
       [ ( \push -> do
             _ <- updateTimers push gState.rideRequestPopUpScreen
-            when (gState.rideRequestPopUpScreen.timer == 0.0) $ startTimer 0 "RideRequestTimer" "0.001" (\id s dt -> push $ UpdateProgress id s dt)
+            when (gState.rideRequestPopUpScreen.timer == 0.0) $ do 
+              startTimer 0 "RideRequestTimer" (show progressTime) (\id s dt -> push $ UpdateProgress id s dt)
+              push $ UpdateProgress "RideRequestTimer" 0 progressTime
             pure $ pure unit
         )
       ]
   , parent: Just "TopPriceView"
-  , eval:
-      ( \action state -> do
-          case action of
-            UpdateProgress _ _ _ -> pure unit
-            _ -> do
-              let
-                _ = spy "RideRequestPopUp TopPriceView -> action " action
+  , eval
+      -- :( \action state -> do
+      --     -- case action of
+      --     --   UpdateProgress _ _ _ -> pure unit
+      --     --   _ -> do
+      --     let
+      --       _ = spy "RideRequestPopUp TopPriceView -> action " action
 
-                _ = spy "RideRequestPopUp TopPriceView -> state " state
-              pure unit
-          eval action state
-      )
+      --       _ = spy "RideRequestPopUp TopPriceView -> state " state
+      --     pure unit
+      --     eval action state
+      -- )
   }
 
 view :: forall w. (Action -> Effect Unit) -> RideRequestPopUpScreenData -> Layout w
@@ -105,6 +111,8 @@ singleTabView push idx item =
 
     progress = getWidthFromProgress item.currentProgress progressWidth
 
+    prevProgress = getWidthFromProgress item.prevProgress progressWidth
+
     progressColor = getColorFromProgress progressWidth progress
   in
     linearLayout
@@ -118,7 +126,7 @@ singleTabView push idx item =
       , clickable $ item.price /= 0.0
       ]
       [ textView
-          $ [ text $ if item.price == 0.0 then "--" else show item.price
+          $ [ text $ if item.price == 0.0 then "--" else "$ " <> show item.price
             , color Color.black900
             ]
           <> FontStyle.body10 TypoGraphy
@@ -126,16 +134,26 @@ singleTabView push idx item =
           [ width $ V $ getSingleTab - 20
           , height $ V 10
           , gravity LEFT
-          , background Color.white900
+          , background progressColor
           , visibility $ if progress <= 0 then INVISIBLE else VISIBLE
           , cornerRadius 5.0
           ]
-          [ linearLayout
-              [ height $ V 10
-              , width $ V $ progress
-              , background progressColor
+          [ animationSet
+              [ PrestoAnim.Animation
+                  [ PrestoAnim.duration $ floor (progressTime * 1000.0)
+                  , PrestoAnim.fromX $ if prevProgress == 0 then progressWidth else prevProgress
+                  , PrestoAnim.toX $ progress
+                  , PrestoAnim.tag "slideIn"
+                  , PrestoAnim.interpolator Linear
+                  ]
+                  true
               ]
-              []
+              $ linearLayout
+                  [ height $ V 10
+                  , width $ V $ progressWidth
+                  , background Color.white900
+                  ]
+                  []
           ]
       ]
   where
@@ -163,7 +181,8 @@ updateTimers :: (Action -> Effect Unit) -> RideRequestPopUpScreenData -> Effect 
 updateTimers push state =
   foldMapWithIndex
     ( \idx (SearchRequest item) -> do
-        let expiryTime = getExpiryTime item.searchRequestValidTill
+        let
+          expiryTime = getExpiryTime item.searchRequestValidTill
         push $ UpdateMaxProgress idx (SearchRequest item) $ toNumber expiryTime
     )
     state.rideRequests

@@ -2,42 +2,30 @@ module Screens.RideRequestPopUp.Controller (module Screens.RideRequestPopUp.Cont
 
 import Prelude
 
-import Api.Types (NearBySearchRequestRes(..), SearchRequest(..))
+import Api.Types (OfferType(..)) as OfferTypes
+import Api.Types (SearchRequest(..))
 import Control.Monad.State (state)
-import Data.Array (elem, filter, foldr, notElem, nub, null)
-import Data.Either (Either(..))
+import Data.Array (filter, foldr, index, notElem, nubByEq, null)
+import Data.Int (fromString)
 import Data.Maybe (Maybe(..))
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
-import Helpers.Commons (flowRunner, liftFlow)
-import Presto.Core.Types.Language.Flow (Flow)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, getPushFn, id, update)
+import Effect.Uncurried (runEffectFn1)
+import Helpers.Commons (callDecline, flowRunner)
+import PrestoDOM (Eval, continue, continueWithCmd, exit, getPushFn, update)
 import Screens.RideRequestPopUp.ScreenData (RideRequestPopUpScreenData)
 import Screens.RideRequestPopUp.TransFormer (toPopupProp)
 import Screens.TopPriceView.Controller as TopPriceView
-import Services.Backend (nearBySearchRequest)
+import Services.Backend (mkQuoteOffer, quoteOfferApi)
 import Types (Action(..)) as ActionType
-import Types (Action(..), OverlayData(..), defaultOverlayData)
+import Types (Action(..), defaultOverlayData)
 
--- Controller
--- All actions which can be performed on the screen. Sample click includes NextClick and BackClick.
--- P.S. This is not the actual logic for going to next screen or previous screen. This is just a example
--- for showing 2 kinds of exits from the screen.
 data ScreenOutput
-  = NextScreen RideRequestPopUpScreenData
-  | Back RideRequestPopUpScreenData
+  = Back RideRequestPopUpScreenData
+  | AcceptRequest SearchRequest
 
 eval :: Action -> RideRequestPopUpScreenData -> Eval Action ScreenOutput RideRequestPopUpScreenData
-eval (UpdateRideRequest searchData) state =
-  if null searchData then 
-    exit $ Back state
-    else
-    continueWithCmd state { holderData = toPopupProp searchData, rideRequests = searchData }
-      [ do
-          notifyTopView (TopPriceView.UpdateRideRequest searchData)
-          pure NoAction
-      ]
 
 eval (NotifyExpired ids) state = do
   if null ids then update state
@@ -52,7 +40,7 @@ eval (NotifyExpired ids) state = do
           ]
 
 eval (AppendRequest request) state = do
-  let updatedRequest = spy "AppendRequest -> " $ foldr (\(SearchRequest item1) acc -> acc <> map (\(SearchRequest item2) -> if item2.searchTryId /= item1.searchTryId then (SearchRequest item2) else  (SearchRequest item1)) state.rideRequests) state.rideRequests request
+  let updatedRequest = nubByEq (\(SearchRequest item1) (SearchRequest item2) -> item1.searchTryId == item2.searchTryId) $ state.rideRequests <> request
       updatedState = state { holderData = toPopupProp updatedRequest, rideRequests = updatedRequest }
   continueWithCmd updatedState
     [ do
@@ -60,27 +48,38 @@ eval (AppendRequest request) state = do
         pure NoAction
     ]
 
-eval NextClick state = exit $ NextScreen state
-
-eval BackClick state = exit $ Back state
-
 eval NoAction state = continue state
 
-eval (Decline idx) state = exit $ Back state
+eval (Decline idx) state = 
+  case index state.rideRequests idx of
+    Nothing -> continue state
+    Just (SearchRequest item) -> continueWithCmd state 
+                  [ do  
+                    void $ runEffectFn1 callDecline item.searchTryId
+                    notifyTopView $ TopPriceView.NotifyExpired [item.searchTryId]
+                    pure $ NotifyExpired [item.searchTryId]]
+
+eval (Accept idx) state = 
+  case index state.rideRequests idx of
+    Nothing -> continue state
+    Just item -> exit $ AcceptRequest item
 
 eval (UpdateCarousel idx) state = continue state{selectedRequest = idx}
+
+eval (OnPageSelected idx) state = case fromString idx of 
+  Nothing -> update state
+  Just item -> continueWithCmd state{selectedRequest = item}
+                [do 
+                  _ <- notifyTopView $ TopPriceView.OnCardChanged item
+                  pure NoAction]
 
 eval (NotificationLister nType id) state 
   | nType == "CLEARED_FARE" || nType == "CANCELLED_SEARCH_REQUEST" = continueWithCmd state [(pure $ NotifyExpired [id])]
   | otherwise =  continue state 
-      -- continueWithCmd state [ (do
-      --           push <- getPushFn (Just "RideRequestPopUp") "RideRequestPopUp"
-      --           void $ pure $ launchAff $ flowRunner defaultOverlayData $ getRideRequest push id
-      --           pure $ NoAction
-      --       )]
 
 notifyTopView :: TopPriceView.Action -> Effect Unit
 notifyTopView action = do
   push <- getPushFn (Just "TopPriceView") "TopPriceView"
   void $ push action
 
+-- void $ quoteOfferApi $ mkAcceptQuote item.searchTryId

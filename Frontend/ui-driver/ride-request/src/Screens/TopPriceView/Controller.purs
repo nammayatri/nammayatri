@@ -1,33 +1,30 @@
 module Screens.TopPriceView.Controller where
 
+import Debug
 import Prelude
-import PrestoDOM
 
 import Api.Types (SearchRequest(..))
-import Data.Array (catMaybes, filter, foldr, mapWithIndex, nub, null, take)
+import Constants (progressTime)
+import Data.Array (catMaybes, elem, filter, foldl, mapWithIndex, notElem, null, take)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Debug (spy)
 import Effect (Effect)
+import PrestoDOM (class Loggable, Eval, continue, continueWithCmd, defaultPerformLog, exit, getPushFn)
 import Screens.RideRequestPopUp.ScreenData (RideRequestPopUpScreenData, defaultTabs)
 import Types (Action(..)) as RideRequestPopUpAction
-import Web.DOM.DOMTokenList (item)
 
--- Controller
--- All actions which can be performed on the screen. Sample click includes NextClick and BackClick.
--- P.S. This is not the actual logic for going to next screen or previous screen. This is just a example
--- for showing 2 kinds of exits from the screen.
 data ScreenOutput
   = UpdateTimers RideRequestPopUpScreenData
 
-data Action
-  = UpdateRideRequest (Array SearchRequest)
-  | AppendRequest (Array SearchRequest)
+data Action 
+  = AppendRequest (Array SearchRequest)
   | UpdateProgress String Int Number
   | UpdateMaxProgress Int SearchRequest Number
   | OnTabClick Int
   | NoAction
+  | OnCardChanged Int
+  | NotifyExpired (Array String)
 
 instance showAction :: Show Action where
   show _ = "BackClick"
@@ -39,10 +36,10 @@ eval :: Action -> RideRequestPopUpScreenData -> Eval Action ScreenOutput RideReq
 
 eval (UpdateProgress _ time diffTime) state = do
   let
-    updatedRequests = map (\item -> item{currentProgress = item.startTime + item.maxProgress - diffTime}) state.tabs
-    Tuple onGoingRequests expiredRequested = foldr (\item (Tuple ong exp) -> if item.currentProgress > 0.0 then Tuple (ong <> [item]) exp else Tuple ong (exp <> if item.id == Nothing then [] else [item.id])) (Tuple [] []) updatedRequests
+    updatedRequests = map (\item -> item{currentProgress = item.startTime + item.maxProgress - diffTime, prevProgress = item.currentProgress}) state.tabs
+    Tuple onGoingRequests expiredRequested = foldl (\(Tuple ong exp) item -> if item.currentProgress > 0.0 then Tuple (ong <> [item]) exp else Tuple ong (exp <> if item.id == Nothing then [] else [item.id])) (Tuple [] []) updatedRequests
     updatedTabs = take 3 $ onGoingRequests <> defaultTabs
-    updatedState = state { tabs = updatedTabs, timer = toNumber time}
+    updatedState = state { tabs = updatedTabs, timer = toNumber time, diffTime = diffTime}
   if null expiredRequested then continue updatedState 
     else continueWithCmd updatedState [ do 
           callPopUpAction (RideRequestPopUpAction.NotifyExpired $ catMaybes expiredRequested)
@@ -51,22 +48,30 @@ eval (UpdateProgress _ time diffTime) state = do
 
 eval (UpdateMaxProgress idx (SearchRequest request) time) state = do
   let
-    updatedTabs = mapWithIndex (\index item -> if index == idx then item { maxProgress = time, price = request.baseFare, id = Just request.searchTryId, startTime = state.timer, isSelected = true} else item) state.tabs
+    updatedTabs = mapWithIndex (\index item -> if index == idx && item.currentProgress == 0.0 then item { currentProgress =  if idx /= 0 then state.timer + time - state.diffTime else item.currentProgress, maxProgress = time, price = request.baseFare, id = Just request.searchTryId, startTime = state.timer, prevProgress = time} else item) state.tabs
   continue state { tabs = updatedTabs }
 
-eval (UpdateRideRequest searchData) state = exit $ UpdateTimers state{rideRequests = searchData}
 eval (AppendRequest searchData) state = exit $ UpdateTimers state{rideRequests = searchData}
+
+eval (NotifyExpired ids) state = do
+  let updatedTabs = take 3 $ (filter (\item -> case item.id of 
+                                    Just id -> notElem id ids
+                                    Nothing -> false) state.tabs) <> defaultTabs
+  continue state{tabs= updatedTabs}
 
 eval (OnTabClick idx) state = do
   let
-    updatedState = state { tabs = mapWithIndex (\index item -> if index == idx then item { isSelected = true } else item { isSelected = false }) state.tabs }
+    updatedState = getTabSelected state idx
   continueWithCmd updatedState
     [ (pure NoAction)
     , ( do
-          void $ callPopUpAction RideRequestPopUpAction.NoAction
+          void $ callPopUpAction $ RideRequestPopUpAction.UpdateCarousel idx
           pure NoAction
       )
     ]
+eval (OnCardChanged idx) state = do
+  let updatedState = getTabSelected state idx
+  continue updatedState
 
 eval _ state = continue state
 
@@ -74,3 +79,6 @@ callPopUpAction :: RideRequestPopUpAction.Action -> Effect Unit
 callPopUpAction action = do
   push <- getPushFn (Just "RideRequestPopUp") "RideRequestPopUp"
   push action
+
+getTabSelected :: RideRequestPopUpScreenData -> Int -> RideRequestPopUpScreenData
+getTabSelected state idx = state { tabs = mapWithIndex (\index item -> if index == idx then item { isSelected = true } else item { isSelected = false }) state.tabs }

@@ -8,14 +8,15 @@ import Helpers.Accessor
 import PrestoDOM (toPropValue)
 import Screens.RideRequestPopUp.ScreenData (PopupProps)
 import Data.Lens ((^.))
+import Helpers.Commons (meterToKm)
 
 toPopupProp :: Array SearchRequest -> Array PopupProps
 toPopupProp =
   map
     ( \(SearchRequest item) ->
         { tripPrice: toPropValue $ show item.baseFare
-        , tripDistance: toPropValue $ show $ fromMaybe 0 item.distance
-        , pickupDistance: toPropValue $ show $ fromMaybe 0 item.distanceToPickup
+        , tripDistance: toPropValue $ meterToKm $ fromMaybe 0 item.distance
+        , pickupDistance: toPropValue $  meterToKm $ fromMaybe 0 item.distanceToPickup
         , sourceArea: toPropValue $ fromMaybe "" $ item.fromLocation ^. _area
         , sourceFullAddress: toPropValue $ fromMaybe "" $ item.fromLocation ^. _full_address
         , sourcePincode: toPropValue $ fromMaybe "" $ item.fromLocation ^. _areaCode

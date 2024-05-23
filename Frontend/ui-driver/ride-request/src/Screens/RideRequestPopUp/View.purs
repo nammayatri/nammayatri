@@ -58,10 +58,11 @@ screen (OverlayData oState) =
               runEffectFn1 clearAllTimers "")
       ]
   , parent: Just "RideRequestPopUp"
-  , eval : (\action state -> do
-            let _ = spy "RideRequestPopUp RideRequestPopUp -> action " action
-                _ = spy "RideRequestPopUp RideRequestPopUp -> state " state
-            eval action state)
+  , eval 
+  -- : (\action state -> do
+  --           let _ = spy "RideRequestPopUp RideRequestPopUp -> action " action
+  --               _ = spy "RideRequestPopUp RideRequestPopUp -> state " state
+  --           eval action state)
   }
 
 view :: forall w. (Action -> Effect Unit) -> RideRequestPopUpScreenData -> Layout w
@@ -140,6 +141,7 @@ sheetView push state = case state.holderView of
         , listDataV2 $ state.holderData -- getListData state
         , scrollDirection HORIZONTAL
         , currentItem state.selectedRequest
+        , onPageSelected push OnPageSelected
         ]
     ]
   Nothing -> linearLayout[][]
@@ -350,6 +352,7 @@ buttonsView push state =
         , cornerRadius 8.0
         , gravity CENTER
         , margin $ MarginLeft 12
+        , onClickHolder push Accept
         ]
         [ textView
             $ [ text "Accept"

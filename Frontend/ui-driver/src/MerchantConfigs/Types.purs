@@ -126,7 +126,9 @@ type RideActionModelConfig = {
 
 type RideCompletedCardConfig = {
   showSavedCommission :: Boolean,
-  lottieQRAnim :: Boolean
+  lottieQRAnim :: Boolean,
+  topCardGradient :: Array String,
+  bottomBackground :: String
 }
 
 type ProfileConfig = {

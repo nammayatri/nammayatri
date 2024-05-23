@@ -1,13 +1,14 @@
 module Services.Backend where
 
 import Prelude
-import Api.Types (NearBySearchRequest(..), NearBySearchRequestRes(..))
+
+import Api.Types (APISuccesResult, NearBySearchRequest(..), NearBySearchRequestRes, OfferType(..), QuoteOfferReq(..))
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Helpers.Commons (getKeyInSharedPrefKeys)
-import Presto.Core.Types.API (class RestEndpoint, Header(..), Headers(..), Response, ErrorResponse)
-import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, loadS)
-import Types (OverlayData(..))
+import Presto.Core.Types.API (ErrorResponse, Header(..), Headers(..))
+import Presto.Core.Types.Language.Flow (Flow, callAPI, loadS)
+import Types (OverlayData)
 
 getHeaders :: String -> Boolean -> Flow OverlayData Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -28,7 +29,6 @@ getHeaders val isGzipCompressionEnabled = do
         []
           <> if val /= "" then [ Header "x-f-token" val ] else []
 
--- unwrapResponse :: forall b. APIResult (Response b) -> Either ErrorResponse b
 unwrapResponse ::
   forall b c.
   Either ErrorResponse
@@ -45,3 +45,17 @@ nearBySearchRequest id = do
   headers <- getHeaders "" false
   resp <- callAPI headers (NearBySearchRequest id)
   pure $ unwrapResponse resp
+
+
+quoteOfferApi ∷ QuoteOfferReq -> Flow OverlayData (Either ErrorResponse APISuccesResult)
+quoteOfferApi req = do
+  headers <- getHeaders "" false
+  resp <- callAPI headers req
+  pure $ unwrapResponse resp
+
+mkQuoteOffer :: String -> OfferType -> QuoteOfferReq
+mkQuoteOffer id offerType = QuoteOfferReq {
+  offeredFareWithCurrency : Nothing,
+  response : offerType,
+  searchTryId : Just id
+}
