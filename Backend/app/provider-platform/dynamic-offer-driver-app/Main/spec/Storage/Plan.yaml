@@ -2,6 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   PlanBaseAmount: Domain.Types.Extra.Plan
+  Variant: Domain.Types.Vehicle
 
 Plan:
   tableName: plan
@@ -52,6 +53,7 @@ Plan:
     merchantOpCityId : Id MerchantOperatingCity
     basedOnEntity : BasedOnEntity
     serviceName : ServiceNames
+    vehicleVariant : Maybe Variant
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentMode>
@@ -85,6 +87,11 @@ Plan:
       kvFunction: findAllWithKV
       where:
         and: [merchantOpCityId, planType, serviceName]
+
+    findByMerchantOpCityIdAndTypeWithServiceNameAndVariant:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOpCityId, paymentMode, serviceName, vehicleVariant]
 
   sqlType:
     maxAmount: integer

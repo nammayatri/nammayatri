@@ -22,6 +22,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Plan as DPlan
+import qualified Domain.Types.Vehicle as Vehicle
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess
@@ -39,6 +40,7 @@ type API =
            :> TokenAuth
            :> QueryParam "limit" Int
            :> QueryParam "offset" Int
+           :> QueryParam "vehicleVariant" Vehicle.Variant
            :> Get '[JSON] DPlan.PlanListAPIRes
            :<|> "suspend"
              :> TokenAuth
@@ -68,8 +70,8 @@ handler =
     :<|> planSubscribe
     :<|> planSelect
 
-planList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> FlowHandler DPlan.PlanListAPIRes
-planList (driverId, merchantId, merchantOpCityId) mbLimit = withFlowHandlerAPI . DPlan.planList (driverId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION mbLimit
+planList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> Maybe Vehicle.Variant -> FlowHandler DPlan.PlanListAPIRes
+planList (driverId, merchantId, merchantOpCityId) mbLimit mbOffset = withFlowHandlerAPI . DPlan.planList (driverId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION mbLimit mbOffset
 
 planSuspend :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 planSuspend = withFlowHandlerAPI . DPlan.planSuspend DPlan.YATRI_SUBSCRIPTION False
