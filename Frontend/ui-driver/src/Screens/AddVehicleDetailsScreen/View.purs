@@ -1009,48 +1009,6 @@ collectVehicleDetails push state =
       , padding $ PaddingBottom 10
       ]$[ vehicleRegistrationNumber state push
       , howToUpload push state 
-      ,   linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , orientation VERTICAL
-          , padding (PaddingHorizontal 20 20)
-          , margin $ MarginTop 20
-          , visibility $ boolToVisibility $ not state.props.openHowToUploadManual
-          ][ textView $
-            [ text $ getString DATE_OF_REGISTRATION
-            , color Color.greyTextColor
-            ] <> FontStyle.body3 TypoGraphy
-          , linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , orientation HORIZONTAL
-            , margin $ MarginVertical 10 10
-            , padding $ Padding 20 16 16 16
-            , cornerRadius 4.0
-            , stroke $ "1," <> Color.borderGreyColor
-            ][ linearLayout
-                [ width MATCH_PARENT
-                  , height MATCH_PARENT
-                  , orientation HORIZONTAL
-                  , onClick (\action -> do
-                                _ <- push action
-                                JB.datePicker "MAXIMUM_PRESENT_DATE" push $ DatePicker2 
-                                ) $ const DatePickerAction
-                  , clickable state.props.isDateClickable
-                ][ textView $
-                  [ text if state.data.registrationDate == Nothing then (getString SELECT_DATE_OF_REGISTRATION) else state.data.registrationDateActual
-                  , color if state.data.registrationDate == Nothing then Color.darkGrey else Color.greyTextColor
-                  , weight 1.0
-                  , padding $ PaddingRight 15
-                  ] <> FontStyle.subHeading1 TypoGraphy
-                , imageView
-                  [ width $ V 20
-                  , height $ V 20
-                  , imageWithFallback $ fetchImage FF_ASSET "ny_ic_calendar"
-                  ]
-                ]
-              ]
-            ]
         ] <> DA.mapWithIndex (\idx item -> dropDownFields push state idx  item) (if state.props.openHowToUploadManual then [] else state.data.dropDownList)
       ] 
 

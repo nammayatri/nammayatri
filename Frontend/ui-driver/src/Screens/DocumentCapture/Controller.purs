@@ -85,7 +85,7 @@ eval :: Action -> DocumentCaptureScreenState -> Eval Action ScreenOutput Documen
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = 
   if state.props.isSSNView 
-    then exit $ UpdateSSN state
+    then updateAndExit state $ UpdateSSN state
     else if state.props.isProfileView
       then
         case state.data.firstName, state.data.mobileNumber of
@@ -97,11 +97,13 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state =
                 isValidFirstName = (DS.length name) > 2 
                 isValid = isValidFirstName && (validatorResp == MVR.Valid)
             let newState = state{props{isValidMobileNumber = validatorResp == MVR.Valid, isValidFirstName = isValidFirstName}}
-            if isValid then exit $ UpdateProfile newState else continue newState
+            if isValid then updateAndExit state $ UpdateProfile newState else continue newState
       else
         continueWithCmd state [do
           _ <- liftEffect $ JB.uploadFile false
           pure NoAction]
+
+eval (PrimaryButtonAC PrimaryButtonController.NoAction) state = continue state
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue state {props { menuOptions = true }}
 
@@ -122,6 +124,8 @@ eval (ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionCont
     continueWithCmd state {props {validateDocModal = false}, data{errorMessage = Nothing}} [do
     void $ liftEffect $ JB.uploadFile false
     pure NoAction]
+
+eval (ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionController (PrimaryButtonController.NoAction))) state = continue state
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
 

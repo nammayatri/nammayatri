@@ -703,7 +703,7 @@ onBoardingFlow = do
                       permissionsStatus = if permissions then ST.COMPLETED else ST.NOT_STARTED,
                       cityConfig = cityConfig,
                       vehicleCategory = uiCurrentCategory
-                  }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded, driverEnabled = driverEnabled, isApplicationInVerification = isAllCompleted, isProfileDetailsCompleted = getDriverInfoResp.firstName /= "Driver"}})
+                  }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded, driverEnabled = driverEnabled, isApplicationInVerification = isAllCompleted, isProfileDetailsCompleted = getDriverInfoResp.firstName /= "Driver" && isJust getDriverInfoResp.mobileNumber}})
   liftFlowBT hideSplash
   void $ lift $ lift $ toggleLoader false
   flow <- UI.registration
@@ -753,7 +753,9 @@ onBoardingFlow = do
       documentcaptureScreenFlow
     PROFILE_DETAILS_FROM_REGISTRATION state -> do
       let defState = DocumentCaptureData.initData
-      modifyScreenState $ DocumentCaptureScreenStateType (\_ -> defState { data { cityConfig = state.data.cityConfig, vehicleCategory = state.data.vehicleCategory, linkedRc = state.data.linkedRc, variantList = state.data.variantList}, props{isProfileView = true}})
+          isDefault = getDriverInfoResp.firstName == "Driver"
+          firstName = if isDefault then Nothing else Just getDriverInfoResp.firstName
+      modifyScreenState $ DocumentCaptureScreenStateType (\_ -> defState { data { cityConfig = state.data.cityConfig, vehicleCategory = state.data.vehicleCategory, linkedRc = state.data.linkedRc, variantList = state.data.variantList, firstName = firstName, lastName = getDriverInfoResp.lastName}, props{isProfileView = true}})
       documentcaptureScreenFlow
     SELECT_LANG_FROM_REGISTRATION -> do
       modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})

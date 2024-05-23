@@ -56,7 +56,7 @@ view push config =
             , onClick
                 ( \action -> do
                     _ <- pure $ toggleBtnLoader config.id true
-                    _ <- pure $ startLottieProcess lottieAnimationConfig{ rawJson = config.lottieConfig.lottieURL, lottieId = getNewIDWithTag config.id}
+                    _ <- pure $ startLottieProcess lottieAnimationConfig{ rawJson = config.lottieConfig.lottieURL, lottieId = getNewIDWithTag config.id, forceToUseRemote = config.lottieConfig.forceToUseRemote}
                     push action
                 )
                 (const OnClick)

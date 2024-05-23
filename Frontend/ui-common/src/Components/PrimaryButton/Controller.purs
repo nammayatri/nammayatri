@@ -88,6 +88,7 @@ type LottieConfig =
   , width :: Length
   , lottieURL :: String
   , autoDisableLoader :: Boolean
+  , forceToUseRemote :: Boolean
   }
 
 type UnderLineConfig = 
@@ -162,6 +163,7 @@ config =
   , width : V 150
   , lottieURL : btnConfig.loaderUrl
   , autoDisableLoader : true
+  , forceToUseRemote: false
   }
   , underlineConfig : {
     color : Color.grey900

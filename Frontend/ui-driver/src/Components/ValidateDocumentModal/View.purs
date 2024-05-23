@@ -219,5 +219,6 @@ primaryButtonConfig state = let
       , cornerRadius = 8.0
       , height = V 60
       , id = "ValidateDocumentModalStatePB"
+      , enableLoader = JB.getBtnLoader "ValidateDocumentModalStatePB"
       }
   in primaryButtonConfig'

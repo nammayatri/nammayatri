@@ -41,6 +41,7 @@ import Components.BottomDrawerList as BottomDrawerList
 import ConfigProvider
 import Data.Maybe
 import Engineering.Helpers.Commons as EHC
+import JBridge as JB
 
 
 primaryButtonConfig :: ST.DocumentCaptureScreenState -> PrimaryButton.Config
@@ -55,6 +56,10 @@ primaryButtonConfig state = let
         , id = "DocCaptureButton"
         , isClickable = if state.props.isSSNView then if isValid  then true else false else true
         , alpha =  if state.props.isSSNView then if isValid then 1.0 else 0.4 else 1.0
+        , enableLoader = if state.props.isSSNView then JB.getBtnLoader "DocCaptureButton" else false
+        , lottieConfig {
+          forceToUseRemote = true
+        }
       }
   in primaryButtonConfig'
 
@@ -68,7 +73,11 @@ profileViewPrimaryButtonConfig state = let
         { text = "Submit" } 
         , margin = Margin 16 16 16 (EHC.safeMarginBottomWithDefault 16)
         , id = "DocCaptureSubmitButton"
+        , enableLoader = JB.getBtnLoader "DocCaptureSubmitButton"
         , isClickable = isValid
+        , lottieConfig {
+          forceToUseRemote = true
+        }
         , alpha = if isValid then 1.0 else 0.4
       }
   in primaryButtonConfig'
@@ -196,6 +205,7 @@ firstNamePrimaryEditTextConfig state =
         , margin = MarginHorizontal 10 10
         , textStyle = FontStyle.Body7
         , focused = true
+        , text = fromMaybe "" state.data.firstName
         , gravity = LEFT
         }
       , background = Color.white900
@@ -227,6 +237,7 @@ lastNamePrimaryEditTextConfig state =
         , margin = MarginHorizontal 10 10
         , textStyle = FontStyle.Body7
         , gravity = LEFT
+        , text = fromMaybe "" state.data.lastName
         }
       , background = Color.white900
       , margin = MarginVertical 16 16
