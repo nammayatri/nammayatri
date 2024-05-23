@@ -27,7 +27,10 @@ import Prelude
 import Components.PopUpModal as PopUpModal
 import Screens.Types as ST
 import Helpers.Utils as HU
-
+import Components.RateCard as RateCard
+import Common.Types.App as CTA
+import Data.Maybe (Maybe(..))
+import Data.Array as DA
 
 topAcDriverPopUpConfig :: ST.BookingOptionsScreenState -> PopUpModal.Config
 topAcDriverPopUpConfig state = let 
@@ -69,3 +72,40 @@ topAcDriverPopUpConfig state = let
       }
     }
   in config'
+
+rateCardConfig :: ST.BookingOptionsScreenState -> RateCard.Config
+rateCardConfig state =
+  let
+    config' = RateCard.config
+    rateCardConfig' =
+      config'
+        { isNightShift = state.data.rateCard.isNightShift
+        , currentRateCardType = state.data.rateCard.currentRateCardType
+        , onFirstPage = state.data.rateCard.onFirstPage
+        , showDetails = true 
+        , description = if state.data.rateCard.isNightShift then (getString $ NIGHT_TIME_CHARGES state.data.rateCard.nightChargeFrom state.data.rateCard.nightChargeTill) else (getString $ DAY_TIME_CHARGES state.data.rateCard.nightChargeTill state.data.rateCard.nightChargeFrom )
+        , buttonText = Just if state.data.rateCard.currentRateCardType == CTA.DefaultRateCard then (getString GOT_IT) else (getString GO_BACK)
+        , title = getString RATE_CARD
+        , fareList = 
+            state.data.rateCard.extraFare 
+        , driverAdditions = state.data.rateCard.driverAdditions
+        , otherOptions  = otherOptions $ not DA.null state.data.rateCard.driverAdditions
+        , fareInfoDescription = state.data.rateCard.fareInfoDescription
+        , additionalStrings = [
+          {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
+          {key : "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val : (getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)},
+          {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)},
+          {key : "TOLL_OR_PARKING_CHARGES", val : (getString TOLL_OR_PARKING_CHARGES)},
+          {key : "TOLL_CHARGES", val : (getString TOLL_CHARGES)},
+          {key : "TOLL_CHARGES_DESC", val : (getString TOLL_CHARGES_DESC)},
+          {key : "PARKING_CHARGES", val : (getString PARKING_CHARGES)},
+          {key : "PARKING_CHARGES_DESC", val : (getString PARKING_CHARGES_DESC)}]
+        }
+  in
+    rateCardConfig'
+  where     
+    otherOptions :: Boolean -> Array CTA.FareList
+    otherOptions showAdditions = (if showAdditions then 
+                                    [ {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)}] 
+                                    else [])
+                                  <>  [{key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }]

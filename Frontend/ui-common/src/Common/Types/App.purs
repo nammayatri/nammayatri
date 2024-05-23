@@ -575,3 +575,41 @@ type RentalBookingConfig = {
   , extraTimeFare :: String
 }
 
+newtype EstimateFares = EstimateFares {
+  priceWithCurrency :: Price,
+  title :: String
+}
+
+derive instance genericEstimateFares :: Generic EstimateFares _
+derive instance newtypeEstimateFares :: Newtype EstimateFares _
+instance standardEncodeEstimateFares :: StandardEncode EstimateFares where standardEncode (EstimateFares body) = standardEncode body
+instance showEstimateFares :: Show EstimateFares where show = genericShow
+instance decodeEstimateFares :: Decode EstimateFares where decode = defaultDecode
+instance encodeEstimateFares  :: Encode EstimateFares where encode = defaultEncode
+
+type BreakupList = {
+  fareList :: Array FareList,
+  fareInfo :: Array String,
+  driverAdditions :: Array FareList,
+  nightChargeStart :: String,
+  nightChargeEnd :: String,
+  isNightShift :: Boolean,
+  waitingTimeInfo :: WaitingTimeInfo
+}
+
+type RateCard =
+  {
+    baseFare :: Int,
+    driverAdditions :: Array FareList,
+    fareInfoDescription :: Array String,
+    additionalFare :: Int,
+    isNightShift :: Boolean,
+    nightChargeTill :: String,
+    nightChargeFrom :: String,
+    currentRateCardType :: RateCardType,
+    onFirstPage :: Boolean,
+    createdTime :: String,
+    extraFare :: Array FareList,
+    waitingTimeInfo :: WaitingTimeInfo,
+    serviceTierName :: Maybe String
+  }

@@ -259,9 +259,7 @@ getEN stringKey =
         MORE_THAN -> "More than"
         RATE_ABOVE_MIN_FARE -> "Rate above Min. Fare"
         DRIVER_PICKUP_CHARGES _ -> "Driver Pickup Charges"
-        DAY_TIMES_OF -> ""
         DAYTIME_CHARGES_APPLICABLE_AT_NIGHT from till -> "x of daytime charges applicable at night from "<> from <>" to " <> till
-        NIGHT_TIMES_OF -> ""
         DAYTIME_CHARGES_APPLIED_AT_NIGHT percentage from till -> percentage <> "x of daytime charges applied to fare at night (🌙) from "<> from <>" to " <> till
         DRIVERS_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC -> "* Driver may optionally request 10% of base fare (rounded to nearest Rs.10) to cover for traffic, chance of return trip etc."
         GOT_IT -> "Got It!"

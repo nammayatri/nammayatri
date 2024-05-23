@@ -51,7 +51,7 @@ import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, VehicleViewType(..))
-import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..))
+import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..))
 import Services.Backend as Remote
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Storage (setValueToLocalStore, getValueToLocalStore, KeyStore(..))
@@ -74,7 +74,7 @@ import Mobility.Prelude as MP
 import Data.Function.Uncurried (runFn2)
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
 import Common.Types.App as CT
-import Helpers.RateCardUtils (getFareBreakupList)
+import Components.RateCard.Utils (getFareBreakupList)
 import Data.Tuple as DT
 import Data.Foldable (maximum)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType, dummyRentalBookingConfig)
@@ -528,7 +528,8 @@ getEstimates (EstimateAPIEntity estimate) estimates index isFareRange count acti
       config = getCityConfig (getAppConfig appConfig).cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
       tipConfig = getTipConfig estimate.vehicleVariant
       maxTip = fromMaybe 0 (maximum tipConfig.customerTipArrayWithValues)
-      breakupConfig = getFareBreakupList (EstimateAPIEntity estimate) maxTip
+      fareBreakup = fromMaybe [] estimate.estimateFareBreakup
+      breakupConfig = getFareBreakupList fareBreakup maxTip
       additionalFare = maybe 20 calculateFareRangeDifference (estimate.totalFareRange)
       extractFare f = case estimate.totalFareRange of
                         Just (FareRange fareRange) -> Just (f fareRange)

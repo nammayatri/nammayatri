@@ -18,7 +18,7 @@ module Services.API where
 import Data.Maybe
 import PaymentPage
 
-import Common.Types.App (Version(..), ReelButtonConfig(..)) as Common
+import Common.Types.App as Common
 import Domain.Payments as PP
 import Control.Alt ((<|>))
 import Control.Monad.Except (except, runExcept)
@@ -4647,3 +4647,40 @@ instance standardEncodeUpdateAirConditionUpdateResponse :: StandardEncode Update
 instance showUpdateAirConditionUpdateResponse :: Show UpdateAirConditionUpdateResponse where show = genericShow
 instance decodeUpdateAirConditionUpdateResponse :: Decode UpdateAirConditionUpdateResponse where decode = defaultDecode
 instance encodeUpdateAirConditionUpdateResponse  :: Encode UpdateAirConditionUpdateResponse where encode = defaultEncode
+
+--------------------------------------------------------- Get Driver Rate Card --------------------------------------------------------------------------
+
+data GetDriverRateCardReq = GetDriverRateCardReq (Maybe String)
+
+newtype GetDriverRateCardRes = GetDriverRateCardRes (Array RateCardRespItem)
+
+newtype RateCardRespItem = RateCardRespItem {
+    perKmRate :: Common.Price,
+    perMinuteRate :: Maybe Common.Price,
+    rateCardItems :: Array Common.EstimateFares,
+    serviceTierType :: ServiceTierType,
+    totalFare :: Common.Price
+  }
+
+instance makeGetDriverRateCardReq :: RestEndpoint GetDriverRateCardReq GetDriverRateCardRes where
+  makeRequest reqBody@(GetDriverRateCardReq vehicleServiceTier) headers = defaultMakeRequest GET (EP.getDriverRateCard vehicleServiceTier) headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericGetDriverRateCardReq :: Generic GetDriverRateCardReq _
+instance standardEncodeGetDriverRateCardReq :: StandardEncode GetDriverRateCardReq where standardEncode (GetDriverRateCardReq _) = standardEncode {}
+instance showGetDriverRateCardReq :: Show GetDriverRateCardReq where show = genericShow
+instance decodeGetDriverRateCardReq :: Decode GetDriverRateCardReq where decode = defaultDecode
+instance encodeGetDriverRateCardReq  :: Encode GetDriverRateCardReq where encode = defaultEncode
+
+derive instance genericRateCardRespItem :: Generic RateCardRespItem _
+instance standardEncodeRateCardRespItem :: StandardEncode RateCardRespItem where standardEncode (RateCardRespItem _) = standardEncode {}
+instance showRateCardRespItem :: Show RateCardRespItem where show = genericShow
+instance decodeRateCardRespItem :: Decode RateCardRespItem where decode = defaultDecode
+instance encodeRateCardRespItem  :: Encode RateCardRespItem where encode = defaultEncode
+
+derive instance genericGetDriverRateCardRes :: Generic GetDriverRateCardRes _
+instance standardEncodeGetDriverRateCardRes :: StandardEncode GetDriverRateCardRes where standardEncode (GetDriverRateCardRes res) = standardEncode res
+instance showGetDriverRateCardRes :: Show GetDriverRateCardRes where show = genericShow
+instance decodeGetDriverRateCardRes :: Decode GetDriverRateCardRes where decode = defaultDecode
+instance encodeGetDriverRateCardRes  :: Encode GetDriverRateCardRes where encode = defaultEncode

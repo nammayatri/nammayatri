@@ -13,7 +13,12 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Services.Accessor where
+module Services.Accessor (
+  module Services.Accessor,
+  module Reexport
+) where
+
+import Engineering.Helpers.Accessor as Reexport
 
 import Prelude
 import Data.Lens (Lens', lens)

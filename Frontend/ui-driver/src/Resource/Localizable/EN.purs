@@ -1401,5 +1401,32 @@ getEN stringKey =
         CONVERT_YOUR_COINS_TO_DISCOUNT -> "Convert your coins to discount"
         CONVERT_YOUR_COINS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION  -> "Convert your coins to get discount on your subscription"
         CONVERT_NOW -> "Convert Now"
-
-
+        RATE_CARD -> "Rate Card"
+        TOLL_CHARGES -> "Toll Charges"
+        TOLL_CHARGES_DESC -> "Any toll charge accrued during the trip is included in your fare."
+        TOLL_CHARGES_INCLUDING amount -> "Toll charges " <> amount <> " included in the fare"
+        TOLL_ROAD_CHANGED -> "Toll charges not applicable"
+        PARKING_CHARGES -> "Parking Charges"
+        FARE_FOR limit -> "Fare for " <> limit
+        WAITING_CHARGE_LIMIT timeLimit -> "Waiting Charges (after " <> timeLimit <> " mins)"
+        PARKING_CHARGES_DESC -> "Parking charges accrued by the driver is not included in the fare. This is to be settled post ride between driver and passenger."
+        TIP_CAN_BE_ADDED maxTip -> "Tip of upto ₹" <> maxTip <> " can be added to the ride fare."
+        DAY_TIME_CHARGES from till -> "Daytime Charges ("<> from <> " to " <> till <> ")"
+        RUSH_HOURS_DESC charges -> "*During Rush hours, "<> charges <>"% additional fare is applicable to compensate driver’s time for high traffic."
+        TOLL_OR_PARKING_CHARGES -> "^Toll/ Parking Charges"
+        TOLL_CHARGES_ESTIMATED -> "Toll Charges (Estimated)^"
+        RUSH_HOUR_CHARGES -> "Rush Hour Charges*"
+        PICKUP_CHARGE -> "Pickup Charges"
+        NIGHT_TIME_CHARGES from till -> "Night-time Charges ("<> from <> " to   " <> till <> ")"
+        MIN_FARE_UPTO val -> "Min. Fare upto " <> val
+        MORE_THAN -> "More than"
+        RATE_ABOVE_MIN_FARE -> "Rate above Min. Fare"
+        DRIVER_PICKUP_CHARGES _ -> "Driver Pickup Charges"
+        DAYTIME_CHARGES_APPLICABLE_AT_NIGHT from till -> "x of daytime charges applicable at night from "<> from <>" to " <> till
+        DAYTIME_CHARGES_APPLIED_AT_NIGHT percentage from till -> percentage <> "x of daytime charges applied to fare at night (🌙) from "<> from <>" to " <> till
+        TOTAL_FARE_MAY_CHANGE_DUE_TO_CHANGE_IN_ROUTE -> "Total fare may change due to change in route"
+        DRIVER_ADDITIONS -> "Driver Additions*"
+        FARE_UPDATE_POLICY -> "Fare Update Policy"
+        DRIVER_ADDITIONS_OPTIONAL -> "Driver Additions (Optional)"
+        THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC -> "The Driver may quote extra to cover for traffic, chance of return trip etc."
+        DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE -> "Note The driver may/may not charge this additional fare"

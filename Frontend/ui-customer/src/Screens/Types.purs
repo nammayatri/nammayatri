@@ -604,7 +604,7 @@ type HomeScreenStateData =
   , destinationAddress :: Address
   , route :: Maybe Route
   , startedAtUTC :: String
-  , rateCard :: RateCard
+  , rateCard :: Common.RateCard
   , speed :: Int
   , selectedLocationListItem :: Maybe LocationListItemState
   , saveFavouriteCard :: SaveFavouriteCardState
@@ -654,7 +654,7 @@ type HomeScreenStateData =
   , iopState :: InteroperabilityState
   , currentCityConfig :: MRC.CityConfig
   , otherSelectedEstimates :: Array String
-  , rateCardCache :: Maybe RateCard
+  , rateCardCache :: Maybe Common.RateCard
   , maxEstimatedDuration :: Int
   , invalidBookingPopUpConfig :: Maybe InvalidBookingPopUpConfig
   }
@@ -1028,26 +1028,6 @@ type Contact = {
      name :: String,
      phoneNo :: String
 }
-
-type RateCard =
-  {
-    additionalFare :: Int,
-    createdTime :: String,
-    tollCharge :: Number,
-    waitingTimeInfo :: Common.WaitingTimeInfo,
-    currentRateCardType :: Common.RateCardType,
-    driverAdditions :: Array Common.FareList,
-    extraFare :: Array Common.FareList,
-    fareInfoDescription :: Array String,
-    isNightShift :: Boolean,
-    nightChargeFrom :: String,
-    nightChargeTill :: String,
-    onFirstPage :: Boolean,
-    pickUpCharges :: Number,
-    vehicleVariant :: String,
-    baseFare :: Int
-  }
-
 
 type RateCardDetails = {
   title :: String ,

@@ -972,45 +972,22 @@ rateCardConfig state =
         , showDetails = state.data.config.searchLocationConfig.showRateCardDetails
         , description = if state.data.rateCard.isNightShift then (getString $ NIGHT_TIME_CHARGES state.data.rateCard.nightChargeFrom state.data.rateCard.nightChargeTill) else (getString $ DAY_TIME_CHARGES state.data.rateCard.nightChargeTill state.data.rateCard.nightChargeFrom)
         , buttonText = Just if state.data.rateCard.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
-        , title =
-          case MU.getMerchant FunctionCall of
-            MU.NAMMAYATRI -> case city of
-              Delhi -> getString RATE_CARD
-              Kochi -> getVehicleTitle state.data.rateCard.vehicleVariant
-              Hyderabad -> getString RATE_CARD
-              Chennai -> getVehicleTitle state.data.rateCard.vehicleVariant
-              Pondicherry -> getString RATE_CARD
-              Bangalore -> getString RATE_CARD
-              _ -> getString RATE_CARD
-            MU.YATRI -> getVehicleTitle state.data.rateCard.vehicleVariant
-            _ -> ""
-        , fareList =
-          state.data.rateCard.extraFare
+        , title = getString RATE_CARD
+        , fareList = 
+            state.data.rateCard.extraFare 
         , driverAdditions = state.data.rateCard.driverAdditions
         , otherOptions = otherOptions $ not DA.null state.data.rateCard.driverAdditions
         , fareInfoDescription = state.data.rateCard.fareInfoDescription
-        , additionalStrings =
-          [ { key: "DRIVER_ADDITIONS_OPTIONAL", val: (getString DRIVER_ADDITIONS_OPTIONAL) }
-          , { key: "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val: (getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC) }
-          , { key: "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE"
-            , val:
-                ( if (state.data.rateCard.vehicleVariant /= "AUTO_RICKSHAW") then
-                    getString DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS
-                  else
-                    getString $ DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE"
-                )
-            }
-          , { key: "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val: (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE) }
-          , { key: "FARE_UPDATE_POLICY", val: (getString FARE_UPDATE_POLICY) }
-          , { key: "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS", val: (getString YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS) }
-          , { key: "REASON_CHANGE_IN_ROUTE", val: ("<span style=\"color:black;\">" <> (getString REASON_CHANGE_IN_ROUTE_A) <> "</span>" <> (getString REASON_CHANGE_IN_ROUTE_B)) }
-          , { key: "TOLL_OR_PARKING_CHARGES", val: (getString TOLL_OR_PARKING_CHARGES) }
-          , { key: "TOLL_CHARGES", val: (getString TOLL_CHARGES) }
-          , { key: "TOLL_CHARGES_DESC", val: (getString TOLL_CHARGES_DESC) }
-          , { key: "PARKING_CHARGES", val: (getString PARKING_CHARGES) }
-          , { key: "PARKING_CHARGES_DESC", val: (getString PARKING_CHARGES_DESC) }
-          ]
-            <> if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" && state.data.config.searchLocationConfig.showChargeDesc then [ { key: "CHARGE_DESCRIPTION", val: (getString ERNAKULAM_LIMIT_CHARGE) } ] else []
+        , additionalStrings = [
+          {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
+          {key : "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val : (getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)},
+          {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)},
+          {key : "TOLL_OR_PARKING_CHARGES", val : (getString TOLL_OR_PARKING_CHARGES)},
+          {key : "TOLL_CHARGES", val : (getString TOLL_CHARGES)},
+          {key : "TOLL_CHARGES_DESC", val : (getString TOLL_CHARGES_DESC)},
+          {key : "PARKING_CHARGES", val : (getString PARKING_CHARGES)},
+          {key : "PARKING_CHARGES_DESC", val : (getString PARKING_CHARGES_DESC)}]
+          <> if state.data.rateCard.serviceTierName == Just "Auto" && state.data.config.searchLocationConfig.showChargeDesc then [{key : "CHARGE_DESCRIPTION", val : (getString ERNAKULAM_LIMIT_CHARGE)}] else [] 
         }
   in
     rateCardConfig'

@@ -619,7 +619,7 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   tripTerms :: Array String,
   id :: String,
   agencyCompletedRidesCount :: Maybe Int,
-  estimateFareBreakup :: Maybe (Array EstimateFares),
+  estimateFareBreakup :: Maybe (Array CTA.EstimateFares),
   totalFareRange :: Maybe FareRange,
   nightShiftRate :: Maybe NightShiftRate,
   specialLocationTag :: Maybe String,
@@ -642,11 +642,6 @@ newtype NightShiftRate = NightShiftRate {
 newtype FareRange = FareRange {
   maxFare :: Int,
   minFare :: Int
-}
-
-newtype EstimateFares = EstimateFares {
-  priceWithCurrency :: CTA.Price,
-  title :: String
 }
 
 newtype SearchReqLocationAPIEntity = SearchReqLocationAPIEntity {
@@ -788,13 +783,6 @@ instance standardEncodeEstimateAPIEntity :: StandardEncode EstimateAPIEntity whe
 instance showEstimateAPIEntity :: Show EstimateAPIEntity where show = genericShow
 instance decodeEstimateAPIEntity :: Decode EstimateAPIEntity where decode = defaultDecode
 instance encodeEstimateAPIEntity  :: Encode EstimateAPIEntity where encode = defaultEncode
-
-derive instance genericEstimateFares :: Generic EstimateFares _
-derive instance newtypeEstimateFares :: Newtype EstimateFares _
-instance standardEncodeEstimateFares :: StandardEncode EstimateFares where standardEncode (EstimateFares body) = standardEncode body
-instance showEstimateFares :: Show EstimateFares where show = genericShow
-instance decodeEstimateFares :: Decode EstimateFares where decode = defaultDecode
-instance encodeEstimateFares  :: Encode EstimateFares where encode = defaultEncode
 
 derive instance genericFareRange :: Generic FareRange _
 derive instance newtypeFareRange :: Newtype FareRange _

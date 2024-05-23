@@ -950,16 +950,14 @@ eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) s
     , data 
       { rateCard 
         { onFirstPage = false
-        , vehicleVariant = config.vehicleVariant
         , currentRateCardType = DefaultRateCard
-        , pickUpCharges = config.pickUpCharges 
-        , tollCharge = config.tollCharge
         , extraFare = config.extraFare
         , driverAdditions = config.driverAdditions
         , fareInfoDescription = config.fareInfoDescription
         , isNightShift = config.isNightShift
         , nightChargeTill = config.nightChargeTill
         , nightChargeFrom = config.nightChargeFrom
+        , serviceTierName = config.serviceTierName
         }
       }
     }
@@ -2869,10 +2867,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".RateCard") "true"
   continue state{ props { showRateCard = true }
                 , data {  rateCard {  onFirstPage = false
-                                    , vehicleVariant = config.vehicleVariant
                                     , currentRateCardType = DefaultRateCard
-                                    , pickUpCharges = config.pickUpCharges
-                                    , tollCharge = config.tollCharge
                                     , extraFare = config.extraFare
                                     , fareInfoDescription = config.fareInfoDescription
                                     , additionalFare = config.additionalFare
@@ -2880,6 +2875,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
                                     , nightChargeTill = config.nightChargeTill
                                     , nightChargeFrom = config.nightChargeFrom
                                     , driverAdditions = config.driverAdditions
+                                    , serviceTierName = config.serviceTierName
                                     }}}
 
 
@@ -3164,10 +3160,10 @@ eval (AcWorkingPopupAction PopUpModal.DismissPopup) state = continue state{props
 eval NoRender state = update state
 
 eval UpdateRateCardCache state = do
-  let (rateCard :: Maybe ST.RateCard) = handleRateCard $ runFn3 getFromCache (show RATE_CARD_INFO) Nothing Just
+  let (rateCard :: Maybe CTP.RateCard) = handleRateCard $ runFn3 getFromCache (show RATE_CARD_INFO) Nothing Just
   continue state{data{rateCardCache = rateCard}}
   where 
-    handleRateCard :: Maybe ST.RateCard -> Maybe ST.RateCard
+    handleRateCard :: Maybe CTP.RateCard -> Maybe CTP.RateCard
     handleRateCard rateCard = do
       case rateCard of
         Nothing -> do 
@@ -3617,10 +3613,6 @@ specialZoneRideFlow  (RideBookingRes response) state = do
         }
   exit $ RideConfirmed newState { props { isInApp = true } }
 
-getRateCardArray :: Boolean -> String -> Int -> Int -> Int -> Array {title :: String , description :: String}
-getRateCardArray nightCharges lang baseFare extraFare additionalFare = ([ { title :(getString $ MIN_FARE_UPTO "2 km") <> if nightCharges then " 🌙" else "" , description : "₹" <> toStringJSON (baseFare) }
-                      , { title : (getString RATE_ABOVE_MIN_FARE) <> if nightCharges then " 🌙" else "", description : "₹" <> toStringJSON (extraFare) <> " / km"} ]
-                      <> if (getMerchant FunctionCall) == NAMMAYATRI && additionalFare > 0 then [ {title : (getString DRIVER_ADDITIONS) , description : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
 
 findingQuotesSearchExpired :: Boolean -> Boolean -> Int
 findingQuotesSearchExpired gotQuotes isNormalRide =
@@ -3707,10 +3699,8 @@ openLiveDashboard state = do
 cacheRateCard :: HomeScreenState -> Effect Unit 
 cacheRateCard state = do
   let rateCard =  state.data.rateCard { onFirstPage = false
-                  , vehicleVariant = state.data.selectedEstimatesObject.vehicleVariant
+                  , serviceTierName = state.data.selectedEstimatesObject.serviceTierName
                   , currentRateCardType = DefaultRateCard
-                  , pickUpCharges = state.data.selectedEstimatesObject.pickUpCharges
-                  , tollCharge = state.data.selectedEstimatesObject.tollCharge
                   , extraFare = state.data.selectedEstimatesObject.extraFare
                   , fareInfoDescription = state.data.selectedEstimatesObject.fareInfoDescription
                   , additionalFare = state.data.selectedEstimatesObject.additionalFare

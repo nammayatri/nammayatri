@@ -18,11 +18,11 @@ import RemoteConfig.Types (SafetyVideoConfig)
 safetyVideoConfigData :: String -> String -> Array SafetyVideoConfig
 safetyVideoConfigData city language = do
     let config = fetchRemoteConfigString ("safety_videos_" <> language)
-        value = decodeForeignObject (parseJSON config) defaultRemoteConfig
+        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
     getCityBasedConfig value city
 
 safetyBannerVideoConfigData :: String -> String -> Array SafetyVideoConfig
 safetyBannerVideoConfigData city language = do
     let config = fetchRemoteConfigString ("safety_banner_videos_" <> language)
-        value = decodeForeignObject (parseJSON config) defaultRemoteConfig
+        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
     getCityBasedConfig value city

@@ -14,14 +14,16 @@
 -}
 module Common.RemoteConfig.Utils where
 
-import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..))
-import DecodeUtil (decodeForeignObject, parseJSON)
-import Data.String (null)
+import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), TipsConfig)
+import DecodeUtil (decodeForeignObject, parseJSON, setAnyInWindow)
+import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
-import Prelude (not, ($), (==))
-import Data.Maybe (fromMaybe)
+import Prelude (not, ($), (==), bind, pure)
+import Data.Maybe (fromMaybe, Maybe(..))
 import Data.Array (elem, filter, uncons)
 import Data.Array as DA
+import Data.Function.Uncurried (runFn3, runFn2)
+import DecodeUtil (getAnyFromWindow)
 
 foreign import fetchRemoteConfigString :: String -> String
 
@@ -29,23 +31,23 @@ foreign import fetchRemoteConfig :: forall a. String -> a
 
 foreign import isWhiteListed :: String -> Array String -> Boolean
 
-defaultRemoteConfig :: forall a. RemoteConfig (Array a)
-defaultRemoteConfig =
-  { bangalore: []
-  , kolkata: []
-  , chennai: []
-  , tumakuru: []
-  , mysore: []
-  , kochi: []
-  , delhi: []
-  , hyderabad: []
-  , mumbai: []
-  , coimbatore: []
-  , pondicherry: []
-  , goa: []
-  , pune: []
-  , tamilnaducities: []
-  , default: []
+defaultRemoteConfig :: forall a. a -> RemoteConfig a
+defaultRemoteConfig defaultValue =
+  { bangalore : defaultValue
+  , kolkata : defaultValue
+  , chennai : defaultValue
+  , tumakuru : defaultValue
+  , mysore : defaultValue
+  , kochi : defaultValue
+  , delhi : defaultValue
+  , hyderabad : defaultValue
+  , mumbai : defaultValue
+  , coimbatore : defaultValue
+  , pondicherry : defaultValue
+  , goa : defaultValue
+  , pune : defaultValue
+  , tamilnaducities : defaultValue
+  , default : defaultValue
   , config: Nothing
   }
 
@@ -56,7 +58,7 @@ carouselConfigData city configKey default userId categoryFilter =
 
     parseVal = if not null remoteConfig then remoteConfig else fetchRemoteConfigString default
 
-    decodedConfg = decodeForeignObject (parseJSON parseVal) defaultRemoteConfig
+    decodedConfg = decodeForeignObject (parseJSON parseVal) $ defaultRemoteConfig []
   in
     filterWhiteListedConfigs userId $ filterCategoryBasedCarousel categoryFilter $ getCityBasedConfig decodedConfg city
 
@@ -118,3 +120,44 @@ getCityBasedConfig config city = case city of
   "pune" -> config.pune
   "tamilnaducities" -> config.tamilnaducities
   _ -> config.default
+
+tipConfigData :: String -> String -> Array Int
+tipConfigData city variant = do
+  let
+    tipsConfig = runFn3 getAnyFromWindow "tips_config" Nothing Just
+    decodedConfig = case tipsConfig of
+          Just (config :: (RemoteConfig TipsConfig)) -> config
+          Nothing -> do
+            let remoteConfig = fetchRemoteConfigString "tips_config"
+                decodedConfg = decodeForeignObject (parseJSON remoteConfig) $ defaultRemoteConfig defaultTipsConfig
+                _ = runFn2 setAnyInWindow "tips_config" decodedConfg
+            decodedConfg
+  getTipForVariant variant $ getCityBasedConfig decodedConfig $ toLower city
+  where
+    -- if a variant tip is not provided for a particular city we will check for default variant config for that city. If default is not there then tip wont be there.
+    getTipForVariant variant config = case getTip config variant of
+      Nothing -> fromMaybe [] $ getTip config "default"
+      Just tips -> tips
+
+    getTip config variant = 
+      case variant of 
+        "SEDAN" -> config.sedan
+        "SUV" -> config.suv
+        "HATCHBACK" -> config.hatchback
+        "AUTO_RICKSHAW" -> config.autoRickshaw
+        "TAXI" -> config.taxi
+        "TAXI_PLUS" -> config.taxiPlus
+        "BOOK_ANY" -> config.bookAny
+        _ -> config.default
+
+defaultTipsConfig :: TipsConfig
+defaultTipsConfig = 
+  { sedan: Nothing
+  , suv: Nothing
+  , hatchback: Nothing
+  , autoRickshaw: Nothing
+  , taxi: Nothing
+  , taxiPlus: Nothing
+  , bookAny: Nothing
+  , default: Nothing
+  }

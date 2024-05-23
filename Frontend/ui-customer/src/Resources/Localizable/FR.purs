@@ -256,9 +256,7 @@ getFR stringKey =
         MIN_FARE_UPTO _ -> "Min. Tarif jusqu'à 2 km"
         RATE_ABOVE_MIN_FARE -> "Taux supérieur au tarif minimum"
         DRIVER_PICKUP_CHARGES _ -> "Frais de ramassage des conducteurs"
-        DAY_TIMES_OF -> ""
         DAYTIME_CHARGES_APPLICABLE_AT_NIGHT from till -> "X des frais diurnes applicables la nuit de 22 h à 5 h"
-        NIGHT_TIMES_OF -> ""
         DAYTIME_CHARGES_APPLIED_AT_NIGHT percentage from till -> percentage <> "x des frais diurnes appliqués au tarif de nuit (🌙) de "<> from <>" à " <> till
         DRIVERS_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC -> "* Le conducteur peut éventuellement demander 10% des tarifs de base (arrondi à Rs.10 le plus proche) pour couvrir le trafic, les chances de retour, etc."
         GOT_IT -> "J'ai compris!"
