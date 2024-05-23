@@ -143,3 +143,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD PRIMARY KEY ( merchant
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_silent_fcm_for_forward_batch boolean NOT NULL default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fare_recompute_weekly_extra_kms_threshold integer NOT NULL default 20000;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fare_recompute_daily_extra_kms_threshold integer NOT NULL default 5000;
