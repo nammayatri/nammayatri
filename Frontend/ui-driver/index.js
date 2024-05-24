@@ -3,6 +3,7 @@ import "core-js";
 import "presto-ui";
 import "regenerator-runtime/runtime";
 
+Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;","null");
 window.events = {};
 try {
   if (typeof window.assetDownloadDuration === "number") {
@@ -443,10 +444,10 @@ if (typeof window.JOS != "undefined") {
 
 const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
 
-if (sessionInfo.package_name.includes("debug")) {
-  logger.enableLogger();
-} else {
-  logger.disableLogger();
-}
+// if (sessionInfo.package_name.includes("debug")) {
+//   logger.enableLogger();
+// } else {
+//   logger.disableLogger();
+// }
 
 console.log("APP_PERF INDEX_BUNDLE_END : ", new Date().getTime());
