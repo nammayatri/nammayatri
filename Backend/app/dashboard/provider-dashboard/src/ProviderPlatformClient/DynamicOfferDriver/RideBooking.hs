@@ -53,7 +53,7 @@ data DriversAPIs = DriversAPIs
     collectCashV2 :: Id Driver.Driver -> Text -> Driver.ServiceNames -> Euler.EulerClient APISuccess,
     exemptCash :: Id Driver.Driver -> Text -> Euler.EulerClient APISuccess,
     exemptCashV2 :: Id Driver.Driver -> Text -> Driver.ServiceNames -> Euler.EulerClient APISuccess,
-    driverInfo :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> Euler.EulerClient Driver.DriverInfoRes,
+    driverInfo :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> Euler.EulerClient Driver.DriverInfoRes,
     unlinkVehicle :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     endRCAssociation :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     addVehicle :: Id Driver.Driver -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,

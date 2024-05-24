@@ -108,6 +108,7 @@ type DriverInfoAPI =
     :> QueryParam "vehicleNumber" Text
     :> QueryParam "dlNumber" Text
     :> QueryParam "rcNumber" Text
+    :> QueryParam "email" Text
     :> Capture "fleetOwnerId" Text
     :> Capture "mbFleet" Bool
     :> Get '[JSON] Common.DriverInfoRes
@@ -145,8 +146,8 @@ exemptCash merchantShortId opCity driverId = withFlowHandlerAPI . DDriver.exempt
 exemptCashV2 :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.ServiceNames -> FlowHandler APISuccess
 exemptCashV2 merchantShortId opCity driverId rId serviceName = withFlowHandlerAPI $ DDriver.exemptCashV2 merchantShortId opCity driverId rId serviceName
 
-driverInfo :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> FlowHandler Common.DriverInfoRes
-driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber fleetOwnerId = withFlowHandlerAPI . DDriver.driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber fleetOwnerId
+driverInfo :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> FlowHandler Common.DriverInfoRes
+driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber mbEmail fleetOwnerId mbFleet = withFlowHandlerAPI $ DDriver.driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber mbEmail fleetOwnerId mbFleet
 
 unlinkVehicle :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler APISuccess
 unlinkVehicle merchantShortId opCity = withFlowHandlerAPI . DDriver.unlinkVehicle merchantShortId opCity
