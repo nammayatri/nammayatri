@@ -990,7 +990,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       ..
     }
 
-mkGeneralInfoTagGroup :: Maybe DTC.TransporterConfig -> Pricing -> Bool -> Maybe Spec.TagGroup
+mkGeneralInfoTagGroup :: DTC.TransporterConfig -> Pricing -> Bool -> Maybe Spec.TagGroup
 mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
   | isNothing pricing.specialLocationTag && isNothing pricing.distanceToNearestDriver = Nothing
   | otherwise =
@@ -1101,7 +1101,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
                       descriptorName = Just $ show pricing.vehicleVariant,
                       descriptorShortDesc = Nothing
                     },
-              tagValue = getDurationToNearestDriver (DTC.avgSpeedOfVehicle =<< transporterConfig)
+              tagValue = getDurationToNearestDriver (DTC.avgSpeedOfVehicle transporterConfig)
             }
       where
         getDurationToNearestDriver :: Maybe DTC.AvgSpeedOfVechilePerKm -> Maybe Text

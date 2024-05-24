@@ -172,6 +172,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             itemId = estimate.itemId,
             validTill = quoteValidTill,
             estimatedTotalFare = estimatedFare,
+            estimatedPickupDurationInMinutes = Nothing,
             vehicleServiceTierType = fromMaybe (DVST.castVariantToServiceTier vehicleVariant) serviceTierType,
             tollChargesInfo =
               ((,) <$> (estimate.tollChargesInfo <&> (.tollCharges)) <*> (estimate.tollChargesInfo <&> (.tollNames)))
