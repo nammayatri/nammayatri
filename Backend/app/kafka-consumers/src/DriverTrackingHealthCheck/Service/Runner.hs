@@ -23,6 +23,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Text.Encoding as T
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
+import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as DriverInfo
 import qualified "dynamic-offer-driver-app" Domain.Types.Person as DP
 import qualified DriverTrackingHealthCheck.API as HC
 import Environment (Flow, HealthCheckAppCfg)
@@ -34,6 +35,7 @@ import Kernel.Types.Error (PersonError (PersonNotFound))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Service
+import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as DI
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person as SQP
 import "dynamic-offer-driver-app" Tools.Notifications
 
@@ -53,7 +55,7 @@ driverLastLocationUpdateCheckService healthCheckAppCfg = startService "driverLas
     case nonEmpty drivers of
       Just allDrivers -> do
         mapM_ (flip driverDevicePingService fcmNofificationSendCount) allDrivers
-        log INFO ("Drivers to ping: " <> show (length allDrivers))
+        log INFO ("Drivers to ping: " <> show allDrivers)
       Nothing -> log INFO "No drivers to ping"
     threadDelay (secondsToMcs serviceInterval).getMicroseconds
 
@@ -83,8 +85,10 @@ driverDevicePingService driverId fcmNofificationSendCount = do
   where
     pingDriver :: DP.Person -> Flow ()
     pingDriver driver = do
+      driverInformation <- DI.findByPrimaryKey (Id driverId) >>= fromMaybeM (PersonNotFound $ driverId <> " information")
       case driver.deviceToken of
-        Just token -> notifyDevice driver.merchantOperatingCityId FCM.TRIGGER_SERVICE "You were inactive" "Please check the app" driver (Just token)
+        Just token | driverInformation.mode `elem` [Just DriverInfo.ONLINE, Just DriverInfo.SILENT] -> notifyDevice driver.merchantOperatingCityId FCM.TRIGGER_SERVICE "You were inactive" "Please check the app" driver (Just token)
+        Just _ -> log INFO $ "Driver went offline " <> show driver.id
         Nothing -> log INFO $ "Active drivers with no token" <> show driver.id
 
 withLock :: (Redis.HedisFlow m r, MonadMask m) => Text -> m () -> m ()
