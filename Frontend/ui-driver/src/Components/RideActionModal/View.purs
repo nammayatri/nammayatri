@@ -1087,6 +1087,7 @@ separatorConfig =
   , layoutWidth : V 14
   , layoutHeight : V 16
   , color : Color.black500
+  , margin : MarginVertical 2 2
   }
 
 isSpecialRide :: Config -> Boolean

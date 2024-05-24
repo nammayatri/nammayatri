@@ -46,6 +46,9 @@ import Screens(ScreenName)
 import PrestoDOM.List
 import JBridge (Location)
 import Data.HashMap as DHM
+import PrestoDOM ( Margin(..), Orientation(..), Padding(..), Visibility(..), Length(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, text, textFromHtml, textSize, textView, weight, width, padding, visibility, afterRender, editText, onClick, alignParentBottom, imageWithFallback, stroke, layoutGravity )
+import Components.InputView.Controller (ImageConfig(..), InputView(..))
+import Components.SeparatorView.View as SeparatorView
 
 type Contacts = {
   name :: String,
@@ -617,6 +620,7 @@ type HomeScreenStateData =
   , followers :: Maybe (Array Followers)
   , vehicleVariant :: String
   , hotSpotInfo :: Array HotSpotData
+  , selectedBoxId :: Maybe Int
   }
 
 type RentalsInfo = 
@@ -804,6 +808,8 @@ type HomeScreenStateProps =
   , repeatRideServiceTierName :: Maybe String
   , isSearchCancelled :: Boolean
   , referralComponentProps :: ReferralComponentState
+  , inputView :: Array InputView
+  , selectedIndex :: Int
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

@@ -713,6 +713,7 @@ separatorConfig =
   , layoutWidth : V 15
   , layoutHeight : V 15
   , color : Color.black500
+  , margin : MarginVertical 2 2 
   }
 
 

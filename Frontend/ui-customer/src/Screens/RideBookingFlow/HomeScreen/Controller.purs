@@ -53,6 +53,8 @@ import Components.SelectListModal.Controller as CancelRidePopUp
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
 import Components.Referral as ReferralComponent
+import Components.InputView as InputView
+import Components.InputView.Controller as InputViewController
 import Constants (defaultDensity, languageKey)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Except (runExcept)
@@ -898,6 +900,7 @@ data Action = NoAction
             | GoToConfirmingLocationStage
             | ReferralComponentAction ReferralComponent.Action
             | GoToHomeScreen
+            | InputViewAction InputViewController.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -1712,9 +1715,14 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
       _            -> continue state
 
 eval WhereToClick state = do
+  let _ = spy "WHERETO CLICKED" state.data
   _ <- pure $ performHapticFeedback unit
   let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.DestinationSearch" "true"
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
+  -- let updatedInputView = map (\inputField -> (check!)
+  --       if inputField.index == 0 
+  --       then inputField { textValue = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source } 
+  --       else inputField) state.props.inputView
   exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }, rideSearchProps{sessionId = generateSessionId unit}}, data{source= if state.data.source == "" then getString CURRENT_LOCATION else state.data.source}}
   
 eval (RideCompletedAC RideCompletedCard.GoToSOS) state = exit $ GoToNammaSafety state true false 
@@ -1969,7 +1977,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Locatio
 
 eval (ExitLocationSelected item addToRecents)state = exit $ LocationSelected item  addToRecents state
 
-eval (SearchLocationModelActionController (SearchLocationModelController.DebounceCallBack searchString isSource)) state = do
+eval (SearchLocationModelActionController (SearchLocationModelController.DebounceCallBack searchString isSource)) state = do 
   if (STR.length searchString > 2) && (isSource == fromMaybe true state.props.isSource) then 
     validateSearchInput state searchString
   else continue state
@@ -2005,12 +2013,6 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
           pure NoAction
       ]
 
-eval (SearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType)) state = do
-  _ <- pure $ spy "searchLocationModal" textType
-  if textType == "D" then
-    continue state { props { isSource = Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source, locationList = if state.props.isSource == Just false then state.data.locationList else state.data.destinationSuggestions } }
-  else
-    continue state { props { isSource = Just true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length state.data.source) > 2}} , data{ locationList = if state.props.isSource == Just true then state.data.locationList else state.data.recentSearchs.predictionArray } }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.NoAction)) state = continue state
 
@@ -2784,10 +2786,56 @@ eval GoToHomeScreen state = do
   logStatus "confirming_ride" "no_active_ride"
   exit $ GoToHome state
 
-eval _ state = update state
+eval ( SearchLocationModelActionController (SearchLocationModelController.InputViewAction (InputViewController.AddRemoveStopAction action index))) state = do
+  case action of
+    "D" -> do  
+      let newIndex = (length state.props.inputView) 
+          newStop = defaultAddStopConfig { index = newIndex , id = "STOP" <> (show newIndex), textValue = "D"}  
+          _ = spy "Inside newStop" newStop
+          updatedInputView = map (\stop -> if stop.index == index then stop { textValue = "ADD" } else stop) state.props.inputView <> [newStop]
+          _ = spy "This is the updated input view after adding" updatedInputView
+      continue state { props { inputView = updatedInputView } }
+    "ADD" -> do
+      let
+        filteredInputView = filter (\stop -> stop.index /= index) state.props.inputView
+        _ = spy "Inside filtered array" filteredInputView
 
+        updatedInputView = map (\stop -> if stop.index > index then stop { index = stop.index - 1 } else stop) filteredInputView
+          
+        _ = spy "Removing stop with ID and updating indices" index
+        _ = spy "This is the updated input view after deleting" 
+
+      continue state { props = state.props { inputView = updatedInputView } }
+
+    _ -> continue state
+
+eval (SearchLocationModelActionController (SearchLocationModelController.InputViewAction (InputViewController.AutoCompleteCallBack searchString isSource))) state = do 
+  if (STR.length searchString > 2) then do 
+    validateSearchInput state searchString
+  else continue state
+
+eval (SearchLocationModelActionController (SearchLocationModelController.InputViewAction (InputViewController.InputChanged index value))) state = do 
+  let canClearText = STR.length value > 2
+  let updatedInputView = map (\stop -> if stop.index == index then stop { textValue = value } else stop) state.props.inputView
+  void $ pure $ updateInputString value 
+  continue state { props { inputView = updatedInputView, searchLocationModelProps{isAutoComplete = canClearText}, selectedIndex = index}}
+
+eval (SearchLocationModelActionController (SearchLocationModelController.InputViewAction (InputViewController.BackPress))) state = do
+  _ <- pure $ performHapticFeedback unit
+  continueWithCmd state{props{showShimmer = true}}
+    [ do
+        _ <- pure $ hideKeyboardOnNavigation true
+        pure $ BackPressed
+    ]
+
+eval (SearchLocationModelActionController ((SearchLocationModelController.InputViewAction  (InputViewController.TextFieldFocusChanged textField isEditText index hasFocus) ))) state = do
+  let updatedFocusInputView = map (\ele -> if ele.index == index then ele { isFocussed = true} else ele {isFocussed = false}) state.props.inputView
+  continue state {props{selectedIndex = index, inputView = updatedFocusInputView}}
+
+eval _ state = update state 
+ 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
-validateSearchInput state searchString =
+validateSearchInput state searchString = 
   if STR.length (STR.trim searchString) > 2 && searchString /= state.data.source && searchString /= (getString CURRENT_LOCATION) && (searchString /= state.data.destination || ((getSearchType unit) == "direct_search") && (state.props.isSearchLocation == SearchLocation)) then
     callSearchLocationAPI
   else
@@ -2997,7 +3045,7 @@ locationSelected :: LocationListItemState -> Boolean -> HomeScreenState -> Eval 
 locationSelected item addToRecents state = do
   let stage' = if os == "IOS" && state.props.currentStage == HomeScreen then ConfirmingLocation else LoadMap
   _ <- pure $ hideKeyboardOnNavigation true
-  let favClick = if item.postfixImageUrl == "ny_ic_fav_red,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_fav_red.png" then "true" else "false"
+  let favClick = if item.postfixImageUrl == "ny_ic_fav_red,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_fav_red.png" then "true" else "false"  
   if state.props.isSource == Just true then do
     let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_user_pickup_select" $ [ {key : "Source", value : unsafeToForeign item.title},
                                                                                                               {key : "Favourite", value : unsafeToForeign favClick}]
@@ -3005,12 +3053,23 @@ locationSelected item addToRecents state = do
         newState = state {data{ source = item.title, sourceAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon)},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, rideSearchProps{ sourceSelectType = sourceSelectType } }}
     pure $ setText (getNewIDWithTag "SourceEditText") item.title
     updateAndExit state $ LocationSelected item addToRecents newState
-    else do
-      let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_user_destination_select" $ [{key : "Destination", value : unsafeToForeign item.title},
-                                                                                                                    {key : "Favourite", value : unsafeToForeign favClick}]
-      let newState = state {data{ destination = item.title,destinationAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon)},props{destinationPlaceId = item.placeId, destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon}}
-      pure $ setText (getNewIDWithTag "DestinationEditText") item.title
-      updateAndExit state{props{currentStage = stage'}} $ LocationSelected item addToRecents newState
+  else do
+    let index = state.props.selectedIndex
+    let updatedInputView = mapWithIndex (\idx inputField -> 
+          if idx == index
+          then inputField{ destination = item.title,
+              destinationAddress = encodeAddress (item.title <> ", " <> item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon),
+              destinationPlaceId = item.placeId,
+              destinationLat = fromMaybe 0.0 item.lat,
+              destinationLong = fromMaybe 0.0 item.lon}
+          else inputField) state.props.inputView
+    let _ = spy "UPDATED INPUT VIEW AFTER LOCATION SELECTED" updatedInputView
+    let newState = state 
+          { props {
+              inputView = updatedInputView
+            }
+          }
+    continue newState
 
 checkCurrentLocation :: Number -> Number -> Array CurrentLocationDetails -> Boolean
 checkCurrentLocation lat lon previousCurrentLocations =  (length (filter (\ (item) -> (filterFunction lat lon item))(previousCurrentLocations)) > 0)

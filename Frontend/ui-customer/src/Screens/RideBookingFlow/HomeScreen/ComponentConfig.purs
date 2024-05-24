@@ -13,7 +13,97 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.RideBookingFlow.HomeScreen.Config where
+module Screens.RideBookingFlow.HomeScreen.Config
+  ( TipConfig
+  , TipVehicleConfig
+  , autoAnimConfig
+  , bangaloreConfig
+  , callSupportConfig
+  , cancelAppConfig
+  , cancelRidePopUpConfig
+  , chooseVehicleConfig
+  , chooseYourRideConfig
+  , confirmAndBookButtonConfig
+  , customerFeedbackPillData
+  , defaultTipConfig
+  , disabilityBannerConfig
+  , distanceOusideLimitsConfig
+  , driverInfoCardViewState
+  , driverInfoTransformer
+  , emergencyHelpModelViewState
+  , estimateChangedPopupConfig
+  , feedbackPillDataWithRating1
+  , feedbackPillDataWithRating2
+  , feedbackPillDataWithRating3
+  , feedbackPillDataWithRating4
+  , feedbackPillDataWithRating5
+  , genderBannerConfig
+  , generateReferralLink
+  , getBottomMargin
+  , getCarouselData
+  , getChatSuggestions
+  , getDefaultPeekHeight
+  , getDistanceString
+  , getFareUpdatedStr
+  , getInputViewConfig
+  , getRateYourRideString
+  , getSafetyAlertData
+  , getSelectedYesNoButton
+  , getTipConfig
+  , getTipViewData
+  , getTipViewProps
+  , getTipViewText
+  , getTips
+  , getVehicleTitle
+  , hyderabadConfig
+  , isMockLocationConfig
+  , locationTagBarConfig
+  , logOutPopUpModelConfig
+  , maybeLaterButtonConfig
+  , menuButtonConfig
+  , messagingViewConfig
+  , metersToKm
+  , metroBannerConfig
+  , metroTicketBannerConfig
+  , mkTipConfig
+  , nyRateCardList
+  , nyRateCardListForDelhi
+  , pickUpFarFromCurrentLocationConfig
+  , primaryButtonConfirmPickupConfig
+  , primaryButtonRequestRideConfig
+  , quoteListModelViewState
+  , rateCardConfig
+  , ratingCardViewState
+  , referralPopUpConfig
+  , rentalBannerConfig
+  , reportIssueOptions
+  , reportIssuePopUpConfig
+  , rideCompletedAnimConfig
+  , rideCompletedCardConfig
+  , rideRequestAnimConfig
+  , safetyAlertConfig
+  , safetyIssueOptions
+  , searchLocationModelViewState
+  , separatorConfig
+  , setTipViewData
+  , shareAppConfig
+  , shareRideButtonConfig
+  , shareRideConfig
+  , shortDistanceConfig
+  , skipButtonConfig
+  , sosSetupBannerConfig
+  , sourceToDestinationConfig
+  , specialLocationConfig
+  , specialZoneInfoPopupConfig
+  , ticketBannerConfig
+  , updateProfileConfig
+  , waitTimeInfoCardConfig
+  , whereToButtonConfig
+  , yatriRateCardList
+  , zoneTimerExpiredConfig
+  , defaultAddStopConfig
+  )
+  where
 
 import Common.Types.App
 import Language.Strings
@@ -43,9 +133,13 @@ import Components.LocationTagBarV2 as LocationTagBar
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.SourceToDestination as SourceToDestination
 import Components.Referral as ReferralComponent
+import Components.InputView (InputView(..), InputViewConfig, defaultImageConfig)
+import Components.SeparatorView.View as SeparatorView
+import Components.LocationListItem.Controller ( dummyAddress)
 import Control.Monad.Except (runExcept)
 import Data.Array ((!!), sortBy, mapWithIndex, elem, length)
 import Data.Array as DA
+import Debug
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber)
@@ -340,7 +434,7 @@ primaryButtonConfirmPickupConfig state =
         }
   in
     primaryButtonConfig'
-
+    
 
 
 cancelRidePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
@@ -1225,8 +1319,86 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     , isAutoComplete: state.props.searchLocationModelProps.isAutoComplete
                                     , showLoader: state.props.searchLocationModelProps.showLoader
                                     , prevLocation: state.data.searchLocationModelData.prevLocation
-                                    , currentLocationText : state.props.currentLocation.place 
+                                    , currentLocationText : state.props.currentLocation.place
+                                    , selectedBoxId : state.data.selectedBoxId
+                                    , inputViewConfig :  getInputViewConfig state
                                     }
+
+getInputViewConfig :: ST.HomeScreenState -> InputViewConfig
+getInputViewConfig state = 
+  { backIcon : defaultImageConfig {
+    imageName = "ny_ic_cross_white"
+    , height = V 24
+    , width = V 24
+    , padding = PaddingTop 0 
+  }
+  , headerText : ""
+  , headerVisibility : false
+  , imageLayoutMargin : MarginLeft 0
+  , imageLayoutWidth : V 20
+  , inputLayoutPading : PaddingLeft 0 
+  , inputView : getInputViewItemConfig state 
+  }
+
+getInputViewItemConfig :: ST.HomeScreenState -> Array InputView
+getInputViewItemConfig state = state.props.inputView
+
+defaultAddStopConfig :: InputView
+defaultAddStopConfig = {
+  margin : Margin 0 12 0 5
+  , padding : Padding 0 0 0 0 
+  , textValue : "ADD" 
+  , height : V 37
+  , isFocussed : true
+  , id : "Stop"  
+  , placeHolder : getString WHERE_TO
+  , canClearText : true
+  , isEditable : true  
+  , isClickable : true
+  , prefixImage : defaultImageConfig{ height = V 12
+                , width = V 12
+                , padding = Padding 0 0 0 0   
+                , imageName = "ny_ic_grey_circle"
+                , layoutWidth = V 16
+                , layoutHeight = V 16
+                }
+  , stroke : ""
+  , imageSeparator : separatorConfig
+  , clearTextIcon : defaultImageConfig 
+  , cornerRadius : 4.0
+  , inputTextViewContainerMargin : Margin 0 0 0 0 
+  , postfixImageConfig : defaultImageConfig
+                { imageName = "ny_ic_add"
+                , height = V 20
+                , width = V 20
+                , padding = PaddingTop 0
+                , layoutWidth = V 32
+                , layoutHeight = V 32
+                , layoutCornerRadius = 26.0
+                , layoutPadding = Padding 10 10 10 10
+                , layoutMargin = Margin 10 0 0 0
+                , layoutColor = Color.squidInkBlue
+                }
+  , index : 0
+  , hint : getString WHERE_TO
+  , destinationAddress : dummyAddress
+  , destination : ""
+  , destinationPlaceId : Nothing
+  , destinationLat : 0.0
+  , destinationLong : 0.0
+}
+
+separatorConfig :: SeparatorView.Config
+separatorConfig = 
+  { orientation : VERTICAL
+  , count : 7
+  , height : V 4
+  , width : V 1
+  , layoutWidth : V 12
+  , layoutHeight : V 15
+  , color : Color.black500
+  , margin : Margin 0 0 0 0
+  }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
 quoteListModelViewState state = let vehicleVariant = state.data.selectedEstimatesObject.vehicleVariant

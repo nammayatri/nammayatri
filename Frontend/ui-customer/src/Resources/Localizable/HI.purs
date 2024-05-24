@@ -1112,3 +1112,5 @@ getHI stringKey =
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "नीचे 6 अंकों का रेफ़ेरल कोड दर्ज करें"
         APPLY -> "लागू करें"
         TOLL_CHARGES_INCLUDED -> "टोल शुल्क समाहित"
+        ADD -> "जोड़ें"
+        ADD_STOP -> "स्टॉप जोड़ें"

@@ -1115,3 +1115,5 @@ getFR stringKey =
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "Entrez un code de parrainage à 6 chiffres ci-dessous"
         APPLY -> "Appliquer"
         TOLL_CHARGES_INCLUDED -> "Frais de péage inclus"
+        ADD -> "ajouter"
+        ADD_STOP -> "ajouter un arrêt"

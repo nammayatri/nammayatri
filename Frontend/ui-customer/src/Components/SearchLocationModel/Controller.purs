@@ -28,6 +28,8 @@ import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Foreign.Object (Object)
 import Foreign (Foreign)
+import Components.InputView (InputViewConfig(..))
+import Components.InputView.Controller as InputViewController
 
 data Action = GoBack
             | NoAction
@@ -38,13 +40,14 @@ data Action = GoBack
             | DestinationClear
             | SetLocationOnMap
             | SetCurrentLocation
-            | EditTextFocusChanged String
+            | EditTextFocusChanged String Int
             | LocationListItemActionController LocationListItem.Action
             | PrimaryButtonActionController PrimaryButton.Action
             | DebounceCallBack String Boolean
             | SavedAddressClicked LocationTagBarController.Action
             | UpdateCurrentLocation String String
             | RecenterCurrentLocation
+            | InputViewAction InputViewController.Action
 
 type SearchLocationModelState = {
     isSearchLocation :: SearchLocationModelType
@@ -64,6 +67,8 @@ type SearchLocationModelState = {
   , showLoader :: Boolean
   , prevLocation :: String
   , currentLocationText :: String
+  , selectedBoxId :: Maybe Int
+  , inputViewConfig :: InputViewConfig
 }
 
 dummy_data :: Array LocationListItemState

@@ -1129,3 +1129,5 @@ getTA stringKey =
     ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "கீழே 6 இலக்க பரிந்துரை குறியீடு உள்ளிடவும்"
     APPLY -> "விண்ணப்பிக்கவும்"
     TOLL_CHARGES_INCLUDED -> "டோல் கட்டணங்கள் சேர்க்கப்பட்டுள்ளன"
+    ADD -> "சேர்"
+    ADD_STOP -> "நிறுத்தத்தை சேர்க்கவும்"

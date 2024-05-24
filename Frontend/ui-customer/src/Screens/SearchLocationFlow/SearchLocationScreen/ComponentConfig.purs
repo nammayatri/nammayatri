@@ -21,6 +21,7 @@ import Components.SeparatorView.View as SeparatorView
 import Components.LocationTagBarV2 as LTB
 import Components.InputView as InputView
 import Components.MenuButton as MenuButton
+import Components.LocationListItem.Controller ( dummyAddress)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types as ST
 import MerchantConfig.Types as MT
@@ -36,6 +37,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Screens 
 import JBridge as JB
+import Data.Maybe 
 
 locationTagBarConfig :: ST.SearchLocationScreenState -> ST.GlobalProps -> LTB.LocationTagBarConfig
 locationTagBarConfig state globalProps = 
@@ -78,12 +80,13 @@ locationTagBarConfig state globalProps =
 separatorConfig :: SeparatorView.Config
 separatorConfig = 
   { orientation : VERTICAL
-  , count : 3
+  , count : 4 
   , height : V 4
   , width : V 1
   , layoutWidth : V 12
   , layoutHeight : V 15
   , color : Color.black500
+  , margin : MarginVertical 2 2
   }
 
 
@@ -146,21 +149,53 @@ mapInputViewConfig state isEditable = let
             , id : show item.id
             , placeHolder : item.placeHolder 
             , canClearText : (item.canClearText  || state.props.canClearText ) && item.isFocussed
-            , isEditable : isEditable && item.isEditable
+            , inputTextViewContainerMargin : MarginTop 8
+            , isEditable : true
             , isClickable : item.isEditable
             , prefixImage : { 
                 imageName : item.prefixImageName,
                 height : V 15,
                 width : V 15 ,
-                padding : Padding 0 0 0 0 }
+                padding : Padding 0 0 0 0,
+                layoutWidth : V 0,
+                layoutHeight : V 0,
+                layoutCornerRadius : 0.0,
+                layoutPadding : Padding 0 0 0 0,
+                layoutMargin : Margin 0 0 0 0,
+                layoutColor : "" }
             , stroke : ((if item.isFocussed then "1," else "0,") <> Color.yellow900)
             , imageSeparator : separatorConfig 
             , clearTextIcon : { 
                 imageName : (state.appConfig.searchLocationConfig.clearTextImage) ,
                 height : V 19,
                 width : V 19 ,
-                padding : PaddingVertical 10 2 }
+                padding : PaddingVertical 10 2,
+                layoutWidth : V 0,
+                layoutHeight : V 0,
+                layoutCornerRadius : 0.0,
+                layoutPadding : Padding 0 0 0 0,
+                layoutMargin : Margin 0 0 0 0,
+                layoutColor : ""}
             , cornerRadius : 4.0
+            , postfixImageConfig : {
+                imageName : (state.appConfig.searchLocationConfig.clearTextImage) ,
+                height : V 19,
+                width : V 19 ,
+                padding : PaddingVertical 10 2,
+                layoutWidth : V 0,
+                layoutHeight : V 0,
+                layoutCornerRadius : 0.0,
+                layoutPadding : Padding 0 0 0 0,
+                layoutMargin : Margin 0 0 0 0,
+                layoutColor : ""
+            }
+            , index : item.index
+            , hint : ""
+            , destinationAddress : dummyAddress
+            , destination : ""
+            , destinationPlaceId : Nothing
+            , destinationLat : 0.0
+            , destinationLong : 0.0
             } 
           ) 
           (inputViewArray state)
@@ -185,15 +220,17 @@ inputViewArray state =
       , canClearText : DS.length (if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc) > 2
       , id : ST.SearchLocPickup
       , isEditable : not $ (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN))
+      , index : 0
       } ,
       { textValue : if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc
       , isFocussed : dropLocFocussed
       , prefixImageName : getInputView.destPrefixImageName
-      , margin : MarginTop 8
+      , margin : MarginTop 0
       , placeHolder : getInputView.destPlaceHolder
       , canClearText : DS.length (if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc) > 2
       , id : ST.SearchLocDrop
       , isEditable : true
+      , index : 1
       }
     ]
 

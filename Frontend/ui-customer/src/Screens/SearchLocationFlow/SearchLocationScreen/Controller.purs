@@ -57,7 +57,7 @@ instance loggableAction :: Loggable Action where
 data Action = NoAction 
             | MapReady String String String
             | AfterRender
-            | InputChanged String
+            | InputChanged String 
             | TextFieldFocusChanged SearchLocationTextField Boolean
             | UpdateLocAndLatLong (Array LocationListItemState) String String 
             | RecenterCurrentLocation 
@@ -156,7 +156,7 @@ eval (LocationTagBarAC savedLoc (LocationTagBarController.TagClicked tag) ) stat
     "WORK" -> continue state 
     _ -> continue state{ props {searchLocStage = AllFavouritesStage}}
 
-eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textField isEditText hasFocus)) state = do
+eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textField isEditText index hasFocus)) state = do
   case textField of 
     "SearchLocPickup" -> pure $ setText (getNewIDWithTag textField) $ MB.maybe "" (\srcLoc -> srcLoc.address) state.data.srcLoc
     "SearchLocDrop" ->  pure $ setText (getNewIDWithTag textField) $ MB.maybe "" (\destLoc -> destLoc.address) state.data.destLoc
@@ -181,11 +181,10 @@ eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textFie
         "SearchLocDrop" ->  (STR.length $ MB.maybe "" (\destLoc -> destLoc.address) state.data.destLoc) > 2 
         _ -> false
 eval (InputViewAC _ (InputViewController.AutoCompleteCallBack value pickUpchanged)) state = do 
-  if state.props.actionType == MetroStationSelectionAction then continue state
-    else 
-      autoCompleteAPI state value $ if pickUpchanged then SearchLocPickup else SearchLocDrop
-
-eval (InputViewAC _ (InputViewController.InputChanged value)) state = do 
+  if state.props.actionType == MetroStationSelectionAction then do  
+    continue state
+  else autoCompleteAPI state value $ if pickUpchanged then SearchLocPickup else SearchLocDrop
+eval (InputViewAC _ (InputViewController.InputChanged _ value)) state = do 
   if state.props.actionType == MetroStationSelectionAction && not (STR.null value) then do
     void $ pure $ spy "InputChanged" value
     let newArray = findStationWithPrefix value state.data.metroStations

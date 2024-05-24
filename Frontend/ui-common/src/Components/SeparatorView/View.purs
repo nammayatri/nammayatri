@@ -13,10 +13,10 @@ view :: Config -> forall w . PrestoDOM (Effect Unit) w
 view config = 
   let viewConfig = getConfigByOrientation config.orientation config
   in linearLayout
-  [ height viewConfig.height
+  [ height $ config.layoutHeight
   , width  viewConfig.width
   , gravity CENTER
-  , margin $ MarginVertical 2 2
+  , margin $ config.margin
   , orientation config.orientation
   ](map (\_ -> linearLayout[height config.height
   , width config.width
@@ -24,8 +24,6 @@ view config =
   , cornerRadius $ getCornerRadius config.width
   , margin viewConfig.margin
   ][]) (getArray config.count))
-
-
 
 getConfigByOrientation :: Orientation -> Config -> {margin :: Margin, height :: Length, width :: Length}
 getConfigByOrientation orientation config = case orientation of
@@ -50,6 +48,7 @@ type Config = {
 , layoutWidth :: Length
 , layoutHeight :: Length
 , color :: String
+, margin :: Margin
 }
 
 getCornerRadius :: Length -> Number

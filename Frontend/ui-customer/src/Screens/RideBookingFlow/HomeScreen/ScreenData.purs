@@ -23,15 +23,20 @@ import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
 import Prelude (($) ,negate)
+import Components.InputView.Controller (InputView(..), InputViewConfig, defaultImageConfig)
 import Data.Array (head)
 import Prelude(negate)
 import Foreign.Object (empty)
 import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
-import PrestoDOM (BottomSheetState(..), Margin(..))
+import PrestoDOM 
 import Data.Map as Map 
 import JBridge (Location)
 import Data.HashMap as DHM
+import Language.Strings
+import Language.Types
+import Components.InputView.Controller
+import Styles.Colors as Color
 
 initData :: HomeScreenState
 initData = {
@@ -167,6 +172,7 @@ initData = {
     , followers : Nothing
     , vehicleVariant : ""
     , hotSpotInfo : []
+    , selectedBoxId : Nothing
     },
     props: {
       rideRequestFlow : false
@@ -336,7 +342,100 @@ initData = {
                                , showReferralProgramInfoPopup : false 
                                , isInvalidCode : false 
                                }
+    , inputView: [
+ { margin : Margin 0 12 0 5
+  , padding : Padding 0 0 0 0
+  , textValue : "" 
+  , height : V 37
+  , isFocussed : false
+  , id : "abc" 
+  , placeHolder : "Start" 
+  , canClearText : true
+  , isEditable : true 
+  , isClickable : true
+  , prefixImage : 
+              defaultImageConfig
+                { height = V 12
+                , width = V 12
+                , padding = Padding 0 0 0 0 
+                , imageName = "ny_ic_green_circle"
+                , layoutWidth = V 16
+                , layoutHeight = V 16
+                }
+  , stroke : ""
+  , imageSeparator : separatorConfig 
+  , clearTextIcon : defaultImageConfig    
+  , cornerRadius : 4.0
+  , inputTextViewContainerMargin : Margin 0 0 0 0 
+  , postfixImageConfig :
+              defaultImageConfig
+                { imageName = ""
+                , height = V 20
+                , width = V 20
+                , padding = PaddingTop 0
+                , layoutWidth = V 32
+                , layoutHeight = V 32
+                , layoutCornerRadius = 26.0
+                , layoutPadding = Padding 10 10 10 10
+                , layoutMargin = Margin 10 0 0 0
+                , layoutColor = ""
+                }
+  , index : 0
+  , hint : "Start"
+  , destinationAddress : dummyAddress
+  , destination : ""
+  , destinationPlaceId : Nothing
+  , destinationLat : 0.0
+  , destinationLong : 0.0
+  },{
+  margin : Margin 0 12 0 5
+  , padding : Padding 0 0 0 0
+  , textValue : "" 
+  , height : V 37
+  , isFocussed : true
+  , id : "dest" 
+  , placeHolder : getString WHERE_TO 
+  , canClearText : true
+  , isEditable : true  
+  , isClickable : true
+  , prefixImage : 
+              defaultImageConfig
+                { height = V 12
+                , width = V 12
+                , padding = PaddingTop 0  
+                , imageName = "ny_ic_red_circle"
+                , layoutWidth = V 16
+                , layoutHeight = V 16
+                }
+  , stroke : ""
+  , imageSeparator : separatorConfig 
+  , clearTextIcon : defaultImageConfig    
+  , cornerRadius : 4.0
+  , inputTextViewContainerMargin : Margin 0 0 0 0 
+  , postfixImageConfig : 
+              defaultImageConfig
+                { imageName = "ny_ic_add"
+                , height = V 20
+                , width = V 20
+                , padding = Padding 0 0 0 0
+                , layoutWidth = V 32
+                , layoutHeight = V 32
+                , layoutCornerRadius = 26.0
+                , layoutPadding = Padding 10 10 10 10
+                , layoutMargin = Margin 10 0 0 0
+                , layoutColor = Color.squidInkBlue
+                }
+  , index : 1
+  , hint : getString WHERE_TO
+  , destinationAddress : dummyAddress
+  , destination : ""
+  , destinationPlaceId : Nothing
+  , destinationLat : 0.0
+  , destinationLong : 0.0
+  }]  
+  , selectedIndex : -1                  
   }
+  
 }
 
 dummySearchLocationModelProps = {

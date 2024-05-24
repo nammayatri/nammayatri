@@ -13,7 +13,26 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Components.SearchLocationModel.View where
+module Components.SearchLocationModel.View
+  ( addStopImageView
+  , bottomBtnsView
+  , destBtnData
+  , destinationView
+  , findPlacesIllustration
+  , locationUnserviceableView
+  , primaryButtonConfig
+  , primaryButtonView
+  , recenterButtonView
+  , savedLocationBar
+  , searchLottieLoader
+  , searchResultsParentView
+  , searchResultsView
+  , separatorConfig
+  , sourceDestinationEditTextView
+  , sourceDestinationImageView
+  , view
+  )
+  where
 
 import Common.Types.App
 
@@ -25,7 +44,8 @@ import Components.LocationTagBar as LocationTagBar
 import Components.PrimaryButton as PrimaryButton
 import Components.SearchLocationModel.Controller (Action(..), SearchLocationModelState)
 import Components.SeparatorView.View as SeparatorView
-import Data.Array (mapWithIndex, length, take, null)
+import Components.InputView as InputView
+import Data.Array (mapWithIndex, length, take, null, (..))
 import Data.Function (flip)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Function.Uncurried (runFn3)
@@ -43,7 +63,7 @@ import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude ((<>))
-import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard, (>=), void)
+import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard, (>=), void, show)
 import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, selectAllOnFocus, singleLine, stroke, text, textSize, textView, visibility, weight, width, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
@@ -61,45 +81,13 @@ view push state =
       , orientation VERTICAL
       , background case state.isSearchLocation of
                     SearchLocation -> Color.white900
-                    _           -> Color.transparent --"#FFFFFF"
+                    _           -> Color.transparent 
       , margin $ MarginBottom (if state.isSearchLocation == LocateOnMap then bottomSpacing else 0)
       , onBackPressed push (const $ GoBack)
       ][ PrestoAnim.animationSet
           [ fadeIn true ]
           $ 
-          linearLayout
-          [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , background state.appConfig.searchLocationConfig.backgroundColor
-            , padding $ PaddingVertical safeMarginTop 16
-            ][  linearLayout
-                [ orientation HORIZONTAL
-                , height $ V 105 
-                , width MATCH_PARENT
-                 ][ linearLayout
-                    [ height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , onClick push (const GoBack)
-                    , disableClickFeedback true
-                    , margin (Margin 5 17 0 0)
-                    , gravity CENTER
-                    , padding (Padding 4 4 4 4)
-                    , cornerRadius 20.0
-                    , rippleColor Color.rippleShade
-                    ]
-                  [ imageView
-                      [ height $ V 23
-                      , width $ V 23
-                      , accessibilityHint "Back : Button"
-                      , accessibility ENABLE
-                      , imageWithFallback state.appConfig.searchLocationConfig.backArrow
-                      , margin $ Margin 4 4 4 4
-                      ]
-                  ]
-                  , sourceDestinationImageView state
-                  , sourceDestinationEditTextView state push
-                  ]]
+            InputView.view (push <<< InputViewAction) state.inputViewConfig 
                   , linearLayout
                       [ height $ V 1
                       , width MATCH_PARENT
@@ -209,29 +197,54 @@ sourceDestinationImageView state =
     , orientation VERTICAL
     , gravity CENTER
     ][ linearLayout
-        [ height $ V 15
-        , width $  V 15
+        [ height $ V 16
+        , width $  V 16
         , gravity CENTER
         , margin $ Margin 2 20 2 0
         ][  imageView
-            [ height $ V 15
-            , width $ V 15
+            [ height $ V 12
+            , width $ V 12
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_circle"
             ]
           ]
     , SeparatorView.view separatorConfig
-    , linearLayout
-        [ height $ V 15
-        , width $  V 15
+    , linearLayout [
+      height WRAP_CONTENT,
+      width MATCH_PARENT,
+      orientation VERTICAL
+    ][
+     linearLayout
+        [ height $ V 16
+        , width $  V 16
         , gravity CENTER
         ][  imageView
-            [ height $ V 15
-            , width $ V 15
+            [ height $ V 12
+            , width $ V 12
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_red_circle"
             ]
-        ]
+         ]
+      ]
     ]
 
+addStopImageView :: forall w. SearchLocationModelState -> PrestoDOM (Effect Unit) w
+addStopImageView state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width $ V 20 
+    , orientation VERTICAL
+    , gravity CENTER
+    ][ linearLayout
+      [ height $ V 16
+      , width $  V 16
+      , gravity CENTER
+      ][ imageView
+            [ height $ V 12
+            , width $ V 12
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_grey_circle"
+            ]
+        ],
+        SeparatorView.view separatorConfig 
+      ]
 ---------------------------- sourceDestinationEditTextView ---------------------------------
 sourceDestinationEditTextView :: forall w. SearchLocationModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 sourceDestinationEditTextView state push =
@@ -239,12 +252,24 @@ sourceDestinationEditTextView state push =
     [ width MATCH_PARENT
     , orientation VERTICAL
     , margin if os == "IOS" then (Margin 0 18 15 0) else (Margin 0 16 16 0)
-    , height $ V 121
-  
-    ][linearLayout
-      [ height WRAP_CONTENT
+    , height WRAP_CONTENT 
+    , background $ Color.black700 --
+    ][
+      linearLayout
+      [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation HORIZONTAL
+      , gravity CENTER_VERTICAL
+      , margin $ Margin 0 0 0 3 --
+      ][
+      linearLayout
+      [ weight 1.0
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      ][linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
       , background state.appConfig.searchLocationConfig.editTextBackground
       , cornerRadius 4.0 
       , stroke $ if state.isSource == Just true && state.isSearchLocation == LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
@@ -278,32 +303,11 @@ sourceDestinationEditTextView state push =
                 )
                 SourceChanged
             , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
-            , onFocus push $ const $ EditTextFocusChanged "S"
+            , onFocus push $ const $ EditTextFocusChanged "S" 0
               , selectAllOnFocus true
             , autoCorrectionType 1
             ] <> FontStyle.subHeading1 LanguageStyle
-        , linearLayout
-            [ height $ V 32
-            , width $ V 30
-            , gravity CENTER
-            , padding $ PaddingVertical 10 2
-            , onClick (\action -> do
-                        _ <- if state.isSource == Just true then pure $ setText (getNewIDWithTag "SourceEditText") "" else pure unit
-                        _ <- push action
-                        pure unit
-                      )(const $ SourceClear)
-            , accessibilityHint "Clear Source Text : Button"
-            , accessibility ENABLE
-            , visibility if state.crossBtnSrcVisibility && state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
-            ]
-            [ imageView
-                [ height $ V 19
-                , width $ V 19
-                , imageWithFallback $ fetchImage FF_ASSET state.appConfig.searchLocationConfig.clearTextImage
-                ]
-            ]
-        ]
-    , linearLayout
+    ,   linearLayout
         [ height $ V 1
         , width MATCH_PARENT
         , background Color.grey900
@@ -311,12 +315,22 @@ sourceDestinationEditTextView state push =
         , visibility if state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
         ]
         []
-    , linearLayout
+      ]
+    ]
+      ]
+    ]
+
+destinationView :: forall w . SearchLocationModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+destinationView state push = 
+  linearLayout
+  [ weight 1.0
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  ][ linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , cornerRadius 4.0
         , orientation HORIZONTAL
-        , margin $ MarginTop 12
         , background state.appConfig.searchLocationConfig.editTextBackground
         , stroke if state.isSource == Just false && state.isSearchLocation == LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
         ]
@@ -349,17 +363,16 @@ sourceDestinationEditTextView state push =
                   )
                   DestinationChanged
               , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
-              , onFocus push $ const $ EditTextFocusChanged "D"
               , selectAllOnFocus true
               , autoCorrectionType 1
               ]
                 <> FontStyle.subHeading1 TypoGraphy
             )
-        , linearLayout -- TO BE ADDED LATER FOR CLEARING TEXT
-            [ height $ V 32
-            , width $ V 30
+        , linearLayout -- TO BE ADDED LATER FOR CLEARING TEXT (KUCH KAAM?)
+            [height $ V 32
+            , width $ V 32
+            , cornerRadius 26.0
             , gravity CENTER
-            , margin $ MarginTop 2
             , visibility if state.crossBtnDestVisibility && state.isSource == Just false && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
             , onClick (\action -> do
                         _ <- if state.isSource == Just false then pure $ setText (getNewIDWithTag  "DestinationEditText") "" else pure unit
@@ -370,22 +383,21 @@ sourceDestinationEditTextView state push =
             , accessibility ENABLE
             ]
             [ imageView
-                [ height $ V 19
-                , width $ V 19
-                , imageWithFallback $ fetchImage FF_ASSET state.appConfig.searchLocationConfig.clearTextImage
+                [ height $ V 20
+                , width $ V 20
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_add" 
                 ]
             ]
         ]
     , linearLayout
         [ height $ V 1
         , width MATCH_PARENT
-        , margin (MarginBottom 5)
         , background if state.isDestServiceable then Color.grey900 else Color.textDanger
         , visibility if state.isSource == Just false && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
         ]
         []
-    ]
-
+  ]
+        
 ---------------------------- searchResultsView ---------------------------------
 searchResultsView :: forall w . SearchLocationModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 searchResultsView state push =
@@ -651,6 +663,7 @@ separatorConfig =
   , height : V 4
   , width : V 1
   , layoutWidth : V 12
-  , layoutHeight : V 15
+  , layoutHeight : V 25
   , color : Color.black500
+  , margin : MarginVertical 2 2
   }

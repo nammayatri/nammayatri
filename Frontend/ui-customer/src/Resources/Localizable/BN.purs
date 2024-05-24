@@ -1114,3 +1114,5 @@ getBN stringKey =
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "নীচে 6 ডিজিটের রেফারাল কোড লিখুন"
         APPLY -> "প্রয়োগ করুন"
         TOLL_CHARGES_INCLUDED -> "টোল চার্জ অন্তর্ভুক্ত"
+        ADD -> "ಸೇರಿಸು"
+        ADD_STOP -> "স্টপ যোগ করুন"
