@@ -495,6 +495,7 @@ type DriverInfoAPI =
     :> QueryParam "vehicleNumber" Text
     :> QueryParam "dlNumber" Text
     :> QueryParam "rcNumber" Text
+    :> QueryParam "email" Text
     :> Get '[JSON] DriverInfoRes
 
 data DriverInfoRes = DriverInfoRes
@@ -532,7 +533,8 @@ data DriverInfoRes = DriverInfoRes
     currentACStatus :: Bool,
     blockedDueToRiderComplains :: Bool,
     blockStateModifier :: Maybe Text,
-    driverTag :: Maybe [Text]
+    driverTag :: Maybe [Text],
+    email :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

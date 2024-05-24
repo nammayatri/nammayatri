@@ -667,8 +667,8 @@ mobileIndianCode = "+91"
 appendPlusInMobileCountryCode :: Maybe Text -> Maybe Text
 appendPlusInMobileCountryCode = fmap (\code -> if "+" `T.isPrefixOf` code then code else "+" <> code)
 
-driverInfo :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> Flow Common.DriverInfoRes
-driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber fleetOwnerId mbFleet = do
+driverInfo :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> Flow Common.DriverInfoRes
+driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber mbemail fleetOwnerId mbFleet = do
   when mbFleet $ do
     when (isNothing mbVehicleNumber) $ throwError $ InvalidRequest "Fleet Owner can only search with vehicle Number"
     vehicleInfo <- RCQuery.findLastVehicleRCFleet' (fromMaybe " " mbVehicleNumber) fleetOwnerId
@@ -677,28 +677,32 @@ driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNu
     throwError $ InvalidRequest "\"mobileCountryCode\" can be used only with \"mobileNumber\""
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  driverWithRidesCount <- case (mbMobileNumber, mbVehicleNumber, mbDlNumber, mbRcNumber) of
-    (Just mobileNumber, Nothing, Nothing, Nothing) -> do
+  driverWithRidesCount <- case (mbMobileNumber, mbVehicleNumber, mbDlNumber, mbRcNumber, mbemail) of
+    (Just mobileNumber, Nothing, Nothing, Nothing, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
       let mobileCountryCode = fromMaybe mobileIndianCode (appendPlusInMobileCountryCode mbMobileCountryCode)
       B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing
+        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing Nothing
           >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
-    (Nothing, Just vehicleNumber, Nothing, Nothing) -> do
+    (Nothing, Just vehicleNumber, Nothing, Nothing, Nothing) -> do
       B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing (Just vehicleNumber) Nothing Nothing
+        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing (Just vehicleNumber) Nothing Nothing Nothing
           >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
-    (Nothing, Nothing, Just driverLicenseNumber, Nothing) -> do
+    (Nothing, Nothing, Just driverLicenseNumber, Nothing, Nothing) -> do
       dlNumberHash <- getDbHash driverLicenseNumber
       B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing (Just dlNumberHash) Nothing
+        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing (Just dlNumberHash) Nothing Nothing
           >>= fromMaybeM (InvalidRequest "License does not exist.")
-    (Nothing, Nothing, Nothing, Just rcNumber) -> do
+    (Nothing, Nothing, Nothing, Just rcNumber, Nothing) -> do
       rcNumberHash <- getDbHash rcNumber
       B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing Nothing (Just rcNumberHash)
+        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing Nothing (Just rcNumberHash) Nothing
           >>= fromMaybeM (InvalidRequest "Registration certificate does not exist.")
-    _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"dlNumber\", \"rcNumber\" is required"
+    (Nothing, Nothing, Nothing, Nothing, Just email) -> do
+      B.runInReplica $
+        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing Nothing Nothing (Just email)
+          >>= fromMaybeM (InvalidRequest "Email does not exist.")
+    _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"dlNumber\", \"rcNumber\", \"Email\" is required"
   let driverId = driverWithRidesCount.person.id
   mbDriverLicense <- B.runInReplica $ QDriverLicense.findByDriverId driverId
   rcAssociationHistory <- B.runInReplica $ QRCAssociation.findAllByDriverId driverId
@@ -712,6 +716,7 @@ buildDriverInfoRes ::
   m Common.DriverInfoRes
 buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociationHistory = do
   mobileNumber <- traverse decrypt person.mobileNumber
+  let email = person.email
   driverLicenseDetails <- traverse buildDriverLicenseAPIEntity mbDriverLicense
   vehicleRegistrationDetails <- traverse buildRCAssociationAPIEntity rcAssociationHistory
   availableMerchants <- case person.unencryptedMobileNumber of
@@ -776,7 +781,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         lastACStatusCheckedAt = info.lastACStatusCheckedAt,
         currentACStatus = isACAllowedForDriver && isVehicleACWorking,
         blockedDueToRiderComplains = not isACAllowedForDriver,
-        driverTag = person.driverTag
+        driverTag = person.driverTag,
+        email
       }
 
 buildDriverLicenseAPIEntity :: EncFlow m r => DriverLicense -> m Common.DriverLicenseAPIEntity
