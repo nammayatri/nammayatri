@@ -15,6 +15,7 @@ import qualified Domain.Action.Beckn.Search
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.TransporterConfig as DTC
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
@@ -22,26 +23,26 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (highPrecMoneyToText, type (:::))
 
-buildOnSearchMessage :: Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> Bool -> Maybe BecknV2.OnDemand.Types.OnSearchReqMessage
-buildOnSearchMessage res bppConfig isValueAddNP = do
-  let onSearchReqMessageCatalog_ = tfCatalog res bppConfig isValueAddNP
+buildOnSearchMessage :: Maybe DTC.TransporterConfig -> Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> Bool -> Maybe BecknV2.OnDemand.Types.OnSearchReqMessage
+buildOnSearchMessage transporterConfig res bppConfig isValueAddNP = do
+  let onSearchReqMessageCatalog_ = tfCatalog transporterConfig res bppConfig isValueAddNP
       returnData = BecknV2.OnDemand.Types.OnSearchReqMessage {onSearchReqMessageCatalog = onSearchReqMessageCatalog_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
     then Nothing
     else Just returnData
 
-buildOnSearchRideReq :: (Monad m, Kernel.Types.App.MonadFlow m) => Kernel.Prelude.Text -> DBC.BecknConfig -> Domain.Action.Beckn.Search.DSearchRes -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Data.Text.Text -> Maybe Data.Text.Text -> Data.Text.Text -> Kernel.Prelude.BaseUrl -> Maybe Data.Text.Text -> Maybe Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Beckn.Context.Country -> Bool -> m BecknV2.OnDemand.Types.OnSearchReq
-buildOnSearchRideReq onSearchTtl bppConfig res action domain messageId transactionId bapId bapUri bppId bppUri city country isValueAddNP = do
+buildOnSearchRideReq :: (Monad m, Kernel.Types.App.MonadFlow m) => Maybe DTC.TransporterConfig -> Kernel.Prelude.Text -> DBC.BecknConfig -> Domain.Action.Beckn.Search.DSearchRes -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Data.Text.Text -> Maybe Data.Text.Text -> Data.Text.Text -> Kernel.Prelude.BaseUrl -> Maybe Data.Text.Text -> Maybe Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Beckn.Context.Country -> Bool -> m BecknV2.OnDemand.Types.OnSearchReq
+buildOnSearchRideReq transporterConfig onSearchTtl bppConfig res action domain messageId transactionId bapId bapUri bppId bppUri city country isValueAddNP = do
   let onSearchReqError_ = Nothing
   onSearchReqContext_ <- BecknV2.OnDemand.Utils.Context.buildContextV2 action domain messageId transactionId bapId bapUri bppId bppUri city country (Just onSearchTtl)
-  let onSearchReqMessage_ = buildOnSearchMessage res bppConfig isValueAddNP
+  let onSearchReqMessage_ = buildOnSearchMessage transporterConfig res bppConfig isValueAddNP
   pure $ BecknV2.OnDemand.Types.OnSearchReq {onSearchReqContext = onSearchReqContext_, onSearchReqError = onSearchReqError_, onSearchReqMessage = onSearchReqMessage_}
 
-tfCatalog :: Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> Bool -> BecknV2.OnDemand.Types.Catalog
-tfCatalog res bppConfig isValueAddNP = do
+tfCatalog :: Maybe DTC.TransporterConfig -> Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> Bool -> BecknV2.OnDemand.Types.Catalog
+tfCatalog transporterConfig res bppConfig isValueAddNP = do
   let catalogDescriptor_ = tfCatalogDescriptor res
-      catalogProviders_ = tfCatalogProviders res bppConfig isValueAddNP & Just . Data.List.singleton
+      catalogProviders_ = tfCatalogProviders transporterConfig res bppConfig isValueAddNP & Just . Data.List.singleton
   BecknV2.OnDemand.Types.Catalog {catalogDescriptor = catalogDescriptor_, catalogProviders = catalogProviders_}
 
 tfCatalogDescriptor :: Domain.Action.Beckn.Search.DSearchRes -> Maybe BecknV2.OnDemand.Types.Descriptor
@@ -55,15 +56,15 @@ tfCatalogDescriptor res = do
     then Nothing
     else Just returnData
 
-tfCatalogProviders :: Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> Bool -> BecknV2.OnDemand.Types.Provider
-tfCatalogProviders res bppConfig isValueAddNP = do
+tfCatalogProviders :: Maybe DTC.TransporterConfig -> Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> Bool -> BecknV2.OnDemand.Types.Provider
+tfCatalogProviders transporterConfig res bppConfig isValueAddNP = do
   let providerId_ = Just bppConfig.subscriberId
       providerLocations_ = Just $ Beckn.OnDemand.Utils.OnSearch.mkProviderLocations ((map (\(_, _, c) -> c) res.estimates) <> (map (\(_, _, c) -> c) res.quotes))
       providerPayments_ = Just $ mkPayment res.provider bppConfig
       providerDescriptor_ = tfCatalogDescriptor res
       pricings = (map Beckn.OnDemand.Utils.Common.convertEstimateToPricing res.estimates) <> (map Beckn.OnDemand.Utils.Common.convertQuoteToPricing res.quotes)
       providerFulfillments_ = map (tfProviderFulfillments res) pricings & Just
-      providerItems_ = Just $ map (tfProviderItems res isValueAddNP) pricings
+      providerItems_ = Just $ map (tfProviderItems transporterConfig res isValueAddNP) pricings
   BecknV2.OnDemand.Types.Provider {providerDescriptor = providerDescriptor_, providerFulfillments = providerFulfillments_, providerId = providerId_, providerItems = providerItems_, providerLocations = providerLocations_, providerPayments = providerPayments_}
 
 tfItemPrice :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Types.Price
@@ -92,14 +93,14 @@ tfProviderFulfillments res pricing = do
       fulfillmentVehicle_ = tfVehicle pricing
   BecknV2.OnDemand.Types.Fulfillment {fulfillmentAgent = fulfillmentAgent_, fulfillmentCustomer = fulfillmentCustomer_, fulfillmentId = fulfillmentId_, fulfillmentState = fulfillmentState_, fulfillmentStops = fulfillmentStops_, fulfillmentTags = fulfillmentTags_, fulfillmentType = fulfillmentType_, fulfillmentVehicle = fulfillmentVehicle_}
 
-tfProviderItems :: Domain.Action.Beckn.Search.DSearchRes -> Bool -> Beckn.OnDemand.Utils.Common.Pricing -> BecknV2.OnDemand.Types.Item
-tfProviderItems res isValueAddNP pricing = do
+tfProviderItems :: Maybe DTC.TransporterConfig -> Domain.Action.Beckn.Search.DSearchRes -> Bool -> Beckn.OnDemand.Utils.Common.Pricing -> BecknV2.OnDemand.Types.Item
+tfProviderItems transporterConfig res isValueAddNP pricing = do
   let itemDescriptor_ = tfItemDescriptor pricing
       itemFulfillmentIds_ = Just [pricing.pricingId]
       itemId_ = Just pricing.pricingId
       itemLocationIds_ = Beckn.OnDemand.Utils.OnSearch.mkItemLocationIds ((map (\(_, _, c) -> c) res.estimates) <> (map (\(_, _, c) -> c) res.quotes))
       itemPaymentIds_ = Nothing
-      itemTags_ = Beckn.OnDemand.Utils.OnSearch.mkItemTags pricing isValueAddNP
+      itemTags_ = Beckn.OnDemand.Utils.OnSearch.mkItemTags transporterConfig pricing isValueAddNP
       itemPrice_ = tfItemPrice pricing
   BecknV2.OnDemand.Types.Item {itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
 
