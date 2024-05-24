@@ -153,8 +153,6 @@ parseBookingDetails order msgId = do
 parseRideAssignedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> Text -> m Common.RideAssignedReq
 parseRideAssignedEvent order msgId txnId = do
   let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
-  fareParamsQuotationBreakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "quote breakup is not present in RideAssigned Event.")
-  fareParams <- traverse mkDFareBreakup fareParamsQuotationBreakup
   let tagGroupsFullfillment = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
   let castToBool mbVar = case T.toLower <$> mbVar of
         Just "true" -> True
@@ -169,8 +167,7 @@ parseRideAssignedEvent order msgId txnId = do
         transactionId = txnId,
         isDriverBirthDay,
         isFreeRide,
-        previousRideEndPos,
-        fareParams
+        previousRideEndPos
       }
 
 parseRideStartedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m Common.RideStartedReq

@@ -43,8 +43,7 @@ data DRideAssignedReq = DRideAssignedReq
     image :: Maybe Text,
     isDriverBirthDay :: Bool,
     isFreeRide :: Bool,
-    estimateId :: Maybe Text,
-    fareParams :: Fare.FareParameters
+    estimateId :: Maybe Text
   }
 
 data DRideStartedReq = DRideStartedReq

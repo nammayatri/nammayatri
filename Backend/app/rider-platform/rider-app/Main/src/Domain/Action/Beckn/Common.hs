@@ -85,8 +85,7 @@ data RideAssignedReq = RideAssignedReq
     transactionId :: Text,
     isDriverBirthDay :: Bool,
     isFreeRide :: Bool,
-    previousRideEndPos :: Maybe LatLong,
-    fareParams :: [DFareBreakup]
+    previousRideEndPos :: Maybe LatLong
   }
 
 data ValidatedRideAssignedReq = ValidatedRideAssignedReq
