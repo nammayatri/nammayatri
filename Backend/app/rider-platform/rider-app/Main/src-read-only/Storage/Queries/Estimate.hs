@@ -66,7 +66,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.estimatedDistanceValue (Kernel.Types.Common.distanceToHighPrecDistance (estimatedDistance <&> (.unit)) <$> estimatedDistance),
       Se.Set Beam.estimatedDuration estimatedDuration,
       Se.Set Beam.estimatedFare ((.amount) estimatedFare),
-      Se.Set Beam.estimatedPickupDurationInMinutes estimatedPickupDurationInMinutes,
+      Se.Set Beam.estimatedPickupDuration estimatedPickupDuration,
       Se.Set Beam.estimatedTotalFare ((.amount) estimatedTotalFare),
       Se.Set Beam.isBlockedRoute isBlockedRoute,
       Se.Set Beam.isCustomerPrefferedSearchRoute isCustomerPrefferedSearchRoute,

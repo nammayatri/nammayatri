@@ -64,7 +64,7 @@ Quote:
     estimatedFare : Price
     discount : Maybe Price
     estimatedTotalFare : Price
-    estimatedPickupDurationInMinutes : Maybe Minutes
+    estimatedPickupDuration : Maybe Seconds
     providerId : Text
     providerUrl : BaseUrl
     itemId : Text
@@ -172,7 +172,7 @@ Quote:
     estimatedFare: numeric(30,10)
     discount: numeric(30,2)
     estimatedTotalFare: numeric(30,2)
-    estimatedPickupDurationInMinutes: integer
+    estimatedPickupDuration: integer
     providerId: character varying(255)
     vehicle_variant: character varying(60)
     distanceToNearestDriver: double precision

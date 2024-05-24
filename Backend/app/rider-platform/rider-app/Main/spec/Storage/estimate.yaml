@@ -75,7 +75,7 @@ Estimate:
     totalFareRange : FareRange
     estimatedDuration : Maybe Seconds
     estimatedDistance : Maybe Distance
-    estimatedPickupDurationInMinutes : Maybe Minutes
+    estimatedPickupDuration : Maybe Seconds
     device : Maybe Text
     providerId : Text
     providerUrl : BaseUrl
@@ -225,7 +225,7 @@ Estimate:
     status: character varying(255)
     nightShiftCharge: integer
     currency: character varying(255)
-    estimatedPickupDurationInMinutes: integer
+    estimatedPickupDuration: integer
 
   queries:
     findById:
