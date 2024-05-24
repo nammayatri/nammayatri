@@ -1,0 +1,25 @@
+module Helpers.PrestoUtils where
+
+import Prelude
+import DecodeUtil
+import Data.Maybe
+import Control.Monad.Trans.Class (lift)
+import Types.App(FlowBT)
+import Common.Types.App
+import Services.Accessor
+import Data.Lens ((^.))
+import PrestoDOM 
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Data.Function.Uncurried
+
+initUIWrapper :: FlowBT String Unit
+initUIWrapper = do 
+  let globalPayload = getGlobalPayload "__payload"
+  case globalPayload of
+    Nothing -> lift $ lift $ initUI
+    Just payload -> liftFlowBT $ initUIWithNameSpace "default" ((payload ^. _payload) ^. _fragmentID)
+
+getGlobalPayload :: String -> Maybe GlobalPayload
+getGlobalPayload key = do
+  let mBPayload = runFn3 getFromWindow key Nothing Just
+  maybe (Nothing) (\payload -> decodeForeignAnyImpl payload) mBPayload

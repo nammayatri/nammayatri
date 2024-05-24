@@ -140,6 +140,7 @@ newtype Payload = Payload
   , view_param :: Maybe String
   , deeplinkOptions :: Maybe DeeplinkOptions
   , deepLinkJSON :: Maybe QueryParam
+  , fragmentID :: Maybe String
   }
 
 newtype QueryParam = QueryParam {
