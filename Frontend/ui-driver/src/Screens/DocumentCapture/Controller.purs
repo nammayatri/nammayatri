@@ -189,10 +189,10 @@ eval (SSNPEAC (PrimaryEditText.TextChanged id val)) state = do
       else pure unit
   continue state {data{ssn = DS.trim val}}
 eval (FirstNameEditText (PrimaryEditText.TextChanged id val)) state = do
-  continue state{data{firstName = strToMaybe (DS.trim val)}, props{isValidFirstName = true}}
+  continue state{data{firstName = strToMaybe (DS.trim val)}, props{isValidFirstName = true, setDefault = false}}
 
 eval (LastNameEditText (PrimaryEditText.TextChanged id val)) state = do
-  continue state{data{lastName = strToMaybe (DS.trim val)}}
+  continue state{data{lastName = strToMaybe (DS.trim val)}, props{setDefault = false}}
 
 eval (MobileEditText (PrimaryEditText.TextChanged id newVal)) state = do
   let config = getAppConfig appConfig

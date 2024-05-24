@@ -51,6 +51,7 @@ import Debug (spy)
 import Screens.RegistrationScreen.ComponentConfig (changeVehicleConfig)
 import Data.Array as DA
 import Components.BottomDrawerList as BottomDrawerList
+import Data.Maybe (fromMaybe)
 
 screen :: ST.DocumentCaptureScreenState -> Screen Action ST.DocumentCaptureScreenState ScreenOutput
 screen initialState = 
@@ -61,6 +62,11 @@ screen initialState =
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
     _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
     _ <- runEffectFn1 consumeBP unit
+    if initialState.props.setDefault then do
+      let _ = EHC.setText (EHC.getNewIDWithTag "FirstNameEditText") (fromMaybe "" initialState.data.firstName)
+          _ = EHC.setText (EHC.getNewIDWithTag "LastNameEditText") (fromMaybe "" initialState.data.lastName)
+      pure unit
+      else pure unit
     pure $ pure unit
   )]
   , eval :

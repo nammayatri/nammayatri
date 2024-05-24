@@ -2651,7 +2651,8 @@ type DocumentCaptureScreenProps = {
   isProfileView :: Boolean,
   isValidEmail :: Boolean,
   isValidFirstName :: Boolean,
-  isValidMobileNumber :: Boolean
+  isValidMobileNumber :: Boolean,
+  setDefault :: Boolean
 } 
 
 

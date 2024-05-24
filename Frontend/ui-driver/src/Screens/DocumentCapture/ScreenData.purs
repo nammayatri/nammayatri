@@ -46,6 +46,7 @@ initData =
         isProfileView: false,
         isValidEmail : true,
         isValidFirstName : true,
-        isValidMobileNumber: true
+        isValidMobileNumber: true,
+        setDefault : false
       }
   }

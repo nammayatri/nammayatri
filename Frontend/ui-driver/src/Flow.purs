@@ -755,7 +755,8 @@ onBoardingFlow = do
       let defState = DocumentCaptureData.initData
           isDefault = getDriverInfoResp.firstName == "Driver"
           firstName = if isDefault then Nothing else Just getDriverInfoResp.firstName
-      modifyScreenState $ DocumentCaptureScreenStateType (\_ -> defState { data { cityConfig = state.data.cityConfig, vehicleCategory = state.data.vehicleCategory, linkedRc = state.data.linkedRc, variantList = state.data.variantList, firstName = firstName, lastName = getDriverInfoResp.lastName}, props{isProfileView = true}})
+          setDefault = not isDefault || isJust getDriverInfoResp.lastName
+      modifyScreenState $ DocumentCaptureScreenStateType (\_ -> defState { data { cityConfig = state.data.cityConfig, vehicleCategory = state.data.vehicleCategory, linkedRc = state.data.linkedRc, variantList = state.data.variantList, firstName = firstName, lastName = getDriverInfoResp.lastName}, props{isProfileView = true, setDefault = setDefault}})
       documentcaptureScreenFlow
     SELECT_LANG_FROM_REGISTRATION -> do
       modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})

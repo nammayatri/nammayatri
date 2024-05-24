@@ -205,7 +205,6 @@ firstNamePrimaryEditTextConfig state =
         , margin = MarginHorizontal 10 10
         , textStyle = FontStyle.Body7
         , focused = true
-        , text = fromMaybe "" state.data.firstName
         , gravity = LEFT
         }
       , background = Color.white900
@@ -237,7 +236,6 @@ lastNamePrimaryEditTextConfig state =
         , margin = MarginHorizontal 10 10
         , textStyle = FontStyle.Body7
         , gravity = LEFT
-        , text = fromMaybe "" state.data.lastName
         }
       , background = Color.white900
       , margin = MarginVertical 16 16
