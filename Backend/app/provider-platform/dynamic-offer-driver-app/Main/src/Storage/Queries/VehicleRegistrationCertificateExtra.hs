@@ -143,7 +143,9 @@ findAllInactiveRCForFleet fleetOwnerId limitVal offsetVal merchantId = do
               B.orderBy_ (\rc -> B.desc_ rc.createdAt) $
                 B.filter_'
                   ( \rc ->
-                      B.sqlBool_ $ B.not_ (rc.id `B.in_` (B.val_ <$> allActiveRCIds))
+                      rc.merchantId B.==?. B.val_ (Just merchantId.getId)
+                        B.&&?. rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
+                        B.&&?. B.sqlBool_ (B.not_ (rc.id `B.in_` (B.val_ <$> allActiveRCIds)))
                   )
                   $ B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
   case res of
