@@ -51,4 +51,4 @@ ALTER TABLE atlas_app.quote ADD COLUMN toll_charges double precision ;
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.quote ADD COLUMN estimated_pickup_duration_in_minutes integer ;
+ALTER TABLE atlas_app.quote ADD COLUMN estimated_pickup_duration integer ;

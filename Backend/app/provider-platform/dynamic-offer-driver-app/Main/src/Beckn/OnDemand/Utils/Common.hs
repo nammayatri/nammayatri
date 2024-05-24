@@ -1120,14 +1120,14 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
         getDuration :: Maybe Meters -> Int -> Maybe Text
         getDuration distance avgSpeed
           | avgSpeed <= 0 = Nothing
-          -- lets return 1 in case distance is 0
-          | distance == Just 0 = Just "1"
+          -- lets return 60 seconds in case distance is 0
+          | distance == Just 0 = Just "60"
           | otherwise = do
             distance' <- distance
-            let distanceInKilometer = realToFrac @_ @Double distance' / 1000
-                avgSpeed' = realToFrac @_ @Double avgSpeed
-                estimatedTimeTakeInMinutes :: Int = ceiling $ (distanceInKilometer / avgSpeed') * 60
-            Just $ show estimatedTimeTakeInMinutes
+            let distanceInMeters = realToFrac @_ @Double distance'
+                avgSpeedInMetersPerSec = realToFrac @_ @Double (avgSpeed * 5) / 18
+                estimatedTimeTakenInSeconds :: Int = ceiling $ (distanceInMeters / avgSpeedInMetersPerSec)
+            Just $ show estimatedTimeTakenInSeconds
 
 mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.TagGroup]
 mkRateCardTag estimatedDistance tollCharges farePolicy = do

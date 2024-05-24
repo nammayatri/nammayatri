@@ -60,4 +60,4 @@ ALTER TABLE atlas_app.estimate ADD COLUMN is_blocked_route boolean ;
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.estimate ADD COLUMN estimated_pickup_duration_in_minutes integer ;
+ALTER TABLE atlas_app.estimate ADD COLUMN estimated_pickup_duration integer ;
