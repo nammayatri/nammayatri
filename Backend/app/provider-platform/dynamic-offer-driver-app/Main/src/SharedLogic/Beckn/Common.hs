@@ -43,7 +43,6 @@ data DRideAssignedReq = DRideAssignedReq
     image :: Maybe Text,
     isDriverBirthDay :: Bool,
     isFreeRide :: Bool,
-    fareParams :: Fare.FareParameters,
     estimateId :: Maybe Text,
     fareParams :: Fare.FareParameters
   }

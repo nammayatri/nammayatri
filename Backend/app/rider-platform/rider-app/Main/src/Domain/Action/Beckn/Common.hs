@@ -85,7 +85,6 @@ data RideAssignedReq = RideAssignedReq
     transactionId :: Text,
     isDriverBirthDay :: Bool,
     isFreeRide :: Bool,
-    fareParams :: [DFareBreakup],
     previousRideEndPos :: Maybe LatLong,
     fareParams :: [DFareBreakup]
   }
@@ -223,16 +222,15 @@ rideAssignedReqHandler req = do
   mbMerchant <- CQM.findById booking.merchantId
   ride <- buildRide mbMerchant booking req.bookingDetails req.previousRideEndPos
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
-  let fareParams = fromMaybe [] req.fareParams
-  fareBreakups <- traverse (buildFareBreakupV2 req.booking.id.getId DFareBreakup.BOOKING) fareParams
-  _ <- QFareBreakup.createMany fareBreakups
   let category = case booking.specialLocationTag of
         Just _ -> "specialLocation"
         Nothing -> "normal"
   incrementRideCreatedRequestCount booking.merchantId.getId booking.merchantOperatingCityId.getId category
-  _ <- QRB.updateStatus booking.id DRB.TRIP_ASSIGNED -- mark00
+  let fareParams = fromMaybe [] req.fareParams
+  fareBreakups <- traverse (buildFareBreakupV2 req.booking.id.getId DFareBreakup.BOOKING) fareParams
+  _ <- QFareBreakup.createMany fareBreakups
+  _ <- QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
   _ <- QRide.createRide ride
-
   _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
   unless isInitiatedByCronJob $ do
@@ -444,23 +442,6 @@ buildFareBreakupV2 entityId entityType DFareBreakup {..} = do
         ..
       }
 
--- buildFareBreakupV2' :: MonadFlow m => Text -> DFareBreakupV2.FareBreakupV2Tags -> DRB.Booking -> DFareBreakup -> m DFareBreakupV2.FareBreakupV2
--- buildFareBreakupV2' entityId tag booking DFareBreakup {..} = do
---   guid <- generateGUID
---   now <- getCurrentTime
---   pure
---     DFareBreakupV2.FareBreakupV2
---       { id = guid,
---         createdAt = now,
---         updatedAt = now,
---         merchantId = Just booking.merchantId,
---         merchantOperatingCityId = Just booking.merchantOperatingCityId,
---         entityId,
---         tag,
---         description,
---         amount = amount.amount
---       }
-
 farePaidReqHandler :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => ValidatedFarePaidReq -> m ()
 farePaidReqHandler req = void $ QRB.updatePaymentStatus req.booking.id req.paymentStatus
 
@@ -564,11 +545,10 @@ validateRideAssignedReq ::
   ) =>
   RideAssignedReq ->
   m ValidatedRideAssignedReq
-validateRideAssignedReq RideAssignedReq {fareParams = reqFareParams, ..} = do
+validateRideAssignedReq RideAssignedReq {..} = do
   booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
   unless (isAssignable booking) $ throwError (BookingInvalidStatus $ show booking.status)
-  let fareParams = if null reqFareParams then Nothing else Just reqFareParams
-  return $ ValidatedRideAssignedReq {..}
+  return $ ValidatedRideAssignedReq {fareParams = Nothing, ..}
   where
     isAssignable booking = booking.status `elem` [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW]
 

@@ -27,6 +27,7 @@ where
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.Beckn.Common as DCommon
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
@@ -42,6 +43,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import Tools.Metrics (HasBAPMetrics)
@@ -54,7 +56,8 @@ data OnConfirmReq
 
 data BookingConfirmedInfo = BookingConfirmedInfo
   { bppBookingId :: Id DRB.BPPBooking,
-    specialZoneOtp :: Maybe Text
+    specialZoneOtp :: Maybe Text,
+    fareParams :: Maybe [DCommon.DFareBreakup]
   }
 
 data RideAssignedInfo = RideAssignedInfo
@@ -72,7 +75,8 @@ data RideAssignedInfo = RideAssignedInfo
     rideOtp :: Text,
     vehicleNumber :: Text,
     vehicleColor :: Maybe Text,
-    vehicleModel :: Text
+    vehicleModel :: Text,
+    fareParams :: Maybe [DCommon.DFareBreakup]
   }
 
 data ValidatedOnConfirmReq
@@ -82,7 +86,8 @@ data ValidatedOnConfirmReq
 data ValidatedBookingConfirmedReq = ValidatedBookingConfirmedReq
   { bppBookingId :: Id DRB.BPPBooking,
     specialZoneOtp :: Maybe Text,
-    booking :: DRB.Booking
+    booking :: DRB.Booking,
+    fareParams :: Maybe [DCommon.DFareBreakup]
   }
 
 onConfirm ::
@@ -102,6 +107,9 @@ onConfirm ::
   ValidatedOnConfirmReq ->
   m ()
 onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
+  let fareParamsList = fromMaybe [] fareParams
+  fareBreakups <- traverse (DCommon.buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) fareParamsList
+  _ <- QFareBreakup.createMany fareBreakups
   whenJust specialZoneOtp $ \otp -> do
     void $ QRB.updateOtpCodeBookingId booking.id otp
     fork "sending Booking confirmed dasboard sms" $ do
@@ -134,5 +142,4 @@ validateRequest (BookingConfirmed BookingConfirmedInfo {..}) _txnId = do
 validateRequest (RideAssigned RideAssignedInfo {..}) transactionId = do
   let bookingDetails = DCommon.BookingDetails {otp = rideOtp, isInitiatedByCronJob = False, ..}
   booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
-  let fareParams = Nothing
   return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {..}

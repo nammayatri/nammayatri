@@ -156,8 +156,6 @@ parseRideAssignedEvent order msgId txnId = do
   fareParamsQuotationBreakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "quote breakup is not present in RideAssigned Event.")
   fareParams <- traverse mkDFareBreakup fareParamsQuotationBreakup
   let tagGroupsFullfillment = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
-  fareParamsQuotationBreakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "quote breakup is not present in RideAssigned Event.")
-  fareParams <- traverse mkDFareBreakup fareParamsQuotationBreakup
   let castToBool mbVar = case T.toLower <$> mbVar of
         Just "true" -> True
         _ -> False
@@ -171,7 +169,6 @@ parseRideAssignedEvent order msgId txnId = do
         transactionId = txnId,
         isDriverBirthDay,
         isFreeRide,
-        fareParams,
         previousRideEndPos,
         fareParams
       }
