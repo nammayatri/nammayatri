@@ -70,6 +70,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
+import Kernel.Types.Confidence
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
@@ -181,6 +182,7 @@ data DriverRideRes = DriverRideRes
     estimatedTollCharges :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
+    tollConfidence :: Maybe Confidence,
     customerCancellationDuesWithCurrency :: PriceAPIEntity,
     estimatedTollChargesWithCurrency :: Maybe PriceAPIEntity,
     parkingChargeWithCurrency :: Maybe PriceAPIEntity,
@@ -316,6 +318,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         estimatedTollCharges = fareParams.tollCharges,
         parkingCharge = fareParams.parkingCharge,
         tollCharges = ride.tollCharges,
+        tollConfidence = ride.tollConfidence,
         customerCancellationDuesWithCurrency = flip PriceAPIEntity fareParams.currency $ fromMaybe 0 fareParams.customerCancellationDues,
         estimatedTollChargesWithCurrency = flip PriceAPIEntity fareParams.currency <$> fareParams.tollCharges,
         parkingChargeWithCurrency = flip PriceAPIEntity fareParams.currency <$> fareParams.parkingCharge,
