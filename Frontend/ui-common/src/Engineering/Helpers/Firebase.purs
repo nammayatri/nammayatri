@@ -49,5 +49,6 @@ checkAndUpdateToken retry updateToken deviceToken =
             newTokenPrefix = DS.take 3 newToken
             newTokenLength = DS.length newToken
             newTokenSuffix = DS.drop (newTokenLength - 3) newToken
-        when (existingTokenPrefix /= newTokenPrefix || existingTokenSuffix /= newTokenSuffix) $ do
+        if (existingTokenPrefix /= newTokenPrefix || existingTokenSuffix /= newTokenSuffix || deviceToken == Nothing) then
           updateToken newToken
+        else pure unit
