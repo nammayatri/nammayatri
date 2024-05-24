@@ -57,7 +57,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude
 import Presto.Core.Types.Language.Flow (doAff, Flow)
-import PrestoDOM (textFromHtml, scrollView, frameLayout, shimmerFrameLayout, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, lottieAnimationView, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha, singleLine, rippleColor)
+import PrestoDOM (textFromHtml, scrollView, frameLayout, shimmerFrameLayout, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, lottieAnimationView, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha, singleLine, rippleColor, ellipsize, maxLines)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Events (globalOnScroll)
 import PrestoDOM.Properties (cornerRadii)
@@ -199,7 +199,7 @@ view push state =
                 , if not state.data.anyRidesAssignedEver then
                     noRideHistoryView push state
                   else
-                    linearLayout
+                    scrollView
                       [ height MATCH_PARENT
                       , width MATCH_PARENT
                       , orientation VERTICAL
@@ -355,7 +355,7 @@ earningsView push state =
     , orientation VERTICAL
     , onBackPressed push (const BackPressed)
     , afterRender push (const AfterRender)
-    , padding $ Padding 16 0 16 70
+    , padding $ if EHC.os == "IOS" then Padding 16 0 16 205 else Padding 16 0 16 70
     ]
     [ 
       totalEarningsView push state
@@ -553,7 +553,7 @@ dotView push index state =
   linearLayout
     [ height $ V 6
     , width $ V 6
-    , cornerRadius 12.0
+    , cornerRadius 3.0
     , background $ if index == state.props.weekIndex then Color.black800 else Color.grey900
     , margin $ MarginHorizontal 2 2
     ]
@@ -1863,12 +1863,13 @@ historyViewItemForEarnings push item state index =
           ]
           [ linearLayout
               [ height WRAP_CONTENT
-              , width WRAP_CONTENT
-              , weight 1.0
+              , weight 2.0
               , orientation VERTICAL
               ]
               [ textView
-                  $ [ text $ getString DESTINATION <> ":" <> DS.take 30 (fromMaybe "" item.destination) <> "..."
+                  $ [ text $ getString DESTINATION <> ":" <> fromMaybe "" item.destination
+                    , ellipsize true
+                    , maxLines 1
                     , color Color.black900
                     ]
                   <> FontStyle.body3 TypoGraphy
@@ -1896,22 +1897,27 @@ historyViewItemForEarnings push item state index =
                     ] (map (\name -> (tagview name)) item.tagImages)
                 ]
               ]
-          , linearLayout
+          , linearLayout 
               [ height WRAP_CONTENT
-              , width WRAP_CONTENT
-              , gravity CENTER
-              , background if rideStatus == "CANCELLED" then Color.red600 else Color.white900
-              , cornerRadius 100.0
-              , padding $ Padding 11 3 11 6
-              ]
-              [ textView
-                  $ [ text $ if rideStatus /= "CANCELLED" then "₹" <> formatCurrencyWithCommas (show earnings) else getString CANCELLED_
-                    , height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , color color'
-                    ]
-                  <> FontStyle.body6 TypoGraphy
-              ]
+              , weight 1.0
+              , gravity RIGHT
+              ][ linearLayout
+                  [ height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , background if rideStatus == "CANCELLED" then Color.red600 else Color.white900
+                  , cornerRadius 12.0
+                  , padding $ Padding 11 3 11 6
+                  , gravity RIGHT
+                  ]
+                  [ textView
+                      $ [ text $ if rideStatus /= "CANCELLED" then "₹" <> formatCurrencyWithCommas (show earnings) else getString CANCELLED_
+                        , height WRAP_CONTENT
+                        , width WRAP_CONTENT
+                        , color color'
+                        ]
+                      <> FontStyle.body6 TypoGraphy
+                  ]
+                ]
           ]
       , separatorView true state.props.subView
       ]
