@@ -46,6 +46,7 @@ Ride:
       computedPriceWithCurrency: Maybe PriceAPIEntity
       chargeableRideDistance: Maybe HighPrecMeters
       chargeableRideDistanceWithUnit: Maybe Distance
+      tollConfidence: Maybe Confidence
       driverArrivalTime: Maybe UTCTime
       rideStartTime: Maybe UTCTime
       rideEndTime: Maybe UTCTime
