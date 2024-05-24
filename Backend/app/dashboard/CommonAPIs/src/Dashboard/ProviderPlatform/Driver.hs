@@ -889,7 +889,8 @@ data FleetEarningRes = FleetEarningRes
     status :: Maybe DriverMode,
     vehicleType :: Maybe Variant,
     totalDuration :: TotalDuration,
-    distanceTravelled :: Double
+    distanceTravelled :: Double,
+    driverPhoneNo :: Maybe Text
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
