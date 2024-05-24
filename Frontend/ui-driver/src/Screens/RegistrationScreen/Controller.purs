@@ -92,7 +92,7 @@ data ScreenOutput = GoBack
                   | GoToUploadVehicleRegistration RegistrationScreenState
                   | GoToPermissionScreen RegistrationScreenState
                   | LogoutAccount
-                  | GoToOnboardSubscription
+                  | GoToOnboardSubscription RegistrationScreenState
                   | GoToHomeScreen
                   | RefreshPage
                   | ReferralCode RegistrationScreenState
@@ -146,7 +146,7 @@ eval (RegistrationAction item ) state =
           DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state
           VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state
           GRANT_PERMISSION -> exit $ GoToPermissionScreen state
-          SUBSCRIPTION_PLAN -> exit GoToOnboardSubscription
+          SUBSCRIPTION_PLAN -> exit $ GoToOnboardSubscription state
           PROFILE_PHOTO -> exit $ DocCapture state item -- Launch hyperverge
           AADHAAR_CARD -> exit $ DocCapture state item -- Launch hyperverge
           PAN_CARD  -> exit $ DocCapture state item -- Launch hyperverge

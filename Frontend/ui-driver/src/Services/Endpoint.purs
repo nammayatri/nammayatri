@@ -15,7 +15,7 @@
 
 module Services.EndPoints where
 
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Prelude (show, (<>), (==))
 import Services.Config (getBaseUrl)
 
@@ -208,8 +208,8 @@ unVerifiedAadhaarData _ = (getBaseUrl "") <> "/driver/register/unVerifiedAadhaar
 getKioskLocations :: String -> String
 getKioskLocations _ = (getBaseUrl "") <> "/kioskLocation/list"
 
-getUiPlans :: String -> String 
-getUiPlans _ = (getBaseUrl "") <> "/plan/list"
+getUiPlans :: Maybe String -> String 
+getUiPlans mbVehicleVariant = (getBaseUrl "") <> "/plan/list" <> (maybe "" (\vehicleVariant -> "?vehicleVariant=" <> (show vehicleVariant)) mbVehicleVariant)
 
 getCurrentPlan :: String -> String 
 getCurrentPlan driverId = (getBaseUrl "") <> "/plan/currentPlan"

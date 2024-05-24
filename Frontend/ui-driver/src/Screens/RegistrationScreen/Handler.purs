@@ -42,7 +42,7 @@ registration = do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ PERMISSION_SCREEN updatedState)
     LogoutAccount -> App.BackT $ App.BackPoint <$> (pure LOGOUT_FROM_REGISTERATION_SCREEN)
-    GoToOnboardSubscription -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_ONBOARD_SUBSCRIPTION)
+    GoToOnboardSubscription updatedState -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_ONBOARD_SUBSCRIPTION updatedState)
     GoToHomeScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN)
     RefreshPage -> App.BackT $ App.BackPoint <$> (pure $ REFRESH_REGISTERATION_SCREEN)
     ReferralCode updatedState -> do

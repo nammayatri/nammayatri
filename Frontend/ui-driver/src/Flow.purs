@@ -628,8 +628,9 @@ onBoardingFlow = do
     REFRESH_REGISTERATION_SCREEN -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> registerScreen { props { refreshAnimation = false}})
       onBoardingFlow
-    GO_TO_ONBOARD_SUBSCRIPTION -> do
+    GO_TO_ONBOARD_SUBSCRIPTION state -> do
       let onBoardingSubscriptionViewCount =  fromMaybe 0 (fromString (getValueToLocalNativeStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT))
+      modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{data{vehicleCategory = state.data.vehicleCategory}})
       onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount
     REFERRAL_CODE_SUBMIT state -> do
       activateReferralCode state state.data.referralCode
@@ -2887,7 +2888,7 @@ subScriptionFlow = do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen{props{isEndRideModal = isEndRideModal}})
       subScriptionFlow
     GO_TO_MANAGE_PLAN state -> do
-      uiPlans <- Remote.getUiPlansBT ""
+      uiPlans <- Remote.getUiPlansBT Nothing
       modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{ data { managePlanData { alternatePlans = alternatePlansTransformer uiPlans state}}, props {subView = ManagePlan, showShimmer = false}})
       subScriptionFlow
     GO_TO_FIND_HELP_CENTRE state -> do

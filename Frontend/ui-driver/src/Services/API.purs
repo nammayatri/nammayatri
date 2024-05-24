@@ -2620,7 +2620,7 @@ instance encodeUnVerifiedDataReq :: Encode UnVerifiedDataReq where encode = defa
 
 -------------------------------------------------- getUiPlans -------------------------------------
 
-data UiPlansReq = UiPlansReq String
+data UiPlansReq = UiPlansReq (Maybe String)
 
 newtype UiPlansResp = UiPlansResp {
   list :: Array PlanEntity,
@@ -2688,7 +2688,7 @@ instance decodePromotionPopupConfig :: Decode PromotionPopupConfig where decode 
 instance encodePromotionPopupConfig :: Encode PromotionPopupConfig where encode = defaultEncode 
 
 instance makeUiPlansReq :: RestEndpoint UiPlansReq UiPlansResp where
- makeRequest reqBody@(UiPlansReq dummy) headers = defaultMakeRequest GET (EP.getUiPlans "") headers reqBody Nothing
+ makeRequest reqBody@(UiPlansReq mbVehicleVariant) headers = defaultMakeRequest GET (EP.getUiPlans mbVehicleVariant) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
@@ -2777,7 +2777,7 @@ newtype DuesEntity = DuesEntity {
 
 
 instance makePaymentDuesReq :: RestEndpoint PaymentDuesReq PaymentDuesResp where
- makeRequest reqBody@(PaymentDuesReq dummy ) headers = defaultMakeRequest GET (EP.getUiPlans "") headers reqBody Nothing
+ makeRequest reqBody@(PaymentDuesReq dummy) headers = defaultMakeRequest GET (EP.paymentDues dummy) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 

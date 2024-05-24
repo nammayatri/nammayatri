@@ -80,10 +80,13 @@ view ::
   ST.RegistrationScreenState ->
   PrestoDOM (Effect Unit) w
 view push state =
-  let showSubscriptionsOption = (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true") && state.data.config.bottomNavConfig.subscription.isVisible
-      documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs else state.data.registerationStepsAuto
+  let documentList = case state.data.vehicleCategory of
+        Just ST.CarCategory -> state.data.registerationStepsCabs
+        Just ST.AutoCategory -> state.data.registerationStepsAuto
+        Just ST.BikeCategory -> state.data.registerationStepsBike
+        Nothing -> state.data.registerationStepsCabs
       completedStatusCount = length $ filter (\doc -> (getStatus doc.stage state) == ST.COMPLETED) documentList
-      subScriptionStepCount = if showSubscriptionsOption && state.data.subscriptionStatus == IN_PROGRESS then 1 else 0
+      subScriptionStepCount = if state.data.subscriptionStatus == IN_PROGRESS then 1 else 0
       progressPercent = floor $ (toNumber completedStatusCount - toNumber subScriptionStepCount) / toNumber (length documentList) * 100.0
       variantImage = case state.data.vehicleCategory of
         Just ST.CarCategory -> "ny_ic_sedan_side"
@@ -172,9 +175,6 @@ view push state =
                                   [ height $ V 5
                                   , weight 1.0
                                   , cornerRadius 2.0
-                                  , visibility case item.stage of
-                                      ST.SUBSCRIPTION_PLAN -> boolToVisibility showSubscriptionsOption
-                                      _ -> VISIBLE
                                   , background case getStatus item.stage state of
                                       ST.COMPLETED -> Color.green900
                                       ST.IN_PROGRESS -> Color.yellow900
@@ -367,6 +367,8 @@ cardsListView push state =
         , weight 1.0
         ][ if state.data.vehicleCategory == Just ST.CarCategory then
             vehicleSpecificList push state state.data.registerationStepsCabs
+          else if state.data.vehicleCategory == Just ST.BikeCategory then
+            vehicleSpecificList push state state.data.registerationStepsBike
           else
             vehicleSpecificList push state state.data.registerationStepsAuto
         ]
@@ -485,7 +487,7 @@ listItem push item state =
       compImage item = 
         fetchImage FF_ASSET $ case item.stage of
           ST.DRIVING_LICENSE_OPTION -> "ny_ic_dl_blue"
-          ST.VEHICLE_DETAILS_OPTION -> if state.data.vehicleCategory == Just ST.CarCategory then "ny_ic_car_onboard" else "ny_ic_vehicle_onboard"
+          ST.VEHICLE_DETAILS_OPTION -> if state.data.vehicleCategory == Just ST.CarCategory then "ny_ic_car_onboard" else if state.data.vehicleCategory == Just ST.BikeCategory then "ny_ic_bike_onboard" else "ny_ic_vehicle_onboard"
           ST.GRANT_PERMISSION -> "ny_ic_grant_permission"
           ST.SUBSCRIPTION_PLAN -> "ny_ic_plus_circle_blue"
           ST.PROFILE_PHOTO -> "ny_ic_profile_image_blue"
@@ -546,9 +548,9 @@ listItem push item state =
                     _ -> Nothing
 
       cardVisibility :: ST.StepProgress -> ST.RegistrationScreenState -> Boolean
-      cardVisibility item state = 
+      cardVisibility item state =
         case item.stage of
-          SUBSCRIPTION_PLAN -> not item.isHidden && (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true") && state.data.config.bottomNavConfig.subscription.isVisible
+          SUBSCRIPTION_PLAN -> not item.isHidden && state.data.config.bottomNavConfig.subscription.isVisible
           _ -> not item.isHidden
 
 
@@ -571,7 +573,11 @@ popupModal push state =
 
 refreshView :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
 refreshView push state =
-  let documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs else state.data.registerationStepsAuto
+  let documentList = case state.data.vehicleCategory of
+                      Just ST.CarCategory -> state.data.registerationStepsCabs
+                      Just ST.AutoCategory -> state.data.registerationStepsAuto
+                      Just ST.BikeCategory -> state.data.registerationStepsBike
+                      Nothing -> state.data.registerationStepsCabs
       showRefresh = any (_ == IN_PROGRESS) $ map (\item -> getStatus item.stage state) documentList
   in 
     linearLayout

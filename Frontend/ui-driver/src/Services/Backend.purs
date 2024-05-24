@@ -1098,17 +1098,17 @@ getKioskLocations dummy = do
     where
         unwrapResponse (x) = x
 
-getUiPlans :: String -> Flow GlobalState (Either ErrorResponse UiPlansResp)
-getUiPlans dummy = do
+getUiPlans :: Maybe String -> Flow GlobalState (Either ErrorResponse UiPlansResp)
+getUiPlans mbVehicleVariant = do
     headers <- getHeaders "" false
-    withAPIResult (EP.getUiPlans "") unwrapResponse $ callAPI headers (UiPlansReq "")
+    withAPIResult (EP.getUiPlans mbVehicleVariant) unwrapResponse $ callAPI headers (UiPlansReq mbVehicleVariant)
     where
         unwrapResponse (x) = x
 
-getUiPlansBT :: String -> FlowBT String UiPlansResp
-getUiPlansBT dummy = do
+getUiPlansBT :: Maybe String -> FlowBT String UiPlansResp
+getUiPlansBT mbVehicleVariant = do
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.getUiPlans "") identity errorHandler (lift $ lift $ callAPI headers (UiPlansReq ""))
+    withAPIResultBT (EP.getUiPlans mbVehicleVariant) identity errorHandler (lift $ lift $ callAPI headers (UiPlansReq mbVehicleVariant))
     where
         errorHandler (ErrorPayload errorPayload) =  do
             pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage

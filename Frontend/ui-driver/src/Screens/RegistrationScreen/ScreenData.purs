@@ -70,7 +70,7 @@ initData = {
         contactSupportView : true,
         contactSupportModal : ST.HIDE,
         selectedVehicleIndex : Nothing,
-        optionalDocsExpanded : false,
+        optionalDocsExpanded : true,
         confirmChangeVehicle : false,
         refreshAnimation : false,
         driverEnabled : false,

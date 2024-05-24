@@ -105,10 +105,10 @@ decodeOfferPlan str = do
     let strArray = split (Pattern "-*@*-") str
     {plan : (decodeOfferDescription $ fromMaybe "" (strArray !! 0)), offer : (decodeOfferDescription $ fromMaybe "" (strArray !! 1))}
 
-freeRideOfferConfig :: LazyCheck -> PromoConfig
-freeRideOfferConfig lazy = 
+freeRideOfferConfig :: Int -> PromoConfig
+freeRideOfferConfig count = 
     {  
-    title : Just $ getString FIRST_FREE_RIDE,
+    title : Just $ "First " <> (if(count > 1) then show count <> " Rides" else "Ride") <> " Free",
     isGradient : false,
     gradient : [],
     hasImage : false,
@@ -204,7 +204,7 @@ getPlanCardConfig (PlanEntity planEntity) isLocalized isIntroductory gradientCon
             description : planData.description ,
             isSelected : false ,
             offers : (if planEntity.freeRideCount > 0 
-                        then [freeRideOfferConfig Language] 
+                        then [freeRideOfferConfig planEntity.freeRideCount] 
                         else if isIntroductory then [introductoryOfferConfig Language] else []) <> getPromoConfig planEntity.offers gradientConfig,
             priceBreakup : planEntity.planFareBreakup,
             frequency : planEntity.frequency,

@@ -1450,7 +1450,8 @@ type OnBoardingSubscriptionScreenState = {
 type OnBoardingSubscriptionScreenData = {
   plansList :: Array PlanCardConfig,
   selectedPlanItem :: Maybe PlanCardConfig,
-  subscriptionConfig :: SubscriptionConfig
+  subscriptionConfig :: SubscriptionConfig,
+  vehicleCategory :: Maybe VehicleCategory
 }
 
 type OnBoardingSubscriptionScreenProps = {

@@ -13,7 +13,8 @@ initData = {
     data:{
         plansList : [dummyPlanConfig],
         selectedPlanItem : Nothing,
-        subscriptionConfig : (getAppConfig appConfig).subscriptionConfig
+        subscriptionConfig : (getAppConfig appConfig).subscriptionConfig,
+        vehicleCategory : Nothing
     },
     props:{
         isSelectedLangTamil : false,

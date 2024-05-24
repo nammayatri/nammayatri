@@ -601,6 +601,7 @@
       "silent_popup_background" : true,
       "tip_banner_rectangle" : true,
       "up_hand_arrow" : true,
-      "widget_close_gradient" : true
+      "widget_close_gradient" : true,
+      "ny_ic_bike_onboard" : true
    }
 }

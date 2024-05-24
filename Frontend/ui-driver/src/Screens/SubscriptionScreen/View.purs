@@ -120,7 +120,7 @@ loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre errorActio
           let (GetCurrentPlanResp resp) = resp'
           case resp.currentPlanDetails of
             Nothing -> do
-              uiPlans <- Remote.getUiPlans ""
+              uiPlans <- Remote.getUiPlans Nothing
               case uiPlans of
                 Right plansResp -> doAff do liftEffect $ push $ loadPlans plansResp
                 Left err -> doAff do liftEffect $ push $ errorAction err

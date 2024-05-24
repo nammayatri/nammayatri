@@ -59,6 +59,7 @@ import Components.PopUpModal as PopUpModal
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
 import Locale.Utils
+import Mobility.Prelude (boolToVisibility)
 
 screen :: ST.OnBoardingSubscriptionScreenState -> Screen Action ST.OnBoardingSubscriptionScreenState ScreenOutput
 screen initialState =
@@ -67,7 +68,7 @@ screen initialState =
   , name : "OnBoardingSubscriptionScreen"
   , globalEvents : [(\push -> do 
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
-        uiPlans <- Remote.getUiPlans ""
+        uiPlans <- Remote.getUiPlans if(initialState.data.vehicleCategory == Just ST.BikeCategory) then (Just "BIKE") else Nothing
         case uiPlans of
           Right plansResp -> do 
             liftFlow $ push $ LoadPlans plansResp
@@ -205,12 +206,14 @@ headerLayout push state =
         , width $ V 1
         , background Color.white900
         , margin $ Margin 0 2 0 1
+        , visibility $ boolToVisibility $ state.data.vehicleCategory /= Just ST.BikeCategory
         , alpha 0.3][]
       , linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , margin $ MarginLeft 8
         , onClick push $ const GoToRegisteration
+        , visibility $ boolToVisibility $ state.data.vehicleCategory /= Just ST.BikeCategory
         ][
           imageView
           [ width $ V 16
