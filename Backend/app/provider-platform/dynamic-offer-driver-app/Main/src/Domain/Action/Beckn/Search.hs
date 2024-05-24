@@ -127,7 +127,7 @@ data DSearchRes = DSearchRes
     now :: UTCTime,
     quotes :: [(DQuote.Quote, DVST.VehicleServiceTier, Maybe NearestDriverInfo)],
     estimates :: [(DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo)],
-    merchantOpCityId :: Id DMOC.MerchantOperatingCity
+    transporterConfig :: DTMT.TransporterConfig
   }
 
 data NearestDriverInfo = NearestDriverInfo
