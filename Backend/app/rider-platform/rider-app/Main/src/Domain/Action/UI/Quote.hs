@@ -84,6 +84,7 @@ data QuoteAPIEntity = QuoteAPIEntity
     serviceTierShortDesc :: Maybe Text,
     estimatedFare :: Money,
     estimatedTotalFare :: Money,
+    estimatedPickupDurationInMinutes :: Maybe Minutes,
     discount :: Maybe Money,
     estimatedFareWithCurrency :: PriceAPIEntity,
     estimatedTotalFareWithCurrency :: PriceAPIEntity,

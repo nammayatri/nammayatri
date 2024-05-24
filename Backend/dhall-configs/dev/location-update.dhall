@@ -77,6 +77,15 @@ let healthCheckAppCfg =
           //  { logFilePath = "/tmp/driver-tracking-healthcheck.log" }
       }
 
+let cacConfig =
+      { host = "http://localhost:8080"
+      , interval = 10
+      , tenant = "dev"
+      , retryConnection = False
+      , cacExpTime = +86400
+      , enablePolling = True
+      }
+
 in  { hedisCfg
     , hedisClusterCfg
     , hedisNonCriticalCfg = hedisCfg
@@ -101,4 +110,5 @@ in  { hedisCfg
     , enablePrometheusMetricLogging = True
     , kvConfigUpdateFrequency
     , healthCheckAppCfg = Some healthCheckAppCfg
+    , cacConfig
     }

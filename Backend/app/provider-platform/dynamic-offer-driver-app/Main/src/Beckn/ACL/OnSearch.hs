@@ -25,7 +25,6 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
-import qualified Storage.Queries.TransporterConfig as QTC
 
 mkOnSearchRequest ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -45,5 +44,4 @@ mkOnSearchRequest ::
 mkOnSearchRequest res@DSearch.DSearchRes {..} action domain messageId transactionId bapId bapUri bppId bppUri city country isValueAddNP = do
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle provider.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show provider.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show AUTO_RICKSHAW)
   ttl <- bppConfig.onSearchTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId
-  TOnSearch.buildOnSearchRideReq transporterConfig ttl bppConfig res action domain messageId transactionId bapId bapUri bppId bppUri city country isValueAddNP
+  TOnSearch.buildOnSearchRideReq ttl bppConfig res action domain messageId transactionId bapId bapUri bppId bppUri city country isValueAddNP

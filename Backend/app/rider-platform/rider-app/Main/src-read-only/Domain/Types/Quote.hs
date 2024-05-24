@@ -32,6 +32,7 @@ data Quote = Quote
     createdAt :: Kernel.Prelude.UTCTime,
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     estimatedFare :: Kernel.Types.Common.Price,
+    estimatedPickupDurationInMinutes :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
     estimatedTotalFare :: Kernel.Types.Common.Price,
     id :: Kernel.Types.Id.Id Domain.Types.Quote.Quote,
     isBlockedRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
