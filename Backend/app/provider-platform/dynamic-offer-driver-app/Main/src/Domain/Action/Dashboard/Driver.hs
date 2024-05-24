@@ -668,7 +668,7 @@ appendPlusInMobileCountryCode :: Maybe Text -> Maybe Text
 appendPlusInMobileCountryCode = fmap (\code -> if "+" `T.isPrefixOf` code then code else "+" <> code)
 
 driverInfo :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> Flow Common.DriverInfoRes
-driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber mbemail fleetOwnerId mbFleet = do
+driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber mbEmail fleetOwnerId mbFleet = do
   when mbFleet $ do
     when (isNothing mbVehicleNumber) $ throwError $ InvalidRequest "Fleet Owner can only search with vehicle Number"
     vehicleInfo <- RCQuery.findLastVehicleRCFleet' (fromMaybe " " mbVehicleNumber) fleetOwnerId
@@ -677,7 +677,7 @@ driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNu
     throwError $ InvalidRequest "\"mobileCountryCode\" can be used only with \"mobileNumber\""
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  driverWithRidesCount <- case (mbMobileNumber, mbVehicleNumber, mbDlNumber, mbRcNumber, mbemail) of
+  driverWithRidesCount <- case (mbMobileNumber, mbVehicleNumber, mbDlNumber, mbRcNumber, mbEmail) of
     (Just mobileNumber, Nothing, Nothing, Nothing, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
       let mobileCountryCode = fromMaybe mobileIndianCode (appendPlusInMobileCountryCode mbMobileCountryCode)
@@ -1278,7 +1278,7 @@ getListOfDrivers mbCountryCode mbDriverPhNo fleetOwnerId merchantId mbIsActive m
       fleetDriverAssociation <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId
       pure $ maybeToList fleetDriverAssociation
     Nothing -> do
-      let limit = min 5 $ fromMaybe 5 mbLimit
+      let limit = min 10 $ fromMaybe 5 mbLimit
           offset = fromMaybe 0 mbOffset
       case mbMode of
         Just mode -> FDV.findAllDriversByFleetOwnerIdByMode fleetOwnerId (castDashboardDriverStatus mode) mbIsActive (fromIntegral limit) (fromIntegral offset)
@@ -1871,7 +1871,8 @@ fleetVehicleEarning _merchantShortId _ fleetOwnerId mbVehicleNumber mbLimit mbOf
           status = Nothing,
           vehicleType = castVehicleVariantDashboard rc.vehicleVariant,
           totalDuration = duration,
-          distanceTravelled = fromIntegral distanceTravelled / 1000.0
+          distanceTravelled = fromIntegral distanceTravelled / 1000.0,
+          driverPhoneNo = Nothing
         }
   let summary = Common.Summary {totalCount = 10000, count = length res}
   pure $ Common.FleetEarningListRes {fleetEarningRes = res, summary}
@@ -1901,7 +1902,8 @@ fleetDriverEarning merchantShortId _ fleetOwnerId mbMobileCountryCode mbDriverPh
           status = Just $ castDriverStatus driverInfo'.mode,
           vehicleType = Nothing,
           totalDuration = duration,
-          distanceTravelled = (fromIntegral distanceTravelled) / 1000.0
+          distanceTravelled = (fromIntegral distanceTravelled) / 1000.0,
+          driverPhoneNo = driver.unencryptedMobileNumber
         }
   let summary = Common.Summary {totalCount = 10000, count = length res}
   pure $ Common.FleetEarningListRes {fleetEarningRes = res, summary}
