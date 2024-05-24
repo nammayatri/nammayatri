@@ -62,7 +62,6 @@ handler transporterId req = do
           let image = join (eitherToMaybe resp)
           let isDriverBirthDay = False
           let isFreeRide = False
-          let fareParams = booking.fareParams
           pure $ RideAssignedReq DRideAssignedReq {..}
         DRide.INPROGRESS -> do
           bookingDetails <- SyncRide.fetchBookingDetails ride booking
