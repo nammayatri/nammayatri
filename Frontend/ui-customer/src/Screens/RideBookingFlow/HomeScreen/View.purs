@@ -99,7 +99,7 @@ import Screens.RideBookingFlow.HomeScreen.Config
 import Services.API
 import Screens.NammaSafetyFlow.Components.ContactsList (contactCardView)
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), RideBookingListRes(..))
-import Screens.Types (Followers(..), CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..),City(..), BottomNavBarIcon(..), NewContacts, ReferralStatus(..), VehicleViewType(..))
+import Screens.Types (Followers(..), CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..), BottomNavBarIcon(..), NewContacts, ReferralStatus(..), VehicleViewType(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, getRouteMarkers, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
@@ -1485,7 +1485,7 @@ rideRequestFlowView push state =
         else
           emptyTextView state
 
-      isCityInList :: City -> Array City -> Boolean
+      isCityInList :: CTP.City -> Array CTP.City -> Boolean
       isCityInList city = any (_ == city)
 
 isStageInList :: Stage -> Array Stage -> Boolean
@@ -3118,7 +3118,7 @@ homeScreenViewV2 push state = let
         , width MATCH_PARENT 
         , onAnimationEnd push (const MapReadyAction)
         ][tagShimmerView state]] 
-      else if state.data.config.banners.homeScreenCabLaunch && Arr.elem state.props.city [ST.Bangalore, ST.Tumakuru, ST.Mysore] then ([
+      else if state.data.config.banners.homeScreenCabLaunch && Arr.elem state.props.city [CTP.Bangalore, CTP.Tumakuru, CTP.Mysore] then ([
         imageView
           [ imageWithFallback "ny_ic_cab_banner,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_cab_banner.png"
           , height $ V 135

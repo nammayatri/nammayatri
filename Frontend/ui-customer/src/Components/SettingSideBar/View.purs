@@ -41,9 +41,9 @@ import Screens.Types (Stage(..))
 import Storage (getValueToLocalStore, KeyStore(..), isLocalStageOn)
 import Styles.Colors as Color
 import Data.Maybe (Maybe(..))
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..),City(..))
 import Data.Array as DA
-import Screens.Types (Stage(..),City(..))
+import Screens.Types (Stage(..))
 import Data.String as DS
 import Mobility.Prelude
 import Debug

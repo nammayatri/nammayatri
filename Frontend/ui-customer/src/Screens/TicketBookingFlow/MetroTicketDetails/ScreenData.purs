@@ -26,7 +26,7 @@ initData = {
   data : {
     dummyData : ""
   , bookingId : ""
-  , city : AnyCity
+  , city : Common.AnyCity
   , bookingUpdatedAt : ""
   , metroRoute : []
   , ticketsInfo : []

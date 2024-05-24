@@ -20,7 +20,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Effect (Effect)
 import Animation as Anim
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), City(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText.View as PrimaryEditText

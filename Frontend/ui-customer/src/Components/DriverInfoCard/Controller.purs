@@ -24,8 +24,8 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Data.Maybe (Maybe)
 import PrestoDOM
-import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), NavigationMode(..),  FareProductType(..))
-import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), FareProductType(..))
+import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, BannerCarousalData(..), NavigationMode(..),  FareProductType(..))
+import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, BannerCarousalData(..), FareProductType(..))
 import Components.BannerCarousel as BannerCarousel
 import Common.Types.App as CTP
 import MerchantConfig.Types
@@ -69,7 +69,7 @@ type DriverInfoCardProps =
     isSpecialZone :: Boolean,
     estimatedTime :: String,
     zoneType :: ZoneType,
-    merchantCity :: City,
+    merchantCity :: CTP.City,
     showBanner :: Boolean,
     isChatWithEMEnabled :: Boolean,
     isRateCardAvailable :: Boolean,

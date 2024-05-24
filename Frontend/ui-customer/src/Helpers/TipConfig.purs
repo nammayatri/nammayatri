@@ -7,14 +7,14 @@ import Data.Array (mapWithIndex, (!!), elem)
 import Data.Maybe 
 import Helpers.Utils as HU
 import Storage (getValueToLocalStore, KeyStore(..))
-import Screens.Types (City(..), TipViewProps(..), TipViewStage(..), TipViewData(..))
+import Screens.Types (TipViewProps(..), TipViewStage(..), TipViewData(..))
 import Locale.Utils
 import MerchantConfig.Types
 import Effect (Effect)
 import Foreign.Class (class Encode)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Foreign.Generic (decodeJSON, encodeJSON)
-
+import Common.Types.App (City(..))
 
 type TipConfig = {
   customerTipArray :: Array String,
@@ -31,9 +31,9 @@ type TipVehicleConfig = {
 }
 
 
-getTipConfig :: String -> TipConfig
-getTipConfig variant = do
-  let city = HU.getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+getTipConfig :: String -> String -> TipConfig
+getTipConfig variant cityStr = do
+  let city = HU.getCityFromString cityStr
   case city of 
     Bangalore -> bangaloreConfig variant
     Hyderabad -> hyderabadConfig variant
@@ -117,7 +117,7 @@ getTipViewProps tipViewProps vehicleVariant = do
 
 getTipViewText :: TipViewProps -> String-> String -> String
 getTipViewText tipViewProps vehicleVariant prefixString = do
-  let tipConfig = getTipConfig vehicleVariant
+  let tipConfig = getTipConfig vehicleVariant $ getValueToLocalStore CUSTOMER_LOCATION
       tip = show (fromMaybe 10 (tipConfig.customerTipArrayWithValues !! tipViewProps.activeIndex))
   if tip == "0" then 
     case tipViewProps.stage of

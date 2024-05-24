@@ -604,7 +604,7 @@ type HomeScreenStateData =
   , destinationAddress :: Address
   , route :: Maybe Route
   , startedAtUTC :: String
-  , rateCard :: RateCard
+  , rateCard :: Common.RateCard
   , speed :: Int
   , selectedLocationListItem :: Maybe LocationListItemState
   , saveFavouriteCard :: SaveFavouriteCardState
@@ -654,7 +654,7 @@ type HomeScreenStateData =
   , iopState :: InteroperabilityState
   , currentCityConfig :: MRC.CityConfig
   , otherSelectedEstimates :: Array String
-  , rateCardCache :: Maybe RateCard
+  , rateCardCache :: Maybe Common.RateCard
   , maxEstimatedDuration :: Int
   , invalidBookingPopUpConfig :: Maybe InvalidBookingPopUpConfig
   }
@@ -708,7 +708,7 @@ type QuoteListItemState =
   , driverName :: String
   , selectedQuote :: Maybe String
   , appConfig :: AppConfig
-  , city :: City
+  , city :: Common.City
   , vehicleImage :: String
   , serviceTierName :: Maybe String
   }
@@ -839,8 +839,8 @@ type HomeScreenStateProps =
   , isNotificationExpanded :: Boolean
   , bottomSheetState :: SheetState
   , removeNotification :: Boolean
-  , city :: City
-  , destCity :: Maybe City
+  , city :: Common.City
+  , destCity :: Maybe Common.City
   , isHomescreenExpanded :: Boolean
   , isRepeatRide :: Boolean
   , currSlideIndex :: Number
@@ -911,29 +911,6 @@ data SafetyAlertType = DEVIATION | STATIONARY_VEHICLE
 derive instance genericSafetyAlertType :: Generic SafetyAlertType _
 instance showSafetyAlertType :: Show SafetyAlertType where show = genericShow
 instance eqSafetyAlertType :: Eq SafetyAlertType where eq = genericEq
-
-data City
-  = Bangalore
-  | Kolkata
-  | Paris
-  | Kochi
-  | Delhi
-  | Hyderabad
-  | Mumbai
-  | Chennai
-  | Coimbatore
-  | Pondicherry
-  | Goa
-  | Pune
-  | Mysore
-  | Tumakuru
-  | AnyCity
-
-derive instance genericCity :: Generic City _
-instance showCity :: Show City where show = genericShow
-instance eqCity :: Eq City where eq = genericEq
-instance encodeCity :: Encode City where encode = defaultEnumEncode
-instance decodeCity :: Decode City where decode = defaultEnumDecode
 
 type SearchLocationModelProps = {
     isAutoComplete :: Boolean
@@ -1028,26 +1005,6 @@ type Contact = {
      name :: String,
      phoneNo :: String
 }
-
-type RateCard =
-  {
-    additionalFare :: Int,
-    createdTime :: String,
-    tollCharge :: Number,
-    waitingTimeInfo :: Common.WaitingTimeInfo,
-    currentRateCardType :: Common.RateCardType,
-    driverAdditions :: Array Common.FareList,
-    extraFare :: Array Common.FareList,
-    fareInfoDescription :: Array String,
-    isNightShift :: Boolean,
-    nightChargeFrom :: String,
-    nightChargeTill :: String,
-    onFirstPage :: Boolean,
-    pickUpCharges :: Number,
-    vehicleVariant :: String,
-    baseFare :: Int
-  }
-
 
 type RateCardDetails = {
   title :: String ,
@@ -1873,7 +1830,7 @@ type MetroTicketDetailsScreenState = {
 type MetroTicketDetailsScreenData = {
   dummyData :: String
 , bookingId :: String
-, city :: City
+, city :: Common.City
 , bookingUpdatedAt :: String
 , metroRoute :: Array MetroRoute
 , ticketsInfo :: Array MetroTicketInfo
@@ -2119,7 +2076,7 @@ type LocationInfo =
     addressComponents :: Address ,
     metroInfo :: Maybe Station,
     stationCode :: String,
-    city :: City
+    city :: Common.City
   }
   
 -- ############################################## NammaSafetyScreenState #############################
@@ -2226,7 +2183,7 @@ type FollowRideScreenData = {
 }
 
 type FollowRideScreenProps = {
-  city :: City
+  city :: Common.City
 , showChatNotification :: Boolean
 , canSendSuggestion :: Boolean
 , isChatNotificationDismissed :: Boolean
@@ -2279,7 +2236,7 @@ type MetroStation = {
 }
 
 type MetroStations = {
-  city :: City,
+  city :: Common.City,
   stations :: Array GetMetroStationResp,
   lastUpdatedAt :: String
 }

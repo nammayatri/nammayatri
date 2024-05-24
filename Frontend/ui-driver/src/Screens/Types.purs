@@ -1867,7 +1867,8 @@ type BookingOptionsScreenData = {
   defaultRidePreference :: RidePreference,
   canSwitchToInterCity :: Boolean,
   canSwitchToRental :: Boolean,
-  airConditioned :: Maybe API.AirConditionedTier
+  airConditioned :: Maybe API.AirConditionedTier,
+  rateCard :: Common.RateCard
 }
 
 type RidePreference = {
@@ -1883,7 +1884,8 @@ type RidePreference = {
   shortDescription :: Maybe String,
   vehicleRating :: Maybe Number,
   isUsageRestricted :: Boolean,
-  priority :: Int
+  priority :: Int,
+  rateCardData :: Maybe Common.BreakupList
 }
 
 type BookingOptionsScreenProps = {
@@ -1891,7 +1893,8 @@ type BookingOptionsScreenProps = {
   downgraded :: Boolean,
   canSwitchToRental :: Boolean,
   acExplanationPopup :: Boolean,
-  fromDeepLink :: Boolean
+  fromDeepLink :: Boolean,
+  showRateCard :: Boolean
 }
 
 data LeaderBoardType = Daily | Weekly

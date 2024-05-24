@@ -336,3 +336,10 @@ getRideStatusPastDays _ = (getBaseUrl "") <> "/coins/rideStatusPastDays"
 
 updateAirConditioned :: String -> String
 updateAirConditioned _ = (getBaseUrl "") <> "/driver/updateAirCondition"
+
+getDriverRateCard :: Maybe String -> String
+getDriverRateCard serviceTier = 
+  (getBaseUrl "") <> "/driver/rateCard"
+                  <> case serviceTier of
+                      Just serviceTier' -> "?vehicleServiceTier=" <> serviceTier'
+                      Nothing -> ""

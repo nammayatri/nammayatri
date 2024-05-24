@@ -16,7 +16,7 @@
 module Screens.RideSelectionScreen.Transformer where
 
 import Accessor (_computedPrice, _contents, _driverName, _estimatedDistance, _id, _otpCode, _rideRating, _toLocation, _vehicleNumber, _vehicleVariant, _stopLocation)
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), City(..))
 import Common.Types.App as CTP
 import Data.Array (filter, null, (!!), any, elem)
 import Data.Lens ((^.))
@@ -30,7 +30,7 @@ import Prelude (map, show, ($), (&&), (+), (-), (/=), (<>), (==), (||))
 import PrestoDOM.Types.Core (toPropValue)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getKmMeter, fetchVehicleVariant)
 import Resources.Localizable.EN (getEN)
-import Screens.Types (Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..), City(..), VehicleViewType(..))
+import Screens.Types (Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..), VehicleViewType(..))
 import Storage (isLocalStageOn, getValueToLocalStore, KeyStore(..))
 import Data.Ord (abs)
 import ConfigProvider

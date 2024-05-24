@@ -34,7 +34,7 @@ import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&
 import PrestoDOM (Eval, update, ScrollState(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..), ZoneType(..), VehicleVariant(..),City(..), VehicleViewType(..))
+import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..), ZoneType(..), VehicleVariant(..), VehicleViewType(..))
 import Storage (isLocalStageOn, getValueToLocalStore,  KeyStore(..))
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getFareProductType)
 import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..), RideBookingAPIDetails(..))
@@ -249,7 +249,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
     updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
     specialTags = getSpecialTag ride.specialLocationTag
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-    nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
+    nightChargeFrom = if city == CTP.Delhi then "11 PM" else "10 PM"
     nightChargeTill = "5 AM"
     startTime = fromMaybe "" ride.rideStartTime
     endTime = fromMaybe "" ride.rideEndTime

@@ -18,11 +18,12 @@ module Components.QuoteListModel.Controller where
 import Components.PrimaryButton as PrimaryButtonController
 import Components.QuoteListItem as QuoteListItemController
 import Data.Maybe (Maybe)
-import Screens.Types (TipViewProps, QuoteListItemState(..), City(..))
+import Screens.Types (TipViewProps, QuoteListItemState(..))
 import MerchantConfig.Types (AppConfig)
 import Components.TipsView as TipsView
 import Components.ChooseVehicle.Controller as CVC
 import Components.ProviderModel as PM
+import Common.Types.App (City(..))
 
 data Action = GoBack
             | NoAction

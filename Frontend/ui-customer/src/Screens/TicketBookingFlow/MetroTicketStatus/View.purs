@@ -93,7 +93,7 @@ screen initialState =
   where
   getMetroStatusEvent push = do
     let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-    if city == ST.Chennai then
+    if city == Common.Chennai then
       void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusPooling initialState.data.bookingId initialState.data.validUntil 3000.0 initialState push MetroPaymentStatusAction
     else
       void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusfinitePooling initialState.data.bookingId initialState.data.validUntil 5 5000.0 initialState push MetroPaymentStatusAction

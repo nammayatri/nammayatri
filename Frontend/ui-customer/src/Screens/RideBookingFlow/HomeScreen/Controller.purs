@@ -96,7 +96,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getQuotesTransformer, transformContactList, getNearByDrivers, dummyEstimateEntity, filterSpecialZoneAndInterCityQuotes, getFareProductType, extractFareProductType)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..), City(..), CancelSearchType(..))
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), ReferralStatus(..), NewContacts(..), CancelSearchType(..))
 import Services.API (BookingLocationAPIEntity(..), EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..), Route(..), RideAPIEntity(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -950,16 +950,14 @@ eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) s
     , data 
       { rateCard 
         { onFirstPage = false
-        , vehicleVariant = config.vehicleVariant
         , currentRateCardType = DefaultRateCard
-        , pickUpCharges = config.pickUpCharges 
-        , tollCharge = config.tollCharge
         , extraFare = config.extraFare
         , driverAdditions = config.driverAdditions
         , fareInfoDescription = config.fareInfoDescription
         , isNightShift = config.isNightShift
         , nightChargeTill = config.nightChargeTill
         , nightChargeFrom = config.nightChargeFrom
+        , serviceTierName = config.serviceTierName
         }
       }
     }
@@ -2331,7 +2329,7 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelAutoAssigni
 
 eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryButtonClick PrimaryButtonController.OnClick)) state = do
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".Tip") "true"
-  let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+  let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant $ getValueToLocalStore CUSTOMER_LOCATION
       customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
   _ <- pure $ clearTimerWithId state.props.timerId
   void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), scaleType="CENTER_CROP"}
@@ -2869,10 +2867,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".RateCard") "true"
   continue state{ props { showRateCard = true }
                 , data {  rateCard {  onFirstPage = false
-                                    , vehicleVariant = config.vehicleVariant
                                     , currentRateCardType = DefaultRateCard
-                                    , pickUpCharges = config.pickUpCharges
-                                    , tollCharge = config.tollCharge
                                     , extraFare = config.extraFare
                                     , fareInfoDescription = config.fareInfoDescription
                                     , additionalFare = config.additionalFare
@@ -2880,6 +2875,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
                                     , nightChargeTill = config.nightChargeTill
                                     , nightChargeFrom = config.nightChargeFrom
                                     , driverAdditions = config.driverAdditions
+                                    , serviceTierName = config.serviceTierName
                                     }}}
 
 
@@ -2965,7 +2961,7 @@ eval (ChooseYourRideAction ChooseYourRideController.SpecialZoneInfoTag) state = 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.NoAction))) state = continueWithCmd state{data {triggerPatchCounter = state.data.triggerPatchCounter + 1}} [pure NoAction]
 
 eval (ChooseYourRideAction (ChooseYourRideController.TipBtnClick index value)) state = do
-  let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+  let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant $ getValueToLocalStore CUSTOMER_LOCATION
       customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
       tip = fromMaybe 0 (customerTipArrayWithValues !! index)
       isTipSelected = tip > 0
@@ -3164,10 +3160,10 @@ eval (AcWorkingPopupAction PopUpModal.DismissPopup) state = continue state{props
 eval NoRender state = update state
 
 eval UpdateRateCardCache state = do
-  let (rateCard :: Maybe ST.RateCard) = handleRateCard $ runFn3 getFromCache (show RATE_CARD_INFO) Nothing Just
+  let (rateCard :: Maybe CTP.RateCard) = handleRateCard $ runFn3 getFromCache (show RATE_CARD_INFO) Nothing Just
   continue state{data{rateCardCache = rateCard}}
   where 
-    handleRateCard :: Maybe ST.RateCard -> Maybe ST.RateCard
+    handleRateCard :: Maybe CTP.RateCard -> Maybe CTP.RateCard
     handleRateCard rateCard = do
       case rateCard of
         Nothing -> do 
@@ -3617,10 +3613,6 @@ specialZoneRideFlow  (RideBookingRes response) state = do
         }
   exit $ RideConfirmed newState { props { isInApp = true } }
 
-getRateCardArray :: Boolean -> String -> Int -> Int -> Int -> Array {title :: String , description :: String}
-getRateCardArray nightCharges lang baseFare extraFare additionalFare = ([ { title :(getString $ MIN_FARE_UPTO "2 km") <> if nightCharges then " 🌙" else "" , description : "₹" <> toStringJSON (baseFare) }
-                      , { title : (getString RATE_ABOVE_MIN_FARE) <> if nightCharges then " 🌙" else "", description : "₹" <> toStringJSON (extraFare) <> " / km"} ]
-                      <> if (getMerchant FunctionCall) == NAMMAYATRI && additionalFare > 0 then [ {title : (getString DRIVER_ADDITIONS) , description : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
 
 findingQuotesSearchExpired :: Boolean -> Boolean -> Int
 findingQuotesSearchExpired gotQuotes isNormalRide =
@@ -3707,10 +3699,8 @@ openLiveDashboard state = do
 cacheRateCard :: HomeScreenState -> Effect Unit 
 cacheRateCard state = do
   let rateCard =  state.data.rateCard { onFirstPage = false
-                  , vehicleVariant = state.data.selectedEstimatesObject.vehicleVariant
+                  , serviceTierName = state.data.selectedEstimatesObject.serviceTierName
                   , currentRateCardType = DefaultRateCard
-                  , pickUpCharges = state.data.selectedEstimatesObject.pickUpCharges
-                  , tollCharge = state.data.selectedEstimatesObject.tollCharge
                   , extraFare = state.data.selectedEstimatesObject.extraFare
                   , fareInfoDescription = state.data.selectedEstimatesObject.fareInfoDescription
                   , additionalFare = state.data.selectedEstimatesObject.additionalFare

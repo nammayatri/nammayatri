@@ -1,13 +1,12 @@
-module Helpers.RateCardUtils where
+module Components.RateCard.Utils where
 
 import Prelude
-import Services.API (EstimateAPIEntity(..), EstimateFares(..))
-import Common.Types.App
+import Common.Types.App (EstimateFares(..), FareList(..), Price(..), BreakupList)
 import Data.Maybe (fromMaybe, isJust, Maybe(..), maybe)
 import Data.Array as DA
 import Mobility.Prelude as MP
 import Data.Lens ((^.), view)
-import Accessor
+import Engineering.Helpers.Accessor as EHA
 import JBridge as JB
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
@@ -26,24 +25,14 @@ type StepFare
     , price :: String
     }
 
-type BreakupList = {
-  fareList :: Array FareList,
-  fareInfo :: Array String,
-  driverAdditions :: Array FareList,
-  nightChargeStart :: String,
-  nightChargeEnd :: String,
-  isNightShift :: Boolean,
-  waitingTimeInfo :: WaitingTimeInfo
-}
-
 fetchSpecificFare :: Array EstimateFares -> String -> Price
 fetchSpecificFare fareBreakup fareType =
   let
-    fare = DA.find (\item -> item ^. _title == fareType) fareBreakup
+    fare = DA.find (\item -> item ^. EHA._title == fareType) fareBreakup
   in
     maybe dummyPriceEntity getPriceEntity fare
   where
-    getPriceEntity item = item ^. _priceWithCurrency
+    getPriceEntity item = item ^. EHA._priceWithCurrency
     dummyPriceEntity = { amount: 0.0, currency: "INR" }
 
 priceToBeDisplayed :: Price -> String
@@ -53,8 +42,8 @@ priceToBeDisplayed price = case price.currency of
   where
     value = EHU.getFixedTwoDecimals price.amount
 
-getFareBreakupList :: EstimateAPIEntity -> Int -> BreakupList
-getFareBreakupList (EstimateAPIEntity estimate) maxTip =
+getFareBreakupList :: Array EstimateFares -> Int -> BreakupList
+getFareBreakupList fareBreakup maxTip =
   {
     fareList : fareBreakupConstructed,
     fareInfo : fareInfoDescription,
@@ -84,19 +73,16 @@ getFareBreakupList (EstimateAPIEntity estimate) maxTip =
     <> (if maxTip > 0 then [getString $ TIP_CAN_BE_ADDED $ show maxTip] else [])
     <> (if congestionCharges.amount > 0.0 then [getString $ RUSH_HOURS_DESC $ EHU.getFixedTwoDecimals congestionCharges.amount] else [])
 
-  
-  fareBreakup = fromMaybe [] estimate.estimateFareBreakup
-
   -- Base fare calculation
   baseDistance = fetchSpecificFare fareBreakup "BASE_DISTANCE"
-  baseFare = priceToBeDisplayed $ fetchSpecificFare fareBreakup "BASE_DISTANCE_FARE"
+  baseFare = priceToBeDisplayed $ fetchSpecificFare fareBreakup "BASE_FARE"
 
   -- Step fare calculation
   extraFareBreakup =
     DA.sortBy compareByLimit
       $ DA.mapMaybe
           ( \item ->
-              if MP.startsWith "EXTRA_PER_KM_STEP_FARE_" (item ^. _title) 
+              if MP.startsWith "EXTRA_PER_KM_STEP_FARE_" (item ^. EHA._title) 
                 then Just $ parseStepFare item "EXTRA_PER_KM_STEP_FARE_" fareMultiplier
               else Nothing
           )
@@ -148,9 +134,9 @@ getFareBreakupList (EstimateAPIEntity estimate) maxTip =
   parseStepFare :: EstimateFares -> String -> Number -> StepFare
   parseStepFare item prefixString fareMultiplier =
     let
-      title = item ^. _title
+      title = item ^. EHA._title
 
-      price = item ^. _priceWithCurrency
+      price = item ^. EHA._priceWithCurrency
 
       trimmedTitle = DS.drop (DS.length prefixString) title
 
@@ -185,7 +171,7 @@ getFareBreakupList (EstimateAPIEntity estimate) maxTip =
     DA.sortBy compareByLimit
       $ DA.mapMaybe
           ( \item ->
-              if MP.startsWith "DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE_" (item ^. _title) && (item ^. _title) /= "DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE_0_Above"
+              if MP.startsWith "DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE_" (item ^. EHA._title) && (item ^. EHA._title) /= "DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE_0_Above"
                 then Just $ parseStepFare item "DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE_" 1.0
               else Nothing
           )

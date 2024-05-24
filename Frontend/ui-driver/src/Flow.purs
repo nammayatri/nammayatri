@@ -1681,7 +1681,8 @@ bookingOptionsFlow = do
           shortDescription : item.shortDescription,
           vehicleRating : item.vehicleRating,
           isUsageRestricted : fromMaybe false item.isUsageRestricted,
-          priority : fromMaybe 0 item.priority
+          priority : fromMaybe 0 item.priority,
+          rateCardData : Nothing
         }
       )
 

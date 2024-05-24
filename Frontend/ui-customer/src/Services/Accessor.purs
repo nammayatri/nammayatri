@@ -13,7 +13,12 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Accessor where
+module Accessor (
+  module Accessor,
+  module Reexport
+) where
+
+import Engineering.Helpers.Accessor as Reexport
 
 import Prelude
 import Data.Lens (Lens', lens)
@@ -104,12 +109,6 @@ _geometry = lens (unwrap >>> _.geometry) (\oldRec newVal -> wrap ((unwrap oldRec
 
 _estimateFareBreakup :: forall a b c. Newtype a {estimateFareBreakup :: b | c } => Lens' a b
 _estimateFareBreakup = lens (unwrap >>> _.estimateFareBreakup) (\oldRec newVal -> wrap ((unwrap oldRec) { estimateFareBreakup = newVal }))
-
-_title :: forall a b c. Newtype a {title :: b | c } => Lens' a b
-_title = lens (unwrap >>> _.title) (\oldRec newVal -> wrap ((unwrap oldRec) { title = newVal }))
-
-_priceWithCurrency :: forall a b c. Newtype a {priceWithCurrency :: b | c } => Lens' a b
-_priceWithCurrency = lens (unwrap >>> _.priceWithCurrency) (\oldRec newVal -> wrap ((unwrap oldRec) { priceWithCurrency = newVal }))
 
 _totalFareRange :: forall a b c. Newtype a {totalFareRange :: b | c } => Lens' a b
 _totalFareRange = lens (unwrap >>> _.totalFareRange) (\oldRec newVal -> wrap ((unwrap oldRec) { totalFareRange = newVal }))

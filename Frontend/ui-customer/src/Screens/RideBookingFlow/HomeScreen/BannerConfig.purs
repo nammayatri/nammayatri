@@ -2,14 +2,14 @@ module Screens.RideBookingFlow.HomeScreen.BannerConfig where
 
 import Prelude
 
-import Common.Types.App (LazyCheck(..), ProviderType(..))
+import Common.Types.App (LazyCheck(..), ProviderType(..), City(..))
 import Language.Strings (getString)
 import PrestoDOM (Length(..), Margin(..), Padding(..))
 import Components.BannerCarousel as BannerCarousel
 import Data.Maybe (Maybe(..), isJust, fromMaybe)
 import Helpers.Utils (FetchImageFrom(..), fetchImage, getAssetLink, getCommonAssetLink, getMetroConfigFromCity, CityMetroConfig(..), getCityConfig)
 import Language.Types (STR(..))
-import Screens.Types (City, HomeScreenState)
+import Screens.Types (HomeScreenState)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
@@ -27,10 +27,10 @@ import DecodeUtil (getAnyFromWindow)
 
 getBannerConfigs :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
 getBannerConfigs state action =
-  (if state.props.city == ST.Chennai || state.props.city == ST.Kochi
+  (if state.props.city == Chennai || state.props.city == Kochi
   then [metroBannerConfig state action]
   else [])
-  <> (if state.data.config.banners.homeScreenCabLaunch && state.props.city == ST.Bangalore then [cabLaunchBannerConfig state action] else [])
+  <> (if state.data.config.banners.homeScreenCabLaunch && state.props.city == Bangalore then [cabLaunchBannerConfig state action] else [])
   <> (if state.data.config.feature.enableAdditionalServices || (cityConfig state).enableRentals
   then [checkoutRentalBannerConfig state action] 
   else [])

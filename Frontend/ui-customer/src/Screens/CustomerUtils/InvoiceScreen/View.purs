@@ -15,7 +15,7 @@
 module Screens.InvoiceScreen.View where
 
 import Animation as Anim
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), City(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
@@ -114,7 +114,7 @@ view push state =
 referenceList :: ST.InvoiceScreenState -> Array String
 referenceList state =
   let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-      nightChargeFrom = if city == ST.Delhi then "11 PM" else "10 PM"
+      nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
       nightChargeTill = "5 AM"
   in
   (if (state.data.selectedItem.nightCharges ) then [ "1.5" <> (getString $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill) ] else [])

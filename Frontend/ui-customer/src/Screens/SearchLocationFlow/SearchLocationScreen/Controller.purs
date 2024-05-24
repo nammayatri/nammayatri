@@ -69,6 +69,7 @@ import Language.Strings (getString)
 import Components.ChooseYourRide.Controller as ChooseYourRideController
 import Language.Types (STR(..))
 import Helpers.TipConfig
+import Common.Types.App (City(..))
 
 instance showAction :: Show Action where 
   show _ = ""
