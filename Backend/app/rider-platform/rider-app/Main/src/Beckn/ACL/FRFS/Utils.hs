@@ -25,6 +25,7 @@ import qualified Domain.Action.Beckn.FRFS.Common as Domain
 import Domain.Types (BknPaymentParams)
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicket as Ticket
+import qualified Domain.Types.FRFSTicketBooking as Booking
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
@@ -339,21 +340,21 @@ encodeToText' = A.decode . A.encode
 
 type TicketNumber = Text
 
-getTicketStatus :: (MonadFlow m) => DTicket -> m (TicketNumber, Ticket.FRFSTicketStatus)
-getTicketStatus dTicket = do
+getTicketStatus :: (MonadFlow m) => Booking.FRFSTicketBooking -> DTicket -> m (TicketNumber, Ticket.FRFSTicketStatus)
+getTicketStatus booking dTicket = do
   let validTill = dTicket.validTill
   now <- getCurrentTime
-
-  if now > validTill
+  ticketStatus <- castTicketStatus dTicket.status booking
+  if now > validTill && (ticketStatus /= Ticket.CANCELLED || ticketStatus /= Ticket.COUNTER_CANCELLED)
     then return (dTicket.ticketNumber, Ticket.EXPIRED)
-    else do
-      status <- castTicketStatus dTicket.status
-      return (dTicket.ticketNumber, status)
+    else return (dTicket.ticketNumber, ticketStatus)
 
-castTicketStatus :: (MonadFlow m) => Text -> m Ticket.FRFSTicketStatus
-castTicketStatus "UNCLAIMED" = return Ticket.ACTIVE
-castTicketStatus "CLAIMED" = return Ticket.USED
-castTicketStatus _ = throwError $ InternalError "Invalid ticket status"
+castTicketStatus :: MonadFlow m => Text -> Booking.FRFSTicketBooking -> m Ticket.FRFSTicketStatus
+castTicketStatus "UNCLAIMED" _ = return Ticket.ACTIVE
+castTicketStatus "CLAIMED" _ = return Ticket.USED
+castTicketStatus "CANCELLED" booking | booking.customerCancelled = return Ticket.CANCELLED
+castTicketStatus "CANCELLED" booking | not booking.customerCancelled = return Ticket.COUNTER_CANCELLED
+castTicketStatus _ _ = throwError $ InternalError "Invalid ticket status"
 
 data BppData = BppData
   { bppId :: Text,

@@ -5,6 +5,7 @@
 module Storage.Queries.FRFSRecon where
 
 import qualified Domain.Types.FRFSRecon
+import qualified Domain.Types.FRFSTicketBooking
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -21,6 +22,18 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSRecon.FRFSRecon] -> m ())
 createMany = traverse_ create
+
+updateTOrderValueAndSettlementAmountById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Common.Price -> Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateTOrderValueAndSettlementAmountById settlementAmount totalOrderValue (Kernel.Types.Id.Id frfsTicketBookingId) = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.settlementAmount ((.amount) settlementAmount),
+      Se.Set Beam.totalOrderValue ((.amount) totalOrderValue),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.frfsTicketBookingId $ Se.Eq frfsTicketBookingId]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSRecon.FRFSRecon -> m (Maybe Domain.Types.FRFSRecon.FRFSRecon))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
@@ -43,6 +56,8 @@ updateByPrimaryKey (Domain.Types.FRFSRecon.FRFSRecon {..}) = do
       Se.Set Beam.message message,
       Se.Set Beam.mobileNumber mobileNumber,
       Se.Set Beam.networkOrderId networkOrderId,
+      Se.Set Beam.providerId providerId,
+      Se.Set Beam.providerName providerName,
       Se.Set Beam.receiverSubscriberId receiverSubscriberId,
       Se.Set Beam.settlementAmount ((.amount) settlementAmount),
       Se.Set Beam.settlementDate settlementDate,
@@ -50,6 +65,7 @@ updateByPrimaryKey (Domain.Types.FRFSRecon.FRFSRecon {..}) = do
       Se.Set Beam.sourceStationCode sourceStationCode,
       Se.Set Beam.ticketNumber ticketNumber,
       Se.Set Beam.ticketQty ticketQty,
+      Se.Set Beam.ticketStatus ticketStatus,
       Se.Set Beam.time time,
       Se.Set Beam.totalOrderValue ((.amount) totalOrderValue),
       Se.Set Beam.transactionRefNumber transactionRefNumber,
@@ -81,6 +97,8 @@ instance FromTType' Beam.FRFSRecon Domain.Types.FRFSRecon.FRFSRecon where
             message = message,
             mobileNumber = mobileNumber,
             networkOrderId = networkOrderId,
+            providerId = providerId,
+            providerName = providerName,
             receiverSubscriberId = receiverSubscriberId,
             settlementAmount = Kernel.Types.Common.mkPrice currency settlementAmount,
             settlementDate = settlementDate,
@@ -88,6 +106,7 @@ instance FromTType' Beam.FRFSRecon Domain.Types.FRFSRecon.FRFSRecon where
             sourceStationCode = sourceStationCode,
             ticketNumber = ticketNumber,
             ticketQty = ticketQty,
+            ticketStatus = ticketStatus,
             time = time,
             totalOrderValue = Kernel.Types.Common.mkPrice currency totalOrderValue,
             transactionRefNumber = transactionRefNumber,
@@ -117,6 +136,8 @@ instance ToTType' Beam.FRFSRecon Domain.Types.FRFSRecon.FRFSRecon where
         Beam.message = message,
         Beam.mobileNumber = mobileNumber,
         Beam.networkOrderId = networkOrderId,
+        Beam.providerId = providerId,
+        Beam.providerName = providerName,
         Beam.receiverSubscriberId = receiverSubscriberId,
         Beam.settlementAmount = (.amount) settlementAmount,
         Beam.settlementDate = settlementDate,
@@ -124,6 +145,7 @@ instance ToTType' Beam.FRFSRecon Domain.Types.FRFSRecon.FRFSRecon where
         Beam.sourceStationCode = sourceStationCode,
         Beam.ticketNumber = ticketNumber,
         Beam.ticketQty = ticketQty,
+        Beam.ticketStatus = ticketStatus,
         Beam.time = time,
         Beam.totalOrderValue = (.amount) totalOrderValue,
         Beam.transactionRefNumber = transactionRefNumber,

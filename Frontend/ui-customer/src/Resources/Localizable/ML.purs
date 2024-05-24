@@ -1255,3 +1255,8 @@ getML stringKey =
         TOLL_CHARGES_DESCRIPTION -> "പ്രയോഗിക്കുന്ന ടോൾ ചാർജുകൾ അവസാന ഫെയർക്ക് ചേർക്കപ്പെടും"
         WILL_BE_ADDED_TO_FINAL_FARE -> "അവസാന ഫെയർക്ക് ചേർക്കപ്പെടും"
         EXTRA_DISTANCE_FARE -> "അധിക ദൂരം നിരക്ക്"
+        NETWORK_ERROR -> "നെറ്റ്‌വർക്ക് പിശക്"
+        SERVER_ERROR -> "സെർവർ തകരാർ"
+        UNKNOWN_ERROR -> "അജ്ഞാത പിശക്"
+        CONNECTION_REFUSED -> "കണക്ഷൻ നിരസിച്ചു"
+        TIMEOUT -> "ടൈം ഔട്ട്"

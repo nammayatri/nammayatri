@@ -18,45 +18,68 @@ import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import qualified Data.Aeson as A
 import qualified Domain.Action.Beckn.FRFS.Common as Domain
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Utils.Common
+import Tools.Error
 
 buildOnConfirmReq ::
   (MonadFlow m) =>
   Spec.OnConfirmReq ->
-  m Domain.DOrder
+  m (Maybe Domain.DOrder)
 buildOnConfirmReq onConfirmReq = do
   Utils.validateContext Spec.ON_CONFIRM onConfirmReq.onConfirmReqContext
-  transactionId <- onConfirmReq.onConfirmReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
-  messageId <- onConfirmReq.onConfirmReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
+  handleError onConfirmReq $ \message -> do
+    case parseData message of
+      Right (providerId, totalPrice, bppItemId, transactionId, bppOrderId, messageId, item, fulfillments, quoteBreakup, orderStatus) -> do
+        tickets <- Utils.parseTickets item fulfillments
+        fareBreakUp <- traverse Utils.mkFareBreakup quoteBreakup
+        let dOrder =
+              Domain.DOrder
+                { providerId = providerId,
+                  totalPrice,
+                  fareBreakUp = fareBreakUp,
+                  bppItemId,
+                  transactionId,
+                  orderStatus,
+                  bppOrderId,
+                  messageId,
+                  tickets
+                }
+        return $ Just dOrder
+      Left err -> throwError $ InvalidBecknSchema $ "on_confirm error:-" <> show err
+  where
+    parseData :: Spec.ConfirmReqMessage -> Either Text (Text, HighPrecMoney, Text, Text, Text, Text, Spec.Item, [Spec.Fulfillment], [Spec.QuotationBreakupInner], Maybe Spec.OrderStatus)
+    parseData message = do
+      transactionId <- onConfirmReq.onConfirmReqContext.contextTransactionId & maybe (Left "TransactionId not found") Right
+      messageId <- onConfirmReq.onConfirmReqContext.contextMessageId & maybe (Left "MessageId not found") Right
 
-  order <- onConfirmReq.onConfirmReqMessage <&> (.confirmReqMessageOrder) & fromMaybeM (InvalidRequest "Order not found")
-  providerId <- order.orderProvider >>= (.providerId) & fromMaybeM (InvalidRequest "Provider not found")
+      let order = message.confirmReqMessageOrder
+      providerId <- order.orderProvider >>= (.providerId) & maybe (Left "Provider not found") Right
 
-  item <- order.orderItems >>= listToMaybe & fromMaybeM (InvalidRequest "Item not found")
-  bppItemId <- item.itemId & fromMaybeM (InvalidRequest "BppItemId not found")
-  bppOrderId <- order.orderId & fromMaybeM (InvalidRequest "BppOrderId not found")
+      item <- order.orderItems >>= listToMaybe & maybe (Left "Item not found") Right
+      bppItemId <- item.itemId & maybe (Left "BppItemId not found") Right
+      bppOrderId <- order.orderId & maybe (Left "BppOrderId not found") Right
 
-  quotation <- order.orderQuote & fromMaybeM (InvalidRequest "Quotation not found")
-  quoteBreakup <- quotation.quotationBreakup & fromMaybeM (InvalidRequest "QuotationBreakup not found")
-  totalPrice <- quotation.quotationPrice >>= Utils.parseMoney & fromMaybeM (InvalidRequest "Invalid quotationPrice")
+      quotation <- order.orderQuote & maybe (Left "Quotation not found") Right
+      quoteBreakup <- quotation.quotationBreakup & maybe (Left "QuotationBreakup not found") Right
+      let orderStatus :: Maybe Spec.OrderStatus = A.decode $ A.encode orderStatus
+      totalPrice <- quotation.quotationPrice >>= Utils.parseMoney & maybe (Left "Invalid quotationPrice") Right
 
-  fareBreakUp <- traverse Utils.mkFareBreakup quoteBreakup
+      fulfillments <- order.orderFulfillments & maybe (Left "Fulfillments not found") Right
+      when (null fulfillments) $ Left "Empty fulfillments"
 
-  fulfillments <- order.orderFulfillments & fromMaybeM (InvalidRequest "Fulfillments not found")
-  when (null fulfillments) $ throwError $ InvalidRequest "Empty fulfillments"
-  tickets <- Utils.parseTickets item fulfillments
+      Right (providerId, totalPrice, bppItemId, transactionId, bppOrderId, messageId, item, fulfillments, quoteBreakup, orderStatus)
 
-  pure $
-    Domain.DOrder
-      { providerId = providerId,
-        totalPrice,
-        fareBreakUp = fareBreakUp,
-        bppItemId,
-        transactionId,
-        bppOrderId,
-        messageId,
-        tickets
-      }
+handleError ::
+  (MonadFlow m) =>
+  Spec.OnConfirmReq ->
+  (Spec.ConfirmReqMessage -> m (Maybe Domain.DOrder)) ->
+  m (Maybe Domain.DOrder)
+handleError req action = do
+  case req.onConfirmReqError of
+    Nothing -> req.onConfirmReqMessage & maybe (pure Nothing) action
+    Just err -> do
+      logTagError "on_confirm req" $ "on_confirm error:-" <> show err
+      pure Nothing

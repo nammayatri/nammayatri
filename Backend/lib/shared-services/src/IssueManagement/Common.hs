@@ -189,3 +189,9 @@ data MerchantConfig = MerchantConfig
     counterPartyUrl :: BaseUrl,
     counterPartyApiKey :: Text
   }
+
+data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE
+  deriving stock (Eq, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''IssueReportType)

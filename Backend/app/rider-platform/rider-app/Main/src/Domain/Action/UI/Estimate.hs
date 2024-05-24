@@ -47,6 +47,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     agencyCompletedRidesCount :: Int,
     tripTerms :: [Text],
     estimateFareBreakup :: [EstimateBreakupAPIEntity],
+    estimatedPickupDuration :: Maybe Seconds,
     nightShiftRate :: Maybe NightShiftRateAPIEntity, -- TODO: doesn't make sense, to be removed
     nightShiftInfo :: Maybe NightShiftInfoAPIEntity,
     tollChargesInfo :: Maybe TollChargesInfoAPIEntity,

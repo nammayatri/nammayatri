@@ -50,6 +50,7 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.ServiceTierType as DVST
+import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.Vehicle as Variant
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -989,8 +990,8 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       ..
     }
 
-mkGeneralInfoTagGroup :: Pricing -> Bool -> Maybe Spec.TagGroup
-mkGeneralInfoTagGroup pricing isValueAddNP
+mkGeneralInfoTagGroup :: DTC.TransporterConfig -> Pricing -> Bool -> Maybe Spec.TagGroup
+mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
   | isNothing pricing.specialLocationTag && isNothing pricing.distanceToNearestDriver = Nothing
   | otherwise =
     Just $
@@ -1009,6 +1010,7 @@ mkGeneralInfoTagGroup pricing isValueAddNP
               <> isCustomerPrefferedSearchRouteSingleton pricing.isCustomerPrefferedSearchRoute
               <> isBlockedRouteSingleton pricing.isBlockedRoute
               <> tollNamesSingleton pricing.tollNames
+              <> durationToNearestDriverTagSingleton
         }
   where
     specialLocationTagSingleton specialLocationTag
@@ -1086,6 +1088,46 @@ mkGeneralInfoTagGroup pricing isValueAddNP
                     },
               tagValue = show <$> tollNames
             }
+    durationToNearestDriverTagSingleton
+      | isNothing (pricing.distanceToNearestDriver) || not isValueAddNP = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.DURATION_TO_NEAREST_DRIVER_MINUTES,
+                      descriptorName = Just $ show pricing.vehicleVariant,
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = getDurationToNearestDriver (DTC.avgSpeedOfVehicle transporterConfig)
+            }
+      where
+        getDurationToNearestDriver :: Maybe DTC.AvgSpeedOfVechilePerKm -> Maybe Text
+        getDurationToNearestDriver avgSpeedOfVehicle = do
+          avgSpeed <- avgSpeedOfVehicle
+          let variantSpeed = case pricing.vehicleVariant of
+                Variant.SEDAN -> avgSpeed.sedan.getKilometers
+                Variant.SUV -> avgSpeed.suv.getKilometers
+                Variant.HATCHBACK -> avgSpeed.hatchback.getKilometers
+                Variant.AUTO_RICKSHAW -> avgSpeed.autorickshaw.getKilometers
+                Variant.BIKE -> avgSpeed.bike.getKilometers
+                Variant.TAXI -> avgSpeed.taxi.getKilometers
+                Variant.TAXI_PLUS -> avgSpeed.taxiplus.getKilometers
+          getDuration pricing.distanceToNearestDriver variantSpeed
+
+        getDuration :: Maybe Meters -> Int -> Maybe Text
+        getDuration distance avgSpeed
+          | avgSpeed <= 0 = Nothing
+          -- lets return 60 seconds in case distance is 0
+          | distance == Just 0 = Just "60"
+          | otherwise = do
+            distance' <- distance
+            let distanceInMeters = realToFrac @_ @Double distance'
+                avgSpeedInMetersPerSec = realToFrac @_ @Double (avgSpeed * 5) / 18
+                estimatedTimeTakenInSeconds :: Int = ceiling $ (distanceInMeters / avgSpeedInMetersPerSec)
+            Just $ show estimatedTimeTakenInSeconds
 
 mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.TagGroup]
 mkRateCardTag estimatedDistance tollCharges farePolicy = do

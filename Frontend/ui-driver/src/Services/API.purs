@@ -1167,6 +1167,7 @@ newtype DriverProfileStatsResp = DriverProfileStatsResp
     , bonusEarning :: Int
     , coinBalance :: Int
     , totalEarningsOfDayPerKm :: Maybe Int
+    , totalValidRidesOfDay :: Maybe Int
     }
 
 instance makeGetDriverProfileStatsReq :: RestEndpoint DriverProfileStatsReq DriverProfileStatsResp where
@@ -4599,6 +4600,30 @@ instance makeDriverVehicleServiceTierReq :: RestEndpoint DriverVehicleServiceTie
   makeRequest reqBody headers = defaultMakeRequest GET (EP.driverVehicleServiceTier "") headers reqBody Nothing
   decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
+  
+data RideStatusPastDaysReq = RideStatusPastDaysReq
+
+newtype RideStatusPastDaysRes = RideStatusPastDaysRes {
+  rideCountPopupValue :: Boolean
+}
+
+instance makeRideStatusPastDaysReq :: RestEndpoint RideStatusPastDaysReq RideStatusPastDaysRes where
+    makeRequest reqBody headers = defaultMakeRequest GET (EP.getRideStatusPastDays "") headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+derive instance genericRideStatusPastDaysReq :: Generic RideStatusPastDaysReq _
+instance showRideStatusPastDaysReq :: Show RideStatusPastDaysReq where show = genericShow
+instance decodeRideStatusPastDaysReq :: Decode RideStatusPastDaysReq where decode = defaultDecode
+instance encodeRideStatusPastDaysReq :: Encode RideStatusPastDaysReq where encode = defaultEncode
+instance standardEncodeRideStatusPastDaysReq :: StandardEncode RideStatusPastDaysReq where standardEncode body = standardEncode {}
+
+derive instance genericRideStatusPastDaysRes :: Generic RideStatusPastDaysRes _
+derive instance newtypeRideStatusPastDaysRes :: Newtype RideStatusPastDaysRes _
+instance standardEncodeRideStatusPastDaysRes :: StandardEncode RideStatusPastDaysRes where standardEncode (RideStatusPastDaysRes res) = standardEncode res
+instance showRideStatusPastDaysRes :: Show RideStatusPastDaysRes where show = genericShow
+instance decodeRideStatusPastDaysRes :: Decode RideStatusPastDaysRes where decode = defaultDecode
+instance encodeRideStatusPastDaysRes :: Encode RideStatusPastDaysRes where encode = defaultEncode
 
 newtype UpdateAirConditionUpdateRequest = UpdateAirConditionUpdateRequest {
   isAirConditioned :: Boolean

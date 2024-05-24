@@ -20,6 +20,7 @@ imports:
   Currency: Kernel.Types.Common
   showBaseUrl: Kernel.Prelude
   Distance: Kernel.Types.Common
+  Minutes: Kernel.Types.Common
   Version: Kernel.Types.Version
   Device : Kernel.Types.Version
   DeviceType: Kernel.Types.Version
@@ -63,6 +64,7 @@ Quote:
     estimatedFare : Price
     discount : Maybe Price
     estimatedTotalFare : Price
+    estimatedPickupDuration : Maybe Seconds
     providerId : Text
     providerUrl : BaseUrl
     itemId : Text
@@ -170,7 +172,7 @@ Quote:
     estimatedFare: numeric(30,10)
     discount: numeric(30,2)
     estimatedTotalFare: numeric(30,2)
-
+    estimatedPickupDuration: integer
     providerId: character varying(255)
     vehicle_variant: character varying(60)
     distanceToNearestDriver: double precision

@@ -74,6 +74,8 @@ import Mobility.Prelude (boolToVisibility)
 import Constants 
 import LocalStorage.Cache (getValueFromCache)
 import Engineering.Helpers.Utils (getFixedTwoDecimals)
+import Common.Resources.Constants
+import Helpers.Utils
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -1944,9 +1946,19 @@ bgLocPopup state =
       cornerRadius = PTD.Corners 15.0 true true true true,
       coverImageConfig {
         imageUrl = fetchImage FF_ASSET "ny_ic_bgloc"
-      , visibility = VISIBLE
+      , visibility = GONE
       , width = V 300
       , height = V 315
+      }
+    , coverLottie{
+        visibility = VISIBLE
+      , id = EHC.getNewIDWithTag "bgLocLottie"
+      , height =V 300
+      , width = V 300
+      , config{
+          rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/" <>  (if state.data.config.appData.name =="Mana Yatri" then "enable_locatio_permission_lottie_manayatri" else "enable_locatio_permission_lottie") <> ".json"
+        , lottieId = EHC.getNewIDWithTag "bgLocLottie"
+        }
       }
     }
   
@@ -2006,6 +2018,146 @@ introducingCoinsPopup state = PopUpModal.config {
     },
   dismissPopup = false
     }
+
+coinEarnedPopup :: ST.HomeScreenState -> PopUpModal.Config
+coinEarnedPopup state =
+  let
+    popupConfig = getCoinEarnedPopupConfig state
+  in
+    PopUpModal.config
+      { cornerRadius = Corners 15.0 true true true true
+      , margin = MarginHorizontal 16 16
+      , padding = Padding 16 16 16 16
+      , gravity = CENTER
+      , backgroundColor = Color.black9000
+      , backgroundClickable = true
+      , buttonLayoutMargin = MarginBottom 0
+      , primaryText
+        { text = popupConfig.primaryText
+        , margin = Margin 16 16 16 0
+        , visibility = VISIBLE
+        , color = Color.black800
+        , textStyle = Heading2
+        }
+      , option1
+        { text = popupConfig.option1
+        , color = Color.yellow900
+        , background = Color.black900
+        , visibility = true
+        , margin = MarginTop 16
+        , width = MATCH_PARENT
+        }
+      , coverImageConfig
+        { imageUrl = popupConfig.coverImageConfig
+        , visibility = boolToVisibility (popupConfig.coverImageConfig /= "")
+        , width = MATCH_PARENT
+        , height = V 210
+        }
+      , coverLottieConfig
+        { lottieUrl = popupConfig.coverLottieConfig
+        , width = MATCH_PARENT
+        , height = V 210
+        , visibility = boolToVisibility (popupConfig.coverLottieConfig /= "")
+        , id = (EHC.getNewIDWithTag "PopupLottieView")
+        }
+      , option2 { visibility = false }
+      , secondaryText
+        { text = popupConfig.secondaryText
+        , color = Color.black700
+        , margin = Margin 16 4 16 0
+        , textStyle = SubHeading2
+        , visibility = boolToVisibility popupConfig.secondaryTextVisibility 
+        },
+      optionWithHtml {
+        textOpt1 {
+          color = Color.black650
+          , text = popupConfig.optionWithHtml
+          , textStyle = SubHeading2
+          , visibility = VISIBLE
+        }
+        , strokeColor = Color.white900
+        , margin = MarginHorizontal 16 16
+        , background = Color.white900
+        , visibility = popupConfig.optionWithHtmlVisibility
+        , isClickable = true
+      }
+      , dismissPopup = true
+      }
+
+type CoinEarnedPopupConfig = 
+  { primaryText :: String
+  , secondaryText :: String
+  , secondaryTextVisibility :: Boolean
+  , option1 :: String
+  , optionWithHtml :: String
+  , optionWithHtmlVisibility :: Boolean
+  , coverImageConfig :: String
+  , coverLottieConfig :: String
+  }
+
+getCoinEarnedPopupConfig :: ST.HomeScreenState -> CoinEarnedPopupConfig
+getCoinEarnedPopupConfig state = case state.props.coinPopupType of
+  ST.RIDE_MORE_EARN_COIN ->
+    { primaryText: getString RIDE_MORE_AND_EARN_COINS
+    , secondaryText: getString TAKE_MORE_RIDES_TO_EARN_MORE_COINS_AND_CONVERT_IT_TO_SUBSCRIPTION_DISCOUNTS
+    , secondaryTextVisibility: true
+    , option1: getString OKAY
+    , optionWithHtml: getString CHECK_YATRI_COINS
+    , optionWithHtmlVisibility: true
+    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_ride_more_earn_more"
+    , coverLottieConfig: ""
+    }
+  ST.TWO_MORE_RIDES ->
+    { primaryText: getString TWO_MORE_RIDES_TO_GO
+    , secondaryText: getString $ TAKE_TWO_MORE_RIDES_TO_EARN_COINS $ state.data.config.coinsConfig.eightPlusRidesCoins
+    , secondaryTextVisibility: true
+    , option1: getString OKAY
+    , optionWithHtml: ""
+    , optionWithHtmlVisibility: false
+    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_two_more_rides"
+    , coverLottieConfig: ""
+    }
+  ST.ONE_MORE_RIDE ->
+    { primaryText: getString ONE_MORE_RIDE_TO_GO
+    , secondaryText: getString $ TAKE_ONE_MORE_RIDE_TO_EARN_COINS $ state.data.config.coinsConfig.eightPlusRidesCoins
+    , secondaryTextVisibility: true
+    , option1: getString OKAY
+    , optionWithHtml: ""
+    , optionWithHtmlVisibility: false
+    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_one_more_ride"
+    , coverLottieConfig: ""
+    }
+  ST.EIGHT_RIDE_COMPLETED ->
+    { primaryText: getString CONGRATULATIONS <> "🎉"
+    , secondaryText: getString $ YOU_HAVE_EARNED_COINS_FOR_COMPLETING_EIGHT_RIDES $ state.data.config.coinsConfig.eightPlusRidesCoins 
+    , secondaryTextVisibility: true
+    , option1: getString OKAY
+    , optionWithHtml: getString CHECK_YATRI_COINS
+    , optionWithHtmlVisibility: true
+    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_eight_rides_completed"
+    , coverLottieConfig: ""
+    }
+  ST.REFER_AND_EARN_COIN -> 
+    { primaryText: getString $ REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_COINS "REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_COINS"
+    , secondaryText: ""
+    , secondaryTextVisibility: false
+    , option1: getString REFER_NOW
+    , optionWithHtml: getString LATER
+    , optionWithHtmlVisibility: true
+    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_refer_and_earn_coin"
+    , coverLottieConfig: ""
+    }
+  ST.CONVERT_COINS_TO_CASH -> 
+    { primaryText: getString CONVERT_YOUR_COINS_TO_DISCOUNT
+    , secondaryText: getString CONVERT_YOUR_COINS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION
+    , secondaryTextVisibility: true
+    , option1: getString CONVERT_NOW
+    , optionWithHtml: getString LATER
+    , optionWithHtmlVisibility: true
+    , coverImageConfig: ""
+    , coverLottieConfig: state.data.config.coinsConfig.coinConversionPopupLottie
+    }
+  _ -> { primaryText: "", secondaryText: "", secondaryTextVisibility: false, option1: "", optionWithHtml: "", optionWithHtmlVisibility: false, coverImageConfig: HU.fetchImage HU.FF_ASSET "", coverLottieConfig: ""}
 
 isAcWorkingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 isAcWorkingPopupConfig state = PopUpModal.config {

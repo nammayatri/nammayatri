@@ -34,6 +34,7 @@ data QuoteT f = QuoteT
     rentalDetailsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialZoneQuoteId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
+    estimatedPickupDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedTotalFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     id :: B.C f Kernel.Prelude.Text,
     isBlockedRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

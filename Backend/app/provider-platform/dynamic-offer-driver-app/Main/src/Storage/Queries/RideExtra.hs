@@ -37,7 +37,6 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
 import Kernel.Prelude hiding (foldl', map)
-import Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -52,8 +51,6 @@ import qualified Storage.Beam.RideDetails as BeamRD
 import qualified Storage.Beam.RiderDetails as BeamRDR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.Clickhouse.Ride (getCompletedRidesByDriver, getEarningsByDriver, getEarningsByIds, getRidesByIdAndStatus)
-import Storage.Clickhouse.RideDetails (findIdsByFleetOwner, findIdsByFleetOwnerAndVehicle)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
@@ -612,53 +609,3 @@ findTotalRidesInDay (Id driverId) time = do
           Se.Is BeamR.driverId $ Se.Eq driverId
         ]
     ]
-
-totalRidesByFleetOwner :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> m Int
-totalRidesByFleetOwner fleetOwnerId = do
-  rideIds <- findIdsByFleetOwner fleetOwnerId
-  pure $ length rideIds
-
-totalEarningsByFleetOwner :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> m Int
-totalEarningsByFleetOwner fleetOwnerId = do
-  rideIds <- findIdsByFleetOwner fleetOwnerId
-  getEarningsByIds (cast <$> rideIds)
-
-totalRidesCompletedInFleet :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> m Int
-totalRidesCompletedInFleet fleetOwnerId = do
-  rideIds <- findIdsByFleetOwner fleetOwnerId
-  getRidesByIdAndStatus (cast <$> rideIds) DRide.COMPLETED
-
-totalRidesCancelledInFleet :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> m Int
-totalRidesCancelledInFleet fleetOwnerId = do
-  rideIds <- findIdsByFleetOwner fleetOwnerId
-  getRidesByIdAndStatus (cast <$> rideIds) DRide.CANCELLED
-
-totalEarningsByFleetOwnerPerVehicle :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Text -> m Int
-totalEarningsByFleetOwnerPerVehicle fleetOwnerId vehicleNumber = do
-  rideIds <- findIdsByFleetOwnerAndVehicle fleetOwnerId vehicleNumber
-  getEarningsByIds (cast <$> rideIds)
-
-totalEarningsByFleetOwnerPerDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Id Person -> m Int
-totalEarningsByFleetOwnerPerDriver fleetOwnerId driverId = do
-  rideIds <- findIdsByFleetOwner fleetOwnerId
-  getEarningsByDriver (cast <$> rideIds) driverId
-
-totalRidesByFleetOwnerPerVehicle :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Text -> m Int
-totalRidesByFleetOwnerPerVehicle fleetOwnerId vehicleNumber = do
-  rideIds <- findIdsByFleetOwnerAndVehicle fleetOwnerId vehicleNumber
-  getRidesByIdAndStatus (cast <$> rideIds) DRide.COMPLETED
-
-totalRidesByFleetOwnerPerDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Id Person -> m Int
-totalRidesByFleetOwnerPerDriver fleetOwnerId driverId = do
-  rideIds <- findIdsByFleetOwner fleetOwnerId
-  getCompletedRidesByDriver (cast <$> rideIds) driverId
-
-totalRidesByFleetOwnerPerVehicleAndDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Text -> Id Person -> m Int
-totalRidesByFleetOwnerPerVehicleAndDriver fleetOwnerId vehicleNumber driverId = do
-  rideIds <- findIdsByFleetOwnerAndVehicle fleetOwnerId vehicleNumber
-  getCompletedRidesByDriver (cast <$> rideIds) driverId
-
-totalEarningsByFleetOwnerPerVehicleAndDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Text -> Id Person -> m Int
-totalEarningsByFleetOwnerPerVehicleAndDriver fleetOwnerId vehicleNumber driverId = do
-  rideIds <- findIdsByFleetOwnerAndVehicle fleetOwnerId vehicleNumber
-  getEarningsByDriver (cast <$> rideIds) driverId

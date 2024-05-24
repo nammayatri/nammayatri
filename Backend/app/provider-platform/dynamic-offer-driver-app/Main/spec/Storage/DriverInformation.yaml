@@ -73,6 +73,7 @@ DriverInformation:
     acRestrictionLiftCount: Int
     lastACStatusCheckedAt: Maybe UTCTime
     hasAdvanceBooking: Bool
+    tollRelatedIssueCount: Maybe Int
 
   default:
     active: "false"
@@ -180,4 +181,8 @@ DriverInformation:
     updateLastACStatusCheckedAt:
       kvFunction: updateOneWithKV
       params: [lastACStatusCheckedAt]
+      where: driverId
+    updateTollRelatedIssueCount:
+      kvFunction: updateOneWithKV
+      params : [tollRelatedIssueCount]
       where: driverId

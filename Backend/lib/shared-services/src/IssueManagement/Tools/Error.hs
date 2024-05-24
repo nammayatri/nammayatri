@@ -21,7 +21,7 @@ import Kernel.Types.Error.BaseError.HTTPError
 
 data IssueReportError
   = IssueReportDoNotExist Text
-  | ACRelatedIssueReportAlreadyExists Text
+  | IssueReportAlreadyExists Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''IssueReportError
@@ -29,13 +29,13 @@ instanceExceptionWithParent 'HTTPException ''IssueReportError
 instance IsBaseError IssueReportError where
   toMessage = \case
     IssueReportDoNotExist issueReportId -> Just $ "IssueReport with issueReportId \"" <> show issueReportId <> "\" do not exist."
-    ACRelatedIssueReportAlreadyExists rideId -> Just $ "An AC related issue report already exists for the provided rideId -  \"" <> show rideId
+    IssueReportAlreadyExists rideId -> Just $ "An issue report already exists for the selected category and rideId: " <> show rideId
 
 instance IsHTTPError IssueReportError where
   toErrorCode (IssueReportDoNotExist _) = "ISSUE_REPORT_DO_NOT_EXIST"
-  toErrorCode (ACRelatedIssueReportAlreadyExists _) = "AC_RELATED_ISSUE_REPORT_ALREADY_EXISTS"
+  toErrorCode (IssueReportAlreadyExists _) = "ISSUE_REPORT_ALREADY_EXISTS"
   toHttpCode (IssueReportDoNotExist _) = E400
-  toHttpCode (ACRelatedIssueReportAlreadyExists _) = E400
+  toHttpCode (IssueReportAlreadyExists _) = E400
 
 instance IsAPIError IssueReportError
 

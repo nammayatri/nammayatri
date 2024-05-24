@@ -235,6 +235,21 @@ getCategoryFromVariant variant = case variant of
   "AUTO_RICKSHAW" -> Just ST.AutoCategory
   _ -> Just ST.CarCategory
 
+rideMoreEarnMorePopupStartTime :: String
+rideMoreEarnMorePopupStartTime = "07:30:00"
+
+referAndEarnCoinPopupStartTime :: String
+referAndEarnCoinPopupStartTime = "07:30:00"
+
+convertCoinToCashPopupStartTime :: String
+convertCoinToCashPopupStartTime = "12:30:00"
+
+convertCoinsToCashPopupEndTime :: String
+convertCoinsToCashPopupEndTime = "16:30:00"
+
+dayEndTime :: String
+dayEndTime = "23:59:59"
+
 serviceTierMapping :: String -> Maybe Boolean -> String
 serviceTierMapping tierName acRide = 
   case acRide, tierName of

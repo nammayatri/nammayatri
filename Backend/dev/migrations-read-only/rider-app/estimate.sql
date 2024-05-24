@@ -56,3 +56,8 @@ ALTER TABLE atlas_app.estimate ADD COLUMN toll_names text[] ;
 ALTER TABLE atlas_app.estimate ADD COLUMN toll_charges double precision ;
 ALTER TABLE atlas_app.estimate ADD COLUMN is_customer_preffered_search_route boolean ;
 ALTER TABLE atlas_app.estimate ADD COLUMN is_blocked_route boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN estimated_pickup_duration integer ;

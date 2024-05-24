@@ -42,3 +42,10 @@ ALTER TABLE atlas_app.frfs_recon ADD COLUMN transaction_uuid text ;
 
 ALTER TABLE atlas_app.frfs_recon ADD COLUMN currency text ;
 ALTER TABLE atlas_app.frfs_recon ADD COLUMN txn_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_recon ADD COLUMN ticket_status text ;
+ALTER TABLE atlas_app.frfs_recon ADD COLUMN provider_name text NOT NULL;
+ALTER TABLE atlas_app.frfs_recon ADD COLUMN provider_id text NOT NULL;

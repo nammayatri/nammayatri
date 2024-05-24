@@ -43,7 +43,7 @@ import Tools.Auth.Merchant
 
 type API =
   "ride"
-    :> ( ShareRideInfoAPI
+    :> ( Common.ShareRideInfoAPI
            :<|> Common.ShareRideInfoByShortIdAPI
            :<|> RideListAPI
            :<|> TripRouteAPI
@@ -56,10 +56,6 @@ type API =
 type RideListAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'RIDE_LIST
     :> Common.RideListAPI
-
-type ShareRideInfoAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'SHARE_RIDE_INFO
-    :> Common.ShareRideInfoAPI
 
 type TripRouteAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'TRIP_ROUTE
@@ -110,10 +106,9 @@ buildTransaction endpoint apiTokenInfo =
 shareRideInfo ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
   Id Common.Ride ->
   FlowHandler Common.ShareRideInfoRes
-shareRideInfo merchantShortId opCity _ rideId = withFlowHandlerAPI' $ do
+shareRideInfo merchantShortId opCity rideId = withFlowHandlerAPI' $ do
   shareRideApiRateLimitOptions <- asks (.shareRideApiRateLimitOptions)
   checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey $ getId rideId) shareRideApiRateLimitOptions
   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity

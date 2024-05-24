@@ -40,6 +40,7 @@ import Servant.Multipart
 import SharedLogic.DriverOnboarding
 import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CFQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.FleetRCAssociationExtra as FRCA
@@ -147,12 +148,19 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
 
   imagePath <- createPath personId.getId merchantId.getId imageType
   void $ fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
-  imageEntity <- mkImage personId merchantId imagePath imageType False mbRcId -- is valid is false when making image
+  imageEntity <- mkImage personId merchantId imagePath imageType mbRcId
   Query.create imageEntity
 
   -- skipping validation for rc as validation not available in idfy
-  docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe Vehicle.CAR vehicleCategory)
-  if maybe True (.isImageValidationRequired) docConfigs
+  isImageValidationRequired <- case person.role of
+    Person.FLEET_OWNER -> do
+      --------------- Image validation for fleet
+      docConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType
+      return $ maybe True (.isImageValidationRequired) docConfigs
+    _ -> do
+      docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe Vehicle.CAR vehicleCategory)
+      return $ maybe True (.isImageValidationRequired) docConfigs
+  if isImageValidationRequired
     then do
       validationOutput <-
         Verification.validateImage merchantId merchantOpCityId $
@@ -197,10 +205,9 @@ mkImage ::
   Id DM.Merchant ->
   Text ->
   DVC.DocumentType ->
-  Bool ->
   Maybe (Id DVRC.VehicleRegistrationCertificate) ->
   m Domain.Image
-mkImage personId_ merchantId s3Path documentType_ isValid mbRcId = do
+mkImage personId_ merchantId s3Path documentType_ mbRcId = do
   id <- generateGUID
   now <- getCurrentTime
   return $
@@ -210,7 +217,6 @@ mkImage personId_ merchantId s3Path documentType_ isValid mbRcId = do
         merchantId,
         s3Path,
         imageType = documentType_,
-        isValid,
         verificationStatus = Just Documents.PENDING,
         failureReason = Nothing,
         rcId = getId <$> mbRcId,

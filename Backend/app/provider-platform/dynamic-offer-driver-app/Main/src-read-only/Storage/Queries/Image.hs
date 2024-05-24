@@ -12,7 +12,6 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Documents
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -51,13 +50,6 @@ findImagesByPersonAndType (Kernel.Types.Id.Id merchantId) (Kernel.Types.Id.Id pe
         ]
     ]
 
-updateIsValidAndFailureReason ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Tools.Error.DriverOnboardingError -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
-updateIsValidAndFailureReason isValid failureReason (Kernel.Types.Id.Id id) = do
-  _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.isValid isValid, Se.Set Beam.failureReason failureReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
-
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.Image.Image))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
@@ -67,7 +59,6 @@ updateByPrimaryKey (Domain.Types.Image.Image {..}) = do
   updateWithKV
     [ Se.Set Beam.failureReason failureReason,
       Se.Set Beam.imageType imageType,
-      Se.Set Beam.isValid isValid,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.rcId rcId,

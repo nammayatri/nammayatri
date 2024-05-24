@@ -171,6 +171,12 @@ getTollNames item = do
   parsedTagValue <- readMaybe tagValueStr :: Maybe [Text]
   return parsedTagValue
 
+getestimatedPickupDuration :: Spec.Item -> Maybe Seconds
+getestimatedPickupDuration item = do
+  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.DURATION_TO_NEAREST_DRIVER_MINUTES item.itemTags
+  parsedTagValue <- readMaybe tagValueStr :: Maybe Seconds
+  return parsedTagValue
+
 buildNightShiftInfo :: Spec.Item -> Currency -> Maybe OnSearch.NightShiftInfo
 buildNightShiftInfo item currency = do
   let itemTags = item.itemTags

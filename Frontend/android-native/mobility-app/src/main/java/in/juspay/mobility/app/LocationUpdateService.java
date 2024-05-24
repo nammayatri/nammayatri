@@ -228,7 +228,6 @@ public class LocationUpdateService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         /* Start the service if the driver is active*/
-        Log.i("LOCATION_UPDATE_WORKER", "Location update service is started");
         try{
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 startForeground(notificationServiceId, createNotification());

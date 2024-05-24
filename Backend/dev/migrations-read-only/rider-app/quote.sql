@@ -47,3 +47,8 @@ ALTER TABLE atlas_app.quote ADD COLUMN is_blocked_route boolean ;
 
 ALTER TABLE atlas_app.quote ADD COLUMN toll_names text[] ;
 ALTER TABLE atlas_app.quote ADD COLUMN toll_charges double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN estimated_pickup_duration integer ;

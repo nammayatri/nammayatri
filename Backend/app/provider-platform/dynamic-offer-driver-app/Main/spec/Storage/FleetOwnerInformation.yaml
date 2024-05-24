@@ -13,6 +13,7 @@ FleetOwnerInformation:
     verified: Bool
     gstNumber: Maybe Text
     fleetType: FleetType
+    gstImageId : Maybe Text
   excludedFields: [merchantOperatingCityId]
   types:
     FleetType:
@@ -25,6 +26,10 @@ FleetOwnerInformation:
     updateFleetOwnerVerifiedStatus:
       kvFunction: updateWithKV
       params: [verified, updatedAt]
+      where: fleetOwnerPersonId
+    updateGstImageId:
+      kvFunction: updateWithKV
+      params: [gstImageId, updatedAt]
       where: fleetOwnerPersonId
     updateFleetOwnerGstNumberAndEnabledStatus:
       kvFunction: updateWithKV

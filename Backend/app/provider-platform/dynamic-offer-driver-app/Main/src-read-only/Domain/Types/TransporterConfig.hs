@@ -92,6 +92,8 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     enableUdfForOffers :: Kernel.Prelude.Bool,
     fakeOtpEmails :: [Kernel.Prelude.Text],
     fakeOtpMobileNumbers :: [Kernel.Prelude.Text],
+    fareRecomputeDailyExtraKmsThreshold :: Kernel.Types.Common.HighPrecMeters,
+    fareRecomputeWeeklyExtraKmsThreshold :: Kernel.Types.Common.HighPrecMeters,
     fcmConfig :: Kernel.External.Notification.FCM.Types.FCMConfig,
     freeTrialDays :: Kernel.Prelude.Int,
     includeDriverCurrentlyOnRide :: Kernel.Prelude.Bool,

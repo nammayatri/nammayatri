@@ -14,6 +14,7 @@ import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 
+-- Deprecated (Replaced By ReportIssue API)
 type API =
   Capture "rideId" (Id Ride)
     :> "reportACIssue"

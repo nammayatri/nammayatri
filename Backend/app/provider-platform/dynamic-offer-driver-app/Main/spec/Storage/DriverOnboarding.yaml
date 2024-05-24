@@ -292,7 +292,6 @@ Image:
     merchantId: Id Merchant
     s3Path: Text
     imageType: DocumentType
-    isValid: Bool
     failureReason: Maybe DriverOnboardingError
     rcId: Maybe Text
     verificationStatus: Maybe VerificationStatus
@@ -318,10 +317,6 @@ Image:
     deleteByPersonId:
       kvFunction: deleteWithKV
       where: personId
-    updateIsValidAndFailureReason:
-      kvFunction: updateWithKV
-      params: [isValid, failureReason]
-      where: id
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -342,7 +337,7 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix"
   fields:
@@ -573,9 +568,12 @@ FleetOwnerDocumentVerificationConfig:
     disableWarning: Maybe Text
     isHidden: Bool
     dependencyDocumentType: '[DocumentType]'
+    isDefaultEnabledOnManualVerification: Bool
+    isImageValidationRequired: Bool
     checkExtraction: Bool
     checkExpiry: Bool
     maxRetryCount: Int
+    doStrictVerifcation: Bool
     order: Int
   default:
     order: "0"

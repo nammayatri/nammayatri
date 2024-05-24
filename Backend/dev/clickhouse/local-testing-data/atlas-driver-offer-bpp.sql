@@ -93,39 +93,45 @@ INSERT INTO
     atlas_driver_offer_bpp.ride_details (
         id,
         vehicle_number,
-        fleet_owner_id
+        fleet_owner_id,
+        created_at
     )
 VALUES
     (
         '1119bb0b-b012-4d1a-abed-32555212e111',
         'KA01HA0001',
-        '3680f4b5-dce4-4d03-aa8c-5405690e87bd'
+        '3680f4b5-dce4-4d03-aa8c-5405690e87bd',
+        '2024-01-22 07:02:42'
     );
 
 INSERT INTO
     atlas_driver_offer_bpp.ride_details (
         id,
         vehicle_number,
-        fleet_owner_id
+        fleet_owner_id,
+        created_at
     )
 VALUES
     (
         '2229bb0b-b012-4d1a-abed-32555212e222',
         'KA01HA0001',
-        '3680f4b5-dce4-4d03-aa8c-5405690e87bd'
+        '3680f4b5-dce4-4d03-aa8c-5405690e87bd',
+        '2024-01-22 07:02:42'
     );
 
 INSERT INTO
     atlas_driver_offer_bpp.ride_details (
         id,
         vehicle_number,
-        fleet_owner_id
+        fleet_owner_id,
+        created_at
     )
 VALUES
     (
         '3339bb0b-b012-4d1a-abed-32555212e333',
         'KA01HA0001',
-        '3680f4b5-dce4-4d03-aa8c-5405690e87bd'
+        '3680f4b5-dce4-4d03-aa8c-5405690e87bd',
+        '2024-01-22 07:02:42'
     );
 
 INSERT INTO
@@ -133,14 +139,20 @@ INSERT INTO
         id,
         status,
         fare,
-        driver_id
+        driver_id,
+        chargeable_distance,
+        created_at,
+        updated_at
     )
 VALUES
     (
         '3339bb0b-b012-4d1a-abed-32555212e333',
         'COMPLETED',
         '352',
-        'abcdbb0b-b012-4d1a-abed-32555212e213'
+        'abcdbb0b-b012-4d1a-abed-32555212e213',
+        '352',
+        '2024-01-22 07:02:42',
+        '2024-01-22 07:02:42'
     );
 
 INSERT INTO
@@ -148,14 +160,20 @@ INSERT INTO
         id,
         status,
         fare,
-        driver_id
+        driver_id,
+        chargeable_distance,
+        created_at,
+        updated_at
     )
 VALUES
     (
         '2229bb0b-b012-4d1a-abed-32555212e222',
         'COMPLETED',
         '247',
-        'abcdbb0b-b012-4d1a-abed-32555212e213'
+        'abcdbb0b-b012-4d1a-abed-32555212e213',
+        '248',
+        '2024-01-22 07:02:42',
+        '2024-01-22 07:02:42'
     );
 
 INSERT INTO
@@ -163,12 +181,20 @@ INSERT INTO
         id,
         status,
         fare,
-        driver_id
+        driver_id,
+        chargeable_distance,
+        created_at,
+        updated_at
     )
 VALUES
     (
         '1119bb0b-b012-4d1a-abed-32555212e111',
         'CANCELLED',
         '102',
-        'abcdbb0b-b012-4d1a-abed-32555212e213'
+        'abcdbb0b-b012-4d1a-abed-32555212e213',
+        '102',
+        '2024-01-22 07:02:42',
+        '2024-01-22 07:02:42'
     );
+
+

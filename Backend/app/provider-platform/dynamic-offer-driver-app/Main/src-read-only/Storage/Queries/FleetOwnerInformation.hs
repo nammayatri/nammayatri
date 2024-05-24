@@ -34,6 +34,11 @@ updateFleetOwnerVerifiedStatus verified (Kernel.Types.Id.Id fleetOwnerPersonId) 
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.verified verified, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq fleetOwnerPersonId]
 
+updateGstImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateGstImageId gstImageId (Kernel.Types.Id.Id fleetOwnerPersonId) = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.gstImageId gstImageId, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq fleetOwnerPersonId]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.FleetOwnerInformation.FleetOwnerInformation))
 findByPrimaryKey (Kernel.Types.Id.Id fleetOwnerPersonId) = do findOneWithKV [Se.And [Se.Is Beam.fleetOwnerPersonId $ Se.Eq fleetOwnerPersonId]]
 
@@ -44,6 +49,7 @@ updateByPrimaryKey (Domain.Types.FleetOwnerInformation.FleetOwnerInformation {..
     [ Se.Set Beam.blocked blocked,
       Se.Set Beam.enabled enabled,
       Se.Set Beam.fleetType fleetType,
+      Se.Set Beam.gstImageId gstImageId,
       Se.Set Beam.gstNumber gstNumber,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.verified verified,
@@ -61,6 +67,7 @@ instance FromTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformatio
             enabled = enabled,
             fleetOwnerPersonId = Kernel.Types.Id.Id fleetOwnerPersonId,
             fleetType = fleetType,
+            gstImageId = gstImageId,
             gstNumber = gstNumber,
             merchantId = Kernel.Types.Id.Id merchantId,
             verified = verified,
@@ -75,6 +82,7 @@ instance ToTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformation.
         Beam.enabled = enabled,
         Beam.fleetOwnerPersonId = Kernel.Types.Id.getId fleetOwnerPersonId,
         Beam.fleetType = fleetType,
+        Beam.gstImageId = gstImageId,
         Beam.gstNumber = gstNumber,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.verified = verified,

@@ -10,3 +10,8 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN verified b
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD PRIMARY KEY ( fleet_owner_person_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN gst_image_id text ;

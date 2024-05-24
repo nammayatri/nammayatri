@@ -74,6 +74,7 @@ data DriverEndpoint
   | BulkReviewRCVariantEndPoint
   | RemoveACUsageRestrictionEndpoint
   | UpdateDriverTagEndPoint
+  | UpdateFleetOwnerEndPoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "DriverEndpoint"
@@ -494,6 +495,7 @@ type DriverInfoAPI =
     :> QueryParam "vehicleNumber" Text
     :> QueryParam "dlNumber" Text
     :> QueryParam "rcNumber" Text
+    :> QueryParam "email" Text
     :> Get '[JSON] DriverInfoRes
 
 data DriverInfoRes = DriverInfoRes
@@ -531,7 +533,8 @@ data DriverInfoRes = DriverInfoRes
     currentACStatus :: Bool,
     blockedDueToRiderComplains :: Bool,
     blockStateModifier :: Maybe Text,
-    driverTag :: Maybe [Text]
+    driverTag :: Maybe [Text],
+    email :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -863,14 +866,19 @@ data DriverMode
 type FleetTotalEarningAPI =
   "fleet"
     :> "totalEarning"
+    :> QueryParam "from" UTCTime
+    :> QueryParam "to" UTCTime
     :> Get '[JSON] FleetTotalEarningResponse
 
 type FleetVehicleEarningAPI =
   "fleet"
     :> "vehicleEarning"
-    :> Capture "vehicleNo" Text
-    :> QueryParam "driverId" (Id Driver)
-    :> Get '[JSON] FleetEarningRes
+    :> QueryParam "vehicleNo" Text
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> QueryParam "from" UTCTime
+    :> QueryParam "to" UTCTime
+    :> Get '[JSON] FleetEarningListRes
 
 data FleetEarningRes = FleetEarningRes
   { totalRides :: Int,
@@ -879,7 +887,15 @@ data FleetEarningRes = FleetEarningRes
     driverId :: Maybe (Id Driver),
     driverName :: Maybe Text,
     status :: Maybe DriverMode,
-    vehicleType :: Maybe Variant
+    vehicleType :: Maybe Variant,
+    totalDuration :: TotalDuration,
+    distanceTravelled :: Double
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data TotalDuration = TotalDuration
+  { hours :: Int,
+    minutes :: Int
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
@@ -888,15 +904,27 @@ data FleetTotalEarningResponse = FleetTotalEarningResponse
     totalEarning :: Int,
     totalVehicle :: Int,
     conversionRate :: Double,
-    cancellationRate :: Double
+    cancellationRate :: Double,
+    totalDistanceTravelled :: Double
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data FleetEarningListRes = FleetEarningListRes
+  { fleetEarningRes :: [FleetEarningRes],
+    summary :: Summary
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
 type FleetDriverEarningAPI =
   "fleet"
     :> "driverEarning"
-    :> Capture "driverId" (Id Driver)
-    :> Get '[JSON] FleetEarningRes
+    :> QueryParam "mobileCountryCode" Text
+    :> QueryParam "mobileNo" Text
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> QueryParam "from" UTCTime
+    :> QueryParam "to" UTCTime
+    :> Get '[JSON] FleetEarningListRes
 
 ---------------------------------------------------------
 -- update driver name -----------------------------------
@@ -1026,6 +1054,9 @@ type GetFleetDriverVehicleAssociationAPI =
     :> QueryParam "countryCode" Text
     :> QueryParam "phoneNo" Text
     :> QueryParam "vehicleNo" Text
+    :> QueryParam "includeStats" Bool
+    :> QueryParam "from" UTCTime
+    :> QueryParam "to" UTCTime
     :> Get '[JSON] DrivertoVehicleAssociationRes
 
 data DriveVehicleAssociationListItem = DriveVehicleAssociationListItem
@@ -1034,17 +1065,28 @@ data DriveVehicleAssociationListItem = DriveVehicleAssociationListItem
     driverName :: Maybe Text,
     status :: Maybe DriverMode,
     driverPhoneNo :: Maybe Text,
-    completedRides :: Int,
+    completedRides :: Int, ----- will remove this
     vehicleType :: Maybe Variant,
-    earning :: Int,
+    earning :: Int, ------ this also
     isDriverActive :: Bool,
-    isRcAssociated :: Bool
+    isRcAssociated :: Bool,
+    verificationDocsStatus :: Maybe VerificationDocsStatus
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data VerificationDocsStatus = VerificationDocsStatus
+  { vehicleRegistrationCertificate :: Maybe VerificationStatus,
+    vehiclePermit :: Maybe VerificationStatus,
+    vehicleFitness :: Maybe VerificationStatus,
+    vehicleInsurance :: Maybe VerificationStatus,
+    driverLicense :: Maybe VerificationStatus
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
 data DrivertoVehicleAssociationRes = DrivertoVehicleAssociationRes
   { fleetOwnerId :: Text,
-    listItem :: [DriveVehicleAssociationListItem]
+    listItem :: [DriveVehicleAssociationListItem],
+    summary :: Summary
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
@@ -1056,6 +1098,10 @@ type GetFleetDriverAssociationAPI =
     :> QueryParam "Offset" Int
     :> QueryParam "countryCode" Text
     :> QueryParam "phoneNo" Text
+    :> QueryParam "includeStats" Bool
+    :> QueryParam "from" UTCTime
+    :> QueryParam "to" UTCTime
+    :> QueryParam "status" DriverMode
     :> Get '[JSON] DrivertoVehicleAssociationRes
 
 type GetFleetVehicleAssociationAPI =
@@ -1064,7 +1110,14 @@ type GetFleetVehicleAssociationAPI =
     :> QueryParam "Limit" Int
     :> QueryParam "Offset" Int
     :> QueryParam "vehicleNo" Text
+    :> QueryParam "includeStats" Bool
+    :> QueryParam "from" UTCTime
+    :> QueryParam "to" UTCTime
+    :> QueryParam "status" FleetVehicleStatus
     :> Get '[JSON] DrivertoVehicleAssociationRes
+
+data FleetVehicleStatus = Active | InActive | Pending | Invalid
+  deriving (Generic, ToJSON, FromJSON, Show, ToSchema, ToParamSchema)
 
 -- data DriverMode
 --   = ONLINE
@@ -1152,6 +1205,8 @@ data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL
 
 $(mkHttpInstancesForEnum ''ServiceNames)
 $(mkHttpInstancesForEnum ''ReasonForDisablingServiceCharge)
+$(mkHttpInstancesForEnum ''FleetVehicleStatus)
+$(mkHttpInstancesForEnum ''DriverMode)
 
 -- change RC INVALID status  Api ------------------------
 -------------------------------------------
@@ -1224,4 +1279,45 @@ data UpdateDriverTagReq = UpdateDriverTagReq
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance HideSecrets UpdateDriverTagReq where
+  hideSecrets = identity
+
+----------------  UPDATE FLEET OWNER INFO ---------------------------------------------
+
+type UpdateFleetOwnerInfoAPI =
+  Capture "driverId" (Id Driver)
+    :> "updateFleetOwnerInfo"
+    :> ReqBody '[JSON] UpdateFleetOwnerInfoReq
+    :> Post '[JSON] APISuccess
+
+data UpdateFleetOwnerInfoReq = UpdateFleetOwnerInfoReq
+  { firstName :: Maybe Text,
+    lastName :: Maybe Text,
+    mobileNo :: Maybe Text,
+    mobileCountryCode :: Maybe Text,
+    email :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+instance HideSecrets UpdateFleetOwnerInfoReq where
+  hideSecrets = identity
+
+---------------- Get GST and Pan Details For Fleet Owner Id ---------------------------------------------
+
+type GetFleetOwnerInfoAPI =
+  Capture "driverId" (Id Driver)
+    :> "fleetOwnerInfo"
+    :> Get '[JSON] FleetOwnerInfoRes
+
+data FleetOwnerInfoRes = FleetOwnerInfoRes
+  { blocked :: Bool,
+    enabled :: Bool,
+    fleetType :: Text,
+    verified :: Bool,
+    gstNumber :: Maybe Text,
+    gstImageId :: Maybe Text,
+    panNumber :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+instance HideSecrets FleetOwnerInfoRes where
   hideSecrets = identity

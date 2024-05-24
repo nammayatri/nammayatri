@@ -38,7 +38,8 @@ instance FromTType' Beam.Plan Domain.Types.Plan.Plan where
             registrationAmount = registrationAmount,
             serviceName = serviceName,
             sgstPercentage = sgstPercentage,
-            subscribedFlagToggleAllowed = subscribedFlagToggleAllowed
+            subscribedFlagToggleAllowed = subscribedFlagToggleAllowed,
+            vehicleVariant = vehicleVariant
           }
 
 instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
@@ -65,5 +66,6 @@ instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
         Beam.registrationAmount = registrationAmount,
         Beam.serviceName = serviceName,
         Beam.sgstPercentage = sgstPercentage,
-        Beam.subscribedFlagToggleAllowed = subscribedFlagToggleAllowed
+        Beam.subscribedFlagToggleAllowed = subscribedFlagToggleAllowed,
+        Beam.vehicleVariant = vehicleVariant
       }

@@ -26,6 +26,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
 import Data.Maybe as Mb
 import Components.TipsView as TipsView
+import JBridge
 
 data Action = OnButton1Click
             | OnButton2Click
@@ -84,7 +85,9 @@ type Config = {
     isTipEnabled :: Boolean,
     isVisible :: Boolean,
     isTipPopup :: Boolean,
+    coverLottieConfig :: LottieConfig,
     showRetry :: Boolean
+, coverLottie :: CoverLottie
 }
 
 type CoverMediaConfig = {
@@ -164,6 +167,18 @@ type ImageConfig =
   , padding :: Padding
   }
 
+type LottieConfig = 
+  {
+    lottieUrl :: String
+  , visibility :: Visibility
+  , repeat :: Boolean
+  , height :: Length
+  , width :: Length
+  , margin :: Margin
+  , padding :: Padding
+  , id :: String
+  }
+
 type OptionWithHtmlConfig = {
   background :: String,
   strokeColor :: String,
@@ -188,6 +203,18 @@ type TopTitle = {
   , margin :: Margin
   , color :: String
   , gravity :: Gravity
+}
+
+type CoverLottie = {
+  id :: String
+, background :: String
+, cornerRadius :: Number
+, padding :: Padding
+, visibility :: Visibility
+, height :: Length
+, width :: Length
+, margin :: Margin
+, config :: LottieAnimationConfig
 }
 
 config :: Config
@@ -444,6 +471,17 @@ config = {
     , margin : (Margin 0 0 0 0)
     , padding : (Padding 0 0 0 0)
     },
+    coverLottieConfig : 
+    {
+      lottieUrl : ""
+    , id : ""
+    , visibility : GONE
+    , repeat : false
+    , height : WRAP_CONTENT
+    , width : WRAP_CONTENT
+    , margin : (Margin 0 0 0 0)
+    , padding : (Padding 0 0 0 0)
+    },
     contactViewConfig :
     {
        nameInitials: "",
@@ -507,6 +545,17 @@ config = {
     isVisible : false,
     isTipEnabled : true,
     isTipPopup : false
+  , coverLottie : {
+      id : ""
+    , background : Color.transparent
+    , cornerRadius : 0.0
+    , padding : Padding 0 0 0 0
+    , visibility : GONE
+    , height : V 0
+    , width : V 0
+    , margin : Margin 0 0 0 0
+    , config : lottieAnimationConfig
+    }
 }
 
 

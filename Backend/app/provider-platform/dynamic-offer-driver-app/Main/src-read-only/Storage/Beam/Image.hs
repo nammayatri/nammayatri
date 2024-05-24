@@ -18,7 +18,6 @@ data ImageT f = ImageT
   { failureReason :: B.C f (Kernel.Prelude.Maybe Tools.Error.DriverOnboardingError),
     id :: B.C f Kernel.Prelude.Text,
     imageType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
-    isValid :: B.C f Kernel.Prelude.Bool,
     merchantId :: B.C f Kernel.Prelude.Text,
     personId :: B.C f Kernel.Prelude.Text,
     rcId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
