@@ -294,7 +294,17 @@ public class MainActivity extends AppCompatActivity {
         try {
             MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
             Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(context);
-            MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(driverProfileUrl, baseHeaders, null, "GET", false);
+            Boolean isForwardDispatch = getCityConfigForFeatureFlags("Forward_Dispatch_Feature");
+            Map <String,String> driverInfoRequestBody = new HashMap<>();
+            driverInfoRequestBody.put("isAdvancedBookingEnabled", isForwardDispatch.toString());
+            JSONObject driverInfoRequestBodyJSON = new JSONObject(driverInfoRequestBody);
+            MobilityAPIResponse apiResponse = new MobilityAPIResponse();
+            if (isForwardDispatch){
+                apiResponse = mobilityApiHandler.callAPI(driverProfileUrl, baseHeaders, driverInfoRequestBodyJSON.toString(), "POST", false);
+            }
+            else {
+                apiResponse = mobilityApiHandler.callAPI(driverProfileUrl, baseHeaders, null, "GET", false);
+            }
             return apiResponse.getResponseBody();
         } catch (Exception error) {
             Log.d(LOG_TAG, "Catch in getDriverProfile : " + error);
@@ -357,7 +367,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        return results;
+                return results;
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -506,6 +516,30 @@ public class MainActivity extends AppCompatActivity {
         } else {
             return false;
         }
+    }
+
+    @NonNull
+    private boolean getCityConfigForFeatureFlags(String key) {
+        MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, false);
+        String city = sharedPref.getString("DRIVER_LOCATION", "__failed").toLowerCase();
+        String forward_dispatch_config = remoteConfigs.getString(key);
+        JSONObject config = new JSONObject();
+        JSONObject cityConfig = new JSONObject();
+        boolean isFeatureEnabled = false;
+        Log.d("Feature flags","remote config for feature :-" + key +  "->" + forward_dispatch_config);
+        try {
+            config = new JSONObject(forward_dispatch_config);
+            cityConfig = config.optJSONObject(city);
+            Log.d("feature bool", "getCityConfigForFeatureFlags: " + cityConfig);
+            isFeatureEnabled = cityConfig.optBoolean("is_" + key + "_Enabled", false);
+        } catch (Exception e) {
+            Bundle bundle = new Bundle();
+            bundle.putString("Exception",e.toString());
+            FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+            Log.d("feature bool deterimatal", "getCityConfigForFeatureFlags: " + cityConfig);
+            mFirebaseAnalytics.logEvent("exception_while_reading_splash_config",bundle);
+        }
+        return isFeatureEnabled ;
     }
 
     @NonNull

@@ -41,6 +41,7 @@ import Prelude
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
+import Data.Eq.Generic (genericEq)
 import Data.Array (head, (!!))
 
 -- -- import Control.Monad.Except.Trans (lift)
@@ -320,13 +321,9 @@ sliderConfig = {
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
 setMapPadding = runEffectFn4 setMapPaddingImpl
 
-drawRoute :: Array Locations -> String -> Boolean -> MarkerConfig -> MarkerConfig -> Int -> String -> MapRouteConfig -> String -> Effect Unit
-drawRoute locationArr style isActual startMarkerConfig endMarkerConfig routeWidth routeType mapRouteConfig pureScriptID = do
-  let normalLocations = maybe ({points : []}) identity (head locationArr)
-      rentalLocations = maybe ({points : []}) identity (locationArr !! 1)
-      normalRouteConfig = mkRouteConfig normalLocations startMarkerConfig.pointerIcon startMarkerConfig.markerId endMarkerConfig.pointerIcon endMarkerConfig.markerId routeType startMarkerConfig.primaryText endMarkerConfig.primaryText style isActual mapRouteConfig
-      rentalRouteConfig = mkRouteConfig rentalLocations "" "" "ny_ic_blue_marker" "ny_ic_blue_marker" routeType "" "" "" true mapRouteConfig
-      drawRouteConfig = mkDrawRouteConfig normalRouteConfig rentalRouteConfig pureScriptID
+drawRoute :: Array RouteConfig -> String -> Effect Unit
+drawRoute routeConfigs pureScriptID = do
+  let drawRouteConfig = mkDrawRouteConfig routeConfigs pureScriptID
   drawRouteV2 drawRouteConfig
 
 getCurrentPositionWithTimeout :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Int -> Boolean -> Effect Unit
@@ -586,6 +583,8 @@ type MarkerConfig = {
   , rotation :: Number
   , markerId :: String
   , animationConfig :: AnimationConfig
+  , anchorV :: Number
+  , anchorU :: Number
 }
 
 defaultMarkerConfig :: MarkerConfig
@@ -603,6 +602,8 @@ defaultMarkerConfig = {
   , rotation : 0.0
   , markerId : ""
   , animationConfig : defaultAnimationConfig
+  , anchorV : 0.5
+  , anchorU : 0.5
 }
 
 type AnimationConfig = {
@@ -666,6 +667,7 @@ type UpdateRouteConfig = {
   , zoomLevel :: Number
   , autoZoom :: Boolean
   , pureScriptID :: String
+  , polylineKey :: String
 }
 
 type InAppNotificationPayload = {
@@ -707,6 +709,7 @@ updateRouteConfig = {
   , zoomLevel : if (os == "IOS") then 19.0 else 17.0
   , autoZoom : true
   , pureScriptID : ""
+  , polylineKey : ""
 }
 
 mapRouteConfig :: MapRouteConfig
@@ -773,10 +776,7 @@ displayBase64ImageConfig = {
 ---------- ################################### DRAW ROUTE CONFIG ################################### ----------
 
 type DrawRouteConfig = {
-  routes :: {
-    normalRoute :: RouteConfig,
-    rentalRoute :: RouteConfig
-  },
+  routeConfigs :: Array RouteConfig,
   pureScriptID :: String
 }
 
@@ -785,39 +785,30 @@ type RouteConfig = {
   style :: String,
   routeColor :: String,
   isActual :: Boolean,
-  startMarker :: String,
-  endMarker :: String,
   routeWidth :: Int,
   routeType :: String,
-  startMarkerLabel :: String,
-  endMarkerLabel :: String,
   mapRouteConfig :: MapRouteConfig,
   startMarkerConfig :: MarkerConfig,
-  endMarkerConfig :: MarkerConfig
+  endMarkerConfig :: MarkerConfig,
+  routeKey :: String
 }
 
-mkRouteConfig :: Locations -> String -> String -> String -> String -> String -> String -> String -> String -> Boolean -> MapRouteConfig -> RouteConfig
-mkRouteConfig normalRoute startMarker startMarkerId endMarker endMarkerId routeType startMarkerLabel endMarkerLabel style isActual mapRouteConfig = 
+mkRouteConfig :: Locations -> MarkerConfig -> MarkerConfig -> String -> String -> Boolean -> RouteKeysType -> MapRouteConfig -> RouteConfig
+mkRouteConfig normalRoute startMarkerConfig endMarkerConfig routeType style isActual key mapRouteConfig = 
   routeConfig{
     locations = normalRoute,
-    startMarker = startMarker,
-    endMarker = endMarker,
     routeType = routeType,
-    startMarkerLabel = startMarkerLabel,
-    endMarkerLabel = endMarkerLabel,
     style = style,
     isActual = isActual,
     mapRouteConfig = mapRouteConfig,
-    startMarkerConfig = defaultMarkerConfig{markerId = startMarkerId, pointerIcon = startMarker, primaryText = startMarkerLabel},
-    endMarkerConfig = defaultMarkerConfig{markerId = endMarkerId, pointerIcon = endMarker, primaryText = endMarkerLabel}
+    startMarkerConfig = startMarkerConfig,
+    endMarkerConfig = endMarkerConfig,
+    routeKey = show key
   }
 
-mkDrawRouteConfig :: RouteConfig -> RouteConfig -> String -> DrawRouteConfig
-mkDrawRouteConfig normalRouteConfig rentalRouteConfig pureScriptID = 
-  { routes : {
-      normalRoute : normalRouteConfig,
-      rentalRoute : rentalRouteConfig
-    },
+mkDrawRouteConfig :: Array RouteConfig -> String -> DrawRouteConfig
+mkDrawRouteConfig routeConfigs pureScriptID = 
+  { routeConfigs : routeConfigs,
     pureScriptID : pureScriptID
   }
 
@@ -828,15 +819,12 @@ routeConfig = {
   style : "LineString",
   routeColor : "#323643",
   isActual : true,
-  startMarker : "",
-  endMarker : "",
   routeWidth : 8,
   routeType : "",
-  startMarkerLabel : "",
-  endMarkerLabel : "",
   mapRouteConfig : defaultMapRouteConfig,
   startMarkerConfig : defaultMarkerConfig,
-  endMarkerConfig : defaultMarkerConfig
+  endMarkerConfig : defaultMarkerConfig,
+  routeKey : show DEFAULT
 }
 
 defaultMapRouteConfig :: MapRouteConfig
@@ -879,3 +867,10 @@ type UpdateSliderConfig = {
   sliderValue :: Int,
   id :: String
 }
+
+
+data RouteKeysType  = DEFAULT | RENTAL | ADVANCED
+
+derive instance genericRouteKeysType :: Generic RouteKeysType _
+instance showRouteKeysType :: Show RouteKeysType where show = genericShow
+instance eqRouteKeysType :: Eq RouteKeysType where eq = genericEq

@@ -41,7 +41,7 @@ import Data.Either (Either(..), hush, either)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.Show.Generic (genericShow)
 import Data.String (Pattern(..), split, take) as DS
@@ -73,14 +73,14 @@ import Control.Monad.Except.Trans (lift)
 import Foreign.Generic (Foreign)
 import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
-import Services.API (PromotionPopupConfig)
+import Services.API (PromotionPopupConfig, BookingTypes(..), RidesInfo)
 import Services.API as SA
 import Storage (KeyStore) 
 import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys, Location)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3, EffectFn7, runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
-import Screens.Types (LocalStoreSubscriptionInfo)
+import Screens.Types (LocalStoreSubscriptionInfo, HomeScreenState)
 import Data.Int (fromString, even, fromNumber)
 import Data.Int as Int
 import Data.Function.Uncurried (Fn1)
@@ -106,6 +106,8 @@ import Data.Argonaut.Core as AC
 import Data.Argonaut.Decode.Parser as ADP
 import Common.Types.Config as CTC
 import Common.Resources.Constants (assetDomain)
+import Common.RemoteConfig.Utils (forwardBatchConfigData)
+import Common.RemoteConfig.Types (ForwardBatchConfigData(..))
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -648,6 +650,8 @@ getCityConfig cityConfig cityName = do
                           mapImage : "",
                           cityCode : "",
                           showSubscriptions : false,
+                          enableAdvancedBooking : false,
+                          advancedRidePopUpYoutubeLink : "https://www.youtube.com/watch?v=gnZIj8U71tE" , --- Dummy link need to change
                           cityLat : 0.0,
                           cityLong : 0.0,
                           supportNumber : "",
@@ -686,8 +690,12 @@ getCityConfig cityConfig cityName = do
                             }
                           }
                         }
-  fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig
-  
+  maybe dummyCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig
+  where 
+   setForwardBatchingData cityConfig' = do
+    let (ForwardBatchConfigData forwardBatchRemoteConfig) = forwardBatchConfigData cityName
+    cityConfig' {enableAdvancedBooking = forwardBatchRemoteConfig.is_Forward_Dispatch_Feature_Enabled, advancedRidePopUpYoutubeLink = forwardBatchRemoteConfig.advancedRidePopUpYoutubeLink}
+    
 formatSecIntoMinSecs :: Int -> String
 formatSecIntoMinSecs seconds = 
   let
@@ -890,3 +898,9 @@ getChargesOb cityConfig driverVehicle =
   case driverVehicle of
     "AUTO_RICKSHAW" -> cityConfig.waitingChargesConfig.auto
     _ -> cityConfig.waitingChargesConfig.cab
+
+getRideInfoEntityBasedOnBookingType :: HomeScreenState -> ST.ActiveRide
+getRideInfoEntityBasedOnBookingType homeScreenState = 
+  case homeScreenState.props.bookingStage of
+    CURRENT -> homeScreenState.data.activeRide
+    ADVANCED -> fromMaybe homeScreenState.data.activeRide homeScreenState.data.advancedRideData

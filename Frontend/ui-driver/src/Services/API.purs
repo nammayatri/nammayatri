@@ -433,7 +433,9 @@ instance encodeLogOutRes :: Encode LogOutRes where encode = defaultEncode
 ------------------------------------------------------------GET DRIVER PROFILE----------------------------------------------------------------------------------------------------------------------------------------------
 
 -- GetDriverInfo API request, response types
-data GetDriverInfoReq = GetDriverInfoReq { }
+newtype GetDriverInfoReq = GetDriverInfoReq {
+  isAdvancedBookingEnabled :: Maybe Boolean
+ }
 
 newtype GetDriverInfoResp = GetDriverInfoResp
     { id                    :: String
@@ -510,7 +512,7 @@ newtype Vehicle = Vehicle
     }
 
 instance makeGetDriverInfoReq :: RestEndpoint GetDriverInfoReq GetDriverInfoResp where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.getDriverInfo "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequest POST (EP.getDriverInfo "") headers reqBody Nothing
     decodeResponse = decodeJSON
     encodeRequest req = defaultEncode req
 
@@ -603,8 +605,9 @@ newtype RidesInfo = RidesInfo
       vehicleServiceTierName :: String,
       vehicleServiceTier :: String,
       isVehicleAirConditioned :: Maybe Boolean,
-      vehicleCapacity :: Maybe Int
-    , tollConfidence :: Maybe CTA.Confidence
+      vehicleCapacity :: Maybe Int,
+      tollConfidence :: Maybe CTA.Confidence,
+      bookingType :: Maybe BookingTypes
   }
 
 newtype OdometerReading = OdometerReading
@@ -682,6 +685,18 @@ newtype LocationInfo = LocationInfo
         lon :: Number
       }
 
+data BookingTypes = CURRENT | ADVANCED
+
+derive instance genericBookingTypesMethods :: Generic BookingTypes _
+instance showBookingTypesMethods :: Show BookingTypes where show = genericShow
+instance decodeBookingTypesMethods :: Decode BookingTypes where decode = defaultEnumDecode
+instance encodeBookingTypesMethods :: Encode BookingTypes where encode = defaultEnumEncode
+instance eqBookingTypes :: Eq BookingTypes where eq = genericEq
+instance standardEncodeBookingTypesMethods :: StandardEncode BookingTypes
+  where
+  standardEncode CURRENT = standardEncode $ show CURRENT
+  standardEncode ADVANCED = standardEncode $ show ADVANCED
+  standardEncode _ = standardEncode $ show CURRENT
 
 instance makeGetRidesHistoryReq :: RestEndpoint GetRidesHistoryReq GetRidesHistoryResp where
     makeRequest reqBody@(GetRidesHistoryReq limit offset isActive status day) headers = defaultMakeRequest GET (EP.getRideHistory limit offset isActive status day) headers reqBody Nothing

@@ -84,6 +84,8 @@ dummyCityConfig = {
                     mapImage : "",
                     cityCode : "",
                     showSubscriptions : false,
+                    enableAdvancedBooking : false,
+                    advancedRidePopUpYoutubeLink : "https://www.youtube.com/watch?v=gnZIj8U71tE" , --- Dummy link need to change
                     cityLat : 0.0,
                     cityLong : 0.0,
                     supportNumber : "",

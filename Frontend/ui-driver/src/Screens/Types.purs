@@ -42,6 +42,7 @@ import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
 import PrestoDOM.List (ListItem)
+import Services.API (QuestionConfirmRes(..), GetDriverInfoResp(..), Route, Status, MediaType, PaymentBreakUp, BookingTypes(..))
 import Styles.Types (FontSize)
 import Components.ChatView.Controller as ChatView
 import Foreign.Object (Object)
@@ -955,6 +956,8 @@ type HomeScreenData =  {
   driverName :: String,
   vehicleType :: String,
   activeRide :: ActiveRide,
+  advancedRideData :: Maybe ActiveRide,
+  currentRideData :: Maybe ActiveRide,
   driverStats :: Boolean,
   cancelRideModal :: CancelRideModalData,
   currentDriverLat :: Number,
@@ -1180,6 +1183,7 @@ type HomeScreenProps =  {
   refreshAnimation :: Boolean,
   showDottedRoute :: Boolean,
   currentStage :: HomeScreenStage,
+  advancedRideStage :: HomeScreenStage,
   mapRendered :: Boolean,
   cancelConfirmationPopup :: Boolean,
   chatcallbackInitiated :: Boolean,
@@ -1226,8 +1230,10 @@ type HomeScreenProps =  {
   odometerUploadAttempts :: Int,
   odometerImageUploading :: Boolean,
   showAcWorkingPopup :: Maybe Boolean,
-  acExplanationPopup :: Boolean
-, toll :: TollState
+  acExplanationPopup :: Boolean,
+  toll :: TollState,
+  bookingStage :: BookingTypes,
+  showAdvancedRidePopUp :: Boolean
  }
 
 type TollState = {
@@ -1733,6 +1739,7 @@ data HomeScreenStage =  HomeScreen
                       | RideStarted
                       | RideCompleted
                       | ChatWithCustomer
+                      | NotAssigned
 
 derive instance genericHomeScreenStage :: Generic HomeScreenStage _
 instance showHomeScreenStage :: Show HomeScreenStage where show = genericShow

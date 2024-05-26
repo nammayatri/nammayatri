@@ -46,6 +46,7 @@ type Config = {
     customerTipArray :: Array String,
     customerTipArrayWithValues :: Array Int,
     secondaryText :: TextConfig,
+    popUpHeaderConfig :: PopUpHeaderConfig,
     option1 :: ButtonConfig,
     option2 :: ButtonConfig,
     tipButton :: ButtonConfig,
@@ -203,6 +204,7 @@ type TopTitle = {
   , margin :: Margin
   , color :: String
   , gravity :: Gravity
+  , textStyle :: Style
 }
 
 type CoverLottie = {
@@ -216,6 +218,20 @@ type CoverLottie = {
 , margin :: Margin
 , config :: LottieAnimationConfig
 }
+type PopUpHeaderConfig = { 
+    height :: Length
+  , width :: Length
+  , margin :: Margin
+  , padding :: Padding
+  , visibility :: Visibility
+  , backgroundColor :: String
+  , cornerRadius :: Number
+  , orientation :: String
+  , headingText :: TextConfig
+  , subHeadingText :: TextConfig
+  , imageConfig :: ImageConfig
+  , gravity :: Gravity
+  }
 
 config :: Config
 config = {
@@ -243,6 +259,7 @@ config = {
     , margin : MarginVertical 10 10
     , color : Color.black800
     , gravity : LEFT
+    , textStyle : Heading2
     }
   , primaryText : {
       text : "Text1",
@@ -545,7 +562,7 @@ config = {
     isVisible : false,
     isTipEnabled : true,
     isTipPopup : false
-  , coverLottie : {
+    , coverLottie : {
       id : ""
     , background : Color.transparent
     , cornerRadius : 0.0
@@ -555,7 +572,78 @@ config = {
     , width : V 0
     , margin : Margin 0 0 0 0
     , config : lottieAnimationConfig
-    }
+    },
+    popUpHeaderConfig : {
+      height : V 0,
+      width : MATCH_PARENT,
+      margin : (Margin 0 0 0 0),
+      padding : (Padding 0 0 0 0),
+      visibility : GONE,
+      backgroundColor : Color.white900,
+      cornerRadius : 0.0,
+      orientation : "VERTICAL",
+      headingText : {
+      text : "Text1",
+      color : Color.black800,
+      gravity : CENTER,
+      padding : (Padding 0 0 0 0),
+      margin : (Margin 0 0 0 0),
+      visibility : VISIBLE,
+      textStyle : Heading2,
+      accessibilityHint : "", 
+      suffixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      },
+      prefixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      }
+    },
+    subHeadingText :{
+      text : "Text2",
+      color : Color.textSecondary,
+      gravity : CENTER,
+      padding : (Padding 16 0 16 0),
+      margin : (Margin 0 20 0 20),
+      visibility : VISIBLE,
+      textStyle : ParagraphText,
+      accessibilityHint : "", 
+      suffixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      },
+      prefixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      }
+    },
+    imageConfig : {
+      visibility : GONE
+      , imageUrl : ""
+      , height : (V 0)
+      , width : (V 0)
+      , margin : (Margin 0 0 0 0)
+      , padding : (Padding 0 0 0 0)
+    },
+    gravity : CENTER
+  }
 }
 
 

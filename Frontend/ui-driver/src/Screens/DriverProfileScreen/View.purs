@@ -99,7 +99,8 @@ screen initialState =
                     void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
                     EHU.toggleLoader true
                     summaryResponse <- Remote.driverProfileSummary ""
-                    profileResponse <- Remote.getDriverInfoApi (GetDriverInfoReq {})
+                    let cityConfig = getCityConfig initialState.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+                    profileResponse <- Remote.getDriverInfoApi (GetDriverInfoReq { isAdvancedBookingEnabled : Just cityConfig.enableAdvancedBooking})
                     case summaryResponse, profileResponse of
                       Right summaryResp, Right profileResp -> do
                         liftFlow $ push $ DriverSummary summaryResp

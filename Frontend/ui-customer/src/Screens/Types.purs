@@ -658,6 +658,8 @@ type HomeScreenStateData =
   , maxEstimatedDuration :: Int
   , invalidBookingPopUpConfig :: Maybe InvalidBookingPopUpConfig
   , rideCompletedData :: RideCompletedData -- put necesssary data which is required in ride completed screen
+  , routeCacheForAdvancedBooking :: Maybe Route
+  , previousRideDrop :: Boolean
   }
 
 type InteroperabilityState = {
@@ -1269,6 +1271,8 @@ type DriverInfoCard =
   , providerName :: String
   , rentalData :: CTA.RentalBookingConfig
   , fareProductType :: FareProductType
+  , driversPreviousRideDropLocLat :: Maybe Number
+  , driversPreviousRideDropLocLon :: Maybe Number
   }
 
 type RatingCard =

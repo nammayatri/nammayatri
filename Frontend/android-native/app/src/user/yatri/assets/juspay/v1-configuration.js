@@ -272,6 +272,7 @@ window.getMerchantConfig = function () {
       }
     ]
     , "specialLocationView" : true
+    , "isAdvancedBookingEnabled" : true
     , "navigationAppConfig" : {
       "query" : "google.navigation:q=%f,%f"
       , "packageName" : "com.google.android.apps.maps"

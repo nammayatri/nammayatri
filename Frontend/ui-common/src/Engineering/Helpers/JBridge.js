@@ -637,9 +637,9 @@ const drawRoute = function (data, style, trackColor, isActual, sourceMarkerConfi
     if (window.__OS == "IOS" || methodArgumentCount("drawRoute") == 11) {
       if (window.__OS == "IOS" && window.JBridge.drawRouteV2)
         return window.JBridge.drawRouteV2(JSON.stringify(data), style, trackColor, isActual, JSON.stringify(sourceMarkerConfig), JSON.stringify(destMarkerConfig), polylineWidth, type, JSON.stringify(mapRouteConfig));  
-      return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarkerConfig.pointerIcon, destMarkerConfig.pointerIcon, polylineWidth, type, sourceMarkerConfig.primaryText, destMarkerConfig.primaryText, JSON.stringify(mapRouteConfig));  
+      return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarkerConfig.pointerIcon, destMarkerConfig.pointerIcon, polylineWidth, type, sourceMarkerConfig.primaryText, destMarkerConfig.primaryText, JSON.stringify(mapRouteConfig), key);  
     } else {
-      return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, JSON.stringify(sourceMarkerConfig), JSON.stringify(destMarkerConfig), polylineWidth, type, JSON.stringify(mapRouteConfig));
+      return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, JSON.stringify(sourceMarkerConfig), JSON.stringify(destMarkerConfig), polylineWidth, type, JSON.stringify(mapRouteConfig), key);
     }
   } catch (err) {
     console.log("error in draw route", err);
@@ -717,11 +717,14 @@ export const drawRouteV2 = function (drawRouteConfig){
   return function() {
     try{
       console.log("Inside drawRouteV2")
-      const { locations, style, routeColor, isActual, startMarker, endMarker, routeWidth, routeType, startMarkerLabel, endMarkerLabel, mapRouteConfig } = drawRouteConfig.routes.normalRoute;
+      const configs = drawRouteConfig.routeConfigs;
       if (window.JBridge.drawRouteV2){
         return window.JBridge.drawRouteV2(JSON.stringify(drawRouteConfig));
       } else {
+        for (let i = 0; i < configs.length; i++) {
+        const { locations, style, routeColor, isActual, startMarker, endMarker, routeWidth, routeType, startMarkerLabel, endMarkerLabel, mapRouteConfig } = configs[i];
         return drawRoute(locations, style, routeColor, isActual, startMarker, endMarker, routeWidth, routeType, startMarkerLabel, endMarkerLabel, mapRouteConfig);
+        }
       }
     } catch (err) {
       console.log("error in drawRouteV2----------------------------------", err);
@@ -1935,20 +1938,22 @@ export const openWhatsAppSupport = function (contactNumber) {
 }
 
 export const mapSnapShot = function (id) {
-  return function (coordinates) {
-    return function (routeType) {
-      return function (actualRoute) {
-        return function (cb) {
-          return function (action) {
-            return function () {
-              const callback = callbackMapper.map(function (encImage) {
-                console.log("in show map", action);
-                window.x = cb;
-                window.y = action;
-                cb(action(encImage))();
-              });
-              JBridge.mapSnapShot(id, JSON.stringify(coordinates), routeType, actualRoute, callback);
-              return true;
+    return function (coordinates) {
+      return function (routeType) {
+        return function (actualRoute) {
+          return function (cb) {
+            return function (action) {
+              return function (key) {
+                return function () {
+                  const callback = callbackMapper.map(function (encImage) {
+                    console.log("in show map", action);
+                    window.x = cb;
+                    window.y = action;
+                    cb(action(encImage))();
+                  });
+                  JBridge.mapSnapShot(id, JSON.stringify(coordinates), routeType, actualRoute, callback, key);
+                  return true;
+                };
             };
           };
         };

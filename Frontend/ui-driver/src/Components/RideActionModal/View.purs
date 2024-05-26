@@ -29,6 +29,7 @@ import Data.Function.Uncurried (runFn2)
 import Data.Int as Int
 import Data.Maybe as Maybe
 import Data.Ord (abs)
+import Data.Tuple
 import Debug (spy)
 import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
@@ -60,33 +61,36 @@ import Types.App (defaultGlobalState)
 import Mobility.Prelude
 import Common.Types.Config as CTC
 import Resource.Constants as RC
+import Debug
+import PrestoDOM.Elements.Keyed as Keyed
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-view push config =
+view push config = do
+  let _ = spy "rideActionModalView" config
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
     ][linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      ][ linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , id $ getNewIDWithTag "rideActionHeaderLayout"
-        , padding $ PaddingBottom 16
-        ][  linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , orientation HORIZONTAL
-            , gravity CENTER
-            ][ 
-                messageButton push config,
-                callButton push config,
-                openGoogleMap push config
+        ][ linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , id $ getNewIDWithTag "rideActionHeaderLayout"
+          , padding $ PaddingBottom 16
+          ][  linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , orientation HORIZONTAL
+              , gravity CENTER
+              ][ 
+                  messageButton push config,
+                  callButton push config,
+                  openGoogleMap push config
+              ]
             ]
           ]
-        ]
     , if isSpecialRide config
         then rideActionViewWithLabel push config else rideActionView (MarginTop 0) push config
     ]
@@ -167,7 +171,7 @@ rideActionViewWithLabel push config =
   , cornerRadii $ Corners 25.0 true true false false
   , orientation VERTICAL
   , padding $ PaddingTop 5
-  , gravity CENTER
+    , gravity CENTER
   ][ linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -261,7 +265,7 @@ rideTypeView push config =
 
 rideActionView :: forall w . Margin -> (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 rideActionView layoutMargin push config =
-  linearLayout
+  Keyed.linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , cornerRadii $ Corners 25.0 true true false false
@@ -270,7 +274,7 @@ rideActionView layoutMargin push config =
   , padding $ PaddingTop 6
   , gravity CENTER
   , margin layoutMargin
-  , stroke $ "1," <> Color.grey800
+    , stroke $ "1," <> Color.grey800
   , afterRender (\action -> do -- try to move it to the view of heomescreeen
         when (showRideStartRemainingTime config) $ do 
           let id = (HU.generateUniqueId unit)
@@ -280,7 +284,7 @@ rideActionView layoutMargin push config =
         pure unit
       )
       (const RideStartTimer)
-  ][ linearLayout
+  ][ Tuple "rideActionView_Child_1" $ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -298,11 +302,11 @@ rideActionView layoutMargin push config =
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , padding $ Padding 16 16 16 24
-            ][ if config.startRideActive 
+            ][ if config.startRideActive
                 then startRide push config 
                 else if(config.rideType == ST.Rental && Maybe.isJust config.stopAddress) then arrivedStopView push config else endRide push config ]
         ])
-    , cancelRide push config
+    , Tuple "rideActionView_Child_2" $ cancelRide push config
   ]
 
 openGoogleMap :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -557,7 +561,8 @@ startRide push config =
   , background Color.darkMint
   , cornerRadius 8.0
   , gravity CENTER
-  , onClick push (const $ StartRide)
+  , onClick push $ if config.isAdvanced then const NoAction else (const $ StartRide)
+  , alpha $ if config.isAdvanced then 0.3 else 1.0
   , pivotY 0.0
   , onAnimationEnd push $ const NoAction
   , afterRender push $ const NoAction

@@ -93,6 +93,8 @@ type CityConfig = {
   mapImage :: String,
   cityCode :: String,
   showSubscriptions :: Boolean,
+  enableAdvancedBooking :: Boolean,
+  advancedRidePopUpYoutubeLink :: String,
   cityLat :: Number,
   cityLong :: Number,
   supportNumber :: String,

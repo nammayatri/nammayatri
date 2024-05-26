@@ -60,6 +60,7 @@ type AppConfigCustomer a =
   , enableWhatsappOTP :: Array String
   , notifyRideConfirmationConfig :: NotifyRideConfirmationConfig
   , estimateAndQuoteConfig :: EstimateAndQuoteConfig
+  , isAdvancedBookingEnabled :: Boolean
   , customerTip :: CustomerTip
   , feature :: Features
   , rideCompletedCardConfig :: RideCompletedCardConfig

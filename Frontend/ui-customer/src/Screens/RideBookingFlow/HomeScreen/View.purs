@@ -15,16 +15,40 @@
 
 module Screens.HomeScreen.View where
 
+import Components.MessagingView.Common.Types
+import Components.MessagingView.Common.View
+import ConfigProvider
+import Constants.Configs
+import Data.FoldableWithIndex
+import Data.Tuple
+import Engineering.Helpers.BackTrack
+import Locale.Utils
+import Mobility.Prelude
+import Mobility.Prelude
+import PrestoDOM.Core
+import PrestoDOM.List
+import Screens.RideBookingFlow.HomeScreen.Config
+import Services.API hiding (Followers(..))
+import SuggestionUtils
+import Timers
+import Types.App
 import Accessor (_lat, _lon, _selectedQuotes, _fareProductType)
-import Animation (fadeInWithDelay, fadeIn, fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha , translateInXAnim, translateOutXAnim, translateInXForwardAnim, translateOutXBackwardAnimY, translateInXSidebarAnim, screenAnimation, fadeInWithDuration, fadeOutWithDuration, scaleYAnimWithDelay, shimmerAnimation)
+import Animation (fadeInWithDelay, fadeIn, fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, translateInXAnim, translateOutXAnim, translateInXForwardAnim, translateOutXBackwardAnimY, translateInXSidebarAnim, screenAnimation, fadeInWithDuration, fadeOutWithDuration, scaleYAnimWithDelay, shimmerAnimation)
+import Animation as Anim
+import Animation.Config (AnimConfig, animConfig)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig, messageInAnimConfig, messageOutAnimConfig)
+import CarouselHolder as CarouselHolder
+import Common.Resources.Constants (zoomLevel)
 import Common.Types.App (LazyCheck(..), YoutubeData, CarouselData)
+import Common.Types.App as CT
+import Common.Types.App as CTP
 import Components.Banner.Controller as BannerConfig
+import Components.Banner.View as Banner
+import Components.Banner.View as Banner
+import Components.BannerCarousel as BannerCarousel
 import Components.ChooseVehicle as ChooseVehicle
-import Components.Banner.View as Banner
-import Components.Banner.View as Banner
-import Components.MessagingView as MessagingView
-import Components.ChooseYourRide as ChooseYourRide 
+import Components.ChooseYourRide as ChooseYourRide
+import Components.CommonComponentConfig as CommonComponentConfig
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
 import Components.ErrorModal as ErrorModal
@@ -33,75 +57,95 @@ import Components.LocationListItem.View as LocationListItem
 import Components.LocationTagBar as LocationTagBar
 import Components.LocationTagBarV2 as LocationTagBarV2
 import Components.MenuButton as MenuButton
+import Components.MessagingView as MessagingView
 import Components.PopUpModal as PopUpModal
-import Components.RideCompletedCard as RideCompletedCard
+import Components.PopupWithCheckbox.View as PopupWithCheckbox
 import Components.PricingTutorialModel as PricingTutorialModel
 import Components.PrimaryButton as PrimaryButton
-import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Components.QuoteListModel.View as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
+import Components.Referral as ReferralComponent
 import Components.RequestInfoCard as RequestInfoCard
+import Components.RideCompletedCard as RideCompletedCard
 import Components.SaveFavouriteCard as SaveFavouriteCard
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUp
+import Components.ServiceTierCard.View as ServiceTierCard
 import Components.SettingSideBar as SettingSideBar
-import Components.Referral as ReferralComponent
+import Components.SourceToDestination as SourceToDestination
+import Constants (defaultDensity)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (any, length, mapWithIndex,take, (!!),head, filter, cons, null, tail, drop)
 import Data.Array as Arr
-import Data.Function.Uncurried (runFn3)
-import DecodeUtil (getAnyFromWindow)
 import Data.Either (Either(..))
-import Data.Int (ceil, floor, fromNumber, fromString, toNumber, pow)
 import Data.Function.Uncurried (runFn1)
+import Data.Function.Uncurried (runFn1, runFn2)
+import Data.Function.Uncurried (runFn3)
+import Data.Int (ceil, floor, fromNumber, fromString, toNumber, pow)
 import Data.Lens ((^.))
+import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe, isNothing)
 import Data.Number as NUM
+import Data.String as DS
 import Data.Time.Duration (Milliseconds(..))
 import Debug (spy)
+import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn9)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap, getCurrentUTC, convertUTCtoISC)
-import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion, emChatSuggestion)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, compareUTCDate, getCurrentUTC)
-import Engineering.Helpers.Utils (showAndHideLoader)
-import Engineering.Helpers.LogEvent (logEvent)
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate, getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, compareUTCDate, getCurrentUTC)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate, getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap, getCurrentUTC, convertUTCtoISC)
 import Engineering.Helpers.Events as Events
+import Engineering.Helpers.Events as Events
+import Engineering.Helpers.LogEvent (logEvent)
+import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion, emChatSuggestion)
+import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage, getRouteMarkers, TrackingType(..))
-import JBridge (showMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, differenceBetweenTwoUTCInMinutes, differenceBetweenTwoUTC)
+import Halogen.VDom.DOM.Prop (Prop)
+import Helpers.Pooling (delay)
+import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getConfirmLocationCategory)
+import Helpers.Utils (decodeBookingTimeList, getRouteMarkers, TrackingType(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage)
+import JBridge ( animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, differenceBetweenTwoUTCInMinutes, differenceBetweenTwoUTC, mkRouteConfig)
+import JBridge as JB
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
+import LocalStorage.Cache (getValueFromCache)
 import Log (printLog, logStatus)
+import MerchantConfig.Types (MarginConfig, ShadowConfig)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||), (<$>), identity, (>=))
+import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||), (<$>), identity, (>=), (<*>))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, modifyState, getState)
-import Helpers.Pooling (delay)
-import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), scrollBarY,adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, scaleType, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView, onAnimationEnd, clipChildren, enableShift,horizontalScrollView, shadow,onStateChanged,scrollBarX, clipToPadding, onSlide, rotation, rippleColor, shimmerFrameLayout, imageUrl)
+import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), scrollBarY, adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, scaleType, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView, onAnimationEnd, clipChildren, enableShift, horizontalScrollView, shadow, onStateChanged, scrollBarX, clipToPadding, onSlide, rotation, rippleColor, shimmerFrameLayout, imageUrl)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Resources.Localizable.EN (getEN)
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getPeekHeight, checkRecentRideVariant, findingQuotesSearchExpired)
-import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations, getActiveBooking, getDriverInfo, getFormattedContacts, getFareProductType)
-import Screens.RideBookingFlow.HomeScreen.Config
-import Services.API
+import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.ContactsList (contactCardView)
+import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs)
+import Screens.Types (FareProductType(..)) as FPT
+import Screens.Types (Followers(..), CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..), City(..), BottomNavBarIcon(..), NewContacts, ReferralStatus(..), VehicleViewType(..))
+import Screens.Types as ST
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), RideBookingListRes(..))
 import Screens.Types (Followers(..), CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..),City(..), BottomNavBarIcon(..), NewContacts, ReferralStatus(..), VehicleViewType(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
+import Services.FlowCache as FlowCache
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Types.App (FlowBT, GlobalState(..), defaultGlobalState)
@@ -296,7 +340,7 @@ screen initialState =
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-                  _ <- launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 20000.0 (getValueToLocalStore TRACKING_ID) initialState "trip" 1
+                  _ <- launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 10000.0 (getValueToLocalStore TRACKING_ID) initialState "trip" 1
                   pure unit
                 else
                   pure unit
@@ -2697,7 +2741,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
       _ <- pure $ enableMyLocation true
       _ <- pure $ removeAllPolylines ""
       _ <- doAff $ liftEffect $ animateCamera state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng zoomLevel "ZOOM"
-      _ <- doAff $ liftEffect $ showMarker defaultMarkerConfig{ markerId = "ny_ic_src_marker", pointerIcon = "ny_ic_src_marker" } state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 110 0.5 0.9 (getNewIDWithTag "CustomerHomeScreen")
+      _ <- doAff $ liftEffect $ JB.showMarker defaultMarkerConfig{ markerId = "ny_ic_src_marker", pointerIcon = "ny_ic_src_marker" } state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 110 0.5 0.9 (getNewIDWithTag "CustomerHomeScreen")
       void $ delay $ Milliseconds duration
       driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
       else do
@@ -2710,10 +2754,22 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
             let
               srcLat = (resp ^. _lat)
               srcLon = (resp ^. _lon)
-              dstLat = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
-              dstLon = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
-              trackingType = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then DRIVER_TRACKING else RIDE_TRACKING
+              mbPreviousDropLat = state.data.driverInfoCardState.driversPreviousRideDropLocLat
+              mbPreviousDropLon = state.data.driverInfoCardState.driversPreviousRideDropLocLon
+              hasCurrentLocAndPrevDropLoc = isJust mbPreviousDropLat && isJust mbPreviousDropLon
+              Tuple dstLat dstLon = 
+                case (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]), mbPreviousDropLat, mbPreviousDropLon of
+                  true, Just previousDropLat, Just previousDropLon  -> Tuple previousDropLat previousDropLon
+                  true, _, _ -> Tuple state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng
+                  false, _, _ -> Tuple state.data.driverInfoCardState.destinationLat state.data.driverInfoCardState.destinationLng
+
+              trackingType = case Tuple (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) hasCurrentLocAndPrevDropLoc of
+                                Tuple true true -> ADVANCED_RIDE_TRACKING
+                                Tuple false true -> RIDE_TRACKING
+                                _ -> DRIVER_TRACKING
+
               markers = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city trackingType state.data.fareProductType
+              markers' = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city DRIVER_TRACKING state.data.fareProductType
               sourceSpecialTagIcon = zoneLabelIcon state.props.zoneType.sourceTag
               destSpecialTagIcon = zoneLabelIcon state.props.zoneType.destinationTag
               onUsRide = state.data.driverInfoCardState.providerType == CTP.ONUS
@@ -2739,37 +2795,85 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                 
                 if (srcLat /= 0.0 && srcLon /= 0.0 && dstLat /= 0.0 && dstLon /= 0.0) then do 
                   _ <- pure $ removeAllPolylines ""
-                  void $ liftFlow $ drawRoute [(walkCoordinate srcLat srcLon dstLat dstLon)] "DOT" false srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" mapRouteConfig (getNewIDWithTag "CustomerHomeScreen")
+                  let routeConfig = mkRouteConfig (walkCoordinate srcLat srcLon dstLat dstLon) srcMarkerConfig destMarkerConfig "DRIVER_LOCATION_UPDATE" "DOT" false JB.DEFAULT mapRouteConfig
+                  void $ liftFlow $ drawRoute [routeConfig] (getNewIDWithTag "CustomerHomeScreen")
                   else pure unit
                 void $ delay $ Milliseconds duration
                 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
-              else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) then do
+              else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) || (hasCurrentLocAndPrevDropLoc && isNothing state.data.routeCacheForAdvancedBooking) then do
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
-                
-                {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon ( maybe (0.0) (\loc -> loc.lat) state.props.stopLoc) (maybe 0.0 (\loc -> loc.lng) state.props.stopLoc) --state.data.driverInfoCardState.destinationLng
-                let rentalPoints = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideAccepted then points else Nothing
-                    rentalRoute = route 
-                    rentalDistance = routeDistance
-                    rentalDuration = routeDuration
-                    destLat = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideStarted then (maybe dstLat (\loc -> loc.lat) state.props.stopLoc) else dstLat 
-                    destLon = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideStarted then (maybe dstLon (\loc -> loc.lng) state.props.stopLoc) else dstLon
-                {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon destLat destLon
-                -- void $ pure $ removeAllPolylines ""
-                if (srcLat /= 0.0 && srcLon /= 0.0 && destLat /= 0.0 && destLon /= 0.0) then do 
-                  _ <- pure $ removeAllPolylines ""
-                  let srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker }
-                      destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = getMarkerPrimaryText (fromMaybe 0 routeDistance) }
-                  liftFlow $ drawRoute [(fromMaybe {points : []} points), (fromMaybe {points : []} rentalPoints)] "LineString" true srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" mapRouteConfig (getNewIDWithTag "CustomerHomeScreen")
-                  else pure unit
-                _ <- doAff do liftEffect $ push $ updateState (fromMaybe 1 routeDuration) $ fromMaybe 1 routeDistance
-                let duration' = if isJust route then duration else getDuration state.data.config.driverLocationPolling.retryExpFactor expCounter
-                    expCounter' = if isJust route then expCounter else expCounter + 1
-                void $ delay $ Milliseconds duration'
-                driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = route, speed = (fromMaybe 0 routeDistance) / (fromMaybe 1 routeDuration) } } routeState expCounter'
+                routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
+                routeResponseAdvanced <- do
+                  case state.data.routeCacheForAdvancedBooking, mbPreviousDropLat, mbPreviousDropLon of
+                    Nothing , Just previousDropLat, Just previousDropLon -> do
+                      let routeReq = makeGetRouteReq previousDropLat previousDropLon state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng
+                      Just <$> getRoute routeState routeReq
+                    Just advRoute, Just previousDropLat, Just previousDropLon -> pure $ Just (Right (GetRouteResp ([advRoute])))
+                    _, _, _ -> pure $ Just (Right (GetRouteResp []))
 
+                case routeResponse, routeResponseAdvanced of
+                  Right (GetRouteResp routeResp), (Just (Right (GetRouteResp routeRespAdvanced)))  -> do
+                    case ((routeResp) !! 0), ((routeRespAdvanced) !! 0), hasCurrentLocAndPrevDropLoc of
+                      Just (Route routes), Just (Route routesAdvanced), true -> do
+                        _ <- pure $ removeAllPolylines ""    
+                        {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon dstLat dstLon (Just routes)
+                        let newPoints = points
+                            newRoute = route
+                            routeDistanceNormal = fromMaybe 0 routeDistance
+                            routeDurationNormal = fromMaybe 0 routeDuration
+                        {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng (Just routesAdvanced)
+                        let newPointsAdv = points
+                            newRouteAdv = route
+                            routeDistanceAdvanced = fromMaybe 0 routeDistance 
+                            routeDurationAdvanced = fromMaybe 0 routeDuration
+                            srcMarkerConfig = defaultMarkerConfig{ markerId = markers'.srcMarker, pointerIcon = markers'.srcMarker }
+                            srcMarkerConfig' = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = "Dropping another customer nearby" }
+                            destMarkerConfig = defaultMarkerConfig{ markerId = "", pointerIcon = "" , primaryText = "" }
+                            destMarkerConfig' = defaultMarkerConfig{ markerId = markers'.destMarker, pointerIcon = markers'.destMarker, primaryText = getMarkerPrimaryText (routes.distance + routesAdvanced.distance) }
+                            normalRoutePoints = fromMaybe {points : []} newPoints
+                            normalAdvRoutePoints = fromMaybe {points : []} newPointsAdv
+                            normalRoute = mkRouteConfig normalRoutePoints srcMarkerConfig destMarkerConfig "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT mapRouteConfig
+                            normalAdvRouteConfig = mkRouteConfig normalAdvRoutePoints srcMarkerConfig' destMarkerConfig' "DRIVER_LOCATION_UPDATE" "DOT" true JB.ADVANCED mapRouteConfig
+                        liftFlow $ drawRoute [normalRoute,normalAdvRouteConfig] (getNewIDWithTag "CustomerHomeScreen")
+                        _ <- doAff do liftEffect $ push $ updateState (routes.duration + routesAdvanced.duration) (routes.distance + routesAdvanced.distance)
+                        void $ delay $ Milliseconds duration
+                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = newRoute, routeCacheForAdvancedBooking = newRouteAdv, previousRideDrop = true, speed = (routeDistanceNormal + routeDistanceAdvanced) / (routeDurationNormal + routeDurationAdvanced) } } routeState expCounter
+                      Just (Route routes), Nothing, false -> do
+                        {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon ( maybe (0.0) (\loc -> loc.lat) state.props.stopLoc) (maybe 0.0 (\loc -> loc.lng) state.props.stopLoc) Nothing--state.data.driverInfoCardState.destinationLng
+                        let rentalPoints = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideAccepted then points else Nothing
+                            rentalRoute = route 
+                            rentalDistance = routeDistance
+                            rentalDuration = routeDuration
+                            destLat = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideStarted then (maybe dstLat (\loc -> loc.lat) state.props.stopLoc) else dstLat 
+                            destLon = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideStarted then (maybe dstLon (\loc -> loc.lng) state.props.stopLoc) else dstLon
+                        {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon destLat destLon (Just routes)
+                        -- void $ pure $ removeAllPolylines ""
+                        if (srcLat /= 0.0 && srcLon /= 0.0 && destLat /= 0.0 && destLon /= 0.0) then do 
+                          _ <- pure $ removeAllPolylines ""
+                          let srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker }
+                              destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = getMarkerPrimaryText (fromMaybe 0 routeDistance) }
+                              srcRentalMarkerConfig = defaultMarkerConfig{ markerId = "", pointerIcon = "" , primaryText = ""}
+                              destRentalMarkerConfig = defaultMarkerConfig{ markerId = "ny_ic_blue_marker", pointerIcon = "ny_ic_blue_marker", primaryText = "" }
+                              normalRoutePoints = fromMaybe {points : []} points
+                              rentalRoutePoints = fromMaybe {points : []} rentalPoints
+                              normalRoute = mkRouteConfig  normalRoutePoints srcMarkerConfig destMarkerConfig "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT mapRouteConfig
+                              rentalRouteConfig = mkRouteConfig rentalRoutePoints srcRentalMarkerConfig destRentalMarkerConfig "DRIVER_LOCATION_UPDATE" "DOT" true JB.RENTAL mapRouteConfig
+                          liftFlow $ drawRoute [normalRoute,rentalRouteConfig] (getNewIDWithTag "CustomerHomeScreen")
+                          else pure unit
+                        _ <- doAff do liftEffect $ push $ updateState (fromMaybe 1 routeDuration) $ fromMaybe 1 routeDistance
+                        let duration' = if isJust route then duration else getDuration state.data.config.driverLocationPolling.retryExpFactor expCounter
+                            expCounter' = if isJust route then expCounter else expCounter + 1
+                        void $ delay $ Milliseconds duration'
+                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = route, speed = (fromMaybe 0 routeDistance) / (fromMaybe 1 routeDuration), routeCacheForAdvancedBooking = Nothing, previousRideDrop = false } } routeState expCounter'
+                      _, _, _ -> do
+                        void $ delay $ Milliseconds $ getDuration state.data.config.driverLocationPolling.retryExpFactor expCounter
+                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing, routeCacheForAdvancedBooking = Nothing, previousRideDrop = false } } routeState (expCounter + 1)
+                  _ , _-> do
+                    void $ delay $ Milliseconds $ getDuration state.data.config.driverLocationPolling.retryExpFactor expCounter
+                    driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing, routeCacheForAdvancedBooking = Nothing, previousRideDrop = false } } routeState (expCounter + 1)
               else do
-                case state.data.route of
-                  Just (Route route) -> do
+                case state.data.route, (state.data.previousRideDrop == hasCurrentLocAndPrevDropLoc )of
+                  Just (Route route), _  -> do
                         locationResp <- liftFlow $ isCoordOnPath (walkCoordinates route.points) (resp ^. _lat) (resp ^. _lon) (state.data.speed)
                         if locationResp.isInPath then do
                           let newPoints = { points : locationResp.points}
@@ -2778,17 +2882,17 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                                     else
                                                       specialLocationConfig "" destSpecialTagIcon false getPolylineAnimationConfig
                               mapRouteConfig = if onUsRide then specialLocationTag else specialLocationTag{dashUnit = 30, gapUnit = 20}
-                          liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  markers.destMarker, eta = getMarkerPrimaryText locationResp.distance, srcMarker = markers.srcMarker, specialLocation = mapRouteConfig, zoomLevel = zoomLevel, pureScriptID = (getNewIDWithTag "CustomerHomeScreen")}
+                          liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  markers.destMarker, eta = if hasCurrentLocAndPrevDropLoc then "Dropping another customer nearby" else getMarkerPrimaryText locationResp.distance, srcMarker = markers.srcMarker, specialLocation = mapRouteConfig, zoomLevel = zoomLevel, pureScriptID = (getNewIDWithTag "CustomerHomeScreen"),  polylineKey = "DEFAULT"}
                           _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
                           void $ delay $ Milliseconds duration
                           driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
                         else do
-                          driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState expCounter
-                  Nothing -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState expCounter
+                          driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing, routeCacheForAdvancedBooking = Nothing, previousRideDrop = false } } routeState expCounter
+                  _ , _ -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing, routeCacheForAdvancedBooking = Nothing, previousRideDrop = false } } routeState expCounter
             else pure unit
           Left _ -> do
             void $ delay $ Milliseconds $ getDuration state.data.config.driverLocationPolling.retryExpFactor expCounter
-            driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState (expCounter + 1)
+            driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing, routeCacheForAdvancedBooking = Nothing, previousRideDrop = false } } routeState (expCounter + 1)
   else do
     pure unit
   where
@@ -2819,7 +2923,6 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
         fromMaybe "" state.data.driverInfoCardState.sourceAddress.area
       else 
         metersToKm distance (state.props.currentStage == RideStarted)
-
 
 confirmRide :: forall action. String -> (RideBookingRes -> action) -> action -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
 confirmRide trackingId rideConfirmationAction checkFlowStatusAction goToHomeScreenAction count duration push state = do
@@ -4336,25 +4439,30 @@ bookingPrefOptions push state =
   
 
 
-createRouteHelper routeState startLat startLon endLat endLon = do
-  if (startLat /= 0.0 && startLon /= 0.0 && endLat /= 0.0 && endLon /= 0.0) then do
-    routeResp <- getRoute routeState $ makeGetRouteReq startLat startLon endLat endLon
-    case routeResp of 
-      Right (GetRouteResp resp) -> do 
-        case (head resp) of 
-          Just (Route route) -> do 
-            -- void $ pure $ removeAllPolylines ""
-            let (Snapped routePts) = route.points 
-                newPts = if (length routePts > 1 && route.distance <= 50000) then 
-                            getExtendedPath $ walkCoordinates (route.points)
-                            else 
-                              walkCoordinate startLat startLon endLat endLon
-                newRoute = route {points = Snapped (map (\item -> LatLong { lat : item.lat, lon : item.lng}) newPts.points)}
-            pure $ {points : Just newPts, route : Just (Route newRoute), routeDuration : Just $ route.duration, routeDistance : Just $ route.distance}
-          Nothing -> pure $ {points : Nothing, route : Nothing, routeDuration : Nothing, routeDistance : Nothing}
-      Left err -> do 
-        pure $ {points : Nothing, route : Nothing, routeDuration : Nothing, routeDistance : Nothing}
-    else pure $ {points : Nothing, route : Nothing, routeDuration : Nothing, routeDistance : Nothing}
+createRouteHelper routeState startLat startLon endLat endLon mbRoute = do
+  route <- do
+    case mbRoute of
+      Just routeCalculated  -> pure $ Just routeCalculated
+      Nothing -> do
+        routeResp <- getRoute routeState $ makeGetRouteReq startLat startLon endLat endLon
+        case routeResp of 
+          Right (GetRouteResp resp) -> do 
+            case (head resp) of 
+              Just (Route route) -> pure $ Just route
+              Nothing -> pure $ Nothing
+          Left _ -> pure $ Nothing
+  case route of
+    Just route' -> do
+      if (startLat /= 0.0 && startLon /= 0.0 && endLat /= 0.0 && endLon /= 0.0 ) then do
+        let (Snapped routePts) = route'.points 
+            newPts = if (length routePts > 1 && route'.distance <= 50000) then 
+                        getExtendedPath $ walkCoordinates (route'.points)
+                        else 
+                          walkCoordinate startLat startLon endLat endLon
+            newRoute = route' {points = Snapped (map (\item -> LatLong { lat : item.lat, lon : item.lng}) newPts.points)}
+        pure $ {points : Just newPts, route : Just (Route newRoute), routeDuration : Just $ route'.duration, routeDistance : Just $ route'.distance}
+      else pure $ {points : Nothing, route : Nothing, routeDuration : Nothing, routeDistance : Nothing}
+    Nothing -> pure $ {points : Nothing, route : Nothing, routeDuration : Nothing, routeDistance : Nothing}
 
 
 intercityInSpecialZonePopupView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

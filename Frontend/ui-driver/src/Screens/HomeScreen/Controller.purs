@@ -61,6 +61,7 @@ import Data.Number (fromString) as Number
 import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, replaceAll, toLower, null)
 import Data.String as DS
 import Domain.Payments (APIPaymentStatus(..), PaymentStatus(..)) as PP
+import Data.Functor
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
@@ -92,7 +93,7 @@ import RemoteConfig as RC
 import Resource.Constants (decodeAddress, getLocationInfoFromStopLocation, rideTypeConstructor, getHomeStageFromString)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
-import Services.API (GetRidesHistoryResp(..), RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..),StopLocation(..),DriverProfileStatsResp(..))
+import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..), StopLocation(..),DriverProfileStatsResp(..), BookingTypes(..))
 import Services.Accessor (_lat, _lon)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
@@ -156,6 +157,7 @@ instance loggableAction :: Loggable Action where
       -- RideActionModal.MessageCustomer -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "message_customer"
       -- _ -> pure unit
     PopUpModalAccessibilityAction act -> pure unit
+    PopUpModalAdvancedRideAction act -> pure unit
     InAppKeyboardModalAction act -> pure unit--case act of
       -- InAppKeyboardModal.OnSelection key index -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_selection"
       -- InAppKeyboardModal.OnClickBack text -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_click_back"
@@ -197,8 +199,8 @@ instance loggableAction :: Loggable Action where
       -- SelectListModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride" "no_action"
     GenderBannerModal act -> pure unit
     AutoPayBanner act -> pure unit
+    AdvancedRideBannerAction act -> pure unit
     RetryTimeUpdate -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "retry_time_update_onclick"
-    RideActiveAction activeRide -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "ride_active_action"
     TimeUpdate time lat lng -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "time_update"
     ModifyRoute lat lon -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "modify_route"
     SetToken id -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "set_token"
@@ -299,6 +301,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToNewStop ST.HomeScreenState
                     | UpdateAirConditioned ST.HomeScreenState Boolean
                     | GoToBookingPreferences ST.HomeScreenState
+                    | UpdateRouteOnStageSwitch ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -326,7 +329,7 @@ data Action = NoAction
             | ModifyRoute String String
             | RetryTimeUpdate
             | TimeUpdate String String String
-            | RideActiveAction RidesInfo
+            | RideActiveAction RidesInfo (Maybe RidesInfo)
             | RecenterButtonAction
             | ChatViewActionController ChatView.Action
             | UpdateMessages String String String String
@@ -364,8 +367,10 @@ data Action = NoAction
             | GetCurrentDuesAction GetCurrentPlanResp
             | GetCurrentDuesFailed
             | AutoPayBanner Banner.Action
+            | AdvancedRideBannerAction Banner.Action
             | RCDeactivatedAC PopUpModal.Action
             | PopUpModalAccessibilityAction PopUpModal.Action
+            | PopUpModalAdvancedRideAction PopUpModal.Action
             | RideCompletedAC RideCompletedCard.Action
             | RatingCardAC RatingCard.Action
             | PopUpModalChatBlockerAction PopUpModal.Action
@@ -423,6 +428,7 @@ data Action = NoAction
             | OpenLink String
             | TollChargesPopUpAC PopUpModal.Action
             | TollChargesAmbigousPopUpAC PopUpModal.Action
+            | SwitchBookingStage BookingTypes
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -974,7 +980,7 @@ eval (RideActionModalAction (RideActionModal.LoadMessages)) state = do
                         let unReadMessages = (if (readMessages == 0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (Array.length allMessages) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
                         let suggestions = getDriverSuggestions state $ getSuggestionsfromKey chatSuggestion value.message
                         updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = suggestions }, props {unReadMessages = unReadMessages, canSendSuggestion = true}}
-      Nothing -> continue state {props {canSendSuggestion = true}}
+      Nothing -> continue state {props {canSendSuggestion = true}, data{ messages = allMessages}}
 
 eval ScrollToBottom state = do
   _ <- pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
@@ -1128,12 +1134,12 @@ eval (TimeUpdate time lat lng) state = do
           _ <- pure $ JB.exitLocateOnMap ""
           checkPermissionAndUpdateDriverMarker newState true
     else pure unit
-    case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer of
-      true, ST.RideAccepted, false -> do
+    case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, isJust state.data.advancedRideData of
+      true, ST.RideAccepted, false, false -> do
         let dist = getDistanceBwCordinates driverLat driverLong state.data.activeRide.src_lat state.data.activeRide.src_lon
             insideThreshold = dist <= state.data.config.waitTimeConfig.thresholdDist
         pure $ if insideThreshold then UpdateAndNotify else (UpdateLastLoc driverLat driverLong insideThreshold)
-      _, _, _ -> pure $ UpdateLastLoc driverLat driverLong false
+      _, _, _, _ -> pure $ UpdateLastLoc driverLat driverLong false
     ]
 
 eval (OnMarkerClickCallBack tag lat lon) state = do
@@ -1173,9 +1179,10 @@ eval (UpdateAndNotify) state =
 
 eval NotifyAPI state = updateAndExit state $ NotifyDriverArrived state 
 
-eval (RideActiveAction activeRide) state = do
+eval (RideActiveAction activeRide mbAdvancedRide) state = do
   let currActiveRideDetails = activeRideDetail state activeRide
-      updatedState = state { data {activeRide = currActiveRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag), safetyAudioAutoPlay = false}}
+      advancedRideDetails = activeRideDetail state <$> mbAdvancedRide
+      updatedState = state { data {activeRide = currActiveRideDetails, advancedRideData = advancedRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag), safetyAudioAutoPlay = false}}
   updateAndExit updatedState $ UpdateStage ST.RideAccepted updatedState
 
 eval RecenterButtonAction state = continue state
@@ -1244,6 +1251,7 @@ eval (BannerCarousal (BannerCarousel.OnClick index)) state =
           BannerCarousel.Gender -> pure (GenderBannerModal (Banner.OnClick))
           BannerCarousel.Disability -> pure (AccessibilityBannerAction (Banner.OnClick))
           BannerCarousel.AutoPay -> pure (AutoPayBanner (Banner.OnClick))
+          BannerCarousel.AdvancedRide -> pure (AdvancedRideBannerAction (Banner.OnClick))
           BannerCarousel.Remote link -> do
             void $ openUrlInApp link
             pure NoAction
@@ -1263,6 +1271,8 @@ eval (AutoPayBanner (Banner.OnClick)) state = do
                   _ -> ""
   _ <- pure $ cleverTapCustomEvent ctEvent
   exit $ SubscriptionScreen state
+
+eval (AdvancedRideBannerAction (Banner.OnClick)) state = continue state{props{showAdvancedRidePopUp = true}}
 
 eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
 
@@ -1290,6 +1300,15 @@ eval (PopUpModalAccessibilityAction PopUpModal.OnButton1Click) state = continueW
 eval (PopUpModalAccessibilityAction PopUpModal.NoAction) state = continueWithCmd state [do
   pure $ PopUpModalAccessibilityAction PopUpModal.OnButton1Click
 ]
+
+eval (PopUpModalAdvancedRideAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showAdvancedRidePopUp = true}} [ do 
+  void $ openUrlInApp $ state.data.cityConfig.advancedRidePopUpYoutubeLink
+  pure NoAction
+  ] 
+
+eval (PopUpModalAdvancedRideAction PopUpModal.OnButton2Click) state = continue state {props{showAdvancedRidePopUp = false}}
+
+eval (PopUpModalAdvancedRideAction PopUpModal.DismissPopup) state = continue state {props{showAdvancedRidePopUp = false}}
 
 eval (GenericAccessibilityPopUpAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showAccessbilityPopup = false, safetyAudioAutoPlay = false}} [ do 
   _ <- pure $ pauseYoutubeVideo unit
@@ -1351,7 +1370,7 @@ eval (RideCompletedAC (RideCompletedCard.BannerAction (Banner.OnClick))) state =
 eval (RatingCardAC (RatingCard.Rating selectedRating)) state = continue state {data {endRideData { rating = selectedRating}}}
 eval (RatingCardAC (RatingCard.FeedbackChanged feedback)) state = continue state {data {endRideData {feedback = feedback}}}
 eval (RatingCardAC (RatingCard.BackPressed)) state = continue state {props {showRideRating = false}}
-eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = exit $ PostRideFeedback state {props {showRideRating = false, showRideCompleted = false}}
+eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = exit $ PostRideFeedback state {data {activeRide = fromMaybe state.data.activeRide state.data.advancedRideData, currentRideData = state.data.advancedRideData, advancedRideData = Nothing}, props {showRideRating = false, showRideCompleted = false}}
 
 eval (RCDeactivatedAC PopUpModal.OnButton1Click) state = exit $ GoToVehicleDetailScreen state 
 
@@ -1427,7 +1446,19 @@ eval (TollChargesPopUpAC PopUpModal.OnButton2Click) state = continue state {prop
 
 eval (TollChargesAmbigousPopUpAC PopUpModal.OnButton2Click) state = continue state {props {toll {showTollChargeAmbigousPopup = false}}}
 
-eval _ state = update state
+eval (SwitchBookingStage stage) state = do
+  if state.props.bookingStage == stage then continue state
+  else do
+    let currentRideData = if stage == CURRENT then fromMaybe state.data.activeRide state.data.currentRideData else state.data.activeRide
+    let advancedRideData = if stage == ADVANCED then fromMaybe state.data.activeRide state.data.advancedRideData else state.data.activeRide
+    let activeRideData = if stage == CURRENT then currentRideData else advancedRideData
+    _ <- pure $ setValueToLocalStore LOCAL_STAGE (show $ fetchStageFromRideStatus activeRideData)
+    exit $ UpdateRouteOnStageSwitch state {
+      data {activeRide = activeRideData, currentRideData = Just currentRideData},
+      props {bookingStage = stage, currentStage = fetchStageFromRideStatus activeRideData}
+    }
+
+eval _ state = continue state
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Boolean -> Effect Unit
 checkPermissionAndUpdateDriverMarker state toAnimateCamera = do
@@ -1658,6 +1689,7 @@ getBannerConfigs state =
     else [])
   -- <> (if getValueToLocalStore IS_BANNER_ACTIVE == "True" then [genderBannerConfig state BannerCarousal] else []) NOTE::- Deprecated the complete profile banner for now
   <> (if state.props.currentStage == ST.HomeScreen && state.data.config.purpleRideConfig.showPurpleVideos then [accessbilityBannerConfig state BannerCarousal] else [])
+  <> (if state.data.cityConfig.enableAdvancedBooking then [advancedRideBannerCarousel state BannerCarousal] else [])
   <> getRemoteBannerConfigs
   where 
     getRemoteBannerConfigs :: Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
@@ -1693,3 +1725,12 @@ updateCoinPopupLocalStoreVal state = do
 
 getCoinPopupStatus :: String -> ST.CoinEarnedPopupTypeShown
 getCoinPopupStatus key = decodeForeignAny (parseJSON (getKeyInSharedPrefKeys key)) {rideMoreEarnCoin : "" , twoMoreRides : "", oneMoreRide : "", eightRideCompleted : "", referAndEarnCoin : "", convertCoinsToCash : ""}
+
+fetchStageFromRideStatus :: ST.ActiveRide -> ST.HomeScreenStage
+fetchStageFromRideStatus activeRide = 
+  case activeRide.status of
+    NEW -> ST.RideAccepted
+    INPROGRESS -> ST.RideStarted
+    COMPLETED -> ST.RideCompleted
+    CANCELLED -> ST.HomeScreen
+    _ -> ST.HomeScreen

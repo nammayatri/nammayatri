@@ -83,16 +83,18 @@ public class WidgetService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(getApplicationContext());
+        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String intentMessage = intent != null && intent.hasExtra(getResources().getString(R.string.WIDGET_MESSAGE)) ? intent.getStringExtra(getResources().getString(R.string.WIDGET_MESSAGE)) : null;
         Boolean showNearbySpecialPickup = intent != null && intent.hasExtra("showNearbySpecialPickup") ? intent.getBooleanExtra("showNearbySpecialPickup", false) : null;
-        if (showNearbySpecialPickup != null) {
+                if (showNearbySpecialPickup != null) {
             specialPickupNotification(intent, showNearbySpecialPickup);
         }
         else if (intent != null && calculatedTime == 0 && intentMessage == null && animationRunnable == null) {
             showSilentNotification(intent);
-        } else {
+                    } else {
             if (intentMessage != null && intentMessage.equals("CLEAR_FARE") && silentRideRequest != null && progressBar != null && dismissRequest != null && handler != null) {
-                removeViewAndRequest(0);
+                removeViewAndRequest(0, intent);
+
             } else if (isRemovingInProcess || animationRunnable != null) {
                 rideRequestQueue.offer(intent);
             } else if (intentMessage != null && !intentMessage.equals("CLEAR_FARE")) {
@@ -357,7 +359,7 @@ public class WidgetService extends Service {
 
                 //Revert Animation
                 handler = new Handler();
-                removeViewAndRequest(calculatedTime * 1000);
+                removeViewAndRequest(calculatedTime * 1000, intent);
 
                 // Adding dismiss button on widget
                 dismissRequest.setOnClickListener(view -> {
@@ -380,7 +382,7 @@ public class WidgetService extends Service {
         }
     }
 
-    private void removeViewAndRequest(int delayInMilliSeconds) {
+    private void removeViewAndRequest(int delayInMilliSeconds, Intent intent) {
         animationRunnable = () -> {
             if (silentRideRequest != null && progressBar != null && dismissRequest != null) {
                 silentRideRequest.setVisibility(View.GONE);
@@ -416,6 +418,10 @@ public class WidgetService extends Service {
             rotationAnimation(floatingWidget, mAngleToRotate, 0.0f);
 
             handler.postDelayed(animationRunnable, 700);
+            SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            Boolean isOnResume = sharedPref.getString("ACTIVITY_STATUS", "null").equals("onResume");
+            Boolean intentIsForwardRequest = intent != null  && intent.hasExtra("isForwardRequest") ? intent.getBooleanExtra("isForwardRequest", false) : null;
+            if (intentIsForwardRequest && isOnResume) stopService(intent);
         }, delayInMilliSeconds);
     }
 

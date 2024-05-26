@@ -145,7 +145,8 @@ getDriverInfoDataFromCache resp = do
   case resp of 
     Just cacheResp -> pure cacheResp
     Nothing -> do
-      driverInfoResp <- Remote.getDriverInfoApi (GetDriverInfoReq {})
+      (GlobalState state) <- getState
+      driverInfoResp <- Remote.getDriverInfoApi (GetDriverInfoReq {isAdvancedBookingEnabled : Just state.homeScreen.data.cityConfig.enableAdvancedBooking})
       case driverInfoResp of
         Right latestResp -> pure latestResp
         Left _ -> pure dummyDriverInfo

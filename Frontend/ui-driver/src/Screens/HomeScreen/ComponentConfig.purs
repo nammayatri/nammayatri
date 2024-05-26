@@ -42,6 +42,8 @@ import Data.Int as Int
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Data.Maybe (Maybe(..), fromMaybe, isJust,maybe)
 import Data.String as DS
+import Data.Tuple 
+import Data.Array (elem)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey, chatSuggestion)
 import Font.Size as FontSize
@@ -60,7 +62,7 @@ import Resource.Constants as Const
 import Screens.Types (AutoPayStatus(..), SubscriptionBannerType(..), SubscriptionPopupType(..), GoToPopUpType(..))
 import Screens.Types as ST
 import Services.API as SA
-import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..))
+import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..), BookingTypes(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import Mobility.Prelude (boolToVisibility)
 import Styles.Colors as Color
@@ -83,6 +85,9 @@ rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
 rideActionModalConfig state = 
   let
   config = RideActionModal.config
+  Tuple stage rideData = case state.props.bookingStage, state.data.advancedRideData of
+                              ADVANCED, Just advRideInfo -> Tuple state.props.advancedRideStage advRideInfo
+                              _, _  -> Tuple state.props.currentStage state.data.activeRide
   rideActionModalConfig' = config {
     startRideActive = (state.props.currentStage == ST.RideAccepted || (state.props.currentStage == ST.ChatWithCustomer && (Const.getHomeStageFromString $ getValueToLocalStore PREVIOUS_LOCAL_STAGE) /= ST.RideStarted ) ),
     arrivedStopActive = state.props.arrivedAtStop,
@@ -90,10 +95,10 @@ rideActionModalConfig state =
     customerName = if DS.length (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) < 4
                       then (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) <> " " <> (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 1))
                       else
-                        (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)),
+                        (fromMaybe "" ((DS.split (DS.Pattern " ") (rideData.riderName)) DA.!! 0)),
     sourceAddress  {
-      titleText = fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.activeRide.source)) DA.!! 0),
-      detailText = state.data.activeRide.source
+      titleText = fromMaybe "" ((DS.split (DS.Pattern ",") (rideData.source)) DA.!! 0),
+      detailText = rideData.source
     },
     destinationAddress = (\destination -> {
       titleText : fromMaybe "" ((DS.split (DS.Pattern ",") destination) DA.!! 0),
@@ -111,9 +116,9 @@ rideActionModalConfig state =
     notifiedCustomer = state.data.activeRide.notifiedCustomer,
     currentStage = state.props.currentStage,
     unReadMessages = state.props.unReadMessages,
-    specialLocationTag = state.data.activeRide.specialLocationTag,
-    requestedVehicleVariant = state.data.activeRide.requestedVehicleVariant,
-    accessibilityTag = state.data.activeRide.disabilityTag,
+    specialLocationTag = rideData.specialLocationTag,
+    requestedVehicleVariant = rideData.requestedVehicleVariant,
+    accessibilityTag = rideData.disabilityTag,
     appConfig = state.data.config,
     waitTimeStatus = state.props.waitTimeStatus,
     waitTimeSeconds = state.data.activeRide.waitTimeSeconds,
@@ -128,7 +133,8 @@ rideActionModalConfig state =
     cityConfig = state.data.cityConfig,
     serviceTierAndAC = state.data.activeRide.serviceTier,
     capacity = state.data.activeRide.capacity,
-    acRide = state.data.activeRide.acRide
+    acRide = state.data.activeRide.acRide,
+    isAdvanced = (state.props.bookingStage == ADVANCED)
     }
     in rideActionModalConfig'
 
@@ -234,6 +240,34 @@ autpPayBannerCarousel state action =
           CLEAR_DUES_BANNER -> Color.white900
           LOW_DUES_BANNER -> Color.black900
           _ -> Color.green600
+
+advancedRideBannerCarousel :: forall a. ST.HomeScreenState -> (BannerCarousel.Action -> a) -> BannerCarousel.Config (BannerCarousel.Action -> a)
+advancedRideBannerCarousel state action =
+  let config = BannerCarousel.config action
+      imageHeight = if configureImage then (V 75) else (V 105)
+      configureImage = false
+      imageWidth = if configureImage then (V 98) else (V 118)
+      actionTextStyle = if configureImage then FontStyle.Body3 else FontStyle.ParagraphText
+      titleStyle = if configureImage then FontStyle.Body4 else FontStyle.Body7
+  in config {
+        backgroundColor = Color.blue600,
+        title = getString GET_ADVANCED_RIDE,
+        titleColor = Color.blue900,
+        actionText = getString LEARN_MORE,
+        actionTextColor = Color.white900,
+        actionTextBackgroundColour = Color.blue900,
+        actionIconUrl = (HU.getAssetLink FunctionCall) <> "ny_ic_info_white_filled.png",
+        actionIconVisibility = true,
+        imageUrl = fetchImage FF_ASSET "ny_ic_advanced_booking.png",
+        isBanner = true,
+        imageHeight = imageHeight,
+        imageWidth = imageWidth,
+        actionTextStyle = actionTextStyle,
+        actionArrowIconVisibility = false,
+        titleStyle = titleStyle,
+        "type" = BannerCarousel.AdvancedRide,
+        imagePadding = PaddingVertical 5 5
+  }
 
 accessbilityBannerConfig :: forall a. ST.HomeScreenState -> (BannerCarousel.Action -> a) -> BannerCarousel.Config  (BannerCarousel.Action -> a)
 accessbilityBannerConfig _ action = 
@@ -687,6 +721,7 @@ silentModeConfig state = let
       , text =  getString GO_SILENT
       , enableRipple = true
     }
+  , popUpHeaderConfig = config'.popUpHeaderConfig
   }
   in popUpConfig'
 
@@ -1079,6 +1114,91 @@ accessibilityPopUpConfig state =
       }
   in config'
 
+advancedRidePopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
+advancedRidePopUpConfig state = 
+  let 
+    config = PopUpModal.config
+    config' = config
+      {
+        gravity = CENTER,
+        margin = MarginHorizontal 24 24 ,
+        buttonLayoutMargin = Margin 16 0 16 20 ,
+        onlyTopTitle = VISIBLE,
+        dismissPopup = true,
+        optionButtonOrientation = "VERTICAL",
+        topTitle {
+          text = getString ADVANCED_RIDE_POPUP_TITLE 
+        , gravity = LEFT
+        , visibility = VISIBLE
+        , width = WRAP_CONTENT
+        , margin = Margin 12 0 12 0
+        , textStyle = SubHeading2
+        },
+        primaryText {
+          visibility = GONE
+        },
+        secondaryText {
+        visibility = GONE},
+        option1 {
+          text = getString WATCH_VIDEO
+        , background = Color.black900
+        , width = MATCH_PARENT
+        , gravity = CENTER
+        , color = Color.yellow900
+        },
+        option2 {
+          text = getString GOT_IT
+          , width = MATCH_PARENT
+          , gravity = CENTER
+          , background = Color.white900
+          , color = Color.black900
+          , strokeColor = Color.white900
+          , margin = Margin 0 0 0 0
+        },
+        backgroundClickable = true,
+        cornerRadius = (PTD.Corners 15.0 true true true true),
+        coverImageConfig {
+          imageUrl = fetchImage FF_ASSET "ny_ic_pop_advanced_ride_feat"
+        , visibility = VISIBLE
+        , height = V 160
+        , width = MATCH_PARENT
+        , margin = Margin 12 12 12 12
+        },
+        popUpHeaderConfig{
+           visibility = VISIBLE
+          , width = MATCH_PARENT
+          , height = WRAP_CONTENT
+          , margin = Margin 0 0 0 0
+          , gravity = CENTER
+          , padding = Padding 12 12 12 12
+          , orientation = "HORIZONTAL"
+          , backgroundColor = Color.blue600
+          , headingText {
+              margin =  Margin 0 0 0 0
+            , color = Color.black900
+            , gravity = LEFT
+            , text = getString ADVANCE_BOOKING
+            , visibility = VISIBLE
+          }
+          , subHeadingText {
+              margin = Margin 0 0 0 0
+            , color = Color.black700
+            , gravity = LEFT
+            , text = getString FEATURE_UPDATE
+            , visibility = VISIBLE
+          }
+          , imageConfig {
+              imageUrl = fetchImage FF_ASSET "ny_ic_pop_day_illustration"
+            , height = V 60
+            , width = V 60
+            , margin = Margin 0 0 0 0
+            , visibility = VISIBLE
+          }
+          
+        }
+      }
+  in config'
+
 type ContentConfig = 
   { title :: String,
     coverMediaText :: String,
@@ -1315,7 +1435,7 @@ getRideCompletedConfig state = let
       width = MATCH_PARENT,
       margin = MarginTop 0,
       textConfig {
-        text = getString FARE_COLLECTED
+        text = if isJust state.data.advancedRideData then getString GO_TO_ADVANCED_RIDE else getString FARE_COLLECTED
       },
       enableRipple = true,
       rippleColor = Color.rippleShade
@@ -1531,7 +1651,7 @@ subsBlockerPopUpConfig state = PopUpModal.config {
     , isClickable = true
     },
   dismissPopup = false
-    }
+      }
 
 gotoKnowMoreConfig :: ST.HomeScreenState-> PopUpModal.Config
 gotoKnowMoreConfig state = PopUpModal.config {
@@ -1914,7 +2034,7 @@ vehicleNotSupportedPopup state =
       , width = V 300
       , height = V 315
       }
-    }
+        }
 
 bgLocPopup :: ST.HomeScreenState -> PopUpModal.Config
 bgLocPopup state = 

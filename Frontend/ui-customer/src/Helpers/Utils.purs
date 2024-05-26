@@ -1005,7 +1005,7 @@ type Markers = {
     destMarker :: String
 }
 
-data TrackingType = RIDE_TRACKING | DRIVER_TRACKING
+data TrackingType = RIDE_TRACKING | DRIVER_TRACKING | ADVANCED_RIDE_TRACKING
 
 getRouteMarkers :: String -> City -> TrackingType -> FareProductType -> Markers
 getRouteMarkers variant city trackingType fareProductType = 
@@ -1030,6 +1030,7 @@ mkDestMarker trackingType fareProductType =
     case trackingType of 
         RIDE_TRACKING -> if fareProductType == RENTAL then "ny_ic_blue_marker" else "ny_ic_dest_marker"
         DRIVER_TRACKING -> "ny_ic_src_marker"
+        ADVANCED_RIDE_TRACKING -> "ny_ic_drop_loc_marker"
 
 getAutoImage :: City -> String
 getAutoImage city = case city of

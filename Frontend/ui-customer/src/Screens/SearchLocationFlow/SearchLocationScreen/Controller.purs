@@ -40,6 +40,7 @@ import Constants.Configs (getPolylineAnimationConfig)
 import Control.Monad.Trans.Class (lift)
 import Data.Array as DA
 import Data.Maybe as MB
+import Data.Tuple
 import Data.Number (fromString) as NUM
 import Data.Ord (comparing)
 import Data.String (contains, Pattern(..))
@@ -51,7 +52,8 @@ import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isTrue, flowRunner, liftFlow)
 import Helpers.Utils (updateLocListWithDistance, setText, getSavedLocationByTag, getCurrentLocationMarker, normalRoute)
-import JBridge (currentPosition, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus, showKeyboard, scrollViewFocus, animateCamera, hideKeyboardOnNavigation, exitLocateOnMap, removeMarker, Location, setMapPadding, getExtendedPath, drawRoute, defaultMarkerConfig, getLayoutBounds)
+import JBridge (currentPosition, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus, showKeyboard, scrollViewFocus, animateCamera, hideKeyboardOnNavigation, exitLocateOnMap, removeMarker, Location, setMapPadding, getExtendedPath, drawRoute, defaultMarkerConfig, getLayoutBounds, mkRouteConfig)
+import JBridge as JB
 import Log (trackAppActionClick)
 import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -572,7 +574,7 @@ drawRouteOnMap state =
         _ = spy "INside sourceMarkerConfig" sourceMarkerConfig 
         _ = spy "inside destMarkerConfig" destMarkerConfig
     void $ launchAff $ flowRunner defaultGlobalState $ do 
-      let newRoute = case state.data.route of 
+      let Tuple newRoute points = case state.data.route of 
                         MB.Just (Route route) ->
                           let (Snapped routePts) = route.points 
                               newPts = if DA.length routePts > 1 then 
@@ -580,12 +582,13 @@ drawRouteOnMap state =
                                         else 
                                           walkCoordinate startLat startLon endLat endLon
                               newRoute = route {points = Snapped (map (\item -> LatLong { lat : item.lat, lon : item.lng}) newPts.points)}
-                          in (newRoute)
+                          in Tuple newRoute newPts
                         MB.Nothing -> 
                           let newPts = walkCoordinate startLat startLon endLat endLon
                               newRoute = {boundingBox: MB.Nothing, distance: 0, duration: 0, pointsForRentals: MB.Nothing, points : Snapped (map (\item -> LatLong { lat : item.lat, lon : item.lng}) newPts.points), snappedWaypoints : Snapped []}
-                          in newRoute
-      liftFlow $ drawRoute [ (walkCoordinates newRoute.points)] "LineString" true sourceMarkerConfig destMarkerConfig 8 "NORMAL" (specialLocationConfig "" "" false getPolylineAnimationConfig) (getNewIDWithTag "SearchLocationScreenMap")
+                          in Tuple newRoute newPts
+      let routeConfig = JB.mkRouteConfig points sourceMarkerConfig destMarkerConfig "NORMAL" "LineString" false JB.DEFAULT (specialLocationConfig "" "" false getPolylineAnimationConfig)
+      liftFlow $ drawRoute [routeConfig] (getNewIDWithTag "SearchLocationScreenMap")
     pure NoAction
   ] 
 

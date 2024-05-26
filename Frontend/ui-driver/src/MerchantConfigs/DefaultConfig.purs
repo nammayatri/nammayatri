@@ -131,6 +131,8 @@ config =
               mapImage : "ny_ic_bengalore_map",
               cityCode : "std:080",
               showSubscriptions : true,
+              enableAdvancedBooking : true,
+              advancedRidePopUpYoutubeLink : "https://www.youtube.com/watch?v=gnZIj8U71tE" , --- Dummy link need to change
               cityLat : 12.971599,
               cityLong : 77.594566,
               supportNumber : "",
@@ -161,6 +163,8 @@ config =
               mapImage : "ny_ic_hyderabad_map",
               cityCode : "std:040",
               showSubscriptions : false,
+              enableAdvancedBooking : false,
+              advancedRidePopUpYoutubeLink : "https://www.youtube.com/watch?v=gnZIj8U71tE" , --- Dummy link need to change
               cityLat : 17.387140,
               cityLong : 78.491684,
               supportNumber : "+918069724900",
@@ -191,6 +195,8 @@ config =
               mapImage : "ny_ic_mysuru_map",
               cityCode : "std:0821",
               showSubscriptions : false,
+              enableAdvancedBooking : false,
+              advancedRidePopUpYoutubeLink : "https://www.youtube.com/watch?v=gnZIj8U71tE" , --- Dummy link need to change
               cityLat : 12.295810,
               cityLong : 76.639381,
               supportNumber : "",
@@ -221,6 +227,8 @@ config =
               mapImage : "ny_ic_delhi_map",
               cityCode : "std:011",
               showSubscriptions : false,
+              enableAdvancedBooking : false,
+              advancedRidePopUpYoutubeLink : "https://www.youtube.com/watch?v=gnZIj8U71tE" , --- Dummy link need to change
               cityLat : 28.644800,
               cityLong : 77.216721,
               supportNumber : "+918069724848",
@@ -251,6 +259,8 @@ config =
               mapImage : "ny_ic_chennai_map",
               cityCode : "std:044",
               showSubscriptions : false,
+              enableAdvancedBooking : false,
+              advancedRidePopUpYoutubeLink : "https://www.youtube.com/watch?v=gnZIj8U71tE" , --- Dummy link need to change
               cityLat : 13.067439,
               cityLong : 80.237617,
               supportNumber : "08069724899",
@@ -281,6 +291,8 @@ config =
               mapImage : "ny_ic_coimbatore_map",
               cityCode : "std:0422",
               showSubscriptions : false,
+              enableAdvancedBooking : false,
+              advancedRidePopUpYoutubeLink : "https://www.youtube.com/watch?v=gnZIj8U71tE" , --- Dummy link need to change
               cityLat : 11.004556,
               cityLong : 76.961632,
               supportNumber : "",
@@ -311,6 +323,8 @@ config =
               mapImage : "ny_ic_puducherry_map",
               cityCode : "std:0413",
               showSubscriptions : false,
+              enableAdvancedBooking : false,
+              advancedRidePopUpYoutubeLink : "https://www.youtube.com/watch?v=gnZIj8U71tE" , --- Dummy link need to change
               cityLat : 11.943852,
               cityLong : 79.808292,
               supportNumber : "08069724899",
@@ -341,6 +355,8 @@ config =
               mapImage : "ny_ic_gurugram_map",
               cityCode : "std:0124",
               showSubscriptions : false,
+              enableAdvancedBooking : false,
+              advancedRidePopUpYoutubeLink : "https://www.youtube.com/watch?v=gnZIj8U71tE" , --- Dummy link need to change
               cityLat : 28.457523,
               cityLong : 77.026344,
               supportNumber : "",
@@ -371,6 +387,8 @@ config =
               mapImage : "ny_ic_noida_map",
               cityCode : "std:01189",
               showSubscriptions : false,
+              enableAdvancedBooking : false,
+              advancedRidePopUpYoutubeLink : "https://www.youtube.com/watch?v=gnZIj8U71tE" , --- Dummy link need to change
               cityLat : 28.535517,
               cityLong : 77.391029,
               supportNumber : "",
@@ -401,6 +419,8 @@ config =
               mapImage : "ny_ic_tamilnadu_map",
               cityCode :  "std:0422",
               showSubscriptions : false,
+              enableAdvancedBooking : false,
+              advancedRidePopUpYoutubeLink : "https://www.youtube.com/watch?v=gnZIj8U71tE" , --- Dummy link need to change
               cityLat : 11.1271,
               cityLong : 78.6569,
               supportNumber : "08069724899",
@@ -431,6 +451,8 @@ config =
               mapImage : "",
               cityCode : "std:033",
               showSubscriptions : true,
+              enableAdvancedBooking : false,
+              advancedRidePopUpYoutubeLink : "https://www.youtube.com/watch?v=gnZIj8U71tE" , --- Dummy link need to change
               cityLat : 22.5354064,
               cityLong : 88.2649516,
               supportNumber : "",

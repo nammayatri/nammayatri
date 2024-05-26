@@ -15,8 +15,8 @@
 module Screens.HomeScreen.ScreenData where
 
 import Screens.Types
-import Prelude (negate)
-import Services.API (DriverProfileStatsResp(..), Status(..))
+import Prelude(negate)
+import Services.API (DriverProfileStatsResp(..), Status(..), BookingTypes(..))
 import Data.Maybe
 import Foreign.Object (empty)
 import Domain.Payments as PP
@@ -26,8 +26,8 @@ import RemoteConfig.Utils as RU
 import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
 
 initData :: HomeScreenState
-initData =
-  { data:
+initData = 
+  { data: 
       { linkedVehicleCategory: ""
       , linkedVehicleVariant: ""
       , snappedOrigin: Nothing
@@ -40,52 +40,9 @@ initData =
       , subsRemoteConfig: RU.subscriptionConfig "subscription_configs"
       , driverStats: false
       , cityConfig : dummyCityConfig
-      , activeRide:
-          { id: ""
-          , source: ""
-          , destination: Nothing
-          , src_lat: 0.0
-          , src_lon: 0.0
-          , dest_lat: 0.0
-          , dest_lon: 0.0
-          , actualRideDistance: 0.0
-          , tripActualDistance: Nothing
-          , status: NOTHING
-          , distance: 0.0
-          , duration: 0
-          , riderName: ""
-          , estimatedFare: 0
-          , waitTimerId: ""
-          , notifiedCustomer: false
-          , exoPhone: ""
-          , specialLocationTag: Nothing
-          , waitTimeSeconds: -1
-          , waitTimeInfo: false
-          , tripDuration: Nothing
-          , rideCreatedAt: ""
-          , driverVehicle : ""
-          , requestedVehicleVariant: Nothing
-          , disabilityTag: Nothing
-          , enableFrequentLocationUpdates: false
-          , tripScheduledAt: Nothing
-          , tripType: ST.OneWay
-          , tripStartTime: Nothing
-          , tripEndTime: Nothing
-          , nextStopAddress: Nothing
-          , lastStopAddress: Nothing
-          , nextStopLat: Nothing
-          , nextStopLon: Nothing
-          , lastStopLat: Nothing
-          , lastStopLon: Nothing
-          , actualRideDuration: Nothing
-          , startOdometerReading: Nothing
-          , endOdometerReading: Nothing
-          , serviceTier : ""
-          , capacity : Nothing
-          , hasToll: false
-          , estimatedTollCharge : Nothing
-          , acRide : Nothing
-          }
+      , activeRide : dummyRideData
+      , advancedRideData : Nothing
+      , currentRideData : Nothing
       , cancelRideModal:
           { selectionOptions: []
           , activeIndex: Nothing
@@ -108,7 +65,7 @@ initData =
           , timerID: ""
           , continueEnabled: false
           , enableTimer: true
-          }
+        }
       , messages: []
       , messagesSize: "-1"
       , chatSuggestionsList: []
@@ -143,7 +100,7 @@ initData =
           , driverBlocked: false
           , showBlockingPopup: false
           , autoPayStatus: NO_AUTOPAY
-          }
+        }
       , triggerPatchCounter: 0
       , peekHeight: 0
       , endRideData:
@@ -181,18 +138,18 @@ initData =
           , gotoEnabledForMerchant: false
           , confirmGotoCancel: false
           , savedLocationCount: 0
-          }
+        }
       , coinBalance: 0
       , bannerData:
           { bannerItem: Nothing
-          , currentBanner: 0
-          , bannerScrollState: "0"
-          , currentPage: 0
-          }
+        , currentBanner: 0
+        , bannerScrollState: "0"
+        , currentPage: 0
+      }
       , prevLatLon: Nothing
       , noOfLocations: 0
       , isVehicleSupported: true
-      }
+    }
   , props:
       { isFreeRide: false
       , arrivedAtStop: false
@@ -260,6 +217,9 @@ initData =
       , specialZoneProps: { specialZonePopup: false, nearBySpecialZone: false, currentGeoHash: "" }
       , coinPopupType : NO_COIN_POPUP
       , rideStartTimer: 0
+      , bookingStage : CURRENT
+      , advancedRideStage : NotAssigned
+      , showAdvancedRidePopUp : false
       , odometerFileId: Nothing
       , odometerUploadAttempts: 0
       , odometerImageUploading: false
@@ -285,3 +245,51 @@ dummyDriverRideStats =
     , totalEarningsOfDayPerKm : Nothing
     , totalValidRidesOfDay : Nothing
     }
+
+dummyRideData :: ActiveRide
+dummyRideData = {
+      id: ""
+      , source: ""
+      , destination: Nothing
+      , src_lat: 0.0
+      , src_lon: 0.0
+      , dest_lat: 0.0
+      , dest_lon: 0.0
+      , actualRideDistance: 0.0
+      , tripActualDistance: Nothing
+      , status: NOTHING
+      , distance: 0.0
+      , duration: 0
+      , riderName: ""
+      , estimatedFare: 0
+      , waitTimerId: ""
+      , notifiedCustomer: false
+      , exoPhone: ""
+      , specialLocationTag: Nothing
+      , waitTimeSeconds: -1
+      , waitTimeInfo: false
+      , tripDuration: Nothing
+      , rideCreatedAt: ""
+      , driverVehicle : ""
+      , requestedVehicleVariant: Nothing
+      , disabilityTag: Nothing
+      , enableFrequentLocationUpdates: false
+      , tripScheduledAt: Nothing
+      , tripType: ST.OneWay
+      , tripStartTime: Nothing
+      , tripEndTime: Nothing
+      , nextStopAddress: Nothing
+      , lastStopAddress: Nothing
+      , nextStopLat: Nothing
+      , nextStopLon: Nothing
+      , lastStopLat: Nothing
+      , lastStopLon: Nothing
+      , actualRideDuration: Nothing
+      , startOdometerReading: Nothing
+      , endOdometerReading: Nothing
+      , serviceTier : ""
+      , capacity : Nothing
+      , hasToll: false
+      , estimatedTollCharge : Nothing
+      , acRide : Nothing
+      }

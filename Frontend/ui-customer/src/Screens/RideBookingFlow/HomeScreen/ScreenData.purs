@@ -174,6 +174,8 @@ initData = {
     , maxEstimatedDuration : 0
     , invalidBookingPopUpConfig : Nothing
     , rideCompletedData : initialRideCompletedData
+    , routeCacheForAdvancedBooking : Nothing
+    , previousRideDrop : false
     },
     props: {
       rideRequestFlow : false
@@ -467,6 +469,8 @@ dummyDriverInfo =
   , providerType : CT.ONUS
   , rentalData : dummyRentalBookingConfig
   , fareProductType : FPT.ONE_WAY
+  , driversPreviousRideDropLocLat : Nothing
+  , driversPreviousRideDropLocLon : Nothing
   }
 
 dummySettingBar :: SettingSideBarState
@@ -586,7 +590,10 @@ dummyRideBooking = RideBookingRes
   estimatedDistance : Nothing,
   estimatedDuration : Nothing,
   rideScheduledTime : Nothing,
-  vehicleServiceTierType : Nothing
+  vehicleServiceTierType : Nothing,
+  tollConfidence : Nothing,
+  driversPreviousRideDropLocLat : Nothing,
+  driversPreviousRideDropLocLon : Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails
