@@ -111,13 +111,13 @@ type CityConfig = {
   referral :: Referral,
   waitingCharges :: Number,
   waitingChargesConfig :: WaitingChargesConfig,
-  rateCardConfig :: RateCardConfig
+  rateCardConfig :: RateCardConfig,
+  assets :: Assets
 }
 
 type RateCardConfig = {
   showLearnMore :: Boolean,
   learnMoreVideoLink :: String
-  assets :: Assets
 }
 
 type Assets ={

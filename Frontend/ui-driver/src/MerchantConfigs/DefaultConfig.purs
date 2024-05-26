@@ -555,6 +555,9 @@ config =
               showSubscriptions : true,
               cityLat : 9.931233,
               cityLong : 76.267303,
+              enableAdvancedBooking: false,
+              advancedRidePopUpYoutubeLink: "",
+              callDriverInfoPost: false,
               supportNumber : "",
               languageKey : "ML_IN",
               showDriverReferral : true,
@@ -581,6 +584,7 @@ config =
             },
             waitingCharges : 1.50,
             waitingChargesConfig : defWaitingChargesConfig,
+            rateCardConfig : defRateCardConfig,
             assets :{
               auto_image : "ic_auto_rickshaw",
               onboarding_auto_image : "ny_ic_auto_right_side_black"
