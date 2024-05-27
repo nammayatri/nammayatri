@@ -265,6 +265,7 @@ getVehicleImage variant vehicleDetail city = do
                           "SUV" -> "ny_ic_suv_concept"
                           "TAXI" -> "ic_white_taxi"
                           "TAXI_PLUS" -> "ny_ic_sedan_concept"
+                          "BIKE" -> "ny_ic_bike_left_side"
                           _     -> "ny_ic_sedan_concept"
           _          -> case variant of
                           "TAXI"      -> "ny_ic_hatchback_concept"
@@ -274,6 +275,7 @@ getVehicleImage variant vehicleDetail city = do
                           "HATCHBACK" -> "ny_ic_hatchback_concept"
                           "ECO"       -> "ny_ic_hatchback_concept"
                           "COMFY"     -> "ny_ic_sedan_concept"
+                          "BIKE"      -> "ny_ic_bike_left_side"
                           _           -> "ny_ic_sedan_concept"              
     where 
       mkAutoImage :: City -> String

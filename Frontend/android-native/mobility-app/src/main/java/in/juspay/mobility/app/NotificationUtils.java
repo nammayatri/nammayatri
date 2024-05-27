@@ -882,6 +882,7 @@ public class NotificationUtils {
                     case "TAXI_PLUS" : return "AC Cab";
                     case "SUV" : return "AC SUV";
                     case "TAXI" : return "Non AC Taxi";
+                    case "BIKE" : return "Bike Taxi";
                     default : return NO_VARIANT;
                 }
             case "nammayatriprovider" : return NO_VARIANT;

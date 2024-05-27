@@ -980,6 +980,7 @@ getVehicleTitle vehicle =
       "SUV" -> (getString SUV)
       "SEDAN" -> (getString SEDAN)
       "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
+      "BIKE" -> "Bike Taxi"
       _ -> ""
   )
     <> " - "
@@ -1861,7 +1862,7 @@ feedbackPillDataWithRating3 state =
     , { id: "8", text: getString RASH_DRIVING }
     ]
   , [ { id: "8", text: getString DRIVER_CHARGED_MORE }
-    , { id: "11", text: if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else getString UNCOMFORTABLE_CAB }
+    , {id : "11", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else if state.data.vehicleVariant == "BIKE" then getString UNCOMFORTABLE_BIKE else getString UNCOMFORTABLE_CAB}
     ]
   , [ { id: "3", text: getString TRIP_GOT_DELAYED }
     , { id: "3", text: getString FELT_UNSAFE }
@@ -1874,7 +1875,7 @@ feedbackPillDataWithRating4 state =
     , { id: "9", text: getString EXPERT_DRIVING }
     ]
   , [ { id: "9", text: getString ASKED_FOR_EXTRA_FARE }
-    , { id: "11", text: if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else getString UNCOMFORTABLE_CAB }
+    , {id : "11", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else if state.data.vehicleVariant == "BIKE" then getString UNCOMFORTABLE_BIKE else getString UNCOMFORTABLE_CAB}
     ]
   , [ { id: "4", text: getString TRIP_GOT_DELAYED }
     , { id: "4", text: getString SAFE_RIDE }
@@ -1886,7 +1887,7 @@ feedbackPillDataWithRating5 state =
   [ [ { id: "10", text: getString POLITE_DRIVER }
     , { id: "5", text: getString EXPERT_DRIVING }
     ]
-  , [ { id: "12", text: if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else getString CLEAN_CAB }
+  , [ {id : "12", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else if state.data.vehicleVariant == "BIKE" then getString CLEAN_BIKE else getString CLEAN_CAB}
     , { id: "10", text: getString ON_TIME }
     ]
   , [ { id: "10", text: getString SKILLED_NAVIGATOR }

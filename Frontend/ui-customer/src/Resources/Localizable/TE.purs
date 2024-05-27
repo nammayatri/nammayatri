@@ -1319,3 +1319,5 @@ getTE stringKey =
     GURUGRAM -> "గురుగ్రామ్"
     WAITING_CHARGES -> "వెచ్చింపు ధరలు"
     SILIGURI -> "సిలిగురి"
+    CLEAN_BIKE -> "స్వచ్ఛంగా బైక్"
+    UNCOMFORTABLE_BIKE -> "ఆకస్మికమైన బైక్"

@@ -598,6 +598,7 @@ mapServiceTierName vehicleVariant isValueAddNP serviceTierName =
       "SEDAN" -> Just "Sedan"
       "SUV" -> Just "XL Cab"
       "AUTO_RICKSHAW" -> Just "Auto"
+      "BIKE" -> Just "Bike"
       _ -> serviceTierName
 
 mapServiceTierShortDesc :: String -> Maybe Boolean -> Maybe String -> Maybe String
@@ -609,6 +610,7 @@ mapServiceTierShortDesc vehicleVariant isValueAddNP serviceTierShortDesc =
       "SEDAN" -> Just "AC, Premium Comfort"
       "SUV" -> Just "AC, Extra Spacious"
       "AUTO_RICKSHAW" -> Just "Easy Commute"
+      "BIKE" -> Just "Commute Friendly"
       _ -> serviceTierShortDesc
 
 dummyFareRange :: FareRange

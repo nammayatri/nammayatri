@@ -68,7 +68,6 @@ instance showVehicalTypes :: Show VehicalTypes where
     show (Bike ) = "Bike"
 
 
-
 data NotificationType = REGISTRATION_APPROVED | SEARCH_CALLBACK | CONFIRM_CALLBACK
   | TRACKING_CALLBACK | SEARCH_REQUEST | CONFIRM_REQUEST | UPCOMING_CASE
 

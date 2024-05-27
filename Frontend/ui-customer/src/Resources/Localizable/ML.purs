@@ -1306,3 +1306,5 @@ getML stringKey =
         GURUGRAM -> "ഗുരുഗ്രാം"
         WAITING_CHARGES -> "കാത്തിരിക്കൽ ചാർജുകൾ"
         SILIGURI -> "സിലിഗുരി"
+        CLEAN_BIKE -> "വൃത്തിയാക്കിയ ബൈക്ക്"
+        UNCOMFORTABLE_BIKE -> "അസന്തുഷ്ടമായ ബൈക്ക്"

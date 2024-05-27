@@ -669,6 +669,7 @@ getVehicleVariantImage variant viewType =
                                       Kochi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
                                       Delhi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
                                       _ -> variantConfig.bookAny.leftViewImage
+          "BIKE"          -> fetchImage FF_ASSET "ny_ic_bike_left_side"
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
       else do
         case variant of
@@ -694,6 +695,7 @@ getVehicleVariantImage variant viewType =
                                       Kochi -> fetchImage COMMON_ASSET "ny_ic_cab_auto_black"
                                       Delhi -> variantConfig.bookAny.image
                                       _ -> variantConfig.bookAny.image
+          "BIKE"          -> fetchImage FF_ASSET "ny_ic_bike_side"
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
 getVariantRideType :: String -> String
@@ -967,7 +969,7 @@ getAllServices dummy =
     Delhi -> ["AC Mini", "AC Sedan", "Auto", "AC SUV"]
     Chennai -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
     Mysore -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
-    Kolkata -> ["Non-AC", "Hatchback", "Sedan", "SUV"]
+    Kolkata -> ["Non-AC", "Hatchback", "Sedan", "SUV", "Bike Taxi"]
     Kochi -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
     Pondicherry -> ["Auto", "Eco"]
     Noida -> ["AC Mini", "AC Sedan", "Auto", "AC SUV"]
@@ -1000,6 +1002,7 @@ getVariantDescription variant =
     "SEDAN" ->{text : "AC, Plush rides" , airConditioned : true}
     "SUV" ->{text : "AC , Spacious rides" , airConditioned : true}
     "HATCHBACK" ->{text : "Non-AC , Budget rides " , airConditioned : false}
+    "BIKE" ->{ text : "Commute friendly", airConditioned : false}
     _ ->{text : "Non-AC Taxi" , airConditioned : false}
 
 getVehicleName :: String -> String
@@ -1008,6 +1011,7 @@ getVehicleName vaiant =
     YATRISATHI -> case vaiant of
                     "TAXI" -> "Non AC Taxi"
                     "SUV"  -> "AC SUV"
+                    "BIKE" -> "Bike Taxi"
                     _      -> "AC Cab"
     _          -> case vaiant of
                     "AUTO_RICKSHAW" -> "Auto Rickshaw"
@@ -1015,7 +1019,8 @@ getVehicleName vaiant =
                     "TAXI_PLUS" -> "AC Taxi"
                     "SEDAN" -> "Comfy" 
                     "SUV" -> "SUV"
-                    "HATCHBACK" -> "Eco" 
+                    "HATCHBACK" -> "Eco"
+                    "BIKE" -> "Bike Taxi" 
                     _ -> "Non-AC Taxi"
 
 encodeBookingTimeList :: Array BookingTime -> String
@@ -1084,6 +1089,7 @@ getCitySpecificMarker city variant =
         "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
         "SUV"           -> "ny_ic_suv_nav_on_map"
         "HATCHBACK"     -> "ny_ic_hatchback_nav_on_map"
+        "BIKE"          -> "ny_ic_bike_nav_on_map"
         _               -> "ny_ic_vehicle_nav_on_map"
 
 mkDestMarker :: TrackingType -> FareProductType -> String

@@ -337,7 +337,7 @@ getVehicleType vehicleType =
     "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
     "TAXI" -> (getString TAXI)
     "TAXI_PLUS" -> (getString TAXI_PLUS)
-    "BIKE" -> "Bike"
+    "BIKE" -> (getString BIKE_TAXI)
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig
@@ -529,7 +529,7 @@ getCategorizedVariant variant = case variant of
       "HATCHBACK"  -> "AC Taxi"
       "TAXI_PLUS"  -> "AC Taxi"
       "SUV" -> "AC Taxi"
-      "BIKE" -> "Bike"
+      "BIKE" -> "Bike Taxi"
       _ -> "Non AC"
     _ -> case var of
       "SEDAN"  -> "Sedan"
@@ -537,7 +537,7 @@ getCategorizedVariant variant = case variant of
       "TAXI_PLUS"  -> "AC Taxi"
       "SUV" -> "Suv"
       "AUTO_RICKSHAW" -> "Auto Rickshaw"
-      "BIKE" -> "Bike"
+      "BIKE" -> "Bike Taxi"
       _ -> var
   Nothing -> ""
 
@@ -579,6 +579,7 @@ getVehicleVariantImage variant =
                         "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
                         "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
                         "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
+                        "BIKE_TIER" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
                         _           -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
         _ -> case variant of
                         "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
@@ -600,6 +601,7 @@ getVehicleVariantImage variant =
                             "Chennai"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
                             _           -> fetchImage FF_ASSET "ic_vehicle_front"
                         "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
+                        "BIKE_TIER" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
                         _ -> fetchImage FF_ASSET "ic_vehicle_front"
 
 getVariantRideType :: String -> String

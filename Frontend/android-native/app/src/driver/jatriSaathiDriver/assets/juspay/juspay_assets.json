@@ -665,6 +665,7 @@
       "ny_ic_driver_location_undetectable" : true,
       "ny_driver_location_permission" : true,
       "ys_ic_kolkata_map" : true,
-      "ys_ic_siliguri_map" : true
+      "ys_ic_siliguri_map" : true,
+      "ny_ic_bike_left_side" : true
    }
 }

@@ -1304,3 +1304,5 @@ getBN stringKey =
         GURUGRAM -> "গুরুগ্রাম"
         WAITING_CHARGES -> "অপেক্ষার খরচ"
         SILIGURI -> "শিলিগুড়ি"
+        CLEAN_BIKE -> "পরিষ্কার বাইক"
+        UNCOMFORTABLE_BIKE -> "অসুবিধাজনক বাইক"

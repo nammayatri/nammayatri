@@ -96,6 +96,7 @@ defaultTipConfig variant =
     "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
     "TAXI" -> mkTipConfig []
     "TAXI_PLUS" -> mkTipConfig []
+    "BIKE" -> mkTipConfig []
     _ -> mkTipConfig []
 
 getTipViewProps :: TipViewProps -> String -> TipViewProps

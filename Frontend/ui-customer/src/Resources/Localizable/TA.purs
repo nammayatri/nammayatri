@@ -1322,3 +1322,5 @@ getTA stringKey =
     GURUGRAM -> "குருகிராம்"
     WAITING_CHARGES -> "காத்திருப்பு கட்டணங்கள்"
     SILIGURI -> "சிலிகுரி"
+    CLEAN_BIKE -> "சுத்தமான பைக்"
+    UNCOMFORTABLE_BIKE -> "அமைதியற்ற பைக்"

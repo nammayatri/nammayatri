@@ -1305,3 +1305,5 @@ getKN stringKey =
         GURUGRAM -> "ಗುರುಗ್ರಾಮ"
         WAITING_CHARGES -> "ನಿರೀಕ್ಷಣಾ ಶುಲ್ಕಗಳು"
         SILIGURI -> "ಸಿಲಿಗುರಿ"
+        CLEAN_BIKE -> "ಸ್ವಚ್ಛ ಬೈಕ್"
+        UNCOMFORTABLE_BIKE -> "ಅಸಂತೋಷಕರ ಬೈಕ್"

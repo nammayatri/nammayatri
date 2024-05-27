@@ -1306,3 +1306,5 @@ getFR stringKey =
         GURUGRAM -> "Gurugram"
         WAITING_CHARGES -> "Frais d'attente"
         SILIGURI -> "Siliguri"
+        CLEAN_BIKE -> "Vélo propre"
+        UNCOMFORTABLE_BIKE -> "Vélo inconfortable"

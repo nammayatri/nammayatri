@@ -155,6 +155,7 @@ tipConfigData city variant = do
         "AUTO_RICKSHAW" -> config.autoRickshaw
         "TAXI" -> config.taxi
         "TAXI_PLUS" -> config.taxiPlus
+        "BIKE" -> config.bike
         "BOOK_ANY" -> config.bookAny
         _ -> config.default
 
@@ -166,6 +167,7 @@ defaultTipsConfig =
   , autoRickshaw: Nothing
   , taxi: Nothing
   , taxiPlus: Nothing
+  , bike : Nothing
   , bookAny: Nothing
   , default: Nothing
   }

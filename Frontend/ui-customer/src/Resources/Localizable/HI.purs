@@ -1304,3 +1304,5 @@ getHI stringKey =
         GURUGRAM -> "गुरुग्राम"
         WAITING_CHARGES -> "प्रतीक्षा शुल्क"
         SILIGURI -> "सिलीगुड़ी"
+        CLEAN_BIKE -> "साफ बाइक"
+        UNCOMFORTABLE_BIKE -> "असहज बाइक"

@@ -1306,3 +1306,5 @@ getEN stringKey =
         GURUGRAM -> "Gurugram"
         WAITING_CHARGES -> "Waiting charges"
         SILIGURI -> "Siliguri"
+        CLEAN_BIKE -> "Clean Bike"
+        UNCOMFORTABLE_BIKE -> "Uncomfortable Bike"

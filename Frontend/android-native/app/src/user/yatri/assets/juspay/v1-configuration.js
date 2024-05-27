@@ -318,6 +318,10 @@ window.getMerchantConfig = function () {
           "name" : "Book Any",
           "image" : "ny_ic_auto_cab_green,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_cab_green.png"
         },
+        "bike" : {
+          "name" : "Bike",
+          "image" : "ny_ic_bike_side,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_bike_side.png"
+        },
       }
     }
     , "feature" : {
