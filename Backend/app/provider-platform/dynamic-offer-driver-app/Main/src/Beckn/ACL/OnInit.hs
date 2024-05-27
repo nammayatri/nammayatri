@@ -85,7 +85,8 @@ tfVehicle res = do
         vehicleColor = Nothing,
         vehicleMake = Nothing,
         vehicleModel = Nothing,
-        vehicleRegistration = Nothing
+        vehicleRegistration = Nothing,
+        vehicleCapacity = Nothing
       }
 
 tfCancellationTerms :: DBC.BecknConfig -> [Spec.CancellationTerm]

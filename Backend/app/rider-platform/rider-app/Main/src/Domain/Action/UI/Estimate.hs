@@ -62,6 +62,8 @@ data EstimateAPIEntity = EstimateAPIEntity
     isValueAddNP :: Bool,
     isCustomerPrefferedSearchRoute :: Maybe Bool,
     isBlockedRoute :: Maybe Bool,
+    vehicleServiceTierAirConditioned :: Maybe Double,
+    vehicleServiceTierSeatingCapacity :: Maybe Int,
     validTill :: UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

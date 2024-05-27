@@ -70,6 +70,8 @@ updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
       Se.Set Beam.tripTermsId (Kernel.Types.Id.getId <$> (tripTerms <&> (.id))),
       Se.Set Beam.updatedAt (Just _now),
       Se.Set Beam.validTill validTill,
+      Se.Set Beam.vehicleServiceTierAirConditioned vehicleServiceTierAirConditioned,
+      Se.Set Beam.vehicleServiceTierSeatingCapacity vehicleServiceTierSeatingCapacity,
       Se.Set Beam.vehicleVariant vehicleServiceTierType
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

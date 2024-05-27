@@ -52,3 +52,9 @@ ALTER TABLE atlas_app.quote ADD COLUMN toll_charges double precision ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.quote ADD COLUMN estimated_pickup_duration integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN vehicle_service_tier_seating_capacity integer ;
+ALTER TABLE atlas_app.quote ADD COLUMN vehicle_service_tier_air_conditioned double precision ;

@@ -83,6 +83,8 @@ Estimate:
     providerMobileNumber : Text
     providerCompletedRidesCount : Int
     vehicleServiceTierType : VehicleServiceTierType
+    vehicleServiceTierSeatingCapacity : Maybe Int
+    vehicleServiceTierAirConditioned : Maybe Double
     itemId : Text
     tripTerms : Maybe TripTerms
     estimateBreakupList : "[EstimateBreakup]"

@@ -66,6 +66,8 @@ data Booking = Booking
     transactionId :: Kernel.Prelude.Text,
     tripTerms :: Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms,
     updatedAt :: Kernel.Prelude.UTCTime,
+    vehicleServiceTierAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleServiceTierType :: Domain.Types.VehicleServiceTier.VehicleServiceTierType
   }
   deriving (Generic, Show)

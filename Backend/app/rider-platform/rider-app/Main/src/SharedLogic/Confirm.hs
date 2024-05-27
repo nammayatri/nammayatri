@@ -261,6 +261,8 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         updatedAt = now,
         serviceTierName = quote.serviceTierName,
         vehicleServiceTierType = quote.vehicleServiceTierType,
+        vehicleServiceTierSeatingCapacity = quote.vehicleServiceTierSeatingCapacity,
+        vehicleServiceTierAirConditioned = quote.vehicleServiceTierAirConditioned,
         serviceTierShortDesc = quote.serviceTierShortDesc,
         clientBundleVersion = quote.clientBundleVersion,
         clientSdkVersion = quote.clientSdkVersion,
