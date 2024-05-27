@@ -161,6 +161,7 @@ select bapToken quoteId =
         otherSelectedEstimates = Nothing,
         autoAssignEnabled = False,
         autoAssignEnabledV2 = Nothing,
+        isAdvancedBookingEnabled = Nothing,
         paymentMethodId = Nothing
       }
 
