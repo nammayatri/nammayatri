@@ -103,6 +103,7 @@ driverDetailsView config uid =
                           _          -> case config.vehicleVariant of
                                           "TAXI_PLUS" -> " (" <> (getString AC_TAXI) <> ")"
                                           "TAXI" -> " (" <> (getString NON_AC_TAXI) <> ")"
+                                          "BIKE" -> " (" <> "Bike" <> ")"
                                           _ -> ""
           , color Color.black700
           , accessibilityHint $ "Driver : " <> config.driverName <> " : Vehicle : " <> getVehicleType
@@ -236,6 +237,7 @@ getVehicleImage variant vehicleDetail city = do
   let details = (toLower vehicleDetail)
   fetchImage FF_ASSET $ 
     if variant == "AUTO_RICKSHAW" then mkAutoImage city
+    else if variant == "BIKE" then "ny_ic_bike_left_side"
     else
       if contains (Pattern "ambassador") details then "ic_yellow_ambassador"
       else 

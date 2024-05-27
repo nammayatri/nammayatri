@@ -1014,3 +1014,5 @@ getKN stringKey =
         RENTAL_POLICY_DESC_1 -> "ಬುಕಿಂಗ್ ಅನ್ನು ದೃಢೀಕರಿಸುವ ಮೊದಲು ನೀವು ಇನ್ನೂ ಮುಂದಿನ ಪರದೆಯಲ್ಲಿ ನಿಮ್ಮ ದರವನ್ನು ಪರಿಶೀಲಿಸಬಹುದು."
         RENTALS_INTERCITY_AVAILABLE -> "ರೆಂಟಲ್ಸ್ ಮತ್ತು ಇಂಟರ್‌ಸಿಟಿ ಟ್ರಿಪ್‌ಗಳು, ಈಗ Yatri Sathi ಗೆ ಲಭ್ಯವಿದೆ"
         CHECK_IT_OUT -> "ಇದನ್ನು ಪರಿಶೀಲಿಸಿ"
+        CLEAN_BIKE -> "ಸ್ವಚ್ಛ ಬೈಕ್"
+        UNCOMFORTABLE_BIKE -> "ಅಸಂತೋಷಕರ ಬೈಕ್"

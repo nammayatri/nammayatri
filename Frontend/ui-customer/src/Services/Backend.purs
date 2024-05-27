@@ -764,6 +764,7 @@ getRouteMarkers variant city trackingType rideType =
     getCitySpecificMarker :: City -> String
     getCitySpecificMarker city = case variant of
         "AUTO_RICKSHAW" -> getAutoImage city
+        "BIKE"          -> "ny_ic_bike_nav_on_map"
         _               -> "ny_ic_vehicle_nav_on_map"
     
     mkDestMarker :: String
