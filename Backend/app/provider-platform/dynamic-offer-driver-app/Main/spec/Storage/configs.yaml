@@ -75,7 +75,7 @@ DriverPoolConfig:
     batchSizeOnRide: "10"
     onRideRadiusConfig: "ARRAY[]::TEXT[]"
     currentRideTripCategoryValidForForwardBatching: "Array ['OneWay_OneWayOnDemandDynamicOffer']"
-    onRideBatchSplitConfig: "Array ['BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 4 }']"
+    onRideBatchSplitConfig: "Array ['BatchSplitByPickupDistanceOnRide { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistanceOnRide { batchSplitSize = 1, batchSplitDelay = 4 }']"
     enableForwardBatching: "false"
     maxParallelSearchRequestsOnRide: "1"
 

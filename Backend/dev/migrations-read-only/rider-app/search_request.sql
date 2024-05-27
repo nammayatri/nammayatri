@@ -63,3 +63,4 @@ ALTER TABLE atlas_app.search_request ADD COLUMN return_time timestamp with time 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.search_request ADD COLUMN round_trip boolean ;
+ALTER TABLE atlas_app.search_request ADD COLUMN is_advance_booking_enabled boolean ;

@@ -35,6 +35,7 @@ data SearchRequest = SearchRequest
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     fromLocation :: Domain.Types.Location.Location,
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
+    isAdvanceBookingEnabled :: Kernel.Prelude.Bool,
     isBlockedRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isCustomerPrefferedSearchRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isReallocationEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

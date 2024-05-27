@@ -39,6 +39,7 @@ module Domain.Action.UI.Driver
     GetCityReq (..),
     GetCityResp (..),
     DriverFeeResp (..),
+    UpdateProfileInfoPoints (..),
     getInformation,
     activateGoHomeFeature,
     deactivateGoHomeFeature,
@@ -71,6 +72,7 @@ module Domain.Action.UI.Driver
     getDummyRideRequest,
     listScheduledBookings,
     acceptScheduledBooking,
+    getInformationV2,
   )
 where
 
@@ -363,6 +365,9 @@ data BookingAPIEntity = BookingAPIEntity
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
+newtype UpdateProfileInfoPoints = UpdateProfileInfoPoints {isAdvancedBookingEnabled :: Bool}
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
 validateUpdateDriverReq :: Validate UpdateDriverReq
 validateUpdateDriverReq UpdateDriverReq {..} =
   sequenceA_
@@ -508,6 +513,22 @@ data GetCityResp = GetCityResp
     status :: APISuccess
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+getInformationV2 ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    CacheFlow m r,
+    HasField "s3Env" r (S3.S3Env m)
+  ) =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe Int ->
+  UpdateProfileInfoPoints ->
+  m DriverInformationRes
+getInformationV2 (personId, merchantId, merchantOpCityId) mbToss req = do
+  QDriverInformation.updateForwardBatchingEnabled req.isAdvancedBookingEnabled personId
+  getInformation (personId, merchantId, merchantOpCityId) mbToss
 
 getInformation ::
   ( CacheFlow m r,
@@ -1037,7 +1058,9 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             clientConfigVersion = mbConfigVersion',
             clientDevice = getDeviceFromText mbDevice',
             backendConfigVersion = Nothing,
-            backendAppVersion = Just deploymentVersion.getDeploymentVersion
+            backendAppVersion = Just deploymentVersion.getDeploymentVersion,
+            merchantOperatingCityId = Just driver.merchantOperatingCityId,
+            vehicleServiceTierName = sd.vehicleServiceTierName
           }
     thereAreActiveQuotes = do
       driverUnlockDelay <- asks (.driverUnlockDelay)

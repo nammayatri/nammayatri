@@ -76,3 +76,7 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN has_advance_boo
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN toll_related_issue_count integer ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN forward_batching_enabled boolean ;
