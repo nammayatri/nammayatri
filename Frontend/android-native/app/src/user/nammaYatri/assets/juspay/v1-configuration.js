@@ -4,10 +4,48 @@ if (typeof __VERSION__ !== "undefined") {
   version = __VERSION__
 }
 window.version["configuration"]= version;
+window.configCache = window.configCache || {}
+
+function getAppName() {
+  if (!window.configCache["appName"]) {
+    let sessionInfo = JSON.parse(JBridge.getSessionInfo());
+    if (sessionInfo.app_name.toLowerCase().includes("namma")) {
+      window.configCache["appName"] = "Namma Yatri";
+    }
+    else if (sessionInfo.app_name.toLowerCase().includes("mana")) {
+      window.configCache["appName"] = "Mana Yatri";
+    }
+  }
+  return window.configCache["appName"];
+}
+
+function getTandC() {
+  const appName = getAppName()
+  if (appName === "Namma Yatri") {
+    return "https://drive.google.com/file/d/1d7GadhWgqZyoysh7XHG53NvLIr208MEE/view?usp=sharing"
+  } else if (appName === "Mana Yatri") {
+    return "https://drive.google.com/file/d/1d7GadhWgqZyoysh7XHG53NvLIr208MEE/view?usp=sharing"
+  } else {
+    return ""
+  }
+}
+
+function getPrivacyPolicy() {
+  const appName = getAppName()
+  if (appName === "Namma Yatri") {
+    return "https://drive.google.com/file/d/1F3QfydIynZFzfgibawJHaEfP9rMSfXJC/view?usp=sharing"
+  }else if(appName === "Mana Yatri") {
+    return "https://drive.google.com/file/d/1LnEKd6PxolIVAZJq7TyBA9eDCNl_Mq1_/view?usp=sharing"
+  }else{
+    return ""
+  }
+}
+
+
 
 function getAppLink(os) {
-  let sessionInfo = JSON.parse(JBridge.getSessionInfo());
-  if (sessionInfo.app_name.toLowerCase().includes("namma")) {
+  const appName= getAppName();
+  if (appName == "Namma Yatri") {
     if (os == "ANDROID") {
       return "https://play.google.com/store/apps/details?id=in.juspay.nammayatri"
     }
@@ -15,14 +53,15 @@ function getAppLink(os) {
       return "https://apps.apple.com/in/app/namma-yatri/id1637429831"
       
     }
-  }
-  else if (sessionInfo.app_name.toLowerCase().includes("mana")) {
+  } else if (appName == "Mana Yatri") {
     if (os == "ANDROID") {
       return "https://play.google.com/store/apps/details?id=in.mobility.manayatri"
     }
     else {
       return "https://apps.apple.com/in/app/mana-yatri/id6477922432"
     }
+  } else {
+    return ""
   }
 }
 
@@ -39,7 +78,8 @@ window.getMerchantConfig = function () {
     "shareAppContent": "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen",
     "DOCUMENT_LINK": "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA",
     "appLink": getAppLink(window.__OS),
-    "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F",
+    "privacyLink": getPrivacyPolicy(),
+    "termsLink": getTandC(),
     "showChargeDesc" : false,
     "isShareAppEnabled": "true",
     "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png",
@@ -330,12 +370,13 @@ window.getMerchantConfig = function () {
     , "appData" : {
       "link" : getAppLink(window.__OS)
       , "supportMail" :"support@nammayatri.in"
-      , "name" : "Namma Yatri"
+      , "name" : getAppName()
       , "website" : "https://nammayatri.in/"
     }
     , "referral" : {
       "domain" : "https://nammayatri.in/"
     , "customerAppId" : "in.juspay.nammayatri"
   }
+
   })
 }

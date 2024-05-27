@@ -3,6 +3,42 @@ let version = "1.0.0";
 if (typeof __VERSION__ !== "undefined") {
   version = __VERSION__
 }
+
+function getAppName() {
+  if (!window.configCache["appName"]) {
+    let sessionInfo = JSON.parse(JBridge.getSessionInfo());
+    if (sessionInfo.app_name.toLowerCase().includes("namma")) {
+      window.configCache["appName"] = "Namma Yatri";
+    }
+    else if (sessionInfo.app_name.toLowerCase().includes("mana")) {
+      window.configCache["appName"] = "Mana Yatri";
+    }
+  }
+  return window.configCache["appName"];
+}
+
+function getTandC() {
+  const appName = getAppName()
+  if (appName === "Namma Yatri") {
+    return  "https://drive.google.com/file/d/1mFh4bCVZ8Pf4O6oZQDyq3c-G8Dlga7YT/view?usp=sharing"
+  } else if (appName === "Mana Yatri") {
+    return "https://drive.google.com/file/d/1mFh4bCVZ8Pf4O6oZQDyq3c-G8Dlga7YT/view?usp=sharing"
+  } else {
+    return ""
+  }
+}
+
+function getPrivacyPolicy() {
+  const appName = getAppName()
+  if (appName === "Namma Yatri") {
+    return "https://drive.google.com/file/d/1xsx5h9nmcts5ybmh1derUT1FlX3qL7Fs/view?usp=sharing"
+  }else if(appName === "Mana Yatri") {
+    return "https://docs.google.com/document/d/11KmxEhsNYjSNk3npn326W0Y7UX_0NtEzfb76vJCUvAs/edit?usp=sharing"
+  }else{
+    return ""
+  }
+}
+
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
@@ -10,7 +46,6 @@ window.getMerchantConfig = function () {
     "DOCUMENT_LINK": "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc",
     "APP_LINK": "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner",
     "USER_APP_LINK": "https://nammayatri.in/link/rider/mvnw",
-    "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9",
     "SPECIAL_ZONE_OTP_VIEW": "false",
     "StringKeys": ["NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "WHAT_IS_NAMMA_YATRI_BONUS", "EARNED_ON_APP", "TRAVELLED_ON_APP", "GUARANTEED_FIXED_PRICE", "GET_READY_FOR_YS_SUBSCRIPTION"],
     "fontType": "Assets",
@@ -156,9 +191,9 @@ window.getMerchantConfig = function () {
       "genericAccessibilityVideo" : "https://youtu.be/5s21p2rI58c"
     }
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
-    , "termsLink" : "https://docs.google.com/document/d/1K68xvtReD9FVpx-IshtKNMt4baQNgKXt"
+    , "termsLink" : getTandC()
     , "termsVersion" : 2.0
-    , "privacyLink" : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9"
+    , "privacyLink" : getPrivacyPolicy()
     , "feature" : {
       "enableBonus" : true
       , "enableImageUpload" : false
@@ -168,7 +203,7 @@ window.getMerchantConfig = function () {
     }
     , "appData" : {
       "link" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner"
-      , "name" : "Namma Yatri"
+      , "name" : getAppName()
     }
     , "enableMockLocation" : false
     , "cityConfig" : [
