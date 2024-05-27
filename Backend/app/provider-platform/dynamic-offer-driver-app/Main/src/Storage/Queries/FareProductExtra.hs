@@ -4,11 +4,11 @@
 module Storage.Queries.FareProductExtra where
 
 import Domain.Types.Common
-import qualified Domain.Types.Extra.FareProduct as Domain
 import Domain.Types.FareProduct
 import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ServiceTierType as DVST
+import qualified Domain.Types.TimeBound as Domain
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude

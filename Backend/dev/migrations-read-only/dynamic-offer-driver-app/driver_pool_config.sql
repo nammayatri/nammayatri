@@ -44,3 +44,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN enable_forward_
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN current_ride_trip_category_valid_for_forward_batching text[] NOT NULL default Array ['OneWay_OneWayOnDemandDynamicOffer'];
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN batch_size_on_ride integer NOT NULL default 10;
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN actual_distance_threshold_on_ride integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN time_bounds Text NOT NULL default 'Unbounded';
