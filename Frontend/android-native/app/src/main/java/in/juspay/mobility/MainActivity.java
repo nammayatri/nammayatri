@@ -103,6 +103,7 @@ import in.juspay.mobility.app.InAppNotification;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.MobilityAppBridge;
 import in.juspay.mobility.app.MyFirebaseMessagingService;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.RideRequestActivity;
@@ -136,6 +137,8 @@ public class MainActivity extends AppCompatActivity {
     ShowNotificationCallBack inappCallBack;
     private Future<JSONObject> driverInfoFutureTask;
     private Future<JSONObject> preInitFutureTask;
+    private JSONObject preInitFutureTaskResult = null;
+    private MobilityRemoteConfigs remoteConfigs;
     long onCreateTimeStamp = 0;
 
     SharedPreferences.OnSharedPreferenceChangeListener mListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
@@ -319,7 +322,7 @@ public class MainActivity extends AppCompatActivity {
                 Utils.updateLocaleResource(sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.LANGUAGE_KEY), "null"),context);
             }
         }
-        MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
+        
         MobilityAppUpdate mobilityAppUpdate = new MobilityAppUpdate(this);
         mobilityAppUpdate.checkAndUpdateApp(remoteConfigs);
 
@@ -365,10 +368,28 @@ public class MainActivity extends AppCompatActivity {
         context = getApplicationContext();
         sharedPref = context.getSharedPreferences(this.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
         activity = this;
+        remoteConfigs = new MobilityRemoteConfigs(false, true);
 
-        Log.i("APP_PERF", "FORKED_INIT_TASKS_AND_APIS : " + System.currentTimeMillis());
-        preInitFutureTask = Executors.newSingleThreadExecutor().submit(this::preInitFlow);
-        driverInfoFutureTask = Executors.newSingleThreadExecutor().submit(this::getDriverInfoFlow);
+        Log.i("APP_PERF", "FORKED_INIT_TASKS_AND_APIS : " + System.currentTimeMillis());        
+
+        boolean isPerfEnabled = false;
+        try{
+            isPerfEnabled = remoteConfigs.getBoolean("perf_enabled");
+
+            Log.i("PERF", "Fetched from remote config - perf enabled : " + isPerfEnabled);
+
+        }catch(Exception e){
+            Log.i("PERF", "unable to fetch PERF remote config");
+            Exception exception = new Exception("Error in parsing perf config " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);            
+        }
+
+        if(isPerfEnabled) {
+            preInitFutureTask = Executors.newSingleThreadExecutor().submit(this::preInitFlow);
+            driverInfoFutureTask = Executors.newSingleThreadExecutor().submit(this::getDriverInfoFlow);
+        } else {
+            preInitFutureTaskResult = preInitFlow();
+        }     
 
         initApp();
 
@@ -620,26 +641,32 @@ public class MainActivity extends AppCompatActivity {
 
                             String viewParam = null, deepLinkJSON = null;
                             JSONObject driverInfoResponse = null;
-                            try {
-                                JSONObject preInitFutureTaskResult = preInitFutureTask.get(4500, TimeUnit.MILLISECONDS);
-                                Log.i("APP_PERF", "PRE_INIT_NO_EXCEPTION : " + System.currentTimeMillis());
+                            if(preInitFutureTaskResult != null) {
+                                Log.i("APP_PERF", "PRE_INIT : " + System.currentTimeMillis());
                                 viewParam = preInitFutureTaskResult.optString("viewParam");
                                 deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJson");
-                            } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                                preInitFutureTask.cancel(true);
-                                JSONObject preInitFutureTaskResult = preInitFlow();
-                                Log.i("APP_PERF", "PRE_INIT_EXCEPTION : " + System.currentTimeMillis());
-                                viewParam = preInitFutureTaskResult.optString("viewParam");
-                                deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJson");
-                            }
-                            try {
-                                JSONObject driverInfoFutureTaskResult = driverInfoFutureTask.get(4500, TimeUnit.MILLISECONDS);
-                                driverInfoResponse = driverInfoFutureTaskResult.optJSONObject("driverInfoResponse");
-                                Log.i("APP_PERF", "PRE_INIT_CALL_API_NO_EXCEPTION : " + System.currentTimeMillis());
-                            } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                                driverInfoFutureTask.cancel(true);
-                                Log.i("APP_PERF", "PRE_INIT_CALL_API_EXCEPTION : " + System.currentTimeMillis());
-                                e.printStackTrace();
+                            } else {
+                                try {
+                                    JSONObject preInitFutureTaskResult = preInitFutureTask.get(4500, TimeUnit.MILLISECONDS);
+                                    Log.i("APP_PERF", "PRE_INIT_NO_EXCEPTION : " + System.currentTimeMillis());
+                                    viewParam = preInitFutureTaskResult.optString("viewParam");
+                                    deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJson");
+                                } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                                    preInitFutureTask.cancel(true);
+                                    JSONObject preInitFutureTaskResult = preInitFlow();
+                                    Log.i("APP_PERF", "PRE_INIT_EXCEPTION : " + System.currentTimeMillis());
+                                    viewParam = preInitFutureTaskResult.optString("viewParam");
+                                    deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJson");
+                                }
+                                try {
+                                    JSONObject driverInfoFutureTaskResult = driverInfoFutureTask.get(4500, TimeUnit.MILLISECONDS);
+                                    driverInfoResponse = driverInfoFutureTaskResult.optJSONObject("driverInfoResponse");
+                                    Log.i("APP_PERF", "PRE_INIT_CALL_API_NO_EXCEPTION : " + System.currentTimeMillis());
+                                } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                                    driverInfoFutureTask.cancel(true);
+                                    Log.i("APP_PERF", "PRE_INIT_CALL_API_EXCEPTION : " + System.currentTimeMillis());
+                                    e.printStackTrace();
+                                }
                             }
                             Log.i("APP_PERF", "INIT_FUTURE_TASK_RESULT : " + System.currentTimeMillis());
 
