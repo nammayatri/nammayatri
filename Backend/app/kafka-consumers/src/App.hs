@@ -128,6 +128,6 @@ runDriverHealthcheck appCfg appEnv = do
               L.setOption KBT.Tables kvConfigs
               threadDelay (appCfg.kvConfigUpdateFrequency * 1000000)
           )
-        pure flowRt
+        pure flowRt'
     runFlowR flowRt'' appEnv $ Service.driverTrackingHealthcheckService heathCheckConfig
     waitForShutdown appEnv.isShuttingDown
