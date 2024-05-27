@@ -125,6 +125,7 @@ import Foreign (unsafeToForeign)
 import SessionCache (getValueFromWindow)
 import Timers as TF
 import Data.Ord (abs)
+import Debug
 import DecodeUtil
 import LocalStorage.Cache (getValueFromCache, setValueToCache)
 
@@ -299,6 +300,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToNewStop ST.HomeScreenState
                     | UpdateAirConditioned ST.HomeScreenState Boolean
                     | GoToBookingPreferences ST.HomeScreenState
+                    | GoToRideSummary ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -421,6 +423,7 @@ data Action = NoAction
             | OnAudioCompleted String
             | ACExpController PopUpModal.Action
             | OpenLink String
+            | RideSummary
             | TollChargesPopUpAC PopUpModal.Action
             | TollChargesAmbigousPopUpAC PopUpModal.Action
             
@@ -1426,6 +1429,10 @@ eval (OpenLink link) state = continueWithCmd state [ do
 eval (TollChargesPopUpAC PopUpModal.OnButton2Click) state = continue state {props { toll  {showTollChargePopup = false}}}
 
 eval (TollChargesAmbigousPopUpAC PopUpModal.OnButton2Click) state = continue state {props {toll {showTollChargeAmbigousPopup = false}}}
+
+eval RideSummary state = do
+                          let _ = spy "Ayush"
+                          exit $ GoToRideSummary state
 
 eval _ state = update state
 
