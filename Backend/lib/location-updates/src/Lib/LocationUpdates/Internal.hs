@@ -67,7 +67,9 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     updateTollChargesAndNames :: Id person -> HighPrecMoney -> [Text] -> m (),
     updateRouteDeviation :: Id person -> [LatLong] -> m (Bool, Bool),
     getTravelledDistanceAndTollInfo :: Id person -> Meters -> Maybe (HighPrecMoney, [Text], Bool) -> m (Meters, Maybe (HighPrecMoney, [Text], Bool)),
-    getRecomputeIfPickupDropNotOutsideOfThreshold :: Bool
+    getRecomputeIfPickupDropNotOutsideOfThreshold :: Bool,
+    sendTollCrossedNotificationToDriver :: Id person -> m (),
+    sendTollCrossedUpdateToBAP :: Id person -> m ()
   }
 
 --------------------------------------------------------------------------------
@@ -218,6 +220,8 @@ recalcDistanceBatchStep RideInterpolationHandler {..} rectifyDistantPointsFailur
   batchWaypoints <- getFirstNwaypoints driverId (batchSize + 1)
   (distance, interpolatedWps, servicesUsed, snapToRoadFailed, mbTollChargesAndNames) <- interpolatePointsAndCalculateDistanceAndToll rectifyDistantPointsFailureUsing isTollApplicable driverId batchWaypoints
   whenJust mbTollChargesAndNames $ \(tollCharges, tollNames, _) -> do
+    sendTollCrossedNotificationToDriver driverId
+    sendTollCrossedUpdateToBAP driverId
     void $ Redis.rPushExp (onRideTollNamesKey driverId) tollNames 21600
     void $ Redis.incrby (onRideTollChargesKey driverId) (round tollCharges.getHighPrecMoney)
     Redis.expire (onRideTollChargesKey driverId) 21600 -- 6 hours
@@ -259,8 +263,10 @@ mkRideInterpolationHandler ::
   (Id person -> Meters -> Maybe (HighPrecMoney, [Text], Bool) -> m (Meters, Maybe (HighPrecMoney, [Text], Bool))) ->
   Bool ->
   (Maybe MapsServiceConfig -> Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->
+  (Id person -> m ()) ->
+  (Id person -> m ()) ->
   RideInterpolationHandler person m
-mkRideInterpolationHandler isEndRide updateDistance updateTollChargesAndNames updateRouteDeviation getTollInfoOnTheRoute getTravelledDistanceAndTollInfo getRecomputeIfPickupDropNotOutsideOfThreshold snapToRoadCall =
+mkRideInterpolationHandler isEndRide updateDistance updateTollChargesAndNames updateRouteDeviation getTollInfoOnTheRoute getTravelledDistanceAndTollInfo getRecomputeIfPickupDropNotOutsideOfThreshold snapToRoadCall sendTollCrossedNotificationToDriver sendTollCrossedUpdateToBAP =
   RideInterpolationHandler
     { batchSize = 98,
       addPoints = addPointsImplementation,
@@ -280,7 +286,9 @@ mkRideInterpolationHandler isEndRide updateDistance updateTollChargesAndNames up
       isDistanceCalculationFailed = isDistanceCalculationFailedImplementation,
       wrapDistanceCalculation = wrapDistanceCalculationImplementation,
       getTravelledDistanceAndTollInfo,
-      getRecomputeIfPickupDropNotOutsideOfThreshold
+      getRecomputeIfPickupDropNotOutsideOfThreshold,
+      sendTollCrossedNotificationToDriver,
+      sendTollCrossedUpdateToBAP
     }
 
 makeWaypointsRedisKey :: Id person -> Text

@@ -243,3 +243,21 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }
+  OU.TollCrossedBuildReq OU.DTollCrossedBuildReq {..} -> do
+    let BookingDetails {..} = bookingDetails
+    fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing Nothing Nothing False False (Just $ show Event.TOLL_CROSSED) isValueAddNP
+    pure $
+      Spec.Order
+        { orderId = Just ride.bookingId.getId,
+          orderFulfillments = Just [fulfillment],
+          orderBilling = Nothing,
+          orderCancellation = Nothing,
+          orderCancellationTerms = Nothing,
+          orderItems = Nothing,
+          orderPayments = Nothing,
+          orderProvider = Nothing,
+          orderQuote = Nothing,
+          orderStatus = Nothing,
+          orderCreatedAt = Just booking.createdAt,
+          orderUpdatedAt = Just booking.updatedAt
+        }

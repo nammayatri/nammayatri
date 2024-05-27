@@ -31,6 +31,7 @@ module Domain.Action.Beckn.OnUpdate
     ValidatedOnUpdateReq (..),
     EditDestSoftUpdateReq (..),
     EditDestConfirmUpdateReq (..),
+    TollCrossedEventReq (..),
   )
 where
 
@@ -45,6 +46,7 @@ import qualified Domain.Types.Extra.Booking as SRB
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
@@ -63,10 +65,12 @@ import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.BookingExtra as QEBooking
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.LocationMapping as QLM
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as SQQ
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
@@ -75,6 +79,7 @@ import Tools.Error
 import Tools.Maps (LatLong)
 import Tools.Metrics (HasBAPMetrics)
 import qualified Tools.Notifications as Notify
+import qualified Tools.Notifications as TN
 import TransactionLogs.Types
 
 data OnUpdateReq
@@ -91,6 +96,7 @@ data OnUpdateReq
   | OUStopArrivedReq StopArrivedReq
   | OUEditDestSoftUpdateReq EditDestSoftUpdateReq
   | OUEditDestConfirmUpdateReq EditDestConfirmUpdateReq
+  | OUTollCrossedEventReq TollCrossedEventReq
 
 data ValidatedOnUpdateReq
   = OUValidatedRideAssignedReq Common.ValidatedRideAssignedReq
@@ -107,6 +113,7 @@ data ValidatedOnUpdateReq
   | OUValidatedStopArrivedReq ValidatedStopArrivedReq
   | OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq
   | OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq
+  | OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq
 
 data BookingReallocationReq = BookingReallocationReq
   { bppBookingId :: Id DRB.BPPBooking,
@@ -274,6 +281,15 @@ data BreakupPriceInfo = BreakupPriceInfo
     value :: Money
   }
 
+newtype TollCrossedEventReq = TollCrossedEventReq
+  { transactionId :: Text
+  }
+
+data ValidatedTollCrossedEventReq = ValidatedTollCrossedEventReq
+  { booking :: DRB.Booking,
+    person :: DPerson.Person
+  }
+
 onUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
@@ -363,6 +379,7 @@ onUpdate = \case
     QLM.create dropLocMap
     estimatedFare <- bookingUpdateRequest.estimatedFare & fromMaybeM (InternalError "Estimated fare not found for bookingUpdateRequestId")
     QRB.updateMultipleById estimatedFare estimatedFare bookingUpdateRequest.estimatedDistance bookingUpdateRequest.bookingId
+  OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..} -> TN.notifyTollCrossedToCustomer person
 
 validateRequest ::
   ( CacheFlow m r,
@@ -446,6 +463,10 @@ validateRequest = \case
     when (ride.status == DRide.COMPLETED) $ throwError $ RideInvalidStatus "Can't edit the destination of a completed ride."
     bookingUpdateRequest <- runInReplica $ QBUR.findById bookingUpdateRequestId >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with Id:-" <> bookingUpdateRequestId.getId)
     return $ OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq {..}
+  OUTollCrossedEventReq TollCrossedEventReq {..} -> do
+    booking <- QEBooking.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId - " <> transactionId)
+    person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+    return $ OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..}
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>

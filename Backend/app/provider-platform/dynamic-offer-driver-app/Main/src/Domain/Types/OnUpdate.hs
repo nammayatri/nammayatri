@@ -40,6 +40,7 @@ data OnUpdateBuildReq
   | SafetyAlertBuildReq DSafetyAlertReq
   | StopArrivedBuildReq DStopArrivedBuildReq
   | EditDestinationUpdate DEditDestinationUpdateReq
+  | TollCrossedBuildReq DTollCrossedBuildReq
 
 newtype DStopArrivedBuildReq = DStopArrivedBuildReq
   { bookingDetails :: BookingDetails
@@ -73,6 +74,10 @@ data DEditDestinationUpdateReq = DEditDestinationUpdateReq
     newDestination :: Maybe DL.Location,
     currentLocation :: Maybe Maps.LatLong,
     updateType :: UpdateType
+  }
+
+newtype DTollCrossedBuildReq = DTollCrossedBuildReq
+  { bookingDetails :: BookingDetails
   }
 
 data UpdateType = SOFT_UPDATE | CONFIRM_UPDATE

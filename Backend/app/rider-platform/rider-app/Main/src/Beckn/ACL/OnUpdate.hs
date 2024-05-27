@@ -101,6 +101,7 @@ parseEventV2 transactionId messageId order = do
         "NEW_MESSAGE" -> parseNewMessageEvent order
         "SAFETY_ALERT" -> parseSafetyAlertEvent order
         "STOP_ARRIVED" -> parseStopArrivedEvent order
+        "TOLL_CROSSED" -> return $ DOnUpdate.OUTollCrossedEventReq $ DOnUpdate.TollCrossedEventReq transactionId
         _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
 
 parseNewMessageEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq

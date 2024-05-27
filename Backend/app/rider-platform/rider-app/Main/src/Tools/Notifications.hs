@@ -934,3 +934,26 @@ notifyTicketCancelled ticketBookingId ticketBookingCategoryName person = do
             "Check the app for details"
           ]
   notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData
+
+notifyTollCrossedToCustomer ::
+  (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  Person ->
+  m ()
+notifyTollCrossedToCustomer person = do
+  let notificationData =
+        Notification.NotificationReq
+          { category = Notification.TOLL_CROSSED,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product person.id.getId (),
+            body = body,
+            title = title,
+            dynamicParams = EmptyDynamicParam,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing,
+            sound = Nothing
+          }
+      title = "Toll Crossed!"
+      body = "Toll charges added to final fare"
+  notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData

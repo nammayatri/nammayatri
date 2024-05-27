@@ -22,6 +22,7 @@ module SharedLogic.CallBAP
     sendStopArrivalUpdateToBAP,
     sendEstimateRepetitionUpdateToBAP,
     sendQuoteRepetitionUpdateToBAP,
+    sendTollCrossedUpdateToBAP,
     sendUpdateEditDestToBAP,
     sendNewMessageToBAP,
     sendDriverOffer,
@@ -748,6 +749,43 @@ sendQuoteRepetitionUpdateToBAP booking ride newBookingId cancellationSource driv
     retryConfig <- asks (.shortDurationRetryCfg)
     quoteRepMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing quoteRepetitionBuildReq
     void $ callOnUpdateV2 quoteRepMsgV2 retryConfig merchant.id
+
+sendTollCrossedUpdateToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  Maybe DRB.Booking ->
+  Maybe SRide.Ride ->
+  DP.Person ->
+  DVeh.Vehicle ->
+  m ()
+sendTollCrossedUpdateToBAP (Just booking) (Just ride) driver vehicle = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  when isValueAddNP $ do
+    merchant <-
+      CQM.findById booking.providerId
+        >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+      CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+    let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+    let paymentUrl = Nothing
+    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+    let bookingDetails = ACL.BookingDetails {..}
+        tollCrossedUpdateBuildReq = ACL.TollCrossedBuildReq ACL.DTollCrossedBuildReq {..}
+    tollCrossedMsg <- ACL.buildOnUpdateMessageV2 merchant booking Nothing tollCrossedUpdateBuildReq
+    retryConfig <- asks (.shortDurationRetryCfg)
+    void $ callOnUpdateV2 tollCrossedMsg retryConfig merchant.id
+sendTollCrossedUpdateToBAP _ _ _ _ = do
+  logTagError "on_update_req" "on_update_err - Could not send toll crossed update to BPP : booking or ride not found"
+  pure ()
 
 callBecknAPIWithSignature' ::
   ( MonadFlow m,

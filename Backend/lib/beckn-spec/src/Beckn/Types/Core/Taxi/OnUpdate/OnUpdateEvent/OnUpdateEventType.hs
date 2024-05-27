@@ -28,4 +28,5 @@ data OnUpdateEventType
   | NEW_MESSAGE
   | SAFETY_ALERT
   | STOP_ARRIVED
+  | TOLL_CROSSED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)

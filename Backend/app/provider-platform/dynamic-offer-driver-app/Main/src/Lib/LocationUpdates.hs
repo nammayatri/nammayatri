@@ -31,6 +31,7 @@ import Domain.Types.TransporterConfig
 import Environment
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Maps
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
@@ -48,6 +49,7 @@ import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import qualified Tools.Maps as TMaps
+import qualified Tools.Notifications as TN
 
 getDeviationForPoint :: LatLong -> [LatLong] -> Meters
 getDeviationForPoint pt estimatedRoute =
@@ -251,6 +253,19 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
       )
       transportConfig.recomputeIfPickupDropNotOutsideOfThreshold
       snapToRoad'
+      ( \driverId -> do
+          let tollNotificationTitle = "Toll Crossed!"
+              tollNotificationMessage = "Toll charges added to final fare"
+          person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+          TN.sendNotificationToDriver merchantOpCityId FCM.SHOW (Just FCM.HIGH) FCM.TOLL_CROSSED tollNotificationTitle tollNotificationMessage person person.deviceToken
+      )
+      ( \driverId -> do
+          driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+          mbRide <- QRide.getActiveByDriverId driverId
+          mbBooking <- maybe (return Nothing) (QBooking.findById) ((.bookingId) <$> mbRide)
+          vehicle <- QVeh.findById driver.id >>= fromMaybeM (DriverWithoutVehicle driver.id.getId)
+          BP.sendTollCrossedUpdateToBAP mbBooking mbRide driver vehicle
+      )
   where
     snapToRoadWithService req = do
       resp <- TMaps.snapToRoad merchantId merchantOpCityId req
