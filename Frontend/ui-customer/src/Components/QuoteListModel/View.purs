@@ -27,7 +27,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, getCityFromString, quoteModalVariantImage)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
@@ -528,10 +528,11 @@ quoteListTopSheetView state push =
           ]
           []
         ]
-
 noQuotesErrorModel :: forall w . QuoteListModelState -> PrestoDOM (Effect Unit) w
 noQuotesErrorModel state =
-  linearLayout
+  let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+      variant = state.vehicleVariant 
+  in linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
@@ -549,8 +550,8 @@ noQuotesErrorModel state =
         [ height $ V 115
         , width $ V 161
         , accessibility DISABLE
-        , imageWithFallback $ fetchImage FF_ASSET $ if state.vehicleVariant == "AUTO_RICKSHAW" then "ny_ic_no_quotes_auto" else "ny_ic_no_quotes_color"
-        ]
+        , imageWithFallback $ fetchImage FF_ASSET (quoteModalVariantImage variant)
+        ] 
       , textView $
         [ height WRAP_CONTENT
         , width $ V ((screenWidth unit / 2) + (screenWidth unit /3))
@@ -567,9 +568,7 @@ noQuotesErrorModel state =
         , gravity CENTER
         ] <> FontStyle.paragraphText TypoGraphy
     ]
-    ]
-
-
+    ]  
 ---------------------------- quoteListView ---------------------------------
 quoteListView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 quoteListView state push =

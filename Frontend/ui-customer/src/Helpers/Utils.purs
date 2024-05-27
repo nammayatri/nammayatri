@@ -733,6 +733,21 @@ cityCodeMap =
   , Tuple Nothing AnyCity
   ]
 
+quoteModalVariantImage :: String -> String 
+quoteModalVariantImage variant = 
+  let 
+    city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  in 
+    if variant == "AUTO_RICKSHAW"
+      then case city of
+        Bangalore -> "ny_ic_no_quotes_auto_bang_del"
+        Kochi -> "ny_ic_no_quotes_auto_koc"
+        Delhi ->"ny_ic_no_quotes_auto_bang_del"
+        Hyderabad -> "ny_ic_no_quotes_auto_che_hyd"
+        Chennai -> "ny_ic_no_quotes_auto_che_hyd"
+        _ -> "ny_ic_no_quotes_auto"
+      else  "ny_ic_no_quotes_color"
+                
 getCityFromString :: String -> City
 getCityFromString cityString =
   case cityString of 
