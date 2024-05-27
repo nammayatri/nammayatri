@@ -56,6 +56,7 @@ buildConfirmReqV2 req isValueAddNP = do
   let nightSafetyCheck = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getNightSafetyCheckTag isValueAddNP
       enableFrequentLocationUpdates = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableFrequentLocationUpdatesTag
   toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) & maybe (pure Nothing) Utils.parseAddress
+  let paymentId = req.confirmReqMessage.confirmReqMessageOrder.orderPayments >>= listToMaybe >>= (.paymentId)
   return $
     DConfirm.DConfirmReq
       { ..
