@@ -282,6 +282,7 @@ getVehicleName config =
     YATRISATHI -> case config.vehicleVariant of
                     "TAXI" -> "Non AC Taxi"
                     "SUV"  -> "AC SUV"
+                    "BIKE" -> "Bike Taxi"
                     _      -> "AC Cab"
     _          -> case config.vehicleVariant of
                     "AUTO_RICKSHAW" -> "Auto Rickshaw"
@@ -290,6 +291,7 @@ getVehicleName config =
                     "SEDAN" -> "Sedan"
                     "SUV" -> "SUV"
                     "HATCHBACK" -> "Hatchback"
+                    "BIKE" -> "Bike Taxi"
                     _ -> "Non-AC Taxi"
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w

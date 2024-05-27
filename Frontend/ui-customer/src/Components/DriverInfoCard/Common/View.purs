@@ -257,6 +257,7 @@ getVehicleImage variant vehicleDetail city = do
   let details = (toLower vehicleDetail)
   fetchImage FF_ASSET $
     if variant == "AUTO_RICKSHAW" then mkAutoImage city
+    else if variant == "BIKE" then "ny_ic_bike_left_side"
     else
       if contains (Pattern "ambassador") details then "ic_yellow_ambassador"
       else 

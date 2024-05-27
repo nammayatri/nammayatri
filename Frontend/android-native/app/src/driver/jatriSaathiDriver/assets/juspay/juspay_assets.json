@@ -658,6 +658,7 @@
       "up_hand_arrow" : true,
       "widget_close_gradient" : true,
       "zone_curve" : true,
-      "ic_cancel_prevention_cab": true
+      "ic_cancel_prevention_cab": true,
+      "ny_ic_bike_left_side" : true
    }
 }

@@ -1305,3 +1305,5 @@ getFR stringKey =
         NOIDA -> "Noida"
         GURUGRAM -> "Gurugram"
         WAITING_CHARGES -> "Frais d'attente"
+        CLEAN_BIKE -> "Vélo propre"
+        UNCOMFORTABLE_BIKE -> "Vélo inconfortable"
