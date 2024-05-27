@@ -318,6 +318,7 @@ getVehicleType vehicleType =
     "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
     "TAXI" -> (getString TAXI)
     "TAXI_PLUS" -> (getString TAXI_PLUS)
+    "BIKE" -> "Bike"
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig

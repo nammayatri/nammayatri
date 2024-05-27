@@ -456,6 +456,7 @@ tabImageView state push =
     mkAsset cityConfig = 
       if state.data.driverVehicleType == "AUTO_RICKSHAW" 
         then (getAutoImage cityConfig)
+        else if state.data.driverVehicleType == "BIKE" then "ny_ic_bike_side"
         else "ny_ic_silhouette"
     
     getAutoImage :: CityConfig -> String
