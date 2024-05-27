@@ -124,7 +124,7 @@ rideDetails push state =
   , width MATCH_PARENT
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
-  , padding $ PaddingHorizontal 16 16
+  , padding $ PaddingHorizontal 1 1
   , PrestoList.onClickHolder push OnClick
   , margin (MarginBottom 20)
   ][  imageView 
@@ -132,7 +132,7 @@ rideDetails push state =
       , height $ V 32
       , width $ V 32
       , PrestoList.visibilityHolder "vehicleImgVisibility"
-      , margin $ MarginRight 8
+      , margin $ MarginRight 2
       , PrestoList.visibilityHolder "showVariantImage"
       ]
     , textView
