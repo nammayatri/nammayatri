@@ -25,7 +25,7 @@ Alter table atlas_driver_offer_bpp.invoice add column merchant_operating_city_id
 ----- alter in plan table ----
 
 Alter table atlas_driver_offer_bpp.plan drop CONSTRAINT plan_pkey;
-Alter table atlas_driver_offer_bpp.plan add PRIMARY KEY(id, service_name, payment_mode);
+Alter table atlas_driver_offer_bpp.plan add PRIMARY KEY(id, service_name, payment_mode, merchant_op_city_id);
 
 --------- alter in subscription config -----
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ALTER COLUMN generic_job_reschedule_time SET DATA TYPE integer USING generic_job_reschedule_time::integer;
