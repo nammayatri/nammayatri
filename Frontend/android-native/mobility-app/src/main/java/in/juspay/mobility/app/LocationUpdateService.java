@@ -1105,10 +1105,10 @@ public class LocationUpdateService extends Service {
     private void logEventForHealthCheck(Intent intent) {
         if (intent != null) {
             String serviceStartingSource = intent.getStringExtra("StartingSource");
-            if (serviceStartingSource != null) {
-                if (serviceStartingSource.equals("TRIGGER_SERVICE")) {
-                    FirebaseAnalytics.getInstance(this).logEvent("service_triggered_by_health_check", new Bundle());
-                }
+            if (serviceStartingSource != null && serviceStartingSource.equals("TRIGGER_SERVICE")) {
+                FirebaseAnalytics.getInstance(this).logEvent("service_triggered_by_health_check", new Bundle());
+            }else if(serviceStartingSource != null && serviceStartingSource.equals("TRIGGER_SERVICE_INACTIVE")){
+                FirebaseAnalytics.getInstance(this).logEvent("service_by_health_check_inactive", new Bundle());
             }
         }
     }

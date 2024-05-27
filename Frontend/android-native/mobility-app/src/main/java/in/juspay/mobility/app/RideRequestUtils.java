@@ -240,9 +240,11 @@ public class RideRequestUtils {
         mFirebaseAnalytics.logEvent(event, params);
     }
 
-    public static void restartLocationService(Context context) {
+    public static void restartLocationService(Context context, String title) {
         if (!isServiceRunning(context, LocationUpdateService.class.getName())) {
             Intent locationService = new Intent(context, LocationUpdateService.class);
+            if (title.equals("You were inactive"))
+                locationService.putExtra("StartingSource", "c");
             locationService.putExtra("StartingSource", "TRIGGER_SERVICE");
             locationService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             try {
@@ -251,15 +253,15 @@ public class RideRequestUtils {
                 else
                     context.startService(locationService);
 
-            } catch (Exception e){
+            } catch (Exception e) {
                 Log.e(LOG_TAG, e.getMessage());
             }
             Intent restartIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
             restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             SharedPreferences sharedPrefs = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String activityStatus = sharedPrefs.getString("ACTIVITY_STATUS", "null");
-            if(Settings.canDrawOverlays(context) && activityStatus.equals("onDestroy")){
-                try{
+            if (Settings.canDrawOverlays(context) && activityStatus.equals("onDestroy")) {
+                try {
                     new Handler(Looper.getMainLooper()).postDelayed(() -> {
                         context.startActivity(restartIntent);
                         Utils.minimizeApp(context);

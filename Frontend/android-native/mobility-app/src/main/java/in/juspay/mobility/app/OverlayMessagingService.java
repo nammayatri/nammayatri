@@ -300,7 +300,7 @@ public class OverlayMessagingService extends Service {
         switch (action) {
             case "SET_DRIVER_ONLINE":
                 RideRequestUtils.updateDriverStatus(true, "ONLINE", this, false);
-                RideRequestUtils.restartLocationService(this);
+                RideRequestUtils.restartLocationService(this, "");
                 break;
             case "NAVIGATE":
                 openNavigation(editLat, editlon);
