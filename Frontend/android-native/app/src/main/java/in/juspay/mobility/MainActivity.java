@@ -520,6 +520,16 @@ public class MainActivity extends AppCompatActivity {
                 notificationManager.deleteNotificationChannel("TRIP_STARTED");
                 notificationManager.deleteNotificationChannel("General");
                 notificationManager.deleteNotificationChannel("FLOATING_NOTIFICATION");
+                notificationManager.deleteNotificationChannel("DRIVER_QUOTE_INCOMING");
+                notificationManager.deleteNotificationChannel("DRIVER_ASSIGNMENT");
+                notificationManager.deleteNotificationChannel("REALLOCATE_PRODUCT");
+                notificationManager.deleteNotificationChannel("GENERAL_NOTIFICATION");
+                notificationManager.deleteNotificationChannel("RIDE_STARTED");
+                notificationManager.deleteNotificationChannel("CANCELLED_PRODUCT");
+                notificationManager.deleteNotificationChannel("DRIVER_HAS_REACHED");
+                notificationManager.deleteNotificationChannel("TRIP_FINISHED");
+                notificationManager.deleteNotificationChannel("SOS_TRIGGERED");
+                notificationManager.deleteNotificationChannel("SOS_RESOLVED"); 
             } catch(Exception e) {
                 System.out.println("Notification Channel doesn't exists");
             }
@@ -554,8 +564,8 @@ public class MainActivity extends AppCompatActivity {
         NotificationUtils.createNotificationChannel(this, NotificationUtils.CANCELLED_PRODUCT);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_HAS_REACHED);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.TRIP_FINISHED);
-        NotificationUtils.createNotificationChannel(this, MyFirebaseMessagingService.NotificationTypes.SOS_TRIGGERED);
-        NotificationUtils.createNotificationChannel(this, MyFirebaseMessagingService.NotificationTypes.SOS_RESOLVED);
+        NotificationUtils.createNotificationChannel(this, NotificationUtils.SOS_TRIGGERED);
+        NotificationUtils.createNotificationChannel(this, NotificationUtils.SOS_RESOLVED);
     }
 
     public void updateConfigURL() {
