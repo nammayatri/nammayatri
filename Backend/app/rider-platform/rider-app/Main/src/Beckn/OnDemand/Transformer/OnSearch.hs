@@ -35,7 +35,7 @@ tfProviderInfo req = do
   let mobileNumber_ = ""
   name_ <- Beckn.OnDemand.Utils.OnSearch.getProviderName req
   let ridesCompleted_ = 0
-  providerId_ <- req.onSearchReqContext.contextBppId & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing bpp_id")
+  providerId_ <- req.onSearchReqMessage >>= (.onSearchReqMessageCatalog.catalogProviders) >>= Kernel.Prelude.listToMaybe >>= (.providerId) & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing provider_id")
   url_ <- Beckn.OnDemand.Utils.Common.getContextBppUri req.onSearchReqContext >>= Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing bpp_uri")
   pure $ Domain.Action.Beckn.OnSearch.ProviderInfo {mobileNumber = mobileNumber_, name = name_, providerId = providerId_, ridesCompleted = ridesCompleted_, url = url_}
 
