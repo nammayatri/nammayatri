@@ -53,6 +53,8 @@ data QuoteT f = QuoteT
     tripTermsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     validTill :: B.C f Kernel.Prelude.UTCTime,
+    vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleVariant :: B.C f Domain.Types.VehicleServiceTier.VehicleServiceTierType
   }
   deriving (Generic, B.Beamable)

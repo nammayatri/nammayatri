@@ -115,6 +115,7 @@ tfVehicle res =
       vehicleRegistration = Nothing
       vehicleVariant = Just variant
       vehicleCategory = Just category
+      vehicleCapacity = Nothing
    in Spec.Vehicle {..}
 
 tfOrderItem :: DSelect.DSelectRes -> Bool -> Spec.Item

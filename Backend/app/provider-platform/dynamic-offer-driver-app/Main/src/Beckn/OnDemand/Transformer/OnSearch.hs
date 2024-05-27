@@ -87,7 +87,7 @@ tfProviderFulfillments res pricing = do
       fulfillmentId_ = Just pricing.pricingId
       fulfillmentState_ = Nothing
       fulfillmentStops_ = Beckn.OnDemand.Utils.Common.mkStops res.fromLocation res.toLocation
-      fulfillmentTags_ = Nothing
+      fulfillmentTags_ = Beckn.OnDemand.Utils.Common.mkVehicleTags pricing.vehicleServiceTierAirConditioned
       fulfillmentType_ = Just pricing.fulfillmentType
       fulfillmentVehicle_ = tfVehicle pricing
   BecknV2.OnDemand.Types.Fulfillment {fulfillmentAgent = fulfillmentAgent_, fulfillmentCustomer = fulfillmentCustomer_, fulfillmentId = fulfillmentId_, fulfillmentState = fulfillmentState_, fulfillmentStops = fulfillmentStops_, fulfillmentTags = fulfillmentTags_, fulfillmentType = fulfillmentType_, fulfillmentVehicle = fulfillmentVehicle_}
@@ -112,7 +112,8 @@ tfVehicle pricing = do
       vehicleModel_ = Nothing
       vehicleRegistration_ = Nothing
       vehicleVariant_ = Just variant
-      returnData = BecknV2.OnDemand.Types.Vehicle {vehicleCategory = vehicleCategory_, vehicleColor = vehicleColor_, vehicleMake = vehicleMake_, vehicleModel = vehicleModel_, vehicleRegistration = vehicleRegistration_, vehicleVariant = vehicleVariant_}
+      vehicleCapacity_ = pricing.vehicleServiceTierSeatingCapacity
+      returnData = BecknV2.OnDemand.Types.Vehicle {vehicleCategory = vehicleCategory_, vehicleColor = vehicleColor_, vehicleMake = vehicleMake_, vehicleModel = vehicleModel_, vehicleRegistration = vehicleRegistration_, vehicleVariant = vehicleVariant_, vehicleCapacity = vehicleCapacity_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
     then Nothing

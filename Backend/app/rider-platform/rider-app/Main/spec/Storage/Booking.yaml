@@ -166,6 +166,8 @@ Booking:
     estimatedTotalFare: Price
     isScheduled: Bool
     vehicleServiceTierType: VehicleServiceTierType|NoRelation
+    vehicleServiceTierSeatingCapacity: Maybe Int
+    vehicleServiceTierAirConditioned: Maybe Double
     bookingDetails: BookingDetails
     tripTerms: Maybe TripTerms
     merchantId: Id Merchant
