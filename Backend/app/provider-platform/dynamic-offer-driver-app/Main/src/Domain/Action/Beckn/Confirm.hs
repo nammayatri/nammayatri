@@ -66,7 +66,8 @@ data DConfirmReq = DConfirmReq
     toAddress :: Maybe DL.LocationAddress,
     mbRiderName :: Maybe Text,
     nightSafetyCheck :: Bool,
-    enableFrequentLocationUpdates :: Bool
+    enableFrequentLocationUpdates :: Bool,
+    paymentId :: Maybe Text
   }
 
 data ValidatedQuote = DriverQuote DPerson.Person DDQ.DriverQuote | StaticQuote DQ.Quote | RideOtpQuote DQ.Quote
@@ -82,7 +83,8 @@ data DConfirmResp = DConfirmResp
     riderName :: Maybe Text,
     transporter :: DM.Merchant,
     vehicleVariant :: DVeh.Variant,
-    quoteType :: ValidatedQuote
+    quoteType :: ValidatedQuote,
+    paymentId :: Maybe Text
   }
 
 data RideInfo = RideInfo
@@ -178,7 +180,8 @@ handler merchant req validatedQuote = do
           fromLocation = uBooking.fromLocation,
           toLocation = uBooking.toLocation,
           vehicleVariant = req.vehicleVariant,
-          quoteType = validatedQuote
+          quoteType = validatedQuote,
+          paymentId = req.paymentId
         }
 
 validateRequest ::
