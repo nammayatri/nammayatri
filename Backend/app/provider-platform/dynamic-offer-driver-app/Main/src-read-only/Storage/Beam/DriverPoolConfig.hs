@@ -7,6 +7,7 @@ module Storage.Beam.DriverPoolConfig where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.TimeBound
 import qualified Domain.Types.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -48,6 +49,7 @@ data DriverPoolConfigT f = DriverPoolConfigT
     scheduleTryTimes :: B.C f [Kernel.Prelude.Int],
     singleBatchProcessTime :: B.C f Kernel.Types.Common.Seconds,
     thresholdToIgnoreActualDistanceThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
+    timeBounds :: B.C f Domain.Types.TimeBound.TimeBound,
     tripCategory :: B.C f Kernel.Prelude.Text,
     tripDistance :: B.C f Kernel.Types.Common.Meters,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,

@@ -16,10 +16,10 @@
 module Storage.CachedQueries.FareProduct where
 
 import qualified Domain.Types.Common as DTC
-import qualified Domain.Types.Extra.FareProduct as Domain
 import Domain.Types.FareProduct
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.ServiceTierType as DVST
+import qualified Domain.Types.TimeBound as Domain
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
