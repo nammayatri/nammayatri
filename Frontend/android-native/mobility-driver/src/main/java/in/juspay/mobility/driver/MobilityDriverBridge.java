@@ -432,6 +432,68 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         }
     }
 
+    @JavascriptInterface
+    public void mapSnapShotV2(final String pureScriptId, final String json, final String routeType, final boolean actualRoute, final String callback, final String key) {
+        try {
+            if (bridgeComponents.getActivity() != null) {
+                ExecutorManager.runOnMainThread(() -> {
+                    try {
+                        SupportMapFragment mapFragment = SupportMapFragment.newInstance();
+                        FragmentManager supportFragmentManager = ((FragmentActivity) bridgeComponents.getActivity()).getSupportFragmentManager();
+                        FragmentTransaction fragmentTransaction = supportFragmentManager.beginTransaction();
+                        fragmentTransaction.add(Integer.parseInt(pureScriptId), mapFragment);
+                        fragmentTransaction.commitAllowingStateLoss();
+                        mapFragment.getMapAsync(googleMap -> {
+                            this.googleMap = googleMap;
+                            googleMap.getUiSettings().setAllGesturesEnabled(false);
+                            googleMap.getUiSettings().setRotateGesturesEnabled(false);
+                            googleMap.getUiSettings().setMyLocationButtonEnabled(false);
+                            markers = new JSONObject();
+                            markersElement.put(pureScriptId, markers);
+                            this.googleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+                                @Override
+                                public synchronized void onMapLoaded() {
+                                    showRouteV2(json, routeType, "#323643", actualRoute, "ny_ic_dest_marker", "ny_ic_src_marker", 8, key);
+                                    final Handler handler = new Handler();
+                                    handler.postDelayed(() -> {
+                                        GoogleMap.SnapshotReadyCallback callback2 = new GoogleMap.SnapshotReadyCallback() {
+                                            Bitmap bitmap;
+
+                                            @Override
+                                            public void onSnapshotReady(Bitmap snapshot) {
+                                                bitmap = snapshot;
+                                                String encImage = "";
+                                                try {
+                                                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+                                                    byte[] b = baos.toByteArray();
+                                                    encImage = Base64.encodeToString(b, Base64.NO_WRAP);
+                                                } catch (Exception e) {
+                                                    e.printStackTrace();
+                                                }
+
+                                                if (callback != null) {
+                                                    Log.i(MAPS, encImage);
+                                                    String javascript = String.format("window.callUICallback('%s','%s');", callback, encImage);
+                                                    Log.e(LOG_TAG, javascript);
+                                                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                                                }
+                                            }
+                                        };
+                                        googleMap.snapshot(callback2);
+                                    }, 2000);
+                                }
+                            });
+                        });
+                    } catch (Exception e) {
+                        Log.e(LOG_TAG, "Error in mapSnapShot " + e);
+                    }
+                });
+            }
+        } catch (Exception e) {
+            Log.e("ADD_MARKER", e.toString());
+        }
+    }
 
     @JavascriptInterface
     public void showRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth) {
@@ -503,6 +565,95 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                                         BitmapDescriptorFactory.fromBitmap(sourceBitmap)
                                 )
                         );
+                    }
+
+                    if (destMarker != null && !destMarker.equals("")) {
+                        Bitmap destBitmap = constructBitmap(90, destMarker);
+                        polyline.setEndCap(
+                                new CustomCap(
+                                        BitmapDescriptorFactory.fromBitmap(destBitmap)
+                                )
+                        );
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+
+    public void showRouteV2(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String key) {
+        ExecutorManager.runOnMainThread(() -> {
+            if (googleMap != null) {
+                Log.i(MAPS, "Show Route");
+                PolylineOptions polylineOptions = new PolylineOptions();
+                int color = Color.parseColor(trackColor);
+                try {
+                    JSONObject jsonObject = new JSONObject(json);
+                    JSONArray coordinates = jsonObject.getJSONArray("points");
+                    JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
+                    JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length() - 1);
+                    double sourceLat = sourceCoordinates.getDouble("lat");
+                    double sourceLong = sourceCoordinates.getDouble("lng");
+                    double destLat = destCoordinates.getDouble("lat");
+                    double destLong = destCoordinates.getDouble("lng");
+
+                    double source_lat, source_lng, destination_lat, destination_lng;
+                    if (sourceLat <= destLat) {
+                        source_lat = sourceLat - 0.4 * (destLat - sourceLat);
+                        destination_lat = destLat + 0.1 * (destLat - sourceLat);
+                    } else {
+                        source_lat = sourceLat + 0.1 * (sourceLat - destLat);
+                        destination_lat = destLat - 0.4 * (sourceLat - destLat);
+                    }
+                    if (sourceLong <= destLong) {
+                        source_lng = sourceLong - 0.09 * (destLong - sourceLong);
+                        destination_lng = destLong + 0.09 * (destLong - sourceLong);
+                    } else {
+                        source_lng = sourceLong + 0.09 * (sourceLong - destLong);
+                        destination_lng = destLong - 0.09 * (sourceLong - destLong);
+                    }
+
+                    if (googleMap != null) {
+                        try {
+                            LatLng pickupLatLng = new LatLng(source_lat, source_lng);
+                            LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
+                            LatLngBounds bounds = LatLngBounds.builder().include(pickupLatLng).include(destinationLatLng).build();
+                            googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 0));
+                        } catch (IllegalArgumentException e) {
+                            LatLng pickupLatLng = new LatLng(source_lat, source_lng);
+                            LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
+                            LatLngBounds bounds = LatLngBounds.builder().include(destinationLatLng).include(pickupLatLng).build();
+                            googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 0));
+                        } catch (Exception e) {
+                            System.out.println("In mmove camera in catch exception " + e);
+                        }
+                    }
+                    if (isActual) {
+                        for (int i = coordinates.length() - 1; i >= 0; i--) {
+                            JSONObject coordinate = (JSONObject) coordinates.get(i);
+                            double lng = coordinate.getDouble("lng");
+                            double lat = coordinate.getDouble("lat");
+                            polylineOptions.add(new LatLng(lat, lng));
+                        }
+                    } else {
+                        LatLng fromPointObj = new LatLng(sourceLat, sourceLong);
+                        LatLng toPointObj = new LatLng(destLat, destLong);
+                        polylineOptions.add(toPointObj);
+                        polylineOptions.add(fromPointObj);
+                    }
+                    PolylineDataPoints polylineDataPoints = setRouteCustomThemeV2(polylineOptions, color, style, polylineWidth, null, googleMap,false, key);
+                    Polyline polyline = getPolyLine(false, polylineDataPoints);
+                    if (sourceMarker != null && !sourceMarker.equals("")) {
+                        Bitmap sourceBitmap = constructBitmap(90, sourceMarker);
+                        polyline.setStartCap(
+                                new CustomCap(
+                                        BitmapDescriptorFactory.fromBitmap(sourceBitmap)
+                                )
+                        );
+                        polylineDataPoints.setPolyline(polyline);
+                        polylines.put(key,polylineDataPoints);
                     }
 
                     if (destMarker != null && !destMarker.equals("")) {

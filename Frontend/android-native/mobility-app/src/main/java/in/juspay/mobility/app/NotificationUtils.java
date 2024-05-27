@@ -59,6 +59,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Locale;
@@ -732,9 +733,13 @@ public class NotificationUtils {
 
     public static void showRR(Context context, JSONObject entity_payload, JSONObject payload, String source){
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        boolean isOnRide = entity_payload.optBoolean("isOnRide", false);
+        boolean useSilentFCMForForwardBatch = entity_payload.optBoolean("useSilentFCMForForwardBatch", false) && isOnRide;
         sharedPref.edit().putString(context.getString(R.string.RIDE_STATUS), context.getString(R.string.NEW_RIDE_AVAILABLE)).apply();
-        if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))) {
-            NotificationUtils.startWidgetService(context, null, payload, entity_payload);
+        boolean activityBasedChecks = Arrays.asList("onPause", "onDestroy").contains(sharedPref.getString("ACTIVITY_STATUS", "null"));
+        boolean useWidgetService = (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && activityBasedChecks) || useSilentFCMForForwardBatch;
+        if (useWidgetService) {
+             NotificationUtils.startWidgetService(context, null, payload, entity_payload);
         } else {
             NotificationUtils.showAllocationNotification(context, payload, entity_payload, source);
         }
@@ -744,11 +749,15 @@ public class NotificationUtils {
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         Intent widgetService = new Intent(context, WidgetService.class);
         String key = context.getString(R.string.service);
+        boolean isOnRide = payload.optBoolean("isOnRide", false);
+        boolean useSilentFCMForForwardBatch = payload.optBoolean("useSilentFCMForForwardBatch", false) && isOnRide;
+        boolean activityStatusCheck = (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"));
         String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider")? "DRIVER" : "USER";
-        if (merchantType.equals("DRIVER") && Settings.canDrawOverlays(context) && !sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && !sharedPref.getString("ANOTHER_ACTIVITY_LAUNCHED", "false").equals("true") && (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
+        if (merchantType.equals("DRIVER") && Settings.canDrawOverlays(context) && !sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && !sharedPref.getString("ANOTHER_ACTIVITY_LAUNCHED", "false").equals("true") && (activityStatusCheck || useSilentFCMForForwardBatch)) {
             widgetService.putExtra(context.getResources().getString(R.string.WIDGET_MESSAGE), widgetMessage);
             widgetService.putExtra("payload", payload != null ? payload.toString() : null);
             widgetService.putExtra("data", data != null ? data.toString() : null);
+            widgetService.putExtra("isForwardRequest", useSilentFCMForForwardBatch);
             try {
                 context.startService(widgetService);
             } catch (Exception e) {
