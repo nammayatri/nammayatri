@@ -293,9 +293,7 @@ planList ::
 planList (driverId, _, merchantOpCityId) serviceName _mbLimit _mbOffset mbVariant = do
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   mDriverPlan <- B.runInReplica $ QDPlan.findByDriverIdWithServiceName driverId serviceName
-  plans <- case mbVariant of
-    Just _ -> QPD.findByMerchantOpCityIdAndTypeWithServiceNameAndVariant merchantOpCityId (maybe AUTOPAY (.planType) mDriverPlan) serviceName mbVariant (Just False)
-    Nothing -> QPD.findByMerchantOpCityIdAndPaymentModeWithServiceName merchantOpCityId (maybe AUTOPAY (.planType) mDriverPlan) serviceName (Just False)
+  plans <- QPD.findByMerchantOpCityIdAndTypeWithServiceNameAndVariant merchantOpCityId (maybe AUTOPAY (.planType) mDriverPlan) serviceName mbVariant (Just False)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getCurrentTime
   let mandateSetupDate = fromMaybe now ((.mandateSetupDate) =<< mDriverPlan)
