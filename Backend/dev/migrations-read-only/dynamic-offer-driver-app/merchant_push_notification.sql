@@ -14,3 +14,9 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_push_notification ADD PRIMARY KEY ( 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_push_notification ADD COLUMN fcm_notification_type text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_push_notification DROP CONSTRAINT merchant_push_notification_pkey;
+ALTER TABLE atlas_driver_offer_bpp.merchant_push_notification ADD PRIMARY KEY ( key, merchant_operating_city_id);

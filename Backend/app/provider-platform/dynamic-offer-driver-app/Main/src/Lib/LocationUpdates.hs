@@ -41,6 +41,7 @@ import qualified SharedLogic.CallBAP as BP
 import SharedLogic.Ride
 import qualified SharedLogic.TollsDetector as TollsDetector
 import qualified Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -48,6 +49,7 @@ import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import qualified Tools.Maps as TMaps
+import qualified Tools.Notifications as TN
 
 getDeviationForPoint :: LatLong -> [LatLong] -> Meters
 getDeviationForPoint pt estimatedRoute =
@@ -251,6 +253,19 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
       )
       transportConfig.recomputeIfPickupDropNotOutsideOfThreshold
       snapToRoad'
+      ( \driverId -> do
+          person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+          merchantPN <- CPN.findByMerchantOpCityIdAndMessageKey merchantOpCityId "TOLL_CROSSED" >>= fromMaybeM (MerchantPNNotFound merchantOpCityId.getId "TOLL_CROSSED")
+          let entityData = TN.NotifReq {entityId = person.id.getId, title = merchantPN.title, message = merchantPN.body}
+          TN.notifyDriverOnEvents person.merchantOperatingCityId person.id person.deviceToken entityData merchantPN.fcmNotificationType
+      )
+      ( \driverId -> do
+          driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+          mbRide <- QRide.getActiveByDriverId driverId
+          mbBooking <- maybe (return Nothing) (QBooking.findById . bookingId) mbRide
+          vehicle <- QVeh.findById driver.id >>= fromMaybeM (DriverWithoutVehicle driver.id.getId)
+          BP.sendTollCrossedUpdateToBAP mbBooking mbRide driver vehicle
+      )
   where
     snapToRoadWithService req = do
       resp <- TMaps.snapToRoad merchantId merchantOpCityId req

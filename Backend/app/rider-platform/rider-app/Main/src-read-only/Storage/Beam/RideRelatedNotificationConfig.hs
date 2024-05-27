@@ -23,7 +23,6 @@ data RideRelatedNotificationConfigT f = RideRelatedNotificationConfigT
     notificationType :: B.C f Domain.Types.RideRelatedNotificationConfig.NotificationType,
     onBookingStatus :: B.C f Domain.Types.Extra.Booking.BookingStatus,
     onScheduledBooking :: B.C f Kernel.Prelude.Bool,
-    onlyIfOffline :: B.C f Kernel.Prelude.Bool,
     timeDiff :: B.C f Kernel.Types.Common.Seconds,
     timeDiffEvent :: B.C f Domain.Types.RideRelatedNotificationConfig.TimeDiffEvent,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
