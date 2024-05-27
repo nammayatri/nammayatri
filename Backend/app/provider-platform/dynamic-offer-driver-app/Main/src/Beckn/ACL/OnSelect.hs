@@ -111,7 +111,8 @@ mkVehicleV2 quote =
           vehicleColor = Nothing,
           vehicleMake = Nothing,
           vehicleModel = Nothing,
-          vehicleRegistration = Nothing
+          vehicleRegistration = Nothing,
+          vehicleCapacity = Nothing
         }
 
 mkAgentV2 :: DQuote.DriverQuote -> Bool -> Spec.Agent

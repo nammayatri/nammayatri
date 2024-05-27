@@ -69,6 +69,8 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             tripTerms = tripTerms',
             updatedAt = updatedAt,
             validTill = validTill,
+            vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
+            vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
             vehicleServiceTierType = vehicleVariant,
             waitingCharges = Domain.Types.Estimate.WaitingCharges $ Kernel.Types.Common.mkPriceWithDefault waitingChargePerMinAmount currency <$> waitingChargePerMin
           }
@@ -124,6 +126,8 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.tripTermsId = Kernel.Types.Id.getId <$> (tripTerms <&> (.id)),
         Beam.updatedAt = updatedAt,
         Beam.validTill = validTill,
+        Beam.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
+        Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         Beam.vehicleVariant = vehicleServiceTierType,
         Beam.waitingChargePerMin = (.waitingChargePerMin) waitingCharges <&> (.amountInt),
         Beam.waitingChargePerMinAmount = (.waitingChargePerMin) waitingCharges <&> (.amount)

@@ -2161,7 +2161,9 @@ data Vehicle = Vehicle
     -- |
     vehicleRegistration :: Maybe Text,
     -- |
-    vehicleVariant :: Maybe Text
+    vehicleVariant :: Maybe Text,
+    -- |
+    vehicleCapacity :: Maybe Int
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -2184,5 +2186,6 @@ optionsVehicle =
         ("vehicleMake", "make"),
         ("vehicleModel", "model"),
         ("vehicleRegistration", "registration"),
-        ("vehicleVariant", "variant")
+        ("vehicleVariant", "variant"),
+        ("vehicleCapacity", "capacity")
       ]

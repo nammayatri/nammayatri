@@ -181,6 +181,8 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
                     { tollCharges = tollCharges',
                       tollNames = tollNames'
                     },
+            vehicleServiceTierAirConditioned = estimate.vehicleServiceTierAirConditioned,
+            vehicleServiceTierSeatingCapacity = estimate.vehicleServiceTierSeatingCapacity,
             ..
           }
   pure quote

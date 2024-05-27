@@ -89,6 +89,8 @@ data BookingAPIEntity = BookingAPIEntity
     isValueAddNP :: Bool,
     editPickupAttemptsLeft :: Int,
     vehicleServiceTierType :: DVST.VehicleServiceTierType,
+    vehicleServiceTierSeatingCapacity :: Maybe Int,
+    vehicleServiceTierAirConditioned :: Maybe Double,
     serviceTierName :: Maybe Text,
     serviceTierShortDesc :: Maybe Text
   }
@@ -192,6 +194,8 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
       editPickupAttemptsLeft = fromMaybe 0 (activeRide >>= (.allowedEditLocationAttempts)),
       isValueAddNP,
       vehicleServiceTierType = booking.vehicleServiceTierType,
+      vehicleServiceTierSeatingCapacity = booking.vehicleServiceTierSeatingCapacity,
+      vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned,
       serviceTierName = booking.serviceTierName,
       serviceTierShortDesc = booking.serviceTierShortDesc,
       driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,

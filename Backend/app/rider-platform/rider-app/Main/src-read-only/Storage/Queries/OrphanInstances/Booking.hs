@@ -76,6 +76,8 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             transactionId = riderTransactionId,
             tripTerms = tripTerms',
             updatedAt = updatedAt,
+            vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
+            vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
             vehicleServiceTierType = vehicleVariant
           }
 
@@ -132,5 +134,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.riderTransactionId = transactionId,
         Beam.tripTermsId = Kernel.Types.Id.getId <$> (tripTerms <&> (.id)),
         Beam.updatedAt = updatedAt,
+        Beam.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
+        Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         Beam.vehicleVariant = vehicleServiceTierType
       }

@@ -88,7 +88,9 @@ data Pricing = Pricing
     fulfillmentType :: Text,
     distanceToNearestDriver :: Maybe Meters,
     tollNames :: Maybe [Text],
-    currency :: Currency
+    currency :: Currency,
+    vehicleServiceTierSeatingCapacity :: Maybe Int,
+    vehicleServiceTierAirConditioned :: Maybe Double
   }
 
 data RateCardBreakupItem = RateCardBreakupItem
@@ -446,7 +448,8 @@ mkFulfillmentV2 mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDr
                   vehicleRegistration = Just vehicle.registrationNo,
                   vehicleCategory = Just category,
                   vehicleVariant = Just variant,
-                  vehicleMake = Nothing
+                  vehicleMake = Nothing,
+                  vehicleCapacity = vehicle.capacity
                 },
         fulfillmentCustomer = Nothing,
         fulfillmentState =
@@ -623,6 +626,35 @@ mkArrivalTimeTagGroupV2 arrivalTime' =
                             descriptorShortDesc = Nothing
                           },
                     tagValue = Just $ show arrivalTime
+                  }
+              ]
+        }
+    ]
+
+mkVehicleTags :: Maybe Double -> Maybe [Spec.TagGroup]
+mkVehicleTags vehicleServiceTierAirConditioned' =
+  vehicleServiceTierAirConditioned' <&> \vehicleServiceTierAirConditioned ->
+    [ Spec.TagGroup
+        { tagGroupDisplay = Just True,
+          tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.VEHICLE_INFO,
+                  descriptorName = Just "Vehicle Info",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDisplay = Just True,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.IS_AIR_CONDITIONED,
+                            descriptorName = Just "isAirConditioned",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ show vehicleServiceTierAirConditioned
                   }
               ]
         }
@@ -936,6 +968,8 @@ convertEstimateToPricing (DEst.Estimate {..}, serviceTier, mbDriverLocations) =
       serviceTierDescription = serviceTier.shortDescription,
       vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
+      vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
+      vehicleServiceTierAirConditioned = serviceTier.airConditioned,
       ..
     }
 
@@ -952,6 +986,8 @@ convertQuoteToPricing (DQuote.Quote {..}, serviceTier, mbDriverLocations) =
       serviceTierDescription = serviceTier.shortDescription,
       vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
+      vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
+      vehicleServiceTierAirConditioned = serviceTier.airConditioned,
       ..
     }
   where
@@ -1239,7 +1275,8 @@ mkFulfillmentV2SoftUpdate mbDriver ride booking mbVehicle mbImage mbTags mbPerso
                   vehicleRegistration = Just vehicle.registrationNo,
                   vehicleCategory = Just category,
                   vehicleVariant = Just variant,
-                  vehicleMake = Nothing
+                  vehicleMake = Nothing,
+                  vehicleCapacity = vehicle.capacity
                 },
         fulfillmentCustomer = Nothing,
         fulfillmentState =

@@ -252,7 +252,8 @@ tfVehicle mbVehicle =
           vehicleRegistration = Just vehicle.registrationNo,
           vehicleCategory = Just category,
           vehicleVariant = Just variant,
-          vehicleMake = Nothing
+          vehicleMake = Nothing,
+          vehicleCapacity = Nothing
         }
 
 tfAgent :: DRB.Booking -> Maybe Text -> Maybe Spec.Agent
