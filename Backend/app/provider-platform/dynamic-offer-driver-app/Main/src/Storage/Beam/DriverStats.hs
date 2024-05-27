@@ -38,7 +38,8 @@ data DriverStatsT f = DriverStatsT
     coinCovertedToCashLeft :: B.C f (Maybe HighPrecMoney),
     totalCoinsConvertedCash :: B.C f (Maybe HighPrecMoney),
     updatedAt :: B.C f UTCTime,
-    favRiderCount :: B.C f Int
+    favRiderCount :: B.C f Int,
+    favRiderList :: B.C f [Text]
   }
   deriving (Generic, B.Beamable)
 

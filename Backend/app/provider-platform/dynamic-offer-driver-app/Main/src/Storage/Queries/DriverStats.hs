@@ -52,7 +52,8 @@ createInitialDriverStats currency driverId = do
             totalCoinsConvertedCash = 0.0,
             currency,
             updatedAt = now,
-            favRiderCount = 0
+            favRiderCount = 0,
+            favRiderList = []
           }
   createWithKV dStats
 
@@ -75,6 +76,19 @@ incFavRiders (Id driverId) = do
   driver <- findById (Id driverId) >>= fromMaybeM (InternalError ("Driver not found with id:" <> driverId))
   let newFavRiderCount = driver.favRiderCount + 1
   updateOneWithKV [Se.Set BeamDS.favRiderCount newFavRiderCount] [Se.Is BeamDS.driverId $ Se.Eq driverId]
+
+findFavRiderList :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [Text]
+findFavRiderList (Id driverId) = do
+  driverDetail <- findById (Id driverId) >>= fromMaybeM (InternalError "Couldn't find kv_configs table for kafka consumer")
+  pure $ driverDetail.favRiderList
+
+updateFavRiderList :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Person -> m ()
+updateFavRiderList riderId (Id driverId) = do
+  favRiderList <- findFavRiderList (Id driverId)
+  let newFavRiderList = favRiderList <> [riderId]
+  updateOneWithKV
+    [Se.Set BeamDS.favRiderList newFavRiderList]
+    [Se.Is BeamDS.driverId (Se.Eq driverId)]
 
 fetchAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [DriverStats]
 fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
@@ -165,7 +179,8 @@ instance FromTType' BeamDS.DriverStats DriverStats where
             totalCoinsConvertedCash = fromMaybe 0 totalCoinsConvertedCash,
             currency = fromMaybe INR currency,
             updatedAt = updatedAt,
-            favRiderCount = favRiderCount
+            favRiderCount = favRiderCount,
+            favRiderList = favRiderList
           }
 
 instance ToTType' BeamDS.DriverStats DriverStats where
@@ -188,7 +203,8 @@ instance ToTType' BeamDS.DriverStats DriverStats where
         BeamDS.coinCovertedToCashLeft = Just coinCovertedToCashLeft,
         BeamDS.totalCoinsConvertedCash = Just totalCoinsConvertedCash,
         BeamDS.updatedAt = updatedAt,
-        BeamDS.favRiderCount = favRiderCount
+        BeamDS.favRiderCount = favRiderCount,
+        BeamDS.favRiderList = favRiderList
       }
 
 incrementTotalEarningsAndBonusEarnedAndLateNightTrip :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> HighPrecMoney -> HighPrecMoney -> Int -> m ()

@@ -63,6 +63,7 @@ handler merchantId req ride = do
   when (isJust req.shouldFavDriver && isJust req.riderId) $ do
     SQR.updateFavDriverList (fromJust req.riderId) ride.driverId
     SQD.incFavRiders ride.driverId
+    SQD.updateFavRiderList (fromJust req.riderId) ride.driverId
   -- case req.shouldFavDriver of
   --   Just True -> do
   --     SQR.updateFavDriverList (fromJust req.riderId) ride.driverId
