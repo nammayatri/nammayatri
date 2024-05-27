@@ -42,7 +42,9 @@ createInitialDriverStats currency distanceUnit driverId = do
             totalCoinsConvertedCash = 0.0,
             currency,
             distanceUnit,
-            updatedAt = now
+            updatedAt = now,
+            favRiderCount = 0,
+            favRiderList = []
           }
   createWithKV dStats
 
@@ -174,3 +176,34 @@ setMissedEarnings (Id driverId') missedEarnings = do
       Se.Set BeamDS.earningsMissed $ roundToIntegral missedEarnings
     ]
     [Se.Is BeamDS.driverId (Se.Eq driverId')]
+
+addToFavRiderList :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Driver -> m ()
+addToFavRiderList riderId (Id driverId) = do
+  mbDriverDetail <- findById (Id driverId)
+  case mbDriverDetail of
+    Just driverDetail -> do
+      let favRiderList = driverDetail.favRiderList
+      unless (riderId `elem` favRiderList) $ do
+        updateOneWithKV
+          [ Se.Set BeamDS.favRiderList (favRiderList <> [riderId]),
+            Se.Set BeamDS.favRiderCount (driverDetail.favRiderCount + 1)
+          ]
+          [Se.Is BeamDS.driverId (Se.Eq driverId)]
+    Nothing -> do
+      logError $ "Driver stats doesn't exist for driver Id : " <> driverId
+      pure ()
+
+removeFavouriteRider :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Text -> m ()
+removeFavouriteRider (Id driverId) riderId = do
+  mbDriverDetail <- findById (Id driverId)
+  case mbDriverDetail of
+    Just driverDetail -> do
+      let favRiderList = driverDetail.favRiderList
+          newFavRiderList = filter (/= riderId) favRiderList
+      when (riderId `elem` favRiderList) $ do
+        updateOneWithKV
+          [ Se.Set BeamDS.favRiderList newFavRiderList,
+            Se.Set BeamDS.favRiderCount (driverDetail.favRiderCount - 1)
+          ]
+          [Se.Is BeamDS.driverId (Se.Eq driverId)]
+    Nothing -> pure ()

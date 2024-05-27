@@ -17,6 +17,7 @@ data RatingT f = RatingT
     driverId :: B.C f Data.Text.Text,
     feedbackDetails :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     id :: B.C f Data.Text.Text,
+    isFavourite :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSafe :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     issueId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     ratingValue :: B.C f Kernel.Prelude.Int,

@@ -17,6 +17,7 @@ data Rating = Rating
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     feedbackDetails :: Kernel.Prelude.Maybe Data.Text.Text,
     id :: Kernel.Types.Id.Id Domain.Types.Rating.Rating,
+    isFavourite :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isSafe :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     issueId :: Kernel.Prelude.Maybe Data.Text.Text,
     ratingValue :: Kernel.Prelude.Int,

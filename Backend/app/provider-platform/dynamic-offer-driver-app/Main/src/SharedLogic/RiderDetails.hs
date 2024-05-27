@@ -48,5 +48,6 @@ getRiderDetails currency merchantId customerMobileCountryCode customerPhoneNumbe
             cancellationDues = 0.0,
             currency,
             disputeChancesUsed = 0,
-            nightSafetyChecks = nightSafetyCheck
+            nightSafetyChecks = nightSafetyCheck,
+            favDriverList = []
           }

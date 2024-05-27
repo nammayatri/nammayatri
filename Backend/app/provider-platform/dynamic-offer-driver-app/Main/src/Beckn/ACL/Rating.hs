@@ -14,6 +14,7 @@
 
 module Beckn.ACL.Rating where
 
+import Beckn.OnDemand.Utils.Common
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Text as T
@@ -27,7 +28,11 @@ import Kernel.Utils.Common
 import Tools.Error
 
 buildRatingReqV2 ::
-  (HasFlowEnv m r '["_version" ::: Text]) =>
+  ( HasFlowEnv m r '["_version" ::: Text],
+    MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
   Subscriber.Subscriber ->
   Spec.RatingReq ->
   m DRating.DRatingReq
@@ -46,12 +51,14 @@ buildRatingReqV2 subscriber req = do
   bookingId <- rating.ratingId & fromMaybeM (InvalidRequest "Missing ratingId")
   ratingValueText <- rating.ratingValue & fromMaybeM (InvalidRequest "Missing ratingValue")
   let mbRatingValue = readMaybe $ T.unpack ratingValueText
+      shouldFavDriver = getShouldFavouriteDriver rating
   ratingValue <- mbRatingValue & fromMaybeM (InvalidRequest "Invalid ratingValue")
   pure
     DRating.DRatingReq
       { bookingId = Id bookingId,
         ratingValue = ratingValue,
-        feedbackDetails = tfFeedbackDetails rating
+        feedbackDetails = tfFeedbackDetails rating,
+        shouldFavDriver = shouldFavDriver
       }
 
 tfFeedbackDetails :: Spec.Rating -> [Maybe Text]

@@ -70,6 +70,7 @@ library
       API.Internal.DriverInactiveFCM
       API.Internal.DriverMode
       API.Internal.DriverReferee
+      API.Internal.FavouriteDrivers
       API.Internal.FeedbackForm
       API.Internal.ReportACIssue
       API.Internal.ReportIssue
@@ -163,6 +164,7 @@ library
       Domain.Action.Internal.DriverInactiveFCM
       Domain.Action.Internal.DriverMode
       Domain.Action.Internal.DriverReferee
+      Domain.Action.Internal.FavouriteDrivers
       Domain.Action.Internal.FeedbackForm
       Domain.Action.Internal.ReportACIssue
       Domain.Action.Internal.ReportIssue

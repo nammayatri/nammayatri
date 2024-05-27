@@ -13,24 +13,26 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data DriverStatsT f = DriverStatsT
-  { bonusEarned :: (B.C f Kernel.Types.Common.Money),
-    bonusEarnedAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    coinCovertedToCashLeft :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
-    distanceUnit :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit)),
-    driverId :: (B.C f Kernel.Prelude.Text),
-    earningsMissed :: (B.C f Kernel.Types.Common.Money),
-    earningsMissedAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    idleSince :: (B.C f Kernel.Prelude.UTCTime),
-    lateNightTrips :: (B.C f Kernel.Prelude.Int),
-    ridesCancelled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    totalCoinsConvertedCash :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    totalDistance :: (B.C f Kernel.Prelude.Double),
-    totalEarnings :: (B.C f Kernel.Types.Common.Money),
-    totalEarningsAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    totalRides :: (B.C f Kernel.Prelude.Int),
-    totalRidesAssigned :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { bonusEarned :: B.C f Kernel.Types.Common.Money,
+    bonusEarnedAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    coinCovertedToCashLeft :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
+    driverId :: B.C f Kernel.Prelude.Text,
+    earningsMissed :: B.C f Kernel.Types.Common.Money,
+    earningsMissedAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    favRiderCount :: B.C f Kernel.Prelude.Int,
+    favRiderList :: B.C f [Kernel.Prelude.Text],
+    idleSince :: B.C f Kernel.Prelude.UTCTime,
+    lateNightTrips :: B.C f Kernel.Prelude.Int,
+    ridesCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    totalCoinsConvertedCash :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    totalDistance :: B.C f Kernel.Prelude.Double,
+    totalEarnings :: B.C f Kernel.Types.Common.Money,
+    totalEarningsAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    totalRides :: B.C f Kernel.Prelude.Int,
+    totalRidesAssigned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -40,6 +42,6 @@ instance B.Table DriverStatsT where
 
 type DriverStats = DriverStatsT Identity
 
-$(enableKVPG (''DriverStatsT) [('driverId)] [])
+$(enableKVPG ''DriverStatsT ['driverId] [])
 
-$(mkTableInstances (''DriverStatsT) "driver_stats")
+$(mkTableInstances ''DriverStatsT "driver_stats")

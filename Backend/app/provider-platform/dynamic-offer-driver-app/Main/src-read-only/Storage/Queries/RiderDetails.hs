@@ -24,7 +24,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RiderDetails.RiderDetails] -> m ())
 createMany = traverse_ create
 
-findAllReferredByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m ([Domain.Types.RiderDetails.RiderDetails]))
+findAllReferredByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m [Domain.Types.RiderDetails.RiderDetails])
 findAllReferredByDriverId referredByDriver = do findAllWithDb [Se.Is Beam.referredByDriver $ Se.Eq (Kernel.Types.Id.getId <$> referredByDriver)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m (Maybe Domain.Types.RiderDetails.RiderDetails))
@@ -73,12 +73,13 @@ updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.disputeChancesUsed disputeChancesUsed,
+      Se.Set Beam.favDriverList favDriverList,
       Se.Set Beam.hasTakenValidRide hasTakenValidRide,
       Se.Set Beam.hasTakenValidRideAt hasTakenValidRideAt,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.mobileCountryCode mobileCountryCode,
-      Se.Set Beam.mobileNumberEncrypted (((mobileNumber & unEncrypted . encrypted))),
-      Se.Set Beam.mobileNumberHash ((mobileNumber & hash)),
+      Se.Set Beam.mobileNumberEncrypted (mobileNumber & unEncrypted . encrypted),
+      Se.Set Beam.mobileNumberHash (mobileNumber & hash),
       Se.Set Beam.nightSafetyChecks nightSafetyChecks,
       Se.Set Beam.otpCode otpCode,
       Se.Set Beam.referralCode (Kernel.Types.Id.getId <$> referralCode),

@@ -31,6 +31,7 @@ RiderDetails:
     merchantId : Id Merchant
     otpCode : Maybe Text
     nightSafetyChecks : Bool
+    favDriverList : "[Text]"
 
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E

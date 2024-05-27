@@ -25,6 +25,8 @@ DriverStats:
     currency : Currency
     distanceUnit: DistanceUnit
     updatedAt : UTCTime
+    favRiderCount : Int
+    favRiderList : "[Text]"
 
   beamFields:
     totalEarnings:

@@ -45,6 +45,7 @@ data FeedbackReq = FeedbackReq
     rating :: Int,
     feedbackDetails :: Maybe Text,
     nightSafety :: Maybe Bool,
+    shouldFavDriver :: Maybe Bool,
     wasOfferedAssistance :: Maybe Bool
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
@@ -61,7 +62,8 @@ data FeedbackRes = FeedbackRes
     city :: Context.City,
     issueId :: Maybe Text,
     vehicleVariant :: DVeh.VehicleVariant,
-    vehicleServiceTierType :: DVST.VehicleServiceTierType
+    vehicleServiceTierType :: DVST.VehicleServiceTierType,
+    shouldFavDriver :: Maybe Bool
   }
 
 feedback :: FeedbackReq -> App.Flow FeedbackRes
@@ -97,6 +99,7 @@ feedback request = do
         issueId = issueId',
         vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType,
         vehicleServiceTierType = booking.vehicleServiceTierType,
+        shouldFavDriver = request.shouldFavDriver,
         ..
       }
   where

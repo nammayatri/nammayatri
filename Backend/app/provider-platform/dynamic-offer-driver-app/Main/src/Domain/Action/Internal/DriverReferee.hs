@@ -91,5 +91,6 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
             nightSafetyChecks = True,
             cancellationDues = 0.0,
             disputeChancesUsed = 0,
+            favDriverList = [],
             currency
           }

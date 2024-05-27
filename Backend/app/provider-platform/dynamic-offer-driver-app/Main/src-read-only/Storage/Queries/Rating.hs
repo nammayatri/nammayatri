@@ -33,8 +33,8 @@ findRatingForRide (Kernel.Types.Id.Id rideId) = do findOneWithKV [Se.Is Beam.rid
 
 updateRating ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Rating.Rating -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance (Kernel.Types.Id.Id id) (Kernel.Types.Id.Id driverId) = do
+  (Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Rating.Rating -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance isFavourite (Kernel.Types.Id.Id id) (Kernel.Types.Id.Id driverId) = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.ratingValue ratingValue,
@@ -42,7 +42,8 @@ updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance (Ke
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.isSafe isSafe,
       Se.Set Beam.issueId issueId,
-      Se.Set Beam.wasOfferedAssistance wasOfferedAssistance
+      Se.Set Beam.wasOfferedAssistance wasOfferedAssistance,
+      Se.Set Beam.isFavourite isFavourite
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq id, Se.Is Beam.driverId $ Se.Eq driverId]]
 
@@ -56,6 +57,7 @@ updateByPrimaryKey (Domain.Types.Rating.Rating {..}) = do
     [ Se.Set Beam.createdAt createdAt,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.feedbackDetails feedbackDetails,
+      Se.Set Beam.isFavourite isFavourite,
       Se.Set Beam.isSafe isSafe,
       Se.Set Beam.issueId issueId,
       Se.Set Beam.ratingValue ratingValue,

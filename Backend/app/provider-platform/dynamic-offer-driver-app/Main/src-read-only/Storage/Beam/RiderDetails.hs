@@ -14,23 +14,24 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data RiderDetailsT f = RiderDetailsT
-  { cancellationDues :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
-    disputeChancesUsed :: (B.C f Kernel.Prelude.Int),
-    hasTakenValidRide :: (B.C f Kernel.Prelude.Bool),
-    hasTakenValidRideAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    mobileCountryCode :: (B.C f Kernel.Prelude.Text),
-    mobileNumberEncrypted :: (B.C f Kernel.Prelude.Text),
-    mobileNumberHash :: (B.C f Kernel.External.Encryption.DbHash),
-    nightSafetyChecks :: (B.C f Kernel.Prelude.Bool),
-    otpCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    referralCode :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    referredAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    referredByDriver :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { cancellationDues :: B.C f Kernel.Types.Common.HighPrecMoney,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    disputeChancesUsed :: B.C f Kernel.Prelude.Int,
+    favDriverList :: B.C f [Kernel.Prelude.Text],
+    hasTakenValidRide :: B.C f Kernel.Prelude.Bool,
+    hasTakenValidRideAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    mobileCountryCode :: B.C f Kernel.Prelude.Text,
+    mobileNumberEncrypted :: B.C f Kernel.Prelude.Text,
+    mobileNumberHash :: B.C f Kernel.External.Encryption.DbHash,
+    nightSafetyChecks :: B.C f Kernel.Prelude.Bool,
+    otpCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    referredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    referredByDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -40,6 +41,6 @@ instance B.Table RiderDetailsT where
 
 type RiderDetails = RiderDetailsT Identity
 
-$(enableKVPG (''RiderDetailsT) [('id)] [[('merchantId)], [('mobileNumberHash)]])
+$(enableKVPG ''RiderDetailsT ['id] [['merchantId], ['mobileNumberHash]])
 
-$(mkTableInstances (''RiderDetailsT) "rider_details")
+$(mkTableInstances ''RiderDetailsT "rider_details")

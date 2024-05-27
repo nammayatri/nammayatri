@@ -38,3 +38,31 @@ updateReferralInfo customerNumberHash merchantId referralId driverId = do
       Se.Set BeamRD.referredAt (Just now)
     ]
     [Se.And [Se.Is BeamRD.mobileNumberHash (Se.Eq customerNumberHash), Se.Is BeamRD.merchantId (Se.Eq $ getId merchantId)]]
+
+addToFavDriverList :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Person -> m ()
+addToFavDriverList riderId driverId = do
+  mbRiderDetail <- findOneWithKV [Se.Is BeamRD.id $ Se.Eq riderId]
+  case mbRiderDetail of
+    Just riderDetail -> do
+      let favDriverList = riderDetail.favDriverList
+      unless (driverId.getId `elem` favDriverList) $ do
+        updateOneWithKV
+          [Se.Set BeamRD.favDriverList (favDriverList <> [driverId.getId])]
+          [Se.Is BeamRD.id (Se.Eq riderId)]
+    Nothing -> do
+      logError $ "Rider details doesn't exist when adding driver to fav list for riderID : " <> riderId
+      pure ()
+
+removeFavouriteDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id RiderDetails -> Text -> m ()
+removeFavouriteDriver (Id riderId) driverId = do
+  mbRiderDetail <- findOneWithKV [Se.Is BeamRD.id $ Se.Eq riderId]
+  case mbRiderDetail of
+    Just riderDetail -> do
+      let favDriverList = riderDetail.favDriverList
+          newFavDriverList = filter (/= driverId) favDriverList
+      updateOneWithKV
+        [Se.Set BeamRD.favDriverList newFavDriverList]
+        [Se.Is BeamRD.id (Se.Eq riderId)]
+    Nothing -> do
+      logError $ "Rider details doesn't exist when removing driver to fav list for riderID : " <> riderId
+      pure ()

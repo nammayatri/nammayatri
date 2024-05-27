@@ -19,6 +19,7 @@ data RiderDetailsE e = RiderDetails
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     disputeChancesUsed :: Kernel.Prelude.Int,
+    favDriverList :: [Kernel.Prelude.Text],
     hasTakenValidRide :: Kernel.Prelude.Bool,
     hasTakenValidRideAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails,
@@ -34,9 +35,9 @@ data RiderDetailsE e = RiderDetails
   }
   deriving (Generic)
 
-type RiderDetails = RiderDetailsE ('AsEncrypted)
+type RiderDetails = RiderDetailsE 'AsEncrypted
 
-type DecryptedRiderDetails = RiderDetailsE ('AsUnencrypted)
+type DecryptedRiderDetails = RiderDetailsE 'AsUnencrypted
 
 instance EncryptedItem RiderDetails where
   type Unencrypted RiderDetails = (DecryptedRiderDetails, HashSalt)
@@ -48,6 +49,7 @@ instance EncryptedItem RiderDetails where
           createdAt = createdAt entity,
           currency = currency entity,
           disputeChancesUsed = disputeChancesUsed entity,
+          favDriverList = favDriverList entity,
           hasTakenValidRide = hasTakenValidRide entity,
           hasTakenValidRideAt = hasTakenValidRideAt entity,
           id = id entity,
@@ -69,6 +71,7 @@ instance EncryptedItem RiderDetails where
             createdAt = createdAt entity,
             currency = currency entity,
             disputeChancesUsed = disputeChancesUsed entity,
+            favDriverList = favDriverList entity,
             hasTakenValidRide = hasTakenValidRide entity,
             hasTakenValidRideAt = hasTakenValidRideAt entity,
             id = id entity,

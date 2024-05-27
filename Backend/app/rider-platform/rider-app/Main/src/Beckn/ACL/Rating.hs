@@ -17,6 +17,7 @@ module Beckn.ACL.Rating (buildRatingReq, buildRatingReqV2) where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Rating as Rating
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -94,7 +95,8 @@ tfRating res@DFeedback.FeedbackRes {..} = do
     { ratingId = Just $ bppBookingId.getId,
       ratingValue = Just $ show ratingValue,
       ratingRatingCategory = Nothing,
-      ratingFeedbackForm = Just $ tfFeedbackForm res
+      ratingFeedbackForm = Just $ tfFeedbackForm res,
+      ratingTag = mkRatingTag res.shouldFavDriver
     }
 
 tfFeedbackForm :: DFeedback.FeedbackRes -> [Spec.FeedbackForm]
@@ -114,4 +116,39 @@ tfFeedbackForm DFeedback.FeedbackRes {..} = do
       { feedbackFormQuestion = "Get IssueId.",
         feedbackFormAnswer = issueId
       }
+    ]
+
+mkRatingTag :: Maybe Bool -> Maybe [Spec.TagGroup]
+mkRatingTag mShouldFavDriver = mShouldFavDriver >>= mkRatingTags
+
+mkRatingTags :: Bool -> Maybe [Spec.TagGroup]
+mkRatingTags shouldFavDriver =
+  Just
+    [ Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.RATING_TAGS,
+                  descriptorName = Just "Rating Information",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList = mkPersonTag shouldFavDriver
+        }
+    ]
+
+mkPersonTag :: Bool -> Maybe [Spec.Tag]
+mkPersonTag shouldFavDriver =
+  Just
+    [ Spec.Tag
+        { tagDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.SHOULD_FAVOURITE_DRIVER,
+                  descriptorName = Just "Should Favourite Driver",
+                  descriptorShortDesc = Nothing
+                },
+          tagDisplay = Just False,
+          tagValue = Just $ show shouldFavDriver
+        }
     ]

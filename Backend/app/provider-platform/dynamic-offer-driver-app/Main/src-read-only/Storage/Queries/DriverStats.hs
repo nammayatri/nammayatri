@@ -41,6 +41,8 @@ updateByPrimaryKey (Domain.Types.DriverStats.DriverStats {..}) = do
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.earningsMissed (Kernel.Prelude.roundToIntegral earningsMissed),
       Se.Set Beam.earningsMissedAmount (Kernel.Prelude.Just earningsMissed),
+      Se.Set Beam.favRiderCount favRiderCount,
+      Se.Set Beam.favRiderList favRiderList,
       Se.Set Beam.idleSince idleSince,
       Se.Set Beam.lateNightTrips lateNightTrips,
       Se.Set Beam.ridesCancelled ridesCancelled,
