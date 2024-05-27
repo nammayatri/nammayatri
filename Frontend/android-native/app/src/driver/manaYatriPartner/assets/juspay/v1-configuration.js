@@ -186,9 +186,9 @@ window.getMerchantConfig = function () {
       "genericAccessibilityVideo" : "https://youtu.be/5s21p2rI58c"
     }
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
-    , "termsLink" : "https://www.manayatri.in/terms_of_use"
+    , "termsLink" : "https://drive.google.com/file/d/1mFh4bCVZ8Pf4O6oZQDyq3c-G8Dlga7YT/view?usp=sharing"
     , "termsVersion" : 2.0
-    , "privacyLink" : "https://www.manayatri.in/privacy-policy"
+    , "privacyLink" :"https://docs.google.com/document/d/11KmxEhsNYjSNk3npn326W0Y7UX_0NtEzfb76vJCUvAs/edit?usp=sharing"
     , "feature" : {
       "enableBonus" : true
       , "enableImageUpload" : false
