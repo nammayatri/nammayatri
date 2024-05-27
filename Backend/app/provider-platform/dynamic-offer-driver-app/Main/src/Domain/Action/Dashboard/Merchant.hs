@@ -73,6 +73,7 @@ import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Overlay as DMO
 import qualified Domain.Types.Plan as Plan
 import qualified Domain.Types.ServiceTierType as DVST
+import Domain.Types.TimeBound
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -425,6 +426,7 @@ buildDriverPoolConfig merchantId merchantOpCityId tripDistance area vehicleVaria
         onRideBatchSplitConfig = map castOnRideSplitByPickupDistance onRideBatchSplitConfig,
         onRideRadiusConfig = map castOnRideRadiusConfig onRideRadiusConfig,
         batchSizeOnRide = batchSizeOnRide,
+        timeBounds = Unbounded,
         ..
       }
 

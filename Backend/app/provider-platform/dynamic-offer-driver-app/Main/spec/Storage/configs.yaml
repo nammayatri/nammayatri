@@ -10,6 +10,7 @@ imports:
   ServiceTierType: Domain.Types.ServiceTierType
   Area: Lib.Types.SpecialLocation
   Common: Domain.Types.Common
+  TimeBound : Domain.Types.TimeBound
 
 DriverPoolConfig:
   tableName: driver_pool_config
@@ -38,6 +39,7 @@ DriverPoolConfig:
     driverToDestinationDuration: Seconds
     scheduleTryTimes: "[Int]"
     area: Area
+    timeBounds: TimeBound|NoRelation
     batchSizeOnRide: Int
     onRideRadiusConfig: "[OnRideRadiusConfig]"
     onRideBatchSplitConfig: "[BatchSplitByPickupDistanceOnRide]"
@@ -61,6 +63,7 @@ DriverPoolConfig:
     distanceBasedBatchSplit: text[]
     onRideRadiusConfig: text[]
     scheduleTryTimes: integer[]
+    timeBounds: Text
     onRideBatchSplitConfig: text[]
 
   default:
@@ -68,6 +71,7 @@ DriverPoolConfig:
     area: "'Default'"
     distanceBasedBatchSplit: "Array ['BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 4 }']"
     scheduleTryTimes: "'{1800, 900, 300}'"
+    timeBounds: "'Unbounded'"
     batchSizeOnRide: "10"
     onRideRadiusConfig: "ARRAY[]::TEXT[]"
     currentRideTripCategoryValidForForwardBatching: "Array ['OneWay_OneWayOnDemandDynamicOffer']"

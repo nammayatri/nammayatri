@@ -237,7 +237,6 @@ library
       Domain.Types.DriverPlan
       Domain.Types.DriverStats
       Domain.Types.Extra.DriverFee
-      Domain.Types.Extra.FareProduct
       Domain.Types.Extra.Location
       Domain.Types.Extra.MerchantMessage
       Domain.Types.Extra.MerchantPaymentMethod
@@ -277,6 +276,7 @@ library
       Domain.Types.RideRoute
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.ServiceTierType
+      Domain.Types.TimeBound
       Domain.Types.UtilsTH
       Environment
       Lib.DriverCoins.Coins
@@ -998,7 +998,7 @@ library
       cac_client
   default-language: Haskell2010
   if flag(Local)
-    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4 -fwhole-archive-hs-libs
   else
     ghc-options: -O2 -j4
 
@@ -1114,6 +1114,6 @@ executable dynamic-offer-driver-app-exe
       cac_client
   default-language: Haskell2010
   if flag(Local)
-    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4 -fwhole-archive-hs-libs
   else
     ghc-options: -O2 -j4

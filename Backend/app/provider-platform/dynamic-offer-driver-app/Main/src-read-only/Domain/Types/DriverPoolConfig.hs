@@ -8,6 +8,7 @@ import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.TimeBound
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -47,6 +48,7 @@ data DriverPoolConfig = DriverPoolConfig
     scheduleTryTimes :: [Kernel.Prelude.Int],
     singleBatchProcessTime :: Kernel.Types.Common.Seconds,
     thresholdToIgnoreActualDistanceThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    timeBounds :: Domain.Types.TimeBound.TimeBound,
     tripCategory :: Kernel.Prelude.Text,
     tripDistance :: Kernel.Types.Common.Meters,
     updatedAt :: Kernel.Prelude.UTCTime,

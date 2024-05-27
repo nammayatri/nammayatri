@@ -24,19 +24,54 @@ module SharedLogic.DriverPool.Config
 where
 
 import Control.Applicative ((<|>))
-import Data.Text as Text hiding (find)
+import Data.Text as Text hiding (filter, find)
 import Domain.Types.DriverPoolConfig
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceTierType as DVST
+import Domain.Types.TimeBound
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
-import Kernel.Utils.Error
+import Kernel.Utils.Common
 import qualified Lib.Types.SpecialLocation as SL
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Cac.TransporterConfig as CTC
 import Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
+
+getDriverPoolConfigFromDB' ::
+  Maybe DVST.ServiceTierType ->
+  String ->
+  SL.Area ->
+  Maybe Meters ->
+  [DriverPoolConfig] ->
+  Maybe DriverPoolConfig
+getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist configs = do
+  let distance = fromMaybe 0 mbDist
+  let mbApplicableConfig =
+        find (filterByDistAndDvehAndArea serviceTier (Text.pack tripCategory) distance area) configs
+          <|> find (filterByDistAndDvehAndArea serviceTier (Text.pack tripCategory) distance SL.Default) configs
+  case configs of
+    [] -> Nothing
+    _ ->
+      case mbApplicableConfig of
+        Just applicableConfig -> Just applicableConfig
+        Nothing -> do
+          let alternativeConfigs =
+                find (filterByDistAndDvehAndArea serviceTier "All" distance area) configs
+                  <|> find (filterByDistAndDvehAndArea serviceTier "All" distance SL.Default) configs
+          case alternativeConfigs of
+            Just cfg -> Just cfg
+            Nothing -> findDriverPoolConfig configs Nothing "All" distance area
+
+filterByDistAndDvehAndArea :: Maybe DVST.ServiceTierType -> Text -> Meters -> SL.Area -> DriverPoolConfig -> Bool
+filterByDistAndDvehAndArea serviceTier tripCategory dist area cfg =
+  dist >= cfg.tripDistance && cfg.vehicleVariant == serviceTier && cfg.tripCategory == tripCategory && cfg.area == area
+
+findDriverPoolConfig :: [DriverPoolConfig] -> Maybe DVST.ServiceTierType -> Text -> Meters -> SL.Area -> Maybe DriverPoolConfig
+findDriverPoolConfig configs serviceTier tripCategory dist area = do
+  find (filterByDistAndDvehAndArea serviceTier tripCategory dist area) configs
+    <|> find (filterByDistAndDvehAndArea serviceTier tripCategory dist SL.Default) configs
 
 getDriverPoolConfigFromDB ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -47,30 +82,12 @@ getDriverPoolConfigFromDB ::
   Maybe Meters ->
   m (Maybe DriverPoolConfig)
 getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist = do
-  let distance = fromMaybe 0 mbDist
   configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
-  let mbApplicableConfig =
-        find (filterByDistAndDvehAndArea serviceTier (Text.pack tripCategory) distance area) configs
-          <|> find (filterByDistAndDvehAndArea serviceTier (Text.pack tripCategory) distance SL.Default) configs
-  case configs of
-    [] -> throwError $ InvalidRequest $ "DriverPool Configs not found for MerchantOperatingCity: " <> merchantOpCityId.getId
-    _ ->
-      case mbApplicableConfig of
-        Just applicableConfig -> return $ Just applicableConfig
-        Nothing -> do
-          let alternativeConfigs =
-                find (filterByDistAndDvehAndArea serviceTier "All" distance area) configs
-                  <|> find (filterByDistAndDvehAndArea serviceTier "All" distance SL.Default) configs
-          case alternativeConfigs of
-            Just cfg -> return $ Just cfg
-            Nothing -> Just <$> findDriverPoolConfig configs Nothing "All" distance area
-
-filterByDistAndDvehAndArea :: Maybe DVST.ServiceTierType -> Text -> Meters -> SL.Area -> DriverPoolConfig -> Bool
-filterByDistAndDvehAndArea serviceTier tripCategory dist area cfg =
-  dist >= cfg.tripDistance && cfg.vehicleVariant == serviceTier && cfg.tripCategory == tripCategory && cfg.area == area
-
-findDriverPoolConfig :: (EsqDBFlow m r) => [DriverPoolConfig] -> Maybe DVST.ServiceTierType -> Text -> Meters -> SL.Area -> m DriverPoolConfig
-findDriverPoolConfig configs serviceTier tripCategory dist area = do
-  find (filterByDistAndDvehAndArea serviceTier tripCategory dist area) configs
-    <|> find (filterByDistAndDvehAndArea serviceTier tripCategory dist SL.Default) configs
-      & fromMaybeM (InvalidRequest $ "DriverPool Config not found: " <> show serviceTier <> show tripCategory <> show dist)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc -- bounds, all these params, timeDiffFromUTC
+  let boundedConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) configs) localTime
+  let unboundedConfig = filter (\cfg -> cfg.timeBounds == Unbounded) configs
+  return $
+    ( getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist boundedConfigs
+        <|> getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist unboundedConfig
+    )

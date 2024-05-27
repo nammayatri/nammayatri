@@ -9,15 +9,12 @@
 
 module SharedLogic.FareProduct where
 
-import Control.Applicative ((<|>))
-import Data.Time hiding (getCurrentTime)
-import Data.Time.Calendar.WeekDate
 import qualified Domain.Types.Common as DTC
-import qualified Domain.Types.Extra.FareProduct as UFP
 import qualified Domain.Types.FareProduct as DFareProduct
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ServiceTierType as DVST
+import qualified Domain.Types.TimeBound as DTB
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
@@ -121,38 +118,4 @@ getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
 getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTier area = do
   fareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area
   currentIstTime <- getLocalCurrentTime 19800
-  let currTimeOfDay = utcTimeToDiffTime currentIstTime
-      currentDay = utctDay currentIstTime
-      (_, _, currentDayOfWeek) = toWeekDate currentDay
-  let (fareProductBoundedByWeekday, fareProductBoundedByDay) =
-        foldl
-          ( \acc@(fpBoundedByWeekday, fpBoundedByDay) fp ->
-              case fp.timeBounds of
-                UFP.BoundedByWeekday timeBounds ->
-                  if isWithin currTimeOfDay (getPeaksForCurrentDay currentDayOfWeek timeBounds)
-                    then (Just fp, fpBoundedByDay)
-                    else acc
-                UFP.BoundedByDay days ->
-                  if maybe False (isWithin currTimeOfDay) (snd <$> find (\(day, _) -> day == currentDay) days)
-                    then (fpBoundedByWeekday, Just fp)
-                    else acc
-                UFP.Unbounded -> acc
-          )
-          (Nothing, Nothing)
-          fareProducts
-  return $ fareProductBoundedByDay <|> fareProductBoundedByWeekday
-  where
-    isWithin _ [] = False
-    isWithin currTime [(startTime, endTime)] = currTime > (timeOfDayToTime startTime) && currTime < (timeOfDayToTime endTime)
-    isWithin currTime ((startTime, endTime) : xs) = (currTime > (timeOfDayToTime startTime) && currTime < (timeOfDayToTime endTime)) || isWithin currTime xs
-
-    getPeaksForCurrentDay currentDayOfWeek peaks =
-      case currentDayOfWeek of
-        1 -> peaks.monday
-        2 -> peaks.tuesday
-        3 -> peaks.wednesday
-        4 -> peaks.thursday
-        5 -> peaks.friday
-        6 -> peaks.saturday
-        7 -> peaks.sunday
-        _ -> peaks.monday -- This case should never come.
+  return $ listToMaybe (DTB.findBoundedDomain fareProducts currentIstTime)
