@@ -2,8 +2,32 @@ console.log("APP_PERF INDEX_BUNDLE_START : ", new Date().getTime());
 import "core-js";
 import "presto-ui";
 import "regenerator-runtime/runtime";
+import * as purescript from "./output/Main"
 
 window.events = {};
+window.events.exceptions = window.events.exceptions || [];
+
+window.onerror = function (message, source, lineno, colno, error) {
+  if (!error) {
+    error = {
+        message: message,
+        stack: "No stack trace available"
+    };
+  }
+
+  if (window.events) {
+    window.events.exceptions.push({
+      message: message,
+      source: source,
+      lineno: lineno,
+      colno: colno,
+      error: error ? error.toString() : null
+  });
+  }
+  purescript.pushErrorEventData();
+  return false;
+};
+
 try {
   if (typeof window.assetDownloadDuration === "number") {
     window.events.assetDownloadDuration = Date.now() - window.assetDownloadDuration;
@@ -11,11 +35,10 @@ try {
 } catch (err) {}
 const bundleLoadTime = Date.now();
 window.flowTimeStampObject = {};
-const blackListFunctions = ["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "addToLogList", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds"]
+const blackListFunctions = []
 window.whitelistedNotification = ["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "DRIVER_REACHED", "REALLOCATE_PRODUCT"];
 
-console.log("APP_PERF INDEX_FIREBASE_LOG_PARAMS_START : ", new Date().getTime());
-if (window.JBridge.firebaseLogEventWithParams){  
+console.log("APP_PERF INDEX_FIREBASE_LOG_PARAMS_START : ", new Date().getTime());  
   Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
     return blackListFunctions.indexOf(fnName) == -1
   }).forEach(fnName => {
@@ -26,18 +49,18 @@ if (window.JBridge.firebaseLogEventWithParams){
         if (fnName === "callAPI") {
           params = arguments[1].split("/").splice(6).join("/");
         }
-        let shouldLog = true;
-        if (window.appConfig) {
-        shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
+
+        let result;
+        try {
+          result = window.JBridgeProxy[fnName](...arguments);
+        } catch (err) {
+          window.onerror(err.message + " in fnName: " + fnName, 'index.js', 57, 83, err);
+          result = undefined;
         }
-        if (shouldLog) {
-        window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
-        }
-        const result = window.JBridgeProxy[fnName](...arguments);
         return result;
       };
     });
-}
+
 console.log("APP_PERF INDEX_FIREBASE_LOG_PARAMS_END : ", new Date().getTime());
 
 function guid() {
@@ -130,7 +153,6 @@ if (!window.__OS) {
 }
 console.log("APP_PERF INDEX_BUNDLE_OS_END : ", new Date().getTime());
 
-const purescript = require("./output/Main");
 
 function callInitiateResult () {
   const payload = {

@@ -44,31 +44,34 @@ export const endMeasuringDuration = function (key) {
   };
 };
 
-export const getEvents = function () {
-  try {
-    if (typeof window === "object") {
-      if (window.Aggregate && !window.Aggregate.pushOnce) {
-        window.events.Aggregate = window.Aggregate;
-        window.Aggregate.pushOnce = true;        
+export const getEvents = function(driverId) { 
+  return function () {
+    try {
+      if (typeof window === "object") {
+        if (window.Aggregate && !window.Aggregate.pushOnce) {
+          window.events.Aggregate = window.Aggregate;
+          window.Aggregate.pushOnce = true;        
+        }
+        const events = Object.assign({}, window.events, {
+          appVersion: window.version["app"],
+          configVersion: window.version["configuration"],
+          hyperCoreVersion: window.top.hyper_core_version,
+          os: window.__OS,
+          josBundleLoadTime:
+            window.top.__osBundleLoadLogLine.os_bundle_load.bundle_load_latency,
+          sdkVersion: window.__payload.sdkVersion,
+          service: window.__payload.service,
+          sessionId: window.session_id,
+          driverId
+        });
+        return JSON.stringify(nestJSON(events));
+      } else {
+        return JSON.stringify({});
       }
-      const events = Object.assign({}, window.events, {
-        appVersion: window.version["app"],
-        configVersion: window.version["configuration"],
-        hyperCoreVersion: window.top.hyper_core_version,
-        os: window.__OS,
-        josBundleLoadTime:
-          window.top.__osBundleLoadLogLine.os_bundle_load.bundle_load_latency,
-        sdkVersion: window.__payload.sdkVersion,
-        service: window.__payload.service,
-        sessionId: window.session_id,
-      });
-      return JSON.stringify(nestJSON(events));
-    } else {
+    } catch (error) {
+      console.log("Latency getEvents catch block" + error);
       return JSON.stringify({});
     }
-  } catch (error) {
-    console.log("Latency getEvents catch block" + error);
-    return JSON.stringify({});
   }
 };
 

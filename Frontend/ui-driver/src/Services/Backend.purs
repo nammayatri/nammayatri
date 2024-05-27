@@ -1395,8 +1395,9 @@ detectCity lat lon = do
 ------------------------------------------------------------------------- Push SDK Events -----------------------------------------------------------------------------
 pushSDKEvents :: Flow GlobalState (Either ErrorResponse SDKEventsResp)
 pushSDKEvents = do
-    headers <- getHeaders "" false
-    events <- liftFlow $ Events.getEvents
+    let driverId = getValueToLocalStore DRIVER_ID
+    headers <- getHeaders "" false    
+    events <- liftFlow $ Events.getEvents driverId
     withAPIResult (EP.pushSDKEvents "") unwrapResponse $ callAPI headers (SDKEventsReq { event : events })
     where
         unwrapResponse x = x

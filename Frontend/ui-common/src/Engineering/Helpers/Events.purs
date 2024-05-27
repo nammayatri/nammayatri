@@ -17,7 +17,7 @@ import Types.App (FlowBT)
 foreign import initMeasuringDuration :: String -> Effect Unit
 foreign import endMeasuringDuration :: String -> Effect Unit
 foreign import addEventData :: String -> String -> Effect Unit
-foreign import getEvents :: Effect String
+foreign import getEvents :: String -> Effect String
 
 measureDuration :: forall a. String -> Effect a -> Effect a
 measureDuration name action = do

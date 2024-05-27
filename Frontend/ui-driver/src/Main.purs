@@ -15,7 +15,7 @@
 
 module Main where
 
-import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<), (==), void, discard, identity)
+import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<), (==), (<>), void, discard, identity)
 import Data.Either (Either(..))
 import Effect (Effect)
 import Effect.Aff (killFiber, launchAff, launchAff_)
@@ -23,12 +23,12 @@ import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, getWindowVariable, markPerformance, setEventTimestamp)
 import AssetsProvider (fetchAssets)
 import Flow as Flow
-import Control.Monad.Except.Trans (runExceptT)
+import Control.Monad.Except.Trans (runExceptT, lift)
 import Control.Transformers.Back.Trans (runBackT)
 import PrestoDOM.Core (processEvent) as PrestoDom
 import Log
 import Presto.Core.Types.API (ErrorResponse(..))
-import Presto.Core.Types.Language.Flow (throwErr)
+import Presto.Core.Types.Language.Flow (throwErr, fork)
 import Foreign (Foreign, MultipleErrors, unsafeToForeign)
 import Foreign.Generic (decode)
 import Common.Types.App (GlobalPayload, Event, FCMBundleUpdate)
@@ -51,6 +51,8 @@ import Screens.Types as ST
 import Common.Types.App as Common
 import Storage (KeyStore(..), setValueToLocalStore)
 import Services.API (GetDriverInfoResp(..))
+import Services.Backend as Remote
+import Debug (spy)
 
 main :: Event -> Foreign -> Effect Unit
 main event driverInfoRespFiber = do
@@ -155,3 +157,9 @@ restorePreviousState :: FlowBT String Unit
 restorePreviousState = do
   let popupType = maybe ST.NO_POPUP_VIEW identity (runFn2 Utils.getPopupType Just Nothing)
   modifyScreenState $ GlobalPropsType (\globalProps -> globalProps { gotoPopupType = popupType})
+
+pushErrorEventData :: Effect Unit
+pushErrorEventData = do
+  _ <- launchAff $ flowRunner defaultGlobalState $ do 
+          void $ Remote.pushSDKEvents
+  pure unit
