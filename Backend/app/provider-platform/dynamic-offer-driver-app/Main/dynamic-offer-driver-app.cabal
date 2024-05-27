@@ -130,6 +130,7 @@ library
       Beckn.OnDemand.Utils.Init
       Beckn.OnDemand.Utils.OnSearch
       Beckn.OnDemand.Utils.OnUpdate
+      Beckn.OnDemand.Utils.Rating
       Beckn.OnDemand.Utils.Search
       Domain.Action.Beckn.Cancel
       Domain.Action.Beckn.Confirm

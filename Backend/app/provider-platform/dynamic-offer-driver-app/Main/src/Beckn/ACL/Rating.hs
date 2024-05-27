@@ -14,6 +14,7 @@
 
 module Beckn.ACL.Rating where
 
+import Beckn.OnDemand.Utils.Rating
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Text as T
@@ -24,10 +25,15 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
+import qualified Storage.Queries.Booking as QBooking
 import Tools.Error
 
 buildRatingReqV2 ::
-  (HasFlowEnv m r '["_version" ::: Text]) =>
+  ( HasFlowEnv m r '["_version" ::: Text],
+    MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
   Subscriber.Subscriber ->
   Spec.RatingReq ->
   m DRating.DRatingReq
@@ -46,8 +52,8 @@ buildRatingReqV2 subscriber req = do
   bookingId <- rating.ratingId & fromMaybeM (InvalidRequest "Missing ratingId")
   ratingValueText <- rating.ratingValue & fromMaybeM (InvalidRequest "Missing ratingValue")
   let mbRatingValue = readMaybe $ T.unpack ratingValueText
-      shouldFavDriver = rating.shouldFavDriver
-      riderId = rating.riderId
+      shouldFavDriver = getShouldFavouriteDriver rating
+  booking <- QBooking.findById (Id bookingId) >>= fromMaybeM (InvalidRequest "Missing booking_id")
   ratingValue <- mbRatingValue & fromMaybeM (InvalidRequest "Invalid ratingValue")
   pure
     DRating.DRatingReq
@@ -55,7 +61,7 @@ buildRatingReqV2 subscriber req = do
         ratingValue = ratingValue,
         feedbackDetails = tfFeedbackDetails rating,
         shouldFavDriver = shouldFavDriver,
-        riderId = riderId
+        riderId = getId <$> booking.riderId
       }
 
 tfFeedbackDetails :: Spec.Rating -> [Maybe Text]
