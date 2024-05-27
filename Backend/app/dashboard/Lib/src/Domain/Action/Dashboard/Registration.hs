@@ -105,7 +105,8 @@ data FleetRegisterReq = FleetRegisterReq
     mobileCountryCode :: Text,
     merchantId :: ShortId DMerchant.Merchant,
     fleetType :: Maybe FleetType,
-    city :: Maybe City.City
+    city :: Maybe City.City,
+    email :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -337,13 +338,14 @@ buildFleetOwner req mbPersonId roleId dashboardAccessType = do
     Nothing -> generateGUID
   now <- getCurrentTime
   mobileNumber <- encrypt req.mobileNumber
+  email <- forM req.email encrypt
   return
     PT.Person
       { id = pid,
         firstName = req.firstName,
         lastName = req.lastName,
         roleId = roleId,
-        email = Nothing,
+        email = email,
         mobileNumber = mobileNumber,
         mobileCountryCode = req.mobileCountryCode,
         passwordHash = Nothing,
