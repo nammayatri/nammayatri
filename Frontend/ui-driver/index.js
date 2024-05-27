@@ -444,11 +444,13 @@ if (typeof window.JOS != "undefined") {
 }
 
 const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
-
-if (sessionInfo.package_name.includes("debug")) {
+const enableLogs = JBridge.fetchRemoteConfigBool && JBridge.fetchRemoteConfigBool("enable_logs")
+if (sessionInfo.package_name.includes("debug") || enableLogs) {
   logger.enableLogger();
+  Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;", "null");
 } else {
   logger.disableLogger();
+  Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;", "null");
 }
 
 console.log("APP_PERF INDEX_BUNDLE_END : ", new Date().getTime());
