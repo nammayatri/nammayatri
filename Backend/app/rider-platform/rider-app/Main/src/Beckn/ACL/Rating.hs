@@ -30,7 +30,6 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import Tools.Error
