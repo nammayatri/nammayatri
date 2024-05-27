@@ -73,6 +73,7 @@ import Common.Types.App (CategoryListType)
 import Services.API
 import Screens.DocumentCaptureScreen.ScreenData as DocumentCaptureScreenData
 import Screens.DocumentDetailsScreen.ScreenData as DocumentDetailsScreenData
+import Screens.RideSummaryScreen.ScreenData as RideSummaryScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -125,6 +126,7 @@ newtype GlobalState = GlobalState {
   , lmsVideoScreen :: LmsVideoScreenState
   , lmsQuizScreen :: LmsQuizScreenState
   , documentDetailsScreen :: DocumentDetailsScreenState
+  , rideSummaryScreen :: RideSummaryScreenData.RideSummaryScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -177,6 +179,7 @@ defaultGlobalState = GlobalState {
 , lmsVideoScreen : LmsVideoScreenData.initData
 , lmsQuizScreen : LmsQuizScreenData.initData
 , documentDetailsScreen : DocumentDetailsScreenData.initData
+, rideSummaryScreen : RideSummaryScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -239,6 +242,7 @@ data ScreenType =
   | LmsQuizScreenStateType (LmsQuizScreenState -> LmsQuizScreenState)
   | DocumentCaptureScreenStateType (DocumentCaptureScreenState -> DocumentCaptureScreenState)
   | DocumentDetailsScreenStateType (DocumentDetailsScreenState -> DocumentDetailsScreenState)
+  | RideSummaryScreenStateType (RideSummaryScreenData.RideSummaryScreenState -> RideSummaryScreenData.RideSummaryScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -412,6 +416,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | UPDATE_SPECIAL_LOCATION_LIST
                           | UPDATE_AIR_CONDITIONED Boolean
                           | GO_TO_BOOKING_PREFERENCES
+                          | GO_TO_RIDE_SUMMARY
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -450,6 +455,8 @@ data AADHAAR_VERIFICATION_SCREEN_OUTPUT = ENTER_AADHAAR_OTP AadhaarVerificationS
   | SEND_UNVERIFIED_AADHAAR_DATA AadhaarVerificationScreenState
   | GO_TO_HOME_FROM_AADHAAR
   | LOGOUT_FROM_AADHAAR
+
+data RIDE_SUMMARY_SCREEN_OUTPUT = GOTO_HOME
 
 data SUBSCRIPTION_SCREEN_OUTPUT = GOTO_HOMESCREEN
                                   | NAV NAVIGATION_ACTIONS

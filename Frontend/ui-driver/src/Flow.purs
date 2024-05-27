@@ -2631,6 +2631,7 @@ homeScreenFlow = do
       homeScreenFlow
     GO_TO_EARNINGS_SCREEN -> driverEarningsFlow
     CLEAR_PENDING_DUES -> clearPendingDuesFlow true
+    GO_TO_RIDE_SUMMARY -> rideSummaryScreenFlow 
     ENABLE_GOTO_API state id currentLocation -> do
       activateResp <- lift $ lift $ Remote.activateDriverGoTo id currentLocation
       pure $ toggleBtnLoader "" false
@@ -3909,3 +3910,9 @@ getSrcDestConfig state =
       source : state.data.activeRide.source,
       destination : fromMaybe "" state.data.activeRide.destination
   }
+
+
+rideSummaryScreenFlow :: FlowBT String Unit
+rideSummaryScreenFlow = do
+  action <- UI.rideSummaryScreen
+  pure unit

@@ -126,6 +126,7 @@ import Foreign (unsafeToForeign)
 import SessionCache (getValueFromWindow)
 import Timers as TF
 import Data.Ord (abs)
+import Debug
 
 instance showAction :: Show Action where
   show _ = ""
@@ -298,6 +299,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToNewStop ST.HomeScreenState
                     | UpdateAirConditioned ST.HomeScreenState Boolean
                     | GoToBookingPreferences ST.HomeScreenState
+                    | GoToRideSummary ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -419,6 +421,7 @@ data Action = NoAction
             | OnAudioCompleted String
             | ACExpController PopUpModal.Action
             | OpenLink String
+            | RideSummary
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -1398,6 +1401,10 @@ eval (OpenLink link) state = continueWithCmd state [ do
   void $ JB.openUrlInApp link
   pure AfterRender
   ]
+
+eval RideSummary state = do
+                          let _ = spy "Ayush"
+                          exit $ GoToRideSummary state
 
 eval _ state = update state
 

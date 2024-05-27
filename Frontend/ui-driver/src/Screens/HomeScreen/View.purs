@@ -1760,6 +1760,7 @@ offlineNavigationLinks push state =
     where
       navLinksArray = [ {title : getString if showAddGoto then ADD_GOTO else GOTO_LOCS , icon : "ny_ic_loc_goto", action : AddGotoAC},
                         {title : getString ADD_ALTERNATE_NUMBER, icon : "ic_call_plus", action : ClickAddAlternateButton},
+                        {title : "Ride Summary", icon : "ny_ic_aadhaar_logo", action : RideSummary},
                         {title : getString REPORT_ISSUE, icon : "ny_ic_vector_black", action : HelpAndSupportScreen},
                         {title : getString ENTER_AADHAAR_DETAILS, icon : "ny_ic_aadhaar_logo", action : LinkAadhaarAC}
                       ]
