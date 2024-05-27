@@ -273,33 +273,32 @@ public class RideRequestUtils {
             return null;
         }
     }
-    public static void restartLocationService(Context context) {
-        if (!isServiceRunning(context, LocationUpdateService.class.getName())) {
-            Intent locationService = new Intent(context, LocationUpdateService.class);
-            locationService.putExtra("StartingSource", "TRIGGER_SERVICE");
-            locationService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                    context.startForegroundService(locationService);
-                else
-                    context.startService(locationService);
+    public static void restartLocationService(Context context, String title) {
+        Intent locationService = new Intent(context, LocationUpdateService.class);
+        if (title.equals("You were inactive")) locationService.putExtra("StartingSource", "TRIGGER_SERVICE_INACTIVE");
+        locationService.putExtra("StartingSource", "TRIGGER_SERVICE");
+        locationService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                context.startForegroundService(locationService);
+            else
+                context.startService(locationService);
 
-            } catch (Exception e){
-                Log.e(LOG_TAG, e.getMessage());
-            }
-            Intent restartIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-            restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-            SharedPreferences sharedPrefs = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-            String activityStatus = sharedPrefs.getString("ACTIVITY_STATUS", "null");
-            if(Settings.canDrawOverlays(context) && activityStatus.equals("onDestroy")){
-                try{
-                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                        context.startActivity(restartIntent);
-                        Utils.minimizeApp(context);
-                    }, 5000);
-                } catch (Exception e) {
-                    Log.e("BootUpReceiver", "Unable to Start Widget Service");
-                }
+        } catch (Exception e){
+            Log.e(LOG_TAG, e.getMessage());
+        }
+        Intent restartIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+        restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+        SharedPreferences sharedPrefs = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String activityStatus = sharedPrefs.getString("ACTIVITY_STATUS", "null");
+        if(Settings.canDrawOverlays(context) && activityStatus.equals("onDestroy")){
+            try{
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    context.startActivity(restartIntent);
+                    Utils.minimizeApp(context);
+                }, 5000);
+            } catch (Exception e) {
+                Log.e("BootUpReceiver", "Unable to Start Widget Service");
             }
         }
     }
