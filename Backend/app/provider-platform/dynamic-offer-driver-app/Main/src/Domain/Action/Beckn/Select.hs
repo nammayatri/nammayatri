@@ -49,7 +49,8 @@ data DSelectReq = DSelectReq
     pickupTime :: UTCTime,
     autoAssignEnabled :: Bool,
     customerExtraFee :: Maybe HighPrecMoney,
-    customerPhoneNum :: Maybe Text
+    customerPhoneNum :: Maybe Text,
+    isAdvancedBookingEnabled :: Bool
   }
 
 -- user can select array of estimate because of book any option, in most of the cases it will be a single estimate
@@ -64,17 +65,19 @@ handler merchant sReq searchReq estimates = do
     Nothing -> do
       logWarning "Failed to get rider details as BAP Phone Number is NULL"
   when sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id sReq.autoAssignEnabled
+  when sReq.isAdvancedBookingEnabled $ QSR.updateIsAdvancedBookingEnabled sReq.isAdvancedBookingEnabled searchReq.id
   tripQuoteDetails <-
     estimates `forM` \estimate -> do
       QDQ.setInactiveAllDQByEstId estimate.id now
       let mbDriverExtraFeeBounds = ((,) <$> estimate.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> estimate.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
           driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
       buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge estimate.id.getId
+  let searchReq' = searchReq {DSR.isAdvanceBookingEnabled = sReq.isAdvancedBookingEnabled}
   let driverSearchBatchInput =
         DriverSearchBatchInput
           { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
             merchant,
-            searchReq,
+            searchReq = searchReq',
             tripQuoteDetails,
             customerExtraFee = sReq.customerExtraFee,
             messageId = sReq.messageId,

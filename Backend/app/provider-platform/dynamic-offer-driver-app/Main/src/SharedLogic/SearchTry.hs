@@ -141,9 +141,10 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
           let serviceTier = firstQuoteDetail.vehicleServiceTier -- for fallback case
           let estOrQuoteId = firstQuoteDetail.estimateOrQuoteId -- for fallback case
           let estimateOrQuoteIds = tripQuoteDetails <&> (.estimateOrQuoteId)
+          let estimateOrQuoteServiceTierNames = tripQuoteDetails <&> (.vehicleServiceTierName)
           searchTry <- case mbLastSearchTry of
             Nothing -> do
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory customerExtraFee messageId serviceTier
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory customerExtraFee messageId estimateOrQuoteServiceTierNames serviceTier
               _ <- QST.create searchTry
               return searchTry
             Just oldSearchTry -> do
@@ -154,7 +155,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               -- TODO : Fix this
               -- unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
               --   throwError SearchTryEstimatedFareChanged
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory customerExtraFee messageId serviceTier
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory customerExtraFee messageId estimateOrQuoteServiceTierNames serviceTier
               when (oldSearchTry.status == DST.ACTIVE) $ do
                 QST.updateStatus DST.CANCELLED oldSearchTry.id
                 void $ QDQ.setInactiveBySTId oldSearchTry.id
@@ -185,9 +186,10 @@ buildSearchTry ::
   DTC.TripCategory ->
   Maybe HighPrecMoney ->
   Text ->
+  [Text] ->
   DVST.ServiceTierType ->
   m DST.SearchTry
-buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory customerExtraFee messageId serviceTier = do
+buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory customerExtraFee messageId estimateOrQuoteServTierNames serviceTier = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId serviceTier searchReq.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))
@@ -209,6 +211,8 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
         createdAt = now,
         updatedAt = now,
         currency = searchReq.currency,
+        isAdvancedBookingEnabled = searchReq.isAdvanceBookingEnabled,
+        serviceTierArray = estimateOrQuoteServTierNames,
         ..
       }
 

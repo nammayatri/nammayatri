@@ -213,4 +213,5 @@ data Tag
     TOLL_CONFIDENCE
   | -- Vehicle Air Conditioned info tag
     IS_AIR_CONDITIONED
+  | IS_FORWARD_BATCH_ENABLED
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

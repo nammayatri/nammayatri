@@ -140,7 +140,8 @@ mkItemTags res =
   let itemTags = [mkAutoAssignEnabledTagGroup res]
       itemTags' = if isJust res.customerExtraFee then mkCustomerTipTagGroup res : itemTags else itemTags
       itemTags'' = if not (null res.remainingEstimateBppIds) then mkOtheEstimatesTagGroup res : itemTags' else itemTags'
-   in itemTags''
+      itemTags''' = mkAdvancedBookingEnabledTagGroup res : itemTags''
+   in itemTags'''
 
 mkCustomerTipTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
 mkCustomerTipTagGroup res =
@@ -219,6 +220,33 @@ mkAutoAssignEnabledTagGroup res =
                       },
                 tagDisplay = Just False,
                 tagValue = Just $ show res.autoAssignEnabled
+              }
+          ]
+    }
+
+mkAdvancedBookingEnabledTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
+mkAdvancedBookingEnabledTagGroup res =
+  Spec.TagGroup
+    { tagGroupDisplay = Just False,
+      tagGroupDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just $ show Tags.FORWARD_BATCHING_REQUEST_INFO,
+              descriptorName = Just "Forward Batch Enabled",
+              descriptorShortDesc = Nothing
+            },
+      tagGroupList =
+        Just
+          [ Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tags.IS_FORWARD_BATCH_ENABLED,
+                        descriptorName = Just "Forward Batch Enabled",
+                        descriptorShortDesc = Nothing
+                      },
+                tagDisplay = Just False,
+                tagValue = Just $ show res.isAdvancedBookingEnabled
               }
           ]
     }

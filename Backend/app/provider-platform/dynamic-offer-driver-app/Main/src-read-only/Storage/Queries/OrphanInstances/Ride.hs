@@ -20,10 +20,10 @@ import qualified Storage.Queries.Transformers.Ride
 
 instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
   fromTType' (Beam.RideT {..}) = do
-    backendConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))
-    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
-    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
-    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
+    backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
+    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
+    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
+    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     fromLocation' <- Storage.Queries.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId
     merchantOperatingCityId' <- Storage.Queries.Transformers.Ride.getMerchantOperatingCityId bookingId merchantId merchantOperatingCityId
     toLocation' <- Storage.Queries.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId
@@ -38,7 +38,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             chargeableDistance = chargeableDistance,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion),
+            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion,
             clientId = Kernel.Types.Id.Id <$> clientId,
             clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
@@ -89,7 +89,9 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy,
             updatedAt = updatedAt,
             vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
-            vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity
+            vehicleServiceTierName = vehicleServiceTierName,
+            vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
+            vehicleVariant = vehicleVariant
           }
 
 instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
@@ -101,8 +103,8 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.chargeableDistance = chargeableDistance,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientOsType = (clientDevice <&> (.deviceType)),
-        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
+        Beam.clientOsType = clientDevice <&> (.deviceType),
+        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
         Beam.clientId = Kernel.Types.Id.getId <$> clientId,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = createdAt,
@@ -157,5 +159,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy,
         Beam.updatedAt = updatedAt,
         Beam.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
-        Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity
+        Beam.vehicleServiceTierName = vehicleServiceTierName,
+        Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
+        Beam.vehicleVariant = vehicleVariant
       }
