@@ -240,7 +240,7 @@ window.getMerchantConfig = function () {
       , "name" : "Yatri Sathi"
     }
     , "vehicle" : {
-      "validationPrefix" :  "WB"
+       "validationPrefix" :  "WB|JH|OR|BR" 
     }
     , "banners" :{
       "autoPay" : false

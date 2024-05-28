@@ -500,7 +500,7 @@ eval BackPressed state = do
   else if state.props.showBonusInfo then continue state { props { showBonusInfo = false } }
   else if state.data.paymentState.showRateCard then continue state { data { paymentState{ showRateCard = false } } }
   else if state.props.endRidePopUp then continue state{props {endRidePopUp = false}}
-  else if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then continue state {props{showAadharPopUp = false}}
+  else if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then continue state {props{showAadharPopUp = if state.data.vehicleType /= "BIKE" then false else true}}
   else if state.props.silentPopUpView then continue state { props {silentPopUpView = false}}
   else if state.data.paymentState.showBlockingPopup then continue state {data{paymentState{showBlockingPopup = false}}}
   else if state.props.subscriptionPopupType /= ST.NO_SUBSCRIPTION_POPUP then continue state {props{subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}}

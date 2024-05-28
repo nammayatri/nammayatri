@@ -11,7 +11,7 @@ import Helpers.Utils (getVehicleType, fetchImage, FetchImageFrom(..), getVariant
 import Language.Strings (getString)
 import Engineering.Helpers.Utils as EHU
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, not, ($), (<<<), (<>), (==), (<>))
+import Prelude (Unit, const, map, not, ($), (<<<), (<>), (==), (<>), (&&), (/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine)
 import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval, getVehicleCapacity)
 import Screens.Types as ST
@@ -60,9 +60,10 @@ view push state =
 
 downgradeVehicleView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 downgradeVehicleView push state =
-  let canDowngrade = not $ DA.null state.data.downgradeOptions
+  let canDowngrade = (not $ DA.null state.data.downgradeOptions) && state.data.vehicleType /= "BIKE"
       downgradeFrom = case state.data.vehicleType of
                         "SUV" -> getString AC_SUV
+                        "BIKE" -> "Bike"
                         _     -> getString AC_CAB
       downgradeTo = case state.data.vehicleType of
                       "SUV" -> getString AC_CAB
