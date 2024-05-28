@@ -68,6 +68,22 @@ SavedReqLocation:
     deleteAllByRiderId:
       kvFunction: deleteWithKV
       where: riderId
+  cachedQueries:
+    deleteSavedLocation:
+      keyParams:
+        - riderId
+        - latLong: Kernel.External.Maps.LatLong
+      keyMaker: makeIdKey
+    findByLatLonAndRiderId:
+      keyParams:
+        - riderId
+        - latLong: Kernel.External.Maps.LatLong
+      keyMaker: makeIdKey
+      dbQuery: findByLatLonAndRiderId
+      dbQueryParams:
+        - riderId
+        - latLong: Kernel.External.Maps.LatLong
   extraOperations:
    - EXTRA_QUERY_FILE
+   - EXTRA_CACHED_QUERY_FILE
 

@@ -11,7 +11,7 @@
     };
 
     namma-dsl = {
-      url = "github:nammayatri/namma-dsl";
+      url = "github:nammayatri/namma-dsl/75234d168572d92d04c660bb7c549bd00ec1e4e5";
     };
 
     haskell-cac = {

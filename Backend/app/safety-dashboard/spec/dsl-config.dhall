@@ -12,6 +12,8 @@ let outputPath =
       { _apiRelatedTypes = outputPrefixReadOnly ++ "API/Types/UI"
       , _beamQueries = outputPrefixReadOnly ++ "Storage/Queries"
       , _extraBeamQueries = outputPrefix ++ "Storage/Queries/"
+      , _cachedQueries = outputPrefixReadOnly ++ "Storage/CachedQueries"
+      , _extraCachedQueries = outputPrefix ++ "Storage/CachedQueries/"
       , _beamTable = outputPrefixReadOnly ++ "Storage/Beam"
       , _domainHandler = outputPrefix ++ "Domain/Action/UI"
       , _domainType = outputPrefixReadOnly ++ "Domain/Types"
@@ -25,6 +27,7 @@ let GeneratorType =
       | API_TYPES
       | DOMAIN_HANDLER
       | BEAM_QUERIES
+      | CACHED_QUERIES
       | BEAM_TABLE
       | DOMAIN_TYPE
       | SQL
@@ -149,11 +152,18 @@ let defaultImports =
         , _qualifiedImports = [ "Sequelize as Se" ]
         , _generationType = GeneratorType.BEAM_QUERIES
         }
+      , { _simpleImports = [ "Kernel.Prelude", "Kernel.Utils.Common" ]
+        , _qualifiedImports = [ "Kernel.Storage.Hedis as Hedis" ]
+        , _generationType = GeneratorType.CACHED_QUERIES
+        }
       ]
 
 in  { _output = outputPath
     , _storageConfig =
-      { _sqlTypeMapper = sqlMapper, _extraDefaultFields = extraDefaultFields }
+      { _sqlTypeMapper = sqlMapper
+      , _extraDefaultFields = extraDefaultFields
+      , _defaultCachedQueryKeyPrefix = ""
+      }
     , _defaultImports = defaultImports
     , _defaultTypeImportMapper = defaultTypeImportMapper
     , _generate =
