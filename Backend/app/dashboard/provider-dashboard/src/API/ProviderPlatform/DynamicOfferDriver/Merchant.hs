@@ -59,10 +59,11 @@ type API =
            :<|> SmsServiceConfigUpdateAPI
            :<|> SmsServiceUsageConfigUpdateAPI
            :<|> VerificationServiceConfigUpdateAPI
-           :<|> CreateFPDriverExtraFee
-           :<|> UpdateFPDriverExtraFee
-           :<|> UpdateFPPerExtraKmRate
-           :<|> UpdateFarePolicy
+           :<|> CreateFPDriverExtraFee -- deprecate this
+           :<|> UpdateFPDriverExtraFee -- deprecate this
+           :<|> UpdateFPPerExtraKmRate -- deprecate this
+           :<|> UpdateFarePolicy -- deprecate this
+           :<|> UpsertFarePolicyAPI
            :<|> CreateMerchantOperatingCityAPI
            :<|> SchedulerTriggerAPI
            :<|> UpdateOnboardingVehicleVariantMapping
@@ -156,6 +157,10 @@ type UpdateFarePolicy =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPDATE_FARE_POLICY
     :> Common.UpdateFarePolicy
 
+type UpsertFarePolicyAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPSERT_FARE_POLICY
+    :> Common.UpsertFarePolicyAPI
+
 type CreateMerchantOperatingCityAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'CREATE_MERCHANT_OPERATING_CITY
     :> Common.CreateMerchantOperatingCityAPI
@@ -203,10 +208,11 @@ handler merchantId city =
     :<|> smsServiceConfigUpdate merchantId city
     :<|> smsServiceUsageConfigUpdate merchantId city
     :<|> verificationServiceConfigUpdate merchantId city
-    :<|> createFPDriverExtraFee merchantId city
-    :<|> updateFPDriverExtraFee merchantId city
-    :<|> updateFPPerExtraKmRate merchantId city
-    :<|> updateFarePolicy merchantId city
+    :<|> createFPDriverExtraFee merchantId city -- deprecate this
+    :<|> updateFPDriverExtraFee merchantId city -- deprecate this
+    :<|> updateFPPerExtraKmRate merchantId city -- deprecate this
+    :<|> updateFarePolicy merchantId city -- deprecate this
+    :<|> upsertFarePolicy merchantId city
     :<|> createMerchantOperatingCity merchantId city
     :<|> schedulerTrigger merchantId city
     :<|> updateOnboardingVehicleVariantMapping merchantId city
@@ -472,6 +478,14 @@ updateFarePolicy merchantShortId opCity apiTokenInfo farePolicyId req = withFlow
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.UpdateFarePolicy apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.updateFarePolicy) farePolicyId req
+
+upsertFarePolicy :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertFarePolicyReq -> FlowHandler Common.UpsertFarePolicyResp
+upsertFarePolicy merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.UpsertFarePolicyEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (addMultipartBoundary . (.merchant.upsertFarePolicy)) req
+  where
+    addMultipartBoundary clientFn reqBody = clientFn ("XXX00XXX", reqBody)
 
 createMerchantOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> FlowHandler Common.CreateMerchantOperatingCityRes
 createMerchantOperatingCity merchantShortId opCity apiTokenInfo req@Common.CreateMerchantOperatingCityReq {..} = withFlowHandlerAPI' $ do

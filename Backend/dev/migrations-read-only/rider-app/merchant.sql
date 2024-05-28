@@ -58,3 +58,8 @@ ALTER TABLE atlas_app.merchant DROP COLUMN distanc_unit;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant ADD COLUMN fake_otp_emails text[] NOT NULL default '{}';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant ADD COLUMN arriving_pickup_threshold double precision NOT NULL default 100;

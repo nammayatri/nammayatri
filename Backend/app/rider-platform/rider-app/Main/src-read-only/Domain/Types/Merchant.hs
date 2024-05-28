@@ -19,6 +19,7 @@ data MerchantD (s :: UsageSafety) = Merchant
   { aadhaarKeyExpiryTime :: Kernel.Types.Common.Seconds,
     aadhaarVerificationTryLimit :: Kernel.Prelude.Int,
     arrivedPickupThreshold :: Kernel.Types.Common.Distance,
+    arrivingPickupThreshold :: Kernel.Types.Common.Distance,
     bapId :: Kernel.Prelude.Text,
     bapUniqueKeyId :: Kernel.Prelude.Text,
     cipherText :: Kernel.Prelude.Maybe Kernel.Types.Base64.Base64,

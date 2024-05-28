@@ -23,6 +23,9 @@ import Kernel.Utils.Common
 import Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as BeamFPPDP
 
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection -> m ()
+create = createWithKV
+
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id DFP.FarePolicy -> m (Maybe BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
 findById' farePolicyId' = findOneWithKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId')]
 

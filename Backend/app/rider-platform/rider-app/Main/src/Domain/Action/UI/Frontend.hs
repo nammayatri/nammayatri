@@ -148,6 +148,7 @@ handleRideTracking personId merchantId (Just isPolling) DPFS.RIDE_PICKUP {..} = 
       merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       mbIsOnTheWayNotified <- Redis.get @() driverOnTheWay
       mbHasReachedNotified <- Redis.get @() driverHasReached
+      mbHasReachingNotified <- Redis.get @() driverReaching
 
       when (isNothing mbIsOnTheWayNotified || isNothing mbHasReachedNotified) $ do
         let distance = highPrecMetersToMeters $ distanceBetweenInMeters fromLocation location.currPoint
@@ -161,10 +162,14 @@ handleRideTracking personId merchantId (Just isPolling) DPFS.RIDE_PICKUP {..} = 
             when (isNothing mbHasReachedNotified && distance <= distanceToMeters merchant.arrivedPickupThreshold) $ do
               Notify.notifyDriverHasReached personId otp vehicleNumber
               Redis.setExp driverHasReached () 1500
+            when (isNothing mbHasReachingNotified && distance <= distanceToMeters merchant.arrivingPickupThreshold) $ do
+              Notify.notifyDriverReaching personId otp vehicleNumber
+              Redis.setExp driverReaching () 1500
       where
         distanceUpdates = "Ride:GetDriverLoc:DriverDistance " <> rideId.getId
         driverOnTheWay = "Ride:GetDriverLoc:DriverIsOnTheWay " <> rideId.getId
         driverHasReached = "Ride:GetDriverLoc:DriverHasReached " <> rideId.getId
+        driverReaching = "Ride:GetDriverLoc:DriverReaching " <> rideId.getId
 handleRideTracking _ _ Nothing DPFS.DRIVER_ARRIVED {..} = return $ GetPersonFlowStatusRes Nothing (DPFS.RIDE_ASSIGNED rideId) Nothing -- handle backward compatibility, if isPolling is Nothing means old version of API Call, isValueAddNP is Nothing as its not needed in rideStage
 handleRideTracking personId _ (Just isPolling) DPFS.DRIVER_ARRIVED {..} = do
   trackUrl <- getTrackUrl rideId trackingUrl

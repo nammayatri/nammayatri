@@ -10,7 +10,7 @@
 
 module Storage.Queries.FarePolicy.FarePolicyRentalDetails where
 
-import Data.List.NonEmpty (nonEmpty)
+import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -25,10 +25,20 @@ import qualified Storage.Queries.FarePolicy.FarePolicyRentalDetails.FarePolicyRe
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m (Maybe Domain.FullFarePolicyRentalDetails)
 findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPRD.farePolicyId $ Se.Eq farePolicyId']
 
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.FullFarePolicyRentalDetails -> m ()
+create farePolicyRentalDetails = do
+  mapM_ QueriesFPRDB.create (map (fst farePolicyRentalDetails,) (NE.toList (snd farePolicyRentalDetails).distanceBuffers))
+  createWithKV farePolicyRentalDetails
+
+delete :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m ()
+delete farePolicyId = do
+  QueriesFPRDB.delete farePolicyId
+  deleteWithKV [Se.Is BeamFPRD.farePolicyId $ Se.Eq (KTI.getId farePolicyId)]
+
 instance FromTType' BeamFPRD.FarePolicyRentalDetails Domain.FullFarePolicyRentalDetails where
   fromTType' farePolicyRentalDetails = do
     fullFPRDB <- QueriesFPRDB.findAll' (KTI.Id farePolicyRentalDetails.farePolicyId)
-    fPRDB <- fromMaybeM (InternalError "No distance buffer found for rental") (nonEmpty fullFPRDB)
+    fPRDB <- fromMaybeM (InternalError "No distance buffer found for rental") (NE.nonEmpty fullFPRDB)
     pure . Just $ fromTTypeFarePolicyRentalDetails farePolicyRentalDetails fPRDB
 
 fromTTypeFarePolicyRentalDetails ::
