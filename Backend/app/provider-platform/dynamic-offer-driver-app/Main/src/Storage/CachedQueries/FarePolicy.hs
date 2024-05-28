@@ -19,7 +19,8 @@ module Storage.CachedQueries.FarePolicy
   \ But most likely you need a version from Cac with inMem results feature."
     #-}
   ( clearCache,
-    update,
+    create,
+    delete,
     update',
     clearCacheById,
     findFarePolicyFromDB,
@@ -64,8 +65,11 @@ clearCacheById :: HedisFlow m r => Id FarePolicy -> m ()
 clearCacheById fid = Hedis.withCrossAppRedis $ do
   Hedis.del (makeIdKey fid)
 
-update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
-update = Queries.update
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
+create = Queries.create
+
+delete :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m ()
+delete = Queries.delete
 
 update' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
 update' = Queries.update'

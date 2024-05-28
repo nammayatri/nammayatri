@@ -775,6 +775,39 @@ data AllowedTripDistanceBounds = AllowedTripDistanceBounds
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
+--- Upsert fare policy using csv file ----
+type UpsertFarePolicyAPI =
+  "config"
+    :> "farePolicy"
+    :> "upsert"
+    :> MultipartForm Tmp UpsertFarePolicyReq
+    :> Post '[JSON] UpsertFarePolicyResp
+
+data UpsertFarePolicyResp = UpsertFarePolicyResp
+  { unprocessedFarePolicies :: [Text],
+    success :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype UpsertFarePolicyReq = UpsertFarePolicyReq
+  { file :: FilePath
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp UpsertFarePolicyReq where
+  fromMultipart form = do
+    UpsertFarePolicyReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp UpsertFarePolicyReq where
+  toMultipart form =
+    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
+
+instance HideSecrets UpsertFarePolicyReq where
+  hideSecrets = identity
+
 ---- generic trigger for schedulers ----
 
 type SchedulerTriggerAPI =

@@ -34,6 +34,7 @@ module Domain.Action.Dashboard.Merchant
     updateFPDriverExtraFee,
     updateFPPerExtraKmRate,
     updateFarePolicy,
+    upsertFarePolicy,
     createMerchantOperatingCity,
     schedulerTrigger,
     updateOnboardingVehicleVariantMapping,
@@ -50,10 +51,13 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as C
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
+import qualified Data.List as DL
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.MerchantServiceConfig as DMSC
 import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverIntelligentPoolConfig as DDIPC
 import qualified Domain.Types.DriverPoolConfig as DDPC
@@ -106,7 +110,6 @@ import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIPC
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CQDIPC
 import qualified Storage.Cac.DriverPoolConfig as CQDPC
-import qualified Storage.Cac.FarePolicy as CFP
 import qualified Storage.Cac.FarePolicy as CQFP
 import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.Cac.GoHomeConfig as CQGHC
@@ -840,7 +843,7 @@ updateFPPerExtraKmRate merchantShortId city farePolicyId startDistance req = do
 
 updateFarePolicy :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Common.UpdateFarePolicyReq -> Flow APISuccess
 updateFarePolicy _ _ farePolicyId req = do
-  farePolicy <- CFP.findById Nothing farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
+  farePolicy <- CQFP.findById Nothing farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
   SMerchant.checkCurrencies farePolicy.currency $
     [ req.serviceChargeWithCurrency,
       req.perMinuteRideExtraTimeChargeWithCurrency,
@@ -890,6 +893,255 @@ updateFarePolicy _ _ farePolicyId req = do
           ..
         }
 
+---------------------------------------------------------------------
+data FarePolicyCSVRow = FarePolicyCSVRow
+  { city :: Text,
+    vehicleServiceTier :: Text,
+    area :: Text,
+    tripCategory :: Text,
+    farePolicyKey :: Text,
+    nightShiftStart :: Text,
+    nightShiftEnd :: Text,
+    minAllowedTripDistance :: Text,
+    maxAllowedTripDistance :: Text,
+    serviceCharge :: Text,
+    tollCharges :: Text,
+    govtCharges :: Text,
+    farePolicyType :: Text,
+    description :: Text,
+    congestionChargeMultiplier :: Text,
+    congestionChargeMultiplierIncludeBaseFare :: Text,
+    parkingCharge :: Text,
+    currency :: Text,
+    baseDistance :: Text,
+    baseFare :: Text,
+    deadKmFare :: Text,
+    waitingCharge :: Text,
+    waitingChargeType :: Text,
+    nightShiftCharge :: Text,
+    nightShiftChargeType :: Text,
+    freeWatingTime :: Text,
+    startDistanceDriverAddition :: Text,
+    minFee :: Text,
+    maxFee :: Text,
+    stepFee :: Text,
+    defaultStepFee :: Text,
+    extraKmRateStartDistance :: Text,
+    perExtraKmRate :: Text
+  }
+  deriving (Show)
+
+instance FromNamedRecord FarePolicyCSVRow where
+  parseNamedRecord r =
+    FarePolicyCSVRow
+      <$> r .: "city"
+      <*> r .: "vehicle_service_tier"
+      <*> r .: "area"
+      <*> r .: "tripCategory"
+      <*> r .: "fare_policy_key"
+      <*> r .: "night_shift_start"
+      <*> r .: "night_shift_end"
+      <*> r .: "min_allowed_trip_distance"
+      <*> r .: "max_allowed_trip_distance"
+      <*> r .: "service_charge"
+      <*> r .: "toll_charges"
+      <*> r .: "govt_charges"
+      <*> r .: "fare_policy_type"
+      <*> r .: "description"
+      <*> r .: "congestion_charge_multiplier"
+      <*> r .: "congestion_charge_multiplier_include_base_fare"
+      <*> r .: "parking_charge"
+      <*> r .: "currency"
+      <*> r .: "base_distance"
+      <*> r .: "base_fare"
+      <*> r .: "dead_km_fare"
+      <*> r .: "waiting_charge"
+      <*> r .: "waiting_charge_type"
+      <*> r .: "night_shift_charge"
+      <*> r .: "night_shift_charge_type"
+      <*> r .: "free_wating_time"
+      <*> r .: "start_distance_driver_addition"
+      <*> r .: "min_fee"
+      <*> r .: "max_fee"
+      <*> r .: "step_fee"
+      <*> r .: "default_step_fee"
+      <*> r .: "extra_km_rate_start_distance"
+      <*> r .: "per_extra_km_rate"
+
+upsertFarePolicy :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
+upsertFarePolicy merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  logTagInfo "Updating Fare Policies for merchant: " (show merchant.id <> " and city: " <> show opCity)
+  flatFarePolicies <- readCsv req.file
+  logTagInfo "Read file: " (show flatFarePolicies)
+  farePolicyErrors <- (foldlM (processFarePolicyGroup merchantOpCity) [] . groupFarePolices) flatFarePolicies
+  return $
+    Common.UpsertFarePolicyResp
+      { unprocessedFarePolicies = farePolicyErrors,
+        success = "Fare Policies updated successfully"
+      }
+  where
+    cleanField = replaceEmpty . T.strip
+
+    readCsv csvFile = do
+      csvData <- L.runIO $ BS.readFile csvFile
+      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector FarePolicyCSVRow)) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> V.imapM makeFarePolicy v >>= (pure . V.toList)
+
+    readCSVField :: Read a => Int -> Text -> Text -> Flow a
+    readCSVField idx fieldValue fieldName =
+      cleanField fieldValue >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
+
+    readMaybeCSVField :: Read a => Int -> Text -> Text -> Maybe a
+    readMaybeCSVField _ fieldValue _ =
+      cleanField fieldValue >>= readMaybe . T.unpack
+
+    cleanCSVField :: Int -> Text -> Text -> Flow Text
+    cleanCSVField idx fieldValue fieldName =
+      cleanField fieldValue & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
+
+    groupFarePolices :: [(Context.City, DVST.ServiceTierType, DTC.TripCategory, SL.Area, TimeBound, FarePolicy.FarePolicy)] -> [[(Context.City, DVST.ServiceTierType, DTC.TripCategory, SL.Area, TimeBound, FarePolicy.FarePolicy)]]
+    groupFarePolices = DL.groupBy (\a b -> fst5 a == fst5 b) . DL.sortBy (compare `on` fst5)
+      where
+        fst5 (c, t, tr, a, tb, _) = (c, t, tr, a, tb)
+
+    processFarePolicyGroup :: DMOC.MerchantOperatingCity -> [Text] -> [(Context.City, DVST.ServiceTierType, DTC.TripCategory, SL.Area, TimeBound, FarePolicy.FarePolicy)] -> Flow [Text]
+    processFarePolicyGroup _ _ [] = throwError $ InvalidRequest "Empty Fare Policy Group"
+    processFarePolicyGroup merchantOpCity errors (x : xs) = do
+      let (city, vehicleServiceTier, tripCategory, area, timeBounds, firstFarePolicy) = x
+      if (city /= opCity)
+        then return $ errors <> ["Can't process fare policy for different city: " <> show city <> ", please login with this city in dashboard"]
+        else do
+          let mergeFarePolicy newId FarePolicy.FarePolicy {..} = do
+                let remainingfarePolicies = map (\(_, _, _, _, _, fp) -> fp) xs
+                let driverExtraFeeBounds' = NE.nonEmpty $ (maybe [] NE.toList driverExtraFeeBounds) <> concatMap ((maybe [] NE.toList) . (.driverExtraFeeBounds)) remainingfarePolicies
+                let driverExtraFeeBoundsDuplicateRemoved = (NE.nubBy (\a b -> a.startDistance == b.startDistance)) <$> driverExtraFeeBounds'
+                farePolicyDetails' <-
+                  case farePolicyDetails of
+                    FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {currency = _currency', ..} -> do
+                      remainingPerKmSections <-
+                        mapM
+                          ( \f ->
+                              case f.farePolicyDetails of
+                                FarePolicy.ProgressiveDetails details -> return $ NE.toList details.perExtraKmRateSections
+                                _ -> throwError $ InvalidRequest "Please have same fare policy type for all fare policies of a area, service tier, trip category and time bound"
+                          )
+                          remainingfarePolicies
+                      let perExtraKmRateSections' =
+                            case remainingPerKmSections of
+                              [] -> perExtraKmRateSections
+                              _ -> perExtraKmRateSections <> NE.fromList (concat remainingPerKmSections)
+                      let perExtraKmRateSectionsDuplicateRemoved = NE.nubBy (\a b -> a.startDistance == b.startDistance) perExtraKmRateSections'
+                      return $ FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {perExtraKmRateSections = perExtraKmRateSectionsDuplicateRemoved, ..}
+                    _ -> return farePolicyDetails
+                return $ FarePolicy.FarePolicy {id = newId, driverExtraFeeBounds = driverExtraFeeBoundsDuplicateRemoved, farePolicyDetails = farePolicyDetails', ..}
+
+          newId <- generateGUID
+          finalFarePolicy <- mergeFarePolicy newId firstFarePolicy
+          CQFP.create finalFarePolicy
+          let merchanOperatingCityId = merchantOpCity.id
+          mbFareProduct <- CQFProduct.findUnboundedByMerchantVariantArea merchanOperatingCityId [DFareProduct.ALL] tripCategory vehicleServiceTier area
+          case mbFareProduct of
+            Just fp -> do
+              CQFProduct.updateFarePolicyId finalFarePolicy.id fp.id
+              CQFP.delete fp.farePolicyId
+              CQFProduct.clearCache fp
+            Nothing -> do
+              id <- generateGUID
+              let farePolicyId = finalFarePolicy.id
+              let fareProduct = DFareProduct.FareProduct {searchSource = DFareProduct.ALL, enabled = True, merchantId = merchantOpCity.merchantId, merchantOperatingCityId = merchantOpCity.id, ..}
+              CQFProduct.create fareProduct
+              CQFProduct.clearCache fareProduct
+          return errors
+
+    makeFarePolicy :: Int -> FarePolicyCSVRow -> Flow (Context.City, DVST.ServiceTierType, DTC.TripCategory, SL.Area, TimeBound, FarePolicy.FarePolicy)
+    makeFarePolicy idx row = do
+      now <- getCurrentTime
+      let createdAt = now
+      let updatedAt = now
+      city :: Context.City <- readCSVField idx row.city "City"
+      vehicleServiceTier :: DVST.ServiceTierType <- readCSVField idx row.vehicleServiceTier "Vehicle Service Tier"
+      area :: SL.Area <- readCSVField idx row.area "Area"
+      idText <- cleanCSVField idx row.farePolicyKey "Fare Policy Key"
+      tripCategory :: DTC.TripCategory <- readCSVField idx row.tripCategory "Trip Category"
+      nightShiftStart :: TimeOfDay <- readCSVField idx row.nightShiftStart "Night Shift Start"
+      nightShiftEnd :: TimeOfDay <- readCSVField idx row.nightShiftEnd "Night Shift End"
+      let nightShiftBounds = Just $ Common.NightShiftBounds nightShiftStart nightShiftEnd
+      minAllowedTripDistance :: Meters <- readCSVField idx row.minAllowedTripDistance "Min Allowed Trip Distance"
+      maxAllowedTripDistance :: Meters <- readCSVField idx row.maxAllowedTripDistance "Max Allowed Trip Distance"
+      let allowedTripDistanceBounds = Just $ Common.AllowedTripDistanceBounds minAllowedTripDistance maxAllowedTripDistance
+      let serviceCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.serviceCharge "Service Charge"
+      let tollCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.tollCharges "Toll Charge"
+      let perMinuteRideExtraTimeCharge = Nothing
+      let govtCharges :: (Maybe Double) = readMaybeCSVField idx row.govtCharges "Govt Charges"
+      farePolicyType :: FarePolicy.FarePolicyType <- readCSVField idx row.farePolicyType "Fare Policy Type"
+      description <- cleanCSVField idx row.description "Description"
+      congestionChargeMultiplierValue :: Centesimal <- readCSVField idx row.congestionChargeMultiplier "Congestion Charge Multiplier"
+      let congestionChargeMultiplierIncludeBaseFare :: Bool = (mapToBool . T.toLower) row.congestionChargeMultiplierIncludeBaseFare
+      let congestionChargeMultiplier =
+            if congestionChargeMultiplierIncludeBaseFare
+              then Just $ FarePolicy.BaseFareAndExtraDistanceFare congestionChargeMultiplierValue
+              else Just $ FarePolicy.ExtraDistanceFare congestionChargeMultiplierValue
+      let parkingCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.parkingCharge "Parking Charge"
+      currency :: Currency <- readCSVField idx row.currency "Currency"
+
+      (freeWatingTime, waitingCharges, nightCharges) <- do
+        freeWatingTime :: Minutes <- readCSVField idx row.freeWatingTime "Free Waiting Time"
+        waitingCharge :: HighPrecMoney <- readCSVField idx row.waitingCharge "Waiting Charge"
+        waitingChargeType <- cleanCSVField idx row.waitingChargeType "Waiting Charge Type"
+        let waitingCharges =
+              case waitingChargeType of
+                "PerMinuteWaitingCharge" -> FarePolicy.PerMinuteWaitingCharge waitingCharge
+                "ConstantWaitingCharge" -> FarePolicy.ConstantWaitingCharge waitingCharge
+                _ -> FarePolicy.PerMinuteWaitingCharge waitingCharge
+        nightShiftChargeType <- cleanCSVField idx row.nightShiftChargeType "Night Shift Charge Type"
+        nightCharges <-
+          case nightShiftChargeType of
+            "ProgressiveNightShiftCharge" -> do
+              nightShiftCharge :: Float <- readCSVField idx row.nightShiftCharge "Night Shift Charge"
+              return $ FarePolicy.ProgressiveNightShiftCharge nightShiftCharge
+            "ConstantNightShiftCharge" -> do
+              nightShiftCharge :: HighPrecMoney <- readCSVField idx row.nightShiftCharge "Night Shift Charge"
+              return $ FarePolicy.ConstantNightShiftCharge nightShiftCharge
+            _ -> do
+              nightShiftCharge :: Float <- readCSVField idx row.nightShiftCharge "Night Shift Charge"
+              return $ FarePolicy.ProgressiveNightShiftCharge nightShiftCharge
+        return (freeWatingTime, waitingCharges, nightCharges)
+
+      farePolicyDetails <-
+        case farePolicyType of
+          FarePolicy.Progressive -> do
+            baseDistance :: Meters <- readCSVField idx row.baseDistance "Base Distance"
+            baseFare :: HighPrecMoney <- readCSVField idx row.baseFare "Base Fare"
+            deadKmFare :: HighPrecMoney <- readCSVField idx row.deadKmFare "Dead Km Fare"
+            let waitingChargeInfo =
+                  Just
+                    FarePolicy.WaitingChargeInfo
+                      { waitingCharge = waitingCharges,
+                        freeWaitingTime = freeWatingTime
+                      }
+            startDistance :: Meters <- readCSVField idx row.extraKmRateStartDistance "Extra Km Rate Start Distance"
+            perExtraKmRate :: HighPrecMoney <- readCSVField idx row.perExtraKmRate "Per Extra Km Rate"
+            let perExtraKmRateSections = NE.fromList $ [FarePolicy.FPProgressiveDetailsPerExtraKmRateSection startDistance perExtraKmRate]
+            return $ FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {nightShiftCharge = Just nightCharges, ..}
+          _ -> throwError $ InvalidRequest "Fare Policy Type not supported"
+
+      driverExtraFeeBounds <- do
+        let mbStartDistance :: Maybe Meters = readMaybeCSVField idx row.startDistanceDriverAddition "Start Distance Driver Addition"
+        case mbStartDistance of
+          Nothing -> return Nothing
+          Just startDistance -> do
+            minFee :: HighPrecMoney <- readCSVField idx row.minFee "Min Fee"
+            maxFee :: HighPrecMoney <- readCSVField idx row.maxFee "Max Fee"
+            stepFee :: HighPrecMoney <- readCSVField idx row.stepFee "Step Fee"
+            defaultStepFee :: HighPrecMoney <- readCSVField idx row.defaultStepFee "Default Step Fee"
+            return $ NE.nonEmpty [DFPEFB.DriverExtraFeeBounds {..}]
+
+      return $ (city, vehicleServiceTier, tripCategory, area, Unbounded, FarePolicy.FarePolicy {id = Id idText, description = Just description, ..})
+
+---------------------------------------------------------------------
 upsertSpecialLocation :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Flow APISuccess
 upsertSpecialLocation merchantShortId _city mbSpecialLocationId request = do
   existingSLWithGeom <- maybe (return Nothing) QSL.findByIdWithGeom mbSpecialLocationId
@@ -1249,7 +1501,22 @@ createMerchantOperatingCity merchantShortId city req = do
             ..
           }
 
-data CSVRow = CSVRow
+mapToBool :: Text -> Bool
+mapToBool = \case
+  "yes" -> True
+  "no" -> False
+  "true" -> True
+  "false" -> False
+  _ -> False
+
+replaceEmpty :: Text -> Maybe Text
+replaceEmpty = \case
+  "" -> Nothing
+  "no constraint" -> Nothing
+  "no_constraint" -> Nothing
+  x -> Just x
+
+data VehicleVariantMappingCSVRow = VehicleVariantMappingCSVRow
   { vehicleClass :: Text,
     vehicleCapacity :: Text,
     vehicleVariant :: Text,
@@ -1260,9 +1527,9 @@ data CSVRow = CSVRow
     priority :: Text
   }
 
-instance FromNamedRecord CSVRow where
+instance FromNamedRecord VehicleVariantMappingCSVRow where
   parseNamedRecord r =
-    CSVRow
+    VehicleVariantMappingCSVRow
       <$> r .: "vehicle_class"
       <*> r .: "vehicle_capacity"
       <*> r .: "vehicle_variant"
@@ -1286,24 +1553,13 @@ updateOnboardingVehicleVariantMapping merchantShortId opCity req = do
   where
     readCsv csvFile = do
       csvData <- L.runIO $ BS.readFile csvFile
-      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector CSVRow)) of
+      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector VehicleVariantMappingCSVRow)) of
         Left err -> throwError (InvalidRequest $ show err)
         Right (_, v) -> V.imapM makeConfig v >>= (pure . V.toList)
 
-    makeConfig :: Int -> CSVRow -> Flow DVC.VehicleClassVariantMap
+    makeConfig :: Int -> VehicleVariantMappingCSVRow -> Flow DVC.VehicleClassVariantMap
     makeConfig idx row = do
       let cleanField = replaceEmpty . T.toLower . T.strip
-          replaceEmpty = \case
-            "" -> Nothing
-            "no constraint" -> Nothing
-            "no_constraint" -> Nothing
-            x -> Just x
-      let mapToBool = \case
-            "yes" -> True
-            "no" -> False
-            "true" -> True
-            "false" -> False
-            _ -> False
       vehicleVariant <- readMaybe (T.unpack row.vehicleVariant) & fromMaybeM (InvalidRequest $ "Invalid vehicle variant: " <> show row.vehicleVariant <> " at row: " <> show idx)
       vehicleClass <- cleanField row.vehicleClass & fromMaybeM (InvalidRequest $ "Vehicle class cannot be empty or without constraint: " <> show row.vehicleClass <> " at row: " <> show idx)
       vehicleModel <- replaceEmpty (T.strip row.vehicleModel) & fromMaybeM (InvalidRequest $ "Vehicle Model cannot be empty or without constraint: " <> show row.vehicleModel <> " at row: " <> show idx)

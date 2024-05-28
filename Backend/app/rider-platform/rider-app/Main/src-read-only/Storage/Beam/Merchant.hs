@@ -20,6 +20,7 @@ data MerchantT f = MerchantT
     aadhaarVerificationTryLimit :: B.C f Kernel.Prelude.Int,
     arrivedPickupThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     arrivedPickupThresholdValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
+    arrivingPickupThreshold :: B.C f Kernel.Types.Common.HighPrecDistance,
     bapId :: B.C f Kernel.Prelude.Text,
     bapUniqueKeyId :: B.C f Kernel.Prelude.Text,
     cipherText :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Base64.Base64),

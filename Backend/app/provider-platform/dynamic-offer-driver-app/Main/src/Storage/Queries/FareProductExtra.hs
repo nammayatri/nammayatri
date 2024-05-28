@@ -4,6 +4,7 @@
 module Storage.Queries.FareProductExtra where
 
 import Domain.Types.Common
+import Domain.Types.FarePolicy
 import Domain.Types.FareProduct
 import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -23,6 +24,9 @@ import qualified Storage.Beam.FareProduct as Beam
 import Storage.Queries.OrphanInstances.FareProduct
 
 -- Extra code goes here --
+
+updateFarePolicyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id FarePolicy -> Kernel.Types.Id.Id Domain.Types.FareProduct.FareProduct -> m ()
+updateFarePolicyId (Kernel.Types.Id.Id farePolicyId) (Kernel.Types.Id.Id id) = do updateWithKV [Se.Set Beam.farePolicyId farePolicyId] [Se.Is Beam.id $ Se.Eq id]
 
 findAllBoundedByMerchantOpCityIdVariantArea ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

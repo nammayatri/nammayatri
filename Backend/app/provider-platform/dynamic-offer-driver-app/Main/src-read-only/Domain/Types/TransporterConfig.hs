@@ -29,6 +29,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     approxRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
     arrivedPickupThreshold :: Kernel.Types.Common.HighPrecMeters,
     arrivedStopThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
+    arrivingPickupThreshold :: Kernel.Types.Common.HighPrecMeters,
     automaticRCActivationCutOff :: Kernel.Types.Common.Seconds,
     avgSpeedOfVehicle :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.AvgSpeedOfVechilePerKm,
     badDebtBatchSize :: Kernel.Prelude.Int,

@@ -140,6 +140,7 @@ getDriverLoc rideId = do
   merchant <- CQMerchant.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   mbIsOnTheWayNotified <- Redis.get @() driverOnTheWay
   mbHasReachedNotified <- Redis.get @() driverHasReached
+  mbHasReachingNotified <- Redis.get @() driverReaching
   when (ride.status == NEW && (isNothing mbIsOnTheWayNotified || isNothing mbHasReachedNotified)) $ do
     let distance = highPrecMetersToMeters $ distanceBetweenInMeters fromLocation res.currPoint
     mbStartDistance <- Redis.get @Meters distanceUpdates
@@ -152,6 +153,9 @@ getDriverLoc rideId = do
         when (isNothing mbHasReachedNotified && distance <= distanceToMeters merchant.arrivedPickupThreshold) $ do
           Notify.notifyDriverHasReached booking.riderId ride.otp ride.vehicleNumber
           Redis.setExp driverHasReached () 1500
+        when (isNothing mbHasReachingNotified && distance <= distanceToMeters merchant.arrivingPickupThreshold) $ do
+          Notify.notifyDriverReaching booking.riderId ride.otp ride.vehicleNumber
+          Redis.setExp driverReaching () 1500
   return $
     GetDriverLocResp
       { lat = res.currPoint.lat,
@@ -162,6 +166,7 @@ getDriverLoc rideId = do
     distanceUpdates = "Ride:GetDriverLoc:DriverDistance " <> rideId.getId
     driverOnTheWay = "Ride:GetDriverLoc:DriverIsOnTheWay " <> rideId.getId
     driverHasReached = "Ride:GetDriverLoc:DriverHasReached " <> rideId.getId
+    driverReaching = "Ride:GetDriverLoc:DriverReaching " <> rideId.getId
 
 getRideStatus ::
   ( CacheFlow m r,

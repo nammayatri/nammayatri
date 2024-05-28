@@ -28,6 +28,7 @@ data TransporterConfigT f = TransporterConfigT
     approxRideDistanceDiffThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
     arrivedPickupThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     arrivedStopThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
+    arrivingPickupThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
     automaticRCActivationCutOff :: B.C f Kernel.Types.Common.Seconds,
     avgSpeedOfVehicle :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     badDebtBatchSize :: B.C f Kernel.Prelude.Int,

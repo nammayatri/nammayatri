@@ -652,6 +652,38 @@ notifyDriverHasReached personId otp vehicleNumber = do
           ]
   notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
 
+notifyDriverReaching ::
+  ServiceFlow m r =>
+  Id Person ->
+  Text ->
+  Text ->
+  m ()
+notifyDriverReaching personId otp vehicleNumber = do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.DRIVER_REACHING merchantOperatingCityId
+  let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
+  let notificationData =
+        Notification.NotificationReq
+          { category = Notification.DRIVER_REACHING,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product personId.getId (),
+            body = body,
+            title = title,
+            dynamicParams = DriverReachedParam vehicleNumber otp,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing,
+            sound = notificationSound
+          }
+      title = T.pack "Driver Arriving Now!"
+      body =
+        unwords
+          [ "Your driver is arriving now! Please be at the pickup location"
+          ]
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+
 notifyOnNewMessage ::
   ( ServiceFlow m r,
     EsqDBReplicaFlow m r

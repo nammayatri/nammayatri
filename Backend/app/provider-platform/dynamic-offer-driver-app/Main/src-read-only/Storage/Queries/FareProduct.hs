@@ -5,6 +5,7 @@
 module Storage.Queries.FareProduct (module Storage.Queries.FareProduct, module ReExport) where
 
 import qualified Domain.Types.Common
+import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.FareProduct
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceTierType

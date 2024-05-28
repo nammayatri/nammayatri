@@ -149,3 +149,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_silent_fcm_
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fare_recompute_weekly_extra_kms_threshold integer NOT NULL default 20000;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fare_recompute_daily_extra_kms_threshold integer NOT NULL default 5000;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN arriving_pickup_threshold double precision NOT NULL default 100;
