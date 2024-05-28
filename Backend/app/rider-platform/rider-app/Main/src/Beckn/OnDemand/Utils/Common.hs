@@ -190,7 +190,7 @@ castVehicleVariant = \case
   VehVar.AUTO_RICKSHAW -> (show Enums.AUTO_RICKSHAW, "AUTO_RICKSHAW")
   VehVar.TAXI -> (show Enums.CAB, "TAXI")
   VehVar.TAXI_PLUS -> (show Enums.CAB, "TAXI_PLUS")
-  VehVar.BIKE -> (show Enums.BIKE, "BIKE")
+  VehVar.BIKE -> (show Enums.MOTORCYCLE, "BIKE")
 
 parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
 parseVehicleVariant mbCategory mbVariant =

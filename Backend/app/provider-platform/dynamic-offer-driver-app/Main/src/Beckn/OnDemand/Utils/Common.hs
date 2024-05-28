@@ -206,7 +206,7 @@ castVariant Variant.SUV = (show Enums.CAB, "SUV")
 castVariant Variant.AUTO_RICKSHAW = (show Enums.AUTO_RICKSHAW, "AUTO_RICKSHAW")
 castVariant Variant.TAXI = (show Enums.CAB, "TAXI")
 castVariant Variant.TAXI_PLUS = (show Enums.CAB, "TAXI_PLUS")
-castVariant Variant.BIKE = (show Enums.BIKE, "BIKE")
+castVariant Variant.BIKE = (show Enums.MOTORCYCLE, "BIKE")
 
 mkFulfillmentType :: DCT.TripCategory -> Text
 mkFulfillmentType = \case
