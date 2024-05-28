@@ -3,6 +3,7 @@ let version = "1.0.0";
 if (typeof __VERSION__ !== "undefined") {
   version = __VERSION__
 }
+window.configCache = window.configCache || {}
 
 function getAppName() {
   if (!window.configCache["appName"]) {
