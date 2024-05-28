@@ -44,6 +44,8 @@ import qualified EulerHS.Types as Euler
 import IssueManagement.Common
 import qualified IssueManagement.Common.Dashboard.Issue as Issue
 import IssueManagement.Domain.Types.Issue.IssueCategory
+import IssueManagement.Domain.Types.Issue.IssueMessage
+import IssueManagement.Domain.Types.Issue.IssueOption
 import IssueManagement.Domain.Types.Issue.IssueReport
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
@@ -212,7 +214,13 @@ data IssueAPIs = IssueAPIs
     issueUpdate :: Id IssueReport -> Issue.IssueUpdateByUserReq -> Euler.EulerClient APISuccess,
     issueAddComment :: Id IssueReport -> Issue.IssueAddCommentByUserReq -> Euler.EulerClient APISuccess,
     issueFetchMedia :: Text -> Euler.EulerClient Text,
-    ticketStatusCallBack :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess
+    ticketStatusCallBack :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess,
+    createIssueCategory :: Issue.CreateIssueCategoryReq -> Euler.EulerClient APISuccess,
+    updateIssueCategory :: Id IssueCategory -> Issue.UpdateIssueCategoryReq -> Euler.EulerClient APISuccess,
+    createIssueOption :: Id IssueCategory -> Id IssueMessage -> Issue.CreateIssueOptionReq -> Euler.EulerClient APISuccess,
+    updateIssueOption :: Id IssueOption -> Issue.UpdateIssueOptionReq -> Euler.EulerClient APISuccess,
+    upsertIssueMessage :: Maybe (Id IssueMessage) -> Issue.UpsertIssueMessageReq -> Euler.EulerClient APISuccess,
+    uploadIssueMessageMediaFiles :: (LBS.ByteString, Issue.IssueMessageMediaFileUploadListReq) -> Euler.EulerClient APISuccess
   }
 
 data SubscriptionAPIs = SubscriptionAPIs
@@ -405,7 +413,13 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> issueUpdate
       :<|> issueAddComment
       :<|> issueFetchMedia
-      :<|> ticketStatusCallBack = issueClient
+      :<|> ticketStatusCallBack
+      :<|> createIssueCategory
+      :<|> updateIssueCategory
+      :<|> createIssueOption
+      :<|> updateIssueOption
+      :<|> upsertIssueMessage
+      :<|> uploadIssueMessageMediaFiles = issueClient
 
     getCollectionHistory
       :<|> getAllDriverFeeHistory = revenueClient

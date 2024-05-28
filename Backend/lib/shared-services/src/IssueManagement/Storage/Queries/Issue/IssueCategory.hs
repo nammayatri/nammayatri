@@ -14,6 +14,22 @@ import IssueManagement.Tools.UtilsTH
 import Kernel.External.Types (Language)
 import Kernel.Types.Id
 
+create :: BeamFlow m r => IssueCategory -> m ()
+create = createWithKV
+
+updateByPrimaryKey :: BeamFlow m r => IssueCategory -> m ()
+updateByPrimaryKey IssueCategory {..} =
+  updateWithKV
+    [ Set BeamIC.category category,
+      Set BeamIC.logoUrl logoUrl,
+      Set BeamIC.priority priority,
+      Set BeamIC.categoryType categoryType,
+      Set BeamIC.isActive isActive,
+      Set BeamIC.createdAt createdAt,
+      Set BeamIC.updatedAt updatedAt
+    ]
+    [And [Is BeamIC.id $ Eq (getId id)]]
+
 findAllIssueTranslationWithSeCondition :: BeamFlow m r => [Clause Postgres BeamIT.IssueTranslationT] -> m [IssueTranslation]
 findAllIssueTranslationWithSeCondition = findAllWithKV
 
@@ -56,7 +72,11 @@ instance FromTType' BeamIC.IssueCategory IssueCategory where
             category = category,
             logoUrl = logoUrl,
             priority = priority,
-            merchantId = Id merchantId
+            merchantId = Id merchantId,
+            categoryType = categoryType,
+            isActive = isActive,
+            createdAt = createdAt,
+            updatedAt = updatedAt
           }
 
 instance ToTType' BeamIC.IssueCategory IssueCategory where
@@ -66,5 +86,9 @@ instance ToTType' BeamIC.IssueCategory IssueCategory where
         BeamIC.category = category,
         BeamIC.logoUrl = logoUrl,
         BeamIC.priority = priority,
-        BeamIC.merchantId = getId merchantId
+        BeamIC.merchantId = getId merchantId,
+        BeamIC.categoryType = categoryType,
+        BeamIC.isActive = isActive,
+        BeamIC.createdAt = createdAt,
+        BeamIC.updatedAt = updatedAt
       }

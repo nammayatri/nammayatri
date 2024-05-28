@@ -160,9 +160,9 @@ castCreateTicket merchantId merchantOpCityId = TT.createTicket (cast merchantId)
 castUpdateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp
 castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
 
-buildMerchantConfig :: (CacheFlow m r, Esq.EsqDBFlow m r, HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal]) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> Id Common.Person -> m Common.MerchantConfig
-buildMerchantConfig _merchantId merchantOpCityId personId = do
-  transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+buildMerchantConfig :: (CacheFlow m r, Esq.EsqDBFlow m r, HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal]) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> Maybe (Id Common.Person) -> m Common.MerchantConfig
+buildMerchantConfig _merchantId merchantOpCityId mbPersonId = do
+  transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) mkCacKey >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   appBackendBapInternal <- asks (.appBackendBapInternal)
   return
     Common.MerchantConfig
@@ -173,6 +173,8 @@ buildMerchantConfig _merchantId merchantOpCityId personId = do
         counterPartyUrl = appBackendBapInternal.url,
         counterPartyApiKey = appBackendBapInternal.apiKey
       }
+  where
+    mkCacKey = maybe Nothing (Just . DriverId . cast) mbPersonId
 
 issueReportDriverList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Language -> FlowHandler Common.IssueReportListRes
 issueReportDriverList (driverId, merchantId, merchantOpCityId) language = withFlowHandlerAPI $ Common.issueReportList (cast driverId, cast merchantId, cast merchantOpCityId) language driverIssueHandle Common.DRIVER

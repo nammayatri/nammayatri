@@ -14,6 +14,12 @@ type DashboardIssueAPI =
            :<|> Common.IssueAddCommentByUserAPI
            :<|> Common.IssueFetchMediaAPI
            :<|> Common.TicketStatusCallBackAPI
+           :<|> Common.CreateIssueCategoryAPI
+           :<|> Common.UpdateIssueCategoryAPI
+           :<|> Common.CreateIssueOptionAPI
+           :<|> Common.UpdateIssueOptionAPI
+           :<|> Common.UpsertIssueMessageAPI
+           :<|> Common.IssueMessageMediaFileUploadAPI
        )
 
 type DashboardIssueAPIV2 =
@@ -26,4 +32,10 @@ type DashboardIssueAPIV2 =
            :<|> Common.IssueAddCommentByUserAPI
            :<|> Common.IssueFetchMediaAPI
            :<|> Common.TicketStatusCallBackAPI
+           :<|> Common.CreateIssueCategoryAPI
+           :<|> Common.UpdateIssueCategoryAPI
+           :<|> Common.CreateIssueOptionAPI
+           :<|> Common.UpdateIssueOptionAPI
+           :<|> Common.UpsertIssueMessageAPI
+           :<|> Common.IssueMessageMediaFileUploadAPI
        )

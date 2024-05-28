@@ -48,7 +48,7 @@ data ServiceHandle m = ServiceHandle
     getRideInfo :: Id Merchant -> Id MerchantOperatingCity -> Id Ride -> m RideInfoRes,
     createTicket :: Id Merchant -> Id MerchantOperatingCity -> TIT.CreateTicketReq -> m TIT.CreateTicketResp,
     updateTicket :: Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp,
-    findMerchantConfig :: Id Merchant -> Id MerchantOperatingCity -> Id Person -> m MerchantConfig,
+    findMerchantConfig :: Id Merchant -> Id MerchantOperatingCity -> Maybe (Id Person) -> m MerchantConfig,
     mbReportACIssue :: Maybe (BaseUrl -> Text -> Text -> m APISuccess), -- Deprecated
     mbReportIssue :: Maybe (BaseUrl -> Text -> Text -> IssueReportType -> m APISuccess)
   }
@@ -221,7 +221,7 @@ issueMediaUpload ::
 issueMediaUpload (personId, merchantId) issueHandle Common.IssueMediaUploadReq {..} = do
   contentType <- validateContentType
   person <- issueHandle.findPersonById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  config <- issueHandle.findMerchantConfig merchantId person.merchantOperatingCityId personId
+  config <- issueHandle.findMerchantConfig merchantId person.merchantOperatingCityId (Just personId)
   fileSize <- L.runIO $ withFile file ReadMode hFileSize
   when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)

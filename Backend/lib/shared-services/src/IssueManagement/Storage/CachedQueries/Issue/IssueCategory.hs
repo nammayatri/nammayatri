@@ -45,6 +45,9 @@ findByIdAndLanguage issueCategoryId language identifier =
     Just a -> pure a
     Nothing -> cacheIssueCategoryByIdAndLanguage issueCategoryId language identifier /=<< Queries.findByIdAndLanguage issueCategoryId language
 
+updateByPrimaryKey :: BeamFlow m r => IssueCategory -> m ()
+updateByPrimaryKey = Queries.updateByPrimaryKey
+
 --------- Caching logic for issue category by language -------------------
 
 clearIssueCategoryByLanguageCache :: (CacheFlow m r) => Language -> Identifier -> m ()

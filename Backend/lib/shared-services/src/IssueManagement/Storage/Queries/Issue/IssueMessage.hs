@@ -15,6 +15,21 @@ import IssueManagement.Tools.UtilsTH hiding (label)
 import Kernel.External.Types (Language)
 import Kernel.Types.Id
 
+create :: BeamFlow m r => IssueMessage -> m ()
+create = createWithKV
+
+updateByPrimaryKey :: BeamFlow m r => IssueMessage -> m ()
+updateByPrimaryKey IssueMessage {..} =
+  updateWithKV
+    [ Set BeamIM.categoryId ((.getId) <$> categoryId),
+      Set BeamIM.optionId ((.getId) <$> optionId),
+      Set BeamIM.priority priority,
+      Set BeamIM.message message,
+      Set BeamIM.createdAt createdAt,
+      Set BeamIM.updatedAt updatedAt
+    ]
+    [And [Is BeamIM.id $ Eq (getId id)]]
+
 findAllIssueTranslationWithSeCondition :: BeamFlow m r => [Clause Postgres BeamIT.IssueTranslationT] -> m [IssueTranslation]
 findAllIssueTranslationWithSeCondition = findAllWithKV
 
@@ -66,7 +81,7 @@ instance FromTType' BeamIM.IssueMessage IssueMessage where
             message = message,
             priority = priority,
             label = label,
-            merchantId = Id merchantId
+            merchantId = Id merchantId,
           }
 
 instance ToTType' BeamIM.IssueMessage IssueMessage where
@@ -77,6 +92,8 @@ instance ToTType' BeamIM.IssueMessage IssueMessage where
         BeamIM.optionId = getId <$> optionId,
         BeamIM.message = message,
         BeamIM.priority = priority,
-        label = label,
-        BeamIM.merchantId = getId merchantId
+        BeamIM.merchantId = getId merchantId,
+        BeamIM.label = label,
+        BeamIM.createdAt = createdAt,
+        BeamIM.updatedAt = updatedAt
       }
