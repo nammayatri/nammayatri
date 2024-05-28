@@ -260,7 +260,14 @@ window.onMerchantEvent = function (_event, payload) {
       window.callPopUp(parsedPayload.payload.popType, parsedPayload.payload.entityPayload);
     }
     else {
-      window.__payload = parsedPayload;
+      if (window.__payload.payload.fragmentViewGroups) {
+        const fvg = window.__payload.payload.fragmentViewGroups;
+        window.__payload = parsedPayload;
+        window.__payload.payload.fragmentViewGroups = fvg
+      } else {
+        window.__payload = parsedPayload;
+      }
+      
       console.log("window Payload: ", window.__payload);
       const jpConsumingBackpress = {
         event: "jp_consuming_backpress",
@@ -290,7 +297,7 @@ window.onMerchantEvent = function (_event, payload) {
       }
     }
   } else {
-    console.error("unknown event: ", event);
+    console.error("unknown event: ", _event, payload);
   }
 }
 console.log("APP_PERF INDEX_BUNDLE_END_ON_MERCHANT : ", new Date().getTime());

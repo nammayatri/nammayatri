@@ -25,6 +25,7 @@ data Action
   = Decline Int
   | Accept Int
   | NoAction
+  | AfterRender
   | NotificationLister String String
   | UpdateCarousel Int
   | AppendRequest (Array SearchRequest)

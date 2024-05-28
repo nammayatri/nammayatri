@@ -17,7 +17,7 @@ initUIWrapper = do
   let globalPayload = getGlobalPayload "__payload"
   case globalPayload of
     Nothing -> lift $ lift $ initUI
-    Just payload -> liftFlowBT $ initUIWithNameSpace "default" ((payload ^. _payload) ^. _fragmentID)
+    Just payload -> liftFlowBT $ initUIWithNameSpace "default" ((payload ^. _payload) ^. _fragmentViewGroups >>= (\a -> a ^. _main))
 
 getGlobalPayload :: String -> Maybe GlobalPayload
 getGlobalPayload key = do

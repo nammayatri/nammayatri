@@ -72,6 +72,7 @@ view push state =
     , width MATCH_PARENT
     , background Color.blackLessTrans
     , padding $ PaddingTop safeMarginTop
+    , afterRender push (const AfterRender)
     ]
     [ linearLayout
         [ width MATCH_PARENT

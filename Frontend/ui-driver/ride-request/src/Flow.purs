@@ -11,20 +11,22 @@ import Debug (spy)
 import Effect.Aff (makeAff, nonCanceler)
 import Effect.Uncurried (runEffectFn1, runEffectFn3)
 import Foreign (unsafeToForeign)
-import Helpers.Commons (bootDriverInParallel, emitEvent, getSearchRequestId, liftFlow, openDriverApp, waitTillDriverAppBoot)
+import Helpers.Commons (bootDriverInParallel, emitEvent, getSearchRequestId, liftFlow, openDriverApp, waitTillDriverAppBoot, isDriverAppBooted)
 import Presto.Core.Types.Language.Flow (Flow, await, doAff, fork, loadS, modifyState)
 import PrestoDOM (initUIWithNameSpace, toast)
 import PrestoDOM.Core (terminateUI)
 import Screens.RideRequestPopUp.Controller (ScreenOutput(..))
 import Screens.RideRequestPopUp.Handler (rideRequestPopUp)
 import Screens.RideRequestPopUp.TransFormer (toPopupProp)
+import Screens.DriverApp.Handler (renderDriverApp)
 import Services.Backend (mkQuoteOffer, nearBySearchRequest, quoteOfferApi)
 import Types (OverlayData(..))
 
 startOverlay :: String -> Flow OverlayData Unit
-startOverlay _ = do
+startOverlay parent = do
   regToken <- loadS "REGISTERATION_TOKEN"
   if validateToken regToken then do
+    when (parent == "java" && (not $ isDriverAppBooted "")) $ renderDriverApp
     void $ liftFlow $ initUIWithNameSpace "RideRequestPopUp" Nothing
     void $ liftFlow $ initUIWithNameSpace "TopPriceView" Nothing
     void $ fork $ liftFlow $ runEffectFn3 emitEvent "java" "onEvent" (unsafeToForeign { event: "start_location_updates" })

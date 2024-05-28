@@ -356,3 +356,10 @@ export const callDecline = function (id) {
     }
   }, 5);
 }
+
+export const getDriverAppPayload = function (key) {
+  return JSON.stringify(window.__payload[key])
+}
+export const isDriverAppBooted = function () {
+  return (window.isDriverAppInitiated || Object.prototype.hasOwnProperty.call(top.mapps, "in.yatri.provider"))
+}

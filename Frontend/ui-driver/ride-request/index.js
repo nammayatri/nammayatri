@@ -22,7 +22,6 @@ function callInitiateResult() {
       jp_consuming_backpress: true
     }
   }
-  purescript.initiateDriverMapp();
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
   JOS.emitEvent(JOS.parent)("onEvent")(JSON.stringify(payload))()();
 }
@@ -44,19 +43,7 @@ export const getNotificationType = function () {
   return ""; 
 }
   
-function checkAndStart() {
-  window.retry = window.retry || 0;
-  window.retry++;
-  if (window.JOS.parent == "in.yatri.provider" || window.isDriverAppInitiated) {
-    purescript.main()();
-  } else {
-    setTimeout(() => {checkAndStart()},5);
-  }
-}
-  
 window.onMerchantEvent = function (_event, payload) {
-  console.warn("onMerchantEvent RideRequest",_event, Object.assign({},JSON.parse(payload)));
-  console.error("onMerchantEvent RideRequest",Object.assign({},JSON.parse(payload))["payload"]["rideData"]["notification_type"]);
   const clientPaylod = JSON.parse(payload);
   const appName = clientPaylod.payload.appName;
   window.appName = appName;
@@ -67,11 +54,10 @@ window.onMerchantEvent = function (_event, payload) {
       purescript.callDecline(id)()
     }
   } else if (_event == "process") {
-
     if (window.notificationCallBack && window.rideRequestCallBack) {
       purescript.checkAndPushRideRequest(window.rideRequestCallBack)(window.notificationCallBack)(getNotificationType())(getSearchRequestId())();
     } else {
-      checkAndStart();
+      purescript.main(JOS.parent)();
     }
   }
 }
@@ -89,22 +75,21 @@ window.onResume = function () {
 window["onEvent'"] = function (_event, args) {
 }
 
-window["onEvent"] = function (_event, args) {
-  console.log("onEvent ->" , args);
-  // function getPayload(action) {
-  //   const innerPayload = Object.assign({}, window.__payload.payload);
-  //   const initiatePayload = Object.assign({}, window.__payload);
-  //   if (action) innerPayload["action"] = action;
-  //   initiatePayload["payload"] = innerPayload;
-  //   initiatePayload["service"] = "in.yatri.provider";
-  //   return initiatePayload;
-  // }  
-  // if (JOS && top.mapps["in.yatri.provider"]) {
-  //   JOS.emitEvent("in.yatri.provider")("onMerchantEvent")("process")(JSON.stringify(getPayload()))();
-  // } else {
-  //   console.error("JOS Not Found")
-  // }
-  window.isDriverAppInitiated = true
+window["onEvent"] = function (args) {
+  const payload = JSON.parse(args);
+  console.log("onEvent ->", payload);
+  if ( payload.event == "initiate_result") {
+    const innerPayload = Object.assign({}, window.__payload.payload);
+    const initiatePayload = Object.assign({}, window.__payload);
+    initiatePayload["payload"] = innerPayload;
+    initiatePayload["service"] = "in.yatri.provider";
+    if (JOS && top.mapps["in.yatri.provider"]) {
+      JOS.emitEvent("in.yatri.provider")("onMerchantEvent")("process")(JSON.stringify(initiatePayload))();
+    } else {
+      console.error("JOS Not Found")
+    }
+    window.isDriverAppInitiated = true
+  }
 }
 
 

@@ -15,8 +15,8 @@ import Helpers.Commons (flowRunner, liftFlow)
 import Services.Backend (mkQuoteOffer, nearBySearchRequest, quoteOfferApi)
 import Types (defaultOverlayData)
 
-main :: Effect Unit
-main = void $ launchAff $ flowRunner defaultOverlayData $ startOverlay ""
+main :: String -> Effect Unit
+main parent = void $ launchAff $ flowRunner defaultOverlayData $ startOverlay parent
 
 
 checkAndPushRideRequest :: (Array SearchRequest-> Effect Unit) -> (String -> String -> Effect Unit) -> String -> String -> Effect Unit

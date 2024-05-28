@@ -145,6 +145,7 @@ import Helpers.API as HelpersAPI
 import Engineering.Helpers.API as EHA
 import LocalStorage.Cache (getValueFromCache)
 import Effect.Unsafe (unsafePerformEffect)
+import Helpers.PrestoUtils
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -161,7 +162,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
     updateNightSafetyPopup
     void $ liftFlowBT initiateLocationServiceClient
     updateOperatingCity
-    when baseFlow $ lift $ lift $ initUI
+    when baseFlow $ initUIWrapper
     void $ pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     void $ pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getCurrency Constants.appConfig)

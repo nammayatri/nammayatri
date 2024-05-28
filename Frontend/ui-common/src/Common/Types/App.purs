@@ -140,11 +140,15 @@ newtype Payload = Payload
   , view_param :: Maybe String
   , deeplinkOptions :: Maybe DeeplinkOptions
   , deepLinkJSON :: Maybe QueryParam
-  , fragmentID :: Maybe String
+  , fragmentViewGroups :: Maybe FragmentViewGroup
   }
 
 newtype QueryParam = QueryParam {
   option :: Maybe String
+}
+
+newtype FragmentViewGroup = FragmentViewGroup {
+  main :: Maybe String
 }
 
 newtype DeeplinkOptions = DeeplinkOptions {
@@ -157,6 +161,11 @@ newtype LocationData = LocationData {
   , lon :: Number
   , name :: Maybe String
 }
+
+derive instance newFragmentViewGroup :: Newtype FragmentViewGroup _
+derive instance genericFragmentViewGroup :: Generic FragmentViewGroup _
+instance decodeFragmentViewGroup :: Decode FragmentViewGroup where decode = defaultDecode
+instance encodeFragmentViewGroup :: Encode FragmentViewGroup where encode = defaultEncode
 
 derive instance newPayload :: Newtype Payload _
 derive instance genericPayload :: Generic Payload _

@@ -105,6 +105,9 @@ foreign import callDecline :: EffectFn1 String Unit
 
 foreign import getExpiryTime :: String -> Int
 
+foreign import getDriverAppPayload :: String -> String
+foreign import isDriverAppBooted :: String -> Boolean
+
 os :: String
 os = getOs unit
 

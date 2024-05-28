@@ -20,6 +20,7 @@ import Screens.TopPriceView.Controller as TopPriceView
 import Services.Backend (mkQuoteOffer, quoteOfferApi)
 import Types (Action(..)) as ActionType
 import Types (Action(..), defaultOverlayData)
+import Screens.DriverApp.Handler as DriverApp
 
 data ScreenOutput
   = Back RideRequestPopUpScreenData
@@ -65,6 +66,11 @@ eval (Accept idx) state =
     Just item -> exit $ AcceptRequest item
 
 eval (UpdateCarousel idx) state = continue state{selectedRequest = idx}
+eval AfterRender state = continueWithCmd state
+                [do 
+                    push <- getPushFn (Just "DriverApp") "DriverApp"
+                    void $ push DriverApp.RenderDriverApp
+                    pure NoAction]
 
 eval (OnPageSelected idx) state = case fromString idx of 
   Nothing -> update state
@@ -81,5 +87,3 @@ notifyTopView :: TopPriceView.Action -> Effect Unit
 notifyTopView action = do
   push <- getPushFn (Just "TopPriceView") "TopPriceView"
   void $ push action
-
--- void $ quoteOfferApi $ mkAcceptQuote item.searchTryId

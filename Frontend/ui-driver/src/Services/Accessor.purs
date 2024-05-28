@@ -95,5 +95,8 @@ _languagesAvailableForVideos = lens (unwrap >>> _.languagesAvailableForVideos) (
 _payload :: forall a b c. Newtype a { payload :: b | c } => Lens' a b
 _payload = lens (unwrap >>> _.payload) (\oldRec newVal -> wrap ((unwrap oldRec) { payload = newVal }))
 
-_fragmentID :: forall a b c. Newtype a { fragmentID :: b | c } => Lens' a b
-_fragmentID = lens (unwrap >>> _.fragmentID) (\oldRec newVal -> wrap ((unwrap oldRec) { fragmentID = newVal }))
+_fragmentViewGroups :: forall a b c. Newtype a { fragmentViewGroups :: b | c } => Lens' a b
+_fragmentViewGroups = lens (unwrap >>> _.fragmentViewGroups) (\oldRec newVal -> wrap ((unwrap oldRec) { fragmentViewGroups = newVal }))
+
+_main :: forall a b c. Newtype a { main :: b | c } => Lens' a b
+_main = lens (unwrap >>> _.main) (\oldRec newVal -> wrap ((unwrap oldRec) { main = newVal }))
