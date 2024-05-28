@@ -5,7 +5,7 @@
   "private": true,
   "main": "index.js",
   "scripts": {
-    "compile:purs": "spago build",
+    "compile:purs": "spago build --purs-args '--censor-warnings'",
     "bundle:android": "webpack --env prod --mode=production --progress --config webpack.android.js && npm run webpack-uglify",
     "bundle:ios": "webpack --env prod --mode=production --progress --config webpack.ios.js",
     "prod:android": "npm-run-all compile:purs bundle:android",
