@@ -607,9 +607,9 @@ quoteListView push config =
                     , orientation VERTICAL
                     ] $ mapWithIndex
                         ( \index item -> do
-                            let estimates = if item.vehicleVariant == "BOOK_ANY" then filter (\quote -> elem (fromMaybe "" quote.serviceTierName) item.selectedServices) variantBasedList else []
+                            let estimates = if item.vehicleVariant == "BOOK_ANY" then filter (\estimate -> elem (fromMaybe "" estimate.serviceTierName) item.selectedServices) variantBasedList else []
                                 services = if item.vehicleVariant == "BOOK_ANY" then HU.getAllServices FunctionCall else []
-                                bookAnyConfig = getBookAnyProps item estimates
+                                bookAnyConfig = getBookAnyProps estimates
                                 price = getMinMaxPrice bookAnyConfig item estimates
                                 capacity = getMinMaxCapacity bookAnyConfig item estimates
                             ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length variantBasedList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
@@ -621,9 +621,9 @@ quoteListView push config =
                     , orientation VERTICAL
                     ] $ mapWithIndex
                         ( \index item -> do
-                            let estimates = if item.vehicleVariant == "BOOK_ANY" then filter (\quote -> elem (fromMaybe "" quote.serviceTierName) item.selectedServices) topProviderList else []
+                            let estimates = if item.vehicleVariant == "BOOK_ANY" then filter (\estimate -> elem (fromMaybe "" estimate.serviceTierName) item.selectedServices) topProviderList else []
                                 services = if item.vehicleVariant == "BOOK_ANY" then HU.getAllServices FunctionCall else []
-                                bookAnyConfig = getBookAnyProps item estimates
+                                bookAnyConfig = getBookAnyProps estimates
                                 price = getMinMaxPrice bookAnyConfig item estimates
                                 capacity = getMinMaxCapacity bookAnyConfig item estimates
                             ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
@@ -687,37 +687,34 @@ quoteListView push config =
         ]
         []
 
-getBookAnyProps :: ChooseVehicle.Config -> Array ChooseVehicle.Config -> BookAnyProps
-getBookAnyProps quote estimates = foldl (\acc item -> getMinMax acc item) bookAnyProps estimates
+getBookAnyProps :: Array ChooseVehicle.Config -> BookAnyProps
+getBookAnyProps estimates = foldl (\acc item -> getMinMax acc item) bookAnyProps estimates
   where 
     getMinMax :: BookAnyProps -> ChooseVehicle.Config -> BookAnyProps
     getMinMax bookAnyProps item = 
-      let minPrice = bookAnyProps.minPrice `min` (fromMaybe intMax item.minPrice)
-          maxPrice = bookAnyProps.maxPrice `max` (fromMaybe intMin item.maxPrice)
-          minCapacity = bookAnyProps.minCapacity `min` (fromMaybe intMax (fromString item.capacity))
-          maxCapacity = bookAnyProps.maxCapacity `max` (fromMaybe intMin (fromString item.capacity))
+      let minPrice = bookAnyProps.minPrice `min` (fromMaybe item.basePrice item.minPrice)
+          maxPrice = bookAnyProps.maxPrice `max` (fromMaybe item.basePrice item.maxPrice)
+          minCapacity = bookAnyProps.minCapacity `min` (fromMaybe 0 (fromString item.capacity))
+          maxCapacity = bookAnyProps.maxCapacity `max` (fromMaybe 0 (fromString item.capacity))
       in bookAnyProps{minPrice = minPrice, maxPrice = maxPrice, minCapacity = minCapacity, maxCapacity = maxCapacity}
 
 getMinMaxPrice :: BookAnyProps -> ChooseVehicle.Config -> Array ChooseVehicle.Config -> String
-getMinMaxPrice bookAnyProps quote estimates =
+getMinMaxPrice bookAnyProps estimate estimates =
   let currency = getCurrency appConfig
-  in case (length estimates), quote.vehicleVariant == "BOOK_ANY" of 
+  in case (length estimates), estimate.vehicleVariant == "BOOK_ANY" of 
       0, true -> "-"
-      1, true -> (fromMaybe ChooseVehicle.config (estimates !! 0)).price
-      _, true -> case bookAnyProps.minPrice <= 0, bookAnyProps.maxPrice <= 0 of  
-              false,false -> if bookAnyProps.minPrice == bookAnyProps.maxPrice then quote.price
-                                else (currency <> (show bookAnyProps.minPrice) <> " - " <> currency <> (show bookAnyProps.maxPrice))
-              _,_ -> quote.price
-      _ , false -> quote.price
+      _, true -> if bookAnyProps.minPrice == bookAnyProps.maxPrice then (currency <> (show bookAnyProps.minPrice))
+                 else (currency <> (show bookAnyProps.minPrice) <> " - " <> currency <> (show bookAnyProps.maxPrice))
+      _ , false -> estimate.price
       _,_ -> "-"
 
 getMinMaxCapacity :: BookAnyProps -> ChooseVehicle.Config -> Array ChooseVehicle.Config -> String
-getMinMaxCapacity bookAnyProps quote estimates =
-  case (length estimates), quote.vehicleVariant == "BOOK_ANY" of 
+getMinMaxCapacity bookAnyProps estimate estimates =
+  case (length estimates), estimate.vehicleVariant == "BOOK_ANY" of 
     0, true -> "-"
     _, true -> if bookAnyProps.minCapacity == bookAnyProps.maxCapacity then (show bookAnyProps.minCapacity)
                else (show bookAnyProps.minCapacity) <> " - " <> (show bookAnyProps.maxCapacity)
-    _ , false -> quote.capacity
+    _ , false -> estimate.capacity
     _,_ -> "-"
 
 getQuoteListViewHeight :: Config -> Int -> Int
