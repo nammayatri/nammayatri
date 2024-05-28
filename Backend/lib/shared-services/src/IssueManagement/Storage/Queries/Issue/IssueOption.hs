@@ -15,6 +15,23 @@ import IssueManagement.Tools.UtilsTH hiding (label)
 import Kernel.External.Types (Language)
 import Kernel.Types.Id
 
+create :: BeamFlow m r => IssueOption -> m ()
+create = createWithKV
+
+updateByPrimaryKey :: BeamFlow m r => IssueOption -> m ()
+updateByPrimaryKey IssueOption {..} =
+  updateWithKV
+    [ Set BeamIO.option option,
+      Set BeamIO.issueCategoryId (getId <$> issueCategoryId),
+      Set BeamIO.issueMessageId issueMessageId,
+      Set BeamIO.priority priority,
+      Set BeamIO.label label,
+      Set BeamIO.isActive isActive,
+      Set BeamIO.createdAt createdAt,
+      Set BeamIO.updatedAt updatedAt
+    ]
+    [And [Is BeamIO.id $ Eq (getId id)]]
+
 findByIdAndCategoryId :: BeamFlow m r => Id IssueOption -> Id IssueCategory -> m (Maybe IssueOption)
 findByIdAndCategoryId issueOptionId issueCategoryId = findOneWithKV [And [Is BeamIO.id $ Eq $ getId issueOptionId, Is BeamIO.issueCategoryId $ Eq $ Just (getId issueCategoryId)]]
 
@@ -66,11 +83,8 @@ instance FromTType' BeamIO.IssueOption IssueOption where
         IssueOption
           { id = Id id,
             issueCategoryId = Id <$> issueCategoryId,
-            option = option,
-            priority = priority,
-            issueMessageId = issueMessageId,
-            label = label,
-            merchantId = Id merchantId
+            merchantId = Id merchantId,
+            ..
           }
 
 instance ToTType' BeamIO.IssueOption IssueOption where
@@ -82,5 +96,8 @@ instance ToTType' BeamIO.IssueOption IssueOption where
         BeamIO.priority = priority,
         BeamIO.issueMessageId = issueMessageId,
         BeamIO.label = label,
-        BeamIO.merchantId = getId merchantId
+        BeamIO.merchantId = getId merchantId,
+        BeamIO.isActive = isActive,
+        BeamIO.createdAt = createdAt,
+        BeamIO.updatedAt = updatedAt
       }

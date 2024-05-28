@@ -8,13 +8,17 @@ module IssueManagement.Common.Dashboard.Issue
 where
 
 import Data.Aeson
-import Data.Text as T hiding (count)
+import qualified Data.Text as T
 import Data.Time
-import IssueManagement.Common
+import IssueManagement.Common (ChatDetail, IssueStatus, Person, Ride, User)
 import IssueManagement.Domain.Types.Issue.IssueCategory
+import IssueManagement.Domain.Types.Issue.IssueMessage
+import IssueManagement.Domain.Types.Issue.IssueOption
 import IssueManagement.Domain.Types.Issue.IssueReport
 import IssueManagement.Domain.Types.MediaFile (MediaFile)
+import Kernel.External.Types (Language)
 import Kernel.Prelude
+import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto hiding (count)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.CacheFlow as Reexport
@@ -28,7 +32,13 @@ data IssueEndpoint
   = IssueUpdateEndpoint
   | IssueAddCommentEndpoint
   | TicketStatusCallBackEndpoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
+  | CreateIssueCategoryEndpoint
+  | UpdateIssueCategoryEndpoint
+  | CreateIssueOptionEndpoint
+  | UpdateIssueOptionEndpoint
+  | UpsertIssueMessageEndpoint
+  | UploadIssueMessageMediaFilesEndpoint
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "IssueEndpoint"
 
@@ -246,3 +256,186 @@ data Summary = Summary
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-----------------------------------------------------------
+-- CreateIssueCatgeory API ------------------------------------
+
+type CreateIssueCategoryAPI =
+  "category"
+    :> "create"
+    :> ReqBody '[JSON] CreateIssueCategoryReq
+    :> Post '[JSON] APISuccess
+
+data CreateIssueCategoryReq = CreateIssueCategoryReq
+  { category :: Text,
+    logoUrl :: Text,
+    priority :: Int,
+    categoryType :: CategoryType,
+    isActive :: Maybe Bool,
+    translations :: [Translation],
+    messages :: [CreateIssueMessageReq]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CreateIssueMessageReq = CreateIssueMessageReq
+  { message :: Text,
+    label :: Maybe Text,
+    priority :: Int,
+    translations :: [Translation],
+    options :: [CreateIssueOptionReq]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CreateIssueOptionReq = CreateIssueOptionReq
+  { option :: Text,
+    label :: Maybe Text,
+    priority :: Int,
+    isActive :: Maybe Bool,
+    translations :: [Translation],
+    messages :: [CreateIssueMessageReq]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CreateIssueCategoryReq where
+  hideSecrets = identity
+
+-----------------------------------------------------------
+-- Update IssueCatgeory API ------------------------------------
+
+type UpdateIssueCategoryAPI =
+  "category"
+    :> "update"
+    :> MandatoryQueryParam "issueCategoryId" (Id IssueCategory)
+    :> ReqBody '[JSON] UpdateIssueCategoryReq
+    :> Post '[JSON] APISuccess
+
+data UpdateIssueCategoryReq = UpdateIssueCategoryReq
+  { category :: Maybe Text,
+    logoUrl :: Maybe Text,
+    priority :: Maybe Int,
+    categoryType :: Maybe CategoryType,
+    isActive :: Maybe Bool,
+    translations :: [Translation]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data Translation = Translation
+  { language :: Language,
+    translation :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpdateIssueCategoryReq where
+  hideSecrets = identity
+
+-----------------------------------------------------------
+-- Create IssueOption API ------------------------------------
+
+type CreateIssueOptionAPI =
+  "option"
+    :> "create"
+    :> MandatoryQueryParam "issueCategoryId" (Id IssueCategory)
+    :> MandatoryQueryParam "issueMessageId" (Id IssueMessage)
+    :> ReqBody '[JSON] CreateIssueOptionReq
+    :> Post '[JSON] APISuccess
+
+instance HideSecrets CreateIssueOptionReq where
+  hideSecrets = identity
+
+-----------------------------------------------------------
+-- Update IssueOption API ------------------------------------
+
+type UpdateIssueOptionAPI =
+  "option"
+    :> "update"
+    :> MandatoryQueryParam "issueOptionid" (Id IssueOption)
+    :> ReqBody '[JSON] UpdateIssueOptionReq
+    :> Post '[JSON] APISuccess
+
+data UpdateIssueOptionReq = UpdateIssueOptionReq
+  { issueCategoryId :: Maybe (Id IssueCategory),
+    option :: Maybe Text,
+    priority :: Maybe Int,
+    issueMessageId :: Maybe Text,
+    label :: Maybe Text,
+    isActive :: Maybe Bool,
+    translations :: [Translation]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpdateIssueOptionReq where
+  hideSecrets = identity
+
+-----------------------------------------------------------
+-- Upsert IssueMessage API ------------------------------------
+
+type UpsertIssueMessageAPI =
+  "message"
+    :> "upsert"
+    :> QueryParam "issueMessageId" (Id IssueMessage)
+    :> ReqBody '[JSON] UpsertIssueMessageReq
+    :> Post '[JSON] APISuccess
+
+data UpsertIssueMessageReq = UpsertIssueMessageReq
+  { message :: Maybe Text,
+    categoryId :: Maybe (Id IssueCategory),
+    optionId :: Maybe (Id IssueOption),
+    priority :: Maybe Int,
+    label :: Maybe Text,
+    translation :: [Translation]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpsertIssueMessageReq where
+  hideSecrets = identity
+
+-----------------------------------------------------------
+-- Upload IssueMessageMediaFiles API ------------------------------------
+
+type IssueMessageMediaFileUploadAPI =
+  "message"
+    :> "media"
+    :> MultipartForm Tmp IssueMessageMediaFileUploadListReq
+    :> Post '[JSON] APISuccess
+
+data IssueMessageMediaFileUploadListReq = IssueMessageMediaFileUploadListReq
+  { issueMessageId :: Id IssueMessage,
+    mediaFiles :: [IssueMessageMediaFileUploadReq]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data IssueMessageMediaFileUploadReq = IssueMessageMediaFileUploadReq
+  { file :: FilePath,
+    reqContentType :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp IssueMessageMediaFileUploadListReq where
+  fromMultipart form = do
+    mediaFiles <- mapM extractFile (files form)
+    issueMessageIdText <- lookupInput "issueMessageId" form
+    return $ IssueMessageMediaFileUploadListReq (Id issueMessageIdText) mediaFiles
+    where
+      extractFile f =
+        pure (IssueMessageMediaFileUploadReq (fdPayload f) (fdFileCType f))
+
+instance ToMultipart Tmp IssueMessageMediaFileUploadListReq where
+  toMultipart (IssueMessageMediaFileUploadListReq issueMessageId mediaFiles) =
+    MultipartData inputs files
+    where
+      inputs = [Input "issueMessageId" issueMessageId.getId]
+      files = map mkFileData mediaFiles
+      mkFileData (IssueMessageMediaFileUploadReq filePath contType) =
+        FileData "file" (T.pack filePath) contType filePath
+
+instance HideSecrets IssueMessageMediaFileUploadListReq where
+  hideSecrets = identity

@@ -25,6 +25,8 @@ import "lib-dashboard" Environment
 import qualified IssueManagement.Common as DIssue
 import qualified IssueManagement.Common.Dashboard.Issue as Common
 import IssueManagement.Domain.Types.Issue.IssueCategory
+import IssueManagement.Domain.Types.Issue.IssueMessage
+import IssueManagement.Domain.Types.Issue.IssueOption
 import IssueManagement.Domain.Types.Issue.IssueReport
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -52,6 +54,12 @@ type API =
            :<|> IssueAddCommentAPI
            :<|> IssueFetchMediaAPI
            :<|> TicketStatusCallBackAPI
+           :<|> CreateIssueCategoryAPI
+           :<|> UpdateIssueCategoryAPI
+           :<|> CreateIssueOptionAPI
+           :<|> UpdateIssueOptionAPI
+           :<|> UpsertIssueMessageAPI
+           :<|> IssueMessageMediaFileUploadAPI
        )
 
 type IssueCategoryListAPI =
@@ -86,6 +94,30 @@ type TicketStatusCallBackAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'ISSUE 'TICKET_STATUS_CALL_BACK
     :> Common.TicketStatusCallBackAPI
 
+type CreateIssueCategoryAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'ISSUE 'CREATE_ISSUE_CATEGORY
+    :> Common.CreateIssueCategoryAPI
+
+type UpdateIssueCategoryAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'ISSUE 'UPDATE_ISSUE_CATEGORY
+    :> Common.UpdateIssueCategoryAPI
+
+type CreateIssueOptionAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'ISSUE 'CREATE_ISSUE_OPTION
+    :> Common.CreateIssueOptionAPI
+
+type UpdateIssueOptionAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'ISSUE 'UPDATE_ISSUE_OPTION
+    :> Common.UpdateIssueOptionAPI
+
+type UpsertIssueMessageAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'ISSUE 'UPSERT_ISSUE_MESSAGE
+    :> Common.UpsertIssueMessageAPI
+
+type IssueMessageMediaFileUploadAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'ISSUE 'UPLOAD_ISSUE_MESSAGE_MEDIA_FILES
+    :> Common.IssueMessageMediaFileUploadAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   issueCategoryList merchantId city
@@ -96,6 +128,12 @@ handler merchantId city =
     :<|> issueAddComment merchantId city
     :<|> issueFetchMedia merchantId city
     :<|> ticketStatusCallBack merchantId city
+    :<|> createIssueCategory merchantId city
+    :<|> updateIssueCategory merchantId city
+    :<|> createIssueOption merchantId city
+    :<|> updateIssueOption merchantId city
+    :<|> upsertIssueMessage merchantId city
+    :<|> uploadIssueMessageMediaFiles merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -163,6 +201,44 @@ ticketStatusCallBack merchantShortId opCity apiTokenInfo req = withFlowHandlerAP
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.TicketStatusCallBackEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.ticketStatusCallBack) req
+
+createIssueCategory :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateIssueCategoryReq -> FlowHandler APISuccess
+createIssueCategory merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.CreateIssueCategoryEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.createIssueCategory) req
+
+updateIssueCategory :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id IssueCategory -> Common.UpdateIssueCategoryReq -> FlowHandler APISuccess
+updateIssueCategory merchantShortId opCity apiTokenInfo issueCategoryId req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.UpdateIssueCategoryEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.updateIssueCategory) issueCategoryId req
+
+createIssueOption :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id IssueCategory -> Id IssueMessage -> Common.CreateIssueOptionReq -> FlowHandler APISuccess
+createIssueOption merchantShortId opCity apiTokenInfo issueCategoryId issueMessageId req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.CreateIssueOptionEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.createIssueOption) issueCategoryId issueMessageId req
+
+updateIssueOption :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id IssueOption -> Common.UpdateIssueOptionReq -> FlowHandler APISuccess
+updateIssueOption merchantShortId opCity apiTokenInfo issueOptionId req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.UpdateIssueOptionEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.updateIssueOption) issueOptionId req
+
+upsertIssueMessage :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id IssueMessage) -> Common.UpsertIssueMessageReq -> FlowHandler APISuccess
+upsertIssueMessage merchantShortId opCity apiTokenInfo mbIssueMessageId req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.UpsertIssueMessageEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.upsertIssueMessage) mbIssueMessageId req
+
+uploadIssueMessageMediaFiles :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.IssueMessageMediaFileUploadListReq -> FlowHandler APISuccess
+uploadIssueMessageMediaFiles merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.UploadIssueMessageMediaFilesEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (addMultipartBoundary . (.issue.uploadIssueMessageMediaFiles)) req
+  where
+    addMultipartBoundary clientFn reqBody = clientFn ("xxxxxxx", reqBody)
 
 addAuthorDetails :: Common.IssueInfoRes -> Flow Common.IssueInfoRes
 addAuthorDetails Common.IssueInfoRes {..} = do

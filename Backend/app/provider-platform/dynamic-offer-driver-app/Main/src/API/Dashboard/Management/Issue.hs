@@ -1,5 +1,6 @@
 module API.Dashboard.Management.Issue where
 
+import qualified API.UI.Issue as AUI
 import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified IssueManagement.API.Dashboard.Issue as IMD
@@ -7,10 +8,10 @@ import qualified IssueManagement.Common as Common
 import qualified IssueManagement.Common.Dashboard.Issue as Common
 import qualified IssueManagement.Domain.Action.Dashboard.Issue as DIssue
 import IssueManagement.Domain.Types.Issue.IssueCategory
+import IssueManagement.Domain.Types.Issue.IssueMessage
+import IssueManagement.Domain.Types.Issue.IssueOption
 import IssueManagement.Domain.Types.Issue.IssueReport
-import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -22,7 +23,6 @@ import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Merchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.Person as QP
 
 type API = IMD.DashboardIssueAPI
 
@@ -36,29 +36,20 @@ handler merchantId city =
     :<|> issueAddComment merchantId city
     :<|> issueFetchMedia merchantId city
     :<|> ticketStatusCallBack merchantId city
+    :<|> createIssueCategory merchantId city
+    :<|> updateIssueCategory merchantId city
+    :<|> createIssueOption merchantId city
+    :<|> updateIssueOption merchantId city
+    :<|> upsertIssueMessage merchantId city
+    :<|> uploadIssueMessageMediaFiles merchantId city
 
 dashboardIssueHandle :: DIssue.ServiceHandle Flow
 dashboardIssueHandle =
   DIssue.ServiceHandle
-    { findPersonById = castPersonById,
-      findByMerchantShortIdAndCity = castfindByMerchantShortIdAndCity
+    { findPersonById = AUI.castPersonById,
+      findByMerchantShortIdAndCity = castfindByMerchantShortIdAndCity,
+      findMerchantConfig = AUI.buildMerchantConfig
     }
-
-castPersonById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Person -> m (Maybe Common.Person)
-castPersonById driverId = do
-  person <- runInReplica $ QP.findById (cast driverId)
-  return $ fmap castDriver person
-  where
-    castDriver person =
-      Common.Person
-        { id = cast person.id,
-          language = person.language,
-          firstName = Just person.firstName,
-          lastName = person.lastName,
-          middleName = person.middleName,
-          mobileNumber = person.mobileNumber,
-          merchantOperatingCityId = cast person.merchantOperatingCityId
-        }
 
 castfindByMerchantShortIdAndCity :: (CacheFlow m r, EsqDBFlow m r) => ShortId Common.Merchant -> Context.City -> m (Maybe Common.MerchantOperatingCity)
 castfindByMerchantShortIdAndCity (ShortId merchantShortId) opCity = do
@@ -131,3 +122,21 @@ issueFetchMedia (ShortId merchantShortId) _opCity = withFlowHandlerAPI . DIssue.
 
 ticketStatusCallBack :: ShortId DM.Merchant -> Context.City -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
 ticketStatusCallBack (ShortId _merchantShortId) _opCity req = withFlowHandlerAPI $ DIssue.ticketStatusCallBack req Common.DRIVER
+
+createIssueCategory :: ShortId DM.Merchant -> Context.City -> Common.CreateIssueCategoryReq -> FlowHandler APISuccess
+createIssueCategory (ShortId merchantShortId) city req = withFlowHandlerAPI $ DIssue.createIssueCategory (ShortId merchantShortId) city req Common.DRIVER
+
+updateIssueCategory :: ShortId DM.Merchant -> Context.City -> Id IssueCategory -> Common.UpdateIssueCategoryReq -> FlowHandler APISuccess
+updateIssueCategory (ShortId merchantShortId) city issueCategoryId req = withFlowHandlerAPI $ DIssue.updateIssueCategory (ShortId merchantShortId) city issueCategoryId req Common.DRIVER
+
+createIssueOption :: ShortId DM.Merchant -> Context.City -> Id IssueCategory -> Id IssueMessage -> Common.CreateIssueOptionReq -> FlowHandler APISuccess
+createIssueOption (ShortId merchantShortId) city issueCategoryId issueMessageId req = withFlowHandlerAPI $ DIssue.createIssueOption (ShortId merchantShortId) city issueCategoryId issueMessageId req Common.DRIVER
+
+updateIssueOption :: ShortId DM.Merchant -> Context.City -> Id IssueOption -> Common.UpdateIssueOptionReq -> FlowHandler APISuccess
+updateIssueOption (ShortId merchantShortId) city issueOptionId req = withFlowHandlerAPI $ DIssue.updateIssueOption (ShortId merchantShortId) city issueOptionId req Common.DRIVER
+
+upsertIssueMessage :: ShortId DM.Merchant -> Context.City -> Maybe (Id IssueMessage) -> Common.UpsertIssueMessageReq -> FlowHandler APISuccess
+upsertIssueMessage (ShortId merchantShortId) city mbIssueMessageId req = withFlowHandlerAPI $ DIssue.upsertIssueMessage (ShortId merchantShortId) city mbIssueMessageId req Common.DRIVER
+
+uploadIssueMessageMediaFiles :: ShortId DM.Merchant -> Context.City -> Common.IssueMessageMediaFileUploadListReq -> FlowHandler APISuccess
+uploadIssueMessageMediaFiles (ShortId merchantShortId) city req = withFlowHandlerAPI $ DIssue.uploadIssueMessageMediaFiles (ShortId merchantShortId) city req dashboardIssueHandle
