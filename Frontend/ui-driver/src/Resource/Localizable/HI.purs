@@ -1401,3 +1401,7 @@ getHI stringKey =
         CONVERT_YOUR_COINS_TO_DISCOUNT -> "अपने सिक्के डिस्काउंट में बदलें"
         CONVERT_YOUR_COINS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION -> "अपने सिक्के अपनी सदस्यता पर डिस्काउंट प्राप्त करने के लिए बदलें"
         CONVERT_NOW -> "अब बदलें"
+        TOLL_CHARGES_INCLUDED -> "किराए में टोल शुल्क शामिल है"
+        PLEASE_DO_NOT_DEMAND_EXTRA -> "कृपया ग्राहक से अतिरिक्त मांग न करें"
+        FINAL_FARE_EXCLUDES_TOLL -> "अंतिम किराये में टोल शुल्क शामिल नहीं है"
+        PLEASE_COLLECT_SEPARATELY -> "कृपया इसे ग्राहक से अलग से वसूल करें <b>केवल तभी जब कोई टोल पार किया गया हो</b>"

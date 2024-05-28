@@ -2,7 +2,7 @@ module Components.RideCompletedCard.View where
 
 import Components.RideCompletedCard.Controller 
 
-import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint, afterRender, alignParentBottom, onAnimationEnd, scrollBarY, lottieAnimationView, rippleColor, Prop)
+import PrestoDOM 
 import Components.Banner.View as Banner
 import Components.Banner as BannerConfig
 import Data.Functor (map)
@@ -13,12 +13,13 @@ import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*
 import Common.Styles.Colors as Color
 import Components.SelectListModal as CancelRidePopUp
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Data.Array (mapWithIndex, length, (!!), null, any)
+import Data.Array (mapWithIndex, length, (!!), null, any, (..))
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime, safeMarginTop, screenHeight, getNewIDWithTag)
 import Components.PrimaryButton as PrimaryButton
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Properties (cornerRadii)
-import Common.Types.App (LazyCheck(..), RentalBookingConfig)
+import Language.Types (STR(..))
+import Common.Types.App 
 import Font.Style as FontStyle
 import Font.Size as FontSize
 import Halogen.VDom.DOM.Prop (Prop)
@@ -37,6 +38,9 @@ import Animation as Anim
 import Engineering.Helpers.Utils as Utils
 import Data.Number (fromString)
 import Data.Int (ceil)
+import PrestoDOM.List
+import CarouselHolder as CarouselHolder
+import Debug
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -47,8 +51,7 @@ view config push =
   , background if config.isDriver then Color.grey700 else Color.white900
   ] $ [  mainView config push 
     , stickyButtonView config push 
-  ] <> if config.customerIssueCard.reportIssueView then [reportIssueView config push] else []
-    <> if config.showContactSupportPopUp then [contactSupportPopUpView config push] else []
+  ] <> if config.showContactSupportPopUp then [contactSupportPopUpView config push] else []
 
 mainView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 mainView config push = 
@@ -284,7 +287,8 @@ rideDetailsButtonView config push =
     width MATCH_PARENT
   , height WRAP_CONTENT 
   , layoutGravity "bottom"
-  , margin $ MarginHorizontal 16 16
+  , padding $ PaddingHorizontal 16 16
+  , rippleColor Color.rippleShade
   ][
     linearLayout
           [ width MATCH_PARENT
@@ -295,7 +299,6 @@ rideDetailsButtonView config push =
           , accessibilityHint "Ride Details : Button"
           , cornerRadius 4.0
           , padding $ Padding 4 16 4 16
-          , rippleColor Color.rippleShade
           ][  textView $
               [ height WRAP_CONTENT
               , text config.topCard.bottomText
@@ -353,109 +356,141 @@ rideCustomerExperienceView config push =
   , orientation VERTICAL
   , gravity CENTER
   ]
-  [ customerIssueView config push
+  [ customerIssueCaroselView push config.customerIssue 
   , customerRatingDriverView config push
   , needHelpPillView config push
   ]
 
 ---------------------------------------------------- customerIssueView ------------------------------------------------------------------------------------------------------------------------------------------
-customerIssueView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-customerIssueView config push =
-  let
-  showOptions =  boolToVisibility $ (config.customerIssueCard.selectedYesNoButton == boolToInt config.customerIssueCard.isNightRide) && not config.customerIssueCard.wasOfferedAssistanceCardView
-  lineVisibility index = boolToVisibility $ index == 0 && config.customerIssueCard.showCallSupport
-  in
-  (if os == "IOS" then linearLayout else scrollView) 
-  [ width MATCH_PARENT 
-  , height WRAP_CONTENT
-  , visibility $ boolToVisibility (config.customerIssueCard.issueFaced || config.customerIssueCard.wasOfferedAssistanceCardView)
-  ][
-    linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , cornerRadius 8.0
-    , stroke $ "1,"<>Color.grey800
-    , orientation VERTICAL
-    , padding $ Padding 10 10 10 10
-    ][  commonTextView config push config.customerIssueCard.title Color.black800 (FontStyle.h3 TypoGraphy) 0
-      , commonTextView config push config.customerIssueCard.subTitle Color.black800 (FontStyle.paragraphText TypoGraphy) 10
-      , yesNoRadioButton config push
-      , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , gravity CENTER
-        , margin $ MarginTop 15
-        , orientation VERTICAL
-        , visibility GONE -- Removed as per the design
-        ](mapWithIndex (\ index item ->
-            linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , padding $ PaddingHorizontal 10 10
-            , orientation VERTICAL
-            , onClick push $ const $ IssueReportIndex index
-            ][  linearLayout
-                [ width MATCH_PARENT
-                , height WRAP_CONTENT
-                , margin $ MarginBottom 15
-                ][  textView $ 
-                    [ height WRAP_CONTENT
-                    , text item
-                    , color Color.black900
-                    , weight 1.0
-                    ] <> (FontStyle.body2 TypoGraphy)
-                  , imageView
-                    [ width $ V 15
-                    , height $ V 15
-                    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
-                    ]
-                ]
-              , linearLayout
-                [ width MATCH_PARENT
-                , height $ V 1
-                , background Color.grey900
-                , margin $ MarginBottom 15
-                , visibility $ lineVisibility index
-                ][]
-            ]) ([config.customerIssueCard.option1Text] <> if config.customerIssueCard.showCallSupport then [config.customerIssueCard.option2Text] else []))
-    ]
-  ]
-
-yesNoRadioButton :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-yesNoRadioButton config push =
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , padding $ PaddingHorizontal 10 10
-  , margin $ MarginVertical 15 10
-  , gravity CENTER
-  ](mapWithIndex (\index item ->
-      linearLayout
-      [ weight 1.0
+customerIssueCaroselView :: forall w. (Action -> Effect Unit) -> CustomerIssue ->  PrestoDOM (Effect Unit) w
+customerIssueCaroselView push config = 
+  case config.bannerComputedView , config.showIssueBanners, (null config.customerIssueCards) of 
+    Just view , true, false -> 
+      linearLayout[
+        width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      , cornerRadius 8.0
-      , stroke $ "1,"<> if config.customerIssueCard.selectedYesNoButton == index then Color.blue900 else Color.grey800
-      , background if config.customerIssueCard.selectedYesNoButton == index then Color.blue600 else Color.white900
-      , gravity CENTER
-      , onClick push $ const $ SelectButton index
-      , margin $ MarginLeft if index == 0 then 0 else 10
-      ][  textView $
-          [ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , text item
-          , color Color.black800
-          , padding $ Padding 10 12 10 12
-          ] <> FontStyle.subHeading1 TypoGraphy
+      ] [
+        linearLayout[
+          width MATCH_PARENT
+        , height WRAP_CONTENT
+        , cornerRadius 8.0
+        , stroke $ "1," <> Color.grey800
+        ][CarouselHolder.carouselView push $ getCarouselConfig view config]
+      , linearLayout [
+          width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation HORIZONTAL
+        , gravity CENTER
+        , margin $ MarginTop 8
+        , visibility $ if length config.customerIssueCards > 1 then VISIBLE else GONE
+        ] $ mapWithIndex (\ idx elem -> 
+            linearLayout[
+              height $ V $ if idx == config.currentIndex then 8 else 6
+            , width $ V $ if idx == config.currentIndex then 8 else 6
+            , cornerRadius $ if idx == config.currentIndex then 4.0 else 3.0
+            , background $ if idx == config.currentIndex then Color.black900 else Color.rippleShade
+            , margin $ if idx > 0 then MarginLeft 4 else MarginLeft 0
+            ] []
+          ) $ 0 .. ((length config.customerIssueCards) -1)
       ]
-    ) [(config.customerIssueCard.yesText), (config.customerIssueCard.noText)])
+    _,_,_-> textView[
+      width $ V 0
+    , height $ V 0
+    ]
+
+
+customerIssueCarousalView :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+customerIssueCarousalView  push = 
+    linearLayout [
+      width MATCH_PARENT
+    , height WRAP_CONTENT
+    , padding $ Padding 16 24 16 24
+    , cornerRadiusHolder  "cornerRadius"
+    , backgroundHolder "background"
+    , orientation VERTICAL
+    ][
+      textView $ [
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , textHolder "title"
+      , colorHolder "titleColor" 
+      , gravity CENTER
+      , padding $ PaddingBottom 4
+      ] <> FontStyle.h3 TypoGraphy
+    , textView $ [
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , textHolder "subTitle" 
+      , colorHolder "subTitleColor"
+      , gravity CENTER
+      ] <> FontStyle.paragraphText TypoGraphy 
+    , linearLayout [
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation HORIZONTAL
+      , margin $ MarginTop 16
+      ][
+        linearLayout[
+          height WRAP_CONTENT
+        , weight 1.0
+        , gravity CENTER
+        , padding $ Padding 1 1 1 1
+        , cornerRadiusHolder  "cornerRadius"
+        , backgroundHolder "yesStroke"
+        ][
+          linearLayout[
+            height WRAP_CONTENT
+          ,  weight 1.0
+          , gravity CENTER
+          , padding $ PaddingVertical 14 14
+          , onClickHolder push  $  SelectButton true
+          , cornerRadiusHolder  "cornerRadius"
+          , backgroundHolder "yesBackground"
+          ][
+            textView $ [
+              width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , textHolder "yesText" 
+            , colorHolder "yesTextColor" 
+            ] <> FontStyle.subHeading1 TypoGraphy
+          ]
+        ]
+      , linearLayout[
+          height WRAP_CONTENT
+        , weight 1.0
+        , gravity CENTER
+        , padding $ Padding 1 1 1 1
+        , margin $ MarginLeft 10
+        , cornerRadiusHolder  "cornerRadius"
+        , backgroundHolder "noStroke"
+        ][
+          linearLayout[
+            height WRAP_CONTENT
+          , weight 1.0
+          , gravity CENTER
+          , onClickHolder push  $ SelectButton false
+          , padding $ PaddingVertical 14 14
+          , cornerRadiusHolder  "cornerRadius"
+          , backgroundHolder "noBackground"  
+          ][
+            textView $ [
+              width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , textHolder "noText" 
+            , colorHolder "noTextColor" 
+            ] <> FontStyle.subHeading1 TypoGraphy
+          ]
+        ]
+      ]
+    ]
 
 
 ------------------------------------------- customerRatingDriverView -------------------------------------------------------------------------------------------------------------------------------------------------------------
 customerRatingDriverView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 customerRatingDriverView config push =
   let 
-  ratingVisibility = boolToVisibility $ config.customerBottomCard.visible && not config.customerIssueCard.wasOfferedAssistanceCardView
+    ratingVisibility = boolToVisibility $  ((not config.customerIssue.showIssueBanners)  || (null config.customerIssue.customerIssueCards))
   in
   linearLayout
   [ width MATCH_PARENT
@@ -762,13 +797,6 @@ stickyButtonView config push =
   , alignParentBottom "true,-1"
   , padding $ Padding 16 16 16 if os == "IOS" then max safeMarginBottom 16 else 16
   ][PrimaryButton.view (push <<< SkipButtonActionController) (config.primaryButtonConfig)]
-
-reportIssueView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-reportIssueView  config push =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    ][ CancelRidePopUp.view (push <<< IssueReportPopUpAC) (config.customerIssueCard.reportIssuePopUpConfig)]
 
 contactSupportPopUpView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
 contactSupportPopUpView config push = 

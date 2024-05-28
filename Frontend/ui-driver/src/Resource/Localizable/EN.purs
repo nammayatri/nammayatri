@@ -1401,5 +1401,10 @@ getEN stringKey =
         CONVERT_YOUR_COINS_TO_DISCOUNT -> "Convert your coins to discount"
         CONVERT_YOUR_COINS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION  -> "Convert your coins to get discount on your subscription"
         CONVERT_NOW -> "Convert Now"
+        TOLL_CHARGES_INCLUDED -> "Toll Charges included in Fare"
+        PLEASE_DO_NOT_DEMAND_EXTRA -> "Please do not demand extra from the customer"
+        FINAL_FARE_EXCLUDES_TOLL -> "Final fare excludes toll charges"
+        PLEASE_COLLECT_SEPARATELY -> "Please collect it separately from customer <b>only if a toll was crossed</b>"
+         
 
-
+        

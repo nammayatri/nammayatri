@@ -15,12 +15,12 @@
 
 module Screens.HomeScreen.ScreenData where
 
-import Common.Types.App (RateCardType(..), RentalBookingConfig)
+import Common.Types.App (RateCardType(..), RentalBookingConfig, CustomerIssueTypes(..))
 import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig)
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -122,13 +122,12 @@ initData = {
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
     , ratingViewState : {
-        selectedYesNoButton : -1,
+        selectedYes : Nothing,
         selectedRating : -1,
         issueReportActiveIndex : Nothing ,
         issueReasonCode : Nothing,
         openReportIssue : false,
         doneButtonVisibility : false,
-        issueFacedView : false,
         issueReason : Nothing,
         issueDescription : "",
         rideBookingRes : dummyRideBooking,
@@ -174,13 +173,13 @@ initData = {
     , invalidBookingId : Nothing
     , maxEstimatedDuration : 0
     , invalidBookingPopUpConfig : Nothing
+    , rideCompletedData : initialRideCompletedData
     },
     props: {
       rideRequestFlow : false
     , scheduledRidePollingDelay : 0.0
     , startScheduledRidePolling : false
     , maxDateBooking : 5
-    , nightSafetyFlow : false
     , isHomescreenExpanded : false
     , canScheduleRide : false
     , isSearchLocation : NoView
@@ -274,7 +273,6 @@ initData = {
     , canSendSuggestion : true
     , sheetState : Nothing
     , currentSheetState : COLLAPSED
-    , showOfferedAssistancePopUp : false
     , showDisabilityPopUp : false
     , isChatNotificationDismissed : false
     , searchLocationModelProps : dummySearchLocationModelProps
@@ -588,7 +586,8 @@ dummyRideBooking = RideBookingRes
   estimatedDistance : Nothing,
   estimatedDuration : Nothing,
   rideScheduledTime : Nothing,
-  vehicleServiceTierType : Nothing
+  vehicleServiceTierType : Nothing,
+  tollConfidence : Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails
@@ -656,3 +655,36 @@ dummyInvalidBookingPopUpConfig = {
   maxEstimatedDuration : 0,
   fareProductType : FPT.ONE_WAY
 }
+
+initialRideCompletedData :: RideCompletedData
+initialRideCompletedData = {
+  issueReportData : {
+    bannerItem : Nothing 
+  , currentBannerIndex : 0
+  , currentPageIndex : 0
+  , showIssueBanners : true
+  , hasAccessibilityIssue : false
+  , hasTollIssue : false
+  , hasSafetyIssue : false
+  , showTollChargeAmbigousPopUp : false
+  , customerResponse : [
+    {
+      issueType : TollCharge
+    , selectedYes : Nothing
+    }
+  , {
+      issueType : NightSafety
+    , selectedYes : Nothing
+    }
+  , {
+      issueType : Accessibility
+    , selectedYes : Nothing
+    }
+  , {
+      issueType : NoIssue
+    , selectedYes : Nothing
+    }
+  ]
+  }
+}
+

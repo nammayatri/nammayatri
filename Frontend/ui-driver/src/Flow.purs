@@ -145,6 +145,7 @@ import Helpers.API as HelpersAPI
 import Engineering.Helpers.API as EHA
 import LocalStorage.Cache (getValueFromCache)
 import Effect.Unsafe (unsafePerformEffect)
+import Common.Types.App as CTA
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -203,6 +204,8 @@ baseAppFlow baseFlow event driverInfoResponse = do
       setValueToLocalStore DISABLE_WIDGET "false"
       setValueToLocalStore BUNDLE_TIME_OUT "500"
       setValueToLocalStore ENABLE_SPECIAL_PICKUP_WIDGET "true"
+      when ((getValueToLocalStore SHOW_TOLL_POPUP == "__failed") || (getValueToLocalStore SHOW_TOLL_POPUP == "(null)")) $ do
+        setValueToLocalStore SHOW_TOLL_POPUP "true"
       when baseFlow $ setValueToLocalStore APP_SESSION_TRACK_COUNT if (appSessionCount /= "false") then "false" else "true"
       if ((movedToOfflineDate /= "" && isYesterday movedToOfflineDate) || movedToOfflineDate == "__failed") 
         then setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE "" 
@@ -2400,6 +2403,7 @@ homeScreenFlow = do
                       endRideData { 
                         actualTollCharge = fromMaybe 0.0 response.tollCharges, 
                         estimatedTollCharge = fromMaybe 0.0 response.estimatedTollCharges, 
+                        tollAmbigous = response.tollConfidence == Just CTA.UNSURE,
                         actualRideDuration = response.actualDuration,
                         actualRideDistance = response.chargeableDistance, 
                         finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, 

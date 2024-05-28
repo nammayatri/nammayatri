@@ -550,6 +550,8 @@
       "ny_ic_ticket_grey_small" : true,
       "ny_ic_time_conflicts" : true,
       "ny_ic_tip_icon" : true,
+      "ny_ic_toll_charges_excluded" : true,
+      "ny_ic_toll_charges_included" : true,
       "ny_ic_track_google_map" : true,
       "ny_ic_track_in_app" : true,
       "ny_ic_transaction_pending" : true,

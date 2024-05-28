@@ -18,7 +18,7 @@ module Services.API where
 import Data.Maybe
 import PaymentPage
 
-import Common.Types.App (Version(..), ReelButtonConfig(..)) as Common
+import Common.Types.App as CTA
 import Domain.Payments as PP
 import Control.Alt ((<|>))
 import Control.Monad.Except (except, runExcept)
@@ -455,8 +455,8 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , canDowngradeToHatchback :: Boolean
     , canDowngradeToSedan :: Boolean
     , canDowngradeToTaxi :: Boolean
-    , clientVersion         :: Maybe Common.Version
-    , bundleVersion         :: Maybe Common.Version
+    , clientVersion         :: Maybe CTA.Version
+    , bundleVersion         :: Maybe CTA.Version
     , gender                :: Maybe String
     , blocked               :: Maybe Boolean
     , numberOfRides         :: Maybe Int
@@ -604,6 +604,7 @@ newtype RidesInfo = RidesInfo
       vehicleServiceTier :: String,
       isVehicleAirConditioned :: Maybe Boolean,
       vehicleCapacity :: Maybe Int
+    , tollConfidence :: Maybe CTA.Confidence
   }
 
 newtype OdometerReading = OdometerReading
@@ -829,8 +830,8 @@ newtype UpdateDriverInfoReq
   , canDowngradeToHatchback :: Maybe Boolean
   , canDowngradeToTaxi :: Maybe Boolean
   , language :: Maybe String
-  , clientVersion :: Maybe Common.Version
-  , bundleVersion :: Maybe Common.Version
+  , clientVersion :: Maybe CTA.Version
+  , bundleVersion :: Maybe CTA.Version
   , gender :: Maybe String
   , languagesSpoken :: Maybe (Array String)
   , hometown :: Maybe String
@@ -3901,8 +3902,8 @@ newtype LmsVideoRes = LmsVideoRes
   , videoCompletionStatus :: LmsEntityCompletionStatus
   , attemptNumber :: Int
   , rank :: Int
-  , sideButtonConfig :: Maybe (Array (Array Common.ReelButtonConfig))
-  , bottomButtonConfig :: Maybe (Array (Array Common.ReelButtonConfig))
+  , sideButtonConfig :: Maybe (Array (Array CTA.ReelButtonConfig))
+  , bottomButtonConfig :: Maybe (Array (Array CTA.ReelButtonConfig))
  }
 
 data LmsEntityCompletionStatus = ENTITY_COMPLETED | ENTITY_INCOMPLETE | ENTITY_NOT_STARTED
