@@ -42,6 +42,7 @@ type RatingCardConfig =
   , overallFeedbackArray :: Array String
   , accessibility :: Accessiblity
   , closeImgVisible :: Visibility
+  , driverImage :: String
   }
 
 type RatingCardData =
@@ -84,6 +85,7 @@ ratingCardConfig = {
   overallFeedbackArray : [],
   accessibility : DISABLE,
   closeImgVisible : GONE
+, driverImage : ""
 }
 
 

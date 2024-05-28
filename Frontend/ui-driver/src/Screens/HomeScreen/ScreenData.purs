@@ -162,6 +162,7 @@ initData =
           , estimatedTollCharge : 0.0
           , capacity : Nothing
           , serviceTier : ""
+          , tollAmbigous : false
           }
       , driverGotoState:
           { gotoCount: 0
@@ -263,8 +264,15 @@ initData =
       , odometerImageUploading: false
       , showAcWorkingPopup: Nothing
       , acExplanationPopup : false
+      , toll : initialTollState
       }
   }
+
+initialTollState :: TollState
+initialTollState = { 
+  showTollChargePopup: true
+, showTollChargeAmbigousPopup: true
+}
 
 dummyDriverRideStats :: DriverProfileStatsResp
 dummyDriverRideStats =

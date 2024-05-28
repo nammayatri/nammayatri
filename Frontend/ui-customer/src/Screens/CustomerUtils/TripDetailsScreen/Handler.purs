@@ -37,7 +37,6 @@ tripDetailsScreen = do
             Home -> App.BackT $ pure App.GoBack
             MyRides -> App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDES)
             HelpAndSupport -> App.BackT $ App.NoBack <$> (pure $ GO_TO_HELPSCREEN)
-        OnSubmit state -> App.BackT $ App.NoBack <$> (pure $ ON_SUBMIT state)
         GoToInvoice updatedState -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_INVOICE updatedState )
         GoHome updatedState-> do
             modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> updatedState {props{issueReported = false}})

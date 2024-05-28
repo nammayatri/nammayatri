@@ -197,7 +197,7 @@ starRatingView state push =
     , padding (PaddingBottom 16)
     , cornerRadius 8.0
     ][ imageView [
-        imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_driver_avatar"
+        imageWithFallback state.driverImage
         , height $ V 56
         , width $ V 56
         , cornerRadius 50.0

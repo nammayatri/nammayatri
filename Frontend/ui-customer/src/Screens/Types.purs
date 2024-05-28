@@ -52,6 +52,7 @@ import JBridge (Location)
 import Data.HashMap as DHM
 import Data.Map as DM
 import MerchantConfig.Types as MRC
+import Common.Types.App
 
 type Contacts = {
   name :: String,
@@ -657,6 +658,7 @@ type HomeScreenStateData =
   , rateCardCache :: Maybe RateCard
   , maxEstimatedDuration :: Int
   , invalidBookingPopUpConfig :: Maybe InvalidBookingPopUpConfig
+  , rideCompletedData :: RideCompletedData -- put necesssary data which is required in ride completed screen
   }
 
 type InteroperabilityState = {
@@ -727,6 +729,23 @@ type BannerCarousalData = {
   currentBanner :: Int,
   bannerScrollState :: String,
   currentPage :: Int
+}
+
+
+type RideCompletedData = {
+  issueReportData :: IssueReportData
+}
+
+type IssueReportData = {
+  bannerItem :: Maybe ListItem
+, currentBannerIndex :: Int
+, currentPageIndex :: Int
+, showIssueBanners :: Boolean
+, hasAccessibilityIssue :: Boolean
+, hasTollIssue :: Boolean
+, hasSafetyIssue :: Boolean
+, showTollChargeAmbigousPopUp :: Boolean
+, customerResponse :: Array {issueType :: CustomerIssueTypes, selectedYes :: Maybe Boolean}
 }
 
 type DisabilityT = 
@@ -827,7 +846,6 @@ type HomeScreenStateProps =
   , canSendSuggestion :: Boolean
   , sheetState :: Maybe BottomSheetState
   , currentSheetState :: BottomSheetState
-  , showOfferedAssistancePopUp :: Boolean
   , showDisabilityPopUp :: Boolean
   , isChatNotificationDismissed :: Boolean
   , searchLocationModelProps :: SearchLocationModelProps
@@ -848,7 +866,6 @@ type HomeScreenStateProps =
   , repeatRideTimer :: String
   , repeatRideTimerId :: String
   , showShimmer :: Boolean
-  , nightSafetyFlow :: Boolean 
   , reAllocation :: ReAllocationProp
   , homeScreenSheetState :: BottomSheetState
   , autoScrollTimer :: String
@@ -975,12 +992,11 @@ type CancelRideConfirmationData = {
   continueEnabled :: Boolean
 }
 type RatingViewState = {
-    selectedYesNoButton :: Int,
+    selectedYes :: Maybe Boolean,
     selectedRating :: Int,
     issueReportActiveIndex :: Maybe Int,
     issueReasonCode :: Maybe String,
     openReportIssue :: Boolean,
-    issueFacedView :: Boolean,
     doneButtonVisibility :: Boolean,
     issueReason :: Maybe String,
     issueDescription :: String,
