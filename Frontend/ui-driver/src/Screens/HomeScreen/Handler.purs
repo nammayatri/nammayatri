@@ -178,6 +178,5 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_BOOKING_PREFERENCES)
     GoToRideSummary updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
-      let _ = spy "Hello1"
       App.BackT $ App.BackPoint <$> pure GO_TO_RIDE_SUMMARY
     

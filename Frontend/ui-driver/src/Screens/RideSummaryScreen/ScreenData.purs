@@ -10,12 +10,23 @@ type RideSummaryScreenState = {
 }
 
 
-type RideSummaryScreenData = {}
+type RideSummaryScreenData = {
+}
 
-type RideSummaryScreenProps = {}
+type RideSummaryScreenProps = {
+    termsOpen :: Boolean,
+    exChargesOpen :: Boolean,
+    inChargesOpen :: Boolean 
+}
 
 initData :: RideSummaryScreenState
 initData = {
-    data: {},
-    props: {}
+    data: {
+    },
+        
+    props: {
+        termsOpen : false,
+        exChargesOpen : false,
+        inChargesOpen : false
+    }
 }

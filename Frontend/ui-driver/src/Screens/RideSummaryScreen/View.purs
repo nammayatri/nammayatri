@@ -24,7 +24,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
 import Prelude (Unit, const, ($), (<<<), (==))
-import PrestoDOM (visibility, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, maxLines, fontSize, shimmerFrameLayout, relativeLayout, stroke, clickable, frameLayout, afterRender, alpha, background, color, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width, rippleColor, cornerRadius)
+import PrestoDOM (visibility, Visibility(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, maxLines, alignParentBottom, scrollBarY,fontSize, shimmerFrameLayout, relativeLayout, stroke, clickable, frameLayout, afterRender, alpha, background, color, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width, rippleColor, cornerRadius)
 import PrestoDOM.Animation as PrestoAnim
 import Prim.TypeError (class Warn)
 import Screens.RideSummaryScreen.Controller (Action(..), ScreenOutput, eval)
@@ -49,42 +49,92 @@ view :: forall w. (Action -> Effect Unit) -> RideSummaryScreenState -> PrestoDOM
 view push state  =
   Anim.screenAnimation $
   linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
     , orientation VERTICAL
     , background Color.white900
     -- , onBackPressed push $ const BackPressed
     -- , onAnimationEnd push $ const $  NoAction
     -- , background Color.grey700
     ]
-    ([scrollView
+    ([headerLayout state push
+    , linearLayout
+        [ width MATCH_PARENT
+        , height $ V 1
+        , background Color.grey900
+        ][]
+     , scrollView
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-
+        , weight 1.0
         ]
-        [linearLayout
-            [height MATCH_PARENT
-            , width MATCH_PARENT
+        [ linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
             , orientation VERTICAL
             ]
-            [
-            headerLayout state push
-            , rideSummaryCard state push
+            [ rideSummaryCard state push
             , includedChargesCard state push 
+            , excludedChargeCard state push
             , termsCard state push 
-            , test2 state push
-            , clickInnerBox state push
             ]
         ]
+    , linearLayout
+        [ width MATCH_PARENT
+        , height $ V 1
+        , background Color.grey900
+        ][]
+     ,  clickInnerBox state push 
     ])
 
 
 
 
+    -- scrollView
+    --     [ width MATCH_PARENT
+    --     , height WRAP_CONTENT
+
+    --     ]
+    --     [linearLayout
+    --         [height MATCH_PARENT
+    --         , width MATCH_PARENT
+    --         , orientation VERTICAL
+    --         ]
+    --         [
+    --         headerLayout state push
+    --         , rideSummaryCard state push
+    --         , includedChargesCard state push 
+    --         , test2 state push
+    --         , termsCard state push 
+    --         , clickInnerBox state push
+    --         ]
+    --     ]
+        -- [linearLayout
+        --     [height MATCH_PARENT
+        --     , width MATCH_PARENT
+        --     , orientation VERTICAL
+        --     ]
+        --     [
+        --     headerLayout state push
+        --     , rideSummaryCard state push
+        --     , includedChargesCard state push 
+        --     , test2 state push
+        --     , termsCard state push 
+        --     , clickInnerBox state push
+        --     ]
+        -- ]
 
 
-test2 :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-test2 state push = 
+
+
+
+
+-- test2 :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+-- test2 state push = 
+
+
+excludedChargeCard :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+excludedChargeCard state push = 
     linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -95,95 +145,164 @@ test2 state push =
         , stroke ("1," <> Color.grey900)
         , gravity CENTER
         ]
-        [ boxHeading "Excluded charges" state push 
+        [ boxHeading ExChargeOpen "Excluded charges" state push 
         , linearLayout 
             [ width MATCH_PARENT
             , height $ V 20
+            , visibility if state.props.exChargesOpen then VISIBLE else GONE
             ][]
-        , excludedChargesInner state push 
+        , linearLayout
+            [ width MATCH_PARENT
+            , height $ V 108
+            , orientation VERTICAL
+            , visibility if state.props.exChargesOpen then VISIBLE else GONE
+            ]
+            [ linearLayout
+                [ width WRAP_CONTENT
+                , height $ V 20
+                , orientation HORIZONTAL
+                , margin $ MarginBottom 24
+                ]
+                [ imageView
+                    [ width $ V 20
+                    , height $ V 20
+                    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_car_8"
+                    , margin $ MarginRight 8 
+                    , color Color.black900
+                    ]
+                , textView $ 
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , text "Tolls"
+                    , color Color.black900
+                    ] <> FontStyle.body1 TypoGraphy
+                ]
+            , linearLayout
+                [ width WRAP_CONTENT
+                , height $ V 20
+                , orientation HORIZONTAL
+                , margin $ MarginBottom 24
+                ]
+                [ imageView
+                    [ width $ V 20
+                    , height $ V 20
+                    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_certificate"
+                    , margin $ MarginRight 8 
+                    , color Color.black900
+                    ]
+                , textView $ 
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , text "State Permits"
+                    , color Color.black900
+                    ] <> FontStyle.body1 TypoGraphy
+                ]
+            , linearLayout
+                [ width WRAP_CONTENT
+                , height $ V 20
+                , orientation HORIZONTAL
+                ]
+                [ imageView
+                    [ width $ V 20
+                    , height $ V 20
+                    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_parking"
+                    , margin $ MarginRight 8 
+                    , color Color.black900
+                    ]
+                , textView $ 
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , text "Parking Charges"
+                    , color Color.black900
+                    ] <> FontStyle.body1 TypoGraphy
+                ]
+
+            ]
         , linearLayout 
             [ width MATCH_PARENT
             , height $ V 20
+            , visibility if state.props.exChargesOpen then VISIBLE else GONE
             ][]
         , textView $ 
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , text "These fare components are NOT included in the fare and must be settled separately with the customer"
             , color Color.black600
+            , visibility if state.props.exChargesOpen then VISIBLE else GONE
             ] <> FontStyle.body3 TypoGraphy 
         ]
 
 
 
 
-excludedChargesInner :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-excludedChargesInner state push = 
-    linearLayout
-        [ width MATCH_PARENT
-        , height $ V 108
-        , orientation VERTICAL
-        ]
-        [ linearLayout
-            [ width WRAP_CONTENT
-            , height $ V 20
-            , orientation HORIZONTAL
-            , margin $ MarginBottom 24
-            ]
-            [ imageView
-                [ width $ V 20
-                , height $ V 20
-                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_car_8"
-                , margin $ MarginRight 8 
-                , color Color.black900
-                ]
-            , textView $ 
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , text "Tolls"
-                , color Color.black900
-                ] <> FontStyle.body1 TypoGraphy
-            ]
-        , linearLayout
-            [ width WRAP_CONTENT
-            , height $ V 20
-            , orientation HORIZONTAL
-            , margin $ MarginBottom 24
-            ]
-            [ imageView
-                [ width $ V 20
-                , height $ V 20
-                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_certificate"
-                , margin $ MarginRight 8 
-                , color Color.black900
-                ]
-            , textView $ 
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , text "State Permits"
-                , color Color.black900
-                ] <> FontStyle.body1 TypoGraphy
-            ]
-        , linearLayout
-            [ width WRAP_CONTENT
-            , height $ V 20
-            , orientation HORIZONTAL
-            ]
-            [ imageView
-                [ width $ V 20
-                , height $ V 20
-                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_parking"
-                , margin $ MarginRight 8 
-                , color Color.black900
-                ]
-            , textView $ 
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , text "Parking Charges"
-                , color Color.black900
-                ] <> FontStyle.body1 TypoGraphy
-            ]
+-- excludedChargesInner :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+-- excludedChargesInner state push = 
+--     linearLayout
+--         [ width MATCH_PARENT
+--         , height $ V 108
+--         , orientation VERTICAL
+--         ]
+--         [ linearLayout
+--             [ width WRAP_CONTENT
+--             , height $ V 20
+--             , orientation HORIZONTAL
+--             , margin $ MarginBottom 24
+--             ]
+--             [ imageView
+--                 [ width $ V 20
+--                 , height $ V 20
+--                 , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_car_8"
+--                 , margin $ MarginRight 8 
+--                 , color Color.black900
+--                 ]
+--             , textView $ 
+--                 [ width WRAP_CONTENT
+--                 , height WRAP_CONTENT
+--                 , text "Tolls"
+--                 , color Color.black900
+--                 ] <> FontStyle.body1 TypoGraphy
+--             ]
+--         , linearLayout
+--             [ width WRAP_CONTENT
+--             , height $ V 20
+--             , orientation HORIZONTAL
+--             , margin $ MarginBottom 24
+--             ]
+--             [ imageView
+--                 [ width $ V 20
+--                 , height $ V 20
+--                 , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_certificate"
+--                 , margin $ MarginRight 8 
+--                 , color Color.black900
+--                 ]
+--             , textView $ 
+--                 [ width WRAP_CONTENT
+--                 , height WRAP_CONTENT
+--                 , text "State Permits"
+--                 , color Color.black900
+--                 ] <> FontStyle.body1 TypoGraphy
+--             ]
+--         , linearLayout
+--             [ width WRAP_CONTENT
+--             , height $ V 20
+--             , orientation HORIZONTAL
+--             ]
+--             [ imageView
+--                 [ width $ V 20
+--                 , height $ V 20
+--                 , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_parking"
+--                 , margin $ MarginRight 8 
+--                 , color Color.black900
+--                 ]
+--             , textView $ 
+--                 [ width WRAP_CONTENT
+--                 , height WRAP_CONTENT
+--                 , text "Parking Charges"
+--                 , color Color.black900
+--                 ] <> FontStyle.body1 TypoGraphy
+--             ]
 
-        ]
+--         ]
 
 
 
@@ -227,6 +346,7 @@ acceptBox state push =
             , height WRAP_CONTENT
             , text "Accept"
             , color Color.white900
+            -- , onClick push $ const $ Open
             ] <> FontStyle.h2 TypoGraphy
         ]
 
@@ -266,48 +386,77 @@ termsCard state push =
         , stroke ("1," <> Color.grey900)
         , gravity CENTER
         ]
-        [ boxHeading "Terms & Conditions" state push 
+        [ boxHeading TermOpen "Terms & Conditions" state push 
         , linearLayout
             [ width WRAP_CONTENT
             , height $ V 20
+            , visibility if state.props.termsOpen then GONE else VISIBLE 
             ][]
-        , termsFooter state push 
+        , linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , orientation VERTICAL
+            , visibility if state.props.termsOpen then GONE else VISIBLE 
+            ]
+            [ textView $ 
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , text "1. Cancellation before 1 hr from the scheduled ride start will lead to penalties on the platform. "
+                , color Color.black600
+                , margin $ MarginBottom 12
+                ] <> FontStyle.body3 TypoGraphy
+            , textView $ 
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , text "2. Be online before 45 minutes of Scheduled Ride Start "
+                , color Color.black600
+                , margin $ MarginBottom 12
+                ] <> FontStyle.body3 TypoGraphy
+            , textView $ 
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , text "3. Reach Customer pickup location before 15 minutes from scheduled ride start time"
+                , color Color.black600
+
+                ] <> FontStyle.body3 TypoGraphy
+
+            ]
         ]
 
 
 
 
 
-termsFooter :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-termsFooter state push = 
-    linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , orientation VERTICAL
-        ]
-        [ textView $ 
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , text "1. Cancellation before 1 hr from the scheduled ride start will lead to penalties on the platform. "
-            , color Color.black600
-            , margin $ MarginBottom 12
-            ] <> FontStyle.body3 TypoGraphy
-        , textView $ 
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , text "2. Be online before 45 minutes of Scheduled Ride Start "
-            , color Color.black600
-            , margin $ MarginBottom 12
-            ] <> FontStyle.body3 TypoGraphy
-        , textView $ 
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , text "3. Reach Customer pickup location before 15 minutes from scheduled ride start time"
-            , color Color.black600
+-- termsFooter :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+-- termsFooter state push = 
+--     linearLayout
+--         [ width MATCH_PARENT
+--         , height WRAP_CONTENT
+--         , orientation VERTICAL
+--         ]
+--         [ textView $ 
+--             [ width MATCH_PARENT
+--             , height WRAP_CONTENT
+--             , text "1. Cancellation before 1 hr from the scheduled ride start will lead to penalties on the platform. "
+--             , color Color.black600
+--             , margin $ MarginBottom 12
+--             ] <> FontStyle.body3 TypoGraphy
+--         , textView $ 
+--             [ width MATCH_PARENT
+--             , height WRAP_CONTENT
+--             , text "2. Be online before 45 minutes of Scheduled Ride Start "
+--             , color Color.black600
+--             , margin $ MarginBottom 12
+--             ] <> FontStyle.body3 TypoGraphy
+--         , textView $ 
+--             [ width MATCH_PARENT
+--             , height WRAP_CONTENT
+--             , text "3. Reach Customer pickup location before 15 minutes from scheduled ride start time"
+--             , color Color.black600
 
-            ] <> FontStyle.body3 TypoGraphy
+--             ] <> FontStyle.body3 TypoGraphy
 
-        ]
+--         ]
 
 
 
@@ -317,7 +466,7 @@ includedChargesCard :: RideSummaryScreenState -> (Action -> Effect Unit) -> fora
 includedChargesCard state push = 
     linearLayout
         [ width MATCH_PARENT
-        , height $ V 286
+        , height WRAP_CONTENT
         , orientation VERTICAL
         , margin $ Margin 16 0 16 16
         , padding $ Padding 16 16 16 16
@@ -325,7 +474,7 @@ includedChargesCard state push =
         , stroke ("1," <> Color.grey900)
         , gravity CENTER
         ]
-        [ boxHeading "Included charges" state push 
+        [ boxHeading InChargeOpen "Included charges" state push 
         , includedCharges state push 
         , includedFooter state push
         ]
@@ -340,6 +489,7 @@ includedFooter state push =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
+        , visibility if state.props.inChargesOpen then VISIBLE else GONE
         ]
         [ textView $ 
             [ width MATCH_PARENT
@@ -370,6 +520,7 @@ includedCharges state push =
         , orientation HORIZONTAL
         , margin $ MarginVertical 20 20
         -- , gravity CENTER
+        , visibility if state.props.inChargesOpen then VISIBLE else GONE
         ]
         [ linearLayout
             [ width $ V 136
@@ -435,13 +586,14 @@ includedTextBox text1 text2 state push=
 
 
 
-boxHeading :: String -> RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-boxHeading heading state push = 
+boxHeading :: Action -> String -> RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+boxHeading action heading state push = 
     linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation HORIZONTAL
         , padding $ Padding 2 2 2 2
+        , onClick push $ const action
         ]
         [ textView $ 
             [ width WRAP_CONTENT
@@ -455,6 +607,7 @@ boxHeading heading state push =
             , height $ V 24
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
             , color Color.black800
+            
             ]
         ]
 

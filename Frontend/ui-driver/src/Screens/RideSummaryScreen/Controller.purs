@@ -22,8 +22,20 @@ instance loggableAction :: Loggable Action where
 
 
 data Action = BackPressed
+              | TermOpen 
+              | ExChargeOpen 
+              | InChargeOpen 
 
 data ScreenOutput = GoBack
 
 eval ::  Action -> RideSummaryScreenState -> Eval Action ScreenOutput RideSummaryScreenState
+eval TermOpen state = do
+                  let old = state.props.termsOpen
+                  continue state{ props{termsOpen = not old}}
+eval ExChargeOpen state = do
+                  let old = state.props.exChargesOpen
+                  continue state{ props{exChargesOpen = not old}}
+eval InChargeOpen state = do
+                  let old = state.props.inChargesOpen
+                  continue state{ props{inChargesOpen = not old}}
 eval _ state = continue state

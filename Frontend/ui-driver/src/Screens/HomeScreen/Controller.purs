@@ -1430,9 +1430,7 @@ eval (TollChargesPopUpAC PopUpModal.OnButton2Click) state = continue state {prop
 
 eval (TollChargesAmbigousPopUpAC PopUpModal.OnButton2Click) state = continue state {props {toll {showTollChargeAmbigousPopup = false}}}
 
-eval RideSummary state = do
-                          let _ = spy "Ayush"
-                          exit $ GoToRideSummary state
+eval RideSummary state = exit $ GoToRideSummary state
 
 eval _ state = update state
 
