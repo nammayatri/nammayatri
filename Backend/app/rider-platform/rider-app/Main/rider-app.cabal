@@ -261,7 +261,6 @@ library
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.BppDetails
       Storage.CachedQueries.Exophone
-      Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.FollowRide
       Storage.CachedQueries.FRFSConfig
       Storage.CachedQueries.HotSpotConfig
@@ -541,6 +540,7 @@ library
       Storage.Beam.TripTerms
       Storage.Beam.ValueAddNP
       Storage.Beam.WhiteListOrg
+      Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.SavedReqLocation
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify

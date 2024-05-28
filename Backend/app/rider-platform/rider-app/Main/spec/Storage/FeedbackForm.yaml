@@ -58,7 +58,16 @@ FeedbackForm:
     - merchantOperatingCityId
     - createdAt
     - updatedAt
-
+  cachedQueries:
+    findAllFeedback:
+      keyParams: []
+      dbQuery: findAllFeedback
+    findAllFeedbackByRating:
+      keyParams:
+        - rating: Int
+      dbQuery: findAllFeedbackByRating
+      dbQueryParams:
+        - rating: Int
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
     - EXTRA_QUERY_FILE
