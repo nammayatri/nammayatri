@@ -600,7 +600,7 @@ getEN stringKey =
         YOU_DONT_HAVE_ANY_PAYMENTS -> "You haven’t done any payment yet"
         ENTER_AADHAAR_NUMBER -> "Enter Aadhaar Number/UID"
         ENTER_AADHAAR_OTP_ -> "Enter Aadhaar OTP"
-        AADHAAR_LINKING_REQUIRED -> "Aadhaar linking mandatory"
+        AADHAAR_LINKING_REQUIRED -> "Aadhaar linking required"
         CUSTOMER_ADDED_A_STOP -> "Customer added a stop!"
         AADHAAR_LINKING_REQUIRED_DESCRIPTION _ -> "To start driving for our app, please \n link your Aadhaar ID"
         BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC -> "By clicking Continue, you agree to our &nbsp; <a href=\"\">T&Cs</a>s"

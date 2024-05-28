@@ -68,7 +68,7 @@ screen initialState =
   , name : "OnBoardingSubscriptionScreen"
   , globalEvents : [(\push -> do 
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
-        uiPlans <- Remote.getUiPlans if(initialState.data.vehicleCategory == Just ST.BikeCategory) then (Just "BIKE") else Nothing
+        uiPlans <- Remote.getUiPlans if(initialState.data.vehicleCategory == Just ST.BikeCategory) then "BIKE" else "null"
         case uiPlans of
           Right plansResp -> do 
             liftFlow $ push $ LoadPlans plansResp

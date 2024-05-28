@@ -114,13 +114,18 @@ loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre errorActio
         Right resp -> doAff do liftEffect $ push $ loadMyPlans resp
         Left err -> doAff do liftEffect $ push $ errorAction err
     else do
+      let _ = spy "Coming1" "Coming1"
+      -- _ <- Remote.getUiPlans $ Just "BIKE"
+      let _ = spy "Comfing2" "Comgin2"
       currentPlan <- Remote.getCurrentPlan ""
       case currentPlan of
         Right resp' -> do
           let (GetCurrentPlanResp resp) = resp'
           case resp.currentPlanDetails of
             Nothing -> do
-              uiPlans <- Remote.getUiPlans Nothing
+              let _ = spy "dafdaf" "adafd"
+              uiPlans <- Remote.getUiPlans "null"
+              let _ = spy "working" "working"
               case uiPlans of
                 Right plansResp -> doAff do liftEffect $ push $ loadPlans plansResp
                 Left err -> doAff do liftEffect $ push $ errorAction err

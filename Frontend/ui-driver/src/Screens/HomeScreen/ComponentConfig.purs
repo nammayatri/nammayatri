@@ -265,7 +265,7 @@ linkAadhaarPopupConfig state = let
       visibility = false
     },
     backgroundClickable = true,
-    dismissPopup = state.data.vehicleType /= "BIKE",
+    dismissPopup = true,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
       imageUrl = fetchImage FF_ASSET "ny_ic_aadhaar_logo"

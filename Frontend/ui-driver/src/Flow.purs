@@ -2888,7 +2888,7 @@ subScriptionFlow = do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen{props{isEndRideModal = isEndRideModal}})
       subScriptionFlow
     GO_TO_MANAGE_PLAN state -> do
-      uiPlans <- Remote.getUiPlansBT Nothing
+      uiPlans <- Remote.getUiPlansBT "null"
       modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{ data { managePlanData { alternatePlans = alternatePlansTransformer uiPlans state}}, props {subView = ManagePlan, showShimmer = false}})
       subScriptionFlow
     GO_TO_FIND_HELP_CENTRE state -> do

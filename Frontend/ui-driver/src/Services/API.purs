@@ -2620,7 +2620,7 @@ instance encodeUnVerifiedDataReq :: Encode UnVerifiedDataReq where encode = defa
 
 -------------------------------------------------- getUiPlans -------------------------------------
 
-data UiPlansReq = UiPlansReq (Maybe String)
+data UiPlansReq = UiPlansReq String
 
 newtype UiPlansResp = UiPlansResp {
   list :: Array PlanEntity,
@@ -2688,7 +2688,7 @@ instance decodePromotionPopupConfig :: Decode PromotionPopupConfig where decode 
 instance encodePromotionPopupConfig :: Encode PromotionPopupConfig where encode = defaultEncode 
 
 instance makeUiPlansReq :: RestEndpoint UiPlansReq UiPlansResp where
- makeRequest reqBody@(UiPlansReq mbVehicleVariant) headers = defaultMakeRequest GET (EP.getUiPlans mbVehicleVariant) headers reqBody Nothing
+ makeRequest reqBody@(UiPlansReq vehicleVariant) headers = defaultMakeRequest GET (EP.getUiPlans vehicleVariant) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 

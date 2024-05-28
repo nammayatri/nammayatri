@@ -208,8 +208,10 @@ unVerifiedAadhaarData _ = (getBaseUrl "") <> "/driver/register/unVerifiedAadhaar
 getKioskLocations :: String -> String
 getKioskLocations _ = (getBaseUrl "") <> "/kioskLocation/list"
 
-getUiPlans :: Maybe String -> String 
-getUiPlans mbVehicleVariant = (getBaseUrl "") <> "/plan/list" <> (maybe "" (\vehicleVariant -> "?vehicleVariant=" <> (show vehicleVariant)) mbVehicleVariant)
+getUiPlans :: String -> String 
+getUiPlans vehicleVariant = case vehicleVariant of
+  "null" -> (getBaseUrl "") <> "/plan/list"
+  _ -> (getBaseUrl "") <> "/plan/list" <> "?vehicleVariant=" <> vehicleVariant 
 
 getCurrentPlan :: String -> String 
 getCurrentPlan driverId = (getBaseUrl "") <> "/plan/currentPlan"
