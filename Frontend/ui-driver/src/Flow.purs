@@ -148,14 +148,14 @@ import Effect.Unsafe (unsafePerformEffect)
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
+    versionCode <- lift $ lift $ liftFlow $ getVersionCode
+    checkVersion versionCode -- TODO:: Need to handle it properly considering multiple cities and apps
     liftFlowBT $ markPerformance "BASE_APP_FLOW_START"
     liftFlowBT $ Events.endMeasuringDuration "Flow.mainFlow"
     liftFlowBT $ Events.initMeasuringDuration "Flow.baseAppFlow"
     liftFlowBT $ setEventTimestamp "baseAppFlow"    
-    versionCode <- lift $ lift $ liftFlow $ getVersionCode
     liftFlowBT $ runEffectFn1 EHC.resetIdMap ""
     liftFlowBT $ resetAllTimers
-    -- checkVersion versionCode -- TODO:: Need to handle it properly considering multiple cities and apps
     checkTimeSettings
     cacheAppParameters versionCode baseFlow
     updateNightSafetyPopup
@@ -296,13 +296,14 @@ checkRideAndInitiate event driverInfoResponse = do
 
 checkVersion :: Int -> FlowBT String Unit
 checkVersion versioncode = do
-  when (getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && versioncode < (getLatestAndroidVersion (getMerchant FunctionCall))) $ do
+  package <- lift $ lift $ liftFlow $ JB.fetchPackageName unit
+  when ( has package "nammayatri" && getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && versioncode < (getLatestAndroidVersion (getMerchant FunctionCall))) $ do
     liftFlowBT hideSplash
     modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppVersion})
     fl <- UI.handleAppUpdatePopUp
     case fl of
       UpdateNow -> checkVersion versioncode
-      Later -> pure unit
+      Later -> checkVersion versioncode
 
 appUpdatedFlow :: FCMBundleUpdate -> FlowBT String Unit
 appUpdatedFlow payload = do
@@ -332,7 +333,7 @@ checkTimeSettings = do
 getLatestAndroidVersion :: Merchant -> Int
 getLatestAndroidVersion merchant =
   case merchant of
-    NAMMAYATRI -> 90
+    NAMMAYATRI -> 126
     YATRI -> 48
     YATRISATHI -> 16
     MOBILITY_PM -> 1
