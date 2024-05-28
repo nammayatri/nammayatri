@@ -1111,6 +1111,8 @@ eval (TimeUpdate time lat lng) state = do
   let driverLat = getLastKnownLocValue ST.LATITUDE lat
       driverLong = getLastKnownLocValue ST.LONGITUDE lng
       geoHash = Uncurried.runFn3 encodeGeohash driverLat driverLong 7
+      chargesOb = HU.getChargesOb state.data.cityConfig state.data.activeRide.driverVehicle
+      waitTimeEnabledForCity = chargesOb.perMinCharges > 0.0
       nearestZone = case state.props.currentStage, state.data.config.feature.enableSpecialPickup of 
                       ST.HomeScreen, true -> findNearestSpecialZone driverLat driverLong
                       _, _ -> Nothing
@@ -1135,12 +1137,12 @@ eval (TimeUpdate time lat lng) state = do
           _ <- pure $ JB.exitLocateOnMap ""
           checkPermissionAndUpdateDriverMarker newState true
     else pure unit
-    case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, isJust state.data.advancedRideData of
-      true, ST.RideAccepted, false, false -> do
+    case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, isJust state.data.advancedRideData, waitTimeEnabledForCity of
+      true, ST.RideAccepted, false, false, true -> do
         let dist = getDistanceBwCordinates driverLat driverLong state.data.activeRide.src_lat state.data.activeRide.src_lon
             insideThreshold = dist <= state.data.config.waitTimeConfig.thresholdDist
         pure $ if insideThreshold then UpdateAndNotify else (UpdateLastLoc driverLat driverLong insideThreshold)
-      _, _, _, _ -> pure $ UpdateLastLoc driverLat driverLong false
+      _, _, _, _, _ -> pure $ UpdateLastLoc driverLat driverLong false
     ]
 
 eval (OnMarkerClickCallBack tag lat lon) state = do
