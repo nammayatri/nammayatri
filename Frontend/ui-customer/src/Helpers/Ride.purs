@@ -44,10 +44,11 @@ import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromBook
 import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Common.Types.App as Common
+import Common.Types.App as CTA
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
 import Screens.Types (FareProductType(..)) as FPT
 import Resources.Constants (getFareFromArray)
+import Data.Array as DA
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -100,7 +101,7 @@ checkRideStatus rideAssigned = do
                     , showAcWorkingPopup = rideStatus == RideStarted
                   }
                 }
-        setValueToLocalStore IS_SOS_ACTIVE $ show $ Just Common.Pending == resp.sosStatus
+        setValueToLocalStore IS_SOS_ACTIVE $ show $ Just CTA.Pending == resp.sosStatus
         if rideStatus == HomeScreen then do 
           modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{rentalsInfo = (if rideScheduledAt == "" then Nothing else (Just{
                         rideScheduledAtUTC : rideScheduledAt
@@ -179,8 +180,6 @@ checkRideStatus rideAssigned = do
                     props { currentStage = RideCompleted
                           , estimatedDistance = contents.estimatedDistance
                           , zoneType = getSpecialTag resp.specialLocationTag
-                          , nightSafetyFlow = nightSafetyFlow
-                          , showOfferedAssistancePopUp = resp.hasDisability == Just true
                           }
                   , data { rideRatingState
                           { driverName = currRideListItem.driverName
@@ -213,7 +212,7 @@ checkRideStatus rideAssigned = do
                           , driverInfoCardState {
                             price = resp.estimatedTotalFare,
                             rideId = currRideListItem.id,
-                            providerType = maybe Common.ONUS (\valueAdd -> if valueAdd then Common.ONUS else Common.OFFUS) resp.isValueAddNP,
+                            providerType = maybe CTA.ONUS (\valueAdd -> if valueAdd then CTA.ONUS else CTA.OFFUS) resp.isValueAddNP,
                             rentalData 
                                 { finalDuration = (fromMaybe 0 resp.duration) / (60)
                                 , finalDistance = (fromMaybe 0 ride.chargeableRideDistance)/1000
@@ -229,11 +228,19 @@ checkRideStatus rideAssigned = do
                                 , extraTimeFare = show $ getFareFromArray fareBreakup "EXTRA_TIME_FARE"
                                 }
                           }
-                          , ratingViewState { rideBookingRes = (RideBookingRes resp), issueFacedView = nightSafetyFlow}
+                          , ratingViewState { rideBookingRes = (RideBookingRes resp)}
                           , vehicleVariant = currRideListItem.vehicleVariant
                           , fareProductType = fareProductType
+                          , rideCompletedData { 
+                              issueReportData { 
+                                hasAccessibilityIssue = resp.hasDisability == Just true
+                              , hasSafetyIssue = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime
+                              , hasTollIssue = getValueToLocalStore HAS_TOLL_CHARGES == "true"
+                              , showTollChargeAmbigousPopUp = resp.tollConfidence == Just CTA.UNSURE
+                              }
+                            }
                           }
-                })
+                        })
                 updateLocalStage RideCompleted
               when (length listResp.list == 0) $ do 
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})

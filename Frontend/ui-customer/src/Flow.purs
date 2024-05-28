@@ -20,7 +20,7 @@ import Screens.TicketBookingFlow.TicketBooking.Transformer
 import Services.API
 import Common.Resources.Constants (zoomLevel)
 import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate, ProviderType(..))
-import Common.Types.App as Common
+import Common.Types.App as CTA
 import Components.ChatView.Controller (makeChatComponent')
 import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
 import Components.SavedLocationCard.Controller (getCardType)
@@ -259,7 +259,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
           hideSplashAndCallFlow activateSafetyScreenFlow
         "sedu" -> do
           case globalPayload ^. _payload ^. _deepLinkJSON of
-            Just (Common.QueryParam queryParam) -> do
+            Just (CTA.QueryParam queryParam) -> do
               if isJust queryParam.option then do
                 let
                   videoList = RC.safetyBannerVideoConfigData (DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION) $ fetchLanguage $ getLanguageLocale languageKey
@@ -451,7 +451,7 @@ currentFlowStatus = do
   goToFindingQuotesStage :: String -> Maybe Boolean -> Maybe (Array String) -> Boolean -> FlowBT String Unit
   goToFindingQuotesStage estimateId mbIsValueAddNP otherSelectedEstimates driverOfferedQuote = do
     let
-      providerType = maybe Common.ONUS (\valueAdd -> if valueAdd then Common.ONUS else Common.OFFUS) mbIsValueAddNP -- This defines whether quote selected was ours or not after kill and relaunch
+      providerType = maybe CTA.ONUS (\valueAdd -> if valueAdd then CTA.ONUS else CTA.OFFUS) mbIsValueAddNP -- This defines whether quote selected was ours or not after kill and relaunch
     removeChatService ""
     if any (_ == (getValueToLocalStore FINDING_QUOTES_START_TIME)) [ "__failed", "" ] then do
       updateFlowStatus SEARCH_CANCELLED
@@ -1794,21 +1794,6 @@ homeScreenFlow = do
     TRIGGER_PERMISSION_FLOW flowType -> do
       modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen { stage = flowType })
       permissionScreenFlow
-    REPORT_ISSUE state -> do
-      if isNothing state.data.ratingViewState.issueReason then do
-        void $ Remote.callbackRequestBT FunctionCall
-        void $ pure $ toast $ getString STR.WE_WILL_GIVE_YOU_CALLBACK
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> state { data { ratingViewState { issueFacedView = false, selectedYesNoButton = -1 } } })
-        homeScreenFlow
-      else do
-        let
-          bookingId = if DS.null state.props.bookingId then state.data.rideRatingState.bookingId else state.props.bookingId
-
-          isNightSafety = Just $ state.props.nightSafetyFlow
-        void $ Remote.sendIssueBT (Remote.makeSendIssueReq Nothing (Just bookingId) (fromMaybe "" state.data.ratingViewState.issueReason) state.data.ratingViewState.issueDescription isNightSafety)
-        void $ pure $ toast $ getString STR.YOUR_ISSUE_HAS_BEEN_REPORTED
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> state { data { ratingViewState { issueFacedView = false, openReportIssue = false, selectedYesNoButton = -1 } }, props { nightSafetyFlow = false } })
-        homeScreenFlow
     RIDE_DETAILS_SCREEN state -> do
       modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { props { fromMyRides = Home } })
       tripDetailsScreenFlow
@@ -2035,6 +2020,41 @@ homeScreenFlow = do
           void $ lift $ lift $ toggleLoader false
           void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
           homeScreenFlow
+    GO_TO_ISSUE_REPORT_CHAT_SCREEN_WITH_ISSUE updatedState issueType -> do
+      if issueType == CTA.Accessibility then 
+        homeScreenFlow
+      else do
+        let 
+          language = fetchLanguage $ getLanguageLocale languageKey
+          categoryId = case issueType of 
+            CTA.NightSafety -> "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0"
+            _ -> "ziig3kxh-v0xc-kh0t-q6p1-f1v2n8ucs0kj"
+
+          categoryName = case issueType of 
+            CTA.NightSafety -> "Safety Related Issue"
+            _ -> "Ride related"
+
+        (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language  categoryId "" ""
+        let 
+          getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj {option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option) }) getOptionsRes.options
+          messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500*(index + 1))) getOptionsRes.messages
+          chats' = map (\(Message currMessage) -> Chat {chatId : currMessage.id, chatType : "IssueMessage", timestamp : (getCurrentUTC "")} )getOptionsRes.messages
+
+        modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { 
+          data {
+            entryPoint = ReportIssueChatScreenData.HomeScreenEntry
+          , chats = chats'
+          , tripId = Just updatedState.data.rideRatingState.rideId 
+          , categoryName = categoryName
+          , categoryId =categoryId
+          , options = getOptionsRes'
+          , chatConfig {
+              messages = messages' 
+            }
+          , selectedRide = Nothing 
+          } 
+        })
+        flowRouter IssueReportChatScreenFlow
     _ -> homeScreenFlow
 
 findEstimates :: HomeScreenState -> FlowBT String Unit
@@ -2187,7 +2207,7 @@ updateFollower callFollowersApi callInitUi eventType = do
                     _, _ -> followRideScreen.data.currentFollower
                 , sosStatus =
                   if eventType == Just "SOS_MOCK_DRILL" then
-                    Just Common.MockPending
+                    Just CTA.MockPending
                   else
                     Nothing
                 , currentStage =
@@ -2435,17 +2455,7 @@ tripDetailsScreenFlow = do
   flow <- UI.tripDetailsScreen
   case flow of
     GO_TO_HELPSCREEN -> flowRouter HelpAndSupportScreenFlow
-    GO_TO_RIDES -> myRidesScreenFlow
-    ON_SUBMIT state -> do
-      liftFlowBT $ logEventWithParams logField_ "ny_user_issue_reported" "Description" (state.data.message)
-      let
-        bookingId = if state.props.fromMyRides == Home then Just globalState.homeScreen.data.rideRatingState.bookingId else Just state.data.selectedItem.bookingId
-
-        isNightSafety = Just $ globalState.homeScreen.props.nightSafetyFlow
-      void $ Remote.sendIssueBT (Remote.makeSendIssueReq Nothing bookingId state.data.message state.data.message isNightSafety)
-      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { props { issueReported = true, fromMyRides = state.props.fromMyRides } })
-      when globalState.homeScreen.props.nightSafetyFlow $ do modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { ratingViewState { issueFacedView = false, selectedYesNoButton = -1 } }, props { nightSafetyFlow = false } })
-      tripDetailsScreenFlow
+    GO_TO_RIDES -> myRidesScreenFlow 
     GO_TO_INVOICE updatedState -> do
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_invoice_clicked"
         $ [ { key: "Pickup", value: unsafeToForeign updatedState.data.selectedItem.source }
@@ -2502,7 +2512,17 @@ tripDetailsScreenFlow = do
                     }) getOptionsRes.messages
           categoryName = getTitle selectedCategory.categoryAction
           merchantExoPhone' = if updatedState.data.selectedItem.merchantExoPhone == "" then Nothing else Just updatedState.data.selectedItem.merchantExoPhone
-      modifyScreenState $ ReportIssueChatScreenStateType (\ reportIssueChatState -> reportIssueChatState { data { merchantExoPhone = merchantExoPhone',  selectedRide = Just updatedState.data.selectedItem, entryPoint = ReportIssueChatScreenData.TripDetailsScreenEntry, chats = chats', categoryName = categoryName, categoryId = selectedCategory.categoryId, options = options', chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{messages = messages'}, tripId = Just updatedState.data.selectedItem.rideId }})
+      modifyScreenState $ ReportIssueChatScreenStateType (\ reportIssueChatState -> reportIssueChatState {
+        data {
+          merchantExoPhone = merchantExoPhone'
+        , selectedRide = Just updatedState.data.selectedItem
+        , tripId = Just updatedState.data.selectedItem.rideId
+        , entryPoint = ReportIssueChatScreenData.TripDetailsScreenEntry
+        , chats = chats'
+        , categoryName = categoryName
+        , categoryId = selectedCategory.categoryId
+        , options = options'
+        , chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{messages = messages'} }})
       flowRouter IssueReportChatScreenFlow
 
 invoiceScreenFlow :: FlowBT String Unit
@@ -5630,7 +5650,6 @@ fcmHandler notification state = do
                         }
                       , ratingViewState
                         { rideBookingRes = (RideBookingRes resp)
-                        , issueFacedView = nightSafetyFlow
                         }
                       , driverInfoCardState
                         { initDistance = Nothing
@@ -5641,12 +5660,18 @@ fcmHandler notification state = do
                           }
                         }
                       , vehicleVariant = ride.vehicleVariant
+                      , rideCompletedData {
+                        issueReportData {
+                          hasAccessibilityIssue = resp.hasDisability == Just true
+                        , hasSafetyIssue = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime
+                        , hasTollIssue = getValueToLocalStore HAS_TOLL_CHARGES == "true"
+                        , showTollChargeAmbigousPopUp = resp.tollConfidence == Just CTA.UNSURE
+                        }
+                        }
                       }
                     , props
                       { currentStage = RideCompleted
                       , estimatedDistance = contents.estimatedDistance
-                      , nightSafetyFlow = nightSafetyFlow
-                      , showOfferedAssistancePopUp = (resp.hasDisability == Just true)
                       }
                     }
               )

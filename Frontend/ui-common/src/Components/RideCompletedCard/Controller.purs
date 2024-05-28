@@ -7,13 +7,13 @@ import Components.PrimaryButton.Controller as PB
 import Components.SelectListModal.Controller as SL
 import Data.Int (toNumber)
 import Helpers.Utils (parseFloat)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd)
+import PrestoDOM 
 import Prim.TypeError as String
 import Common.Styles.Colors as Color
 import Font.Style (Style (..))
 import Components.PopUpModal as PopUpModal
 import Halogen.VDom.DOM.Prop (Prop)
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App 
 import Font.Style as FontStyle
 import Styles.Types (FontStyle)
 import Data.Eq.Generic (genericEq)
@@ -23,13 +23,17 @@ import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDeco
 import Data.Maybe
 import Styles.Types
 import Common.Types.App (RentalBookingConfig)
+import CarouselHolder as CarouselHolder
+import PrestoDOM.List
+import Halogen.VDom.DOM.Prop
+import Debug
+import Data.Maybe (Maybe(..))
+import Engineering.Helpers.Commons 
 
 data Action = Support
             | RideDetails
-            | SelectButton Int
-            | IssueReportIndex Int
+            | SelectButton Boolean Int
             | RateClick Int
-            | IssueReportPopUpAC SL.Action
             | SkipButtonActionController PB.Action
             | ContactSupportPopUpAC PopUpModal.Action
             | UpiQrRendered String
@@ -37,6 +41,8 @@ data Action = Support
             | HelpAndSupportAC
             | GoToSOS
             | NoAction
+            | BannerChanged String
+            | BannerMoving String
 
 type RentalRideTextConfig = {
   rideTime :: String,
@@ -51,7 +57,7 @@ type RentalRideTextConfig = {
 type Config = {
   isDriver :: Boolean,
   topCard :: TopCard,
-  customerIssueCard :: CustomerIssueCard,
+  customerIssue :: CustomerIssue,
   customerBottomCard :: CustomerBottomCard,
   driverBottomCard :: DriverBottomCard,
   contactSupportPopUpConfig :: PopUpModal.Config,
@@ -142,23 +148,15 @@ config = {
     },
     bottomText : "",
     horizontalLineColor : Color.white900
-  },
-  customerIssueCard : {
-    issueFaced : false, 
-    reportIssueView : false,
-    selectedYesNoButton : 0,
-    reportIssuePopUpConfig : SL.config,
-    title : "",
-    subTitle : "",
-    option1Text : "",
-    option2Text : "",
-    yesText : "",
-    noText : "",
-    isNightRide : false,
-    showCallSupport : false,
-    wasOfferedAssistanceCardView : false
-  },
-  customerBottomCard : {
+  }
+, customerIssue: {
+    currentIndex : 0
+  , currentPageIndex : 0
+  , bannerComputedView : Nothing
+  , customerIssueCards : []
+  , showIssueBanners : true
+  }
+, customerBottomCard : {
     visible : false,
     title : "",
     subTitle : "",
@@ -239,21 +237,23 @@ config = {
   showRentalRideDetails : false
 }
 
+type CustomerIssue = {
+  currentIndex :: Int
+, currentPageIndex :: Int
+, bannerComputedView :: Maybe ListItem
+, customerIssueCards :: Array CustomerIssueCard
+, showIssueBanners :: Boolean
+}
+
 type CustomerIssueCard = {
-  issueFaced :: Boolean, 
-  reportIssueView :: Boolean,
-  selectedYesNoButton :: Int,
-  reportIssuePopUpConfig :: SL.Config,
+  selectedYes :: Maybe Boolean,
   title :: String,
   subTitle :: String,
-  option1Text :: String,
-  option2Text :: String,
   yesText :: String,
-  noText :: String,
-  showCallSupport :: Boolean,
-  isNightRide :: Boolean,
-  wasOfferedAssistanceCardView :: Boolean
+  noText :: String
+, issueType :: CustomerIssueTypes
 }
+
 
 type TopCard = {
   title :: String,
@@ -427,3 +427,70 @@ dummyRentalBookingConfig =
   , extraDistanceFare : ""
   , extraTimeFare : ""
   }
+
+
+
+
+  
+
+type IssueReportBannerProps =(
+  layoutStroke :: PropValue
+, cornerRadius :: PropValue
+, background :: PropValue
+, visibility :: PropValue
+, title :: PropValue
+, titleColor :: PropValue
+, subTitle :: PropValue
+, subTitleColor :: PropValue
+, yesBackground :: PropValue
+, yesText :: PropValue
+, yesTextColor :: PropValue
+, yesStroke :: PropValue
+, noBackground :: PropValue
+, noText :: PropValue
+, noTextColor :: PropValue
+, noStroke :: PropValue
+)
+
+issueReportBannersTransformer  :: Array CustomerIssueCard -> Array (Record IssueReportBannerProps)
+issueReportBannersTransformer arr =
+  let _ = spy "ARRRR" arr
+  in map (
+  \item -> {
+    layoutStroke : toPropValue $ "1," <> Color.grey800,
+    background : toPropValue Color.white900,
+    visibility : toPropValue "visible",
+    title : toPropValue item.title,
+    titleColor : toPropValue Color.black800,
+    subTitle : toPropValue item.subTitle,
+    subTitleColor : toPropValue Color.black700,
+    yesBackground : toPropValue if item.selectedYes == Just true then Color.blue600 else Color.white900,
+    yesText : toPropValue item.yesText,
+    yesStroke : toPropValue $ if item.selectedYes == Just true then Color.blue900 else Color.grey800,
+    yesTextColor : toPropValue Color.black800,
+    noBackground : toPropValue if item.selectedYes == Just false then Color.blue600 else Color.white900,
+    noText : toPropValue item.noText,
+    noTextColor : toPropValue Color.black800,
+    noStroke : toPropValue $ if item.selectedYes == Just false then Color.blue900 else Color.grey800,
+    cornerRadius : toPropValue if os == "IOS" then "12.0" else "20.0"
+  }
+) arr
+
+
+getCarouselConfig ∷ ListItem → CustomerIssue → CarouselHolder.CarouselHolderConfig IssueReportBannerProps Action
+getCarouselConfig view customerIssueConfig = {
+    view
+  , items : issueReportBannersTransformer customerIssueConfig.customerIssueCards
+  , orientation : HORIZONTAL
+  , currentPage: customerIssueConfig.currentPageIndex
+  , autoScroll : false
+  , autoScrollDelay : 0.0
+  , id : "bannerCarousel"
+  , autoScrollAction : Nothing 
+  , onPageSelected : Just BannerChanged
+  , onPageScrollStateChanged : Just BannerMoving
+  , onPageScrolled : Nothing
+  , currentIndex : customerIssueConfig.currentIndex
+  , showScrollIndicator : false
+  , layoutHeight : V 180
+}

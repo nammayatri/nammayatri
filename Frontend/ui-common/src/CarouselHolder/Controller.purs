@@ -41,6 +41,8 @@ type CarouselHolderConfig item a = {
   , onPageScrollStateChanged :: Maybe (String -> a)
   , onPageScrolled :: Maybe (String -> a)
   , currentIndex :: Int
+  , showScrollIndicator :: Boolean
+  , layoutHeight :: Length
 }
 
 checkAndStartAutoLoop :: forall a action. (action -> Effect Unit) -> CarouselHolderConfig a action -> Effect Unit

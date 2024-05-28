@@ -145,6 +145,7 @@ data KeyStore = USER_NAME
                 | RIDE_START_TIMER_ID
                 | PREVIOUS_LOCAL_STAGE
                 | COIN_EARNED_POPUP_TYPE
+                | SHOW_TOLL_POPUP
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

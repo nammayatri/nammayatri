@@ -147,6 +147,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Screens.Types (FareProductType(..)) as FPT
 import Helpers.Utils (decodeBookingTimeList)
 import Resources.Localizable.EN (getEN)
+import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -170,6 +171,7 @@ screen initialState =
             else do
               pure unit
             when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ flowRunner defaultGlobalState $ computeListItem push
+            when (isNothing initialState.data.rideCompletedData.issueReportData.bannerItem) $ void $ launchAff $ flowRunner defaultGlobalState $  computeIssueReportBanners push
             case initialState.props.currentStage of
               SearchLocationModel -> case initialState.props.isSearchLocation of
                 LocateOnMap -> do
@@ -536,6 +538,7 @@ view push state =
             , if state.props.showIntercityUnserviceablePopUp || state.props.showNormalRideNotSchedulablePopUp then intercityInSpecialZonePopupView push state else emptyTextView state
             , if state.props.zoneOtpExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.showScheduledRideExistsPopUp then scheduledRideExistsPopUpView push state else emptyTextView state
+            , if state.data.rideCompletedData.issueReportData.showTollChargeAmbigousPopUp then PopUpModal.view (push <<< TollChargeAmbigousPopUpAction) (PopUpConfigs.finalFareExcludesToll state) else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -654,6 +657,8 @@ getCarouselConfig view state banners = {
   , onPageScrollStateChanged : Just BannerStateChanged
   , onPageScrolled : Nothing
   , currentIndex : state.data.bannerData.currentBanner
+  , showScrollIndicator : true
+  , layoutHeight : V 100
 }
 
 rideCompletedCardView ::  forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -4114,6 +4119,11 @@ computeListItem :: (Action -> Effect Unit) -> Flow GlobalState Unit
 computeListItem push = do
   bannerItem <- preComputeListItem $ BannerCarousel.view push (BannerCarousel.config BannerCarousel)
   void $ liftFlow $ push (SetBannerItem bannerItem)
+
+computeIssueReportBanners :: (Action -> Effect Unit) -> Flow GlobalState Unit
+computeIssueReportBanners push = do
+  bannerItem <- preComputeListItem $ RideCompletedCard.customerIssueCarousalView (push <<< RideCompletedAC) 
+  void $ liftFlow $ push $ SetIssueReportBannerItems bannerItem
     
 updateEmergencyContacts :: (Action -> Effect Unit) -> HomeScreenState -> FlowBT String Unit
 updateEmergencyContacts push state = do

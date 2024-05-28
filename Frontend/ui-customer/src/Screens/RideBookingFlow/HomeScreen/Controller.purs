@@ -129,7 +129,7 @@ import PrestoDOM.List
 import PrestoDOM.Core
 import Locale.Utils (getLanguageLocale)
 import RemoteConfig as RC
-import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
+import Screens.RideBookingFlow.HomeScreen.BannerConfig
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import LocalStorage.Cache (getValueFromCache, setValueToCache, getFromCache, setInCache, removeValueFromCache)
 import DecodeUtil (getAnyFromWindow, stringifyJSON, decodeForeignAny, parseJSON, decodeForeignAnyImpl)
@@ -711,7 +711,6 @@ data ScreenOutput = LogoutUser
                   | CheckFlowStatus HomeScreenState
                   | ExitToPermissionFlow PermissionScreenStage
                   | RetryFindingQuotes Boolean HomeScreenState
-                  | ReportIssue HomeScreenState
                   | RideDetailsScreen HomeScreenState
                   | GoToTicketBookingFlow HomeScreenState
                   | GoToMyTickets HomeScreenState
@@ -740,6 +739,7 @@ data ScreenOutput = LogoutUser
                   | RideSearchSO
                   | ConfirmRentalRideSO HomeScreenState
                   | StayInHomeScreenSO HomeScreenState
+                  | GoToIssueReportChatScreenWithIssue HomeScreenState CTP.CustomerIssueTypes
 
 data Action = NoAction
             | BackPressed
@@ -841,11 +841,8 @@ data Action = NoAction
             | TriggerPermissionFlow PermissionScreenStage
             | PopUpModalCancelConfirmationAction PopUpModal.Action
             | ScrollToBottom
-            | SelectButton Int
             | RateClick Int
             | Support
-            | IssueReportPopUpAC CancelRidePopUp.Action
-            | IssueReportIndex Int
             | RideDetails
             | TerminateApp
             | DirectSearch
@@ -929,6 +926,10 @@ data Action = NoAction
             | IntercitySpecialZone PopUpModal.Action
             | StartScheduledRidePolling 
             | RentalBannerClick 
+            | SetIssueReportBannerItems ListItem
+            | UpdateNextIssueBannerPage Int
+            | UpdateNextIssueBanneerSwipe Int 
+            | TollChargeAmbigousPopUpAction PopUpModal.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -1080,6 +1081,16 @@ eval ReAllocate state =
   else continue state
   
 eval (SetBannerItem bannerItem) state = continue state{data{bannerData{bannerItem = Just bannerItem}}, props{isBannerDataComputed = true}}
+
+eval (SetIssueReportBannerItems bannerItem) state = continue state {
+  data {
+    rideCompletedData {
+      issueReportData {
+        bannerItem = Just bannerItem
+      }
+    }
+  }
+}
 
 eval UpdateBanner state = do
   if state.data.bannerData.bannerScrollState == "1" then continue state
@@ -1269,10 +1280,7 @@ eval OnResumeCallback state =
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
-eval ( RideCompletedAC (RideCompletedCard.SelectButton index)) state = do
-  case state.data.ratingViewState.issueFacedView of
-    true -> continue state { data { ratingViewState { selectedYesNoButton = index, doneButtonVisibility = true}}}
-    false -> continue state {data { ratingViewState{selectedYesNoButton = index, doneButtonVisibility = true, wasOfferedAssistance = Just (index==0)}}} 
+------------------------------- Ride Completed Screen - Start --------------------------
 
 eval ( RideCompletedAC (RideCompletedCard.RateClick index)) state = do
   void $ pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
@@ -1288,17 +1296,92 @@ eval ( RideCompletedAC (RideCompletedCard.RateClick index)) state = do
         }
       }
 
-eval ( RideCompletedAC (RideCompletedCard.IssueReportIndex index)) state =
-  case index of
-    0 -> continue state { data { ratingViewState { openReportIssue = true }}}
-    1 -> exit $ ReportIssue state { data {  ratingViewState { issueReason = Nothing }}}
-    _ -> continue state
+eval (RideCompletedAC(RideCompletedCard.BannerChanged idxStr)) state = 
+  case fromString idxStr of 
+    Just idx -> if idx == state.data.rideCompletedData.issueReportData.currentBannerIndex then update state else continue state {data {rideCompletedData { issueReportData {currentBannerIndex = idx}}}} 
+    Nothing -> update state
 
-eval (RideCompletedAC (RideCompletedCard.Support)) state = continue state {props {callSupportPopUp = true}}
+eval (RideCompletedAC (RideCompletedCard.SelectButton selectedYes pageIndex)) state = do 
+  let 
+    availableBanners = issueReportBannerConfigs state
+    noOfAvailableBanners = length availableBanners 
+    bannerAtIndex = availableBanners !! pageIndex
+  
+  case bannerAtIndex of 
+    Just bannerObj -> do 
+      let 
+        issueType = bannerObj.issueType 
+        issueResponse = find (\obj -> obj.issueType == issueType) state.data.rideCompletedData.issueReportData.customerResponse 
+        issueResponseIndex = findIndex (\obj -> obj.issueType == issueType) state.data.rideCompletedData.issueReportData.customerResponse 
+      case issueResponse , issueResponseIndex of 
+        Just respObj, Just respIdx -> do
+          let 
+            updatedResponse = respObj {selectedYes = Just selectedYes}
+            updatedIssueResponseArr = updateAt respIdx updatedResponse state.data.rideCompletedData.issueReportData.customerResponse
+          case updatedIssueResponseArr of 
+            Just updatedIssueResponseArrObj -> do
+              let 
+                updatedState = state {data {rideCompletedData { issueReportData {customerResponse = updatedIssueResponseArrObj}}}}
+                userRespondedIssues = filter (\issueResp -> issueResp.selectedYes /= Nothing) updatedIssueResponseArrObj
+                userRespondedIssuesCount = length userRespondedIssues
 
-eval (RideCompletedAC (RideCompletedCard.RideDetails)) state = exit $ RideDetailsScreen state -- TODO needs to fill the data
+              if noOfAvailableBanners == userRespondedIssuesCount then do
+                let 
+                  postiveResp = filter (\issueResp -> issueResp.selectedYes == Just true) updatedIssueResponseArrObj 
+                  negativeResp = filter (\issueResp -> issueResp.selectedYes == Just false) updatedIssueResponseArrObj
 
-eval (RideCompletedAC (RideCompletedCard.HelpAndSupportAC)) state = exit $ GoToHelpAndSupport state
+                  hasAssistenceIssue = any (\issueResp -> issueResp.issueType == CTP.Accessibility) negativeResp 
+                  hasSafetyIssue = any (\issueResp -> issueResp.issueType == CTP.NightSafety) negativeResp
+                  hasTollIssue = any (\issueResp -> issueResp.issueType == CTP.TollCharge) negativeResp
+
+                  priorityIssue = case hasSafetyIssue, hasTollIssue of
+                    true, _ -> CTP.NightSafety
+                    false, true -> CTP.TollCharge
+                    _, _ -> CTP.NoIssue
+
+                  ratingUpdatedState = updatedState {
+                    data{
+                      rideCompletedData {
+                        issueReportData {
+                          showIssueBanners = false
+                        }
+                      }
+                    , ratingViewState{
+                        wasOfferedAssistance = Just $ not hasAssistenceIssue
+                      }
+                    }
+                  }
+                
+                if priorityIssue == CTP.NoIssue then 
+                  continue ratingUpdatedState 
+                else 
+                  exit $ GoToIssueReportChatScreenWithIssue ratingUpdatedState priorityIssue
+              else 
+                continue updatedState{data {rideCompletedData { issueReportData {currentPageIndex = if  (pageIndex + 1) < noOfAvailableBanners then pageIndex + 1 else pageIndex}}}}  
+            Nothing -> update state
+        _ , _ -> update state
+    Nothing -> update state
+
+eval (RideCompletedAC RideCompletedCard.Support) state = continue state {props {callSupportPopUp = true}}
+
+eval (RideCompletedAC RideCompletedCard.RideDetails) state = exit $ RideDetailsScreen state -- TODO needs to fill the data
+
+eval (RideCompletedAC RideCompletedCard.HelpAndSupportAC) state = exit $ GoToHelpAndSupport state
+
+eval (RideCompletedAC RideCompletedCard.GoToSOS) state = exit $ GoToNammaSafety state true false 
+
+eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = do
+  void $ pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
+  if state.data.fareProductType == FPT.RENTAL then continue state{data{fareProductType = FPT.ONE_WAY}} 
+  else updateAndExit state $ SubmitRating state{ data {rideRatingState {rating = state.data.ratingViewState.selectedRating }}}
+
+------------------------------- Ride Completed Screen - End --------------------------
+
+eval (UpdateNextIssueBannerPage index) state = update state --{data {rideCompletedData { issueReportData {currentPageIndex = index}}}}
+
+eval (UpdateNextIssueBanneerSwipe index) state = update state --{data {rideCompletedData { issueReportData {currentBannerIndex = index}}}}
+
+
 
 ------------------------------- ChatService - Start --------------------------
 
@@ -1916,51 +1999,7 @@ eval WhereToClick state = do
     void $ pure $ updateLocalStage SearchLocationModel
     exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}, data{source= if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source}}
   
-eval (RideCompletedAC RideCompletedCard.GoToSOS) state = exit $ GoToNammaSafety state true false 
 
-eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = do
-  if state.data.fareProductType == FPT.RENTAL then continue state{data{fareProductType = FPT.ONE_WAY}}
-  else   
-    case state.data.ratingViewState.issueFacedView of
-      true -> do
-              void $ pure $ toggleBtnLoader "SkipButton" false
-              _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
-              let newState = state
-                            { props { nightSafetyFlow = false }
-                            , data
-                              { rideRatingState =
-                                dummyRideRatingState
-                                  { driverName = state.data.driverInfoCardState.driverName
-                                  , rideId = state.data.driverInfoCardState.rideId
-                                  },
-                                ratingViewState {issueFacedView = false, openReportIssue = false, selectedYesNoButton = -1, doneButtonVisibility = false}
-                              }
-                            }
-              if state.props.nightSafetyFlow && state.data.ratingViewState.selectedYesNoButton == boolToInt state.props.nightSafetyFlow  then 
-                exit $ GoToReportSafetyIssue newState
-              else continue newState
-                
-      false ->  
-        if state.props.showOfferedAssistancePopUp then do
-          void $ pure $ toggleBtnLoader "SkipButton" false
-          continue state {data {ratingViewState {selectedYesNoButton = -1, doneButtonVisibility = false}} , props{showOfferedAssistancePopUp = false}} 
-        else 
-          if state.data.ratingViewState.selectedRating > 0 then updateAndExit state $ SubmitRating state{ data {rideRatingState {rating = state.data.ratingViewState.selectedRating }}}
-              else do
-                _ <- pure $ firebaseLogEvent "ny_user_ride_skip_feedback"
-                _ <- pure $ setValueToLocalStore RATING_SKIPPED "true"
-                _ <- pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $ EventPayload {
-                                            event : "process_result"
-                                          , payload : Just {
-                                            action : "feedback_skipped"
-                                          , trip_amount : Just state.data.finalAmount
-                                          , trip_id : Just state.props.bookingId
-                                          , ride_status : Nothing
-                                          , screen : Just $ getScreenFromStage state.props.currentStage
-                                          , exit_app : false
-                                          }
-                                          }
-                updateAndExit state $ GoToHome state
 
 eval OpenSettings state = do
   _ <- pure $ hideKeyboardOnNavigation true
@@ -2116,20 +2155,6 @@ eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnC
       Just index -> if ( (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "OTHER" || (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "TECHNICAL_GLITCH" ) then exit $ CancelRide state{props{cancelDescription = if (state.props.cancelDescription == "") then (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description else state.props.cancelDescription }} NORMAL_RIDE_CANCEL
                       else exit $ CancelRide state{props{cancelDescription = (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description , cancelReasonCode = (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode }} NORMAL_RIDE_CANCEL
       Nothing    -> continue state
-
-eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.Button1 PrimaryButtonController.OnClick))) state = continue state { data { ratingViewState { openReportIssue = false } } }
-
-eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.OnGoBack))) state = continue state { data { ratingViewState { openReportIssue = false } } }
-
-eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.UpdateIndex index))) state = continue state { data { ratingViewState { issueReportActiveIndex = Just index} } }
-
-eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.Button2 PrimaryButtonController.OnClick))) state = do
-  let issue = (if state.props.nightSafetyFlow then safetyIssueOptions true else reportIssueOptions state)!!(fromMaybe 1 state.data.ratingViewState.issueReportActiveIndex)
-      reason = (fromMaybe dummyCancelReason issue)
-  exit $ ReportIssue state { data {
-    ratingViewState { issueReason = Just reason.reasonCode, issueDescription = reason.description},
-    rideRatingState {rideId = state.data.driverInfoCardState.rideId, feedback = ""}
-    }}
 
 eval (PredictionClickedAction (LocationListItemController.OnClick item)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_prediction_list_item"
@@ -3178,6 +3203,8 @@ eval UpdateRateCardCache state = do
                   Nothing -> Nothing
                   Just rateCard -> Just $ runFn2 setInCache (show RATE_CARD_INFO) rateCard
         Just val -> Just val
+
+eval (TollChargeAmbigousPopUpAction PopUpModal.OnButton2Click) state = continue state { data { rideCompletedData { issueReportData {showTollChargeAmbigousPopUp = false }}}}
 
 eval _ state = update state
 

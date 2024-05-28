@@ -2,7 +2,7 @@ module Screens.RideBookingFlow.HomeScreen.BannerConfig where
 
 import Prelude
 
-import Common.Types.App (LazyCheck(..), ProviderType(..))
+import Common.Types.App (LazyCheck(..), ProviderType(..), CustomerIssueTypes(..))
 import Language.Strings (getString)
 import PrestoDOM (Length(..), Margin(..), Padding(..))
 import Components.BannerCarousel as BannerCarousel
@@ -24,6 +24,8 @@ import MerchantConfig.Types (CityConfig)
 import Data.Function.Uncurried (runFn3)
 import DecodeUtil (getAnyFromWindow)
 
+import Components.RideCompletedCard as RideCompletedCard
+import Data.Foldable
 
 getBannerConfigs :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
 getBannerConfigs state action =
@@ -199,3 +201,53 @@ checkoutRentalBannerConfig state action =
       , type = BannerCarousel.RentalsAndIntercity
       }
   in config'
+
+
+issueReportBannerConfigs :: forall action. ST.HomeScreenState -> Array (RideCompletedCard.CustomerIssueCard)
+issueReportBannerConfigs state =
+  let 
+    tollIssue = state.data.rideCompletedData.issueReportData.hasTollIssue 
+    nightSafetyIssue = state.data.rideCompletedData.issueReportData.hasSafetyIssue
+    accessibilityIssue =  state.data.rideCompletedData.issueReportData.hasAccessibilityIssue
+
+    customerResposeArray = state.data.rideCompletedData.issueReportData.customerResponse
+
+
+    (tollIssueConfig :: RideCompletedCard.CustomerIssueCard) = { 
+      issueType : TollCharge
+    , selectedYes : findYesNoState customerResposeArray TollCharge
+    , title : getString WAS_TOLL_EXP_SMOOTH   -- title should be one line
+    , subTitle : getString WAS_TOLL_EXP_SMOOTH_DESC  --- subtitle should be two lines
+    , yesText : getString YES
+    , noText : getString NO
+    }
+
+    (nightSafetyIssueConfig :: RideCompletedCard.CustomerIssueCard) = { 
+      issueType : NightSafety
+    , selectedYes : findYesNoState customerResposeArray NightSafety
+    , title : getString WAS_RIDE_SAFE
+    , subTitle : getString WAS_RIDE_SAFE_DESC
+    , yesText :  getString YES
+    , noText : getString NO
+    }
+
+    (accessibilityIssueConfig :: RideCompletedCard.CustomerIssueCard) = { 
+      issueType : Accessibility
+    , selectedYes : findYesNoState customerResposeArray Accessibility
+    , title : getString WAS_DRIVER_HELPFUL
+    , subTitle : getString WAS_DRIVER_HELPFUL_DESC
+    , yesText :  getString YES
+    , noText : getString NO
+    }
+
+  in
+    (if nightSafetyIssue then [nightSafetyIssueConfig] else [])
+    <> (if tollIssue then [tollIssueConfig] else [])
+    <> (if accessibilityIssue then [accessibilityIssueConfig] else [])
+
+  where 
+    findYesNoState customerResp issueType = 
+      case find (\x -> x.issueType == issueType) customerResp of 
+        Just issue -> issue.selectedYes
+        Nothing -> Nothing
+

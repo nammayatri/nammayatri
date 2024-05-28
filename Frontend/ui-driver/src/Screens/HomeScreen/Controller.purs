@@ -421,6 +421,8 @@ data Action = NoAction
             | OnAudioCompleted String
             | ACExpController PopUpModal.Action
             | OpenLink String
+            | TollChargesPopUpAC PopUpModal.Action
+            | TollChargesAmbigousPopUpAC PopUpModal.Action
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -1420,6 +1422,10 @@ eval (OpenLink link) state = continueWithCmd state [ do
   void $ JB.openUrlInApp link
   pure AfterRender
   ]
+  
+eval (TollChargesPopUpAC PopUpModal.OnButton2Click) state = continue state {props { toll  {showTollChargePopup = false}}}
+
+eval (TollChargesAmbigousPopUpAC PopUpModal.OnButton2Click) state = continue state {props {toll {showTollChargeAmbigousPopup = false}}}
 
 eval _ state = update state
 
@@ -1473,6 +1479,7 @@ activeRideDetail state (RidesInfo ride) =
       isSafetyRide = isSafetyPeriod state ride.createdAt
       isSpecialPickupZone = checkSpecialPickupZone ride.specialLocationTag
       tripType = rideTypeConstructor ride.tripCategory
+      -- _ = setValueToLocalStore HAS
   in 
   {
   id : ride.id,

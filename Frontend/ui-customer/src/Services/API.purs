@@ -1006,7 +1006,8 @@ newtype RideBookingRes = RideBookingRes {
   status :: String,
   tripTerms :: Array String,
   updatedAt :: String,
-  vehicleServiceTierType :: Maybe String
+  vehicleServiceTierType :: Maybe String,
+  tollConfidence :: Maybe CTA.Confidence
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
@@ -1120,6 +1121,7 @@ instance standardEncodeBookingLocationAPIEntity :: StandardEncode BookingLocatio
 instance showBookingLocationAPIEntity :: Show BookingLocationAPIEntity where show = genericShow
 instance decodeBookingLocationAPIEntity :: Decode BookingLocationAPIEntity where decode = defaultDecode
 instance encodeBookingLocationAPIEntity  :: Encode BookingLocationAPIEntity where encode = defaultEncode
+
 
 -------------------------------------------------- Select Estimate Id  API Types -----------------------------------------------------------------
 

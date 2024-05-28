@@ -1401,3 +1401,7 @@ getML stringKey =
         CONVERT_YOUR_COINS_TO_DISCOUNT -> "കോയിനുകൾ രൂപാന്തരിപ്പിക്കുക"
         CONVERT_YOUR_COINS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION -> "നിങ്ങളുടെ സബ്സ്ക്രിപ്ഷൻ ഡിസ്കൗണ്ട് ലഭിക്കാൻ കോയിനുകൾ രൂപാന്തരിപ്പിക്കുക"
         CONVERT_NOW -> "ഇപ്പോൾ രൂപാന്തരിപ്പിക്കുക"
+        TOLL_CHARGES_INCLUDED -> "ടോൾ നിരക്കുകൾ നിരക്കിൽ ഉൾപ്പെടുത്തിയിട്ടുണ്ട്"
+        PLEASE_DO_NOT_DEMAND_EXTRA -> "ദയവായി ഉപഭോക്താവിൽ നിന്ന് അധികമായി ആവശ്യപ്പെടരുത്"
+        FINAL_FARE_EXCLUDES_TOLL -> "അന്തിമ നിരക്ക് ടോൾ നിരക്കുകൾ ഒഴിവാക്കുന്നു"
+        PLEASE_COLLECT_SEPARATELY -> "ദയവായി അത് ഉപഭോക്താവിൽ നിന്ന് പ്രത്യേകം ശേഖരിക്കുക <b>ഒരു ടോൾ മറികടന്നാൽ മാത്രം</b>"

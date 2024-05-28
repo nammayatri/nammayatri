@@ -62,7 +62,7 @@ import MerchantConfig.Types (AppConfig)
 import Data.Maybe (Maybe(..))
 import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduledScreenData
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
-import Common.Types.App (CategoryListType)
+import Common.Types.App as CTA 
 import Screens.TicketBookingFlow.MetroTicketDetails.ScreenData as MetroTicketDetailsScreenData
 import Screens.TicketBookingFlow.MetroMyTickets.ScreenData as MetroMyTicketsScreenData
 import Screens.TicketBookingFlow.TicketStatus.ScreenData as TicketStatusScreenData
@@ -170,7 +170,7 @@ defaultGlobalFlowCache = {
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
 
-data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT TripDetailsScreenState | GO_TO_INVOICE TripDetailsScreenState | GO_TO_HOME TripDetailsScreenState | GO_TO_RIDES | GO_TO_HELPSCREEN | CONNECT_WITH_DRIVER TripDetailsScreenState | GET_CATEGORIES_LIST TripDetailsScreenState | GO_TO_ISSUE_CHAT_SCREEN TripDetailsScreenState CategoryListType
+data TRIP_DETAILS_SCREEN_OUTPUT = GO_TO_INVOICE TripDetailsScreenState | GO_TO_HOME TripDetailsScreenState | GO_TO_RIDES | GO_TO_HELPSCREEN | CONNECT_WITH_DRIVER TripDetailsScreenState | GET_CATEGORIES_LIST TripDetailsScreenState | GO_TO_ISSUE_CHAT_SCREEN TripDetailsScreenState CTA.CategoryListType
 
 data CONTACT_US_SCREEN_OUTPUT = GO_TO_HOME_FROM_CONTACT ContactUsScreenState
 
@@ -234,7 +234,6 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | RETRY_FINDING_QUOTES Boolean
                         | ON_CALL HomeScreenState CallType String
                         | TRIGGER_PERMISSION_FLOW PermissionScreenStage
-                        | REPORT_ISSUE HomeScreenState
                         | RIDE_DETAILS_SCREEN HomeScreenState
                         | GO_TO_TICKET_BOOKING_FLOW HomeScreenState
                         | REPEAT_RIDE_FLOW_HOME Trip
@@ -262,6 +261,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_RIDE_SEARCH_FLOW 
                         | CONFIRM_RENTAL_RIDE
                         | STAY_IN_HOME_SCREEN
+                        | GO_TO_ISSUE_REPORT_CHAT_SCREEN_WITH_ISSUE HomeScreenState CTA.CustomerIssueTypes
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

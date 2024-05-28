@@ -42,9 +42,6 @@ instance loggableAction :: Loggable Action where
         BackPressed -> do
             trackAppBackPress appId (getScreen TRIP_DETAILS_SCREEN)
             trackAppEndScreen appId (getScreen TRIP_DETAILS_SCREEN)
-        PrimaryButtonActionController act -> case act of
-            PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "primary_button" "go_home_or_submit"
-            PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "primary_button" "no_action"
         GenericHeaderActionController act -> case act of
             GenericHeaderController.PrefixImgOnClick -> do
                 trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "generic_header_action" "back_icon"
@@ -74,8 +71,7 @@ instance loggableAction :: Loggable Action where
         OpenChat arg1 -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "open_chat"
         ListExpandAinmationEnd -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "list_expand_animation_end"
 
-data Action = PrimaryButtonActionController PrimaryButtonController.Action
-            | GenericHeaderActionController GenericHeaderController.Action
+data Action = GenericHeaderActionController GenericHeaderController.Action
             | SourceToDestinationActionController SourceToDestinationController.Action 
             | BackPressed
             | ReportIssue 
@@ -89,7 +85,7 @@ data Action = PrimaryButtonActionController PrimaryButtonController.Action
             | OpenChat CategoryListType
             | ListExpandAinmationEnd
 
-data ScreenOutput = GoBack TripDetailsGoBackType | OnSubmit TripDetailsScreenState | GoToInvoice TripDetailsScreenState | GoHome TripDetailsScreenState | ConnectWithDriver TripDetailsScreenState | GetCategorieList TripDetailsScreenState | GoToIssueChatScreen TripDetailsScreenState CategoryListType
+data ScreenOutput = GoBack TripDetailsGoBackType | GoToInvoice TripDetailsScreenState | GoHome TripDetailsScreenState | ConnectWithDriver TripDetailsScreenState | GetCategorieList TripDetailsScreenState | GoToIssueChatScreen TripDetailsScreenState CategoryListType
 
 eval :: Action -> TripDetailsScreenState -> Eval Action ScreenOutput TripDetailsScreenState
 
@@ -113,12 +109,6 @@ eval ReportIssue state =  do
 eval (MessageTextChanged a) state = continue state { data { message = trim(a) }, props{activateSubmit = if (length (trim(a)) > 1) then true else false}}
 
 eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick )) state = continueWithCmd state [do pure BackPressed]
-
-eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
-    _ <- pure $ hideKeyboardOnNavigation true
-    if state.props.issueReported then 
-        updateAndExit state $ GoHome state
-    else updateAndExit state $ OnSubmit state
 
 eval Copy state = continueWithCmd state [ do 
     _ <- pure $ copyToClipboard state.data.tripId

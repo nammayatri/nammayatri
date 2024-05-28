@@ -628,6 +628,8 @@
       "ny_ic_tip_ride_tag" : true,
       "ny_ic_toggle_off" : true,
       "ny_ic_toggle_on" : true,
+      "ny_ic_toll_charges_excluded" : true,
+      "ny_ic_toll_charges_included" : true,
       "ny_ic_transaction_pending" : true,
       "ny_ic_tumakuru_map" : true,
       "ny_ic_two_more_rides" : true,

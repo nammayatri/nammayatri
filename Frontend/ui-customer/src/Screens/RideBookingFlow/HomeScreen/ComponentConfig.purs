@@ -104,7 +104,7 @@ import Resources.Localizable.EN (getEN)
 import Engineering.Helpers.Utils as EHU
 import Mobility.Prelude
 import Locale.Utils
-import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
+import Screens.RideBookingFlow.HomeScreen.BannerConfig 
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import LocalStorage.Cache (getValueFromCache)
 import ConfigProvider
@@ -116,6 +116,8 @@ import Data.String.CodeUnits (stripPrefix, stripSuffix)
 import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig)
 import Helpers.TipConfig
 import Debug
+import Data.Array as DA
+
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state =
@@ -238,49 +240,33 @@ skipButtonConfig state =
     isRentalRide = state.data.fareProductType == FPT.RENTAL
 
     config = PrimaryButton.config
-
-    buttonText =
-      if state.data.ratingViewState.selectedYesNoButton == boolToInt state.props.nightSafetyFlow && issueFaced then
-        REPORT_ISSUE_
-      else
-        DONE
-
     primaryButtonConfig' =
       config
         { textConfig
-          { text = getString buttonText
+          { text = getString DONE
           , accessibilityHint = "Done : Button"
           , color = state.data.config.primaryTextColor
           }
         , background = state.data.config.primaryBackground
         , margin = MarginTop 22
         , id = "SkipButton"
-        -- , enableLoader = (JB.getBtnLoader "SkipButton") -- TODO
-        , visibility = boolToVisibility $ isRentalRide || doneButtonVisibility || state.data.ratingViewState.doneButtonVisibility
-        , isClickable = isRentalRide || issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
-        , alpha = if isRentalRide || issueFaced || (state.data.ratingViewState.selectedRating >= 1) || getSelectedYesNoButton state >= 0 then 1.0 else 0.4
-        , enableRipple = isRentalRide || issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
+        , enableLoader = (JB.getBtnLoader "SkipButton")
+        , visibility = boolToVisibility $ doneButtonVisibility 
+        , isClickable = doneButtonVisibility && state.data.ratingViewState.selectedRating > 0 
+        , alpha = if doneButtonVisibility && state.data.ratingViewState.selectedRating > 0  then 1.0 else 0.4
+        , enableRipple = doneButtonVisibility && state.data.ratingViewState.selectedRating > 0 
         , rippleColor = Color.rippleShade
         }
   in
     primaryButtonConfig'
-  where
-  issueFaced = state.data.ratingViewState.issueFacedView
+  where 
+    doneButtonVisibility = (DA.null $ issueReportBannerConfigs state) || (not state.data.rideCompletedData.issueReportData.showIssueBanners)
 
-  showOfferedAssistancePopUp = state.props.showOfferedAssistancePopUp
 
-  doneButtonVisibility = case issueFaced, showOfferedAssistancePopUp of
-    false, false -> true
-    _, _ -> false
-
-getSelectedYesNoButton :: ST.HomeScreenState -> Int
-getSelectedYesNoButton state = state.data.ratingViewState.selectedYesNoButton
 
 maybeLaterButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 maybeLaterButtonConfig state =
   let
-    issueFaced = state.data.ratingViewState.issueFacedView
-
     config = PrimaryButton.config
 
     primaryButtonConfig' =
@@ -570,42 +556,6 @@ metroTicketBannerConfig state =
   in
     config'
 
-reportIssuePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
-reportIssuePopUpConfig state =
-  let
-    reportIssueConfig = CancelRidePopUpConfig.config
-
-    reportIssueConfig' =
-      reportIssueConfig
-        { selectionOptions = options
-        , primaryButtonTextConfig
-          { firstText = getString GO_BACK_
-          , secondText = getString SUBMIT
-          }
-        , activeIndex = state.data.ratingViewState.issueReportActiveIndex
-        , activeReasonCode = state.data.ratingViewState.issueReasonCode
-        , isLimitExceeded = false
-        , isSelectButtonActive =
-          ( case state.data.ratingViewState.issueReportActiveIndex of
-              Just issueReportActiveIndex -> true
-              Nothing -> false
-          )
-        , headingTextConfig
-          { text = getString REPORT_ISSUE_
-          }
-        , subHeadingTextConfig
-          { text = getString PLEASE_TELL_US_WHAT_WENT_WRONG
-          }
-        , hint = getString HELP_US_WITH_YOUR_REASON
-        , strings
-          { mandatory = getString MANDATORY
-          , limitReached = ((getString MAX_CHAR_LIMIT_REACHED) <> " 100 " <> (getString OF) <> " 100")
-          }
-        }
-  in
-    reportIssueConfig'
-  where
-  options = if state.props.nightSafetyFlow then safetyIssueOptions false else reportIssueOptions state
 
 logOutPopUpModelConfig :: ST.HomeScreenState -> PopUpModal.Config
 logOutPopUpModelConfig state = case state.props.isPopUp of
@@ -1239,6 +1189,7 @@ ratingCardViewState state =
   , overallFeedbackArray: [ (getString TERRIBLE_EXPERIENCE), (getString POOR_EXPERIENCE), (getString NEEDS_IMPROVEMENT), (getString ALMOST_PERFECT), (getString AMAZING) ]
   , accessibility: ENABLE
   , closeImgVisible: GONE
+  , driverImage : fetchImage FF_ASSET if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then "ic_new_avatar" else "ic_driver_avatar_cab"
   }
 
 getRateYourRideString :: String -> String -> String
@@ -1731,79 +1682,54 @@ chooseVehicleConfig state = let
     }
   in chooseVehicleConfig'
 
+rideCompletedCardConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
+rideCompletedCardConfig state = 
+  let topCardConfig = state.data.config.rideCompletedCardConfig.topCard
+      topCardGradient = if topCardConfig.enableGradient then [state.data.config.primaryBackground, topCardConfig.gradient] else [topCardConfig.background, topCardConfig.background]
+      waitingChargesApplied = isJust $ DA.find (\entity  -> entity ^._description == "WAITING_OR_PICKUP_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
+      appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+      isRecentRide = EHC.getExpiryTime (fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _rideEndTime)) true / 60 < state.data.config.safety.pastRideInterval
+      actualPrice =  maybe dummyPrice (\(API.FareBreakupAPIEntity obj) ->  obj.amountWithCurrency) $ DA.find (\entity  -> entity ^._description == "TOLL_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
+      actualTollCharge =  actualPrice.amount
+      serviceTier = fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _serviceTierName)
 
-rideCompletedCardConfig :: ST.HomeScreenState -> RideCompletedCard.Config
-rideCompletedCardConfig state =
-  let
-    topCardConfig = state.data.config.rideCompletedCardConfig.topCard
+  in RideCompletedCard.config {
+        isDriver = false,
+        customerIssue = getCustomerIssueConfig
 
-    topCardGradient = if topCardConfig.enableGradient then [ state.data.config.primaryBackground, topCardConfig.gradient ] else [ topCardConfig.background, topCardConfig.background ]
-
-    waitingChargesApplied = isJust $ DA.find (\entity -> entity ^. _description == "WAITING_OR_PICKUP_CHARGES") (state.data.ratingViewState.rideBookingRes ^. _fareBreakup)
-
-    headerConfig = mkHeaderConfig state.props.nightSafetyFlow state.props.showOfferedAssistancePopUp
-
-    appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
-
-    isRecentRide = EHC.getExpiryTime (fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _rideEndTime)) true / 60 < state.data.config.safety.pastRideInterval
-
-    actualPrice = maybe dummyPrice (\(API.FareBreakupAPIEntity obj) -> obj.amountWithCurrency) $ DA.find (\entity -> entity ^. _description == "TOLL_CHARGES") (state.data.ratingViewState.rideBookingRes ^. _fareBreakup)
-
-    actualTollCharge = actualPrice.amount
-
-    serviceTier = fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _serviceTierName)
-  in
-    RideCompletedCard.config
-      { isDriver = false
-      , customerIssueCard
-        { reportIssueView = state.data.ratingViewState.openReportIssue
-        , issueFaced = state.data.ratingViewState.issueFacedView
-        , selectedYesNoButton = state.data.ratingViewState.selectedYesNoButton
-        , reportIssuePopUpConfig = reportIssuePopUpConfig state
-        , title = headerConfig.title
-        , subTitle = headerConfig.subTitle
-        , option1Text = getString REPORT_ISSUE_
-        , option2Text = getString GET_CALLBACK_FROM_US
-        , yesText = getString YES
-        , noText = getString NO
-        , wasOfferedAssistanceCardView = state.props.showOfferedAssistancePopUp && not state.props.nightSafetyFlow
-        , isNightRide = state.props.nightSafetyFlow
-        , showCallSupport = state.data.config.rideCompletedCardConfig.showCallSupport
-        }
-      , topCard
-        { title = getString RIDE_COMPLETED
-        , titleColor = topCardConfig.titleColor
-        , finalAmount = state.data.finalAmount
-        , initialAmount = state.data.driverInfoCardState.price
-        , fareUpdatedVisiblity = state.data.finalAmount /= state.data.driverInfoCardState.price && state.props.estimatedDistance /= Nothing
-        , gradient = topCardGradient
-        , infoPill
-          { text = getFareUpdatedStr state.data.rideRatingState.distanceDifference waitingChargesApplied
-          , background = topCardConfig.rideDescription.background
-          , color = topCardConfig.rideDescription.textColor
-          , image = fetchImage FF_COMMON_ASSET "ny_ic_parallel_arrows"
-          , imageVis = VISIBLE
-          , visible = if state.data.finalAmount == state.data.driverInfoCardState.price || state.props.estimatedDistance == Nothing then GONE else VISIBLE
-          }
-        , bottomText = getString RIDE_DETAILS
-        , horizontalLineColor = topCardConfig.horizontalLineColor
-        }
-      , customerBottomCard
-        { title = getRateYourRideString (getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName
-        , subTitle = (getString $ YOUR_FEEDBACK_HELPS_US appName)
-        , selectedRating = state.data.ratingViewState.selectedRating
-        , visible = not state.data.ratingViewState.issueFacedView
+      , topCard {
+          title =  getString RIDE_COMPLETED,
+          titleColor = topCardConfig.titleColor,
+          finalAmount = state.data.finalAmount,
+          initialAmount = state.data.driverInfoCardState.price,
+          fareUpdatedVisiblity = state.data.finalAmount /= state.data.driverInfoCardState.price && state.props.estimatedDistance /= Nothing,
+          gradient = topCardGradient,
+          infoPill {
+            text = getFareUpdatedStr state.data.rideRatingState.distanceDifference waitingChargesApplied,
+            background = topCardConfig.rideDescription.background,
+            color = topCardConfig.rideDescription.textColor,
+            image = fetchImage FF_COMMON_ASSET "ny_ic_parallel_arrows",
+            imageVis = VISIBLE,
+            visible = if state.data.finalAmount == state.data.driverInfoCardState.price || state.props.estimatedDistance == Nothing then GONE else VISIBLE
+          },
+          bottomText =  getString RIDE_DETAILS,
+          horizontalLineColor = topCardConfig.horizontalLineColor
+        },
+        customerBottomCard {
+          title = getRateYourRideString (getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName,
+          subTitle = (getString $ YOUR_FEEDBACK_HELPS_US appName),
+          selectedRating = state.data.ratingViewState.selectedRating
         , driverImage = fetchImage FF_ASSET if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then "ic_new_avatar" else "ic_driver_avatar_cab"
-        }
-      , primaryButtonConfig = skipButtonConfig state
-      , enableContactSupport = state.data.config.feature.enableSupport
-      , showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide && not state.props.isSafetyCenterDisabled
-      , safetyTitle = getString SAFETY_CENTER
-      , needHelpText = getString NEED_HELP
-      , serviceTierAndAC = serviceTier
-      , toll
-        { actualAmount = actualTollCharge
-        , text = if actualTollCharge > 0.0 then getString TOLL_CHARGES_INCLUDED else getString TOLL_ROAD_CHANGED -- Handle after design finalized 
+        },
+        primaryButtonConfig = skipButtonConfig state,
+        enableContactSupport = state.data.config.feature.enableSupport,
+        showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide && not state.props.isSafetyCenterDisabled,
+        safetyTitle = getString SAFETY_CENTER,
+        needHelpText = getString NEED_HELP,
+        serviceTierAndAC = serviceTier
+      , toll {
+          actualAmount = actualTollCharge
+        , text =if actualTollCharge > 0.0 then getString TOLL_CHARGES_INCLUDED  else getString TOLL_ROAD_CHANGED -- Handle after design finalized 
         , visibility = boolToVisibility $ (actualTollCharge > 0.0 || (getValueToLocalStore HAS_TOLL_CHARGES == "true")) && serviceTier /= "Auto"
         , image = fetchImage FF_COMMON_ASSET "ny_ic_grey_toll"
         , imageVisibility = boolToVisibility $ actualTollCharge > 0.0
@@ -1833,11 +1759,13 @@ rideCompletedCardConfig state =
         }
       }
   where
-  mkHeaderConfig :: Boolean -> Boolean -> { title :: String, subTitle :: String }
-  mkHeaderConfig isNightSafety offeredAssistance = case isNightSafety, offeredAssistance of
-    true, _ -> { title: getString DID_YOU_HAVE_A_SAFE_JOURNEY, subTitle: getString TRIP_WAS_SAFE_AND_WORRY_FREE }
-    _, true -> { title: getString DID_THE_DRIVER_OFFER_ASSISTANCE, subTitle: getString WAS_THE_DRIVER_UNDERSTANDING_OF_YOUR_NEEDS }
-    _, _ -> { title: getString DID_YOU_FACE_ANY_ISSUE, subTitle: getString WE_NOTICED_YOUR_RIDE_ENDED_AWAY }
+    getCustomerIssueConfig = {
+      currentIndex : state.data.rideCompletedData.issueReportData.currentBannerIndex
+    , currentPageIndex : state.data.rideCompletedData.issueReportData.currentPageIndex
+    , bannerComputedView : state.data.rideCompletedData.issueReportData.bannerItem
+    , customerIssueCards : issueReportBannerConfigs state
+    , showIssueBanners : state.data.rideCompletedData.issueReportData.showIssueBanners
+    }
 
 getFareUpdatedStr :: Int -> Boolean -> String
 getFareUpdatedStr diffInDist waitingChargeApplied = do

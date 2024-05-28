@@ -575,3 +575,28 @@ type RentalBookingConfig = {
   , extraTimeFare :: String
 }
 
+
+
+
+data CustomerIssueTypes = TollCharge | NightSafety | Accessibility | NoIssue | MoreIssues
+derive instance genericCustomerIssueTypes :: Generic CustomerIssueTypes _
+instance eqCustomerIssueTypes :: Eq CustomerIssueTypes where eq = genericEq
+instance priorityCustomerIssueTypes :: Priority CustomerIssueTypes where 
+  priority = case _ of
+    TollCharge -> 1
+    NightSafety -> 0
+    Accessibility -> 2
+    NoIssue -> 10
+    MoreIssues -> 20
+
+
+class Priority a where
+  priority :: a -> Int
+
+data Confidence = SURE | NEUTRAL | UNSURE
+derive instance genericConfidence :: Generic Confidence _
+instance standardEncodeConfidence :: StandardEncode Confidence where standardEncode _ = standardEncode {}
+instance eqConfidence :: Eq Confidence where eq = genericEq
+instance showConfidence :: Show Confidence where show = genericShow
+instance decodeConfidence :: Decode Confidence where decode = defaultDecode
+instance encodeConfidence  :: Encode Confidence where encode = defaultEncode

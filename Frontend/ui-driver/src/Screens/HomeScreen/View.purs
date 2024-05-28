@@ -93,6 +93,7 @@ import PrestoDOM.List
 import Mobility.Prelude
 import Resource.Constants as RC
 import Data.Function.Uncurried (runFn3)
+import Screens.HomeScreen.PopUpConfig as PopUpConfig
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -326,7 +327,9 @@ view push state =
       , if (state.props.showChatBlockerPopUp || state.data.paymentState.showBlockingPopup) then blockerPopUpView push state else dummyTextView
       , if state.props.currentStage == RideCompleted then RideCompletedCard.view (getRideCompletedConfig state) (push <<< RideCompletedAC) else dummyTextView -- 
       , if state.props.showRideRating then RatingCard.view (push <<< RatingCardAC) (getRatingCardConfig state) else dummyTextView
-      , if state.props.showAcWorkingPopup == Just true then isAcWorkingPopupView push state else dummyTextView
+      , if state.props.showAcWorkingPopup == Just true then isAcWorkingPopupView push state else dummyTextView 
+      , if state.props.currentStage == RideAccepted && state.data.activeRide.hasToll && state.props.toll.showTollChargePopup then PopUpModal.view (push <<< TollChargesPopUpAC) (PopUpConfig.tollChargesIncluded state) else dummyTextView
+      , if state.props.currentStage == RideCompleted && state.data.endRideData.tollAmbigous && state.props.toll.showTollChargeAmbigousPopup then PopUpModal.view (push <<< TollChargesAmbigousPopUpAC) (PopUpConfig.finalFareExcludesToll state) else dummyTextView
   ]
   where 
     showPopups = (DA.any (_ == true )
@@ -551,6 +554,8 @@ getCarouselConfig view state = {
   , onPageScrollStateChanged : Just BannerStateChanged
   , onPageScrolled : Nothing
   , currentIndex : state.data.bannerData.currentBanner
+  , showScrollIndicator : true
+  , layoutHeight : V 100
 }
 
 genericAccessibilityPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
