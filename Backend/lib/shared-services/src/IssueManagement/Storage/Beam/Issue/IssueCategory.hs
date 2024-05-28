@@ -18,6 +18,7 @@ module IssueManagement.Storage.Beam.Issue.IssueCategory where
 
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified IssueManagement.Domain.Types.Issue.IssueCategory as IC
 import IssueManagement.Tools.UtilsTH
 
 data IssueCategoryT f = IssueCategoryT
@@ -25,7 +26,11 @@ data IssueCategoryT f = IssueCategoryT
     category :: B.C f Text,
     logoUrl :: B.C f Text,
     priority :: B.C f Int,
-    merchantId :: B.C f Text
+    merchantId :: B.C f Text,
+    categoryType :: B.C f IC.CategoryType,
+    isActive :: B.C f Bool,
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
