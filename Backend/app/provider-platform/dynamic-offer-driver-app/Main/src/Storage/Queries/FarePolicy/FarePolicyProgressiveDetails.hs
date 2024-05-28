@@ -15,7 +15,7 @@
 
 module Storage.Queries.FarePolicy.FarePolicyProgressiveDetails where
 
-import Data.List.NonEmpty (nonEmpty)
+import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -30,10 +30,20 @@ import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePol
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m (Maybe Domain.FullFarePolicyProgressiveDetails)
 findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPPD.farePolicyId $ Se.Eq farePolicyId']
 
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.FullFarePolicyProgressiveDetails -> m ()
+create farePolicyProgressiveDetails = do
+  mapM_ QueriesFPPDP.create (map (fst farePolicyProgressiveDetails,) (NE.toList (snd farePolicyProgressiveDetails).perExtraKmRateSections))
+  createWithKV farePolicyProgressiveDetails
+
+delete :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m ()
+delete farePolicyId = do
+  QueriesFPPDP.deleteAll' farePolicyId
+  deleteWithKV [Se.Is BeamFPPD.farePolicyId $ Se.Eq (KTI.getId farePolicyId)]
+
 instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyProgressiveDetails where
   fromTType' farePolicyProgressiveDetails = do
     fullFPPDP <- QueriesFPPDP.findAll' (KTI.Id farePolicyProgressiveDetails.farePolicyId)
-    fPPDP <- fromMaybeM (InternalError "FromLocation not found") (nonEmpty fullFPPDP)
+    fPPDP <- fromMaybeM (InternalError "FromLocation not found") (NE.nonEmpty fullFPPDP)
     pure . Just $ fromTTypeFarePolicyProgressiveDetails farePolicyProgressiveDetails fPPDP
 
 fromTTypeFarePolicyProgressiveDetails ::

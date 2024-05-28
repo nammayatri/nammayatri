@@ -71,8 +71,11 @@ clearCache = SCQF.clearCache
 clearCacheById :: HedisFlow m r => Id FarePolicy -> m ()
 clearCacheById = SCQF.clearCacheById
 
-update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
-update = SCQF.update
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
+create = SCQF.create
+
+delete :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m ()
+delete = SCQF.delete
 
 update' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
 update' = SCQF.update'

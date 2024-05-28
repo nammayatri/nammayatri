@@ -18,6 +18,9 @@ import Kernel.Utils.Common
 import Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers as BeamFPRDDB
 
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => BeamFPRDDB.FullFarePolicyRentalDetailsDistanceBuffers -> m ()
+create = createWithKV
+
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id DFP.FarePolicy -> m (Maybe BeamFPRDDB.FullFarePolicyRentalDetailsDistanceBuffers)
 findById' farePolicyId' = findOneWithKV [Se.Is BeamFPRDDB.farePolicyId $ Se.Eq (getId farePolicyId')]
 
@@ -26,6 +29,9 @@ findAll' ::
   Id DFP.FarePolicy ->
   m [BeamFPRDDB.FullFarePolicyRentalDetailsDistanceBuffers]
 findAll' farePolicyId = findAllWithOptionsKV [Se.Is BeamFPRDDB.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamFPRDDB.rideDuration) Nothing Nothing
+
+delete :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DFP.FarePolicy -> m ()
+delete farePolicyId = deleteWithKV [Se.Is BeamFPRDDB.farePolicyId $ Se.Eq (getId farePolicyId)]
 
 instance FromTType' BeamFPRDDB.FarePolicyRentalDetailsDistanceBuffers BeamFPRDDB.FullFarePolicyRentalDetailsDistanceBuffers where
   fromTType' BeamFPRDDB.FarePolicyRentalDetailsDistanceBuffersT {..} = do
