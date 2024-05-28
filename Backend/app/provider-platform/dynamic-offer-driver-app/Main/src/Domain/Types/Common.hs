@@ -193,6 +193,8 @@ isInterCityTrip tripCategory = case tripCategory of
 
 isDynamicOfferTrip :: TripCategory -> Bool
 isDynamicOfferTrip (OneWay OneWayOnDemandDynamicOffer) = True
+isDynamicOfferTrip (CrossCity OneWayOnDemandDynamicOffer) = True
+isDynamicOfferTrip (InterCity OneWayOnDemandDynamicOffer) = True
 isDynamicOfferTrip _ = False
 
 isTollApplicable :: ServiceTierType -> Bool
