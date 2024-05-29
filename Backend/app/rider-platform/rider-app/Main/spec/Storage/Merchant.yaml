@@ -64,6 +64,7 @@ Merchant:
     fakeOtpEmails: "[Text]"
     kaptureDisposition: Text
     arrivedPickupThreshold: Distance
+    arrivingPickupThreshold: Distance
     driverOnTheWayNotifyExpiry: Seconds
 
   excludedFields:
@@ -93,6 +94,7 @@ Merchant:
     driverOfferBaseUrl: Text
     scheduleRideBufferTime: Seconds
     driverOnTheWayNotifyExpiry: Maybe Seconds
+    arrivingPickupThreshold: HighPrecDistance
 
   toTType:
     city: defaultCity|E
@@ -111,6 +113,7 @@ Merchant:
     driverDistanceThresholdFromPickupValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance (Just $ (.unit) editPickupDistanceThreshold) driverDistanceThresholdFromPickup)|E
     arrivedPickupThreshold: (Just $ Kernel.Utils.Common.distanceToMeters arrivedPickupThreshold)|E
     arrivedPickupThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance (Just $ (.unit) editPickupDistanceThreshold) arrivedPickupThreshold)|E
+    arrivingPickupThreshold: (Kernel.Utils.Common.distanceToHighPrecDistance (Just $ (.unit) editPickupDistanceThreshold) arrivingPickupThreshold)|E
 
   fromTType:
     defaultCity: city|E
@@ -121,6 +124,7 @@ Merchant:
     driverOfferBaseUrl: Kernel.Prelude.parseBaseUrl|IM
     scheduleRideBufferTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
     arrivedPickupThreshold: maybe (Kernel.Types.Common.Distance 50 Kernel.Types.Common.Meter) (Kernel.Utils.Common.mkDistanceWithDefaultMeters distanceUnit arrivedPickupThresholdValue) arrivedPickupThreshold|E
+    arrivingPickupThreshold: Kernel.Types.Common.Distance arrivingPickupThreshold (fromMaybe Kernel.Types.Common.Meter distanceUnit)|E
     editPickupDistanceThreshold: Kernel.Utils.Common.mkDistanceWithDefault distanceUnit editPickupDistanceThresholdValue editPickupDistanceThreshold|E
     driverDistanceThresholdFromPickup: Kernel.Utils.Common.mkDistanceWithDefault distanceUnit driverDistanceThresholdFromPickupValue driverDistanceThresholdFromPickup|E
     driverOnTheWayNotifyExpiry: (fromMaybe 3600 driverOnTheWayNotifyExpiry)|E
@@ -167,10 +171,12 @@ Merchant:
     createdAt: timestamp with time zone
     updatedAt: timestamp with time zone
     arrivedPickupThreshold: double precision
+    arrivingPickupThreshold: double precision
     driverOnTheWayNotifyExpiry: integer
 
   default:
     arrivedPickupThreshold: "50"
+    arrivingPickupThreshold: "100"
     driverOnTheWayNotifyExpiry: "3600"
     scheduleRideBufferTime: "1800"
     numOfAllowedEditPickupLocationAttemptsThreshold: "2"

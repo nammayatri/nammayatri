@@ -24,20 +24,12 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as D
 import Data.List.NonEmpty
 import Domain.Types.FarePolicy as Domain
 import Kernel.Beam.Functions
-  ( FromTType' (fromTType'),
-    ToTType' (toTType'),
-    createWithKV,
-    findOneWithKV,
-    updateOneWithKV,
-  )
 import Kernel.Prelude hiding (toList)
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy as BeamFP
-import qualified Storage.Beam.FarePolicy.FarePolicyInterCityDetails as BeamFPICD
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
-import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails as BeamFPRD
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QueriesDEFB
 import qualified Storage.Queries.FarePolicy.FarePolicyInterCityDetails as QueriesFPICD
@@ -86,74 +78,29 @@ update' farePolicy = do
     RentalDetails _ -> pure ()
     InterCityDetails _ -> pure ()
 
-update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FarePolicy -> m ()
-update farePolicy = do
-  now <- getCurrentTime
-  void $
-    updateOneWithKV
-      [ Se.Set BeamFP.nightShiftStart $ (.nightShiftStart) <$> farePolicy.nightShiftBounds,
-        Se.Set BeamFP.nightShiftEnd $ (.nightShiftEnd) <$> farePolicy.nightShiftBounds,
-        Se.Set BeamFP.updatedAt now
-      ]
-      [Se.Is BeamFP.id (Se.Eq $ getId farePolicy.id)]
-
-  QueriesDEFB.deleteAll' farePolicy.id
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FarePolicy -> m ()
+create farePolicy = do
   case farePolicy.driverExtraFeeBounds of
     Just driverExtraFeeBounds -> mapM_ (\defb -> QueriesDEFB.create (farePolicy.id, defb)) (toList driverExtraFeeBounds)
     Nothing -> pure ()
-
   case farePolicy.farePolicyDetails of
     ProgressiveDetails fPPD ->
-      updateOneWithKV
-        [ Se.Set BeamFPPD.baseFare $ roundToIntegral fPPD.baseFare,
-          Se.Set BeamFPPD.baseFareAmount $ Just fPPD.baseFare,
-          Se.Set BeamFPPD.currency $ Just fPPD.currency,
-          Se.Set BeamFPPD.baseDistance $ fPPD.baseDistance,
-          Se.Set BeamFPPD.deadKmFare $ roundToIntegral fPPD.deadKmFare,
-          Se.Set BeamFPPD.deadKmFareAmount $ Just fPPD.deadKmFare,
-          Se.Set BeamFPPD.nightShiftCharge $ fPPD.nightShiftCharge
-        ]
-        [Se.Is BeamFPPD.farePolicyId (Se.Eq $ getId farePolicy.id)]
-    SlabsDetails (FPSlabsDetails slabs) -> do
-      _ <- QueriesFPSDS.deleteAll' farePolicy.id
-      mapM_ (create'' farePolicy.id) slabs
-    RentalDetails fPRD ->
-      updateOneWithKV
-        [ Se.Set BeamFPRD.baseFare $ roundToIntegral fPRD.baseFare,
-          Se.Set BeamFPRD.baseFareAmount $ Just fPRD.baseFare,
-          Se.Set BeamFPRD.currency $ Just fPRD.currency,
-          Se.Set BeamFPRD.perHourCharge $ roundToIntegral fPRD.perHourCharge,
-          Se.Set BeamFPRD.perHourChargeAmount $ Just fPRD.perHourCharge,
-          Se.Set BeamFPRD.perExtraMinRate $ roundToIntegral fPRD.perExtraMinRate,
-          Se.Set BeamFPRD.perExtraMinRateAmount $ Just fPRD.perExtraMinRate,
-          Se.Set BeamFPRD.perExtraKmRate $ roundToIntegral fPRD.perExtraKmRate,
-          Se.Set BeamFPRD.perExtraKmRateAmount $ Just fPRD.perExtraKmRate,
-          Se.Set BeamFPRD.deadKmFare $ fPRD.deadKmFare,
-          Se.Set BeamFPRD.includedKmPerHr $ fPRD.includedKmPerHr,
-          Se.Set BeamFPRD.plannedPerKmRate $ roundToIntegral fPRD.plannedPerKmRate,
-          Se.Set BeamFPRD.plannedPerKmRateAmount $ Just fPRD.plannedPerKmRate,
-          Se.Set BeamFPRD.nightShiftCharge $ fPRD.nightShiftCharge
-        ]
-        [Se.Is BeamFPRD.farePolicyId (Se.Eq $ getId farePolicy.id)]
+      QueriesFPPD.create (farePolicy.id, fPPD)
+    SlabsDetails _ -> pure () -- will do later :(
+    RentalDetails fPRD -> do
+      QueriesFPRD.create (farePolicy.id, fPRD)
     InterCityDetails fPICD ->
-      updateOneWithKV
-        [ Se.Set BeamFPICD.baseFare $ fPICD.baseFare,
-          Se.Set BeamFPICD.currency $ fPICD.currency,
-          Se.Set BeamFPICD.perHourCharge $ fPICD.perHourCharge,
-          Se.Set BeamFPICD.perExtraMinRate $ fPICD.perExtraMinRate,
-          Se.Set BeamFPICD.perExtraKmRate $ fPICD.perExtraKmRate,
-          Se.Set BeamFPICD.nightShiftCharge $ fPICD.nightShiftCharge,
-          Se.Set BeamFPICD.perKmRateOneWay $ fPICD.perKmRateOneWay,
-          Se.Set BeamFPICD.perKmRateRoundTrip $ fPICD.perKmRateRoundTrip,
-          Se.Set BeamFPICD.kmPerPlannedExtraHour $ fPICD.kmPerPlannedExtraHour,
-          Se.Set BeamFPICD.deadKmFare $ fPICD.deadKmFare,
-          Se.Set BeamFPICD.perDayMaxHourAllowance $ fPICD.perDayMaxHourAllowance,
-          Se.Set BeamFPICD.defaultWaitTimeAtDestination $ fPICD.defaultWaitTimeAtDestination
-        ]
-        [Se.Is BeamFPICD.farePolicyId (Se.Eq $ getId farePolicy.id)]
-  where
-    create'' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FarePolicy -> FPSlabsDetailsSlab -> m ()
-    create'' id' slab = createWithKV (id', slab)
+      QueriesFPICD.create (farePolicy.id, fPICD)
+  createWithKV farePolicy
+
+delete :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FarePolicy -> m ()
+delete farePolicyId = do
+  QueriesDEFB.deleteAll' farePolicyId
+  QueriesFPPD.delete farePolicyId
+  QueriesFPRD.delete farePolicyId
+  QueriesFPICD.delete farePolicyId
+  QueriesFPSDS.deleteAll' farePolicyId
+  deleteWithKV [Se.Is BeamFP.id $ Se.Eq (getId farePolicyId)]
 
 instance ToTType' BeamFP.FarePolicy FarePolicy where
   toTType' FarePolicy {..} = do

@@ -64,7 +64,8 @@ data MerchantEndpoint
   | VerificationServiceConfigUpdateEndpoint
   | CreateFPDriverExtraFeeEndpoint
   | UpdateFPDriverExtraFeeEndpoint
-  | UpdateFarePolicy
+  | UpdateFarePolicy -- deprecate this
+  | UpsertFarePolicyEndpoint
   | CreateMerchantOperatingCityEndpoint
   | UpdateFPPerExtraKmRate
   | SchedulerTriggerAPIEndpoint

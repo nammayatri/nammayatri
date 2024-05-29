@@ -28,7 +28,7 @@ import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, setText)
 import Engineering.Helpers.Commons as EHC
-import JBridge (addMarker, exitLocateOnMap, getCurrentLatLong, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestLocation, showMarker, toggleBtnLoader, locateOnMapConfig, currentPosition)
+import JBridge (exitLocateOnMap, getCurrentLatLong, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestLocation, toggleBtnLoader, locateOnMapConfig, currentPosition)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))

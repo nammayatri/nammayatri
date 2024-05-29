@@ -737,6 +737,7 @@ TransporterConfig:
     allowDefaultPlanAllocation: Bool
     arrivedStopThreshold: Maybe HighPrecMeters
     arrivedPickupThreshold: HighPrecMeters
+    arrivingPickupThreshold: HighPrecMeters
     specialDrivers: "[Text]"
     specialLocationTags: "[Text]"
     createdAt: UTCTime
@@ -923,6 +924,7 @@ TransporterConfig:
     arrivedStopThreshold: double precision
     actualRideDistanceDiffThresholdIfWithinPickupDrop: double precision
     arrivedPickupThreshold: double precision
+    arrivingPickupThreshold: double precision
     variantsToEnableForSubscription: "text[]"
     crossTravelCities: "text[]"
 
@@ -1016,6 +1018,7 @@ TransporterConfig:
     recomputeIfPickupDropNotOutsideOfThreshold: "true"
     actualRideDistanceDiffThresholdIfWithinPickupDrop: "2500"
     arrivedPickupThreshold: "50"
+    arrivingPickupThreshold: "100"
     pastDaysRideCounter: "3"
     variantsToEnableForSubscription: "'{AUTO_RICKSHAW}'"
     bookAnyVehicleDowngradeLevel: "-1"

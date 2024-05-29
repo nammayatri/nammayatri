@@ -16,6 +16,7 @@
 module Storage.CachedQueries.FareProduct where
 
 import qualified Domain.Types.Common as DTC
+import Domain.Types.FarePolicy
 import Domain.Types.FareProduct
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.ServiceTierType as DVST
@@ -108,3 +109,15 @@ cacheBoundedFareProductByMerchantVariantArea merchantOpCityId searchSources trip
 
 makeBoundedFareProductByMerchantVariantAreaKey :: Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> Text
 makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources tripCategory serviceTier area = "driver-offer:CachedQueries:Bounded:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":SearchSource-" <> show searchSources <> ":ServiceTier-" <> show serviceTier <> ":Area-" <> show area <> ":TripCategory-" <> show tripCategory
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+updateFarePolicyId :: (Esq.EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id FarePolicy -> Id FareProduct -> m ()
+updateFarePolicyId = Queries.updateFarePolicyId
+
+clearCache :: CacheFlow m r => FareProduct -> m ()
+clearCache FareProduct {..} = Hedis.withCrossAppRedis $ do
+  Hedis.del (makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOperatingCityId [searchSource] tripCategory area)
+  Hedis.del (makeUnboundedFareProductByMerchantIdAndAreaKey merchantOperatingCityId [searchSource] area)
+  Hedis.del (makeFareProductByMerchantOpCityIdKey merchantOperatingCityId)
+  Hedis.del (makeUnboundedFareProductByMerchantVariantAreaKey merchantOperatingCityId [searchSource] tripCategory vehicleServiceTier area)
+  Hedis.del (makeBoundedFareProductByMerchantVariantAreaKey merchantOperatingCityId [searchSource] tripCategory vehicleServiceTier area)
