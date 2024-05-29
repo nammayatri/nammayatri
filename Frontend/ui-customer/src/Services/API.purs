@@ -705,7 +705,8 @@ newtype RentalQuoteAPIDetails = RentalQuoteAPIDetails {
   perHourCharge :: Maybe Int ,
   plannedPerKmRate :: Maybe Int ,
   nightShiftCharge :: Maybe Int ,
-  tollCharges :: Maybe Number 
+  tollCharges :: Maybe Number ,
+  deadKmFare :: Maybe Number
 }
 
 newtype SpecialZoneQuoteAPIDetails = SpecialZoneQuoteAPIDetails {
