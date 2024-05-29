@@ -15,29 +15,19 @@
 module Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest where
 
 import Data.Time (UTCTime (..))
-import Database.Beam as B
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.Person
-import qualified EulerHS.Language as L
-import Kernel.Beam.Functions (findAllWithKV, findAllWithOptionsKV, findOneWithKV, getMasterBeamConfig, updateOneWithKV)
+import Kernel.Beam.Functions (createWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateOneWithKV)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id as Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
-import qualified Storage.Beam.Common as BeamCommon
 import Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest as BeamDHR
 import Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal ()
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DDGR.DriverGoHomeRequest -> m ()
-create newDriverGoHomeRequest = do
-  dbConf <- getMasterBeamConfig
-  void $
-    L.runDB dbConf $
-      L.insertRows $
-        B.insert (BeamCommon.driverGoHomeRequest BeamCommon.atlasDB) $
-          B.insertExpressions
-            [BeamDHR.toRowExpression (newDriverGoHomeRequest.id.getId) (getId newDriverGoHomeRequest.driverId) newDriverGoHomeRequest.lat newDriverGoHomeRequest.lon newDriverGoHomeRequest.status newDriverGoHomeRequest.numCancellation newDriverGoHomeRequest.mbReachedHome newDriverGoHomeRequest.createdAt newDriverGoHomeRequest.updatedAt]
+create = createWithKV
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DDGR.DriverGoHomeRequest -> m (Maybe DDGR.DriverGoHomeRequest)
 findById (Id.Id driverGoHomeRequestId) = findOneWithKV [Se.Is BeamDHR.id $ Se.Eq driverGoHomeRequestId]
