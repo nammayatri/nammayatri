@@ -99,6 +99,7 @@ data RideAPIEntity = RideAPIEntity
     shortRideId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     startOdometerReading :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     status :: Domain.Types.Ride.RideStatus,
+    tollConfidence :: Kernel.Prelude.Maybe Kernel.Types.Confidence.Confidence,
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleColor :: Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Text,

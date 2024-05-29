@@ -15,7 +15,7 @@ import qualified Domain.Types.VehicleVariant as DVeh
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
-import Kernel.Types.Common (Currency)
+import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (type (:::))
@@ -56,15 +56,22 @@ buildInterCityQuoteInfo :: BecknV2.OnDemand.Types.Item -> Text -> Currency -> Ma
 buildInterCityQuoteInfo item quoteId_ currency = do
   let itemTags = item.itemTags
   let quoteId = quoteId_
+  let defaultPrice =
+        -- for backward compatibility (fix properly later)
+        Price
+          { amountInt = Money 0,
+            amount = HighPrecMoney 0.0,
+            currency = INR
+          }
   baseFare <- Beckn.OnDemand.Utils.OnSearch.getBaseFare itemTags currency
-  perHourCharge <- Beckn.OnDemand.Utils.OnSearch.getPerHourCharge itemTags currency
-  perExtraMinRate <- Beckn.OnDemand.Utils.OnSearch.getPerExtraMinRate itemTags currency
-  perExtraKmRate <- Beckn.OnDemand.Utils.OnSearch.getPerExtraKmRate itemTags currency
-  kmPerPlannedExtraHour <- Beckn.OnDemand.Utils.OnSearch.getIncludedKmPerHr itemTags
-  plannedPerKmRateOneWay <- Beckn.OnDemand.Utils.OnSearch.getPlannedPerKmRate itemTags currency
-  plannedPerKmRateRoundTrip <- Beckn.OnDemand.Utils.OnSearch.getPlannedPerKmRateRoundTrip itemTags currency
-  perDayMaxHourAllowance <- Beckn.OnDemand.Utils.OnSearch.getPerDayMaxHourAllowance itemTags
-  deadKmFare <- Beckn.OnDemand.Utils.OnSearch.getDeadKilometerFare itemTags currency
+  let perHourCharge = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getPerHourCharge itemTags currency)
+  let perExtraMinRate = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getPerExtraMinRate itemTags currency)
+  let perExtraKmRate = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getPerExtraKmRate itemTags currency)
+  let kmPerPlannedExtraHour = fromMaybe (Distance (HighPrecDistance 0.0) Kilometer) (Beckn.OnDemand.Utils.OnSearch.getIncludedKmPerHr itemTags)
+  let plannedPerKmRateOneWay = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getPlannedPerKmRate itemTags currency)
+  let plannedPerKmRateRoundTrip = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getPlannedPerKmRateRoundTrip itemTags currency)
+  let perDayMaxHourAllowance = fromMaybe (Hours 0) (Beckn.OnDemand.Utils.OnSearch.getPerDayMaxHourAllowance itemTags)
+  let deadKmFare = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getDeadKilometerFare itemTags currency)
   let nightShiftInfo = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item currency
   Just $ Domain.Action.Beckn.OnSearch.InterCityQuoteDetails {..}
 
