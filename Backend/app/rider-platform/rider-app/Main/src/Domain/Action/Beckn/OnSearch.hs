@@ -200,6 +200,7 @@ data RentalQuoteDetails = RentalQuoteDetails
     includedDistancePerHr :: Distance, -- it was Kilometers
     plannedPerKmRate :: Price,
     perExtraKmRate :: Price,
+    deadKmFare :: Price,
     nightShiftInfo :: Maybe NightShiftInfo
   }
 
