@@ -144,13 +144,6 @@ mkNativeRequest (API.Request request@{headers: API.Headers hs}) = NativeRequest
 mkNativeHeader :: API.Header -> NativeHeader
 mkNativeHeader (API.Header field val) = { field: field, value: val}
 
-trackerIcon :: String -> String
-trackerIcon vehicleType = case vehicleType of
-                            "SEDAN" -> "tracker_sedan"
-                            "SUV" -> "tracker_suv"
-                            "HATCHBACK" -> "tracker_hatchback"
-                            _ -> "map_car"
-
 liftFlow :: forall val st. (Effect val)  -> Flow st val
 liftFlow effVal = doAff do liftEffect (effVal)
 

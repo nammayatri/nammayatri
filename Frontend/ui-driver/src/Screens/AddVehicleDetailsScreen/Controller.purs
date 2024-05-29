@@ -298,7 +298,8 @@ eval (SelectVehicleTypeModalAction (SelectVehicleTypeModal.OnSelect item)) state
                         Sedan     -> "Sedan"
                         SUV       -> "SUV"
                         Hatchback -> "Hatchback"
-                        Auto      -> "Auto")
+                        Auto      -> "Auto"
+                        Bike      -> "Bike")
       }
     }
 

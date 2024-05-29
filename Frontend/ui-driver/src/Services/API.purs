@@ -705,7 +705,7 @@ instance showRidesInfo :: Show RidesInfo where show = genericShow
 instance decodeRidesInfo :: Decode RidesInfo where decode = defaultDecode
 instance encodeRidesInfo :: Encode RidesInfo where encode = defaultEncode
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance showVehicleVariant :: Show VehicleVariant where show = genericShow
@@ -717,6 +717,7 @@ instance standardEncodeVehicleVariant :: StandardEncode VehicleVariant
  standardEncode SUV = standardEncode {}
  standardEncode HATCHBACK = standardEncode {}
  standardEncode AUTO_VARIANT = standardEncode {}
+ standardEncode BIKE = standardEncode {}
 
 data Status = NEW | INPROGRESS | COMPLETED | CANCELLED | NOTHING
 

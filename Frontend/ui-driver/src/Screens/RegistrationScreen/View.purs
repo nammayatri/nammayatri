@@ -115,7 +115,7 @@ view push state =
             , width MATCH_PARENT
             , gravity CENTER
             , orientation VERTICAL
-            , visibility $ boolToVisibility $ isJust state.data.vehicleCategory || not state.data.cityConfig.variantSubscriptionConfig.enableVariantBasedSubscription
+            , visibility $ boolToVisibility $ isJust state.data.vehicleCategory
             ]
             [ headerView state push                    
             , linearLayout
@@ -668,7 +668,7 @@ chooseVehicleView push state =
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
-    , visibility $ boolToVisibility $ isNothing state.data.vehicleCategory && state.data.cityConfig.variantSubscriptionConfig.enableVariantBasedSubscription
+    , visibility $ boolToVisibility $ isNothing state.data.vehicleCategory 
     ]
     [ headerView state push
     , textView $ 
