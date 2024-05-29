@@ -5304,7 +5304,7 @@ rentalScreenFlow = do
                 { quoteDetails: ChooseVehicle.config
                 , index: 0
                 , activeIndex: 0
-                , fareDetails: { plannedPerKmRate: 0, baseFare: 0, includedKmPerHr: 0, perExtraKmRate: 0, perExtraMinRate: 0, perHourCharge: 0, nightShiftCharge: 0, tollCharges: Nothing }
+                , fareDetails: { plannedPerKmRate: 0, baseFare: 0, includedKmPerHr: 0, perExtraKmRate: 0, perExtraMinRate: 0, perHourCharge: 0, nightShiftCharge: 0, tollCharges: Nothing, deadKmFare: Nothing }
                 }
                 quoteConfig
             )

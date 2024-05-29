@@ -450,11 +450,19 @@ rentalRateCardConfig state =
             (if extraDistance > 0 then 
               [{key : "Add on fare for " <> show ( extraDistance) <> " km", val : (currency <> show (extraDistance * selectedQuote.fareDetails.plannedPerKmRate))}] 
               else [] )
-            <> [  {key : "Extra distance fare", val : (currency <> show selectedQuote.fareDetails.perExtraKmRate <> "/km")}
-                , {key : "Extra time fare", val : (currency <> show selectedQuote.fareDetails.perExtraMinRate <> "/min")}
-                ] <> case selectedQuote.fareDetails.tollCharges of
-                        MB.Just tollCharges -> [{key : getString TOLL_CHARGES_ESTIMATED, val : (currency <> show tollCharges)}]
-                        MB.Nothing -> []
+            <> 
+            [ {key : "Extra distance fare", val : (currency <> show selectedQuote.fareDetails.perExtraKmRate <> "/km")}
+              , {key : "Extra time fare", val : (currency <> show selectedQuote.fareDetails.perExtraMinRate <> "/min")}
+            ] 
+            <> 
+            (case selectedQuote.fareDetails.tollCharges of
+              MB.Just tollCharges -> [{key : getString TOLL_CHARGES_ESTIMATED, val : (currency <> show tollCharges)}]
+              MB.Nothing -> [])
+            <> 
+            ( case selectedQuote.fareDetails.deadKmFare of
+                MB.Just deadKmFare -> [ { key: getString PICKUP_CHARGES, val: (currency <> show deadKmFare) } ]
+                MB.Nothing -> []
+            )
                   
         }
   in rentalRateCardConfig'

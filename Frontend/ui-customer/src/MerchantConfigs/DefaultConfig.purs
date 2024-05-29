@@ -392,7 +392,6 @@ config =
               enableCabBanner = true
             }
             , enableAcViews = true
-            , enableIntercity = true
             , enableCabs = false
             , estimateAndQuoteConfig {
               showInfoIcon = true
