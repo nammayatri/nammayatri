@@ -26,6 +26,7 @@ RentalDetails:
     perExtraKmRate: Price
     includedDistancePerHr: Distance
     plannedPerKmRate: Price
+    deadKmFare: Price
     nightShiftInfo: Maybe NightShiftInfo
 
   sqlType:
@@ -36,7 +37,11 @@ RentalDetails:
     includedKmPerHr: int
     plannedPerKmRate: numeric(30, 2)
     nightShiftCharge: numeric(30, 2)
+    deadKmFare: numeric(30,2)
     currency: character varying(255)
+
+  default:
+    deadKmFare: "0"
 
   beamFields:
     includedDistancePerHr:
@@ -65,6 +70,8 @@ RentalDetails:
       nightShiftStart: Maybe TimeOfDay
       nightShiftEnd: Maybe TimeOfDay
 
+  beamType:
+    deadKmFare: HighPrecMoney
 
   toTType:
     baseFare: (.amountInt)|I
@@ -85,6 +92,7 @@ RentalDetails:
     includedDistancePerHrValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance (Just $ (.unit) includedDistancePerHr) includedDistancePerHr)|E
     distanceUnit: (Just $ (.unit) includedDistancePerHr)|E
     includedKmPerHr: (Kernel.Utils.Common.metersToKilometers $ Kernel.Utils.Common.distanceToMeters includedDistancePerHr)|E
+    deadKmFare: (.amount)|I
 
   fromTType:
     baseFare: Kernel.Utils.Common.mkPriceWithDefault baseFareAmount currency baseFare|E
@@ -92,6 +100,7 @@ RentalDetails:
     perExtraMinRate: Kernel.Utils.Common.mkPriceWithDefault perExtraMinRateAmount currency perExtraMinRate|E
     perExtraKmRate: Kernel.Utils.Common.mkPriceWithDefault perExtraKmRateAmount currency perExtraKmRate|E
     plannedPerKmRate: Kernel.Utils.Common.mkPriceWithDefault plannedPerKmRateAmount currency plannedPerKmRate|E
+    deadKmFare: Kernel.Utils.Common.mkPrice currency deadKmFare|E
     nightShiftInfo: Storage.Queries.Transformers.RentalDetails.mkNightShiftInfo nightShiftCharge nightShiftChargeAmount nightShiftEnd nightShiftStart currency|E
     includedDistancePerHr: (Kernel.Utils.Common.mkDistanceWithDefaultMeters distanceUnit includedDistancePerHrValue $ Kernel.Utils.Common.kilometersToMeters includedKmPerHr)|E
 

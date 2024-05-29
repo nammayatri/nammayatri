@@ -24,3 +24,8 @@ ALTER TABLE atlas_app.rental_details ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.rental_details ADD COLUMN included_distance_per_hr_value double precision ;
 ALTER TABLE atlas_app.rental_details ADD COLUMN distance_unit character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rental_details ADD COLUMN dead_km_fare numeric(30,2) NOT NULL default 0;

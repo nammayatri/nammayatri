@@ -20,5 +20,6 @@ mkRentalDetailsAPIEntity RentalDetails {..} tollCharges = do
       nightShiftInfo = mkNightShiftInfoAPIEntity <$> nightShiftInfo,
       includedKmPerHr = metersToKilometers $ distanceToMeters includedDistancePerHr,
       includedDistancePerHrWithUnit = includedDistancePerHr,
+      deadKmFare = mkPriceAPIEntity deadKmFare,
       ..
     }

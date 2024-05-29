@@ -17,6 +17,7 @@ data RentalDetailsT f = RentalDetailsT
   { baseFare :: B.C f Kernel.Utils.Common.Money,
     baseFareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency),
+    deadKmFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     id :: B.C f Kernel.Prelude.Text,
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     includedDistancePerHrValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
