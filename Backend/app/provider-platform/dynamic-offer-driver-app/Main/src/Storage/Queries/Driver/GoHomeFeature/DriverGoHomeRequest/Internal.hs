@@ -20,7 +20,6 @@ import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as Domain
 import Domain.Types.Person (Driver)
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (Value)
 import qualified Sequelize as Se
@@ -46,7 +45,6 @@ instance ToTType' BeamDDGR.DriverGoHomeRequest Domain.DriverGoHomeRequest where
     BeamDDGR.DriverGoHomeRequestT
       { id = getId id,
         driverId = getId driverId,
-        point = Point,
         reachedHome = mbReachedHome,
         ..
       }
