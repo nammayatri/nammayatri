@@ -28,6 +28,7 @@ instance FromTType' Beam.RentalDetails Domain.Types.RentalDetails.RentalDetails 
       Just
         Domain.Types.RentalDetails.RentalDetails
           { baseFare = Kernel.Utils.Common.mkPriceWithDefault baseFareAmount currency baseFare,
+            deadKmFare = Kernel.Utils.Common.mkPrice currency deadKmFare,
             id = Kernel.Types.Id.Id id,
             includedDistancePerHr = Kernel.Utils.Common.mkDistanceWithDefaultMeters distanceUnit includedDistancePerHrValue $ Kernel.Utils.Common.kilometersToMeters includedKmPerHr,
             nightShiftInfo = Storage.Queries.Transformers.RentalDetails.mkNightShiftInfo nightShiftCharge nightShiftChargeAmount nightShiftEnd nightShiftStart currency,
@@ -43,6 +44,7 @@ instance ToTType' Beam.RentalDetails Domain.Types.RentalDetails.RentalDetails wh
       { Beam.baseFare = (.amountInt) baseFare,
         Beam.baseFareAmount = Just $ (.amount) baseFare,
         Beam.currency = Just $ (.currency) baseFare,
+        Beam.deadKmFare = (.amount) deadKmFare,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.distanceUnit = Just $ (.unit) includedDistancePerHr,
         Beam.includedDistancePerHrValue = Just $ Kernel.Utils.Common.distanceToHighPrecDistance (Just $ (.unit) includedDistancePerHr) includedDistancePerHr,
