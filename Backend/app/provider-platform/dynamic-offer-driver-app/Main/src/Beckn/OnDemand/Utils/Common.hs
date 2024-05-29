@@ -49,6 +49,7 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
@@ -402,8 +403,9 @@ mkFulfillmentV2 ::
   Bool ->
   Maybe Text ->
   IsValueAddNP ->
+  Maybe DRD.RiderDetailsDecrypted ->
   m Spec.Fulfillment
-mkFulfillmentV2 mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide mbEvent isValueAddNP = do
+mkFulfillmentV2 mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide mbEvent isValueAddNP riderDetails = do
   mbDInfo <- driverInfo
   let rideOtp = fromMaybe ride.otp ride.endOtp
   pure $
@@ -448,7 +450,7 @@ mkFulfillmentV2 mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDr
                   vehicleVariant = Just variant,
                   vehicleMake = Nothing
                 },
-        fulfillmentCustomer = Nothing,
+        fulfillmentCustomer = tfCustomer riderDetails booking,
         fulfillmentState =
           mbEvent
             >> ( Just $
@@ -475,6 +477,29 @@ mkFulfillmentV2 mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDr
             name = dName,
             tags = if isValueAddNP then dTags else Nothing
           }
+
+tfCustomer :: Maybe DRD.RiderDetailsDecrypted -> DBooking.Booking -> Maybe Spec.Customer
+tfCustomer res booking =
+  case res of
+    Just rider ->
+      Just $
+        Spec.Customer
+          { customerContact =
+              Just
+                Spec.Contact
+                  { contactPhone = Just (rider.mobileNumber)
+                  },
+            customerPerson = do
+              riderName <- booking.riderName
+              Just $
+                Spec.Person
+                  { personId = Nothing,
+                    personImage = Nothing,
+                    personName = Just riderName,
+                    personTags = Nothing
+                  }
+          }
+    Nothing -> Nothing
 
 mkDriverDetailsTags :: SP.Person -> Bool -> Bool -> Maybe [Spec.TagGroup]
 mkDriverDetailsTags driver isDriverBirthDay isFreeRide =
