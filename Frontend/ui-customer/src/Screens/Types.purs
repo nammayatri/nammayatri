@@ -2487,7 +2487,8 @@ type FareDetails = {
   perExtraMinRate :: Int,
   perHourCharge :: Int,
   nightShiftCharge :: Int,
-  tollCharges :: Maybe Number
+  tollCharges :: Maybe Number,
+  deadKmFare :: Maybe Number
 }
 
 data RentalScreenStage = RENTAL_SELECT_PACKAGE | RENTAL_SELECT_VARIANT | RENTAL_CONFIRMATION
