@@ -82,6 +82,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.UUID;
@@ -327,6 +328,7 @@ public class MainActivity extends AppCompatActivity {
         mobilityAppUpdate.checkAndUpdateApp(remoteConfigs);
 
         updateConfigURL();
+        mFirebaseAnalytics.setUserProperty("ct_objectId", Objects.requireNonNull(CleverTapAPI.getDefaultInstance(context)).getCleverTapID());
 
         JSONObject results = new JSONObject();
         try {
