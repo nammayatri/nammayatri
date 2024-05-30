@@ -54,6 +54,7 @@ import Data.Csv
 import qualified Data.List as DL
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
+import Data.Time (DayOfWeek (..))
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.MerchantServiceConfig as DMSC
 import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
@@ -927,7 +928,9 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     stepFee :: Text,
     defaultStepFee :: Text,
     extraKmRateStartDistance :: Text,
-    perExtraKmRate :: Text
+    perExtraKmRate :: Text,
+    peakTimings :: Text,
+    peakDays :: Text
   }
   deriving (Show)
 
@@ -967,6 +970,8 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "default_step_fee"
       <*> r .: "extra_km_rate_start_distance"
       <*> r .: "per_extra_km_rate"
+      <*> r .: "peak_timings"
+      <*> r .: "peak_days"
 
 upsertFarePolicy :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
 upsertFarePolicy merchantShortId opCity req = do
@@ -1042,18 +1047,22 @@ upsertFarePolicy merchantShortId opCity req = do
           finalFarePolicy <- mergeFarePolicy newId firstFarePolicy
           CQFP.create finalFarePolicy
           let merchanOperatingCityId = merchantOpCity.id
-          mbFareProduct <- CQFProduct.findUnboundedByMerchantVariantArea merchanOperatingCityId [DFareProduct.ALL] tripCategory vehicleServiceTier area
-          case mbFareProduct of
-            Just fp -> do
-              CQFProduct.updateFarePolicyId finalFarePolicy.id fp.id
-              CQFP.delete fp.farePolicyId
-              CQFProduct.clearCache fp
-            Nothing -> do
-              id <- generateGUID
-              let farePolicyId = finalFarePolicy.id
-              let fareProduct = DFareProduct.FareProduct {searchSource = DFareProduct.ALL, enabled = True, merchantId = merchantOpCity.merchantId, merchantOperatingCityId = merchantOpCity.id, ..}
-              CQFProduct.create fareProduct
-              CQFProduct.clearCache fareProduct
+          oldFareProducts <-
+            case timeBounds of
+              Unbounded -> maybeToList <$> CQFProduct.findUnboundedByMerchantVariantArea merchanOperatingCityId [DFareProduct.ALL] tripCategory vehicleServiceTier area
+              _ -> CQFProduct.findAllBoundedByMerchantVariantArea merchanOperatingCityId [DFareProduct.ALL] tripCategory vehicleServiceTier area
+
+          oldFareProducts `forM_` \fp -> do
+            CQFP.delete fp.farePolicyId
+            CQFProduct.delete fp.id
+            CQFProduct.clearCache fp
+
+          id <- generateGUID
+          let farePolicyId = finalFarePolicy.id
+          let fareProduct = DFareProduct.FareProduct {searchSource = DFareProduct.ALL, enabled = True, merchantId = merchantOpCity.merchantId, merchantOperatingCityId = merchantOpCity.id, ..}
+          CQFProduct.create fareProduct
+          CQFProduct.clearCache fareProduct
+
           return errors
 
     makeFarePolicy :: Int -> FarePolicyCSVRow -> Flow (Context.City, DVST.ServiceTierType, DTC.TripCategory, SL.Area, TimeBound, FarePolicy.FarePolicy)
@@ -1061,6 +1070,24 @@ upsertFarePolicy merchantShortId opCity req = do
       now <- getCurrentTime
       let createdAt = now
       let updatedAt = now
+      let mbPeakTimings = cleanField row.peakTimings
+      timeBound <-
+        case mbPeakTimings of
+          Nothing -> return Unbounded
+          _ -> do
+            peakTimings :: [(TimeOfDay, TimeOfDay)] <- readCSVField idx row.peakTimings "Peak Timings"
+            peakDays :: [DayOfWeek] <- readCSVField idx row.peakDays "Peak Days"
+            let bounds =
+                  BoundedPeaks
+                    { monday = if Monday `elem` peakDays then peakTimings else [],
+                      tuesday = if Tuesday `elem` peakDays then peakTimings else [],
+                      wednesday = if Wednesday `elem` peakDays then peakTimings else [],
+                      thursday = if Thursday `elem` peakDays then peakTimings else [],
+                      friday = if Friday `elem` peakDays then peakTimings else [],
+                      saturday = if Saturday `elem` peakDays then peakTimings else [],
+                      sunday = if Sunday `elem` peakDays then peakTimings else []
+                    }
+            return $ BoundedByWeekday bounds
       city :: Context.City <- readCSVField idx row.city "City"
       vehicleServiceTier :: DVST.ServiceTierType <- readCSVField idx row.vehicleServiceTier "Vehicle Service Tier"
       area :: SL.Area <- readCSVField idx row.area "Area"
@@ -1071,19 +1098,22 @@ upsertFarePolicy merchantShortId opCity req = do
       let nightShiftBounds = Just $ Common.NightShiftBounds nightShiftStart nightShiftEnd
       minAllowedTripDistance :: Meters <- readCSVField idx row.minAllowedTripDistance "Min Allowed Trip Distance"
       maxAllowedTripDistance :: Meters <- readCSVField idx row.maxAllowedTripDistance "Max Allowed Trip Distance"
-      let allowedTripDistanceBounds = Just $ Common.AllowedTripDistanceBounds minAllowedTripDistance maxAllowedTripDistance
+      let allowedTripDistanceBounds = Just $ Common.AllowedTripDistanceBounds maxAllowedTripDistance minAllowedTripDistance
       let serviceCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.serviceCharge "Service Charge"
       let tollCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.tollCharges "Toll Charge"
       let perMinuteRideExtraTimeCharge = Nothing
       let govtCharges :: (Maybe Double) = readMaybeCSVField idx row.govtCharges "Govt Charges"
       farePolicyType :: FarePolicy.FarePolicyType <- readCSVField idx row.farePolicyType "Fare Policy Type"
       description <- cleanCSVField idx row.description "Description"
-      congestionChargeMultiplierValue :: Centesimal <- readCSVField idx row.congestionChargeMultiplier "Congestion Charge Multiplier"
-      let congestionChargeMultiplierIncludeBaseFare :: Bool = (mapToBool . T.toLower) row.congestionChargeMultiplierIncludeBaseFare
+      let mbCongestionChargeMultiplierValue :: (Maybe Centesimal) = readMaybeCSVField idx row.congestionChargeMultiplier "Congestion Charge Multiplier"
       let congestionChargeMultiplier =
-            if congestionChargeMultiplierIncludeBaseFare
-              then Just $ FarePolicy.BaseFareAndExtraDistanceFare congestionChargeMultiplierValue
-              else Just $ FarePolicy.ExtraDistanceFare congestionChargeMultiplierValue
+            case mbCongestionChargeMultiplierValue of
+              Nothing -> Nothing
+              Just congestionChargeMultiplierValue -> do
+                let congestionChargeMultiplierIncludeBaseFare :: Bool = (mapToBool . T.toLower) row.congestionChargeMultiplierIncludeBaseFare
+                if congestionChargeMultiplierIncludeBaseFare
+                  then Just $ FarePolicy.BaseFareAndExtraDistanceFare congestionChargeMultiplierValue
+                  else Just $ FarePolicy.ExtraDistanceFare congestionChargeMultiplierValue
       let parkingCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.parkingCharge "Parking Charge"
       currency :: Currency <- readCSVField idx row.currency "Currency"
 
@@ -1139,7 +1169,7 @@ upsertFarePolicy merchantShortId opCity req = do
             defaultStepFee :: HighPrecMoney <- readCSVField idx row.defaultStepFee "Default Step Fee"
             return $ NE.nonEmpty [DFPEFB.DriverExtraFeeBounds {..}]
 
-      return $ (city, vehicleServiceTier, tripCategory, area, Unbounded, FarePolicy.FarePolicy {id = Id idText, description = Just description, ..})
+      return $ (city, vehicleServiceTier, tripCategory, area, timeBound, FarePolicy.FarePolicy {id = Id idText, description = Just description, ..})
 
 ---------------------------------------------------------------------
 upsertSpecialLocation :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Flow APISuccess
