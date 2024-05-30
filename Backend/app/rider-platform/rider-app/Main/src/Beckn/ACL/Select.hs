@@ -45,8 +45,8 @@ buildSelectReqV2 ::
 buildSelectReqV2 dSelectRes = do
   endLoc <- dSelectRes.searchRequest.toLocation & fromMaybeM (InternalError "To location address not found")
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle dSelectRes.merchant.id "MOBILITY" (UCommon.mapVariantToVehicle dSelectRes.variant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  messageId <- generateGUID
   let message = buildSelectReqMessage dSelectRes endLoc dSelectRes.isValueAddNP bapConfig
-      messageId = dSelectRes.estimate.bppEstimateId.getId
       transactionId = dSelectRes.searchRequest.id.getId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack dSelectRes.merchant.id.getId)
   ttl <- bapConfig.selectTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
