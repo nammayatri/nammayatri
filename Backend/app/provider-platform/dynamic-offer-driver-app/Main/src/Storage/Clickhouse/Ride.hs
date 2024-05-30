@@ -62,14 +62,18 @@ getCompletedRidesByDriver ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   [Id DRide.Ride] ->
   Id DP.Person ->
+  UTCTime ->
+  UTCTime ->
   m Int
-getCompletedRidesByDriver rideIds driverId = do
+getCompletedRidesByDriver rideIds driverId from to = do
   res <-
     CH.findAll $
       CH.select_ (\ride -> CH.aggregate $ CH.count_ ride.id) $
         CH.filter_
           ( \ride _ ->
               ride.status CH.==. Just DRide.COMPLETED
+                CH.&&. ride.createdAt >=. from
+                CH.&&. ride.createdAt <=. to
                 CH.&&. ride.driverId CH.==. Just (cast driverId)
                 CH.&&. ride.id `in_` rideIds
           )
@@ -80,14 +84,18 @@ getRidesByIdAndStatus ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   [Id DRide.Ride] ->
   DRide.RideStatus ->
+  UTCTime ->
+  UTCTime ->
   m Int
-getRidesByIdAndStatus rideIds status = do
+getRidesByIdAndStatus rideIds status from to = do
   res <-
     CH.findAll $
       CH.select_ (\ride -> CH.aggregate $ CH.count_ ride.id) $
         CH.filter_
           ( \ride _ ->
               ride.status CH.==. Just status
+                CH.&&. ride.createdAt >=. from
+                CH.&&. ride.createdAt <=. to
                 CH.&&. ride.id `in_` rideIds
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE rideTTable)
@@ -97,14 +105,18 @@ getEarningsByDriver ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   [Id DRide.Ride] ->
   Id DP.Person ->
+  UTCTime ->
+  UTCTime ->
   m Int
-getEarningsByDriver rideIds driverId = do
+getEarningsByDriver rideIds driverId from to = do
   res <-
     CH.findAll $
       CH.select_ (\ride -> CH.aggregate $ CH.sum_ ride.fare) $
         CH.filter_
           ( \ride _ ->
               ride.status CH.==. Just DRide.COMPLETED
+                CH.&&. ride.createdAt >=. from
+                CH.&&. ride.createdAt <=. to
                 CH.&&. ride.driverId CH.==. Just (cast driverId)
                 CH.&&. ride.id `in_` rideIds
           )
@@ -117,14 +129,18 @@ getEarningsByDriver rideIds driverId = do
 getEarningsByIds ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   [Id DRide.Ride] ->
+  UTCTime ->
+  UTCTime ->
   m Int
-getEarningsByIds rideIds = do
+getEarningsByIds rideIds from to = do
   res <-
     CH.findAll $
       CH.select_ (\ride -> CH.aggregate $ CH.sum_ ride.fare) $
         CH.filter_
           ( \ride _ ->
               ride.status CH.==. Just DRide.COMPLETED
+                CH.&&. ride.createdAt >=. from
+                CH.&&. ride.createdAt <=. to
                 CH.&&. ride.id `in_` rideIds
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE rideTTable)
@@ -137,8 +153,10 @@ getCompletedRidesStatsByIdsAndDriverId ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   [Id DRide.Ride] ->
   Maybe (Id DP.Person) ->
+  UTCTime ->
+  UTCTime ->
   m (Int, Int, Int, Int)
-getCompletedRidesStatsByIdsAndDriverId rideIds mbDriverId = do
+getCompletedRidesStatsByIdsAndDriverId rideIds mbDriverId from to = do
   res <-
     CH.findAll $
       CH.select_
@@ -152,6 +170,8 @@ getCompletedRidesStatsByIdsAndDriverId rideIds mbDriverId = do
         $ CH.filter_
           ( \ride _ ->
               ride.status CH.==. Just DRide.COMPLETED
+                CH.&&. ride.createdAt >=. from
+                CH.&&. ride.createdAt <=. to
                 CH.&&. ride.id `in_` rideIds
                 CH.&&. CH.whenJust_ mbDriverId (\driverId -> ride.driverId CH.==. Just (cast driverId))
           )
@@ -164,50 +184,49 @@ getCompletedRidesStatsByIdsAndDriverId rideIds mbDriverId = do
 totalEarningsByFleetOwnerPerVehicle :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Text -> UTCTime -> UTCTime -> m Int
 totalEarningsByFleetOwnerPerVehicle fleetOwnerId vehicleNumber from to = do
   rideIds <- findIdsByFleetOwnerAndVehicle fleetOwnerId vehicleNumber from to
-  getEarningsByIds (cast <$> rideIds)
+  getEarningsByIds (cast <$> rideIds) from to
 
 totalEarningsByFleetOwnerPerDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Id DP.Person -> UTCTime -> UTCTime -> m Int
 totalEarningsByFleetOwnerPerDriver fleetOwnerId driverId from to = do
   rideIds <- findIdsByFleetOwner fleetOwnerId from to
-  getEarningsByDriver (cast <$> rideIds) driverId
+  getEarningsByDriver (cast <$> rideIds) driverId from to
 
 totalRidesByFleetOwnerPerVehicle :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Text -> UTCTime -> UTCTime -> m Int
 totalRidesByFleetOwnerPerVehicle fleetOwnerId vehicleNumber from to = do
   rideIds <- findIdsByFleetOwnerAndVehicle fleetOwnerId vehicleNumber from to
-  getRidesByIdAndStatus (cast <$> rideIds) DRide.COMPLETED
+  getRidesByIdAndStatus (cast <$> rideIds) DRide.COMPLETED from to
 
 totalRidesByFleetOwnerPerDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Id DP.Person -> UTCTime -> UTCTime -> m Int
 totalRidesByFleetOwnerPerDriver fleetOwnerId driverId from to = do
   rideIds <- findIdsByFleetOwner fleetOwnerId from to
-  getCompletedRidesByDriver (cast <$> rideIds) driverId
+  getCompletedRidesByDriver (cast <$> rideIds) driverId from to
 
 totalRidesByFleetOwnerPerVehicleAndDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Text -> Id DP.Person -> UTCTime -> UTCTime -> m Int
 totalRidesByFleetOwnerPerVehicleAndDriver fleetOwnerId vehicleNumber driverId from to = do
   rideIds <- findIdsByFleetOwnerAndVehicle fleetOwnerId vehicleNumber from to
-  getCompletedRidesByDriver (cast <$> rideIds) driverId
+  getCompletedRidesByDriver (cast <$> rideIds) driverId from to
 
 totalEarningsByFleetOwnerPerVehicleAndDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Text -> Id DP.Person -> UTCTime -> UTCTime -> m Int
 totalEarningsByFleetOwnerPerVehicleAndDriver fleetOwnerId vehicleNumber driverId from to = do
   rideIds <- findIdsByFleetOwnerAndVehicle fleetOwnerId vehicleNumber from to
-  getEarningsByDriver (cast <$> rideIds) driverId
+  getEarningsByDriver (cast <$> rideIds) driverId from to
 
-totalRidesStatsInFleet :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> UTCTime -> UTCTime -> m (Int, Int, Int, Int)
+totalRidesStatsInFleet :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> UTCTime -> UTCTime -> m (Int, Int, Int)
 totalRidesStatsInFleet fleetOwnerId from to = do
   rideIds <- findIdsByFleetOwner fleetOwnerId from to
-  (totalEarning, distanceTravelled, totalCompletedRides, _) <- getCompletedRidesStatsByIdsAndDriverId (cast <$> rideIds) Nothing
-  totalCancelledRides <- getRidesByIdAndStatus (cast <$> rideIds) DRide.CANCELLED
-  pure (totalEarning, distanceTravelled, totalCompletedRides, totalCancelledRides)
+  (totalEarning, distanceTravelled, totalCompletedRides, _) <- getCompletedRidesStatsByIdsAndDriverId (cast <$> rideIds) Nothing from to
+  pure (totalEarning, distanceTravelled, totalCompletedRides)
 
-fleetStatsByDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => [Id RideDetails.RideDetails] -> Maybe (Id DP.Person) -> m (Int, Int, Int, DC.TotalDuration)
-fleetStatsByDriver rideIds mbDriverId = do
-  (totalEarning, distanceTravelled, totalCompletedRides, duration) <- getCompletedRidesStatsByIdsAndDriverId (cast <$> rideIds) mbDriverId
+fleetStatsByDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => [Id RideDetails.RideDetails] -> Maybe (Id DP.Person) -> UTCTime -> UTCTime -> m (Int, Int, Int, DC.TotalDuration)
+fleetStatsByDriver rideIds mbDriverId from to = do
+  (totalEarning, distanceTravelled, totalCompletedRides, duration) <- getCompletedRidesStatsByIdsAndDriverId (cast <$> rideIds) mbDriverId from to
   let totalDuration = calculateTimeDifference duration
   pure (totalEarning, distanceTravelled, totalCompletedRides, totalDuration)
 
 fleetStatsByVehicle :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Text -> Text -> UTCTime -> UTCTime -> m (Int, Int, Int, DC.TotalDuration)
 fleetStatsByVehicle fleetOwnerId vehicleNumber from to = do
   rideIds <- findIdsByFleetOwnerAndVehicle (Just fleetOwnerId) vehicleNumber from to
-  fleetStatsByDriver rideIds Nothing
+  fleetStatsByDriver rideIds Nothing from to
 
 calculateTimeDifference :: Int -> DC.TotalDuration
 calculateTimeDifference diffTime = DC.TotalDuration {..}
