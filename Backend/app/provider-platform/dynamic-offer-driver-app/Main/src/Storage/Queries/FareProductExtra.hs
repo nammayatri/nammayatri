@@ -25,6 +25,9 @@ import Storage.Queries.OrphanInstances.FareProduct
 
 -- Extra code goes here --
 
+delete :: (MonadFlow m, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FareProduct.FareProduct -> m ()
+delete (Id id) = deleteWithKV [Se.And [Se.Is Beam.id (Se.Eq id)]]
+
 updateFarePolicyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id FarePolicy -> Kernel.Types.Id.Id Domain.Types.FareProduct.FareProduct -> m ()
 updateFarePolicyId (Kernel.Types.Id.Id farePolicyId) (Kernel.Types.Id.Id id) = do updateWithKV [Se.Set Beam.farePolicyId farePolicyId] [Se.Is Beam.id $ Se.Eq id]
 
