@@ -387,7 +387,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
   _ <- QRide.updateMultiple updRide.id updRide
   _ <- QFareBreakup.createMany breakups
-  void $ QPFS.updateStatus booking.riderId DPFS.PENDING_RATING {rideId = ride.id}
+  void $ QPFS.updateStatus booking.riderId DPFS.PENDING_RATING {rideId = ride.id, mbBookingId = Just booking.id}
   QPFS.clearCache booking.riderId
 
   -- uncomment for update api test; booking.paymentMethodId should be present
