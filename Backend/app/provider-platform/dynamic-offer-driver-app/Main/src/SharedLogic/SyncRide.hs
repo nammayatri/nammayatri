@@ -38,6 +38,7 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude (whenNothing_)
 import Kernel.Beam.Functions
+import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
@@ -51,6 +52,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.FareParameters as QFareParams
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 
@@ -85,6 +87,8 @@ fetchBookingDetails ride booking = do
   let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
   let paymentUrl = Nothing
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+  riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
+  riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
   pure DCommon.BookingDetails {..}
 
 -- IN_PROGRESS --

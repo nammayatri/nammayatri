@@ -404,8 +404,9 @@ mkFulfillmentV2 ::
   Bool ->
   Maybe Text ->
   IsValueAddNP ->
+  Maybe Text ->
   m Spec.Fulfillment
-mkFulfillmentV2 mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide mbEvent isValueAddNP = do
+mkFulfillmentV2 mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide mbEvent isValueAddNP riderPhone = do
   mbDInfo <- driverInfo
   let rideOtp = fromMaybe ride.otp ride.endOtp
   pure $
@@ -451,7 +452,7 @@ mkFulfillmentV2 mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDr
                   vehicleMake = Nothing,
                   vehicleCapacity = vehicle.capacity
                 },
-        fulfillmentCustomer = Nothing,
+        fulfillmentCustomer = tfCustomer riderPhone booking.riderName,
         fulfillmentState =
           mbEvent
             >> ( Just $
@@ -478,6 +479,25 @@ mkFulfillmentV2 mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDr
             name = dName,
             tags = if isValueAddNP then dTags else Nothing
           }
+
+tfCustomer :: Maybe Text -> Maybe Text -> Maybe Spec.Customer
+tfCustomer riderPhone riderName =
+  Just
+    Spec.Customer
+      { customerContact =
+          Just
+            Spec.Contact
+              { contactPhone = riderPhone
+              },
+        customerPerson = do
+          Just $
+            Spec.Person
+              { personId = Nothing,
+                personImage = Nothing,
+                personName = riderName,
+                personTags = Nothing
+              }
+      }
 
 mkDriverDetailsTags :: SP.Person -> Bool -> Bool -> Maybe [Spec.TagGroup]
 mkDriverDetailsTags driver isDriverBirthDay isFreeRide =
