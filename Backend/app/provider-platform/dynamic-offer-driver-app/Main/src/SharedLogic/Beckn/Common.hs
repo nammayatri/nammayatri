@@ -22,7 +22,6 @@ import Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
-import qualified Domain.Types.RiderDetails as DRD
 import Domain.Types.Vehicle as SVeh
 import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
@@ -32,7 +31,6 @@ data BookingDetails = BookingDetails
     booking :: DRB.Booking,
     driver :: SP.Person,
     vehicle :: SVeh.Vehicle,
-    riderDetails :: Maybe DRD.RiderDetailsDecrypted,
     isValueAddNP :: Bool,
     bppConfig :: DBC.BecknConfig,
     merchant :: DM.Merchant,

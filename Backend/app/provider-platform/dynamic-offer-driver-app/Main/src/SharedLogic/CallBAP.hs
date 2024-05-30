@@ -104,7 +104,6 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.IdfyVerification as QIV
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
@@ -276,7 +275,6 @@ sendRideAssignedUpdateToBAP ::
   DVeh.Vehicle ->
   m ()
 sendRideAssignedUpdateToBAP booking ride driver veh = do
-  riderDetails <- traverse QRD.findById (booking.riderId)
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   let estimateId = booking.estimateId <&> getId
   merchant <-
@@ -380,7 +378,6 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
-  riderDetails <- traverse QRD.findById (booking.riderId)
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
     CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
@@ -418,7 +415,6 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
-  riderDetails <- traverse QRD.findById (booking.riderId)
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   let bookingDetails = ACL.BookingDetails {..}
       estimateId = booking.estimateId <&> (.getId)
