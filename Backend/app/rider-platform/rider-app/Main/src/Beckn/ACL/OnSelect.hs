@@ -23,7 +23,6 @@ import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import BecknV2.Utils
 import qualified BecknV2.Utils as Utils
 import qualified Data.Text as T
-import qualified Data.UUID as UUID
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -52,8 +51,8 @@ buildOnSelectReqV2 req = do
     quote <- order.orderQuote & fromMaybeM (InvalidRequest "Missing orderQuote")
     (timestamp, validTill) <- Utils.getTimestampAndValidTill context
     quotesInfo <- traverse (buildQuoteInfoV2 fulfillment quote timestamp order validTill) items
-    messageUuid <- context.contextMessageId & fromMaybeM (InvalidRequest "Missing message_id")
-    let bppEstimateId = Id $ UUID.toText messageUuid
+    itemId <- listToMaybe items >>= (.itemId) & fromMaybeM (InvalidRequest "Missing itemId")
+    let bppEstimateId = Id itemId
         providerInfo =
           DOnSelect.ProviderInfo
             { providerId = providerId,
