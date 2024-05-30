@@ -208,3 +208,10 @@ findLastCancelledByRiderId riderDetailsId =
     (Just 1)
     Nothing
     <&> listToMaybe
+
+updatePaymentId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Text -> m ()
+updatePaymentId bookingId paymentId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamB.paymentId $ Just paymentId, Se.Set BeamB.updatedAt now]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]

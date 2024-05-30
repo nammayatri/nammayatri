@@ -186,6 +186,7 @@ handler merchantId req validatedReq = do
             roundTrip = searchRequest.roundTrip,
             tollNames = if isTollApplicableForServiceTier then searchRequest.tollNames else Nothing,
             estimateId = Just $ Id req.estimateId,
+            paymentId = Nothing,
             ..
           }
 

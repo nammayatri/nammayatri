@@ -223,11 +223,16 @@ tfItems booking merchant mbFarePolicy =
           itemFulfillmentIds = Just [booking.quoteId],
           itemId = Just $ maybe (Common.mkItemId merchant.shortId.getShortId booking.vehicleServiceTier) getId (booking.estimateId),
           itemLocationIds = Nothing,
-          itemPaymentIds = Nothing,
+          itemPaymentIds = tfPaymentId booking.paymentId,
           itemPrice = tfItemPrice booking,
           itemTags = BUtils.mkRateCardTag Nothing Nothing . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
         }
     ]
+
+tfPaymentId :: Maybe Text -> Maybe [Text]
+tfPaymentId mbPaymentId = do
+  paymentId <- mbPaymentId
+  Just [paymentId]
 
 tfItemPrice :: DRB.Booking -> Maybe Spec.Price
 tfItemPrice booking =
