@@ -63,7 +63,8 @@ data FlowStatus
         driverLocation :: Maybe Maps.LatLong
       }
   | PENDING_RATING
-      { rideId :: Id DRide.Ride
+      { rideId :: Id DRide.Ride,
+        mbBookingId :: Maybe (Id DB.Booking)
       }
   | DRIVER_ARRIVED
       { rideId :: Id DRide.Ride,
