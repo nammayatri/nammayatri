@@ -1840,17 +1840,11 @@ fleetTotalEarning _merchantShortId _ fleetOwnerId mbFrom mbTo = do
   let defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
-  (totalEarning, totalDistanceTravelled, totalCompletedRides, totalCancelledRides) <- CQRide.totalRidesStatsInFleet (Just fleetOwnerId) from to
-  let totalRides = totalCompletedRides + totalCancelledRides
+  (totalEarning, totalDistanceTravelled, totalRides) <- CQRide.totalRidesStatsInFleet (Just fleetOwnerId) from to
   totalVehicle <- VRCQuery.countAllActiveRCForFleet fleetOwnerId merchant.id
-  let conversionRate = (fromIntegral (totalCompletedRides * 100) :: Double) / (fromIntegral (nonZero totalRides) :: Double)
-  let cancellationRate = (fromIntegral (totalCancelledRides * 100) :: Double) / (fromIntegral (nonZero totalRides) :: Double)
+  let conversionRate = 0.0 --------- currently we don't require this
+  let cancellationRate = 0.0
   pure $ Common.FleetTotalEarningResponse {totalDistanceTravelled = fromIntegral totalDistanceTravelled / 1000.0, ..}
-
-nonZero :: Int -> Int
-nonZero a
-  | a <= 0 = 1
-  | otherwise = a
 
 fleetVehicleEarning :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.FleetEarningListRes
 fleetVehicleEarning _merchantShortId _ fleetOwnerId mbVehicleNumber mbLimit mbOffset mbFrom mbTo = do
@@ -1892,7 +1886,7 @@ fleetDriverEarning merchantShortId _ fleetOwnerId mbMobileCountryCode mbDriverPh
   rideIds <- findIdsByFleetOwner (Just fleetOwnerId) from to
   res <- forM driverListWithInfo $ \(driver, driverInfo') -> do
     let dId = cast @DP.Person @Common.Driver driver.id
-    (totalEarning, distanceTravelled, totalRides, duration) <- CQRide.fleetStatsByDriver rideIds (Just driver.id)
+    (totalEarning, distanceTravelled, totalRides, duration) <- CQRide.fleetStatsByDriver rideIds (Just driver.id) from to
     let driverName = driver.firstName <> " " <> fromMaybe "" driver.lastName
     pure $
       Common.FleetEarningRes
