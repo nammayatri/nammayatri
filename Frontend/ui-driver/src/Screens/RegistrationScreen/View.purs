@@ -29,7 +29,7 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Control.Monad.ST (for)
-import Data.Array (all, any, elem, filter, fold, length, mapWithIndex, find)
+import Data.Array (all, any, elem, filter, fold, length, mapWithIndex, find, foldr)
 import Data.Foldable (foldl)
 import Data.Maybe (Maybe(..), isJust, isNothing)
 import Data.String as DS
@@ -201,7 +201,7 @@ view push state =
             , linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
-                , margin $ Margin 16 20 16 16
+                , margin $ Margin 16 8 16 16
                 , visibility $ boolToVisibility $ state.data.cityConfig.showDriverReferral || state.data.config.enableDriverReferral
                 ][enterReferralCode push state]
             , linearLayout
@@ -286,9 +286,10 @@ cardsListView :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState
 cardsListView push state =
   let documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs else state.data.registerationStepsAuto
       isRefreshVisible = any (_ == IN_PROGRESS) $ map (\item -> getStatus item.stage state) documentList
+      count = foldr (\item acc -> if item then acc + 1 else acc) 0 [state.data.cityConfig.showDriverReferral, isRefreshVisible]
   in scrollView
     [ width MATCH_PARENT
-    , height $ if EHC.os == "IOS" then V $ (JB.getHeightFromPercent (if state.data.cityConfig.showDriverReferral || isRefreshVisible then 70 else 80)) - EHC.safeMarginBottom else WRAP_CONTENT
+    , height $ if EHC.os == "IOS" then V $ (JB.getHeightFromPercent (80 - (count * 10))) - EHC.safeMarginBottom else WRAP_CONTENT
     , scrollBarY false
     , fillViewport true
     ][ linearLayout
@@ -301,6 +302,7 @@ cardsListView push state =
             vehicleSpecificList push state state.data.registerationStepsAuto
         ]
     ]
+
 
 vehicleSpecificList :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState -> Array ST.StepProgress -> PrestoDOM (Effect Unit) w
 vehicleSpecificList push state registerationSteps = 
@@ -508,7 +510,7 @@ refreshView push state =
       , cornerRadius 8.0
       , alignParentBottom "true,-1"
       , onClick push $ const Refresh
-      , margin $ Margin 16 0 16 16
+      , margin $ Margin 16 0 16 8
       , visibility $ boolToVisibility $ showRefresh
       ][ textView $
           [ text $ getString LAST_UPDATED
@@ -559,7 +561,7 @@ enterReferralCode push state =
                 , text $ getString ENTER_CODE
                 , margin $ MarginRight 7
                 , color if allStepsCompleted then Color.darkBlue else Color.primaryBG
-                , onClick push $ const $ EnterReferralCode allStepsCompleted
+                , onClick push $ const $ EnterReferralCode (allStepsCompleted || state.data.cityConfig.mandatoryDriverReferral)
                 , visibility $ boolToVisibility $ not state.props.referralCodeSubmitted
                 ] <> FontStyle.body3 TypoGraphy
               , imageView

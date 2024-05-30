@@ -98,6 +98,6 @@ view push config =
                       , background Color.grey700
                       , margin $ MarginHorizontal 16 16
                     ][]
-                ]) $ (DA.filter (\item -> if item.action == "change_language" then if (DA.length uiConfig.languageList) > 1 then true else false else true )) config.menuItems)
+                ]) $ (DA.filter (\item -> if item.action == "change_language" then (DA.length uiConfig.languageList) > 1 else item.isVisible )) config.menuItems)
     ]
   ]

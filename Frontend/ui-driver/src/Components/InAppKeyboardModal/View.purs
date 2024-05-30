@@ -148,7 +148,7 @@ textBoxes push state =
       , gravity CENTER
       , cornerRadius 4.0
       , stroke ("1," <> if (state.otpIncorrect || state.otpAttemptsExceeded ) then Color.textDanger else if state.inputTextConfig.focusIndex == index then Color.highlightBorderColor else Color.borderColorLight )
-      , margin (Margin ((screenWidth unit)/30) 0 ((screenWidth unit)/30) 0)
+      , margin (Margin ((screenWidth unit)/32) 0 ((screenWidth unit)/30) 0)
       , onClick push (const (OnclickTextBox index))
       ]<> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle)) state.textBoxConfig.textBoxesArray)
 

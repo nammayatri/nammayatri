@@ -144,6 +144,7 @@ config =
               supportMail: "",
               languageKey : "KN_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
@@ -175,6 +176,7 @@ config =
               supportMail : "",
               languageKey : "TE_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
@@ -206,6 +208,7 @@ config =
               supportMail: "",
               languageKey : "KN_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
@@ -237,6 +240,7 @@ config =
               supportMail : "",
               languageKey : "HI_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
@@ -268,6 +272,7 @@ config =
               supportMail : "",
               languageKey : "TA_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : false,
               uploadRCandDL : false,
               enableYatriCoins : false,
@@ -299,6 +304,7 @@ config =
               supportMail: "",
               languageKey : "TA_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
@@ -330,6 +336,7 @@ config =
               supportMail : "",
               languageKey : "TA_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
@@ -361,6 +368,7 @@ config =
               supportMail: "",
               languageKey : "HI_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : true,
               uploadRCandDL : true,
               enableYatriCoins : false,
@@ -392,6 +400,7 @@ config =
               supportMail: "",
               languageKey : "HI_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : true,
               uploadRCandDL : true,
               enableYatriCoins : false,
@@ -423,6 +432,7 @@ config =
               supportMail : "",
               languageKey : "TA_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : true,
               uploadRCandDL : false,
               enableYatriCoins : false,
@@ -454,6 +464,7 @@ config =
               supportMail: "",
               languageKey : "BN_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral: false,
               showCustomerReferral : true,
               uploadRCandDL : true, 
               enableYatriCoins : false,
@@ -491,7 +502,8 @@ config =
             , supportNumber: "+19522390127"
             , supportMail : "drivers@bridge.cab"
             , languageKey: "EN_US"
-            , showDriverReferral: false
+            , showDriverReferral: true
+            , mandatoryDriverReferral: true
             , showCustomerReferral: false
             , uploadRCandDL: true
             , enableYatriCoins: false
@@ -701,6 +713,7 @@ dummyCityConfig = {
   supportMail: "",
   languageKey : "",
   showDriverReferral : false,
+  mandatoryDriverReferral : false,
   showCustomerReferral : false,
   uploadRCandDL : true,
   enableYatriCoins : false,

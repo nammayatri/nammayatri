@@ -100,6 +100,7 @@ type CityConfig = {
   supportMail :: String,
   languageKey :: String,
   showDriverReferral :: Boolean,
+  mandatoryDriverReferral :: Boolean,
   showCustomerReferral :: Boolean,
   uploadRCandDL :: Boolean,
   enableYatriCoins :: Boolean,
