@@ -31,6 +31,7 @@ data BookingDetails = BookingDetails
     booking :: DRB.Booking,
     driver :: SP.Person,
     vehicle :: SVeh.Vehicle,
+    riderPhone :: Maybe Text,
     isValueAddNP :: Bool,
     bppConfig :: DBC.BecknConfig,
     merchant :: DM.Merchant,

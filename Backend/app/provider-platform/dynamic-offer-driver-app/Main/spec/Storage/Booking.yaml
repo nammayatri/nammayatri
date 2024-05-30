@@ -68,6 +68,7 @@ Booking:
     roundTrip: Maybe Bool
     isScheduled: Bool
     estimateId: Maybe (Id Estimate)
+    paymentId: Maybe Text
 
   excludedFields:
     - merchantId

@@ -166,6 +166,7 @@ handler merchant req validatedQuote = do
       whenJust booking.toLocation $ \toLocation -> do
         whenJust req.toAddress $ \toAddress -> QL.updateAddress toLocation.id toAddress
       whenJust req.mbRiderName $ QRB.updateRiderName booking.id
+      whenJust req.paymentId $ QRB.updatePaymentId booking.id
       QBE.logRideConfirmedEvent booking.id
 
     mkDConfirmResp mbRideInfo uBooking riderDetails =
