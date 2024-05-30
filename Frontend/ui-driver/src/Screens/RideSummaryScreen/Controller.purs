@@ -12,6 +12,7 @@ import Engineering.Helpers.Commons as EHC
 import JBridge as JBridge
 import Debug
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
+import Components.SourceToDestination.Controller as SourceToDestinationController
 
 
 instance showAction  ::  Show Action where
@@ -22,20 +23,26 @@ instance loggableAction :: Loggable Action where
 
 
 data Action = BackPressed
-              | TermOpen 
-              | ExChargeOpen 
-              | InChargeOpen 
+              | TermsConditionOpen 
+              | ExcludedChargesOpen 
+              | IncludedChargesOpen 
+              | PickUpOpen
+              | SourceToDestinationActionController SourceToDestinationController.Action
+              | NoAction
 
 data ScreenOutput = GoBack
 
 eval ::  Action -> RideSummaryScreenState -> Eval Action ScreenOutput RideSummaryScreenState
-eval TermOpen state = do
-                  let old = state.props.termsOpen
-                  continue state{ props{termsOpen = not old}}
-eval ExChargeOpen state = do
-                  let old = state.props.exChargesOpen
-                  continue state{ props{exChargesOpen = not old}}
-eval InChargeOpen state = do
-                  let old = state.props.inChargesOpen
-                  continue state{ props{inChargesOpen = not old}}
+eval TermsConditionOpen state = do
+                  let old = state.props.termsAndConditionOpen
+                  continue state{ props{termsAndConditionOpen = not old}}
+eval ExcludedChargesOpen state = do
+                  let old = state.props.excludedChargesOpen
+                  continue state{ props{excludedChargesOpen = not old}}
+eval IncludedChargesOpen state = do
+                  let old = state.props.includedChargesOpen
+                  continue state{ props{includedChargesOpen = not old}}
+eval PickUpOpen state = do
+                  let old = state.props.pickUpOpen
+                  continue state{ props{pickUpOpen = not old}}
 eval _ state = continue state
