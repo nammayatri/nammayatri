@@ -293,6 +293,14 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
       now <- getCurrentTime
       ticketService <- QTS.findById ticketServicesReq.serviceId >>= fromMaybeM (TicketServiceNotFound ticketServicesReq.serviceId.getId)
       businessHour <- QBH.findById bHourId >>= fromMaybeM (BusinessHourNotFound bHourId.getId)
+
+      let startTime = case businessHour.btype of
+            Domain.Types.BusinessHour.Slot time -> time
+            Domain.Types.BusinessHour.Duration startTime' _ -> startTime'
+      let visitDateTime = UTCTime visitDate (timeOfDayToTime startTime)
+
+      when (visitDateTime < now) $ throwError $ InvalidRequest "Cannot book for past date"
+
       tBookingSCats <- mapM (createTicketBookingServiceCategory merchantOperatingCityId id visitDate businessHour) categories
       QTBSC.createMany tBookingSCats
       amount <- withCurrencyCheckingList (tBookingSCats <&> (.amount)) $ \mbCurrency as ->
@@ -431,7 +439,7 @@ getTicketBookings (mbPersonId, merchantId_) mbLimit mbOffset status_ = do
           }
 
 getTicketBookingsDetails :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow API.Types.UI.TicketService.TicketBookingDetails
-getTicketBookingsDetails _ shortId_ = do
+getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
   ticketBooking <- QTB.findByShortId shortId_ >>= fromMaybeM (TicketBookingNotFound shortId_.getShortId)
   ticketBookingServices <- QTBS.findAllByBookingId ticketBooking.id
   services <- mapM mkTicketBookingServiceDetails ticketBookingServices
@@ -439,6 +447,16 @@ getTicketBookingsDetails _ shortId_ = do
   where
     mkTicketBookingDetails DTTB.TicketBooking {..} services = do
       refunds <- QRefunds.findAllByOrderId $ Kernel.Types.Id.Id shortId.getShortId
+      let isAnyRefundPending = any (\refund -> refund.status == Kernel.External.Payment.Interface.Types.REFUND_PENDING) refunds
+      refundDetails <-
+        if isAnyRefundPending
+          then do
+            let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId
+                orderStatusCall = Payment.orderStatus merchantId' merchantOperatingCityId (Just ticketPlaceId) Payment.Normal
+            paymentStatus <- DPayment.orderStatusService commonPersonId (Kernel.Types.Id.Id shortId.getShortId) orderStatusCall
+            mapM (mkRefundDetails shortId merchantId') paymentStatus.refunds
+          else pure refunds
+
       ticketPlace <- QTP.findById ticketPlaceId >>= fromMaybeM (TicketPlaceNotFound ticketPlaceId.getId)
       return $
         TicketBookingDetails
@@ -448,9 +466,10 @@ getTicketBookingsDetails _ shortId_ = do
             ticketPlaceName = ticketPlace.name,
             amount = amount.amount,
             amountWithCurrency = mkPriceAPIEntity amount,
-            refundDetails = refunds,
+            refundDetails,
             ..
           }
+
     mkTicketBookingServiceDetails :: DTB.TicketBookingService -> Environment.Flow API.Types.UI.TicketService.TicketBookingServiceDetails
     mkTicketBookingServiceDetails DTB.TicketBookingService {..} = do
       ticketService <- QTS.findById ticketServiceId >>= fromMaybeM (TicketServiceNotFound ticketServiceId.getId)
@@ -494,6 +513,23 @@ getTicketBookingsDetails _ shortId_ = do
           { pricePerUnit = pricePerUnit.amount,
             pricePerUnitWithCurrency = mkPriceAPIEntity pricePerUnit,
             cancelCharges = cancellationCharges,
+            ..
+          }
+    mkRefundDetails :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Payment.RefundsData -> Environment.Flow Refunds
+    mkRefundDetails orderId merchantId Payment.RefundsData {..} = do
+      now <- getCurrentTime
+      return $
+        Refunds
+          { id = Kernel.Types.Id.Id requestId,
+            merchantId = merchantId.getId,
+            shortId = requestId,
+            status = status,
+            orderId = Kernel.Types.Id.Id orderId.getShortId,
+            refundAmount = amount,
+            idAssignedByServiceProvider = Nothing,
+            initiatedBy = Nothing,
+            createdAt = now,
+            updatedAt = now,
             ..
           }
 

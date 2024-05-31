@@ -141,7 +141,8 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
             bankErrorMessage = firstInvoice >>= (.bankErrorMessage),
             isRetried = Just $ order.isRetried,
             isRetargeted = Just $ order.isRetargeted,
-            retargetLink = order.retargetLink
+            retargetLink = order.retargetLink,
+            refunds = []
           }
     else do
       let serviceName = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName

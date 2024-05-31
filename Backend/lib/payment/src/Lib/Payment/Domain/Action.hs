@@ -55,7 +55,8 @@ data PaymentStatusResp
         bankErrorCode :: Maybe Text,
         isRetried :: Maybe Bool,
         isRetargeted :: Maybe Bool,
-        retargetLink :: Maybe Text
+        retargetLink :: Maybe Text,
+        refunds :: [Payment.RefundsData]
       }
   | MandatePaymentStatus
       { status :: Payment.TransactionStatus,
@@ -287,7 +288,7 @@ orderStatusService personId orderId orderStatusCall = do
         )
         transactionUUID
       mapM_ updateRefundStatus refunds
-      return $ PaymentStatus {status = transactionStatus, bankErrorCode = orderTxn.bankErrorCode, bankErrorMessage = orderTxn.bankErrorMessage, isRetried = isRetriedOrder, isRetargeted = isRetargetedOrder, retargetLink = retargetPaymentLink}
+      return $ PaymentStatus {status = transactionStatus, bankErrorCode = orderTxn.bankErrorCode, bankErrorMessage = orderTxn.bankErrorMessage, isRetried = isRetriedOrder, isRetargeted = isRetargetedOrder, retargetLink = retargetPaymentLink, refunds = refunds}
     _ -> throwError $ InternalError "Unexpected Order Status Response."
 
 data OrderTxn = OrderTxn
