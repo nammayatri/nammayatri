@@ -13,7 +13,7 @@ import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 
 public class SheetModel {
-    private final String pickUpDistance, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant, vehicleServiceTier,rideProductType, rideDuration, rideDistance, rideStartTime, rideStartDate;
+    private final String pickUpDistance, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant, vehicleServiceTier,rideProductType, rideDuration, rideDistance, rideStartTime, rideStartDate, notificationSource;
     private String requestId;
     private int startTime, specialZoneExtraTip;
     private double updatedAmount;
@@ -73,7 +73,8 @@ public class SheetModel {
                       String rideDuration,
                       String rideDistance,
                       String rideStartTime,
-                      String rideStartDate){
+                      String rideStartDate,
+                      String notificationSource){
 
         this.srcLat = srcLat;
         this.srcLng = srcLng;
@@ -121,6 +122,7 @@ public class SheetModel {
         this.rideDistance = rideDistance;
         this.rideStartTime = rideStartTime;
         this.rideStartDate = rideStartDate;
+        this.notificationSource = notificationSource;
     }
 
     public String getVehicleServiceTier() {
@@ -326,6 +328,10 @@ public class SheetModel {
 
     public String getDurationToPickup(){
         return durationToPickup;
+    }
+
+    public String getNotificationSource(){
+        return notificationSource;
     }
 
     public int getDriverPickUpCharges() { 

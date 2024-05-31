@@ -120,6 +120,7 @@ public class RideRequestActivity extends AppCompatActivity {
             String rideStartDate = rideRequestBundle.getString("rideStartDate");
             String rideDuration = String.format("%02d:%02d Hr", rideRequestBundle.getInt("rideDuration") / 3600 ,( rideRequestBundle.getInt("rideDuration") % 3600 ) / 60);
             String rideDistance = String.format("%d km", rideRequestBundle.getInt("rideDistance") / 1000);
+            String notificationSource= rideRequestBundle.getString("notificationSource");
                     
             SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                     distanceTobeCovered,
@@ -160,7 +161,8 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideDuration,
                     rideDistance,
                     rideStartTime,
-                    rideStartDate);
+                    rideStartDate,
+                    notificationSource);
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);
             sheetAdapter.notifyItemInserted(sheetArrayList.indexOf(sheetModel));
@@ -314,7 +316,7 @@ public class RideRequestActivity extends AppCompatActivity {
                 }
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 executor.execute(() -> {
-                    Boolean isApiSuccess = RideRequestUtils.driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), true, RideRequestActivity.this, sheetArrayList.indexOf(model));
+                    Boolean isApiSuccess = RideRequestUtils.driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), model.getNotificationSource(), true, RideRequestActivity.this, sheetArrayList.indexOf(model));
                     if (isApiSuccess) {
                         mainLooper.post(executor::shutdown);
                         startLoader(model.getSearchRequestId());
@@ -329,7 +331,7 @@ public class RideRequestActivity extends AppCompatActivity {
                         removeCard(position);
                         return;
                     }
-                    new Thread(() -> RideRequestUtils.driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), false, RideRequestActivity.this, sheetArrayList.indexOf(model))).start();
+                    new Thread(() -> RideRequestUtils.driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), model.getNotificationSource(), false, RideRequestActivity.this, sheetArrayList.indexOf(model))).start();
                     holder.rejectButton.setClickable(false);
                     mainLooper.post(() -> {
                         removeCard(position);
