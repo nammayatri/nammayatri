@@ -104,7 +104,6 @@ library:
           - -fno-cse
           - -fmax-simplifier-iterations1
           - -fno-specialise-aggressively
-          - -fwhole-archive-hs-libs
           - -j4
       else:
         ghc-options:
@@ -134,7 +133,6 @@ executables:
           - -fno-cse
           - -fmax-simplifier-iterations1
           - -fno-specialise-aggressively
-          - -fwhole-archive-hs-libs
           - -j4
       else:
         ghc-options:
