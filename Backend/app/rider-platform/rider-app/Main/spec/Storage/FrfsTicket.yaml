@@ -383,6 +383,10 @@ FRFSRecon:
       kvFunction: updateWithKV
       params: [settlementAmount, totalOrderValue, updatedAt]
       where: frfsTicketBookingId
+    updateStatusByTicketBookingId:
+      kvFunction: updateWithKV
+      params: [ticketStatus, updatedAt]
+      where: frfsTicketBookingId
 
   beamFields:
     fare:

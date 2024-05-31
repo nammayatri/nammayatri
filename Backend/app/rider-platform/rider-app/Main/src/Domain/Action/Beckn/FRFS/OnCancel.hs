@@ -28,6 +28,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QTBP
@@ -60,15 +61,17 @@ onCancel _ booking' dOnCancel = do
     Spec.ON_CANCEL_SOFT_CANCEL -> do
       void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just dOnCancel.refundAmount) (Just dOnCancel.cancellationCharges) (Just True) booking.id
     Spec.ON_CANCEL_CANCELLED -> do
-      val :: Maybe Text <- Redis.get (makecancelledTtlKey booking.id)
+      val :: Maybe Bool <- Redis.get (makecancelledTtlKey booking.id)
       case val of
         Nothing -> do
           void $ QTBooking.updateStatusById FTBooking.COUNTER_CANCELLED booking.id
           void $ QTicket.updateAllStatusByBookingId DFRFSTicket.COUNTER_CANCELLED booking.id
-        Just _ttl -> do
+          void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.COUNTER_CANCELLED) booking.id
+        Just _ -> do
           void $ checkRefundAndCancellationCharges booking.id
           void $ QTBooking.updateStatusById FTBooking.CANCELLED booking.id
           void $ QTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED booking.id
+          void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) booking.id
           void $ QTBP.updateStatusByTicketBookingId DTBP.REFUND_PENDING booking.id
           void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
           void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
