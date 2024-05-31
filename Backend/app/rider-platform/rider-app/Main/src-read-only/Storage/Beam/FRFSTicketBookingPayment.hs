@@ -30,6 +30,6 @@ instance B.Table FRFSTicketBookingPaymentT where
 
 type FRFSTicketBookingPayment = FRFSTicketBookingPaymentT Identity
 
-$(enableKVPG ''FRFSTicketBookingPaymentT ['id] [])
+$(enableKVPG ''FRFSTicketBookingPaymentT ['id] [['frfsTicketBookingId], ['paymentOrderId]])
 
 $(mkTableInstances ''FRFSTicketBookingPaymentT "frfs_ticket_booking_payment")

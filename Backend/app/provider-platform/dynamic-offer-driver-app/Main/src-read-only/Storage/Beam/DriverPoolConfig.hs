@@ -64,7 +64,7 @@ instance B.Table DriverPoolConfigT where
 
 type DriverPoolConfig = DriverPoolConfigT Identity
 
-$(enableKVPG ''DriverPoolConfigT ['id] [])
+$(enableKVPG ''DriverPoolConfigT ['id] [['merchantOperatingCityId]])
 
 $(mkTableInstances ''DriverPoolConfigT "driver_pool_config")
 

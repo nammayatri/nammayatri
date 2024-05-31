@@ -42,6 +42,6 @@ instance B.Table DriverGoHomeRequestT where
 
 type DriverGoHomeRequest = DriverGoHomeRequestT Identity
 
-$(enableKVPG ''DriverGoHomeRequestT ['id] [])
+$(enableKVPG ''DriverGoHomeRequestT ['id] [['driverId]])
 
 $(mkTableInstances ''DriverGoHomeRequestT "driver_go_home_request")

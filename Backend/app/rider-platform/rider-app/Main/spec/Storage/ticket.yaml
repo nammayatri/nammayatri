@@ -113,6 +113,10 @@ SpecialOccasion:
     SpecialDayType:
       enum: "Open,Closed"
 
+  constraints:
+    id: PrimaryKey
+    entityId: SecondaryKey
+
   queries:
     findSpecialOccasionByEntityIdAndDate:
       kvFunction: findOneWithKV
@@ -224,6 +228,9 @@ SeatManagement:
     booked: "0"
     blocked: "0"
 
+  constraints:
+    id: PrimaryKey
+    ticketServiceCategoryId: SecondaryKey
   queries:
     findByTicketServiceCategoryIdAndDate:
       kvFunction: findOneWithKV

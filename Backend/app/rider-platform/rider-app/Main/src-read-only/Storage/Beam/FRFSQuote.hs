@@ -46,6 +46,6 @@ instance B.Table FRFSQuoteT where
 
 type FRFSQuote = FRFSQuoteT Identity
 
-$(enableKVPG ''FRFSQuoteT ['id] [])
+$(enableKVPG ''FRFSQuoteT ['id] [['searchId]])
 
 $(mkTableInstances ''FRFSQuoteT "frfs_quote")

@@ -33,6 +33,6 @@ instance B.Table PersonDefaultEmergencyNumberT where
 
 type PersonDefaultEmergencyNumber = PersonDefaultEmergencyNumberT Identity
 
-$(enableKVPG ''PersonDefaultEmergencyNumberT ['mobileNumberHash, 'personId] [])
+$(enableKVPG ''PersonDefaultEmergencyNumberT ['mobileNumberHash, 'personId] [['mobileNumberHash], ['personId]])
 
 $(mkTableInstances ''PersonDefaultEmergencyNumberT "person_default_emergency_number")

@@ -63,6 +63,9 @@ Station:
     FRFSVehicleType:
       enum: "METRO, BUS"
       derive: HttpInstance
+  constraints:
+    id: PrimaryKey
+    code: SecondaryKey
 
   queries:
     getTicketPlacesByMerchantOperatingCityIdAndVehicleType:
@@ -117,6 +120,10 @@ FRFSQuote:
     price: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
 
+  constraints:
+    id: PrimaryKey
+    searchId: SecondaryKey
+
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -136,6 +143,10 @@ FRFSTrip:
     stationType: StationType
     stopSequence: Int
     stationName: Text
+
+  constraints:
+    id: PrimaryKey
+    quoteId: SecondaryKey
 
   types:
     StationType:
@@ -209,6 +220,13 @@ FRFSTicketBooking:
     estimatedPrice: (.amount)|I
     finalPrice: Kernel.Prelude.fmap (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
+
+  constraints:
+    id: PrimaryKey
+    searchId: SecondaryKey
+    bppOrderId: SecondaryKey
+    riderId: SecondaryKey
+    quoteId: SecondaryKey
 
   queries:
     findById:
@@ -292,6 +310,9 @@ FRFSTicket:
     FRFSTicketStatus:
       enum: "ACTIVE, EXPIRED, USED, CANCELLED, COUNTER_CANCELLED"
 
+  constraints:
+    id: PrimaryKey
+    frfsTicketBookingId: SecondaryKey
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -325,6 +346,11 @@ FRFSTicketBookingPayment:
   types:
     FRFSTicketBookingPaymentStatus:
       enum: "PENDING, SUCCESS, FAILED, REFUND_PENDING, REFUNDED"
+
+  constraints:
+    id: PrimaryKey
+    frfsTicketBookingId: SecondaryKey
+    paymentOrderId: SecondaryKey
 
   queries:
     findById:

@@ -28,6 +28,6 @@ instance B.Table VolunteerT where
 
 type Volunteer = VolunteerT Identity
 
-$(enableKVPG ''VolunteerT ['id] [])
+$(enableKVPG ''VolunteerT ['id] [['place]])
 
 $(mkTableInstances ''VolunteerT "volunteer")

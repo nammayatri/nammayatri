@@ -38,6 +38,6 @@ instance B.Table FeedbackFormT where
 
 type FeedbackForm = FeedbackFormT Identity
 
-$(enableKVPG ''FeedbackFormT ['id] [['rating]]) -- DON'T Enable for KV
+$(enableKVPG ''FeedbackFormT ['id] [[]])
 
 $(mkTableInstances ''FeedbackFormT "feedback_form")

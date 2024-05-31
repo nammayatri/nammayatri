@@ -33,6 +33,6 @@ instance B.Table StationT where
 
 type Station = StationT Identity
 
-$(enableKVPG ''StationT ['id] [])
+$(enableKVPG ''StationT ['id] [['code]])
 
 $(mkTableInstances ''StationT "station")

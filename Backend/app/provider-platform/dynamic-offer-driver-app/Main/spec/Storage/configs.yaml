@@ -70,6 +70,7 @@ DriverPoolConfig:
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
   constraints:
     id: PrimaryKey
+    merchantOperatingCityId: SecondaryKey
 
   sqlType:
     distanceBasedBatchSplit: text[]

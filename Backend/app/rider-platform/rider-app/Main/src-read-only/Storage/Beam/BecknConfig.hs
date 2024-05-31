@@ -50,6 +50,6 @@ instance B.Table BecknConfigT where
 
 type BecknConfig = BecknConfigT Identity
 
-$(enableKVPG ''BecknConfigT ['id] [])
+$(enableKVPG ''BecknConfigT ['id] [['merchantId]])
 
 $(mkTableInstances ''BecknConfigT "beckn_config")

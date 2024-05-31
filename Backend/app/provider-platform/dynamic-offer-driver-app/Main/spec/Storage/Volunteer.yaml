@@ -17,6 +17,7 @@ Volunteer:
 
   constraints:
     id: PrimaryKey
+    place: SecondaryKey
 
   queries:
     findById:
