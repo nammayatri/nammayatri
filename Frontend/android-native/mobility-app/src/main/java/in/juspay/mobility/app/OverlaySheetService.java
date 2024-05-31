@@ -356,7 +356,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         removeCard(position);
                         return;
                     }
-                    new Thread(() -> driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), false, sheetArrayList.indexOf(model))).start();
+                    new Thread(() -> driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), model.getNotificationSource(), false, sheetArrayList.indexOf(model))).start();
                     isRideAcceptedOrRejected = true;
                     holder.rejectButton.setClickable(false);
                     handler.post(() -> {
@@ -400,7 +400,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             Handler handler = new Handler(Looper.getMainLooper());
             executor.execute(() -> {
                 try {
-                    Boolean isApiSuccess = driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), true, sheetArrayList.indexOf(model));
+                    Boolean isApiSuccess = driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), model.getNotificationSource(), true, sheetArrayList.indexOf(model));
                     if (isApiSuccess) {
                         holder.reqButton.setClickable(false);
                         updateSharedPreferences();
@@ -659,6 +659,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String rideDistance = String.format("%d km", rideRequestBundle.getInt("rideDistance") / 1000);
                     String rideStartTime = rideRequestBundle.getString("rideStartTime");
                     String rideStartDate= rideRequestBundle.getString("rideStartDate");
+                    String notificationSource= rideRequestBundle.getString("notificationSource");
                    
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
@@ -703,7 +704,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             rideDuration,
                             rideDistance,
                             rideStartTime,
-                            rideStartDate);
+                            rideStartDate,
+                            notificationSource);
 
                     if (floatyView == null) {
                         startTimer();
@@ -866,7 +868,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         mFirebaseAnalytics.logEvent(event, params);
     }
 
-    private Boolean driverRespondApi(String searchRequestId, double offeredPrice, boolean isAccept, int slotNumber) {
+    private Boolean driverRespondApi(String searchRequestId, double offeredPrice, String notificationSource, boolean isAccept, int slotNumber) {
         StringBuilder result = new StringBuilder();
         Handler handler = new Handler(Looper.getMainLooper());
         sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
@@ -899,6 +901,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 payload.put(getResources().getString(R.string.OFFERED_FARE), offeredPrice);
             }
             payload.put(getResources().getString(R.string.SEARCH_REQUEST_ID), searchRequestId);
+            payload.put("notificationSource", notificationSource);
             if (isAccept) payload.put("response", "Accept");
             else payload.put("response", "Reject");
             payload.put("slotNumber", slotNumber);
