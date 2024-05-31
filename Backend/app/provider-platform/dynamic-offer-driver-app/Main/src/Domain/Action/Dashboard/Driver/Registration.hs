@@ -36,6 +36,7 @@ import Domain.Action.UI.DriverOnboarding.Image
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.DocumentVerificationConfig as Domain
+import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.FleetDriverAssociation as FDV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -45,7 +46,7 @@ import qualified Domain.Types.VehicleFitnessCertificate as DFC
 import qualified Domain.Types.VehicleInsurance as DVI
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import Environment
-import EulerHS.Prelude hiding (map)
+import EulerHS.Prelude hiding (map, whenJust)
 import Kernel.Beam.Functions
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.Encryption (decrypt, encrypt, hash)
@@ -73,14 +74,19 @@ import Tools.Error
 import Tools.Notifications as Notify
 
 documentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DocumentsListResponse
-documentsList merchantShortId _ driverId = do
+documentsList merchantShortId city driverId = do
   merchant <- findMerchantByShortId merchantShortId
-  licImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.DriverLicense)
+  dlImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.DriverLicense)
+  vInspectionImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleInspectionForm)
   vehRegImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleRegistrationCertificate)
   uploadProfImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.UploadProfile)
   vehicleFitnessCertImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleFitnessCertificate)
   vehicleInsImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleInsurance)
   profilePics <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.ProfilePhoto)
+  allDlImgs <- runInReplica (QDL.findAllByImageId (map (Id) dlImgs))
+  allRCImgs <- runInReplica (QRC.findAllByImageId (map (Id) vehRegImgs))
+  allDLDetails <- mapM convertDLToDLDetails allDlImgs
+  allRCDetails <- mapM convertRCToRCDetails allRCImgs
   ssnEntry <- QSSN.findByDriverId (cast driverId)
   ssnUnenc <- case ssnEntry of
     Just ssnRecord -> do
@@ -89,14 +95,49 @@ documentsList merchantShortId _ driverId = do
     _ -> return Nothing
   pure
     Common.DocumentsListResponse
-      { driverLicense = licImgs,
+      { driverLicense = dlImgs,
         vehicleRegistrationCertificate = vehRegImgs,
         vehicleInsurance = vehicleInsImgs,
         uploadProfile = uploadProfImgs,
         ssn = ssnUnenc,
         vehicleFitnessCertificate = vehicleFitnessCertImgs,
-        profilePhoto = profilePics
+        profilePhoto = profilePics,
+        driverLicenseDetails = allDLDetails,
+        vehicleRegistrationCertificateDetails = allRCDetails,
+        vehicleInspectionForm = vInspectionImgs
       }
+  where
+    convertDLToDLDetails dl = do
+      driverLicenseNumberDec <- decrypt dl.licenseNumber
+      pure $
+        Common.DLDetails
+          { driverLicenseNumber = driverLicenseNumberDec,
+            operatingCity = show city,
+            driverDateOfBirth = dl.driverDob,
+            classOfVehicles = dl.classOfVehicles,
+            imageId1 = dl.documentImageId1.getId,
+            imageId2 = getId <$> dl.documentImageId2,
+            createdAt = dl.createdAt,
+            dateOfIssue = dl.dateOfIssue
+          }
+    convertRCToRCDetails rc = do
+      certificateNumberDec <- decrypt rc.certificateNumber
+      pure $
+        Common.RCDetails
+          { vehicleRegistrationCertNumber = certificateNumberDec,
+            imageId = rc.documentImageId.getId,
+            operatingCity = show city,
+            vehicleCategory = show <$> rc.userPassedVehicleCategory,
+            airConditioned = rc.airConditioned,
+            vehicleManufacturer = rc.vehicleManufacturer,
+            vehicleModel = rc.vehicleModel,
+            vehicleColor = rc.vehicleColor,
+            vehicleDoors = rc.vehicleDoors,
+            vehicleSeatBelts = rc.vehicleSeatBelts,
+            createdAt = rc.createdAt,
+            dateOfRegistration = rc.dateOfRegistration,
+            vehicleModelYear = rc.vehicleModelYear
+          }
 
 getDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Image -> Flow Common.GetDocumentResponse
 getDocument merchantShortId _ imageId = do
@@ -242,59 +283,76 @@ approveAndUpdateRC :: Common.RCApproveDetails -> Flow ()
 approveAndUpdateRC req = do
   let imageId = Id req.documentImageId.getId
   rc <- QRC.findByImageId imageId >>= fromMaybeM (InternalError "RC not found by image id")
+  certificateNumber <- mapM encrypt req.vehicleNumberPlate
   let udpatedRC =
         rc
           { DRC.vehicleVariant = (castVehicleVariant <$> req.vehicleVariant) <|> rc.vehicleVariant,
-            DRC.verificationStatus = VALID
+            DRC.verificationStatus = VALID,
+            DRC.certificateNumber = fromMaybe rc.certificateNumber certificateNumber,
+            DRC.vehicleManufacturer = req.vehicleManufacturer <|> rc.vehicleManufacturer,
+            DRC.vehicleModel = req.vehicleModel <|> rc.vehicleModel,
+            DRC.vehicleModelYear = req.vehicleModelYear <|> rc.vehicleModelYear,
+            DRC.vehicleColor = req.vehicleColor <|> rc.vehicleColor,
+            DRC.vehicleDoors = req.vehicleDoors <|> rc.vehicleDoors,
+            DRC.vehicleSeatBelts = req.vehicleSeatBelts <|> rc.vehicleSeatBelts,
+            DRC.fitnessExpiry = if isJust req.fitnessExpiry then fromJust req.fitnessExpiry else rc.fitnessExpiry,
+            DRC.permitExpiry = req.permitExpiry <|> rc.permitExpiry
           }
   QRC.updateByPrimaryKey udpatedRC
-  QImage.updateVerificationStatus VALID imageId
+  QImage.updateVerificationStatusByIdAndType VALID imageId Domain.VehicleRegistrationCertificate
 
 approveAndUpdateInsurance :: Common.VInsuranceApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
-  QImage.updateVerificationStatus VALID imageId
-  policyNo <- encrypt req.policyNumber
+  QImage.updateVerificationStatusByIdAndType VALID imageId Domain.VehicleInsurance
+  QImage.updateDocumentExpiry req.policyExpiry imageId
   vinsurance <- QVI.findByImageId imageId
   now <- getCurrentTime
   uuid <- generateGUID
   case vinsurance of
     Just insurance -> do
+      policyNo <- mapM encrypt req.policyNumber
       let updatedInsurance =
             insurance
               { DVI.insuredName = req.insuredName <|> insurance.insuredName,
                 DVI.issueDate = req.issueDate <|> insurance.issueDate,
                 DVI.limitsOfLiability = req.limitsOfLiability <|> insurance.limitsOfLiability,
-                DVI.policyExpiry = req.policyExpiry,
-                DVI.policyNumber = policyNo,
-                DVI.policyProvider = req.policyProvider,
-                DVI.verificationStatus = VALID
+                DVI.policyNumber = fromMaybe insurance.policyNumber policyNo,
+                DVI.policyProvider = fromMaybe insurance.policyProvider req.policyProvider,
+                DVI.verificationStatus = VALID,
+                DVI.policyExpiry = fromMaybe insurance.policyExpiry req.policyExpiry
               }
       QVI.updateByPrimaryKey updatedInsurance
     Nothing -> do
-      insuranceImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
-      rcNoEnc <- encrypt rcNumber
-      rc <- QRC.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InternalError "RC not found by image id")
-      let insurance =
-            DVI.VehicleInsurance
-              { documentImageId = imageId,
-                driverId = insuranceImage.personId,
-                id = uuid,
-                policyNumber = policyNo,
-                rcId = rc.id,
-                verificationStatus = VALID,
-                createdAt = now,
-                updatedAt = now,
-                merchantId = Just mId,
-                merchantOperatingCityId = Just mOpCityId,
-                ..
-              }
-      QVI.create insurance
+      case (req.policyNumber, req.policyExpiry, req.policyProvider, req.rcNumber) of
+        (Just policyNum, Just policyExp, Just provider, Just rcNo) -> do
+          insuranceImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
+          rcNoEnc <- encrypt rcNo
+          rc <- QRC.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InternalError "RC not found by RC number")
+          policyNo <- encrypt policyNum
+          let insurance =
+                DVI.VehicleInsurance
+                  { documentImageId = imageId,
+                    driverId = insuranceImage.personId,
+                    id = uuid,
+                    policyNumber = policyNo,
+                    rcId = rc.id,
+                    verificationStatus = VALID,
+                    createdAt = now,
+                    updatedAt = now,
+                    merchantId = Just mId,
+                    merchantOperatingCityId = Just mOpCityId,
+                    policyExpiry = policyExp,
+                    policyProvider = provider,
+                    ..
+                  }
+          QVI.create insurance
+        _ -> pure ()
 
 approveAndUpdateFitnessCertificate :: Common.FitnessApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
-  QImage.updateVerificationStatus VALID imageId
+  QImage.updateVerificationStatusByIdAndType VALID imageId Domain.VehicleFitnessCertificate
   mbFitnessCert <- QFC.findByImageId imageId
   applicationNo <- encrypt req.applicationNumber
   now <- getCurrentTime
@@ -316,7 +374,7 @@ approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOp
     Nothing -> do
       certificateImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
       rcNoEnc <- encrypt rcNumber
-      rc <- QRC.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InternalError "RC not found by image id")
+      rc <- QRC.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InternalError "RC not found by rc number")
       let fitnessCert =
             DFC.VehicleFitnessCertificate
               { applicationNumber = applicationNo,
@@ -333,17 +391,32 @@ approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOp
               }
       QFC.create fitnessCert
 
+approveAndUpdateDL :: Common.DLApproveDetails -> Flow ()
+approveAndUpdateDL req = do
+  let imageId = Id req.documentImageId.getId
+  dl <- QDL.findByImageId imageId >>= fromMaybeM (InternalError "DL not found by image id")
+  licenseNumber <- mapM encrypt req.driverLicenseNumber
+  let updatedDL =
+        dl
+          { DDL.licenseNumber = fromMaybe dl.licenseNumber licenseNumber,
+            DDL.driverDob = req.driverDateOfBirth <|> dl.driverDob,
+            DDL.licenseExpiry = fromMaybe dl.licenseExpiry req.dateOfExpiry
+          }
+  QDL.updateByPrimaryKey updatedDL
+  QImage.updateVerificationStatusByIdAndType VALID imageId Domain.DriverLicense
+
 handleApproveRequest :: Common.ApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 handleApproveRequest approveReq merchantId merchantOperatingCityId = do
   case approveReq of
+    Common.DL dlReq -> approveAndUpdateDL dlReq
     Common.RC rcApproveReq -> approveAndUpdateRC rcApproveReq
     Common.VehicleInsurance vInsuranceReq -> approveAndUpdateInsurance vInsuranceReq merchantId merchantOperatingCityId
     Common.VehicleFitnessCertificate fitnessReq -> approveAndUpdateFitnessCertificate fitnessReq merchantId merchantOperatingCityId
-    Common.UploadProfile imageId -> QImage.updateVerificationStatus VALID (Id imageId.getId)
-    Common.ProfilePhoto imageId -> QImage.updateVerificationStatus VALID (Id imageId.getId)
-    Common.DL imageId -> do
-      QDL.updateVerificationStatus VALID (Id imageId.getId)
-      QImage.updateVerificationStatus VALID (Id imageId.getId)
+    Common.UploadProfile imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) Domain.UploadProfile
+    Common.ProfilePhoto imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) Domain.ProfilePhoto
+    Common.VehicleInspectionForm req -> do
+      QImage.updateVerificationStatusByIdAndType VALID (Id req.documentImageId.getId) Domain.VehicleInspectionForm
+      QImage.updateDocumentExpiry req.dateOfExpiry (Id req.documentImageId.getId)
     Common.SSNApprove ssnNum -> do
       ssnEnc <- encrypt ssnNum
       QSSN.updateVerificationStatusAndReasonBySSN VALID Nothing (ssnEnc & hash)
@@ -357,16 +430,17 @@ handleRejectRequest rejectReq _ merchantOperatingCityId = do
       let imageId = Id imageRejectReq.documentImageId.getId
       image <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
       case image.imageType of
-        Domain.ProfilePhoto -> QImage.updateVerificationStatusAndFailureReason INVALID (Just $ ImageNotValid imageRejectReq.reason) imageId
-        Domain.UploadProfile -> QImage.updateVerificationStatusAndFailureReason INVALID (Just $ ImageNotValid imageRejectReq.reason) imageId
+        Domain.ProfilePhoto -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+        Domain.UploadProfile -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+        Domain.VehicleInspectionForm -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+        Domain.VehicleInsurance -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+        Domain.VehicleFitnessCertificate -> QFC.updateVerificationStatus INVALID imageId --At this point the vehicle fitness cert doesn not even exist in this table
         Domain.DriverLicense -> do
           QDL.updateVerificationStatus INVALID imageId
-          QImage.updateVerificationStatus INVALID imageId
+          QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
         Domain.VehicleRegistrationCertificate -> do
           QRC.updateVerificationStatus INVALID imageId
-          QImage.updateVerificationStatus INVALID imageId
-        Domain.VehicleFitnessCertificate -> QFC.updateVerificationStatus INVALID imageId
-        Domain.VehicleInsurance -> QVI.updateVerificationStatus INVALID imageId
+          QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
         _ -> throwError (InternalError "Unknown Config in reject update document")
       driver <- QDriver.findById image.personId >>= fromMaybeM (PersonNotFound image.personId.getId)
       Notify.notifyDriver merchantOperatingCityId notificationType (notificationTitle (show image.imageType)) (message (show image.imageType)) driver driver.deviceToken

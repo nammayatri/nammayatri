@@ -50,6 +50,11 @@ findImagesByPersonAndType (Kernel.Types.Id.Id merchantId) (Kernel.Types.Id.Id pe
         ]
     ]
 
+updateDocumentExpiry :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
+updateDocumentExpiry documentExpiry (Kernel.Types.Id.Id id) = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.documentExpiry documentExpiry, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.Image.Image))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
@@ -57,7 +62,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Image.Image {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.failureReason failureReason,
+    [ Se.Set Beam.documentExpiry documentExpiry,
+      Se.Set Beam.failureReason failureReason,
       Se.Set Beam.imageType imageType,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),

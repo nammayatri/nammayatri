@@ -33,6 +33,9 @@ findByDriverId (Kernel.Types.Id.Id driverId) = do findOneWithKV [Se.Is Beam.driv
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverLicense.DriverLicense -> m (Maybe Domain.Types.DriverLicense.DriverLicense))
 findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
+findByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.DriverLicense.DriverLicense))
+findByImageId (Kernel.Types.Id.Id documentImageId1) = do findOneWithKV [Se.Is Beam.documentImageId1 $ Se.Eq documentImageId1]
+
 updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
 updateVerificationStatus verificationStatus (Kernel.Types.Id.Id documentImageId1) = do
   _now <- getCurrentTime
@@ -48,6 +51,7 @@ updateByPrimaryKey (Domain.Types.DriverLicense.DriverLicense {..}) = do
     [ Se.Set Beam.classOfVehicles classOfVehicles,
       Se.Set Beam.consent consent,
       Se.Set Beam.consentTimestamp consentTimestamp,
+      Se.Set Beam.dateOfIssue dateOfIssue,
       Se.Set Beam.documentImageId1 (Kernel.Types.Id.getId documentImageId1),
       Se.Set Beam.documentImageId2 (Kernel.Types.Id.getId <$> documentImageId2),
       Se.Set Beam.driverDob driverDob,

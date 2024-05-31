@@ -4,6 +4,7 @@
 module Storage.Queries.DriverLicenseExtra where
 
 import Domain.Types.DriverLicense
+import Domain.Types.Image
 import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -37,3 +38,6 @@ findByDLNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Te
 findByDLNumber dlNumber = do
   dlNumberHash <- getDbHash dlNumber
   findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq dlNumberHash]
+
+findAllByImageId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Image] -> m [DriverLicense]
+findAllByImageId imageIds = findAllWithKV [Se.Is BeamDL.documentImageId1 $ Se.In $ map (.getId) imageIds]
