@@ -5,6 +5,7 @@
 module Storage.Queries.FRFSRecon where
 
 import qualified Domain.Types.FRFSRecon
+import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -22,6 +23,13 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSRecon.FRFSRecon] -> m ())
 createMany = traverse_ create
+
+updateStatusByTicketBookingId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.FRFSTicket.FRFSTicketStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateStatusByTicketBookingId ticketStatus (Kernel.Types.Id.Id frfsTicketBookingId) = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.ticketStatus ticketStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.frfsTicketBookingId $ Se.Eq frfsTicketBookingId]
 
 updateTOrderValueAndSettlementAmountById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
