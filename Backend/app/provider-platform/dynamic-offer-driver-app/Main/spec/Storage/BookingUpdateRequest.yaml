@@ -80,3 +80,8 @@ BookingUpdateRequest:
       kvFunction: updateOneWithKV
       params: [status, updatedAt]
       where: bapBookingUpdateRequestId
+
+  constraints:
+    id: PrimaryKey
+    bookingId: SecondaryKey
+    bapBookingUpdateRequestId : SecondaryKey

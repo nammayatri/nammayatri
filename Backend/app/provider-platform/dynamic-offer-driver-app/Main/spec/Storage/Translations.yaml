@@ -23,7 +23,6 @@ Translations:
   constraints:
     id: PrimaryKey
     messageKey: SecondaryKey
-    language: SecondaryKey
 
   excludedFields: [merchantOperatingCityId, merchantId]
 

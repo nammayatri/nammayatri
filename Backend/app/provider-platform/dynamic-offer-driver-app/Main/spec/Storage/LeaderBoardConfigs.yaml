@@ -27,6 +27,7 @@ LeaderBoardConfigs:
 
   constraints:
     id: PrimaryKey
+    merchantOperatingCityId: SecondaryKey
 
   queries:
     findAllByMerchantOpCityId:

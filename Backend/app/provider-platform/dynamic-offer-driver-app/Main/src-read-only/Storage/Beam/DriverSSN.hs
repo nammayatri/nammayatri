@@ -29,6 +29,6 @@ instance B.Table DriverSSNT where
 
 type DriverSSN = DriverSSNT Identity
 
-$(enableKVPG ''DriverSSNT ['id] [['driverId]])
+$(enableKVPG ''DriverSSNT ['id] [['driverId], ['ssnHash]])
 
 $(mkTableInstances ''DriverSSNT "driver_ssn")

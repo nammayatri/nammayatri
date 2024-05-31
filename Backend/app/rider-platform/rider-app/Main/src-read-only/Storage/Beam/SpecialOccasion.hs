@@ -34,6 +34,6 @@ instance B.Table SpecialOccasionT where
 
 type SpecialOccasion = SpecialOccasionT Identity
 
-$(enableKVPG ''SpecialOccasionT ['id] [])
+$(enableKVPG ''SpecialOccasionT ['id] [['entityId]])
 
 $(mkTableInstances ''SpecialOccasionT "special_occasion")

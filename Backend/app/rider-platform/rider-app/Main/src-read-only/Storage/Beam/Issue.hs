@@ -33,6 +33,6 @@ instance B.Table IssueT where
 
 type Issue = IssueT Identity
 
-$(enableKVPG ''IssueT ['id] [['bookingId], ['ticketId]])
+$(enableKVPG ''IssueT ['id] [['bookingId], ['customerId], ['ticketId]])
 
 $(mkTableInstances ''IssueT "issue")

@@ -39,6 +39,6 @@ instance B.Table VehicleInsuranceT where
 
 type VehicleInsurance = VehicleInsuranceT Identity
 
-$(enableKVPG ''VehicleInsuranceT ['id] [])
+$(enableKVPG ''VehicleInsuranceT ['id] [['documentImageId]])
 
 $(mkTableInstances ''VehicleInsuranceT "vehicle_insurance")

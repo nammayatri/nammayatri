@@ -41,6 +41,11 @@ BookingUpdateRequest:
   toTType:
     distanceUnit: Kernel.Prelude.Just|I
 
+
+  constraints:
+    id: PrimaryKey
+    bookingId: SecondaryKey
+
   queries:
     findById:
       kvFunction: findOneWithKV

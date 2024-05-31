@@ -39,6 +39,6 @@ instance B.Table BookingUpdateRequestT where
 
 type BookingUpdateRequest = BookingUpdateRequestT Identity
 
-$(enableKVPG ''BookingUpdateRequestT ['id] [])
+$(enableKVPG ''BookingUpdateRequestT ['id] [['bookingId]])
 
 $(mkTableInstancesWithTModifier ''BookingUpdateRequestT "booking_update_request" [])

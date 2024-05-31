@@ -33,6 +33,6 @@ instance B.Table FRFSTripT where
 
 type FRFSTrip = FRFSTripT Identity
 
-$(enableKVPG ''FRFSTripT ['id] [])
+$(enableKVPG ''FRFSTripT ['id] [['quoteId]])
 
 $(mkTableInstances ''FRFSTripT "frfs_trip")

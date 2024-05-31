@@ -30,6 +30,7 @@ Issue:
     id: PrimaryKey
     ticketId: SecondaryKey
     bookingId: SecondaryKey
+    customerId: SecondaryKey
 
   default:
     status: "'OPEN'"

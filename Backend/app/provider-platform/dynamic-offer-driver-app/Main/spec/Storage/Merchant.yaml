@@ -111,7 +111,6 @@ Merchant:
   constraints:
     subscriberId: SecondaryKey
     shortId: SecondaryKey
-    status: SecondaryKey
 
   toTType:
     registryUrl: Kernel.Prelude.showBaseUrl|I

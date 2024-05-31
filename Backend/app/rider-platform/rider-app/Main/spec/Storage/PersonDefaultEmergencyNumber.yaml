@@ -51,7 +51,7 @@ PersonDefaultEmergencyNumber:
     enableForShareRide: "false"
 
   constraints:
-    personId: PrimaryKey
-    mobileNumberHash: PrimaryKey
+    personId: PrimaryKey|SecondaryKey
+    mobileNumberHash: PrimaryKey|SecondaryKey
     #mobileNumberEncrypted: PrimaryKey
 

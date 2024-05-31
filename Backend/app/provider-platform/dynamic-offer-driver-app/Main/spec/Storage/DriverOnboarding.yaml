@@ -170,10 +170,13 @@ DriverLicense:
     consentTimestamp: UTCTime
     dateOfIssue: Maybe UTCTime
   excludedFields: [merchantOperatingCityId]
+
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
     licenseNumberHash: SecondaryKey
+    documentImageId1: SecondaryKey
+
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -331,7 +334,7 @@ Image:
       where:
         and: [merchantId, personId, imageType]
     findByMerchantId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantId
     addFailureReason:
       kvFunction: updateWithKV
@@ -432,6 +435,9 @@ VehiclePermit:
     issueDate: Maybe UTCTime
     purposeOfJourney: Maybe Text
     verificationStatus: VerificationStatus
+  constraints:
+    id: PrimaryKey
+    rcId: SecondaryKey
   queries:
     findByRcIdAndDriverId:
       kvFunction: findAllWithKV
@@ -452,6 +458,9 @@ VehicleInsurance:
     issueDate: Maybe UTCTime
     limitsOfLiability: Maybe Text
     verificationStatus: VerificationStatus
+  constraints:
+    id: PrimaryKey
+    documentImageId: SecondaryKey
   queries:
     findByRcIdAndDriverId:
       kvFunction: findAllWithKV
@@ -492,6 +501,10 @@ VehicleFitnessCertificate:
     findByImageId:
       kvFunction: findOneWithKV
       where: documentImageId
+  constraints:
+    id: PrimaryKey
+    rcId: SecondaryKey
+    documentImageId: SecondaryKey
 
 VehiclePUC:
   tableName: vehicle_puc
@@ -502,6 +515,9 @@ VehiclePUC:
     documentImageId: Id Image
     pucExpiry: UTCTime
     verificationStatus: VerificationStatus
+  constraints:
+    id: PrimaryKey
+    rcId: SecondaryKey
   queries:
     findByRcIdAndDriverId:
       kvFunction: findAllWithKV
@@ -538,6 +554,7 @@ DriverSSN:
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
+    ssnHash: SecondaryKey
   queries:
     findByDriverId:
       kvFunction: findOneWithKV

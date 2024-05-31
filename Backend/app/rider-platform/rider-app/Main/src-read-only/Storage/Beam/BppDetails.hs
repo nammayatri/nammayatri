@@ -30,6 +30,6 @@ instance B.Table BppDetailsT where
 
 type BppDetails = BppDetailsT Identity
 
-$(enableKVPG ''BppDetailsT ['id] [])
+$(enableKVPG ''BppDetailsT ['id] [['subscriberId]])
 
 $(mkTableInstances ''BppDetailsT "bpp_details")

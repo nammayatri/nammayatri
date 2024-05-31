@@ -41,6 +41,6 @@ instance B.Table DriverLicenseT where
 
 type DriverLicense = DriverLicenseT Identity
 
-$(enableKVPG ''DriverLicenseT ['id] [['driverId], ['licenseNumberHash]])
+$(enableKVPG ''DriverLicenseT ['id] [['documentImageId1], ['driverId], ['licenseNumberHash]])
 
 $(mkTableInstances ''DriverLicenseT "driver_license")

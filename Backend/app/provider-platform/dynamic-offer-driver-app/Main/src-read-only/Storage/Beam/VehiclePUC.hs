@@ -32,6 +32,6 @@ instance B.Table VehiclePUCT where
 
 type VehiclePUC = VehiclePUCT Identity
 
-$(enableKVPG ''VehiclePUCT ['id] [])
+$(enableKVPG ''VehiclePUCT ['id] [['rcId]])
 
 $(mkTableInstances ''VehiclePUCT "vehicle_puc")
