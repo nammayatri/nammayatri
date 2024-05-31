@@ -4,6 +4,8 @@
     "**/result/**": true,
     "**/result-*/**": true
   },
+  // https://github.com/microsoft/vscode/issues/98594#issuecomment-658533647
+  "search.followSymlinks": false,
   "search.useIgnoreFiles": true,
   // Disabled until https://github.com/nammayatri/nammayatri/issues/737
   // "editor.formatOnType": true,
