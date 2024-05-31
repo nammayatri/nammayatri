@@ -141,6 +141,7 @@
           config.pre-commit.devShell
           config.haskellProjects.default.outputs.devShell
           config.flake-root.devShell
+          config.nix-health.outputs.devShell
           inputs.haskell-cac.devShells.${system}.haskell-cac
         ];
         shellHook = ''
