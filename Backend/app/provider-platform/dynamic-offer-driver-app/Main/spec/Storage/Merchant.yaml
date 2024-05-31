@@ -731,6 +731,9 @@ TransporterConfig:
     nightSafetyStartTime: Seconds
     nightSafetyEndTime: Seconds
     cancellationFee: HighPrecMoney
+    cancellationChargePerMeter: HighPrecMoney
+    cancellationChargePerSecond: HighPrecMoney
+    cancellationFeePercentage: Int
     currency: Currency
     distanceUnit: DistanceUnit
     driverDistanceTravelledOnPickupThresholdOnCancel: Meters
@@ -1045,6 +1048,9 @@ TransporterConfig:
     useSilentFCMForForwardBatch: "false"
     fareRecomputeDailyExtraKmsThreshold: "5000"
     fareRecomputeWeeklyExtraKmsThreshold: "20000"
+    cancellationChargePerMeter: "0"
+    cancellationChargePerSecond: "0"
+    cancellationFeePercentage: "0"
 
   excludedDefaultQueries:
     - findByPrimaryKey

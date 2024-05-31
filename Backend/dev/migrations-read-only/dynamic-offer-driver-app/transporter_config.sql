@@ -158,4 +158,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN arriving_pickup
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_fee_percentage integer NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_charge_per_second double precision NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_charge_per_meter double precision NOT NULL default 0;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN distance_unit character varying(255) ;

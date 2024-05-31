@@ -172,7 +172,21 @@ customerCancellationChargesCalculation transporterConfig booking disToPickup = d
     when isChargable $ do
       riderId <- booking.riderId & fromMaybeM (RiderDetailsDoNotExist "BOOKING" booking.id.getId)
       rider <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
-      QRD.updateCancellationDues riderId (rider.cancellationDues + transporterConfig.cancellationFee)
+      cancellationCharge <- getCustomerCancellationCharge transporterConfig booking now
+      QRD.updateCancellationDues riderId (rider.cancellationDues + cancellationCharge)
+
+getCustomerCancellationCharge :: MonadFlow m => DTC.TransporterConfig -> SRB.Booking -> UTCTime -> m HighPrecMoney
+getCustomerCancellationCharge transporterConfig booking now = do
+  let cancellationFee = transporterConfig.cancellationFee
+      distanceTravelledByDriver = fromMaybe 0 booking.distanceToPickup
+      timeElapsedTillCancellation :: Integer = roundToIntegral $ diffUTCTime now booking.createdAt
+      cancellationFeeForTravelledDistance = (fromIntegral distanceTravelledByDriver.getMeters) * transporterConfig.cancellationChargePerMeter
+      cancellationFeeForTravelledDuration = fromIntegral timeElapsedTillCancellation * transporterConfig.cancellationChargePerSecond
+      cancellationChargeByPercentOfFare = (fromIntegral (transporterConfig.cancellationFeePercentage) * (booking.estimatedFare)) / 100
+  -- cancellation logic ->  Max(X, Min((distance traveled by driver for pickup * per mile cancellation charge + time elapsed till cancellation * per min cancellation charge), Y% of ride fare)
+  let totalCancellationCharge = max cancellationFee (min (cancellationFeeForTravelledDuration + cancellationFeeForTravelledDistance) cancellationChargeByPercentOfFare)
+
+  return totalCancellationCharge
 
 cancelSearch ::
   ( CacheFlow m r,
