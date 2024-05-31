@@ -87,7 +87,7 @@ public class RideRequestUtils {
     private static final String KOCHI = "kochi";
     private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
 
-    public static Boolean driverRespondApi(String searchRequestId, double offeredPrice, boolean isAccept, Context context, int slotNumber) {
+    public static Boolean driverRespondApi(String searchRequestId, double offeredPrice, String notificationSource, boolean isAccept, Context context, int slotNumber) {
         Handler mainLooper = new Handler(Looper.getMainLooper());
         StringBuilder result = new StringBuilder();
         SharedPreferences sharedPref = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
@@ -115,6 +115,7 @@ public class RideRequestUtils {
                 payload.put(context.getResources().getString(R.string.OFFERED_FARE), (offeredPrice));
             }
             payload.put(context.getResources().getString(R.string.SEARCH_REQUEST_ID), searchRequestId);
+            payload.put("notificationSource", notificationSource);
             if (isAccept) payload.put("response", "Accept");
             else payload.put("response", "Reject");
             payload.put("slotNumber", slotNumber);
