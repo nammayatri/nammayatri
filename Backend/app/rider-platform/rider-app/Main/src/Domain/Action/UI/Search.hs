@@ -398,6 +398,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         autoAssignEnabledV2 = Nothing,
         availablePaymentMethods = [],
         selectedPaymentMethodId = Nothing,
+        isAdvanceBookingEnabled = Nothing,
         riderPreferredOption -- this is just to store the rider preference for the ride type to handle backward compatibility
       }
   where

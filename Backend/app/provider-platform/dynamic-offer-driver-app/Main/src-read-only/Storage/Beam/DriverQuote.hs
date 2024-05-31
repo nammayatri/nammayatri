@@ -41,6 +41,7 @@ data DriverQuoteT f = DriverQuoteT
     fareParametersId :: B.C f Kernel.Prelude.Text,
     goHomeRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     providerId :: B.C f Kernel.Prelude.Text,
     requestId :: B.C f Kernel.Prelude.Text,
     searchRequestForDriverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -51,6 +52,7 @@ data DriverQuoteT f = DriverQuoteT
     updatedAt :: B.C f Data.Time.LocalTime,
     validTill :: B.C f Data.Time.LocalTime,
     vehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType),
+    vehicleServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleVariant :: B.C f Domain.Types.Vehicle.Variant
   }
   deriving (Generic, B.Beamable)

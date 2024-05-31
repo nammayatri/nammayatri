@@ -121,6 +121,10 @@ type API =
                     :> QueryParam "toss" Int
                     :> Get '[JSON] DDriver.DriverInformationRes
                     :<|> TokenAuth
+                      :> QueryParam "toss" Int
+                      :> ReqBody '[JSON] DDriver.UpdateProfileInfoPoints
+                      :> Post '[JSON] DDriver.DriverInformationRes
+                    :<|> TokenAuth
                       :> Header "x-bundle-version" Version
                       :> Header "x-client-version" Version
                       :> Header "x-config-version" Version
@@ -232,6 +236,7 @@ handler =
     :<|> offerQuote
     :<|> respondQuote
     :<|> ( getInformation
+             :<|> getInformationV2
              :<|> updateDriver
              :<|> getStats
              :<|> uploadDriverPhoto
@@ -354,3 +359,6 @@ listScheduledBookings (personId, merchantId, merchantOpCityId) mbLimit mbOffset 
 
 acceptScheduledBooking :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe (Id DC.Client) -> Id DRB.Booking -> FlowHandler APISuccess
 acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId = withFlowHandlerAPI $ DDriver.acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId
+
+getInformationV2 :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> DDriver.UpdateProfileInfoPoints -> FlowHandler DDriver.DriverInformationRes
+getInformationV2 (personId, driverId, merchantOpCityId) toss = withFlowHandlerAPI . DDriver.getInformationV2 (personId, driverId, merchantOpCityId) toss

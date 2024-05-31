@@ -20,6 +20,8 @@ imports:
   Version: Kernel.Types.Version
   TripCategory: Domain.Types.Common
   Confidence: Kernel.Types.Confidence
+  Variant: Domain.Types.Vehicle
+  ServiceTierType: Domain.Types.ServiceTierType
 
 Ride:
   tableName: ride
@@ -92,6 +94,8 @@ Ride:
     backendConfigVersion: Maybe Version
     backendAppVersion: Maybe Text
     clientDevice: Maybe Device
+    vehicleVariant : Maybe Variant
+    vehicleServiceTierName : Maybe Text
     tripCategory: TripCategory
 
   sqlType:

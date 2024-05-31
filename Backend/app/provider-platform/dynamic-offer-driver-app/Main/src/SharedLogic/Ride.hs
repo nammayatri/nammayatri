@@ -83,8 +83,8 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
           Just otp -> pure otp
   ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
   previousRideInprogress <- QRide.getInProgressByDriverId driver.id
-  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress
-  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+  vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
+  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress vehicle
   rideDetails <- buildRideDetails ride driver vehicle
 
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
@@ -149,8 +149,9 @@ buildRide ::
   Maybe Bool ->
   Maybe (Id DC.Client) ->
   Maybe DRide.Ride ->
+  DVeh.Vehicle ->
   Flow DRide.Ride
-buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previousRide = do
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previousRide vehicle = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   now <- getCurrentTime
@@ -217,7 +218,9 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         clientConfigVersion = driver.clientConfigVersion,
         backendConfigVersion = driver.backendConfigVersion,
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
-        tripCategory = booking.tripCategory
+        tripCategory = booking.tripCategory,
+        vehicleServiceTierName = Just booking.vehicleServiceTierName,
+        vehicleVariant = Just $ vehicle.variant
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

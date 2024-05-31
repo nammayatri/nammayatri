@@ -49,6 +49,7 @@ SearchRequest:
     isBlockedRoute: Maybe Bool
     returnTime: Maybe UTCTime
     roundTrip: Maybe Bool
+    isAdvanceBookingEnabled: Bool
     startTime: UTCTime
     createdAt: UTCTime
 
@@ -59,6 +60,7 @@ SearchRequest:
     bapUri: Text
     merchantOperatingCityId: Maybe Text
     currency: Maybe Currency
+    isAdvanceBookingEnabled: Maybe Bool
   beamFields:
     driverDefaultExtraFee:
       driverDefaultExtraFee: Maybe Money
@@ -79,6 +81,7 @@ SearchRequest:
     currency: Just currency|E
     driverDefaultExtraFeeAmount: driverDefaultExtraFee|E
     driverDefaultExtraFee: roundToIntegral <$> driverDefaultExtraFee|E
+    isAdvanceBookingEnabled: Just isAdvanceBookingEnabled|E
 
   intermediateTransformers:
     fromTType:
@@ -97,6 +100,7 @@ SearchRequest:
     isScheduled: fromMaybe False isScheduled|E
     driverDefaultExtraFee: Kernel.Types.Common.mkAmountWithDefault driverDefaultExtraFeeAmount <$> driverDefaultExtraFee|E
     currency: fromMaybe Kernel.Types.Common.INR currency|E
+    isAdvanceBookingEnabled: fromMaybe False isAdvanceBookingEnabled|E
 
   constraints:
     id: PrimaryKey
@@ -141,6 +145,10 @@ SearchRequest:
       kvFunction: findOneWithKV
       where:
         and: [transactionId, providerId]
+    updateIsAdvancedBookingEnabled:
+      kvFunction: updateWithKV
+      params: [isAdvanceBookingEnabled]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE
