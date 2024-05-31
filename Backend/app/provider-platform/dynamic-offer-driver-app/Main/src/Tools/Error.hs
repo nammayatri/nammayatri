@@ -1249,3 +1249,18 @@ instance IsHTTPError ForwardBatchingErrors where
     CurrentRideInprogress _ -> E500
 
 instance IsAPIError ForwardBatchingErrors
+
+newtype SpecialLocationNotFound = SpecialLocationNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SpecialLocationNotFound
+
+instance IsBaseError SpecialLocationNotFound where
+  toMessage = \case
+    SpecialLocationNotFound spId -> Just $ "Special Location not found for special location id : " <> spId
+
+instance IsHTTPError SpecialLocationNotFound where
+  toErrorCode _ = "SPECIAL_LOCATION_NOT_FOUND"
+  toHttpCode _ = E500
+
+instance IsAPIError SpecialLocationNotFound

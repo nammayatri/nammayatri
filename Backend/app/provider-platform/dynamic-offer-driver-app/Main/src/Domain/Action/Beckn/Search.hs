@@ -57,6 +57,7 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.Queries.GateInfo (findGateInfoByLatLongWithoutGeoJson)
+import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.BlockedRouteDetector
 import SharedLogic.DriverPool
@@ -120,6 +121,7 @@ data ValidatedDSearchReq = ValidatedDSearchReq
 
 data DSearchRes = DSearchRes
   { specialLocationTag :: Maybe Text,
+    specialLocationName :: Maybe Text,
     searchMetricsMVar :: Metrics.SearchMetricsMVar,
     paymentMethodsInfo :: [DMPM.PaymentMethodInfo],
     provider :: DM.Merchant,
@@ -194,9 +196,13 @@ handler ValidatedDSearchReq {..} sReq = do
         (pool, policies) <- selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig possibleTripOption.isScheduled allFarePoliciesProduct.area farePolicies
         pure (nonEmpty pool, policies)
       else return (Nothing, catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleServiceTier)) farePolicies)
-  (mbSpecialZoneGateId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
+  (mbSpecialZoneGateId, mbDefaultDriverExtra, spLocId) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
   logDebug $ "Pickingup Gate info result : " <> show (mbSpecialZoneGateId, mbDefaultDriverExtra)
+  mbSpecialLocation <- case spLocId of
+    Nothing -> pure Nothing
+    Just spId -> Just <$> QSL.findById spId >>= fromMaybeM (SpecialLocationNotFound $ getId spId)
   let specialLocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneGateId
+  let specialLocationName = mbSpecialLocation <&> (.locationName)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag allFarePoliciesProduct.area mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute currency distanceUnit
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
@@ -212,15 +218,15 @@ handler ValidatedDSearchReq {..} sReq = do
   forM_ estimates $ \est -> triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId}
   driverInfoQuotes <- addNearestDriverInfo merchantOpCityId driverPool quotes
   driverInfoEstimates <- addNearestDriverInfo merchantOpCityId driverPool estimates
-  buildDSearchResp sReq.pickupLocation sReq.dropLocation specialLocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates
+  buildDSearchResp sReq.pickupLocation sReq.dropLocation specialLocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocationName
   where
-    getSpecialPickupZoneInfo :: Maybe Text -> DLoc.Location -> Flow (Maybe Text, Maybe HighPrecMoney)
-    getSpecialPickupZoneInfo Nothing _ = pure (Nothing, Nothing)
+    getSpecialPickupZoneInfo :: Maybe Text -> DLoc.Location -> Flow (Maybe Text, Maybe HighPrecMoney, Maybe (Id SL.SpecialLocation))
+    getSpecialPickupZoneInfo Nothing _ = pure (Nothing, Nothing, Nothing)
     getSpecialPickupZoneInfo (Just _) fromLocation = do
       mbPickupZone <- findGateInfoByLatLongWithoutGeoJson (LatLong fromLocation.lat fromLocation.lon)
       if ((.canQueueUpOnGate) <$> mbPickupZone) == Just True
-        then pure $ ((.id.getId) <$> mbPickupZone, fmap (toHighPrecMoney . Money) . (.defaultDriverExtra) =<< mbPickupZone) -- FIXME
-        else pure (Nothing, Nothing)
+        then pure $ ((.id.getId) <$> mbPickupZone, fmap (toHighPrecMoney . Money) . (.defaultDriverExtra) =<< mbPickupZone, (.specialLocationId) <$> mbPickupZone) -- FIXME
+        else pure (Nothing, Nothing, Nothing)
 
     combineFarePoliciesProducts :: [FarePoliciesProduct] -> FarePoliciesProduct
     combineFarePoliciesProducts products =
@@ -245,7 +251,7 @@ handler ValidatedDSearchReq {..} sReq = do
         DTC.InterCity _ -> (buildQuoteHelper True) fp >>= \quote -> pure (estimates, quote : quotes)
         _ -> (buildQuoteHelper False) fp >>= \quote -> pure (estimates, quote : quotes)
 
-    buildDSearchResp fromLocation toLocation specialLocationTag searchMetricsMVar quotes estimates = do
+    buildDSearchResp fromLocation toLocation specialLocationTag searchMetricsMVar quotes estimates specialLocationName = do
       merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
       now <- getCurrentTime
