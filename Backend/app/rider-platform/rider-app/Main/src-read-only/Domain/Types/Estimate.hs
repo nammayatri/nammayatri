@@ -32,6 +32,7 @@ data Estimate = Estimate
     createdAt :: Kernel.Prelude.UTCTime,
     device :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driversLocation :: [Kernel.External.Maps.LatLong],
     estimateBreakupList :: [Domain.Types.Estimate.EstimateBreakup],
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,

@@ -57,7 +57,8 @@ instance FromTType' BeamDEFB.DriverExtraFeeBounds DFP.FullDriverExtraFeeBounds w
               stepFee = mkAmountWithDefault stepFeeAmount stepFee,
               defaultStepFee = mkAmountWithDefault defaultStepFeeAmount defaultStepFee,
               minFee = mkAmountWithDefault minFeeAmount minFee,
-              maxFee = mkAmountWithDefault maxFeeAmount maxFee
+              maxFee = mkAmountWithDefault maxFeeAmount maxFee,
+              distanceUnit = fromMaybe Meter distanceUnit
             }
         )
 
@@ -74,5 +75,6 @@ instance ToTType' BeamDEFB.DriverExtraFeeBounds DFP.FullDriverExtraFeeBounds whe
         minFeeAmount = Just minFee,
         maxFeeAmount = Just maxFee,
         stepFeeAmount = Just stepFee,
-        defaultStepFeeAmount = Just defaultStepFee
+        defaultStepFeeAmount = Just defaultStepFee,
+        distanceUnit = Just distanceUnit
       }

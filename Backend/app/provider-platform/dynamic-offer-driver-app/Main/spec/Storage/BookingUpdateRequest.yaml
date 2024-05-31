@@ -32,6 +32,7 @@ BookingUpdateRequest:
     oldEstimatedFare : HighPrecMoney
     oldEstimatedDistance : Maybe HighPrecMeters
     oldMaxEstimatedDistance : Maybe HighPrecMeters
+    distanceUnit: DistanceUnit
     oldFareParamsId : Id FareParameters
     createdAt: UTCTime
     updatedAt: UTCTime
@@ -40,6 +41,15 @@ BookingUpdateRequest:
     farePolicyId : Id FarePolicy
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+
+  beamType:
+    distanceUnit: Maybe DistanceUnit
+
+  fromTType:
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+
+  toTType:
+    distanceUnit: Kernel.Prelude.Just|I
 
   queries:
     findById:

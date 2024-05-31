@@ -47,6 +47,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     distanceToPickup :: Meters,
+    distanceToPickupWithUnit :: Distance,
     durationToPickup :: Seconds,
     baseFare :: Money,
     customerExtraFee :: Maybe Money,
@@ -57,6 +58,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     newFromLocation :: DLoc.Location,
     newToLocation :: Maybe DLoc.Location, -- we need to show all requests or last one ?
     distance :: Maybe Meters,
+    distanceWithUnit :: Maybe Distance,
     duration :: Maybe Seconds,
     tripCategory :: DTC.TripCategory,
     driverLatLong :: LatLong,
@@ -101,6 +103,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           startTime = nearbyReq.startTime,
           searchRequestValidTill = nearbyReq.searchRequestValidTill,
           distanceToPickup = nearbyReq.actualDistanceToPickup,
+          distanceToPickupWithUnit = convertMetersToDistance nearbyReq.distanceUnit nearbyReq.actualDistanceToPickup,
           durationToPickup = nearbyReq.durationToPickup,
           baseFare = roundToIntegral $ fromMaybe searchTry.baseFare nearbyReq.baseFare, -- short term, later remove searchTry.baseFare
           baseFareWithCurrency = PriceAPIEntity (fromMaybe searchTry.baseFare nearbyReq.baseFare) nearbyReq.currency,
@@ -111,6 +114,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           newFromLocation = searchRequest.fromLocation,
           newToLocation = searchRequest.toLocation,
           distance = searchRequest.estimatedDistance,
+          distanceWithUnit = convertMetersToDistance searchRequest.distanceUnit <$> searchRequest.estimatedDistance,
           driverLatLong =
             LatLong
               { lat = fromMaybe 0.0 nearbyReq.lat,

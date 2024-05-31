@@ -67,7 +67,7 @@ getInvoice (mbPersonId, merchantId) from to = do
                   totalAmount = maybe notAvailableText show ride.totalFare,
                   vehicleNumber = fromMaybe notAvailableText ride.vehicleNumber,
                   chargeableDistance = ride.chargeableDistance,
-                  chargeableDistanceWithUnit = highPrecMetersToDistance <$> ride.chargeableDistance
+                  chargeableDistanceWithUnit = convertHighPrecMetersToDistance Meter <$> ride.chargeableDistance -- FIXME use proper unit
                 }
         Nothing -> return Nothing
     getFareBreakup bookingId (tag, title) = do

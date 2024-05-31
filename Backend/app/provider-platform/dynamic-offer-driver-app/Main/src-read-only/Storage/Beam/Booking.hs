@@ -28,6 +28,7 @@ data BookingT f = BookingT
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency),
     disabilityTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     distanceToPickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     estimateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     estimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),

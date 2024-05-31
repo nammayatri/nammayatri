@@ -48,6 +48,7 @@ instance FromTType' BeamGHC.GoHomeConfig GoHomeConfig where
             ignoreWaypointsTill = Meters ignoreWaypointsTill,
             addStartWaypointAt = Meters addStartWaypointAt,
             newLocAllowedRadius = Meters newLocAllowedRadius,
+            distanceUnit = fromMaybe Meter distanceUnit,
             ..
           }
 
@@ -62,5 +63,6 @@ instance ToTType' BeamGHC.GoHomeConfig GoHomeConfig where
         BeamGHC.ignoreWaypointsTill = getMeters ignoreWaypointsTill,
         BeamGHC.addStartWaypointAt = getMeters addStartWaypointAt,
         BeamGHC.newLocAllowedRadius = getMeters newLocAllowedRadius,
+        BeamGHC.distanceUnit = Just distanceUnit,
         ..
       }

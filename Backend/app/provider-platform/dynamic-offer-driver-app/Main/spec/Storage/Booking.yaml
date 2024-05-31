@@ -64,6 +64,7 @@ Booking:
     paymentUrl: Maybe Text
     stopLocationId: Maybe (Id Location)
     distanceToPickup: Maybe Meters
+    distanceUnit: DistanceUnit
     returnTime: Maybe UTCTime
     roundTrip: Maybe Bool
     isScheduled: Bool
@@ -85,6 +86,7 @@ Booking:
     distanceToPickup: Maybe HighPrecMeters
     isScheduled: Maybe Bool
     merchantOperatingCityId: Maybe Text
+    distanceUnit: Maybe DistanceUnit
   beamFields:
     tripCategory:
       tripCategory: Maybe TripCategory
@@ -112,6 +114,7 @@ Booking:
     vehicleVariant: vehicleServiceTier|E
     fareParametersId: (Kernel.Types.Id.getId $ (.id) fareParams)|E
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
+    distanceUnit: Kernel.Prelude.Just|I
 
   intermediateTransformers:
     fromTType:
@@ -131,6 +134,7 @@ Booking:
     #estimatedFare: Kernel.Prelude.roundToIntegral estimatedFare|E
     isScheduled: fromMaybe False isScheduled|E
     distanceToPickup: Kernel.Prelude.roundToIntegral <$> distanceToPickup|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
 
   sqlType:
     status: character varying(255)

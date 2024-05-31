@@ -25,6 +25,7 @@ BookingCancellationReason:
     additionalInfo : Maybe Text
     driverCancellationLocation : Maybe LatLong
     driverDistToPickup : Maybe Distance
+    distanceUnit : DistanceUnit
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -39,22 +40,25 @@ BookingCancellationReason:
     driverDistToPickup:
       driverDistToPickup: Maybe Meters
       driverDistToPickupValue : Maybe HighPrecDistance
-      distanceUnit : Maybe DistanceUnit
+    distanceUnit:
+      distanceUnit: Maybe DistanceUnit
 
   fromTType:
     driverCancellationLocation: Kernel.External.Maps.LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon|E
     createdAt: getCreatedAt|M
     updatedAt: getUpdatedAt|M
     driverDistToPickup: Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit driverDistToPickupValue <$> driverDistToPickup|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
 
+  # distanceUnit should be the same for all fields
   toTType:
     driverCancellationLocationLat: (driverCancellationLocation <&> (.lat))|E
     driverCancellationLocationLon: (driverCancellationLocation <&> (.lon))|E
     createdAt: Kernel.Prelude.Just|I
     updatedAt: Kernel.Prelude.Just|I
     driverDistToPickup: (Kernel.Types.Common.distanceToMeters <$> driverDistToPickup)|E
-    driverDistToPickupValue: (Kernel.Types.Common.distanceToHighPrecDistance (driverDistToPickup <&> (.unit)) <$> driverDistToPickup)|E
-    distanceUnit: (driverDistToPickup <&> (.unit))|E
+    driverDistToPickupValue: (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> driverDistToPickup)|E
+    distanceUnit: Kernel.Prelude.Just|I
 
   constraints:
     bookingId: PrimaryKey

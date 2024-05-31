@@ -247,11 +247,11 @@ getPerExtraKmRate tagGroups currency = do
   perExtraKmRate <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency perExtraKmRate
 
-getIncludedKmPerHr :: Maybe [Spec.TagGroup] -> Maybe Distance
+getIncludedKmPerHr :: Maybe [Spec.TagGroup] -> Maybe Kilometers
 getIncludedKmPerHr tagGroups = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_HOUR_DISTANCE_KM tagGroups
   includedKmPerHr <- DecimalValue.valueFromString tagValue
-  Just . metersToDistance . kilometersToMeters . Kilometers $ roundToIntegral includedKmPerHr
+  Just . Kilometers $ roundToIntegral includedKmPerHr
 
 getPlannedPerKmRate :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getPlannedPerKmRate tagGroups currency = do

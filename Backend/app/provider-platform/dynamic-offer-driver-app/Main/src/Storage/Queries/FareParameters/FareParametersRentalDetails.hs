@@ -42,6 +42,7 @@ instance FromTType' BeamFPRD.FareParametersRentalDetails Domain.FullFareParamete
               extraDistance = fromMaybe 0 extraDistance,
               extraDuration = fromMaybe 0 extraDuration,
               currency = fromMaybe INR currency,
+              distanceUnit = fromMaybe Meter distanceUnit,
               ..
             }
         )
@@ -58,5 +59,6 @@ instance ToTType' FareParametersRentalDetails Domain.FullFareParametersRentalDet
         extraDistance = Just $ Domain.extraDistance fParamsRentalDetails,
         extraDuration = Just $ Domain.extraDuration fParamsRentalDetails,
         deadKmFare = Just $ (Domain.deadKmFare :: Domain.FParamsRentalDetails -> HighPrecMoney) fParamsRentalDetails,
+        distanceUnit = Just $ Domain.distanceUnit fParamsRentalDetails,
         ..
       }

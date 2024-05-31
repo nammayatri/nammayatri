@@ -28,6 +28,7 @@ data FarePolicySlabsDetailsSlabT f = FarePolicySlabsDetailsSlabT
   { id :: B.C f (Maybe Int),
     farePolicyId :: B.C f Text,
     startDistance :: B.C f Meters,
+    distanceUnit :: B.C f (Maybe DistanceUnit),
     baseFare :: B.C f Money,
     baseFareAmount :: B.C f (Maybe HighPrecMoney),
     currency :: B.C f (Maybe Currency),

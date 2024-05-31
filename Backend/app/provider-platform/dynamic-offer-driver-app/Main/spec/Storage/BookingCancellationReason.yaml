@@ -25,9 +25,11 @@ BookingCancellationReason:
     additionalInfo : Maybe Text
     driverCancellationLocation : Maybe LatLong
     driverDistToPickup : Maybe Meters
+    distanceUnit : DistanceUnit
 
   beamType:
     reasonCode: Maybe Text
+    distanceUnit: Maybe DistanceUnit
 
   beamFields:
     driverCancellationLocation:
@@ -37,11 +39,13 @@ BookingCancellationReason:
   fromTType:
     reasonCode: Domain.Types.CancellationReason.CancellationReasonCode <$> reasonCode|E
     driverCancellationLocation: Kernel.External.Maps.LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
 
   toTType:
     reasonCode: (\(Domain.Types.CancellationReason.CancellationReasonCode x) -> x) <$> reasonCode|E
     driverCancellationLocationLat: (driverCancellationLocation <&> (.lat))|E
     driverCancellationLocationLon: (driverCancellationLocation <&> (.lon))|E
+    distanceUnit: Kernel.Prelude.Just|I
 
   constraints:
     bookingId: PrimaryKey

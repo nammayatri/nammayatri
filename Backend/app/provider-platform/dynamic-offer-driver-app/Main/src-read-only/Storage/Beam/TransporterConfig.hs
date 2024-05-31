@@ -61,6 +61,7 @@ data TransporterConfigT f = TransporterConfigT
     crossTravelCities :: B.C f [Kernel.Types.Beckn.City.City],
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     defaultPopupDelay :: B.C f Kernel.Types.Common.Seconds,
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     dlNumberVerification :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     driverAutoPayExecutionTime :: B.C f Kernel.Types.Common.Seconds,
     driverAutoPayExecutionTimeFallBack :: B.C f Kernel.Types.Common.Seconds,

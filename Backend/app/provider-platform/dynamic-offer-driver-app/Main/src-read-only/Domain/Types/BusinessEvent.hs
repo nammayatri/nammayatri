@@ -17,6 +17,7 @@ import qualified Tools.Beam.UtilsTH
 data BusinessEvent = BusinessEvent
   { bookingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Booking.Booking),
     distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Driver),
     duration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     eventType :: Domain.Types.BusinessEvent.EventType,

@@ -50,6 +50,7 @@ data BookingInfoResponse = BookingInfoResponse
     fromLocation :: Location,
     toLocation :: Maybe Location,
     estimatedDistance :: Maybe Meters,
+    estimatedDistanceWithUnit :: Maybe Distance,
     estimatedFare :: Money,
     estimatedFareWithCurrency :: PriceAPIEntity,
     estimatedDuration :: Maybe Seconds,

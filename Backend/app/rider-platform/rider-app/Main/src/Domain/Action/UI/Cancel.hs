@@ -131,6 +131,7 @@ softCancel bookingId _ = do
 cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
 cancel bookingId _ req = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  let distanceUnit = booking.distanceUnit
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   when (booking.status == SRB.CANCELLED) $ throwError (BookingInvalidStatus "This booking is already cancelled")
   canCancelBooking <- isBookingCancellable booking
@@ -150,8 +151,8 @@ cancel bookingId _ req = do
             let merchantOperatingCityId = booking.merchantOperatingCityId
             disToPickup <- driverDistanceToPickup booking.merchantId merchantOperatingCityId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
             -- Temporary for debug issue with huge values
-            let disToPickupThreshold = Distance 1000000 Meter --1000km can be max valid distance
-            disToPickupUpd :: Maybe Distance <-
+            let disToPickupThreshold = Meters 1000000 -- 1000km can be max valid distance
+            disToPickupUpd :: Maybe Meters <-
               if abs disToPickup > disToPickupThreshold
                 then do
                   logWarning $ "Invalid disToPickup received: " <> show disToPickup
@@ -159,11 +160,11 @@ cancel bookingId _ req = do
                 else do
                   logInfo $ "Valid disToPickup received: " <> show disToPickup
                   pure $ Just disToPickup
-            buildBookingCancelationReason (Just res'.currPoint) disToPickupUpd (Just booking.merchantId)
+            buildBookingCancellationReason (Just res'.currPoint) disToPickupUpd (Just booking.merchantId) distanceUnit
           Left err -> do
             logTagInfo "DriverLocationFetchFailed" $ show err
-            buildBookingCancelationReason Nothing Nothing (Just booking.merchantId)
-      Nothing -> buildBookingCancelationReason Nothing Nothing (Just booking.merchantId)
+            buildBookingCancellationReason Nothing Nothing (Just booking.merchantId) distanceUnit
+      Nothing -> buildBookingCancellationReason Nothing Nothing (Just booking.merchantId) distanceUnit
   QBCR.upsert cancellationReason
   return $
     CancelRes
@@ -178,7 +179,7 @@ cancel bookingId _ req = do
         ..
       }
   where
-    buildBookingCancelationReason currentDriverLocation disToPickup merchantId = do
+    buildBookingCancellationReason currentDriverLocation disToPickup merchantId distanceUnit = do
       let CancelReq {..} = req
       now <- getCurrentTime
       return $
@@ -191,7 +192,7 @@ cancel bookingId _ req = do
             reasonStage = Just reasonStage,
             additionalInfo = additionalInfo,
             driverCancellationLocation = currentDriverLocation,
-            driverDistToPickup = disToPickup,
+            driverDistToPickup = convertMetersToDistance distanceUnit <$> disToPickup,
             createdAt = now,
             updatedAt = now,
             ..
@@ -269,7 +270,7 @@ driverDistanceToPickup ::
   Id DMOC.MerchantOperatingCity ->
   tripStartPos ->
   tripEndPos ->
-  m Distance
+  m Meters
 driverDistanceToPickup merchantId merchantOperatingCityId tripStartPos tripEndPos = do
   distRes <-
     Maps.getDistanceForCancelRide merchantId merchantOperatingCityId $
@@ -278,7 +279,7 @@ driverDistanceToPickup merchantId merchantOperatingCityId tripStartPos tripEndPo
           destination = tripEndPos,
           travelMode = Just Maps.CAR
         }
-  return $ metersToDistance distRes.distance
+  return distRes.distance
 
 disputeCancellationDues :: (Id Person.Person, Id Merchant.Merchant) -> Flow APISuccess
 disputeCancellationDues (personId, merchantId) = do

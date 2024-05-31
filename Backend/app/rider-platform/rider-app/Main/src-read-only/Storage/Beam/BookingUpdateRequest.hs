@@ -18,6 +18,7 @@ data BookingUpdateRequestT f = BookingUpdateRequestT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currentPointLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     currentPointLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     estimatedFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     id :: B.C f Kernel.Prelude.Text,

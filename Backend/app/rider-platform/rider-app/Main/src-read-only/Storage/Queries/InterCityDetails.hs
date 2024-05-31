@@ -51,7 +51,7 @@ instance ToTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCityD
         Beam.deadKmFare = (.amount) deadKmFare,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.distanceUnit = (.unit) kmPerPlannedExtraHour,
-        Beam.kmPerPlannedExtraHour = Kernel.Utils.Common.distanceToHighPrecDistance (Just $ (.unit) kmPerPlannedExtraHour) kmPerPlannedExtraHour,
+        Beam.kmPerPlannedExtraHour = Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) kmPerPlannedExtraHour) kmPerPlannedExtraHour,
         Beam.nightShiftCharge = (.amount) . (.nightShiftCharge) <$> nightShiftInfo,
         Beam.nightShiftEnd = (.nightShiftEnd) <$> nightShiftInfo,
         Beam.nightShiftStart = (.nightShiftStart) <$> nightShiftInfo,

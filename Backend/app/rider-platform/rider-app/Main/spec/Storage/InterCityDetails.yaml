@@ -76,7 +76,7 @@ InterCityDetails:
     currency: (.currency) baseFare|E
     nightShiftStart: (.nightShiftStart) <$> nightShiftInfo|E
     nightShiftEnd: (.nightShiftEnd) <$> nightShiftInfo|E
-    kmPerPlannedExtraHour: (Kernel.Utils.Common.distanceToHighPrecDistance (Just $ (.unit) kmPerPlannedExtraHour) kmPerPlannedExtraHour)|E
+    kmPerPlannedExtraHour: (Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) kmPerPlannedExtraHour) kmPerPlannedExtraHour)|E
     distanceUnit: ((.unit) kmPerPlannedExtraHour)|E
 
   fromTType:

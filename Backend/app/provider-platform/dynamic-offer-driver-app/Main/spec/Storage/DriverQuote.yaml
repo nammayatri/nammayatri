@@ -46,6 +46,7 @@ DriverQuote:
     vehicleServiceTier : ServiceTierType|NoRelation
     distance : Maybe Meters
     distanceToPickup : Meters
+    distanceUnit: DistanceUnit
     durationToPickup : Seconds
     validTill : UTCTime
     estimatedFare : HighPrecMoney
@@ -78,6 +79,7 @@ DriverQuote:
     createdAt: LocalTime
     updatedAt: LocalTime
     currency: Maybe Currency
+    distanceUnit: Maybe DistanceUnit
 
   beamFields:
     clientDevice:
@@ -105,6 +107,7 @@ DriverQuote:
     validTill: Data.Time.localTimeToUTC Data.Time.utc validTill|E
     currency: fromMaybe Kernel.Types.Common.INR currency|E
     estimatedFare: Kernel.Types.Common.mkAmountWithDefault estimatedFareAmount estimatedFare|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
 
   toTType:
     fareParametersId: Kernel.Types.Id.getId ((.id) fareParams)|E
@@ -122,6 +125,7 @@ DriverQuote:
     currency: Kernel.Prelude.Just|I
     estimatedFareAmount: Kernel.Prelude.Just|I
     estimatedFare: Kernel.Prelude.roundToIntegral estimatedFare|E
+    distanceUnit: Kernel.Prelude.Just|I
 
   queries:
     findById:

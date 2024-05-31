@@ -37,6 +37,7 @@ data Booking = Booking
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     createdAt :: Kernel.Prelude.UTCTime,
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedFare :: Kernel.Types.Common.Price,

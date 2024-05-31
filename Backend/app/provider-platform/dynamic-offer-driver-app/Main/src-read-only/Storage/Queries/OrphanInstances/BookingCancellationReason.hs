@@ -9,6 +9,8 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
 import Kernel.Prelude
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -21,6 +23,7 @@ instance FromTType' Beam.BookingCancellationReason Domain.Types.BookingCancellat
         Domain.Types.BookingCancellationReason.BookingCancellationReason
           { additionalInfo = additionalInfo,
             bookingId = Kernel.Types.Id.Id bookingId,
+            distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             driverCancellationLocation = Kernel.External.Maps.LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon,
             driverDistToPickup = driverDistToPickup,
             driverId = Kernel.Types.Id.Id <$> driverId,
@@ -35,6 +38,7 @@ instance ToTType' Beam.BookingCancellationReason Domain.Types.BookingCancellatio
     Beam.BookingCancellationReasonT
       { Beam.additionalInfo = additionalInfo,
         Beam.bookingId = Kernel.Types.Id.getId bookingId,
+        Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverCancellationLocationLat = driverCancellationLocation <&> (.lat),
         Beam.driverCancellationLocationLon = driverCancellationLocation <&> (.lon),
         Beam.driverDistToPickup = driverDistToPickup,

@@ -89,7 +89,7 @@ RentalDetails:
     currency: Just $ (.currency) baseFare|E
     nightShiftStart: (.nightShiftStart) <$> nightShiftInfo|E
     nightShiftEnd: (.nightShiftEnd) <$> nightShiftInfo|E
-    includedDistancePerHrValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance (Just $ (.unit) includedDistancePerHr) includedDistancePerHr)|E
+    includedDistancePerHrValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) includedDistancePerHr) includedDistancePerHr)|E
     distanceUnit: (Just $ (.unit) includedDistancePerHr)|E
     includedKmPerHr: (Kernel.Utils.Common.metersToKilometers $ Kernel.Utils.Common.distanceToMeters includedDistancePerHr)|E
     deadKmFare: (.amount)|I

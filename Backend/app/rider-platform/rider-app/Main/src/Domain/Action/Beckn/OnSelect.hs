@@ -80,7 +80,7 @@ data QuoteInfo = QuoteInfo
 data DriverOfferQuoteDetails = DriverOfferQuoteDetails
   { driverName :: Text,
     durationToPickup :: Maybe Int, -- Seconds?
-    distanceToPickup :: Maybe Distance,
+    distanceToPickup :: Maybe HighPrecMeters,
     validTill :: UTCTime,
     rating :: Maybe Centesimal,
     bppDriverQuoteId :: Text
@@ -205,6 +205,8 @@ buildDriverOffer estimateId DriverOfferQuoteDetails {..} searchRequest = do
         status = DDriverOffer.ACTIVE,
         createdAt = now,
         updatedAt = now,
+        distanceUnit = searchRequest.distanceUnit,
+        distanceToPickup = convertHighPrecMetersToDistance searchRequest.distanceUnit <$> distanceToPickup,
         ..
       }
 

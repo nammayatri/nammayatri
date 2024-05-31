@@ -35,6 +35,7 @@ data SearchRequest = SearchRequest
     device :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     estimatedRideDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     fromLocation :: Domain.Types.Location.Location,
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,

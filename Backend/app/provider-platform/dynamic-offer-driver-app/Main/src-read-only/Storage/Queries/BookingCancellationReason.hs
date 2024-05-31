@@ -40,6 +40,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.BookingCancellationReason.BookingCancellationReason {..}) = do
   updateWithKV
     [ Se.Set Beam.additionalInfo additionalInfo,
+      Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverCancellationLocationLat (driverCancellationLocation <&> (.lat)),
       Se.Set Beam.driverCancellationLocationLon (driverCancellationLocation <&> (.lon)),
       Se.Set Beam.driverDistToPickup driverDistToPickup,

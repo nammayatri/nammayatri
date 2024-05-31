@@ -27,21 +27,24 @@ BusinessEvent:
     whenPoolWasComputed : Maybe WhenPoolWasComputed
     vehicleVariant : Maybe Variant
     distance : Maybe Meters
+    distanceUnit: DistanceUnit
     duration : Maybe Seconds
     rideId : Maybe (Id Ride)
 
   beamType:
     distance: Maybe Int
     duration: Maybe Int
+    distanceUnit: Maybe DistanceUnit
 
   fromTType:
     distance: Kernel.Types.Common.Meters <$> distance|E
     duration: Kernel.Types.Common.Seconds <$> distance|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
 
   toTType:
     distance: Kernel.Types.Common.getMeters <$> distance|E
+    distanceUnit: Kernel.Prelude.Just|I
     duration: Kernel.Types.Common.getSeconds <$> duration|E
-
 
   constraints:
     id: PrimaryKey

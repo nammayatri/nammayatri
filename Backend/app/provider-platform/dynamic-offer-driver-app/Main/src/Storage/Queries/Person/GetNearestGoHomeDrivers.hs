@@ -115,4 +115,24 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
       where
         mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
-          Just $ NearestGoHomeDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.airConditioned location.lat location.lon info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice person.backendConfigVersion person.backendAppVersion
+          Just $
+            NearestGoHomeDriversResult
+              { driverId = cast person.id,
+                driverDeviceToken = person.deviceToken,
+                language = person.language,
+                onRide = info.onRide,
+                distanceToDriver = roundToIntegral dist,
+                variant = vehicle.variant,
+                serviceTier = serviceTier,
+                serviceTierDowngradeLevel = maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver,
+                airConditioned = serviceTierInfo.airConditioned,
+                lat = location.lat,
+                lon = location.lon,
+                mode = info.mode,
+                clientSdkVersion = person.clientSdkVersion,
+                clientBundleVersion = person.clientBundleVersion,
+                clientConfigVersion = person.clientConfigVersion,
+                clientDevice = person.clientDevice,
+                backendConfigVersion = person.backendConfigVersion,
+                backendAppVersion = person.backendAppVersion
+              }

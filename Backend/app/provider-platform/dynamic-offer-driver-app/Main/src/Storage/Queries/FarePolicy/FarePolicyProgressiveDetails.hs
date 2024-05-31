@@ -58,6 +58,7 @@ fromTTypeFarePolicyProgressiveDetails BeamFPPD.FarePolicyProgressiveDetailsT {..
         perExtraKmRateSections = snd <$> fPPDP,
         deadKmFare = mkAmountWithDefault deadKmFareAmount deadKmFare,
         currency = fromMaybe INR currency,
+        distanceUnit = fromMaybe Meter distanceUnit,
         waitingChargeInfo =
           ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
             Domain.WaitingChargeInfo
@@ -79,6 +80,7 @@ instance ToTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyPro
         deadKmFare = roundToIntegral deadKmFare,
         deadKmFareAmount = Just deadKmFare,
         currency = Just currency,
+        distanceUnit = Just distanceUnit,
         waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
         nightShiftCharge = nightShiftCharge
       }

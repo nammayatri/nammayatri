@@ -11,3 +11,8 @@ ALTER TABLE atlas_driver_offer_bpp.business_event ADD COLUMN time_stamp timestam
 ALTER TABLE atlas_driver_offer_bpp.business_event ADD COLUMN vehicle_variant character varying(255) ;
 ALTER TABLE atlas_driver_offer_bpp.business_event ADD COLUMN when_pool_was_computed character varying(255) ;
 ALTER TABLE atlas_driver_offer_bpp.business_event ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.business_event ADD COLUMN distance_unit character varying(255) ;

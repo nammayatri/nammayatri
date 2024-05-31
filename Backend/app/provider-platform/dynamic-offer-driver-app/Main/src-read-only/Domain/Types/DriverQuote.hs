@@ -36,6 +36,7 @@ data DriverQuote = DriverQuote
     currency :: Kernel.Types.Common.Currency,
     distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     distanceToPickup :: Kernel.Types.Common.Meters,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     driverName :: Kernel.Prelude.Text,
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,

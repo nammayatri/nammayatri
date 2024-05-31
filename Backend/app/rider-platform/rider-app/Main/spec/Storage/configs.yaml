@@ -17,6 +17,15 @@ MerchantOperatingCity:
     city: City
     lat: Double
     long: Double
+    distanceUnit: Kernel.Types.Common.DistanceUnit
+
+  beamFields:
+    distanceUnit:
+      distanceUnit: Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit
+  toTType:
+    distanceUnit: Kernel.Prelude.Just|I
+  fromTType:
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
 
   excludedFields: [merchantOperatingCityId]
 

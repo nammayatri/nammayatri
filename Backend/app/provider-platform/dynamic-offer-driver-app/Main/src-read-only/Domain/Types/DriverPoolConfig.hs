@@ -24,6 +24,7 @@ data DriverPoolConfig = DriverPoolConfig
     createdAt :: Kernel.Prelude.UTCTime,
     currentRideTripCategoryValidForForwardBatching :: [Kernel.Prelude.Text],
     distanceBasedBatchSplit :: [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.BatchSplitByPickupDistance],
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverBatchSize :: Kernel.Prelude.Int,
     driverPositionInfoExpiry :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     driverQuoteLimit :: Kernel.Prelude.Int,

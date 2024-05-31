@@ -248,6 +248,10 @@ data RideInfoRes = RideInfoRes
     rideDistanceActual :: Meters,
     chargeableDistance :: Maybe Meters,
     maxEstimatedDistance :: Maybe Meters,
+    rideDistanceEstimatedWithUnit :: Maybe Distance,
+    rideDistanceActualWithUnit :: Distance,
+    chargeableDistanceWithUnit :: Maybe Distance,
+    maxEstimatedDistanceWithUnit :: Maybe Distance,
     estimatedRideDuration :: Maybe Minutes,
     pickupDropOutsideOfThreshold :: Maybe Bool,
     estimatedFare :: Money,
@@ -580,6 +584,7 @@ data FParamsRentalDetails = FParamsRentalDetails
     timeBasedFareWithCurrency :: PriceAPIEntity,
     distBasedFareWithCurrency :: PriceAPIEntity,
     extraDistance :: Meters,
+    extraDistanceWithUnit :: Distance,
     extraDuration :: Seconds
   }
   deriving stock (Show, Generic)

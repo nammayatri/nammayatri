@@ -205,6 +205,7 @@ MerchantOperatingCity:
     supportNumber: Maybe Text
     language: Language
     currency: Currency
+    distanceUnit: DistanceUnit
   sqlType:
     city: character varying(255)
     currency: character varying(255)
@@ -222,6 +223,7 @@ MerchantOperatingCity:
     - createdAt
   beamType:
     currency: Maybe Currency
+    distanceUnit: Maybe DistanceUnit
   beamFields:
     location:
       lat: Double
@@ -230,9 +232,11 @@ MerchantOperatingCity:
     lat: (.lat) location|E
     lon: (.lon) location|E
     currency: Just currency|E
+    distanceUnit: Kernel.Prelude.Just|I
   fromTType:
     location: Kernel.External.Maps.Types.LatLong lat lon|E
     currency: fromMaybe Kernel.Types.Common.INR currency|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
 
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -728,6 +732,7 @@ TransporterConfig:
     nightSafetyEndTime: Seconds
     cancellationFee: HighPrecMoney
     currency: Currency
+    distanceUnit: DistanceUnit
     driverDistanceTravelledOnPickupThresholdOnCancel: Meters
     driverTimeSpentOnPickupThresholdOnCancel: Seconds
     cancellationFeeDisputeLimit: Int
@@ -768,6 +773,7 @@ TransporterConfig:
     fareRecomputeWeeklyExtraKmsThreshold: HighPrecMeters
   beamType:
     currency: Maybe Currency
+    distanceUnit: Maybe DistanceUnit
     driverPaymentCycleBuffer: Seconds
     driverPaymentCycleDuration: Seconds
     driverPaymentCycleStartTime: Seconds
@@ -802,8 +808,10 @@ TransporterConfig:
       fcmUrl: Text
       fcmServiceAccount: Text
       fcmTokenKeyPrefix: Text
+
   toTType:
     currency: Just currency|E
+    distanceUnit: Kernel.Prelude.Just distanceUnit|E
     fcmUrl: Kernel.Prelude.showBaseUrl $ (.fcmUrl) fcmConfig|E
     fcmServiceAccount: (.fcmServiceAccount) fcmConfig|E
     fcmTokenKeyPrefix: (.fcmTokenKeyPrefix) fcmConfig|E
@@ -839,8 +847,10 @@ TransporterConfig:
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
+
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
     fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig {fcmUrl = fcmUrl', fcmServiceAccount = fcmServiceAccount, fcmTokenKeyPrefix = fcmTokenKeyPrefix}|E
     driverPaymentCycleBuffer: Kernel.Utils.Common.secondsToNominalDiffTime|I
     driverPaymentCycleDuration: Kernel.Utils.Common.secondsToNominalDiffTime|I

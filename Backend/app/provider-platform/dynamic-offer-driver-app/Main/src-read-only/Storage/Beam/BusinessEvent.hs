@@ -11,11 +11,13 @@ import qualified Domain.Types.Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data BusinessEventT f = BusinessEventT
   { bookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     distance :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     duration :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     eventType :: B.C f Domain.Types.BusinessEvent.EventType,

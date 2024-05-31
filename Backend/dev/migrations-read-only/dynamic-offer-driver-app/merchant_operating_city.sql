@@ -12,3 +12,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN merchant_s
 ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN state text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN support_number text ;
 ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN distance_unit character varying(255) ;

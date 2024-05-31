@@ -39,6 +39,7 @@ import Servant hiding (throwError)
 import SharedLogic.DriverOnboarding
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
+import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -120,10 +121,16 @@ getDriverRateCard ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Maybe Meters ->
+    Kernel.Prelude.Maybe HighPrecDistance ->
+    Kernel.Prelude.Maybe DistanceUnit ->
     Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType ->
     Environment.Flow [API.Types.UI.DriverOnboardingV2.RateCardResp]
   )
-getDriverRateCard (mbPersonId, _, merchantOperatingCityId) mbDistance mbServiceTierType = do
+getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDistance_ reqDistanceUnit mbServiceTierType = do
+  distanceUnit <- SMerchant.getDistanceUnitByMerchantOpCity merchantOperatingCityId
+  let mbDistance =
+        distanceToMeters <$> (Distance <$> reqDistance_ <*> reqDistanceUnit)
+          <|> reqDistance
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast personId)))
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -134,10 +141,10 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) mbDistance mbServiceT
   case mbServiceTierType of
     Just serviceTierType -> do
       when (serviceTierType `notElem` driverVehicleServiceTierTypes) $ throwError $ InvalidRequest ("Service tier " <> show serviceTierType <> " not available for driver")
-      rateCard <- getRateCardForServiceTier transporterConfig (OneWay OneWayOnDemandDynamicOffer) serviceTierType
+      rateCard <- getRateCardForServiceTier mbDistance transporterConfig (OneWay OneWayOnDemandDynamicOffer) distanceUnit serviceTierType
       return [rateCard]
     Nothing -> do
-      rateCard <- mapM (getRateCardForServiceTier transporterConfig (OneWay OneWayOnDemandDynamicOffer)) driverVehicleServiceTierTypes
+      rateCard <- mapM (getRateCardForServiceTier mbDistance transporterConfig (OneWay OneWayOnDemandDynamicOffer) distanceUnit) driverVehicleServiceTierTypes
       return rateCard
   where
     mkBreakupItem :: Text -> Text -> Maybe API.Types.UI.DriverOnboardingV2.RateCardItem
@@ -149,8 +156,8 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) mbDistance mbServiceT
             price = priceObject.amountInt,
             priceWithCurrency = mkPriceAPIEntity priceObject
           }
-    getRateCardForServiceTier :: Maybe TransporterConfig -> TripCategory -> Domain.Types.ServiceTierType.ServiceTierType -> Environment.Flow API.Types.UI.DriverOnboardingV2.RateCardResp
-    getRateCardForServiceTier transporterConfig tripCategory serviceTierType = do
+    getRateCardForServiceTier :: Maybe Meters -> Maybe TransporterConfig -> TripCategory -> DistanceUnit -> Domain.Types.ServiceTierType.ServiceTierType -> Environment.Flow API.Types.UI.DriverOnboardingV2.RateCardResp
+    getRateCardForServiceTier mbDistance transporterConfig tripCategory distanceUnit serviceTierType = do
       now <- getCurrentTime
       fullFarePolicy <- getFarePolicy merchantOperatingCityId False (OneWay OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing
       let rateCardItems = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id mkBreakupItem Nothing Nothing (fullFarePolicyToFarePolicy fullFarePolicy)
@@ -184,6 +191,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) mbDistance mbServiceT
               estimatedRideDuration = Nothing,
               timeDiffFromUtc = transporterConfig <&> (.timeDiffFromUtc),
               currency = INR, -- fix it later
+              distanceUnit,
               tollCharges = Nothing
             }
       let totalFareAmount = perRideKmFareParamsSum fareParams

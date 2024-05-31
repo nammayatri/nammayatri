@@ -20,6 +20,7 @@ instance FromTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
       Just
         Domain.Types.DailyStats.DailyStats
           { currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
+            distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             driverId = Kernel.Types.Id.Id driverId,
             id = id,
             merchantLocalDate = merchantLocalDate,
@@ -34,6 +35,7 @@ instance ToTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
   toTType' (Domain.Types.DailyStats.DailyStats {..}) = do
     Beam.DailyStatsT
       { Beam.currency = Kernel.Prelude.Just currency,
+        Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = id,
         Beam.merchantLocalDate = merchantLocalDate,

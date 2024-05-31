@@ -21,9 +21,10 @@ import Kernel.Types.Common
 
 data FPProgressiveDetailsPerExtraKmRateSectionD (s :: UsageSafety) = FPProgressiveDetailsPerExtraKmRateSection
   { startDistance :: Meters,
+    distanceUnit :: DistanceUnit,
     perExtraKmRate :: HighPrecMoney
   }
-  deriving (Generic, Show, Eq, ToSchema)
+  deriving (Generic, Show, Eq)
 
 type FPProgressiveDetailsPerExtraKmRateSection = FPProgressiveDetailsPerExtraKmRateSectionD 'Safe
 
@@ -41,6 +42,7 @@ instance ToJSON (FPProgressiveDetailsPerExtraKmRateSectionD 'Safe)
 
 data FPProgressiveDetailsPerExtraKmRateSectionAPIEntity = FPProgressiveDetailsPerExtraKmRateSectionAPIEntity
   { startDistance :: Meters,
+    startDistanceWithUnit :: Distance,
     perExtraKmRate :: HighPrecMoney
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
@@ -48,5 +50,6 @@ data FPProgressiveDetailsPerExtraKmRateSectionAPIEntity = FPProgressiveDetailsPe
 makeFPProgressiveDetailsPerExtraKmRateSectionAPIEntity :: FPProgressiveDetailsPerExtraKmRateSection -> FPProgressiveDetailsPerExtraKmRateSectionAPIEntity
 makeFPProgressiveDetailsPerExtraKmRateSectionAPIEntity FPProgressiveDetailsPerExtraKmRateSection {..} =
   FPProgressiveDetailsPerExtraKmRateSectionAPIEntity
-    { ..
+    { startDistanceWithUnit = convertMetersToDistance distanceUnit startDistance,
+      ..
     }

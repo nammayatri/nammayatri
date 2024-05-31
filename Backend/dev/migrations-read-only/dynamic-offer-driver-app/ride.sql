@@ -106,3 +106,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN is_advance_booking boolean  d
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN vehicle_variant text ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN vehicle_service_tier_name text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN distance_unit character varying(255) ;

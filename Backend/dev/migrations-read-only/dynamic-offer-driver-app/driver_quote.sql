@@ -40,3 +40,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN vehicle_service_tier_name text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN merchant_operating_city_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN distance_unit character varying(255) ;

@@ -148,14 +148,14 @@ buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl = do
       itemTags = item.itemTags
       driverName = fulfillment.fulfillmentAgent >>= (.agentPerson) >>= (.personName) & fromMaybe "Driver"
       durationToPickup = getPickupDurationV2 agentTags
-      distanceToPickup = getDistanceToNearestDriverV2 itemTags
+      distanceToPickup' = getDistanceToNearestDriverV2 itemTags
       rating = getDriverRatingV2 agentTags
   let validTill = (getQuoteValidTill timestamp =<< quote.quotationTtl) & fromMaybe onSelectTtl
   logDebug $ "on_select ttl request rider: " <> show validTill
   bppQuoteId <- fulfillment.fulfillmentId & fromMaybeM (InvalidRequest $ "Missing fulfillmentId, fulfillment:-" <> show fulfillment)
   pure $
     DOnSelect.DriverOfferQuoteDetails
-      { distanceToPickup,
+      { distanceToPickup = realToFrac <$> distanceToPickup',
         bppDriverQuoteId = bppQuoteId,
         ..
       }
@@ -176,8 +176,8 @@ getPickupDurationV2 tagGroups = do
   tagValue <- Utils.getTagV2 Tag.GENERAL_INFO Tag.ETA_TO_NEAREST_DRIVER_MIN tagGroups
   readMaybe $ T.unpack tagValue
 
-getDistanceToNearestDriverV2 :: Maybe [Spec.TagGroup] -> Maybe Distance
+getDistanceToNearestDriverV2 :: Maybe [Spec.TagGroup] -> Maybe Meters
 getDistanceToNearestDriverV2 tagGroups = do
   tagValue <- Utils.getTagV2 Tag.GENERAL_INFO Tag.DISTANCE_TO_NEAREST_DRIVER_METER tagGroups
   distanceToPickup <- readMaybe $ T.unpack tagValue
-  Just $ metersToDistance (Meters distanceToPickup)
+  Just $ Meters distanceToPickup

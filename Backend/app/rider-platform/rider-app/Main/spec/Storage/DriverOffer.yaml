@@ -21,6 +21,7 @@ DriverOffer:
     driverName : Text
     durationToPickup : Maybe Int
     distanceToPickup : Maybe Distance
+    distanceUnit : DistanceUnit
     validTill : UTCTime
     bppQuoteId : Text
     rating : Maybe Centesimal
@@ -34,19 +35,21 @@ DriverOffer:
   beamFields:
     distanceToPickup:
       distanceToPickup: Maybe HighPrecMeters
-      distanceUnit: Maybe DistanceUnit
       distanceToPickupValue: Maybe HighPrecDistance
+    distanceUnit:
+      distanceUnit: Maybe DistanceUnit
 
   fromTType:
     createdAt: Kernel.Prelude.fromMaybe updatedAt|I
     distanceToPickup: Kernel.Types.Common.mkDistanceWithDefault distanceUnit distanceToPickupValue <$> distanceToPickup|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
 
-
+  # distanceUnit should be the same for all fields
   toTType:
     createdAt: Kernel.Prelude.Just|I
     distanceToPickup: (Kernel.Types.Common.distanceToHighPrecMeters <$> distanceToPickup)|E
-    distanceToPickupValue: (Kernel.Types.Common.distanceToHighPrecDistance (distanceToPickup <&> (.unit)) <$> distanceToPickup)|E
-    distanceUnit: (distanceToPickup <&> (.unit))|E
+    distanceToPickupValue: (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> distanceToPickup)|E
+    distanceUnit: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey

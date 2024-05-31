@@ -65,6 +65,7 @@ Quote:
     discount : Maybe Price
     estimatedTotalFare : Price
     estimatedPickupDuration : Maybe Seconds
+    distanceUnit : DistanceUnit
     providerId : Text
     providerUrl : BaseUrl
     itemId : Text
@@ -101,11 +102,12 @@ Quote:
         currency: Maybe Currency
         fareProductType: FareProductType
         distanceToNearestDriver: Maybe HighPrecMeters
-        distanceUnit: Maybe Kernel.Types.Common.DistanceUnit
         distanceToNearestDriverValue: Maybe HighPrecDistance
         rentalDetailsId: Maybe Text
         driverOfferId: Maybe Text
         specialZoneQuoteId: Maybe Text
+      distanceUnit:
+        distanceUnit: Maybe Kernel.Types.Common.DistanceUnit
       vehicleServiceTierType:
         vehicleVariant: VehicleServiceTierType
       clientDevice:
@@ -143,7 +145,9 @@ Quote:
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
     clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion)|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
 
+  # distanceUnit should be the same for all fields
   toTType:
     fareProductType: (Storage.Queries.Transformers.Quote.getfareProduct (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails))|E
     discount: (discount <&> (.amount))|E
@@ -155,8 +159,7 @@ Quote:
     tripTermsId: (Kernel.Types.Id.getId <$> (tripTerms <&> (.id)))|E
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
     distanceToNearestDriver: (Kernel.Types.Common.distanceToHighPrecMeters <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)))|E
-    distanceToNearestDriverValue: (Kernel.Types.Common.distanceToHighPrecDistance (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails) <&> (.unit)) <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)))|E
-    distanceUnit: ((Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)) <&> (.unit))|E
+    distanceToNearestDriverValue: (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit) <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails))|E
     rentalDetailsId: (Storage.Queries.Transformers.Quote.getRentalDetailsId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails))|E
     driverOfferId: (Storage.Queries.Transformers.Quote.getDriverOfferId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails))|E
     specialZoneQuoteId: (Storage.Queries.Transformers.Quote.getSpecialZoneQuoteId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails))|E
@@ -168,6 +171,7 @@ Quote:
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
     clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
     clientOsType:  (clientDevice <&> (.deviceType))|E
+    distanceUnit: Kernel.Prelude.Just|I
 
   sqlType:
     requestId: character varying(255)

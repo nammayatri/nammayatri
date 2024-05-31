@@ -44,7 +44,6 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Extra.Booking as SRB
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.LocationMapping as DLM
-import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
@@ -302,7 +301,7 @@ onUpdate = \case
   OUValidatedBookingCancelledReq req -> Common.bookingCancelledReqHandler req
   OUValidatedBookingReallocationReq ValidatedBookingReallocationReq {..} -> do
     mbRide <- QRide.findActiveByRBId booking.id
-    bookingCancellationReason <- mkBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource booking.merchantId
+    bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) reallocationSource
     void $ QRB.updateStatus booking.id DRB.AWAITING_REASSIGNMENT
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     QBCR.upsert bookingCancellationReason
@@ -312,7 +311,7 @@ onUpdate = \case
   OUValidatedEstimateRepetitionReq ValidatedEstimateRepetitionReq {..} -> do
     when (cancellationSource /= DBCR.ByUser) $ do
       -- in case cancellation is by user, we don't need to create a new booking cancellation reason as already created in the previous step
-      bookingCancellationReason <- mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
+      bookingCancellationReason <- mkBookingCancellationReason booking (Just ride.id) cancellationSource
       void $ QBCR.upsert bookingCancellationReason
     logTagInfo ("EstimateId-" <> getId estimate.id) "Estimate repetition."
 
@@ -326,7 +325,7 @@ onUpdate = \case
   OUValidatedQuoteRepetitionReq ValidatedQuoteRepetitionReq {..} -> do
     when (cancellationSource /= DBCR.ByUser) $ do
       -- in case cancellation is by user, we don't need to create a new booking cancellation reason as already created in the previous step
-      bookingCancellationReason <- mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
+      bookingCancellationReason <- mkBookingCancellationReason booking (Just ride.id) cancellationSource
       void $ QBCR.upsert bookingCancellationReason
 
     quote <- case booking.quoteId of
@@ -360,7 +359,7 @@ onUpdate = \case
     dropLocMap <- SLM.buildDropLocationMapping dropLocMapping.locationId booking.id.getId DLM.BOOKING (Just bookingUpdateRequest.merchantId) (Just bookingUpdateRequest.merchantOperatingCityId)
     QLM.create dropLocMap
     estimatedFare <- bookingUpdateRequest.estimatedFare & fromMaybeM (InternalError "Estimated fare not found for bookingUpdateRequestId")
-    QRB.updateMultipleById estimatedFare estimatedFare bookingUpdateRequest.estimatedDistance bookingUpdateRequest.bookingId
+    QRB.updateMultipleById estimatedFare estimatedFare (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) bookingUpdateRequest.bookingId
 
 validateRequest ::
   ( CacheFlow m r,
@@ -447,18 +446,18 @@ validateRequest = \case
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>
-  Id DRB.Booking ->
+  DRB.Booking ->
   Maybe (Id DRide.Ride) ->
   DBCR.CancellationSource ->
-  Id DMerchant.Merchant ->
   m DBCR.BookingCancellationReason
-mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId = do
+mkBookingCancellationReason booking mbRideId cancellationSource = do
   now <- getCurrentTime
   return $
     DBCR.BookingCancellationReason
-      { bookingId = bookingId,
+      { bookingId = booking.id,
         rideId = mbRideId,
-        merchantId = Just merchantId,
+        merchantId = Just booking.merchantId,
+        distanceUnit = booking.distanceUnit,
         source = cancellationSource,
         reasonCode = Nothing,
         reasonStage = Nothing,

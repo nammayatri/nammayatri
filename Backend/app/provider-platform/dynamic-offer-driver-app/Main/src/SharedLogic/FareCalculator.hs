@@ -208,7 +208,8 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     estimatedDistance :: Maybe Meters,
     timeDiffFromUtc :: Maybe Seconds,
     tollCharges :: Maybe HighPrecMoney,
-    currency :: Currency
+    currency :: Currency,
+    distanceUnit :: DistanceUnit
   }
 
 calculateFareParameters ::
@@ -352,6 +353,7 @@ calculateFareParameters params = do
               extraDistance = Meters $ extraDist * 1000,
               extraDuration = Seconds $ extraMins * 60,
               currency = params.currency,
+              distanceUnit = params.distanceUnit,
               ..
             }
         )

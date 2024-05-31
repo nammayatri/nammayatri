@@ -164,6 +164,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 rideRequestPopupDelayDuration = dpwRes.intelligentScores.rideRequestPopupDelayDuration,
                 baseFare = Just tripQuoteDetail.baseFare,
                 currency,
+                distanceUnit = searchReq.distanceUnit,
                 isPartOfIntelligentPool = dpwRes.isPartOfIntelligentPool,
                 acceptanceRatio = dpwRes.intelligentScores.acceptanceRatio,
                 cancellationRatio = dpwRes.intelligentScores.cancellationRatio,

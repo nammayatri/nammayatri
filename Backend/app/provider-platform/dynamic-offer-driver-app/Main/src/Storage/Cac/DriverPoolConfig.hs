@@ -52,7 +52,7 @@ getSearchDriverPoolConfig ::
 getSearchDriverPoolConfig merchantOpCityId mbDist area = do
   let serviceTier = Nothing
       tripCategory = "All"
-  getdriverPoolConfigCond merchantOpCityId serviceTier tripCategory mbDist area Nothing
+  getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory mbDist area Nothing
 
 getDriverPoolConfigFromCAC ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -83,7 +83,7 @@ getDriverPoolConfigFromCAC merchantOpCityId st tc dist area stickyKey = do
 doubleToInt :: Double -> Int
 doubleToInt = floor
 
-getdriverPoolConfigCond ::
+getDriverPoolConfigCond ::
   (CacheFlow m r, EsqDBFlow m r) =>
   Id MerchantOperatingCity ->
   Maybe DVST.ServiceTierType ->
@@ -92,7 +92,7 @@ getdriverPoolConfigCond ::
   SL.Area ->
   Maybe CacKey ->
   m (Maybe DriverPoolConfig)
-getdriverPoolConfigCond merchantOpCityId serviceTier tripCategory dist' area stickeyKey = do
+getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory dist' area stickeyKey = do
   let dist = fromMaybe 0 dist'
   getDriverPoolConfigFromCAC merchantOpCityId serviceTier tripCategory dist area stickeyKey
     |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier tripCategory dist SL.Default stickeyKey
@@ -137,7 +137,7 @@ getDriverPoolConfig ::
   Maybe CacKey ->
   m DriverPoolConfig
 getDriverPoolConfig merchantOpCityId serviceTier tripCategory area tripDistance srId = do
-  config <- getdriverPoolConfigCond merchantOpCityId (Just serviceTier) (show tripCategory) tripDistance area srId
+  config <- getDriverPoolConfigCond merchantOpCityId (Just serviceTier) (show tripCategory) tripDistance area srId
   when (isNothing config) do
     logError $ "Could not find the config for merchantOpCityId:" <> getId merchantOpCityId <> " and serviceTier:" <> show serviceTier <> " and tripCategory:" <> show tripCategory <> " and tripDistance:" <> show tripDistance
     throwError $ InvalidRequest $ "DriverPool Configs not found for MerchantOperatingCity: " <> merchantOpCityId.getId
