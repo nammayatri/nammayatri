@@ -1007,8 +1007,7 @@ newtype RideBookingRes = RideBookingRes {
   status :: String,
   tripTerms :: Array String,
   updatedAt :: String,
-  vehicleServiceTierType :: Maybe String,
-  tollConfidence :: Maybe CTA.Confidence
+  vehicleServiceTierType :: Maybe String
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
@@ -1040,7 +1039,8 @@ newtype RideAPIEntity = RideAPIEntity {
   bppRideId :: String,
   endOtp :: Maybe String,
   startOdometerReading :: Maybe Number,
-  endOdometerReading :: Maybe Number
+  endOdometerReading :: Maybe Number,
+  tollConfidence :: Maybe CTA.Confidence
 }
 
 newtype RideBookingAPIDetails = RideBookingAPIDetails {

@@ -538,7 +538,7 @@ view push state =
             , if state.props.showIntercityUnserviceablePopUp || state.props.showNormalRideNotSchedulablePopUp then intercityInSpecialZonePopupView push state else emptyTextView state
             , if state.props.zoneOtpExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.showScheduledRideExistsPopUp then scheduledRideExistsPopUpView push state else emptyTextView state
-            , if state.data.rideCompletedData.issueReportData.showTollChargeAmbigousPopUp then PopUpModal.view (push <<< TollChargeAmbigousPopUpAction) (PopUpConfigs.finalFareExcludesToll state) else emptyTextView state
+            , if state.data.rideCompletedData.toll.showAmbiguousPopUp then PopUpModal.view (push <<< TollChargeAmbigousPopUpAction) (PopUpConfigs.finalFareExcludesToll state) else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -2982,22 +2982,6 @@ nearByPickUpPointsView state push =
       in
       finalHeight
 
-confirmingLottieView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-confirmingLottieView push state =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , cornerRadii $ Corners 24.0 true true false false
-    , alignParentBottom "true,-1"
-    ][ relativeLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , cornerRadii $ Corners 24.0 true true false false
-        , background Color.transparent
-        ][ PrestoAnim.animationSet [ fadeIn true ] $
-          loaderView push state
-          ]
-    ]
 
 isAnyOverlayEnabled :: HomeScreenState -> Boolean
 isAnyOverlayEnabled state = state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || state.props.showRateCard || (state.props.showShareAppPopUp && state.data.config.feature.enableShareApp || state.data.waitTimeInfo)

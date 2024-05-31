@@ -593,10 +593,10 @@ instance priorityCustomerIssueTypes :: Priority CustomerIssueTypes where
 class Priority a where
   priority :: a -> Int
 
-data Confidence = SURE | NEUTRAL | UNSURE
+data Confidence = Sure | Neutral | Unsure
 derive instance genericConfidence :: Generic Confidence _
 instance standardEncodeConfidence :: StandardEncode Confidence where standardEncode _ = standardEncode {}
 instance eqConfidence :: Eq Confidence where eq = genericEq
 instance showConfidence :: Show Confidence where show = genericShow
-instance decodeConfidence :: Decode Confidence where decode = defaultDecode
-instance encodeConfidence  :: Encode Confidence where encode = defaultEncode
+instance decodeConfidence :: Decode Confidence where decode = defaultEnumDecode
+instance encodeConfidence  :: Encode Confidence where encode =  defaultEnumEncode

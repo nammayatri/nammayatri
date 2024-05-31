@@ -1406,3 +1406,4 @@ getBN stringKey =
         PLEASE_DO_NOT_DEMAND_EXTRA -> "অনুগ্রহ করে গ্রাহকের কাছ থেকে অতিরিক্ত দাবি করবেন না"
         FINAL_FARE_EXCLUDES_TOLL -> "চূড়ান্ত ভাড়া টোল চার্জ ব্যতীত"
         PLEASE_COLLECT_SEPARATELY -> "অনুগ্রহ করে এটি গ্রাহকের কাছ থেকে আলাদাভাবে সংগ্রহ করুন <b>শুধুমাত্র যদি একটি টোল অতিক্রম করা হয়</b>"
+        TOLL_CHARGES_MAYBE_APPLICABLE -> "টোল চার্জ প্রযোজ্য হতে পারে"

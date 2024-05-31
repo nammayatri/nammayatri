@@ -1404,4 +1404,5 @@ getKN stringKey =
         PLEASE_DO_NOT_DEMAND_EXTRA -> "ದಯವಿಟ್ಟು ಗ್ರಾಹಕರಿಂದ ಹೆಚ್ಚುವರಿ ಬೇಡಿಕೆ ಇಡಬೇಡಿ"
         FINAL_FARE_EXCLUDES_TOLL -> "ಅಂತಿಮ ದರವು ಟೋಲ್ ಶುಲ್ಕಗಳನ್ನು ಹೊರತುಪಡಿಸುತ್ತದೆ"
         PLEASE_COLLECT_SEPARATELY -> "ದಯವಿಟ್ಟು ಅದನ್ನು ಗ್ರಾಹಕರಿಂದ ಪ್ರತ್ಯೇಕವಾಗಿ ಸಂಗ್ರಹಿಸಿ <b>ಟೋಲ್ ದಾಟಿದ್ದರೆ ಮಾತ್ರ</b>"
+        TOLL_CHARGES_MAYBE_APPLICABLE -> "ಟೋಲ್ ಶುಲ್ಕಗಳು ಅನ್ವಯವಾಗಬಹುದು"
         
