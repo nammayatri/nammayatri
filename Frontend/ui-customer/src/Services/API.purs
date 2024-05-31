@@ -1004,6 +1004,7 @@ newtype RideBookingRes = RideBookingRes {
   rideScheduledTime :: Maybe String,
   rideStartTime :: Maybe String,
   specialLocationTag :: Maybe String,
+  specialLocationName :: Maybe String,
   status :: String,
   tripTerms :: Array String,
   updatedAt :: String,

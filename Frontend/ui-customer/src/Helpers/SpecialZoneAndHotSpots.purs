@@ -73,6 +73,7 @@ getZoneType tag =
     "SureBlockedAreaForAutos" -> AUTO_BLOCKED
     "PickupZone" -> SPECIAL_PICKUP
     "SureShoppingMall" -> SHOPPING_MALL
+    "SureAirport" -> AIRPORT
     _ -> NOZONE
 
 getSpecialTag :: Maybe String -> SpecialTags

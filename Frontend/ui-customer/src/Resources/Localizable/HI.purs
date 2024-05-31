@@ -1274,3 +1274,5 @@ getHI stringKey =
         FINAL_FARE_EXCLUDES_TOLL -> "अंतिम किराये में टोल शुल्क शामिल नहीं है"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "टोल शुल्क लागू हो सकता है"
         METRO_BANNER_TITLE appName -> "अब मेट्रो टिकट बुक करें \n" <> appName <> " से!"
+        VIEW_ON_GOOGLE_MAPS -> "गूगल मैप्स पर देखें"
+        WALKING_DIRECTIONS_TO_PICKUP -> "पिकअप के लिए पैदल दिशानिर्देश"

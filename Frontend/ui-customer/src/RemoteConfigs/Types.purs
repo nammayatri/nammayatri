@@ -6,6 +6,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Foreign.Generic (class Decode)
 import Presto.Core.Utils.Encoding (defaultDecode)
+import Data.Maybe (Maybe)
 
 
 type SafetyVideoConfig
@@ -27,3 +28,21 @@ newtype DescriptionComponent = DescriptionComponent {
 derive instance genericDescriptionComponent :: Generic DescriptionComponent _
 instance decodeDescriptionComponent :: Decode DescriptionComponent where decode = defaultDecode
 
+type SpecialLocationsOb = {
+  locations :: Array SpecialLocation
+}
+
+type SpecialLocation = {
+  name :: String,
+  gates :: Array Gate
+}
+
+type Gate = {
+  gateName :: String,
+  images :: Array PickupInstructions
+}
+
+type PickupInstructions = 
+  { image :: String
+  , title :: String
+  }

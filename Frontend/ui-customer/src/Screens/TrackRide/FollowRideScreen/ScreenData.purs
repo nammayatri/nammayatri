@@ -210,4 +210,6 @@ mockDriverInfo =
   , fareProductType : FPT.ONE_WAY
   , driversPreviousRideDropLocLat : Nothing
   , driversPreviousRideDropLocLon : Nothing
+  , spLocationName : Nothing
+  , addressWard : Nothing
   }

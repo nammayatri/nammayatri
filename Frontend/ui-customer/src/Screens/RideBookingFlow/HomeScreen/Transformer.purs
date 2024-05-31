@@ -157,6 +157,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       fareProductType = getFareProductType $ resp.bookingDetails ^._fareProductType
       stopLocation = if fareProductType == FPT.RENTAL then _stopLocation else _toLocation
       (BookingLocationAPIEntity toLocation) = fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation)
+      (BookingLocationAPIEntity bookingLocationAPIEntity) = resp.fromLocation
   in  {
         otp : if isQuote then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else if ((DA.any (_ == fareProductType ) [FPT.RENTAL, FPT.INTER_CITY] ) && isLocalStageOn RideStarted) then fromMaybe "" rideList.endOtp else rideList.rideOtp
       , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then
@@ -211,6 +212,8 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , fareProductType : fareProductType
       , driversPreviousRideDropLocLat : resp.driversPreviousRideDropLocLat
       , driversPreviousRideDropLocLon : resp.driversPreviousRideDropLocLon
+      , spLocationName : resp.specialLocationName
+      , addressWard : bookingLocationAPIEntity.ward
       }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity

@@ -1275,5 +1275,6 @@ getEN stringKey =
         COLLECT_TOLL_SEP -> "Please collect it separately from customer <b>only if a toll was crossed</b>"
         FINAL_FARE_EXCLUDES_TOLL -> "Final fare excludes toll charges"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "Toll charges may be applicable"
-        
         METRO_BANNER_TITLE appName -> "Book metro tickets with \n" <> appName <> " Now!"
+        VIEW_ON_GOOGLE_MAPS -> "View on Google Maps"
+        WALKING_DIRECTIONS_TO_PICKUP -> "Walking Directions to Pickup"

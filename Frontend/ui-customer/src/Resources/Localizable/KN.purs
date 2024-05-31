@@ -1274,5 +1274,6 @@ getKN stringKey =
         COLLECT_TOLL_SEP -> "ದಯವಿಟ್ಟು ಅದನ್ನು ಗ್ರಾಹಕರಿಂದ ಪ್ರತ್ಯೇಕವಾಗಿ ಸಂಗ್ರಹಿಸಿ <b>ಟೋಲ್ ದಾಟಿದ್ದರೆ ಮಾತ್ರ</b>"
         FINAL_FARE_EXCLUDES_TOLL -> "ಅಂತಿಮ ದರವು ಟೋಲ್ ಶುಲ್ಕಗಳನ್ನು ಹೊರತುಪಡಿಸಿ"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "ಟೋಲ್ ಶುಲ್ಕಗಳು ಅನ್ವಯವಾಗಬಹುದು"
-        
         METRO_BANNER_TITLE appName -> "ಈಗ " <> appName <> " ನೊಂದಿಗೆ ಮೆಟ್ರೋ ಟಿಕೆಟ್ಗಳನ್ನು ಬುಕ್ ಮಾಡಿ!"
+        VIEW_ON_GOOGLE_MAPS -> "ಗೂಗಲ್ ನಕ್ಷೆಯಲ್ಲಿ ವೀಕ್ಷಿಸಿ"
+        WALKING_DIRECTIONS_TO_PICKUP -> "ಪಿಕಪ್ ಸ್ಥಳಕ್ಕೆ ನಡೆಯುವ ಮಾರ್ಗದರ್ಶನ"

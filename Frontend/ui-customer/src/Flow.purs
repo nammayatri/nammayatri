@@ -2056,6 +2056,19 @@ homeScreenFlow = do
         })
         void $ pure $ toggleBtnLoader "" false
         flowRouter IssueReportChatScreenFlow
+    GOTO_PICKUP_INSTRUCTIONS state lat lon ->
+      case state.data.driverInfoCardState.spLocationName, state.data.driverInfoCardState.addressWard of
+        Just locationName, Just gateName -> do
+          let pickupInstructions = RC.pickupInstructions locationName gateName $ fetchLanguage $ getLanguageLocale languageKey
+          if (null pickupInstructions || os == "IOS") then do
+            void $ pure $ openNavigation lat lon "WALK"
+            homeScreenFlow
+          else do
+            modifyScreenState $ PickupInstructionsScreenStateType $ \pickupInstructionsScreen -> pickupInstructionsScreen { data { pickupLat = lat, pickupLong = lon, pickupInstructions = pickupInstructions } }
+            pickupInstructionsScreenFlow
+        _ , _ -> do
+          void $ pure $ openNavigation lat lon "WALK"
+          homeScreenFlow
     _ -> homeScreenFlow
 
 findEstimates :: HomeScreenState -> FlowBT String Unit
@@ -5750,3 +5763,9 @@ fcmHandler notification state = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetyAlertType = Just ST.DEVIATION } })
       homeScreenFlow
     _ -> homeScreenFlow
+
+pickupInstructionsScreenFlow :: FlowBT String Unit
+pickupInstructionsScreenFlow = do
+  action <- UI.pickupInstructionsScreen
+  case action of 
+    _ -> pickupInstructionsScreenFlow

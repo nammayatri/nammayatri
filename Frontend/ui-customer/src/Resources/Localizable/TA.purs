@@ -1292,3 +1292,5 @@ getTA stringKey =
     FINAL_FARE_EXCLUDES_TOLL -> "இறுதிக் கட்டணம் டோல் கட்டணங்களைத் தவிர்த்து"
     TOLL_CHARGES_MAYBE_APPLICABLE -> "டோல் கட்டணங்கள் பொருந்தலாம்"
     METRO_BANNER_TITLE appName -> "மெட்ரோ டிக்கெட்டுகளை இப்போது புதுப்பிக்கவும் " <> appName <> " ஆப் மூலம்!"
+    VIEW_ON_GOOGLE_MAPS -> "கூகுள் மேப்ஸில் பார்க்க"
+    WALKING_DIRECTIONS_TO_PICKUP -> "பிக்அப் க்கு நடந்து செல்ல வழிகாட்டி"

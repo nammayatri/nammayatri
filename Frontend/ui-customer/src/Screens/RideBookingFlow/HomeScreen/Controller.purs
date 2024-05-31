@@ -741,6 +741,7 @@ data ScreenOutput = LogoutUser
                   | StayInHomeScreenSO HomeScreenState
                   | GoToIssueReportChatScreenWithIssue HomeScreenState CTP.CustomerIssueTypes
                   | ReloadFlowStatus HomeScreenState
+                  | ExitToPickupInstructions HomeScreenState Number Number
 
 data Action = NoAction
             | BackPressed
@@ -2098,6 +2099,8 @@ eval (SpecialZoneOTPExpiryAction seconds status timerID) state = do
 eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigate mode lat lon)) state = do
   void $ pure $ openNavigation lat lon (show mode)
   continue state 
+
+eval (DriverInfoCardActionController (DriverInfoCardController.ShowDirections lat lon)) state = exit $ ExitToPickupInstructions state lat lon
   
 eval (ZoneTimerExpired (PopUpModal.OnButton2Click)) state = continue state{props{zoneOtpExpired = false}}
 
