@@ -1433,6 +1433,8 @@ getTripDetails state = {
   , backgroundColor : Color.white900
   , enablePaddingBottom : true
   , fareProductType : state.data.fareProductType
+  , enableEditDestination : true -------RITIKA Need to handle this
+  , editingDestinationLoc : EditingDestination  ------RITIKA Need to handle this
 }
 
 driverPickUpStatusText :: DriverInfoCardState -> String -> String

@@ -350,6 +350,7 @@
       "ny_ic_dl_blue" : true,
       "ny_ic_dl_demo" : true,
       "ny_ic_dotted_line" : true,
+      "ny_ic_down_arrow_white" : true,
       "ny_ic_download_button" : true,
       "ny_ic_driver_avatar" : true,
       "ny_ic_driver_gender_banner" : true,
@@ -630,7 +631,11 @@
       "ny_ic_toggle_on" : true,
       "ny_ic_transaction_pending" : true,
       "ny_ic_tumakuru_map" : true,
+<<<<<<< Updated upstream
       "ny_ic_two_more_rides" : true,
+=======
+      "ny_ic_up_arrow_white" : true,
+>>>>>>> Stashed changes
       "ny_ic_upi_autopay" : true,
       "ny_ic_upi_logo" : true,
       "ny_ic_upload" : true,

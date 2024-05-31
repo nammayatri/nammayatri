@@ -242,7 +242,8 @@ config =
     enableCustomerSupportForSafety : false,
     enableSpecialPickup : EHC.jBridgeMethodExists "locateOnMapV2",
     enableAcPopup : false,
-    enableRentalReallocation : true
+    enableRentalReallocation : true,
+    enableEditDestination : true
   }
 
   , rideCompletedCardConfig : {

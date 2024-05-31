@@ -65,6 +65,9 @@ type SearchLocationModelState = {
   , isAutoComplete :: Boolean
   , showLoader :: Boolean
   , prevLocation :: String
+  , isEditDestination :: Boolean
+  , isDestViewEditable :: Boolean
+  , isPrimaryButtonForEditDest :: Boolean
   , currentLocationText :: String
   , suffixButtonVisibility :: Visibility
   , suffixButton :: ButtonLayoutConfig

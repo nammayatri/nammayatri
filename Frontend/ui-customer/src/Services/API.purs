@@ -3746,3 +3746,126 @@ instance makeEditStopReq :: RestEndpoint EditStopRequest EditStopRes where
 -- instance showRentalSearchRes :: Show RentalSearchRes where show = genericShow
 -- instance decodeRentalSearchRes :: Decode RentalSearchRes where decode = defaultDecode
 -- instance encodeRentalSearchRes :: Encode RentalSearchRes where encode = defaultEncode
+
+
+-----------------------Edit Location API --------------------------------------------
+
+data EditLocationRequest = EditLocationRequest String EditLocationReq
+
+newtype EditLocationReq = EditLocationReq {
+  destination :: Maybe SearchReqLocation ,
+  origin :: Maybe SearchReqLocation
+}
+
+data EditLocationRes = EditLocationRes {
+    bookingUpdateRequestId :: Maybe String
+  }
+
+instance makeEditLocationReq :: RestEndpoint EditLocationRequest EditLocationRes where
+ makeRequest reqBody@(EditLocationRequest rideId (EditLocationReq rqBody)) headers = defaultMakeRequest POST (EP.editLocation rideId) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericEditLocationRes :: Generic EditLocationRes _
+instance standardEncodeEditLocationRes :: StandardEncode EditLocationRes where standardEncode (EditLocationRes res) = standardEncode res
+instance showEditLocationRes :: Show EditLocationRes where show = genericShow
+instance decodeEditLocationRes :: Decode EditLocationRes where decode = defaultDecode
+instance encodeEditLocationRes :: Encode EditLocationRes where encode = defaultEncode
+
+derive instance genericEditLocationReq :: Generic EditLocationReq _
+derive instance newtypeEditLocationReq :: Newtype EditLocationReq _
+instance standardEncodeEditLocationReq :: StandardEncode EditLocationReq where standardEncode (EditLocationReq reqBody) = standardEncode reqBody
+instance showEditLocationReq :: Show EditLocationReq where show = genericShow
+instance decodeEditLocationReq :: Decode EditLocationReq where decode = defaultDecode
+instance encodeEditLocationReq :: Encode EditLocationReq where encode = defaultEncode
+
+derive instance genericEditLocationRequest :: Generic EditLocationRequest _
+instance standardEncodeEditLocationRequest :: StandardEncode EditLocationRequest where standardEncode (EditLocationRequest rideId reqBody) = standardEncode reqBody
+instance decodeEditLocationRequest :: Decode EditLocationRequest where decode = defaultDecode
+instance encodeEditLocationRequest :: Encode EditLocationRequest where encode = defaultEncode
+
+-----------------------Edit Location Result API --------------------------------------------
+
+data GetEditLocResultReq = GetEditLocResultReq String
+
+newtype GetEditLocResultResp = GetEditLocResultResp {
+    bookingUpdateRequestDetails :: BookingUpdateRequestDetails
+  } 
+
+newtype BookingUpdateRequestDetails = BookingUpdateRequestDetails { 
+  bookingId :: String,
+  currentPointLat :: Maybe Number,
+  currentPointLon :: Maybe Number,
+  estimatedDistance :: Maybe Number,
+  estimatedFare :: Maybe Number,
+  id :: String,
+  oldEstimatedDistance :: Maybe Int,
+  oldEstimatedFare :: Number,
+  status :: String,--BookingUpdateRequestStatus,
+  totalDistance :: Maybe Int,
+  travelledDistance :: Maybe Int
+  }
+
+data BookingUpdateRequestStatus = SOFT | CONFIRM
+
+instance makeGetEditLocResultReq :: RestEndpoint GetEditLocResultReq GetEditLocResultResp where
+ makeRequest reqBody@(GetEditLocResultReq bookingUpdateRequestId) headers = defaultMakeRequest GET (EP.getEditLocResult bookingUpdateRequestId) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericGetEditLocResultResp :: Generic GetEditLocResultResp _
+derive instance newtypeGetEditLocResultResp :: Newtype GetEditLocResultResp _
+instance standardEncodeGetEditLocResultResp :: StandardEncode GetEditLocResultResp where standardEncode (GetEditLocResultResp body) = standardEncode body
+instance showGetEditLocResultResp :: Show GetEditLocResultResp where show = genericShow
+instance decodeGetEditLocResultResp :: Decode GetEditLocResultResp where decode = defaultDecode
+instance encodeGetEditLocResultResp  :: Encode GetEditLocResultResp where encode = defaultEncode
+
+derive instance genericGetEditLocResultReq :: Generic GetEditLocResultReq _
+instance standardEncodeGetEditLocResultReq :: StandardEncode GetEditLocResultReq where standardEncode (GetEditLocResultReq body) = standardEncode body
+instance showGetEditLocResultReq :: Show GetEditLocResultReq where show = genericShow
+instance decodeGetEditLocResultReq :: Decode GetEditLocResultReq where decode = defaultDecode
+instance encodeGetEditLocResultReq  :: Encode GetEditLocResultReq where encode = defaultEncode
+
+derive instance genericBookingUpdateRequestDetails :: Generic BookingUpdateRequestDetails _
+derive instance newtypeBookingUpdateRequestDetails :: Newtype BookingUpdateRequestDetails _
+instance standardEncodeBookingUpdateRequestDetails :: StandardEncode BookingUpdateRequestDetails where standardEncode (BookingUpdateRequestDetails req) = standardEncode req
+instance showBookingUpdateRequestDetails :: Show BookingUpdateRequestDetails where show = genericShow
+instance decodeBookingUpdateRequestDetails :: Decode BookingUpdateRequestDetails where decode = defaultDecode
+instance encodeBookingUpdateRequestDetails :: Encode BookingUpdateRequestDetails where encode = defaultEncode
+
+derive instance genericBookingUpdateRequestStatus :: Generic BookingUpdateRequestStatus _
+instance showBookingUpdateRequestStatus :: Show BookingUpdateRequestStatus where show = genericShow
+instance decodeBookingUpdateRequestStatus :: Decode BookingUpdateRequestStatus where decode = defaultDecode
+instance encodeBookingUpdateRequestStatus :: Encode BookingUpdateRequestStatus where encode = defaultEncode
+instance standardEncodeBookingUpdateRequestStatus :: StandardEncode BookingUpdateRequestStatus
+  where
+  standardEncode SOFT = standardEncode $ show SOFT
+  standardEncode CONFIRM = standardEncode $ show CONFIRM
+
+  -----------------------Edit Location Result Confirm API --------------------------------------------
+
+data EditLocResultConfirmReq = EditLocResultConfirmReq String
+
+type EditLocResultConfirmResp = APISuccessResp
+
+instance makeEditLocResultConfirmReq :: RestEndpoint EditLocResultConfirmReq APISuccessResp where
+ makeRequest reqBody@(EditLocResultConfirmReq bookingUpdateRequestId) headers = defaultMakeRequest POST (EP.confirmEditLocResult bookingUpdateRequestId) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericEditLocResultConfirmReq :: Generic EditLocResultConfirmReq _
+instance standardEncodeEditLocResultConfirmReq :: StandardEncode EditLocResultConfirmReq where standardEncode (EditLocResultConfirmReq body) = standardEncode body
+instance showEditLocResultConfirmReq :: Show EditLocResultConfirmReq where show = genericShow
+instance decodeEditLocResultConfirmReq :: Decode EditLocResultConfirmReq where decode = defaultDecode
+instance encodeEditLocResultConfirmReq  :: Encode EditLocResultConfirmReq where encode = defaultEncode
+
+newtype APISuccessResp = APISuccessResp {
+  result :: String
+}
+
+derive instance genericAPISuccessResp :: Generic APISuccessResp _
+derive instance newtypeAPISuccessResp :: Newtype APISuccessResp _
+instance standardEncodeAPISuccessResp :: StandardEncode APISuccessResp where standardEncode (APISuccessResp id) = standardEncode id
+instance showAPISuccessResp :: Show APISuccessResp where show = genericShow
+instance decodeAPISuccessResp :: Decode APISuccessResp where decode = defaultDecode
+instance encodeAPISuccessResp :: Encode APISuccessResp where encode = defaultEncode

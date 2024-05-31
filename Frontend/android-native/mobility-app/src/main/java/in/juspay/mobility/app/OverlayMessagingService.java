@@ -180,10 +180,10 @@ public class OverlayMessagingService extends Service {
             endPoint = data.has("endPoint") ? data.getString("endPoint") : null;
             method = data.has("method") ? data.getString("method") : null;
             reqBody = data.has("reqBody") ?  data.getString("reqBody") : null;
-            actions = data.has("actions") ? data.getJSONArray("actions") : null;
-            actions2 = data.has("actions2") ? data.getJSONArray("actions2") : null;
-            secondaryActions = data.has("secondaryActions") ? data.getJSONArray("secondaryActions") : null;
-            secondaryActions2 = data.has("secondaryActions2") ? data.getJSONArray("secondaryActions2") : null;
+            actions = data.has("actions") ? data.getJSONArray("actions") : (new JSONArray());
+            actions2 = data.has("actions2") ? data.getJSONArray("actions2") : (new JSONArray());
+            secondaryActions = data.has("secondaryActions") ? data.getJSONArray("secondaryActions") : (new JSONArray());
+            secondaryActions2 = data.has("secondaryActions2") ? data.getJSONArray("secondaryActions2") : (new JSONArray());
             toastMessage = data.optString("toastMessage", null);
             supportPhoneNumber = data.optString("contactSupportNumber", null);
             editLat = data.has("editlat") ? data.getDouble("editlat") : 0.0;

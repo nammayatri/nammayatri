@@ -68,12 +68,21 @@ homeScreen = do
     LocationSelected selectedItem addToRecents updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
           App.BackT $ App.BackPoint <$> (pure $ LOCATION_SELECTED selectedItem addToRecents)
+    EditDestLocationSelected selectedItem addToRecents updatedState -> do
+          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+          App.BackT $ App.BackPoint <$> (pure $ EDIT_LOCATION_SELECTED selectedItem addToRecents)
+    EditDestinationSoft updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ EDIT_DESTINATION_SOFT updatedState)
     SearchPlace input updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
           App.BackT $ App.NoBack <$> (pure $ SEARCH_LOCATION input updatedState)
     GetQuotes updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
           App.BackT $ App.NoBack <$> (pure $ GET_QUOTES updatedState)
+    ConfirmFare updatedState -> do
+          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+          App.BackT $ App.NoBack <$> (pure $ CONFIRM_FARE updatedState)
     GoToTicketBookingFlow updatedState -> do 
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState{props{focussedBottomIcon = MOBILITY}})
           App.BackT $ App.BackPoint <$> (pure $ EXIT_TO_TICKETING updatedState)

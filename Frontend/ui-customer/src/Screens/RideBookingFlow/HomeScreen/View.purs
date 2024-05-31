@@ -100,7 +100,7 @@ import Services.API
 import Screens.NammaSafetyFlow.Components.ContactsList (contactCardView)
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), RideBookingListRes(..))
 import Screens.Types (Followers(..), CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..),City(..), BottomNavBarIcon(..), NewContacts, ReferralStatus(..), VehicleViewType(..))
-import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, getRouteMarkers, walkCoordinates, walkCoordinate, getSavedLocationList)
+import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, getRouteMarkers, walkCoordinates, walkCoordinate, getSavedLocationList, TrackingType(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -147,6 +147,9 @@ import Effect.Unsafe (unsafePerformEffect)
 import Screens.Types (FareProductType(..)) as FPT
 import Helpers.Utils (decodeBookingTimeList)
 import Resources.Localizable.EN (getEN)
+import Helpers.API as HelpersAPI
+import PrestoDOM.Elements.Keyed as Keyed
+import Data.Tuple (Tuple(..))
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -312,11 +315,34 @@ screen initialState =
               ChatWithDriver -> if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction else pure unit
               ConfirmingLocation -> do
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+              -- GoToConfirmLocation -> do
+              --   void $ pure $ enableMyLocation true
+              --   void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+              --   void $ storeCallBackLocateOnMap push UpdatePickupLocation
+              --   void $ push $ GoToConfirmingLocationStage
               GoToConfirmLocation -> do
                 void $ pure $ enableMyLocation true
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 void $ storeCallBackLocateOnMap push UpdatePickupLocation
                 void $ push $ GoToConfirmingLocationStage
+              ConfirmingEditDestinationLoc -> do
+                -- when ((getValueToLocalStore FINDING_EDIT_LOC_RESULTS) /= "true") $ do --------RITIKA Fix it 
+                  void $ pure $ setValueToLocalStore FINDING_EDIT_LOC_RESULTS "true"
+                  void $ pure $ setValueToLocalStore LOCAL_STAGE (show ConfirmingEditDestinationLoc)
+                  void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
+                  let pollingCount = 6 -----RITIKA --------FIX
+                  void $ launchAff $ flowRunner defaultGlobalState $ getEditLocResults (getValueToLocalStore TRACKING_ID) GetEditLocResult pollingCount (fromMaybe 1000.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState -------RITIKA Fix it
+                -- logStatus "find_edit_location_result" ("bookingUpdateRequestId : " <> initialState.props.bookingUpdateRequestId)
+                -- -- void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+                -- estimatesPolling <- runEffectFn1 getValueFromIdMap "EstimatePolling"
+              
+                -- if initialState.data.currentCityConfig.iopConfig.enable then do 
+                --   when (not $ getValueToLocalStore STARTED_ESTIMATE_SEARCH == "TRUE") do -- Check if estimate search is already started
+                --     void $ pure $ setValueToLocalStore STARTED_ESTIMATE_SEARCH "TRUE"
+                --     void $ launchAff $ flowRunner defaultGlobalState $ getEstimatePolling (getValueToLocalStore TRACKING_ID) GetEstimates CheckFlowStatusAction 3 2000.0 push initialState
+                --   else if estimatesPolling.shouldPush then do
+                --       void $ launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState estimatesPolling.id
+                --   else pure unit
               TryAgain -> do
                 logStatus "find_estimate" ("searchId : " <> initialState.props.searchId)
                 estimatesPolling <- runEffectFn1 getValueFromIdMap "EstimatePolling"
@@ -418,7 +444,7 @@ view push state =
                   , background Color.transparent
                   ][ 
                     if isHomeScreenView state then homeScreenViewV2 push state else emptyTextView state
-                  , if isHomeScreenView state then emptyTextView state else mapView push state "CustomerHomeScreen"
+                  , if isHomeScreenView state then emptyTextView state else mapView' push state $ if any (_ == state.props.currentStage) [EditingDestinationLoc, ConfirmEditDestinationLoc, ConfirmingEditDestinationLoc, RevisedEstimate] then "CustomerHomeScreenEditDest" else "CustomerHomeScreen"
                     ]
                 , if not state.data.config.feature.enableSpecialPickup then
                     linearLayout
@@ -508,7 +534,10 @@ view push state =
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
             , if (state.props.currentStage == SearchLocationModel || state.props.currentStage == FavouriteLocationModel) then searchLocationView push state else emptyTextView state
             , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList, TryAgain, ConfirmingQuotes ] || state.data.iopState.providerSelectionStage) then (quoteListModelView push state) else emptyTextView state
+            , if (state.props.currentStage == EditingDestinationLoc || state.props.currentStage == ConfirmEditDestinationLoc || state.props.currentStage == ConfirmingEditDestinationLoc || state.props.currentStage == RevisedEstimate) then searchLocationView push state else emptyTextView state
+            , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList, TryAgain ] || state.data.iopState.providerSelectionStage) then (quoteListModelView push state) else emptyTextView state
             , if (state.props.isCancelRide) then (cancelRidePopUpView push state) else emptyTextView state
+            , if (state.props.showConfirmEditDestPopUp) then confirmEditDestPopUp push state else emptyTextView state
             , if (state.props.isPopUp /= NoPopUp) then (logOutPopUpView push state) else emptyTextView state
             , if (state.props.isLocationTracking) then (locationTrackingPopUp push state) else emptyTextView state
             , if (state.props.isEstimateChanged) then (estimateChangedPopUp push state) else emptyTextView state
@@ -682,6 +711,14 @@ cancelSearchPopUp push state =
   , width MATCH_PARENT
   , accessibility DISABLE
   ][PopUpModal.view (push <<< CancelSearchAction) (cancelAppConfig state)]
+
+confirmEditDestPopUp :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+confirmEditDestPopUp push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , accessibility DISABLE
+  ][PopUpModal.view (push <<< RequestEditAction) (confirmRequestEditConfig state)]
 
 messageWidgetView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 messageWidgetView push state = 
@@ -907,9 +944,10 @@ searchLocationView push state =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  , background if state.props.currentStage == SearchLocationModel && state.props.isSearchLocation == LocateOnMap then Color.transparent else Color.grey800
+  , background if (state.props.currentStage == SearchLocationModel && state.props.isSearchLocation == LocateOnMap) || (state.props.currentStage == ConfirmEditDestinationLoc || state.props.currentStage == ConfirmingEditDestinationLoc || state.props.currentStage == RevisedEstimate) then Color.transparent else Color.grey800
   ] [ if state.props.currentStage == SearchLocationModel then (searchLocationModelView push state) else emptyTextView state
     , if state.props.currentStage == FavouriteLocationModel then (favouriteLocationModel push state) else emptyTextView state
+    , if (state.props.currentStage == EditingDestinationLoc || state.props.currentStage == ConfirmEditDestinationLoc || state.props.currentStage == ConfirmingEditDestinationLoc || state.props.currentStage == RevisedEstimate) then (editingDestinationLocView push state) else emptyTextView state
 ]
 
 shareAppPopUp :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1450,7 +1488,7 @@ rideRequestFlowView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadii $ Corners 24.0 true true false false
-    , visibility $ boolToVisibility $ isStageInList state.props.currentStage [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain, RideRating, ReAllocated, LoadMap] 
+    , visibility $ boolToVisibility $ isStageInList state.props.currentStage [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingEditDestinationLoc, ConfirmingRide, FindingQuotes, TryAgain, RideRating, ReAllocated, LoadMap, RevisedEstimate] 
     , alignParentBottom "true,-1"
     ]
     [ -- TODO Add Animations
@@ -1466,7 +1504,7 @@ rideRequestFlowView push state =
         , accessibility DISABLE
         ]
         [ PrestoAnim.animationSet [fadeIn true] $ getViewBasedOnStage push state
-        , if isStageInList state.props.currentStage [ FindingEstimate, ConfirmingRide, TryAgain, FindingQuotes, ReAllocated, LoadMap] then
+        , if isStageInList state.props.currentStage [ FindingEstimate, ConfirmingRide, TryAgain, FindingQuotes, ConfirmingEditDestinationLoc, ReAllocated, LoadMap] then
             (loaderView push state)
           else
             emptyTextView state
@@ -1475,11 +1513,11 @@ rideRequestFlowView push state =
     where
       getViewBasedOnStage :: (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
       getViewBasedOnStage push state = do
-        if state.props.currentStage == SettingPrice then
-          if state.props.isRepeatRide && (isNothing state.props.repeatRideServiceTierName || checkRecentRideVariant state)
-            then estimatedFareView push state
-          else
-            ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
+        if state.props.currentStage == RevisedEstimate then revisedEstimatedFareView push state
+          -- if state.props.isRepeatRide && (isNothing state.props.repeatRideServiceTierName || checkRecentRideVariant state)
+            -- then estimatedFareView push state
+          -- else
+          --   ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
         else if state.props.currentStage == ConfirmingLocation then
           confirmPickUpLocationView push state
         else
@@ -1666,6 +1704,111 @@ estimatedFareView push state =
                 , color Color.black700
                 ] <> FontStyle.body1 LanguageStyle
             ]
+      ]
+  ]
+
+
+revisedEstimatedFareView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+revisedEstimatedFareView push state =
+  let tagConfig = specialZoneTagConfig state.props.zoneType.priorityTag
+      showTag = any (_ == state.props.zoneType.priorityTag) [SPECIAL_PICKUP, METRO]
+  in
+  linearLayout
+  [ orientation VERTICAL
+  , height WRAP_CONTENT
+  , width MATCH_PARENT
+  , background tagConfig.backgroundColor
+  , clickable true
+  , visibility VISIBLE --if (state.props.currentStage == SettingPrice) then VISIBLE else GONE
+  , stroke ("1," <> Color.grey900)
+  , gravity CENTER
+  , cornerRadii $ Corners 24.0 true true false false
+  -- , afterRender
+  --       ( \action -> do            
+  --           let fareEstimate = if state.data.rateCard.additionalFare == 0 then "₹" <> (show state.data.suggestedAmount) else  "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
+  --           _ <- pure $  setValueToLocalStore FARE_ESTIMATE_DATA fareEstimate
+  --           pure unit
+  --       )
+  --       (const NoAction)
+  ][ linearLayout
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
+      , width MATCH_PARENT
+      , background Color.white900
+      , clickable true
+      , accessibility if state.props.showRateCard then DISABLE_DESCENDANT else DISABLE
+      , visibility VISIBLE--if (state.props.currentStage == SettingPrice) then VISIBLE else GONE
+      , padding (Padding 16 7 16 24)
+      , stroke ("1," <> Color.grey900)
+      , gravity CENTER
+      , cornerRadii $ Corners 24.0 true true false false
+      ][
+          linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , gravity CENTER_HORIZONTAL
+          ]
+          [ textView $
+              [ text "Fare Updated" ----RITIKA fix this
+              , color Color.black800
+              , gravity CENTER_HORIZONTAL
+              , height WRAP_CONTENT
+              , width MATCH_PARENT
+              ] 
+              <> FontStyle.h1 TypoGraphy
+          ]
+        , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation VERTICAL
+          , gravity CENTER
+          , cornerRadius 8.0
+          , stroke $ "1," <> Color.grey900
+          , margin $ MarginTop 16
+          ][
+            textView $
+            [
+              text $ (getCurrency appConfig) <> (show (fromMaybe 0 state.data.newEstimatedFare))
+              , color Color.black900
+              , gravity CENTER_HORIZONTAL
+              , height WRAP_CONTENT
+              , margin $ MarginTop 8
+              , visibility $ boolToVisibility $ isJust state.data.newEstimatedFare
+              , width MATCH_PARENT
+            ]<> FontStyle.heading TypoGraphy
+            , textView $
+            [
+              text $ (show ((fromMaybe 0 state.data.newEstimatedDistance)/1000)) <> "km ( was " <> state.data.driverInfoCardState.estimatedDistance <> "km " <> ")"
+              , color Color.black700
+              , gravity CENTER_HORIZONTAL
+              , margin $ MarginTop 8
+              , height WRAP_CONTENT
+              , width MATCH_PARENT
+            ]<> FontStyle.paragraphText TypoGraphy
+            , textView $
+            [
+              text $ "Previous Fare :" <> (getCurrency appConfig) <> (show state.data.driverInfoCardState.price)
+              , color Color.black700
+              , gravity CENTER_HORIZONTAL
+              , height WRAP_CONTENT
+              , margin $ Margin 0 8 0 12
+              , width MATCH_PARENT
+            ]<> FontStyle.paragraphText TypoGraphy
+          ]
+        -- , sourceDestinationDetailsView push state
+        , requestRideButtonView push state
+        -- , linearLayout
+        --     [ width MATCH_PARENT
+        --     , height WRAP_CONTENT
+        --     , gravity CENTER
+        --     , margin $ MarginTop 24
+        --     , visibility if state.props.isRepeatRide && not DS.null state.props.repeatRideTimerId then VISIBLE else GONE
+        --     ][ textView $
+        --         [ textFromHtml $ "<u>" <> (getString TAP_HERE_TO_STOP_AUTO_REQUESTING) <> "</u>" 
+        --         , color Color.black700
+        --         ] <> FontStyle.body1 LanguageStyle
+        --     ]
       ]
   ]
 
@@ -2091,7 +2234,92 @@ locationTrackingData lazyCheck =
     }
   ]
 
------------ confirmPickUpLocationView -------------
+--------- confirmPickUpLocationView -------------
+-- confirmPickUpLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+-- confirmPickUpLocationView push state =
+--   let zonePadding = if os == "IOS" then 0 else (ceil (toNumber (screenWidth unit))/8)
+--       confirmLocationCategory = getConfirmLocationCategory state
+--       tagConfig = specialZoneTagConfig confirmLocationCategory
+--       tagVisibility = confirmLocationCategory /= NOZONE && (not (DS.null state.props.defaultPickUpPoint) || any (_ == confirmLocationCategory) [HOTSPOT true, HOTSPOT false])
+--   in
+--   linearLayout
+--     [ orientation VERTICAL
+--     , height WRAP_CONTENT
+--     , width MATCH_PARENT
+--     , disableClickFeedback true
+--     , background Color.transparent
+--     , accessibility DISABLE
+--     , visibility if state.props.currentStage == ConfirmingLocation then VISIBLE else GONE
+--     , padding $ PaddingTop 16
+--     , cornerRadii $ Corners 24.0 true true false false
+--     , gravity CENTER
+--     ]
+--     [ recenterButtonView push state
+--     , linearLayout
+--         [ width MATCH_PARENT
+--         , height WRAP_CONTENT
+--         , orientation VERTICAL
+--         , stroke $ "1," <> Color.grey900
+--         , cornerRadii $ Corners 24.0 true true false false
+--         , background tagConfig.backgroundColor
+--         ]
+--         [ linearLayout
+--             [ width MATCH_PARENT
+--             , height WRAP_CONTENT
+--             , orientation HORIZONTAL
+--             , gravity CENTER
+--             , padding (Padding zonePadding 4 zonePadding 4)
+--             , cornerRadii $ Corners 24.0 true true false false
+--             , visibility $ boolToVisibility tagVisibility
+--             , clickable $ isJust tagConfig.infoPopUpConfig
+--             , onClick push $ const $ SpecialZoneInfoTag
+--             ] [ imageView
+--                 [ width (V 15)
+--                 , height (V 15)
+--                 , margin (MarginRight 6)
+--                 , imageWithFallback $ fetchImage COMMON_ASSET tagConfig.icon
+--                 ]
+--               , textView
+--                 [ width if os == "IOS" && confirmLocationCategory == AUTO_BLOCKED then (V 230) else WRAP_CONTENT
+--                 , height WRAP_CONTENT
+--                 , gravity CENTER
+--                 , textSize FontSize.a_14
+--                 , text tagConfig.text
+--                 , color Color.white900
+--                 ]
+--               , imageView
+--                 [ width (V 18)
+--                 , height (V 18)
+--                 , visibility if isJust tagConfig.infoPopUpConfig then VISIBLE else GONE
+--                 , margin (MarginLeft 6)
+--                 , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_white_info"
+--                 ]
+--               ]
+--         , linearLayout
+--             [ width MATCH_PARENT
+--             , height WRAP_CONTENT
+--             , orientation VERTICAL
+--             , padding $ Padding 16 16 16 24
+--             , cornerRadii $ Corners 24.0 true true false false
+--             , background Color.white900
+--             , accessibility DISABLE
+--             ] [ textView $
+--                 [ text (getString CONFIRM_PICKUP_LOCATION)
+--                 , color Color.black800
+--                 , accessibility DISABLE
+--                 , gravity CENTER_HORIZONTAL
+--                 , height WRAP_CONTENT
+--                 , width MATCH_PARENT
+--                 ] <> FontStyle.h1 TypoGraphy
+--               , currentLocationView push state
+--               , nearByPickUpPointsView state push
+--               , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfirmPickupConfig state)
+--              ]
+--         ]
+--     ]
+
+
+
 confirmPickUpLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 confirmPickUpLocationView push state =
   let zonePadding = if os == "IOS" then 0 else (ceil (toNumber (screenWidth unit))/8)
@@ -2111,8 +2339,8 @@ confirmPickUpLocationView push state =
     , cornerRadii $ Corners 24.0 true true false false
     , gravity CENTER
     ]
-    [ recenterButtonView push state
-    , linearLayout
+    [ --recenterButtonView push state
+      linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
@@ -2127,7 +2355,7 @@ confirmPickUpLocationView push state =
             , gravity CENTER
             , padding (Padding zonePadding 4 zonePadding 4)
             , cornerRadii $ Corners 24.0 true true false false
-            , visibility $ boolToVisibility tagVisibility
+            , visibility GONE
             , clickable $ isJust tagConfig.infoPopUpConfig
             , onClick push $ const $ SpecialZoneInfoTag
             ] [ imageView
@@ -2168,12 +2396,33 @@ confirmPickUpLocationView push state =
                 , height WRAP_CONTENT
                 , width MATCH_PARENT
                 ] <> FontStyle.h1 TypoGraphy
-              , currentLocationView push state
-              , nearByPickUpPointsView state push
+              -- , currentLocationView push state
+              -- , nearByPickUpPointsView state push
               , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfirmPickupConfig state)
              ]
         ]
     ]
+
+-- confirmPickUpLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+-- confirmPickUpLocationView push state =
+--   linearLayout
+--     [ width MATCH_PARENT
+--     , height WRAP_CONTENT
+--     , orientation VERTICAL
+--     , padding $ Padding 16 16 16 24
+--     , cornerRadii $ Corners 24.0 true true false false
+--     , background Color.white900
+--     , accessibility DISABLE
+--     ] [ textView $
+--         [ text (getString CONFIRM_PICKUP_LOCATION)
+--         , color Color.black800
+--         , accessibility DISABLE
+--         , gravity CENTER_HORIZONTAL
+--         , height WRAP_CONTENT
+--         , width MATCH_PARENT
+--         ] <> FontStyle.h1 TypoGraphy
+--       , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfirmPickupConfig state)
+--       ]
 
 ----------- loaderView -------------
 loaderView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -2183,8 +2432,9 @@ loaderView push state =
                           FindingEstimate -> getString GETTING_ESTIMATES_FOR_YOU
                           TryAgain -> getString LET_TRY_THAT_AGAIN
                           ReAllocated -> getString LOOKING_FOR_ANOTHER_RIDE
+                          ConfirmingEditDestinationLoc -> getString GETTING_REVISED_ESTIMATE
                           _ -> getString GETTING_ESTIMATES_FOR_YOU
-      loaderVisibility = (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, TryAgain, ReAllocated]) || (state.props.currentStage == LoadMap && state.props.isRepeatRide)
+      loaderVisibility = (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, TryAgain, ReAllocated, ConfirmingEditDestinationLoc]) || (state.props.currentStage == LoadMap && state.props.isRepeatRide)
   in  linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT
@@ -2282,6 +2532,16 @@ searchLocationModelView push state =
     , width MATCH_PARENT
     , background if state.props.isRideServiceable then Color.transparent else Color.white900
     ][ SearchLocationModel.view (push <<< SearchLocationModelActionController) $ searchLocationModelViewState state]
+
+editingDestinationLocView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+editingDestinationLocView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , background if state.props.isRideServiceable then Color.transparent else Color.white900
+    ]
+    [ SearchLocationModel.view (push <<< EditDestSearchLocationModelActionController) $ editDestSearchLocationModelViewState state]
+
 
 ------------------------ quoteListModelView ---------------------------
 quoteListModelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -2599,6 +2859,40 @@ getQuotesPolling pollingId action retryAction count duration push state = do
         _ <- pure $ updateLocalStage QuoteList
         doAff do liftEffect $ push $ action response
 
+getEditLocResults :: forall action. String -> (GetEditLocResultResp -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
+getEditLocResults pollingId action count duration push state = do
+  when (pollingId == (getValueToLocalStore TRACKING_ID) && (isLocalStageOn ConfirmingEditDestinationLoc)) $ do
+    internetCondition <- liftFlow $ isInternetAvailable unit
+    when (internetCondition && state.props.bookingUpdateRequestId /= Nothing)  $ do
+      -- let gotQuote = (getValueToLocalStore GOT_ONE_QUOTE)
+      -- let minimumPollingCount = fromMaybe 0 (fromString (getValueToLocalStore TEST_MINIMUM_POLLING_COUNT))
+      let usableCount = count
+      -- if (spy "USABLECOUNT :- " usableCount > 0) then do
+      resp <- HelpersAPI.callApi $ Remote.makeEditLocationResultRequest (fromMaybe "" state.props.bookingUpdateRequestId)
+      -- case resp of
+      -- resp <- selectList (state.props.estimateId)
+      -- _ <- pure $ printLog "caseId" (state.props.estimateId)
+      case resp of
+        Right response -> do
+          let (GetEditLocResultResp resp') = response
+          let (BookingUpdateRequestDetails bookingUpdateRequestDetails) = resp'.bookingUpdateRequestDetails
+          _ <- pure $ printLog "Edit loc result api Results ABCD In Right" response
+          -- let (SelectListRes resp) = response
+          when (bookingUpdateRequestDetails.estimatedDistance /= Nothing && bookingUpdateRequestDetails.estimatedFare /= Nothing) do
+            doAff do liftEffect $ push $ action response
+            -- else
+            --   pure unit
+          void $ delay $ Milliseconds duration
+          getEditLocResults pollingId action (usableCount - 1) duration push state
+        Left err -> do
+          _ <- pure $ printLog "api error ABCD In left" err
+          -- doAff do liftEffect $ push $ err
+          void $ delay $ Milliseconds duration
+          getEditLocResults pollingId action (usableCount - 1) duration push state
+      -- else do
+      --   let response = SelectListRes { selectedQuotes: Nothing, bookingId : Nothing }
+      --   _ <- pure $ updateLocalStage QuoteList
+        -- doAff do liftEffect $ push $ action response
 -- Polling for IOP estimates
 getEstimatePolling :: forall action. String -> (GetQuotesRes -> Int -> action) -> action  -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
 getEstimatePolling pollingId action flowStatusAction count duration push state = do
@@ -3094,10 +3388,12 @@ homeScreenViewV2 push state = let
                                       Just followers -> if (showFollowerBar followers state) && state.props.currentStage == HomeScreen 
                                                           then [followView push followers] 
                                                           else [])
-                            <> (if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else [])
-                            <> (if isHomeScreenView state then contentView state else [])
+                            -- <> (if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else [])
+                            -- <> (if isHomeScreenView state then contentView state else [])
                             -- <> if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else []
-                            <> [ shimmerView state
+                            <> [ if isHomeScreenView state then mapView push state "CustomerHomeScreenMap" else emptyLayout state
+                              , if isHomeScreenView state then contentView state else emptyLayout state
+                              , shimmerView state
                               , if state.data.config.feature.enableAdditionalServices || cityConfig.enableRentals then additionalServicesView push state else linearLayout[visibility GONE][]
                               , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][]
                               , suggestionsView push state
@@ -3111,14 +3407,14 @@ homeScreenViewV2 push state = let
           ]
         ]  
   where 
-    contentView state = if state.props.showShimmer then [
+    contentView state = if state.props.showShimmer then 
       PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
         linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT 
         , onAnimationEnd push (const MapReadyAction)
-        ][tagShimmerView state]] 
-      else if state.data.config.banners.homeScreenCabLaunch && Arr.elem state.props.city [ST.Bangalore, ST.Tumakuru, ST.Mysore] then ([
+        ][tagShimmerView state]
+      else if state.data.config.banners.homeScreenCabLaunch && Arr.elem state.props.city [ST.Bangalore, ST.Tumakuru, ST.Mysore] then (
         imageView
           [ imageWithFallback "ny_ic_cab_banner,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_cab_banner.png"
           , height $ V 135
@@ -3128,10 +3424,10 @@ homeScreenViewV2 push state = let
           , onClick push $ const WhereToClick
           , accessibility DISABLE
           ]
-      ])else
+      )else
         (maybe -- TEMP disabling banners in Bangalore
-          ([]) 
-          (\item -> [bannersCarousal item state push]) 
+          (emptyLayout state) 
+          (\item -> bannersCarousal item state push) 
           state.data.bannerData.bannerItem)
       
     followView :: forall w. (Action -> Effect Unit) -> Array Followers -> PrestoDOM (Effect Unit) w
@@ -3397,7 +3693,7 @@ mapView push state idTag =
   let mapDimensions = getMapDimensions state
       bottomPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize extraBottomPadding else 0
       -- banners = getBannerConfigs state BannerCarousel
-      isVisible = if isHomeScreenView state then (not state.props.showShimmer)
+      isVisible = spy "Insdie mapView" $ if isHomeScreenView state then (not state.props.showShimmer)
                       else (not (state.props.currentStage == SearchLocationModel && state.props.isSearchLocation == SearchLocation ))
     
   in
@@ -3415,6 +3711,7 @@ mapView push state idTag =
                 if state.props.sourceLat == 0.0 && state.props.sourceLong == 0.0 then do
                   void $ getCurrentPosition push CurrentLocation
                 else do push RemoveShimmer
+                void $ pure $ spy "Inside MapReady" "ABCD"
                 _ <- showMap (getNewIDWithTag idTag) isCurrentLocationEnabled "satellite" zoomLevel state.props.sourceLat state.props.sourceLong push MAPREADY
                 if os == "IOS" then
                   case state.props.currentStage of  
@@ -3441,6 +3738,103 @@ mapView push state idTag =
           ] <> if state.props.currentStage == HomeScreen then [stroke $ "1,"<> Color.grey900 ] else [])[]
     --  , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][] -- TODO :: Mercy Once rentals is enabled.
      , linearLayout 
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , alignParentBottom "true,-1"
+        , gravity RIGHT
+        , padding $ Padding 16 0 22 16
+        , visibility $ boolToVisibility $ isHomeScreenView state
+        ][ imageView
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_recenter_btn"
+            , accessibility DISABLE
+            , onClick
+                ( \action -> do
+                    _ <- push action
+                    _ <- getCurrentPosition push UpdateCurrentLocation
+                    _ <- pure $ logEvent state.data.logField "ny_user_recenter_btn_click"
+                    pure unit
+                )
+                (const $ RecenterCurrentLocation)
+            , height $ V 40
+            , width $ V 40
+            ]
+
+        ]
+    ]
+
+
+mapView' :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> PrestoDOM (Effect Unit) w
+mapView' push state idTag = 
+  let mapDimensions = getMapDimensions state
+      bottomPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize extraBottomPadding else 0
+      -- banners = getBannerConfigs state BannerCarousel
+      isVisible = spy "Insdie mapView111" $ if isHomeScreenView state then (not state.props.showShimmer)
+                      else (not (state.props.currentStage == SearchLocationModel && state.props.isSearchLocation == SearchLocation ))
+    
+  in
+  PrestoAnim.animationSet[scaleYAnimWithDelay 5000] $
+  Keyed.relativeLayout
+    [ height if (isHomeScreenView state && state.props.showShimmer) then V 0 else mapDimensions.height
+    , width mapDimensions.width 
+    -- , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
+    , margin $ if isHomeScreenView state then MarginTop 16 else MarginTop 0
+    , visibility $ boolToInvisibility isVisible
+    , padding $ PaddingBottom $ bottomPadding
+    -- , onAnimationEnd
+    --         ( \action -> do
+    --             _ <- push action
+    --             if state.props.sourceLat == 0.0 && state.props.sourceLong == 0.0 then do
+    --               void $ getCurrentPosition push CurrentLocation
+    --             else do push RemoveShimmer
+    --             void $ pure $ spy "Inside MapReady111" "ABCD"
+    --             _ <- showMap (getNewIDWithTag idTag) false "satellite" zoomLevel state.props.sourceLat state.props.sourceLong push MAPREADY
+    --             if os == "IOS" then
+    --               case state.props.currentStage of  
+    --                 HomeScreen -> void $ setMapPadding 0 0 0 0
+    --                 ConfirmingLocation -> void $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = state.props.sourceLat, lon = state.props.sourceLong, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin" }
+    --                 _ -> pure unit
+    --             else pure unit
+    --             if state.props.openChatScreen && state.props.currentStage == RideAccepted then push OpenChatScreen
+    --             else pure unit
+    --             case state.props.currentStage of
+    --               HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
+    --               _ -> pure unit
+    --             pure unit
+    --         )
+    --         (const MapReadyAction)
+    ]$[ Tuple ("MapView" <> idTag) $ linearLayout
+          ([ height mapDimensions.height
+          , width $ mapDimensions.width 
+          , accessibility DISABLE_DESCENDANT
+          , id (getNewIDWithTag idTag)
+          , visibility if state.props.isSrcServiceable then VISIBLE else GONE
+          , cornerRadius if state.props.currentStage == HomeScreen && os == "IOS" then 16.0 else 0.0
+          , clickable $ not isHomeScreenView state 
+          , afterRender
+            ( \action -> do
+                _ <- push action
+                if state.props.sourceLat == 0.0 && state.props.sourceLong == 0.0 then do
+                  void $ getCurrentPosition push CurrentLocation
+                else do push RemoveShimmer
+                void $ pure $ spy "Inside MapReady111" "ABCD"
+                _ <- showMap (getNewIDWithTag idTag) false "satellite" zoomLevel state.props.sourceLat state.props.sourceLong push MAPREADY
+                if os == "IOS" then
+                  case state.props.currentStage of  
+                    HomeScreen -> void $ setMapPadding 0 0 0 0
+                    ConfirmingLocation -> void $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = state.props.sourceLat, lon = state.props.sourceLong, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin" }
+                    _ -> pure unit
+                else pure unit
+                if state.props.openChatScreen && state.props.currentStage == RideAccepted then push OpenChatScreen
+                else pure unit
+                case state.props.currentStage of
+                  HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
+                  _ -> pure unit
+                pure unit
+            )
+            (const MapReadyAction)
+          ])[]
+    --  , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][] -- TODO :: Mercy Once rentals is enabled.
+     , Tuple "Recenter" $ linearLayout 
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , alignParentBottom "true,-1"

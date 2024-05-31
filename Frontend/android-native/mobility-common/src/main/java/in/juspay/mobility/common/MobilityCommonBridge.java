@@ -1798,7 +1798,10 @@ public class MobilityCommonBridge extends HyperBridge {
             mapFragment.getMapAsync(googleMap -> {
                 this.googleMap = googleMap;
                 googleMapInstance.put(pureScriptId, googleMap);
-                System.out.println("Inside getMapAsync " + googleMap);
+
+                System.out.println("Map HashMap" + googleMapInstance);
+
+                System.out.println("Inside getMapAsync " + pureScriptId);
                 googleMap.setMinZoomPreference(7.0f);
                 googleMap.setMaxZoomPreference(googleMap.getMaxZoomLevel());
                 googleMap.getUiSettings().setRotateGesturesEnabled(false);
@@ -2245,6 +2248,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
                 boolean isActual = normalRoute.optBoolean("isActual", true);
 
+                System.out.println("Inside draw route purescript id " + purescriptId);
                 GoogleMap gMap = googleMapInstance.get(purescriptId);
 
                 if (gMap != null) {
@@ -2947,11 +2951,13 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void showMap(final String pureScriptId, boolean isEnableCurrentLocation, final String mapType, final float zoom, final String callback, final String mapConfig) {
         try {
-            System.out.println("Inside showMap 123");
+            System.out.println("Inside showMap 123 " + pureScriptId);
             ExecutorManager.runOnMainThread(() -> {
+
                 if (bridgeComponents.getActivity() != null) {
                     try {
                         View view = bridgeComponents.getActivity().findViewById(Integer.parseInt(pureScriptId));
+                        System.out.println("View is null " + (view ==null));
                         if (view == null) return;
                         JSONObject googleMapConfig = new JSONObject(mapConfig);
                         animationDuration = googleMapConfig.optInt("animationDuration", 400);

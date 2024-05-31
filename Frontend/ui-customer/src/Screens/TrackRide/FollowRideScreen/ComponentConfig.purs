@@ -124,6 +124,8 @@ getTripDetails state color =
     , backgroundColor: color
     , enablePaddingBottom : false
     , fareProductType : ride.fareProductType
+    , enableEditDestination : true -------RITIKA Need to handle this
+    , editingDestinationLoc : NoAction  ------RITIKA Need to handle this
     }
 
 getCurrentFollower :: Maybe Followers -> Followers

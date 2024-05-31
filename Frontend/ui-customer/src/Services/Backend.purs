@@ -1385,3 +1385,27 @@ mkRentalSearchReq slat slong dlat dlong srcAdd desAdd startTime estimatedRentalD
                                                  }),
                     "fareProductType" : "RENTAL"
                    }
+------------------------------------------------------------------------- Edit Destination -----------------------------------------------------------------------------
+makeEditLocationRequest :: String -> Number -> Number -> Address -> EditLocationRequest
+makeEditLocationRequest rideId dlat dlong desAdd =
+    EditLocationRequest rideId $ makeEditLocationReq dlat dlong desAdd
+
+makeEditLocationReq :: Number -> Number -> Address -> EditLocationReq
+makeEditLocationReq dlat dlong desAdd =
+    EditLocationReq {
+        "destination" : Just $ SearchReqLocation {
+            "gps" : LatLong {
+                        "lat" : dlat ,
+                        "lon" : dlong 
+                    },
+            "address" : LocationAddress desAdd
+        }, 
+        "origin" : Nothing
+    }
+
+makeEditLocationResultRequest :: String -> GetEditLocResultReq
+makeEditLocationResultRequest bookingUpdateRequestId = GetEditLocResultReq bookingUpdateRequestId
+
+
+makeEditLocResultConfirmReq :: String -> EditLocResultConfirmReq
+makeEditLocResultConfirmReq bookingUpdateRequestId = EditLocResultConfirmReq bookingUpdateRequestId

@@ -97,7 +97,7 @@ import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEst
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..), City(..), CancelSearchType(..))
-import Services.API (BookingLocationAPIEntity(..), EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..), Route(..), RideAPIEntity(..))
+import Services.API (BookingLocationAPIEntity(..), EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), GetEditLocResultResp(..), BookingUpdateRequestDetails(..),  SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..), Route(..), RideAPIEntity(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore, deleteValueFromLocalStore)
@@ -679,6 +679,7 @@ data ScreenOutput = LogoutUser
                   | ChangeLanguage HomeScreenState
                   | Retry HomeScreenState
                   | GetQuotes HomeScreenState
+                  | ConfirmFare HomeScreenState
                   | UpdatedState HomeScreenState Boolean
                   | CancelRide HomeScreenState CancelSearchType
                   | NotificationHandler String HomeScreenState
@@ -686,6 +687,8 @@ data ScreenOutput = LogoutUser
                   | RideConfirmed HomeScreenState
                   | SelectEstimate HomeScreenState
                   | LocationSelected LocationListItemState Boolean HomeScreenState
+                  | EditDestLocationSelected LocationListItemState Boolean HomeScreenState
+                  | EditDestinationSoft HomeScreenState
                   | SearchPlace String HomeScreenState
                   | UpdateLocationName HomeScreenState Number Number
                   | UpdatePickupName HomeScreenState Number Number
@@ -759,6 +762,7 @@ data Action = NoAction
             | GetEstimates GetQuotesRes Int
             | GetRideConfirmation RideBookingRes
             | GetQuotesList SelectListRes
+            | GetEditLocResult GetEditLocResultResp
             | MAPREADY String String String
             | AfterRender
             | UpdateSource Number Number String
@@ -769,6 +773,7 @@ data Action = NoAction
             | PricingTutorialModelActionController PricingTutorialModelController.Action
             | SourceToDestinationActionController SourceToDestinationController.Action
             | SearchLocationModelActionController SearchLocationModelController.Action
+            | EditDestSearchLocationModelActionController SearchLocationModelController.Action
             | QuoteListModelActionController QuoteListModelController.Action
             | DriverInfoCardActionController DriverInfoCardController.Action
             | RatingCardAC RatingCard.Action
@@ -838,6 +843,7 @@ data Action = NoAction
             | SearchForSelectedLocation
             | GenderBannerModal Banner.Action
             | CancelSearchAction PopUpModal.Action
+            | RequestEditAction PopUpModal.Action
             | TriggerPermissionFlow PermissionScreenStage
             | PopUpModalCancelConfirmationAction PopUpModal.Action
             | ScrollToBottom
@@ -1367,6 +1373,14 @@ eval (DriverInfoCardActionController DriverInfoCardController.RateCardInfo) stat
   case state.data.rateCardCache of
     Just val -> continue state {props {showRateCard = true}, data {rateCard = val}}
     Nothing -> continue state
+
+eval (DriverInfoCardActionController DriverInfoCardController.EditingDestination) state = 
+  continue state {props {currentStage = EditingDestinationLoc, isSource = Just false, isSearchLocation = SearchLocation}}
+  -- exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }, rideSearchProps{sessionId = generateSessionId unit}}, data{source= if state.data.source == "" then getString CURRENT_LOCATION else state.data.source}}
+  -- case state.data.rateCardCache of
+  --   Just val -> continue state {props {showRateCard = true}, data {rateCard = val}}
+  --   Nothing -> continue state
+
   
 eval(MessagingViewActionController (MessagingView.Call)) state = do
   void $ pure $ performHapticFeedback unit
@@ -1903,6 +1917,10 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState 
                         void $ pure $ cacheRateCard state
                         let updatedState = state{data{rideHistoryTrip = Nothing}, props{ searchExpire = (getSearchExpiryTime true)}}
                         updateAndExit (updatedState) (GetQuotes updatedState)
+      RevisedEstimate -> do
+        -- exit $ ConfirmFare state
+        continue state{props{showConfirmEditDestPopUp = true}}
+        ---------RITIKA
       _            -> continue state
 
 eval WhereToClick state = do
@@ -2133,12 +2151,12 @@ eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.Bu
 
 eval (PredictionClickedAction (LocationListItemController.OnClick item)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_prediction_list_item"
-  locationSelected item false state{data{source = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source}, props{isSource = Just false}}
+  locationSelected item false state{data{source = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source}, props{isSource = Just false}} false
 
 eval (SuggestedDestinationClicked item) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_sd_list_item"
   let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.SuggestedDestination" "true"
-  locationSelected item true state{props{isSource = Just false, rideSearchProps{sessionId = generateSessionId unit}, suggestedRideFlow = true}, data{source = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source, nearByPickUpPoints = [], polygonCoordinates = ""}}
+  locationSelected item true state{props{isSource = Just false, rideSearchProps{sessionId = generateSessionId unit}, suggestedRideFlow = true}, data{source = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source, nearByPickUpPoints = [], polygonCoordinates = ""}} false
 
 eval (PredictionClickedAction (LocationListItemController.FavClick item)) state = do
   if (length state.data.savedLocations >= 20) then do
@@ -2174,16 +2192,16 @@ eval (FavouriteLocationModelAC (FavouriteLocationModelController.FavouriteLocati
 eval (SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem)) state = if not state.props.isSrcServiceable then continue state else do 
   _ <- pure $ firebaseLogEvent ("ny_user_savedLoc_" <> show savedAddressType)
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.SavedLocation." <> show savedAddressType) "true"
-  tagClickEvent savedAddressType arrItem state{data{source = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source},props{isSource = Just false}}
+  tagClickEvent savedAddressType arrItem state{data{source = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source},props{isSource = Just false}} false
 
-eval (SearchLocationModelActionController (SearchLocationModelController.SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem))) state = tagClickEvent savedAddressType arrItem state
+eval (SearchLocationModelActionController (SearchLocationModelController.SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem))) state = tagClickEvent savedAddressType arrItem state false
 
-eval (TagClick savedAddressType arrItem) state = tagClickEvent savedAddressType arrItem state
+eval (TagClick savedAddressType arrItem) state = tagClickEvent savedAddressType arrItem state false
 
 eval (SearchLocationModelActionController (SearchLocationModelController.LocationListItemActionController (LocationListItemController.OnClick item))) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_location_list_item"
   let condition = state.props.isSource == Just true && any (_ == item.locationItemType) [Just RECENTS, Just SUGGESTED_DESTINATIONS] 
-  locationSelected item {tag = if condition then "" else item.tag, showDistance = Just false} true state{ props { rideSearchProps{ sourceSelectType = if condition then ST.SUGGESTION else state.props.rideSearchProps.sourceSelectType } }, data { nearByDrivers = Nothing } }
+  locationSelected item {tag = if condition then "" else item.tag, showDistance = Just false} true state{ props { rideSearchProps{ sourceSelectType = if condition then ST.SUGGESTION else state.props.rideSearchProps.sourceSelectType } }, data { nearByDrivers = Nothing } } false
 
 eval (ExitLocationSelected item addToRecents)state = exit $ LocationSelected item  addToRecents state
 
@@ -2533,6 +2551,23 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
       let _ = unsafePerformEffect $ Events.addEventData ("External.Search." <> state.props.searchId <> ".Type") "Estimates"
       estimatesListFlow ( quotesRes.estimates) state count
 
+eval (GetEditLocResult (GetEditLocResultResp resp)) state = do
+  logStatus "bookingUpdateRequestDetails" resp
+  let (BookingUpdateRequestDetails bookingUpdateRequestDetails) = resp.bookingUpdateRequestDetails
+  continue state { data { newEstimatedFare = roundOff bookingUpdateRequestDetails.estimatedFare, newEstimatedDistance = roundOff bookingUpdateRequestDetails.estimatedDistance }, props { currentStage = RevisedEstimate } }
+  -- updateAndExit updatedState $ GetQuotes updatedState
+  -- let quotes = filterSpecialZoneAndInterCityQuotes quotesRes.quotes 
+  --     fareProductType = getFareProductType $ maybe "" extractFareProductType (head quotes)
+  -- case null quotes of
+  --   false -> do 
+  --     let _ = unsafePerformEffect $ Events.addEventData ("External.Search." <> state.props.searchId <> ".Type") "Quotes"      
+  --     case fareProductType of 
+  --       FPT.ONE_WAY_SPECIAL_ZONE -> quoteListFlow FPT.ONE_WAY_SPECIAL_ZONE quotes state
+  --       FPT.INTER_CITY -> quoteListFlow FPT.INTER_CITY quotes state
+  --       _ -> quoteListFlow FPT.ONE_WAY_SPECIAL_ZONE quotes state
+  --   true -> do 
+  --     let _ = unsafePerformEffect $ Events.addEventData ("External.Search." <> state.props.searchId <> ".Type") "Estimates"
+  --     estimatesListFlow ( quotesRes.estimates) state count
 
 eval (EstimatesTryAgain (GetQuotesRes quotesRes) count ) state = do
   case (getMerchant FunctionCall) of
@@ -3180,6 +3215,165 @@ eval UpdateRateCardCache state = do
                   Just rateCard -> Just $ runFn2 setInCache (show RATE_CARD_INFO) rateCard
         Just val -> Just val
 
+eval (RequestEditAction PopUpModal.DismissPopup) state = do continue state {props { showConfirmEditDestPopUp = false }}
+
+eval (RequestEditAction PopUpModal.OnButton1Click) state = do
+  let updatedState = state {props {showConfirmEditDestPopUp = false } }
+  updateAndExit updatedState $ ConfirmFare updatedState
+
+eval (RequestEditAction PopUpModal.OnButton2Click) state = do
+  continue state { props { showConfirmEditDestPopUp = false } } -----RITIKA fix this
+  -- let isAcCab = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing
+  --               && state.data.currentCityConfig.enableAcViews
+  -- continue state { props { isCancelRide = true, cancellationReasons = cancelReasons isAcCab, cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
+
+
+
+eval (EditDestSearchLocationModelActionController (SearchLocationModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = do
+  void $ pure $ performHapticFeedback unit
+  _ <- pure $ exitLocateOnMap ""
+  -- let newState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, locateOnMap = false, defaultPickUpPoint = ""}}
+  exit $ EditDestinationSoft state
+
+eval (EditDestSearchLocationModelActionController (SearchLocationModelController.LocationListItemActionController (LocationListItemController.FavClick item))) state = continueWithCmd state [pure $ (PredictionClickedAction (LocationListItemController.FavClick item))]
+
+eval (EditDestSearchLocationModelActionController (SearchLocationModelController.SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem))) state = tagClickEvent savedAddressType arrItem state true
+
+eval (EditDestSearchLocationModelActionController (SearchLocationModelController.LocationListItemActionController (LocationListItemController.OnClick item))) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_location_list_item"
+  let condition = state.props.isSource == Just true && any (_ == item.locationItemType) [Just RECENTS, Just SUGGESTED_DESTINATIONS] 
+  locationSelected item {tag = if condition then "" else item.tag, showDistance = Just false} true state{ props { rideSearchProps{ sourceSelectType = if condition then ST.SUGGESTION else state.props.rideSearchProps.sourceSelectType } }, data { nearByDrivers = Nothing } } true
+
+eval (EditDestSearchLocationModelActionController (SearchLocationModelController.DebounceCallBack searchString isSource)) state = do
+  if (STR.length searchString > 2) && (isSource == fromMaybe true state.props.isSource) then 
+    validateSearchInput state searchString
+  else continue state
+
+eval (EditDestSearchLocationModelActionController (SearchLocationModelController.SourceChanged input)) state = do
+  let srcValue = if (state.data.source == "" || state.data.source == "Current Location") then true else false
+  let sourceSelectType = if state.props.locateOnMap then ST.MAP else state.props.rideSearchProps.sourceSelectType
+      newState = state {props{ rideSearchProps{ sourceSelectType = sourceSelectType } }}
+  if (input /= state.data.source) then do 
+    continueWithCmd newState { props { isRideServiceable = true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length input) > 2, isAutoComplete = if (STR.length input) > 2 then state.props.searchLocationModelProps.isAutoComplete else false}}} 
+      [ do
+          _ <- pure $ updateInputString input
+          pure NoAction
+      ]
+  else
+    continueWithCmd newState{props {searchLocationModelProps{crossBtnSrcVisibility = (STR.length input) > 2, isAutoComplete = false}}}
+      [ do
+          _ <- pure $ updateInputString input
+          pure NoAction
+      ]
+
+eval (EditDestSearchLocationModelActionController (SearchLocationModelController.DestinationChanged input)) state = do
+  if (input /= state.data.destination) then do
+    continueWithCmd state { props { isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = (STR.length input) > 2, isAutoComplete = if (STR.length input)>2 then state.props.searchLocationModelProps.isAutoComplete else false}} }
+      [ do
+          when (state.props.currentStage == ConfirmingEditDestinationLoc) do
+            _ <- pure $ spy "EFGH" "ABCD not equal destination" 
+            void $ pure $ hideKeyboardOnNavigation true
+          void $ pure $ updateInputString input
+          pure NoAction
+      ]
+  else
+    continueWithCmd state{props {searchLocationModelProps{crossBtnDestVisibility = (STR.length input) > 2, isAutoComplete = false}}}
+      [ do
+          when (state.props.currentStage == ConfirmingEditDestinationLoc) do
+            _ <- pure $ spy "EFGH" "ABCD equal destination"
+            void $ pure $ hideKeyboardOnNavigation true
+          void $ pure $ updateInputString input
+          -- _ <- pure $ updateInputString input
+          pure NoAction
+      ]
+
+eval (EditDestSearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType)) state = do
+  _ <- pure $ spy "searchLocationModal" textType
+  if textType == "D" then
+    continue state { props { isSource = Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source, locationList = if state.props.isSource == Just false then state.data.locationList else state.data.destinationSuggestions } }
+  else
+    continue state { props { isSource = Just true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length state.data.source) > 2}} , data{ locationList = if state.props.isSource == Just true then state.data.locationList else state.data.recentSearchs.predictionArray } }
+
+eval (EditDestSearchLocationModelActionController (SearchLocationModelController.NoAction)) state = continue state
+
+eval (EditDestSearchLocationModelActionController (SearchLocationModelController.DestinationClear)) state = do
+  void $ pure $ performHapticFeedback unit
+  if (state.props.isSearchLocation /= LocateOnMap) then do
+    _ <- pure $ requestKeyboardShow (getNewIDWithTag "DestinationEditText")
+    pure unit
+  else
+    pure unit
+  let predicArray = (updateLocListWithDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong true state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist)
+  continue state { data { destination = "", locationList = predicArray }, props {isSource = Just false, isDestServiceable = true, isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = false}} }
+
+eval (EditDestSearchLocationModelActionController (SearchLocationModelController.GoBack)) state = do
+  void $ pure $ performHapticFeedback unit
+  continueWithCmd state{props{showShimmer = true}}
+    [ do
+        _ <- pure $ hideKeyboardOnNavigation true
+        pure $ BackPressed
+    ]
+
+eval (EditDestSearchLocationModelActionController (SearchLocationModelController.SetCurrentLocation)) state = do
+  _ <- pure $ currentPosition ""
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_currentlocation_click"
+  pure $ setText (getNewIDWithTag "SourceEditText") (if (state.data.source == "") then (getString CURRENT_LOCATION) else state.data.source)
+  continue state{ props{ rideSearchProps{ sourceSelectType = if state.props.isSource == Just true then ST.SEARCH else state.props.rideSearchProps.sourceSelectType }, searchLocationModelProps{isAutoComplete = false}}, data{source = if state.props.currentLocation.place /= "" then state.props.currentLocation.place else (getString CURRENT_LOCATION)}}
+
+eval (EditDestSearchLocationModelActionController (SearchLocationModelController.SetLocationOnMap)) state = do
+  void $ pure $ performHapticFeedback unit
+  let isSource = case state.props.isSource of
+                    Just true -> true
+                    _         -> false
+      isDestinationNotEmpty = (not isSource && state.props.destinationLat /= 0.0 && state.props.destinationLong /= 0.0)
+      lat = if isDestinationNotEmpty then state.props.destinationLat else state.props.sourceLat
+      lon = if isDestinationNotEmpty then state.props.destinationLong else state.props.sourceLong
+  _ <- pure $ hideKeyboardOnNavigation true
+  _ <- pure $ removeAllPolylines ""
+  _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon state.props.confirmLocationCategory }}
+  pure $ unsafePerformEffect $ logEvent state.data.logField if state.props.isSource == Just true  then "ny_user_src_set_location_on_map" else "ny_user_dest_set_location_on_map"
+  let srcValue = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source
+  when (state.data.destination == "") $ do
+    pure $ setText (getNewIDWithTag "DestinationEditText") ""
+  let newState = state
+                  { data {source = srcValue}
+                  , props { isSearchLocation = LocateOnMap
+                          , currentStage = SearchLocationModel
+                          , locateOnMap = true,
+                           isRideServiceable = true
+                           , showlocUnserviceablePopUp = false
+                           , searchLocationModelProps{isAutoComplete = false}
+                           , locateOnMapLocation
+                              { sourceLat = state.props.sourceLat
+                              , sourceLng = state.props.sourceLong
+                              , source = state.data.source
+                              , sourceAddress = state.data.sourceAddress
+                              , destinationLat = if state.props.destinationLat /= 0.0 then state.props.destinationLat else state.props.sourceLat
+                              , destinationLng = if state.props.destinationLong /= 0.0 then state.props.destinationLong else state.props.sourceLong
+                              , destination = state.data.destination
+                              , destinationAddress = state.data.destinationAddress 
+                              }
+                           }
+                    }
+  (updateAndExit newState) $ UpdatedState newState false
+
+eval (EditDestSearchLocationModelActionController (SearchLocationModelController.UpdateSource lat lng name)) state = do
+  _ <- pure $ hideKeyboardOnNavigation true
+  if state.props.isSource == Just true then do
+    let newState = state{data{source = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source, sourceAddress = encodeAddress name [] Nothing lat lng},props{ sourceLat= lat,  sourceLong = lng, sourcePlaceId = Nothing, searchLocationModelProps{isAutoComplete = false}}}
+    updateAndExit newState $ LocationSelected (fromMaybe dummyListItem newState.data.selectedLocationListItem) false newState
+    else do
+      let newState = state{data{destination = name,destinationAddress = encodeAddress name [] Nothing lat lng},props{ destinationLat = lat,  destinationLong = lng, destinationPlaceId = Nothing}}
+      updateAndExit newState $ LocationSelected (fromMaybe dummyListItem newState.data.selectedLocationListItem) false newState
+
+eval (EditDestSearchLocationModelActionController (SearchLocationModelController.RecenterCurrentLocation)) state = recenterCurrentLocation state
+
+eval (EditDestSearchLocationModelActionController (SearchLocationModelController.UpdateCurrentLocation lat lng)) state = do
+  if state.props.isSource == Just true then
+    updateCurrentLocation state lat lng
+  else
+    continue state
+
 eval _ state = update state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
@@ -3312,8 +3506,8 @@ dummyListItem = {
   , locationScore : Nothing
 }
 
-tagClickEvent :: CardType -> (Maybe LocationListItemState) -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
-tagClickEvent savedAddressType arrItem state = do
+tagClickEvent :: CardType -> (Maybe LocationListItemState) -> HomeScreenState -> Boolean -> Eval Action ScreenOutput HomeScreenState
+tagClickEvent savedAddressType arrItem state isEditDestination = do
     let stage' = if os == "IOS" && state.props.currentStage == HomeScreen then ConfirmingLocation else LoadMap
     case savedAddressType, arrItem of
         OTHER_TAG,_  -> do
@@ -3334,7 +3528,10 @@ tagClickEvent savedAddressType arrItem state = do
               let newState = state {data{ destination = item.description,destinationAddress = item.fullAddress},props{destinationPlaceId = item.placeId, destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon}}
               pure $ setText (getNewIDWithTag "DestinationEditText") item.description
               pure $ removeMarker $ getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)
-              updateAndExit state{props{currentStage = stage'}} $ LocationSelected item false newState
+              if isEditDestination then
+                updateAndExit state{props{currentStage = stage'}} $ EditDestLocationSelected item false newState
+              else
+                updateAndExit state{props{currentStage = stage'}} $ LocationSelected item false newState
 
 flowWithoutOffers :: LazyCheck -> Boolean
 flowWithoutOffers dummy = not $ (getValueToLocalStore FLOW_WITHOUT_OFFERS) == "false"
@@ -3355,8 +3552,8 @@ recenterCurrentLocation state = continueWithCmd state [ do
 updateCurrentLocation :: HomeScreenState -> String -> String -> Eval Action  ScreenOutput HomeScreenState
 updateCurrentLocation state lat lng = exit $ (CheckLocServiceability state (fromMaybe 0.0 (NUM.fromString lat )) (fromMaybe 0.0 (NUM.fromString lng)))
 
-locationSelected :: LocationListItemState -> Boolean -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
-locationSelected item addToRecents state = do
+locationSelected :: LocationListItemState -> Boolean -> HomeScreenState -> Boolean -> Eval Action ScreenOutput HomeScreenState
+locationSelected item addToRecents state isEditDestination = do
   let stage' = if os == "IOS" && state.props.currentStage == HomeScreen then ConfirmingLocation else LoadMap
   _ <- pure $ hideKeyboardOnNavigation true
   let favClick = if item.postfixImageUrl == "ny_ic_fav_red,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_fav_red.png" then "true" else "false"
@@ -3372,7 +3569,10 @@ locationSelected item addToRecents state = do
                                                                                                                     {key : "Favourite", value : unsafeToForeign favClick}]
       let newState = state {data{ destination = item.title,destinationAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon)},props{destinationPlaceId = item.placeId, destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon}}
       pure $ setText (getNewIDWithTag "DestinationEditText") item.title
-      updateAndExit state{props{currentStage = stage'}} $ LocationSelected item addToRecents newState
+      if isEditDestination then 
+        updateAndExit state{props{currentStage = stage'}} $ EditDestLocationSelected item addToRecents newState
+      else
+        updateAndExit state{props{currentStage = stage'}} $ LocationSelected item addToRecents newState
 
 checkCurrentLocation :: Number -> Number -> Array CurrentLocationDetails -> Boolean
 checkCurrentLocation lat lon previousCurrentLocations =  (length (filter (\ (item) -> (filterFunction lat lon item))(previousCurrentLocations)) > 0)
@@ -3738,3 +3938,7 @@ openDateTimePicker state =
       _ <- launchAff $ showDateTimePicker push DateTimePickerAction
       pure NoAction
     ]
+
+
+roundOff :: Maybe Number -> Maybe Int
+roundOff value = if isJust value then Just $ round (fromMaybe 0.0 value) else Nothing

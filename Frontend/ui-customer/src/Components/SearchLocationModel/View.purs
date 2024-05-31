@@ -27,21 +27,23 @@ import Components.SearchLocationModel.Controller (Action(..), SearchLocationMode
 import Components.SeparatorView.View as SeparatorView
 import Data.Array (mapWithIndex, length, take, null)
 import Data.Function (flip)
-import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Function.Uncurried (runFn3)
-import DecodeUtil (getAnyFromWindow)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
 import Debug (spy)
+import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, setText)
 import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getLocationName, getSearchType, getAssetsBaseUrl, fetchImage, FetchImageFrom(..))
-import JBridge (getBtnLoader, showKeyboard, getCurrentPosition, firebaseLogEvent, startLottieProcess, lottieAnimationConfig, debounceFunction)
+import Helpers.Utils as HU
+import JBridge (getBtnLoader, showKeyboard, getCurrentPosition, firebaseLogEvent, startLottieProcess, lottieAnimationConfig, debounceFunction, hideKeyboardOnNavigation)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Mobility.Prelude (boolToVisibility)
 import Prelude ((<>))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard, (>=), void)
 import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, selectAllOnFocus, singleLine, stroke, text, textSize, textView, visibility, weight, width, rippleColor)
@@ -50,8 +52,6 @@ import Resources.Constants (getDelayForAutoComplete)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
-import Mobility.Prelude (boolToVisibility)
-import Helpers.Utils as HU
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -264,6 +264,7 @@ sourceDestinationImageView state =
     -- , padding $ PaddingLeft 16
     , orientation VERTICAL
     , gravity CENTER
+    , visibility if state.isEditDestination then GONE else VISIBLE
     ][ linearLayout
         [ height $ V 15
         , width $  V 15
@@ -297,68 +298,10 @@ sourceDestinationEditTextView state push =
     , margin if os == "IOS" then (Margin 0 18 15 0) else (Margin 0 16 16 0)
     , height $ V 121
   
-    ][linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation HORIZONTAL
-      , background state.appConfig.searchLocationConfig.editTextBackground
-      , cornerRadius 4.0 
-      , stroke $ if state.isSource == Just true && state.isSearchLocation == LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
-      ][ editText $
-            [ height $ V 37
-            , weight 1.0
-            , text state.source
-            , color if state.isSource == Just true then state.appConfig.searchLocationConfig.editTextColor else state.appConfig.searchLocationConfig.editTextDefaultColor
-            , singleLine true
-            , ellipsize true
-            , cornerRadius 4.0
-            , padding (Padding 8 7 32 7)
-            , lineHeight "24"
-            , accessibilityHint "Pickup Location Editable field"
-            , accessibility ENABLE
-            , hint (getString START_)
-            , hintColor state.appConfig.searchLocationConfig.hintColor
-            , id $ getNewIDWithTag "SourceEditText"
-            , afterRender (\_ -> do
-                  _ <- pure $ showKeyboard case state.isSource of
-                                            Just true  -> (getNewIDWithTag "SourceEditText")
-                                            Just false -> (getNewIDWithTag "DestinationEditText")
-                                            Nothing    -> ""
-                  pure unit
-                    ) (const NoAction)
-            , onChange
-                ( \action -> do
-                    _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack (fromMaybe false state.isSource)
-                    _ <- push action
-                    pure unit
-                )
-                SourceChanged
-            , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
-            , onFocus push $ const $ EditTextFocusChanged "S"
-              , selectAllOnFocus true
-            , autoCorrectionType 1
-            ] <> FontStyle.subHeading1 LanguageStyle
-        , linearLayout
-            [ height $ V 32
-            , width $ V 30
-            , gravity CENTER
-            , padding $ PaddingVertical 10 2
-            , onClick (\action -> do
-                        _ <- if state.isSource == Just true then pure $ setText (getNewIDWithTag "SourceEditText") "" else pure unit
-                        _ <- push action
-                        pure unit
-                      )(const $ SourceClear)
-            , accessibilityHint "Clear Source Text : Button"
-            , accessibility ENABLE
-            , visibility if state.crossBtnSrcVisibility && state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
-            ]
-            [ imageView
-                [ height $ V 19
-                , width $ V 19
-                , imageWithFallback $ fetchImage FF_ASSET state.appConfig.searchLocationConfig.clearTextImage
-                ]
-            ]
-        ]
+    ][
+      if state.isEditDestination ---- RITIKA
+        then nonEditableTextView state push 
+        else editableSourceView state push
     , linearLayout
         [ height $ V 1
         , width MATCH_PARENT
@@ -374,7 +317,7 @@ sourceDestinationEditTextView state push =
         , orientation HORIZONTAL
         , margin $ MarginTop 12
         , background state.appConfig.searchLocationConfig.editTextBackground
-        , stroke if state.isSource == Just false && state.isSearchLocation == LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
+        , stroke if state.isSource == Just false && state.isSearchLocation == LocateOnMap && state.isDestViewEditable then "1," <> Color.yellowText else "0," <> Color.yellowText
         ]
         [ editText
             ( [ height $ V 37
@@ -391,11 +334,16 @@ sourceDestinationEditTextView state push =
               , accessibility ENABLE
               , id $ getNewIDWithTag "DestinationEditText"
               , afterRender (\action -> do
-                  _ <- pure $ showKeyboard case state.isSource of
-                                            Just true -> (getNewIDWithTag "SourceEditText")
-                                            Just false -> (getNewIDWithTag "DestinationEditText")
-                                            Nothing    -> ""
-                  pure unit
+                    if state.isDestViewEditable then do
+                      -- _ <- pure $ spy "it's getting executed" "ABCD"
+                      _ <- pure $ showKeyboard case state.isSource of
+                                                Just true -> (getNewIDWithTag "SourceEditText")
+                                                Just false -> (getNewIDWithTag "DestinationEditText")
+                                                Nothing    -> ""
+                      pure unit
+                    else do
+                      void $ pure $ hideKeyboardOnNavigation true
+                      pure unit
                     ) (const NoAction)
               , onChange
                   ( \action -> do
@@ -441,6 +389,96 @@ sourceDestinationEditTextView state push =
         ]
         []
     ]
+
+editableSourceView :: forall w. SearchLocationModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+editableSourceView state push =
+  let _ = spy "SearchLocationModel ABCD state " state
+  in
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation HORIZONTAL
+  , background state.appConfig.searchLocationConfig.editTextBackground
+  , cornerRadius 4.0 
+  , stroke $ if state.isSource == Just true && state.isSearchLocation == LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
+  ][ 
+    editText $
+        [ height $ V 37
+        , weight 1.0
+        , text state.source
+        , color if state.isSource == Just true then state.appConfig.searchLocationConfig.editTextColor else state.appConfig.searchLocationConfig.editTextDefaultColor
+        , singleLine true
+        , ellipsize true
+        , cornerRadius 4.0
+        , padding (Padding 8 7 32 7)
+        , lineHeight "24"
+        , accessibilityHint "Pickup Location Editable field"
+        , accessibility ENABLE
+        , hint (getString START_)
+        , hintColor state.appConfig.searchLocationConfig.hintColor
+        , id $ getNewIDWithTag "SourceEditText"
+        , afterRender (\_ -> do
+              if state.isDestViewEditable then do
+                _ <- pure $ showKeyboard case state.isSource of
+                                          Just true  -> (getNewIDWithTag "SourceEditText")
+                                          Just false -> (getNewIDWithTag "DestinationEditText")
+                                          Nothing    -> ""
+                
+                pure unit
+              else do
+                void $ pure $ hideKeyboardOnNavigation true
+                pure unit
+                ) (const NoAction)
+        , onChange
+            ( \action -> do
+                _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack (fromMaybe false state.isSource)
+                _ <- push action
+                pure unit
+            )
+            SourceChanged
+        , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
+        , onFocus push $ const $ EditTextFocusChanged "S"
+          , selectAllOnFocus true
+        , autoCorrectionType 1
+        ] <> FontStyle.subHeading1 LanguageStyle
+    , linearLayout
+        [ height $ V 32
+        , width $ V 30
+        , gravity CENTER
+        , padding $ PaddingVertical 10 2
+        , onClick (\action -> do
+                    _ <- if state.isSource == Just true then pure $ setText (getNewIDWithTag "SourceEditText") "" else pure unit
+                    _ <- push action
+                    pure unit
+                  )(const $ SourceClear)
+        , accessibilityHint "Clear Source Text : Button"
+        , accessibility ENABLE
+        , visibility if state.crossBtnSrcVisibility && state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+        ]
+        [ imageView
+            [ height $ V 19
+            , width $ V 19
+            , imageWithFallback $ fetchImage FF_ASSET state.appConfig.searchLocationConfig.clearTextImage
+            ]
+        ]
+    ]
+
+nonEditableTextView :: forall w. SearchLocationModelState -> (Action -> Effect Unit ) -> PrestoDOM (Effect Unit) w
+nonEditableTextView state push = 
+  textView $
+  [
+    height $ V 37
+    , width MATCH_PARENT
+    , text $ getString EDIT_DESTINATION
+    , color state.appConfig.searchLocationConfig.editTextDefaultColor
+    , singleLine true
+    , ellipsize true
+    , cornerRadius 4.0
+    , padding (Padding 8 7 32 7)
+    , lineHeight "24"
+    , id $ getNewIDWithTag "EditDestinationTextView"
+  ] <> FontStyle.subHeading1 LanguageStyle
+
 
 ---------------------------- searchResultsView ---------------------------------
 searchResultsView :: forall w . SearchLocationModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -498,7 +536,7 @@ primaryButtonConfig state =
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-        { text = if state.isSearchLocation == LocateOnMap then if state.isSource == Just true then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION) else ""
+        { text = if state.isSearchLocation == LocateOnMap then if state.isSource == Just true then (getString CONFIRM_PICKUP_LOCATION) else if state.isPrimaryButtonForEditDest then (getString CHECK_REVISED_FARE_AND_ROUTE) else (getString CONFIRM_DROP_LOCATION) else "" ------RITIKA fix it
         , color = state.appConfig.primaryTextColor
         , height = V 40
         }
@@ -536,7 +574,7 @@ primaryButtonView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , alignParentBottom "true,-1"
-    , background Color.transparent
+    , background Color.white900 -----RITIKA
     , visibility if state.isSearchLocation == LocateOnMap then VISIBLE else GONE
     ][ recenterButtonView push state
       , PrimaryButton.view (push <<< PrimaryButtonActionController)(primaryButtonConfig state)]
@@ -552,6 +590,7 @@ recenterButtonView push state =
   , gravity RIGHT
   , padding $ Padding 0 0 16 14
   , disableClickFeedback true
+  , visibility if state.isDestViewEditable then VISIBLE else GONE
   ][
       imageView
         [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_recenter_btn"

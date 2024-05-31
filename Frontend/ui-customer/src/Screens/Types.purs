@@ -557,6 +557,10 @@ data Stage = HomeScreen
            | ChangeToRideAccepted
            | ChangeToRideStarted
            | ConfirmingQuotes
+           | EditingDestinationLoc
+           | ConfirmEditDestinationLoc
+           | ConfirmingEditDestinationLoc
+           | RevisedEstimate
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -589,6 +593,8 @@ type HomeScreenStateData =
   , eta :: String
   , vehicleDetails :: String
   , registrationNumber :: String
+  , newEstimatedDistance :: Maybe Int
+  , newEstimatedFare :: Maybe Int
   , rating :: Number
   , locationList :: Array LocationListItemState
   , savedLocations :: Array LocationListItemState
@@ -765,6 +771,8 @@ type HomeScreenStateProps =
   , sourcePlaceId :: Maybe String
   , destinationPlaceId :: Maybe String
   , estimateId :: String
+  , bookingUpdateRequestId :: Maybe String
+  , showConfirmEditDestPopUp :: Boolean
   , selectedQuote :: Maybe String
   , locationRequestCount :: Int
   , searchId :: String

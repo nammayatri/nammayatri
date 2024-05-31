@@ -16,19 +16,29 @@ module Screens.RideBookingFlow.HomeScreen.Config where
 
 import Common.Types.App
 import ConfigProvider
+import ConfigProvider
+import Debug
+import Helpers.TipConfig
 import Language.Strings
 import Locale.Utils
+import Locale.Utils
+import Mobility.Prelude
 import Mobility.Prelude
 import Prelude
 import PrestoDOM
+
+import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
 import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
 import Accessor (_fareBreakup, _description, _rideEndTime, _amount)
+import Accessor (_fareBreakup, _description, _rideEndTime, _amount, _serviceTierName)
 import Animation.Config as AnimConfig
+import Common.Types.App (LazyCheck(..))
 import Common.Types.App (LazyCheck(..))
 import Common.Types.App (LazyCheck(..))
 import Components.Banner as Banner
 import Components.BannerCarousel as BannerCarousel
 import Components.ChatView as ChatView
+import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.ChooseYourRide as ChooseYourRide
 import Components.DriverInfoCard (DriverInfoCardData)
@@ -40,38 +50,48 @@ import Components.MenuButton as MenuButton
 import Components.MessagingView as MessagingView
 import Components.PopUpModal as PopUpModal
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
+import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListModel as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
+import Components.Referral as ReferralComponent
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUpConfig
+import Components.ServiceTierCard.View as ServiceTierCard
 import Components.SourceToDestination as SourceToDestination
-import Components.Referral as ReferralComponent
 import Control.Monad.Except (runExcept)
 import Data.Array ((!!), sortBy, mapWithIndex, elem, length)
 import Data.Array as DA
+import Data.Either (Either(..))
 import Data.Either (Either(..))
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber)
 import Data.Int as INT
 import Data.Lens ((^.))
+import Data.Lens ((^.))
+import Data.Lens ((^.), view)
 import Data.Lens ((^.), view)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String as DS
+import Data.String.CodeUnits (stripPrefix, stripSuffix)
 import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
+import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
+import Engineering.Helpers.Utils as EHU
 import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
 import Font.Style (Style(..))
+import Font.Style (Style(..))
 import Font.Style as FontStyle
 import Foreign.Class (class Encode)
+import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
 import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode, getCityFromString, isWeekend, getCityFromString, getCityConfig)
@@ -79,43 +99,24 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
 import LocalStorage.Cache (getValueFromCache)
+import LocalStorage.Cache (getValueFromCache)
 import MerchantConfig.Utils as MU
 import PrestoDOM (Accessiblity(..), Orientation(..), Visibility(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Resources.Constants (dummyPrice)
 import Resources.Constants (getKmMeter, emergencyContactInitialChatSuggestionId)
 import Resources.Localizable.EN (getEN)
+import Resources.Localizable.EN (getEN)
+import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig)
+import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
 import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..), VehicleViewType(..))
 import Screens.Types (FareProductType(..)) as FPT
 import Screens.Types as ST
 import Services.API as API
+import Services.API as API
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
-import Common.Types.App (LazyCheck(..))
-import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
-import Components.ChooseVehicle.Controller as ChooseVehicle
-import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
-import Data.Either (Either(..))
-import Font.Style (Style(..))
-import Services.API as API
-import Data.Lens ((^.))
-import Accessor (_fareBreakup, _description, _rideEndTime, _amount, _serviceTierName)
-import Resources.Localizable.EN (getEN)
-import Engineering.Helpers.Utils as EHU
-import Mobility.Prelude
-import Locale.Utils
-import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
-import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
-import LocalStorage.Cache (getValueFromCache)
-import ConfigProvider
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
-import Data.Lens ((^.), view)
-import Components.ServiceTierCard.View as ServiceTierCard
-import Resources.Constants (dummyPrice)
-import Data.String.CodeUnits (stripPrefix, stripSuffix)
-import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig)
-import Helpers.TipConfig
-import Debug
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state =
@@ -214,6 +215,54 @@ cancelAppConfig state =
     popUpConfig'
   where
   distanceString = getDistanceString state.data.driverInfoCardState.distance (fromMaybe 0 state.data.driverInfoCardState.initDistance) state.props.zoneType.priorityTag
+
+confirmRequestEditConfig :: ST.HomeScreenState -> PopUpModal.Config
+confirmRequestEditConfig state =
+  let
+    config' = PopUpModal.config
+
+    popUpConfig' =
+      config'
+        { gravity = BOTTOM
+        , dismissPopup = true
+        , optionButtonOrientation = "VERTICAL"
+        , buttonLayoutMargin = Margin 16 0 16 20
+        , primaryText
+          { text = getString CONFIRM_WITH_YOUR_DRIVER
+          , margin = Margin 16 20 16 20
+          }
+        , secondaryText { text = "Your driver might want to go towards the current drop. Kindly ask them to confirm after requesting."}
+        , option1
+          { text = getString REQUEST_EDIT
+          , color = state.data.config.primaryTextColor
+          , background = state.data.config.primaryBackground
+          , strokeColor = Color.transparent
+          , textStyle = FontStyle.SubHeading1
+          , width = MATCH_PARENT
+          , enableRipple = true
+          }
+        , option2
+          { text = getString CANCEL_
+          , textStyle = FontStyle.SubHeading1
+          , color = Color.black700
+          , background = Color.white900
+          , strokeColor = Color.transparent
+          , width = MATCH_PARENT
+          , margin = Margin 0 0 0 0
+          }
+        , cornerRadius = Corners 15.0 true true false false
+        , coverImageConfig
+          { imageUrl =
+            fetchImage FF_ASSET
+              $ if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then "ny_ic_cnf_edit_dest_auto" else "ny_ic_cnf_edit_dest"
+          , visibility = VISIBLE
+          , margin = Margin 16 20 16 24
+          , width = MATCH_PARENT
+          , height = V 200
+          }
+        }
+  in
+    popUpConfig'
 
 getDistanceString :: Int -> Int -> ZoneType -> String
 getDistanceString currDistance initDistance zoneType
@@ -1282,7 +1331,10 @@ searchLocationModelViewState state =
         , gravity: CENTER_VERTICAL
         }
     , headerText: getString TRIP_DETAILS_
+    , isPrimaryButtonForEditDest : false
     , currentLocationText: state.props.currentLocation.place
+    , isEditDestination : false
+    , isDestViewEditable : true
     }
   where
   formatDate :: String -> String
@@ -1291,6 +1343,40 @@ searchLocationModelViewState state =
       startTime = if state.data.startTimeUTC == "" then EHC.getCurrentUTC "" else state.data.startTimeUTC
     in
       EHC.convertUTCtoISC startTime formatSTR
+
+editDestSearchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState
+editDestSearchLocationModelViewState state = { isSearchLocation: if state.props.currentStage == EditingDestinationLoc then state.props.isSearchLocation else ST.LocateOnMap
+                                    , locationList: state.data.locationList
+                                    , source: state.data.source
+                                    , destination: state.data.destination
+                                    , isSource: Just false
+                                    , isSrcServiceable: state.props.isSrcServiceable
+                                    , isDestServiceable: state.props.isDestServiceable
+                                    , isRideServiceable: state.props.isRideServiceable
+                                    , savedlocationList: state.data.savedLocations
+                                    , appConfig : state.data.config
+                                    , logField : state.data.logField
+                                    , crossBtnSrcVisibility: false
+                                    , crossBtnDestVisibility: state.props.searchLocationModelProps.crossBtnDestVisibility
+                                    , isAutoComplete: state.props.searchLocationModelProps.isAutoComplete
+                                    , showLoader: state.props.searchLocationModelProps.showLoader
+                                    , prevLocation: state.data.searchLocationModelData.prevLocation
+                                    , currentLocationText : state.props.currentLocation.place
+                                    , isEditDestination : state.props.currentStage == EditingDestinationLoc -----fix me ----RITIKA
+                                    , headerVisibility: state.props.canScheduleRide
+                                    , suffixButtonVisibility: boolToVisibility $ state.props.canScheduleRide
+                                    , isPrimaryButtonForEditDest : state.props.currentStage == ConfirmEditDestinationLoc
+                                    , suffixButton:
+                                        { text: ""
+                                        , fontStyle: FontStyle.subHeading2 LanguageStyle
+                                        , prefixImage: "ny_ic_clock_unfilled"
+                                        , suffixImage: "ny_ic_chevron_down"
+                                        , padding: Padding 8 0 8 1
+                                        , gravity: CENTER_VERTICAL
+                                        }
+                                    , headerText: getString TRIP_DETAILS_
+                                    , isDestViewEditable : state.props.currentStage == EditingDestinationLoc
+                                    }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
 quoteListModelViewState state =
@@ -1419,12 +1505,15 @@ confirmAndBookButtonConfig state =
     }
   where
   getBtnTextWithTimer state =
-    if state.props.repeatRideTimer /= "0" && not DS.null state.props.repeatRideTimerId then
-      ((getString REQUESTING_RIDE_IN) <> " " <> state.props.repeatRideTimer <> "s")
-    else if state.props.repeatRideTimer == "0" then
-      (getString REQUESTING_RIDE) <> "..."
+    if state.props.currentStage == RevisedEstimate then
+      (getString CONFIRM_FARE)
     else
-      (getString REQUEST_RIDE)
+      if state.props.repeatRideTimer /= "0" && not DS.null state.props.repeatRideTimerId then
+        ((getString REQUESTING_RIDE_IN) <> " " <> state.props.repeatRideTimer <> "s")
+      else if state.props.repeatRideTimer == "0" then
+        (getString REQUESTING_RIDE) <> "..."
+      else
+        (getString REQUEST_RIDE)
 
 zoneTimerExpiredConfig :: ST.HomeScreenState -> PopUpModal.Config
 zoneTimerExpiredConfig state =

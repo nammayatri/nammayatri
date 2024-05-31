@@ -261,7 +261,8 @@ type Features = {
   enableCustomerSupportForSafety :: Boolean,
   enableSpecialPickup :: Boolean,
   enableAcPopup :: Boolean,
-  enableRentalReallocation :: Boolean
+  enableRentalReallocation :: Boolean,
+  enableEditDestination :: Boolean
   }
 
 type RideCompletedCardConfig = {

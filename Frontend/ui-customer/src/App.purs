@@ -15,61 +15,63 @@
 
 module Types.App where
 
+import Services.API
+
+import Common.Types.App (CategoryListType)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Control.Transformers.Back.Trans (BackT)
+import Data.Maybe (Maybe(..))
+import Foreign (Foreign)
 import Foreign (Foreign)
 import Foreign.Object (Object(..), empty)
+import Foreign.Object (Object(..), empty)
+import Language.Types (STR(..))
 import LoaderOverlay.ScreenData as LoaderScreenScreenData
+import LoaderOverlay.ScreenData as LoaderScreenScreenData
+import MerchantConfig.Types (AppConfig)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
 import Screens.AccountSetUpScreen.ScreenData as AccountSetUpScreenData
 import Screens.AddNewAddressScreen.ScreenData as AddNewAddressScreenData
+import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.ContactUsScreen.ScreenData as ContactUsScreenData
 import Screens.CustomerUtils.AboutUsScreen.ScreenData as AboutUsScreenData
+import Screens.CustomerUtils.AboutUsScreen.ScreenData as AboutUsScreenData
+import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
+import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.InvoiceScreen.ScreenData as InvoiceScreenData
-import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
-import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
-import LoaderOverlay.ScreenData as LoaderScreenScreenData
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.MyRidesScreen.ScreenData as MyRideScreenData
 import Screens.NammaSafetyFlow.ScreenData as NammaSafetyScreenData
 import Screens.OnBoardingFlow.PermissionScreen.ScreenData as PermissionScreenData
+import Screens.OnBoardingFlow.PermissionScreen.ScreenData as PermissionScreenData
+import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
-import Screens.SavedLocationScreen.ScreenData as SavedLocationScreenData
-import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
-import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
-import Screens.OnBoardingFlow.PermissionScreen.ScreenData as PermissionScreenData
-import Screens.CustomerUtils.AboutUsScreen.ScreenData as AboutUsScreenData
-import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
-import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
-import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
-import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
-import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
-import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType) 
-import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
-import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
-import Foreign.Object ( Object(..), empty)
-import Services.API (BookingStatus(..))
-import Foreign (Foreign)
-import MerchantConfig.Types (AppConfig)
-import Data.Maybe (Maybe(..))
-import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduledScreenData
-import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
-import Common.Types.App (CategoryListType)
-import Screens.TicketBookingFlow.MetroTicketDetails.ScreenData as MetroTicketDetailsScreenData
-import Screens.TicketBookingFlow.MetroMyTickets.ScreenData as MetroMyTicketsScreenData
-import Screens.TicketBookingFlow.TicketStatus.ScreenData as TicketStatusScreenData
-import Screens.TicketBookingFlow.MetroTicketStatus.ScreenData as MetroTicketStatusScreenData
-import Services.API
-import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData 
 import Screens.RentalBookingFlow.RentalScreen.ScreenData as RentalScreenData
+import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduledScreenData
+import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
+import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
+import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
+import Screens.SavedLocationScreen.ScreenData as SavedLocationScreenData
+import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
+import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
+import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
+import Screens.TicketBookingFlow.MetroMyTickets.ScreenData as MetroMyTicketsScreenData
+import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
+import Screens.TicketBookingFlow.MetroTicketDetails.ScreenData as MetroTicketDetailsScreenData
+import Screens.TicketBookingFlow.MetroTicketStatus.ScreenData as MetroTicketStatusScreenData
+import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
+import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
+import Screens.TicketBookingFlow.TicketStatus.ScreenData as TicketStatusScreenData
+import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
+import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType)
+import Services.API (BookingStatus(..))
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -200,8 +202,11 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_MY_TICKETS
                         | GO_TO_MY_PROFILE Boolean
                         | LOCATION_SELECTED LocationListItemState Boolean
+                        | EDIT_LOCATION_SELECTED LocationListItemState Boolean
+                        | EDIT_DESTINATION_SOFT HomeScreenState
                         | HOME_SCREEN
                         | GET_QUOTES HomeScreenState
+                        | CONFIRM_FARE HomeScreenState
                         | SELECT_ESTIMATE HomeScreenState
                         | GET_SELECT_LIST HomeScreenState
                         | CONFIRM_RIDE HomeScreenState
