@@ -28,3 +28,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_license DROP COLUMN license_number;
 
 ALTER TABLE atlas_driver_offer_bpp.driver_license ADD COLUMN failed_rules text[] NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.driver_license ADD COLUMN class_of_vehicles text[] NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_license ADD COLUMN date_of_issue timestamp with time zone ;

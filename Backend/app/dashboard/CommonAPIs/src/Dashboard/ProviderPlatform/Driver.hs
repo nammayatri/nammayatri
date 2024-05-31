@@ -740,7 +740,9 @@ data AddVehicleReq = AddVehicleReq
     airConditioned :: Maybe Bool,
     driverName :: Text,
     imageId :: Maybe (Id Image),
-    vehicleCategory :: Maybe Category
+    vehicleCategory :: Maybe Category,
+    dateOfRegistration :: Maybe UTCTime,
+    vehicleModelYear :: Maybe Int
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

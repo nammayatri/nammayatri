@@ -162,6 +162,7 @@ DriverLicense:
     verificationStatus: VerificationStatus
     consent: Bool
     consentTimestamp: UTCTime
+    dateOfIssue: Maybe UTCTime
   excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey
@@ -180,6 +181,9 @@ DriverLicense:
     updateVerificationStatus:
       kvFunction: updateWithKV
       params: [verificationStatus]
+      where: documentImageId1
+    findByImageId:
+      kvFunction: findOneWithKV
       where: documentImageId1
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -213,6 +217,8 @@ VehicleRegistrationCertificate:
     luggageCapacity: Maybe Int
     vehicleRating: Maybe Double
     userPassedVehicleCategory: Maybe Category
+    vehicleModelYear: Maybe Int
+    dateOfRegistration: Maybe UTCTime
   constraints:
     id: PrimaryKey
     certificateNumberHash: SecondaryKey
@@ -295,6 +301,7 @@ Image:
     failureReason: Maybe DriverOnboardingError
     rcId: Maybe Text
     verificationStatus: Maybe VerificationStatus
+    documentExpiry: Maybe UTCTime
   excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey
@@ -317,6 +324,10 @@ Image:
     deleteByPersonId:
       kvFunction: deleteWithKV
       where: personId
+    updateDocumentExpiry:
+      kvFunction: updateOneWithKV
+      params: [documentExpiry]
+      where: id
   extraOperations:
     - EXTRA_QUERY_FILE
 

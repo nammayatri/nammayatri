@@ -54,3 +54,9 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN u
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN vehicle_seat_belts integer ;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN vehicle_doors integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN vehicle_model_year integer ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN date_of_registration timestamp with time zone ;
