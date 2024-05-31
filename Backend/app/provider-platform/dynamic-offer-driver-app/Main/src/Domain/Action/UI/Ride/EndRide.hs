@@ -443,7 +443,8 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
           nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
           timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,
           tollCharges = ride.tollCharges,
-          currency = booking.currency
+          currency = booking.currency,
+          distanceUnit = booking.distanceUnit
         }
   let finalFare = Fare.fareSum fareParams
       distanceDiff = recalcDistance - oldDistance

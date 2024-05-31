@@ -176,5 +176,6 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
             additionalInfo = Just "Reallocation Failed",
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
+            distanceUnit = newBooking.distanceUnit,
             ..
           }

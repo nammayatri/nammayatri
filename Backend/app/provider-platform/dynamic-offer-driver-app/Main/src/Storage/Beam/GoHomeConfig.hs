@@ -18,7 +18,7 @@ module Storage.Beam.GoHomeConfig where
 import qualified Database.Beam as B
 import Domain.Types.UtilsTH
 import Kernel.Prelude
-import Kernel.Types.Common (Meters)
+import Kernel.Types.Common (DistanceUnit, Meters)
 import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
 
 data GoHomeConfigT f = GoHomeConfigT
@@ -33,6 +33,7 @@ data GoHomeConfigT f = GoHomeConfigT
     numHomeLocations :: B.C f Int,
     goHomeFromLocationRadius :: B.C f Meters,
     goHomeWayPointRadius :: B.C f Meters,
+    distanceUnit :: B.C f (Maybe DistanceUnit),
     numDriversForDirCheck :: B.C f Int,
     goHomeBatchDelay :: B.C f Int,
     ignoreWaypointsTill :: B.C f Int,

@@ -19,6 +19,7 @@ import qualified Tools.Beam.UtilsTH
 data BookingCancellationReason = BookingCancellationReason
   { additionalInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverCancellationLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     driverDistToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     driverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

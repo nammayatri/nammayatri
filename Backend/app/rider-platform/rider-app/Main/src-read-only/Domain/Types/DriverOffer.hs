@@ -17,6 +17,7 @@ data DriverOffer = DriverOffer
   { bppQuoteId :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     distanceToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverName :: Kernel.Prelude.Text,
     durationToPickup :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     estimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,

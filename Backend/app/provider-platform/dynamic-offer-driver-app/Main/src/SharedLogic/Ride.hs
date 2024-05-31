@@ -96,12 +96,12 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
   void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
-  QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
+  QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id booking.distanceUnit
 
   Notify.notifyDriver booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken
 
   fork "DriverScoreEventHandler OnNewRideAssigned" $
-    DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency}
+    DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency, distanceUnit = booking.distanceUnit}
 
   return (ride, rideDetails, vehicle)
   where
@@ -175,6 +175,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         trackingUrl = trackingUrl,
         fare = Nothing,
         currency = booking.currency,
+        distanceUnit = booking.distanceUnit,
         traveledDistance = 0,
         chargeableDistance = Nothing,
         driverArrivalTime = Nothing,

@@ -16,6 +16,7 @@ import Tools.Beam.UtilsTH
 data BookingCancellationReasonT f = BookingCancellationReasonT
   { additionalInfo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bookingId :: B.C f Kernel.Prelude.Text,
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverCancellationLocationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     driverCancellationLocationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     driverDistToPickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),

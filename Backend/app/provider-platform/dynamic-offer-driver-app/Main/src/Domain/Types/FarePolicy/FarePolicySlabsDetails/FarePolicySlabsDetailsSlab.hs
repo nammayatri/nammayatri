@@ -25,6 +25,7 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 
 data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   { startDistance :: Meters,
+    distanceUnit :: DistanceUnit,
     baseFare :: HighPrecMoney,
     waitingChargeInfo :: Maybe Domain.WaitingChargeInfo,
     platformFeeInfo :: Maybe PlatformFeeInfo,
@@ -62,6 +63,7 @@ data PlatformFeeInfo = PlatformFeeInfo
 
 data FPSlabsDetailsSlabAPIEntity = FPSlabsDetailsSlabAPIEntity
   { startDistance :: Meters,
+    startDistanceWithUnit :: Distance,
     baseFare :: Money,
     baseFareWithCurrency :: PriceAPIEntity,
     waitingChargeInfo :: Maybe WaitingChargeInfoAPIEntity,

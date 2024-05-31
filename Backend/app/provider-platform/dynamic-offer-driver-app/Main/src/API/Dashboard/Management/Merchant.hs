@@ -22,7 +22,7 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
-import Kernel.Utils.Common (Meters, withFlowHandlerAPI)
+import Kernel.Utils.Common (DistanceUnit, HighPrecDistance, Meters, withFlowHandlerAPI)
 import qualified Lib.Types.SpecialLocation as SL
 import Servant hiding (Unauthorized, throwError)
 import Storage.Beam.SystemConfigs ()
@@ -123,30 +123,36 @@ driverPoolConfig ::
   ShortId DM.Merchant ->
   Context.City ->
   Maybe Meters ->
+  Maybe HighPrecDistance ->
+  Maybe DistanceUnit ->
   FlowHandler Common.DriverPoolConfigRes
-driverPoolConfig merchantShortId opCity = withFlowHandlerAPI . DMerchant.driverPoolConfig merchantShortId opCity
+driverPoolConfig merchantShortId opCity mbTripDistance mbTripDistance_ = withFlowHandlerAPI . DMerchant.driverPoolConfig merchantShortId opCity mbTripDistance mbTripDistance_
 
 driverPoolConfigUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Meters ->
+  Maybe HighPrecDistance ->
+  Maybe DistanceUnit ->
   SL.Area ->
   Maybe Common.Variant ->
   Maybe Text ->
   Common.DriverPoolConfigUpdateReq ->
   FlowHandler APISuccess
-driverPoolConfigUpdate merchantShortId opCity tripDistance area variant tripCategory = withFlowHandlerAPI . DMerchant.driverPoolConfigUpdate merchantShortId opCity tripDistance area variant tripCategory
+driverPoolConfigUpdate merchantShortId opCity tripDistance mbTripDistance_ distanceUnit area variant tripCategory = withFlowHandlerAPI . DMerchant.driverPoolConfigUpdate merchantShortId opCity tripDistance mbTripDistance_ distanceUnit area variant tripCategory
 
 driverPoolConfigCreate ::
   ShortId DM.Merchant ->
   Context.City ->
   Meters ->
+  Maybe HighPrecDistance ->
+  Maybe DistanceUnit ->
   SL.Area ->
   Maybe Common.Variant ->
   Maybe Text ->
   Common.DriverPoolConfigCreateReq ->
   FlowHandler APISuccess
-driverPoolConfigCreate merchantShortId opCity tripDistance area variant tripCategory = withFlowHandlerAPI . DMerchant.driverPoolConfigCreate merchantShortId opCity tripDistance area variant tripCategory
+driverPoolConfigCreate merchantShortId opCity tripDistance mbTripDistance_ distanceUnit area variant tripCategory = withFlowHandlerAPI . DMerchant.driverPoolConfigCreate merchantShortId opCity tripDistance mbTripDistance_ distanceUnit area variant tripCategory
 
 driverIntelligentPoolConfig ::
   ShortId DM.Merchant ->
@@ -228,11 +234,11 @@ verificationServiceConfigUpdate ::
   FlowHandler APISuccess
 verificationServiceConfigUpdate merchantShortId opCity = withFlowHandlerAPI . DMerchant.verificationServiceConfigUpdate merchantShortId opCity
 
-createFPDriverExtraFee :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> FlowHandler APISuccess
-createFPDriverExtraFee merchantShortId opCity farePolicyId startDistance req = withFlowHandlerAPI $ DMerchant.createFPDriverExtraFee merchantShortId opCity (cast farePolicyId) startDistance req
+createFPDriverExtraFee :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Common.CreateFPDriverExtraFeeReq -> FlowHandler APISuccess
+createFPDriverExtraFee merchantShortId opCity farePolicyId startDistance mbStartDistance_ distanceUnit req = withFlowHandlerAPI $ DMerchant.createFPDriverExtraFee merchantShortId opCity (cast farePolicyId) startDistance mbStartDistance_ distanceUnit req
 
-updateFPDriverExtraFee :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> FlowHandler APISuccess
-updateFPDriverExtraFee merchantShortId opCity farePolicyId startDistance req = withFlowHandlerAPI $ DMerchant.updateFPDriverExtraFee merchantShortId opCity (cast farePolicyId) startDistance req
+updateFPDriverExtraFee :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Common.CreateFPDriverExtraFeeReq -> FlowHandler APISuccess
+updateFPDriverExtraFee merchantShortId opCity farePolicyId startDistance mbStartDistance_ distanceUnit req = withFlowHandlerAPI $ DMerchant.updateFPDriverExtraFee merchantShortId opCity (cast farePolicyId) startDistance mbStartDistance_ distanceUnit req
 
 updateFPPerExtraKmRate :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Meters -> Common.UpdateFPPerExtraKmRateReq -> FlowHandler APISuccess
 updateFPPerExtraKmRate merchantShortId opCity farePolicyId startDistance req = withFlowHandlerAPI $ DMerchant.updateFPPerExtraKmRate merchantShortId opCity (cast farePolicyId) startDistance req

@@ -132,4 +132,27 @@ getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong ra
       where
         mkDriverResult mbDefaultServiceTierForDriver person info location rideToLocation distanceFromDriverToDestination distanceFromDestinationToPickup cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
-          Just $ NearestDriversResultCurrentlyOnRide (cast person.id) person.deviceToken person.language info.onRide location.lat location.lon vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.airConditioned rideToLocation.lat rideToLocation.lon (roundToIntegral $ distanceFromDriverToDestination + distanceFromDestinationToPickup) (roundToIntegral distanceFromDriverToDestination) info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice person.backendConfigVersion person.backendAppVersion
+          Just $
+            NearestDriversResultCurrentlyOnRide
+              { driverId = cast person.id,
+                driverDeviceToken = person.deviceToken,
+                language = person.language,
+                onRide = info.onRide,
+                lat = location.lat,
+                lon = location.lon,
+                variant = vehicle.variant,
+                serviceTier = serviceTier,
+                serviceTierDowngradeLevel = maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver,
+                airConditioned = serviceTierInfo.airConditioned,
+                previousRideDropLat = rideToLocation.lat,
+                previousRideDropLon = rideToLocation.lon,
+                distanceToDriver = roundToIntegral $ distanceFromDriverToDestination + distanceFromDestinationToPickup,
+                distanceFromDriverToDestination = roundToIntegral distanceFromDriverToDestination,
+                mode = info.mode,
+                clientSdkVersion = person.clientSdkVersion,
+                clientBundleVersion = person.clientBundleVersion,
+                clientConfigVersion = person.clientConfigVersion,
+                clientDevice = person.clientDevice,
+                backendConfigVersion = person.backendConfigVersion,
+                backendAppVersion = person.backendAppVersion
+              }

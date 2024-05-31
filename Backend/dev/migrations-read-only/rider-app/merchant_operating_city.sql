@@ -23,3 +23,8 @@ ALTER TABLE atlas_app.merchant_operating_city ADD COLUMN lat double precision NO
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_operating_city ADD COLUMN country text NOT NULL default 'India';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_operating_city ADD COLUMN distance_unit character varying(255) ;

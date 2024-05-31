@@ -7,6 +7,7 @@ import qualified Domain.Types.BusinessEvent
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -20,6 +21,7 @@ instance FromTType' Beam.BusinessEvent Domain.Types.BusinessEvent.BusinessEvent 
         Domain.Types.BusinessEvent.BusinessEvent
           { bookingId = Kernel.Types.Id.Id <$> bookingId,
             distance = Kernel.Types.Common.Meters <$> distance,
+            distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             driverId = Kernel.Types.Id.Id <$> driverId,
             duration = Kernel.Types.Common.Seconds <$> distance,
             eventType = eventType,
@@ -35,6 +37,7 @@ instance ToTType' Beam.BusinessEvent Domain.Types.BusinessEvent.BusinessEvent wh
     Beam.BusinessEventT
       { Beam.bookingId = Kernel.Types.Id.getId <$> bookingId,
         Beam.distance = Kernel.Types.Common.getMeters <$> distance,
+        Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverId = Kernel.Types.Id.getId <$> driverId,
         Beam.duration = Kernel.Types.Common.getSeconds <$> duration,
         Beam.eventType = eventType,

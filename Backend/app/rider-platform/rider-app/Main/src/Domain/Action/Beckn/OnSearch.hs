@@ -175,7 +175,7 @@ data QuoteDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneQuoteDetails
 
 newtype OneWayQuoteDetails = OneWayQuoteDetails
-  { distanceToNearestDriver :: Distance
+  { distanceToNearestDriver :: HighPrecMeters
   }
 
 newtype OneWaySpecialZoneQuoteDetails = OneWaySpecialZoneQuoteDetails
@@ -188,7 +188,7 @@ data InterCityQuoteDetails = InterCityQuoteDetails
     perHourCharge :: Price,
     perExtraMinRate :: Price,
     perExtraKmRate :: Price,
-    kmPerPlannedExtraHour :: Distance, -- it was Kilometers
+    kmPerPlannedExtraHour :: Kilometers,
     plannedPerKmRateOneWay :: Price,
     plannedPerKmRateRoundTrip :: Price,
     perDayMaxHourAllowance :: Hours,
@@ -201,7 +201,7 @@ data RentalQuoteDetails = RentalQuoteDetails
     baseFare :: Price,
     perHourCharge :: Price,
     perExtraMinRate :: Price,
-    includedDistancePerHr :: Distance, -- it was Kilometers
+    includedDistancePerHr :: Kilometers,
     plannedPerKmRate :: Price,
     perExtraKmRate :: Price,
     deadKmFare :: Price,
@@ -341,6 +341,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         clientConfigVersion = searchRequest.clientConfigVersion,
         backendConfigVersion = searchRequest.backendConfigVersion,
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
+        distanceUnit = searchRequest.distanceUnit,
         ..
       }
 
@@ -358,13 +359,13 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
   tripTerms <- buildTripTerms descriptions
   quoteDetails' <- case quoteDetails of
     OneWayDetails oneWayDetails ->
-      pure.DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
+      pure.DQuote.OneWayDetails $ mkOneWayQuoteDetails searchRequest.distanceUnit oneWayDetails
     RentalDetails rentalDetails -> do
-      DQuote.RentalDetails <$> buildRentalDetails rentalDetails
+      DQuote.RentalDetails <$> buildRentalDetails searchRequest.distanceUnit rentalDetails
     OneWaySpecialZoneDetails details -> do
       DQuote.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails details
     InterCityDetails details -> do
-      DQuote.InterCityDetails <$> buildInterCityQuoteDetails details
+      DQuote.InterCityDetails <$> buildInterCityQuoteDetails searchRequest.distanceUnit details
   pure
     DQuote.Quote
       { id = uid,
@@ -388,11 +389,16 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
               { tollCharges = tollChargesInfo'.tollCharges,
                 tollNames = tollChargesInfo'.tollNames
               },
+        distanceUnit = searchRequest.distanceUnit,
         ..
       }
 
-mkOneWayQuoteDetails :: OneWayQuoteDetails -> DQuote.OneWayQuoteDetails
-mkOneWayQuoteDetails OneWayQuoteDetails {..} = DQuote.OneWayQuoteDetails {..}
+mkOneWayQuoteDetails :: DistanceUnit -> OneWayQuoteDetails -> DQuote.OneWayQuoteDetails
+mkOneWayQuoteDetails distanceUnit OneWayQuoteDetails {..} =
+  DQuote.OneWayQuoteDetails
+    { distanceToNearestDriver = convertHighPrecMetersToDistance distanceUnit distanceToNearestDriver,
+      ..
+    }
 
 buildOneWaySpecialZoneQuoteDetails :: MonadFlow m => OneWaySpecialZoneQuoteDetails -> m DSpecialZoneQuote.SpecialZoneQuote
 buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
@@ -402,8 +408,8 @@ buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
       updatedAt = now
   pure DSpecialZoneQuote.SpecialZoneQuote {..}
 
-buildInterCityQuoteDetails :: MonadFlow m => InterCityQuoteDetails -> m DInterCityDetails.InterCityDetails
-buildInterCityQuoteDetails InterCityQuoteDetails {..} = do
+buildInterCityQuoteDetails :: MonadFlow m => DistanceUnit -> InterCityQuoteDetails -> m DInterCityDetails.InterCityDetails
+buildInterCityQuoteDetails distanceUnit InterCityQuoteDetails {..} = do
   let id = Id quoteId
   now <- getCurrentTime
   let createdAt = now
@@ -413,17 +419,28 @@ buildInterCityQuoteDetails InterCityQuoteDetails {..} = do
             DRentalDetails.NightShiftInfo nightShiftInfo''.nightShiftCharge Nothing nightShiftInfo''.nightShiftStart nightShiftInfo''.nightShiftEnd
         )
           <$> nightShiftInfo
-  pure DInterCityDetails.InterCityDetails {nightShiftInfo = nightShiftinfo', ..}
+  pure
+    DInterCityDetails.InterCityDetails
+      { nightShiftInfo = nightShiftinfo',
+        kmPerPlannedExtraHour = convertMetersToDistance distanceUnit . kilometersToMeters $ kmPerPlannedExtraHour,
+        ..
+      }
 
-buildRentalDetails :: MonadFlow m => RentalQuoteDetails -> m DRentalDetails.RentalDetails
-buildRentalDetails RentalQuoteDetails {..} = do
+buildRentalDetails :: MonadFlow m => DistanceUnit -> RentalQuoteDetails -> m DRentalDetails.RentalDetails
+buildRentalDetails distanceUnit RentalQuoteDetails {..} = do
   let quoteId = Id id
       nightShiftinfo' =
         ( \nightShiftInfo'' ->
             DRentalDetails.NightShiftInfo nightShiftInfo''.nightShiftCharge Nothing nightShiftInfo''.nightShiftStart nightShiftInfo''.nightShiftEnd
         )
           <$> nightShiftInfo
-  pure DRentalDetails.RentalDetails {id = quoteId, nightShiftInfo = nightShiftinfo', ..}
+  pure
+    DRentalDetails.RentalDetails
+      { id = quoteId,
+        nightShiftInfo = nightShiftinfo',
+        includedDistancePerHr = convertMetersToDistance distanceUnit . kilometersToMeters $ includedDistancePerHr,
+        ..
+      }
 
 buildTripTerms ::
   MonadFlow m =>

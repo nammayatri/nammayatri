@@ -33,6 +33,7 @@ data DriverStatsT f = DriverStatsT
     earningsMissed :: B.C f Money,
     earningsMissedAmount :: B.C f (Maybe HighPrecMoney),
     totalDistance :: B.C f Double,
+    distanceUnit :: B.C f (Maybe DistanceUnit),
     ridesCancelled :: B.C f (Maybe Int),
     totalRidesAssigned :: B.C f (Maybe Int),
     coinCovertedToCashLeft :: B.C f (Maybe HighPrecMoney),

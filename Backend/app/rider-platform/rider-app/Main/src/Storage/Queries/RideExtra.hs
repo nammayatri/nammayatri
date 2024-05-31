@@ -94,7 +94,7 @@ updateRideRating rideId rideRating = do
 
 updateMultiple :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Ride -> m ()
 updateMultiple rideId ride = do
-  let distanceUnit = ride.chargeableDistance <&> (.unit) -- should be the same for all fields
+  let distanceUnit = ride.distanceUnit
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamR.status ride.status,
@@ -103,7 +103,7 @@ updateMultiple rideId ride = do
       Se.Set BeamR.currency (ride.fare <&> (.currency)),
       Se.Set BeamR.chargeableDistance (distanceToHighPrecMeters <$> ride.chargeableDistance),
       Se.Set BeamR.chargeableDistanceValue $ distanceToHighPrecDistance distanceUnit <$> ride.chargeableDistance,
-      Se.Set BeamR.distanceUnit distanceUnit,
+      Se.Set BeamR.distanceUnit $ Just distanceUnit,
       Se.Set BeamR.rideStartTime ride.rideStartTime,
       Se.Set BeamR.rideEndTime ride.rideEndTime,
       Se.Set BeamR.endOtp ride.endOtp,

@@ -17,7 +17,11 @@ DailyStats:
     currency: Currency
     numRides : Int
     totalDistance : Meters
+    distanceUnit : DistanceUnit
     merchantLocalDate : Day
+
+  beamType:
+    distanceUnit: Maybe DistanceUnit
 
   beamFields:
     totalEarnings:
@@ -29,11 +33,13 @@ DailyStats:
   fromTType:
     totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
 
   toTType:
     totalEarnings: Kernel.Prelude.roundToIntegral|I
     totalEarningsAmount:  Kernel.Prelude.Just|I
     currency: Kernel.Prelude.Just|I
+    distanceUnit: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey

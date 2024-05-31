@@ -15,6 +15,7 @@ import qualified Tools.Beam.UtilsTH
 
 data DailyStats = DailyStats
   { currency :: Kernel.Types.Common.Currency,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     id :: Data.Text.Text,
     merchantLocalDate :: Data.Time.Calendar.Day,

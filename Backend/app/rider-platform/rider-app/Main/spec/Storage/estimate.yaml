@@ -104,6 +104,7 @@ Estimate:
     tollChargesInfo: Maybe TollChargesInfo
     isCustomerPrefferedSearchRoute: Maybe Bool
     isBlockedRoute: Maybe Bool
+    distanceUnit: DistanceUnit
     updatedAt : UTCTime
     createdAt : UTCTime
     validTill : UTCTime
@@ -132,6 +133,7 @@ Estimate:
     estimatedDistance:
       estimatedDistance: Maybe HighPrecMeters
       estimatedDistanceValue: Maybe HighPrecDistance
+    distanceUnit:
       distanceUnit: Maybe DistanceUnit
 
     tripTerms:
@@ -181,7 +183,7 @@ Estimate:
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
     clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion)|E
-
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
 
   toTType:
     maxTotalFare: (mkMaxTotalFare totalFareRange)|E
@@ -202,8 +204,8 @@ Estimate:
     nightShiftStart: (nightShiftInfo <&> (.nightShiftStart))|E
     nightShiftEnd: (nightShiftInfo <&> (.nightShiftEnd))|E
     estimatedDistance: (Kernel.Types.Common.distanceToHighPrecMeters <$> estimatedDistance)|E
-    estimatedDistanceValue: (Kernel.Types.Common.distanceToHighPrecDistance (estimatedDistance <&> (.unit)) <$> estimatedDistance)|E
-    distanceUnit: (estimatedDistance <&> (.unit))|E
+    estimatedDistanceValue: (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> estimatedDistance)|E
+    distanceUnit: Kernel.Prelude.Just|I
     clientBundleVersion: (fmap Kernel.Utils.Version.versionToText clientBundleVersion)|E
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E

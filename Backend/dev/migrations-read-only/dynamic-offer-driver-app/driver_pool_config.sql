@@ -50,3 +50,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN actual_distance
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN time_bounds Text NOT NULL default 'Unbounded';
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ALTER COLUMN on_ride_batch_split_config SET DEFAULT Array ['BatchSplitByPickupDistanceOnRide { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistanceOnRide { batchSplitSize = 1, batchSplitDelay = 4 }'];
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN distance_unit character varying(255) ;

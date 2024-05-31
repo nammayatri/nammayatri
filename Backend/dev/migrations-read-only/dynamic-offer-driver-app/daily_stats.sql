@@ -21,3 +21,8 @@ ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN total_earnings_amount double precision ;
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN currency character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN distance_unit character varying(255) ;

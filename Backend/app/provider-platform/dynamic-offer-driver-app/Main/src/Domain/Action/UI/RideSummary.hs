@@ -30,6 +30,7 @@ data DriverRideSummaryResp = DriverRideSummaryResp
   { earnings :: Money,
     earningsWithCurrency :: PriceAPIEntity,
     rideDistance :: Meters,
+    rideDistanceWithUnit :: Distance,
     rideDate :: Day,
     noOfRides :: Int
   }
@@ -54,6 +55,7 @@ mkRideSummaryList =
           { earnings = roundToIntegral x.totalEarnings,
             earningsWithCurrency = PriceAPIEntity x.totalEarnings x.currency,
             rideDistance = x.totalDistance,
+            rideDistanceWithUnit = convertMetersToDistance x.distanceUnit x.totalDistance,
             rideDate = x.merchantLocalDate,
             noOfRides = x.numRides
           }

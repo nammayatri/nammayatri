@@ -36,6 +36,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     createdAt :: B.C f Data.Time.LocalTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     customerCancellationDues :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverAvailableTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     driverDefaultStepFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     driverDefaultStepFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),

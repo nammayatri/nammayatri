@@ -8,6 +8,7 @@ import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -44,6 +45,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             device = device,
             disabilityTag = disabilityTag,
             distance = Kernel.Utils.Common.mkDistanceWithDefault distanceUnit distanceValue . Kernel.Types.Common.HighPrecMeters <$> distance,
+            distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             estimatedRideDuration = estimatedRideDuration,
             fromLocation = fromLocation',
             id = Kernel.Types.Id.Id id,
@@ -83,15 +85,15 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.device = device,
         Beam.disabilityTag = disabilityTag,
         Beam.distance = Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> distance,
-        Beam.distanceUnit = distance <&> (.unit),
-        Beam.distanceValue = Kernel.Utils.Common.distanceToHighPrecDistance (distance <&> (.unit)) <$> distance,
+        Beam.distanceValue = Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance,
+        Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.estimatedRideDuration = estimatedRideDuration,
         Beam.fromLocationId = Just $ Kernel.Types.Id.getId ((.id) fromLocation),
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAdvanceBookingEnabled = isAdvanceBookingEnabled,
         Beam.language = language,
         Beam.maxDistance = Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> maxDistance,
-        Beam.maxDistanceValue = Kernel.Utils.Common.distanceToHighPrecDistance (distance <&> (.unit)) <$> distance,
+        Beam.maxDistanceValue = Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.returnTime = returnTime,

@@ -18,6 +18,7 @@ data MerchantOperatingCityT f = MerchantOperatingCityT
   { city :: B.C f Kernel.Types.Beckn.Context.City,
     country :: B.C f Kernel.Types.Beckn.Context.Country,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     id :: B.C f Kernel.Prelude.Text,
     language :: B.C f Kernel.External.Types.Language,
     lat :: B.C f Kernel.Prelude.Double,

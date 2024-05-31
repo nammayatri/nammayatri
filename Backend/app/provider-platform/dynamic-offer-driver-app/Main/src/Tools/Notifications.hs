@@ -63,6 +63,7 @@ data EditLocationReq = EditLocationReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
+-- FIXME is it correct?
 data UpdateLocationNotificationReq = UpdateLocationNotificationReq
   { rideId :: Id DRide.Ride,
     origin :: Maybe Location,
@@ -70,8 +71,10 @@ data UpdateLocationNotificationReq = UpdateLocationNotificationReq
     stops :: Maybe [Location],
     bookingUpdateRequestId :: Id DBUR.BookingUpdateRequest,
     newEstimatedDistance :: HighPrecMeters,
+    newEstimatedDistanceWithUnit :: Distance,
     newEstimatedFare :: HighPrecMoney,
     oldEstimatedDistance :: HighPrecMeters,
+    oldEstimatedDistanceWithUnit :: Distance,
     oldEstimatedFare :: HighPrecMoney,
     validTill :: UTCTime
   }
@@ -112,11 +115,10 @@ notifyOnNewSearchRequestAvailable merchantOpCityId personId mbDeviceToken entity
           [ "A new ride for",
             showTimeIst entityData.startTime,
             "is available",
-            show entityData.distanceToPickup.getMeters,
-            "meters away from you. Estimated base fare is",
-            show entityData.baseFare <> " INR, estimated distance is",
-            show $ entityData.distance,
-            "meters"
+            distanceToText entityData.distanceToPickupWithUnit,
+            "away from you. Estimated base fare is",
+            show entityData.baseFare <> " INR, estimated distance is", -- FIXME fix currency
+            maybe "unknown" distanceToText entityData.distanceWithUnit
           ]
 
 -- | Send FCM "cancel" notification to driver
@@ -782,11 +784,10 @@ buildSendSearchRequestNotificationData driverId mbDeviceToken entityData dynamic
           [ "A new ride for",
             cs $ showTimeIst entityData.startTime,
             "is available",
-            show entityData.distanceToPickup.getMeters,
-            "meters away from you. Estimated base fare is",
-            show entityData.baseFare <> " INR, estimated distance is",
-            show $ entityData.distance,
-            "meters"
+            distanceToText entityData.distanceToPickupWithUnit,
+            "away from you. Estimated base fare is",
+            show entityData.baseFare <> " INR, estimated distance is", -- FIXME currency
+            maybe "unknown" distanceToText entityData.distanceWithUnit
           ]
 
 sendSearchRequestToDriverNotification ::

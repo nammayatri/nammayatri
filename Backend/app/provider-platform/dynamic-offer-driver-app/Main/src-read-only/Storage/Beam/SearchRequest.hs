@@ -28,6 +28,7 @@ data SearchRequestT f = SearchRequestT
     customerLanguage :: B.C f (Kernel.Prelude.Maybe Tools.Maps.Language),
     device :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     disabilityTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverDefaultExtraFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     driverDefaultExtraFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),

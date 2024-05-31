@@ -122,8 +122,8 @@ data RideCompletedReq = RideCompletedReq
     fare :: Price,
     totalFare :: Price,
     fareBreakups :: [DFareBreakup],
-    chargeableDistance :: Maybe Distance,
-    traveledDistance :: Maybe Distance,
+    chargeableDistance :: Maybe HighPrecMeters,
+    traveledDistance :: Maybe HighPrecMeters,
     tollConfidence :: Maybe Confidence,
     paymentUrl :: Maybe Text,
     tripEndLocation :: Maybe LatLong,
@@ -137,8 +137,8 @@ data ValidatedRideCompletedReq = ValidatedRideCompletedReq
     fare :: Price,
     totalFare :: Price,
     fareBreakups :: [DFareBreakup],
-    chargeableDistance :: Maybe Distance,
-    traveledDistance :: Maybe Distance,
+    chargeableDistance :: Maybe HighPrecMeters,
+    traveledDistance :: Maybe HighPrecMeters,
     tollConfidence :: Maybe Confidence,
     paymentUrl :: Maybe Text,
     tripEndLocation :: Maybe LatLong,
@@ -287,6 +287,7 @@ rideAssignedReqHandler req = do
             driversPreviousRideDropLoc = previousRideEndPos,
             showDriversPreviousRideDropLoc = isJust previousRideEndPos,
             tollConfidence = Nothing,
+            distanceUnit = booking.distanceUnit,
             ..
           }
 
@@ -358,11 +359,12 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
   mbAdvRide <- QRide.findLatestByDriverPhoneNumber ride.driverMobileNumber
   whenJust mbAdvRide $ do \advRide -> when (advRide.id /= ride.id) $ QRide.updateshowDriversPreviousRideDropLoc False advRide.id
+  let distanceUnit = ride.distanceUnit
   let updRide =
         ride{status = DRide.COMPLETED,
              fare = Just fare,
              totalFare = Just totalFare,
-             chargeableDistance,
+             chargeableDistance = convertHighPrecMetersToDistance distanceUnit <$> chargeableDistance,
              tollConfidence,
              rideEndTime,
              endOdometerReading
@@ -482,7 +484,7 @@ bookingCancelledReqHandler ::
   m ()
 bookingCancelledReqHandler ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason:-" <> show cancellationSource)
-  bookingCancellationReason <- mkBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
+  bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) cancellationSource
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   fork "incrementing fraud counters" $ do
     case mbRide of
@@ -512,18 +514,18 @@ bookingCancelledReqHandler ValidatedBookingCancelledReq {..} = do
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>
-  Id DRB.Booking ->
+  DRB.Booking ->
   Maybe (Id DRide.Ride) ->
   DBCR.CancellationSource ->
-  Id DMerchant.Merchant ->
   m DBCR.BookingCancellationReason
-mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId = do
+mkBookingCancellationReason booking mbRideId cancellationSource = do
   now <- getCurrentTime
   return $
     DBCR.BookingCancellationReason
-      { bookingId = bookingId,
+      { bookingId = booking.id,
+        merchantId = Just booking.merchantId,
+        distanceUnit = booking.distanceUnit,
         rideId = mbRideId,
-        merchantId = Just merchantId,
         source = cancellationSource,
         reasonCode = Nothing,
         reasonStage = Nothing,

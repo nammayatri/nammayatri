@@ -10,11 +10,13 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
+import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data MerchantOperatingCityT f = MerchantOperatingCityT
   { city :: B.C f Kernel.Types.Beckn.Context.City,
     country :: B.C f Kernel.Types.Beckn.Context.Country,
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     id :: B.C f Kernel.Prelude.Text,
     lat :: B.C f Kernel.Prelude.Double,
     long :: B.C f Kernel.Prelude.Double,

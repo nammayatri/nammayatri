@@ -170,6 +170,7 @@ handler merchantId req validatedReq = do
             updatedAt = now,
             estimatedFare = driverQuote.estimatedFare,
             currency = driverQuote.currency,
+            distanceUnit = searchRequest.distanceUnit,
             riderName = Nothing,
             estimatedDuration = searchRequest.estimatedDuration,
             fareParams = driverQuote.fareParams,

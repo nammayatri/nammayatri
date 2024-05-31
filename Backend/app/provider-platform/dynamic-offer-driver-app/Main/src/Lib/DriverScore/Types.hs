@@ -43,7 +43,8 @@ data DriverRideRequest
   | OnNewRideAssigned
       { merchantId :: Id DM.Merchant,
         driverId :: Id DP.Person,
-        currency :: Currency
+        currency :: Currency,
+        distanceUnit :: DistanceUnit
       }
   | OnNewSearchRequestForDrivers
       { driverPool :: [DP.DriverPoolWithActualDistResult],
@@ -57,7 +58,8 @@ data DriverRideRequest
       { merchantId :: Id DM.Merchant,
         driverId :: Id DP.Person,
         rideFare :: Maybe HighPrecMoney,
-        currency :: Currency
+        currency :: Currency,
+        distanceUnit :: DistanceUnit
       }
   | OnRideCompletion
       { merchantId :: Id DM.Merchant,

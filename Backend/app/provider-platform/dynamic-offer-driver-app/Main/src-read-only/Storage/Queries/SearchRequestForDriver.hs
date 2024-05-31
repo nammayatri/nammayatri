@@ -61,6 +61,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.createdAt (Data.Time.utcToLocalTime Data.Time.utc searchRequestValidTill),
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.customerCancellationDues (Kernel.Prelude.Just customerCancellationDues),
+      Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverAvailableTime driverAvailableTime,
       Se.Set Beam.driverDefaultStepFee (Kernel.Prelude.roundToIntegral <$> driverDefaultStepFee),
       Se.Set Beam.driverDefaultStepFeeAmount driverDefaultStepFee,

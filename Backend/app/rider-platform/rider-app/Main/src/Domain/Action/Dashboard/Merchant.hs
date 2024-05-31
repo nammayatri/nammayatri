@@ -430,6 +430,7 @@ createMerchantOperatingCity merchantShortId city req = do
             city = req.city,
             state = req.state,
             country = req.country,
+            distanceUnit = fromMaybe Meter req.distanceUnit,
             createdAt = now,
             updatedAt = now
           }

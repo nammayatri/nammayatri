@@ -31,6 +31,7 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
     vehicleServiceTierName :: B.C f (Maybe Text),
     tripCategory :: B.C f (Maybe DTC.TripCategory),
     distance :: B.C f (Maybe Common.Meters),
+    distanceUnit :: B.C f (Maybe Common.DistanceUnit),
     validTill :: B.C f LocalTime,
     estimatedFare :: B.C f Common.Money,
     estimatedFareAmount :: B.C f (Maybe Common.HighPrecMoney),

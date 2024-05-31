@@ -49,6 +49,7 @@ instance FromTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicyS
             { startDistance = startDistance,
               baseFare = mkAmountWithDefault baseFareAmount baseFare,
               currency = fromMaybe INR currency,
+              distanceUnit = fromMaybe Meter distanceUnit,
               waitingChargeInfo =
                 ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
                   DFP.WaitingChargeInfo
@@ -75,6 +76,7 @@ instance ToTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicySla
         baseFare = roundToIntegral baseFare,
         baseFareAmount = Just baseFare,
         currency = Just currency,
+        distanceUnit = Just distanceUnit,
         platformFeeCharge = DFP.platformFeeCharge <$> platformFeeInfo,
         platformFeeCgst = DFP.cgst <$> platformFeeInfo,
         platformFeeSgst = DFP.sgst <$> platformFeeInfo,

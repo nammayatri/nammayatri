@@ -37,3 +37,8 @@ checkCurrencies :: (MonadThrow m, Log m) => Currency -> [Maybe PriceAPIEntity] -
 checkCurrencies currency fields =
   unless (all (\field -> field.currency == currency) (catMaybes fields)) $
     throwError (InvalidRequest "Invalid currency")
+
+getDistanceUnitByMerchantOpCity :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DistanceUnit
+getDistanceUnitByMerchantOpCity merchantOpCityId = do
+  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  pure merchantOperatingCity.distanceUnit

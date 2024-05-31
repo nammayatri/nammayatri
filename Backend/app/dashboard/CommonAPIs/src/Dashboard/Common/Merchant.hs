@@ -20,6 +20,7 @@ module Dashboard.Common.Merchant
   )
 where
 
+import Control.Applicative ((<|>))
 import Dashboard.Common as Reexport
 import Data.Aeson
 import Data.Either (isRight)
@@ -165,7 +166,7 @@ buildMapsServiceConfig = \case
     googleKey' <- encrypt googleKey
     pure . Maps.GoogleConfig $ Maps.GoogleCfg {googleKey = googleKey', ..}
   OSRMConfigUpdateReq OSRMCfgUpdateReq {..} -> do
-    pure . Maps.OSRMConfig $ Maps.OSRMCfg {..}
+    pure . Maps.OSRMConfig $ Maps.OSRMCfg {radiusDeviation = (distanceToMeters <$> radiusDeviationWithUnit) <|> radiusDeviation, ..}
   MMIConfigUpdateReq MMICfgUpdateReq {..} -> do
     mmiAuthSecret' <- encrypt mmiAuthSecret
     mmiApiKey' <- encrypt mmiApiKey
@@ -273,7 +274,8 @@ instance HideSecrets MMICfgUpdateReq where
 
 data OSRMCfgUpdateReq = OSRMCfgUpdateReq
   { osrmUrl :: BaseUrl,
-    radiusDeviation :: Maybe Meters
+    radiusDeviation :: Maybe Meters,
+    radiusDeviationWithUnit :: Maybe Distance
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -652,7 +654,8 @@ data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
     enableForMerchant :: Bool,
     exophone :: Text,
     rcNumberPrefixList :: Maybe [Text],
-    currency :: Maybe Currency
+    currency :: Maybe Currency,
+    distanceUnit :: Maybe DistanceUnit
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -673,6 +676,7 @@ instance FromMultipart Tmp CreateMerchantOperatingCityReq where
       <*> parseInput "exophone" form
       <*> parseMaybeInput "rcNumberPrefixList" form
       <*> parseMaybeInput "currency" form
+      <*> parseMaybeInput "distanceUnit" form
 
 parseInput :: Read b => Text -> MultipartData tag -> Either String b
 parseInput fieldName form = case lookupInput fieldName form of
@@ -709,7 +713,8 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
     enableForMerchant :: Bool,
     exophone :: Text,
     rcNumberPrefixList :: Maybe [Text],
-    currency :: Maybe Currency
+    currency :: Maybe Currency,
+    distanceUnit :: Maybe DistanceUnit
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -37,6 +37,7 @@ data Quote = Quote
     estimatedFare :: HighPrecMoney,
     currency :: Currency,
     distance :: Maybe Meters,
+    distanceUnit :: DistanceUnit,
     specialLocationTag :: Maybe Text,
     fareParams :: Params.FareParameters,
     farePolicy :: Maybe Policy.FarePolicy,

@@ -31,6 +31,7 @@ data DriverQuoteT f = DriverQuoteT
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     distanceToPickup :: B.C f Kernel.Types.Common.Meters,
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverId :: B.C f Kernel.Prelude.Text,
     driverName :: B.C f Kernel.Prelude.Text,
     driverRating :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),

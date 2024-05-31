@@ -39,7 +39,8 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     parkingCharge :: Maybe HighPrecMoney,
     currency :: Currency,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
-    allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
+    allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
+    distanceUnit :: DistanceUnit,
     govtCharges :: Maybe Double,
     tollCharges :: Maybe HighPrecMoney,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
@@ -50,6 +51,21 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     updatedAt :: UTCTime
   }
   deriving (Generic, Show)
+
+data AllowedTripDistanceBounds = AllowedTripDistanceBounds
+  { maxAllowedTripDistance :: Meters,
+    minAllowedTripDistance :: Meters,
+    distanceUnit :: DistanceUnit
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON)
+
+mkAllowedTripDistanceBounds :: DistanceUnit -> DPM.AllowedTripDistanceBoundsAPIEntity -> AllowedTripDistanceBounds
+mkAllowedTripDistanceBounds distanceUnit DPM.AllowedTripDistanceBoundsAPIEntity {..} =
+  AllowedTripDistanceBounds
+    { maxAllowedTripDistance = maybe maxAllowedTripDistance distanceToMeters maxAllowedTripDistanceWithUnit,
+      minAllowedTripDistance = maybe minAllowedTripDistance distanceToMeters minAllowedTripDistanceWithUnit,
+      distanceUnit
+    }
 
 type FarePolicy = FarePolicyD 'DTC.Safe
 
@@ -100,7 +116,8 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     parkingCharge :: Maybe HighPrecMoney,
     currency :: Currency,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
-    allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
+    allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
+    distanceUnit :: DistanceUnit,
     govtCharges :: Maybe Double,
     tollCharges :: Maybe HighPrecMoney,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,

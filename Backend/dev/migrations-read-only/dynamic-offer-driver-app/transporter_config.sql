@@ -154,3 +154,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fare_recompute_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN arriving_pickup_threshold double precision NOT NULL default 100;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN distance_unit character varying(255) ;

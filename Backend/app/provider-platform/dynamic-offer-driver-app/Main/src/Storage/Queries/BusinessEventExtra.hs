@@ -14,7 +14,6 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.BusinessEvent as BeamBE
 import Storage.Queries.OrphanInstances.BusinessEvent
@@ -29,8 +28,9 @@ logBusinessEvent ::
   Maybe Meters ->
   Maybe Seconds ->
   Maybe (Id Ride) ->
+  DistanceUnit ->
   m ()
-logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distance duration rideId = do
+logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distance duration rideId distanceUnit = do
   uuid <- generateGUID
   now <- getCurrentTime
   let bE =
@@ -43,12 +43,13 @@ logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distan
             whenPoolWasComputed = whenPoolWasComputed,
             vehicleVariant = variant,
             distance = distance,
+            distanceUnit,
             duration = duration,
             rideId = rideId
           }
   createWithKV bE
 
-logDriverAssignedEvent :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Id Booking -> Id Ride -> m ()
+logDriverAssignedEvent :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Id Booking -> Id Ride -> DistanceUnit -> m ()
 logDriverAssignedEvent driverId bookingId rideId = do
   logBusinessEvent
     (Just driverId)
@@ -60,7 +61,7 @@ logDriverAssignedEvent driverId bookingId rideId = do
     Nothing
     (Just rideId)
 
-logRideConfirmedEvent :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m ()
+logRideConfirmedEvent :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> DistanceUnit -> m ()
 logRideConfirmedEvent bookingId = do
   logBusinessEvent
     Nothing
@@ -72,7 +73,7 @@ logRideConfirmedEvent bookingId = do
     Nothing
     Nothing
 
-logRideCommencedEvent :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Id Booking -> Id Ride -> m ()
+logRideCommencedEvent :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Id Booking -> Id Ride -> DistanceUnit -> m ()
 logRideCommencedEvent driverId bookingId rideId = do
   logBusinessEvent
     (Just driverId)

@@ -26,10 +26,20 @@ BookingUpdateRequest:
     currentPointLon : Maybe Double
     oldEstimatedFare : HighPrecMoney
     oldEstimatedDistance : Maybe HighPrecMeters
+    distanceUnit : DistanceUnit
     createdAt: UTCTime
     updatedAt: UTCTime
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+
+  beamType:
+    distanceUnit: Maybe DistanceUnit
+
+  fromTType:
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+
+  toTType:
+    distanceUnit: Kernel.Prelude.Just|I
 
   queries:
     findById:

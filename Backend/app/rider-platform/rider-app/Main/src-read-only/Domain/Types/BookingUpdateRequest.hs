@@ -19,6 +19,7 @@ data BookingUpdateRequest = BookingUpdateRequest
     createdAt :: Kernel.Prelude.UTCTime,
     currentPointLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     currentPointLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     estimatedFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     id :: Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest,

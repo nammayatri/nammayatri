@@ -1043,6 +1043,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             distanceToPickup = sd.actualDistanceToPickup,
             durationToPickup = sd.durationToPickup,
             currency = sd.currency,
+            distanceUnit = sd.distanceUnit,
             createdAt = now,
             updatedAt = now,
             validTill = addUTCTime driverQuoteExpirationSeconds now,
@@ -1108,6 +1109,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               estimatedDistance = Nothing,
               timeDiffFromUtc = Nothing,
               currency = searchReq.currency,
+              distanceUnit = searchReq.distanceUnit,
               ..
             }
       QFP.updateFareParameters fareParams

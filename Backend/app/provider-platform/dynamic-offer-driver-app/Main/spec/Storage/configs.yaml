@@ -52,6 +52,18 @@ DriverPoolConfig:
     thresholdToIgnoreActualDistanceThreshold: Maybe Meters
     actualDistanceThresholdOnRide: Maybe Meters
     currentRideTripCategoryValidForForwardBatching : "[Text]"
+    distanceUnit: DistanceUnit
+
+  beamFields:
+    distanceUnit:
+      distanceUnit: Maybe DistanceUnit
+
+  fromTType:
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+
+  toTType:
+    distanceUnit: Kernel.Prelude.Just|I
+
 
   beamInstance:
     - MakeTableInstances

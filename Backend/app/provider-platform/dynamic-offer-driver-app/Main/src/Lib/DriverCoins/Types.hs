@@ -48,7 +48,7 @@ data DriverCoinsEventType
   | LeaderBoard
   | Training
   | BulkUploadEvent
-  deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
+  deriving (Show)
 
 data CoinMessage
   = CoinAdded
@@ -57,7 +57,5 @@ data CoinMessage
   deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
 
 $(mkBeamInstancesForEnum ''CoinMessage)
-
-$(mkBeamInstancesForEnum ''DriverCoinsEventType)
 
 $(mkBeamInstancesForEnum ''DriverCoinsFunctionType)

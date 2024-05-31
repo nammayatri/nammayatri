@@ -8,6 +8,7 @@ import qualified Domain.Types.Booking
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -47,6 +48,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
             discount = Kernel.Types.Common.mkPrice currency <$> discount,
+            distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             estimatedDistance = Kernel.Utils.Common.mkDistanceWithDefault distanceUnit estimatedDistanceValue <$> estimatedDistance,
             estimatedDuration = estimatedDuration,
             estimatedFare = Kernel.Types.Common.mkPrice currency estimatedFare,
@@ -102,10 +104,10 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.clientSdkVersion = Kernel.Utils.Version.versionToText <$> clientSdkVersion,
         Beam.createdAt = createdAt,
         Beam.discount = discount <&> (.amount),
-        Beam.distanceUnit = distance <&> (.unit),
-        Beam.distanceValue = Kernel.Utils.Common.distanceToHighPrecDistance (distance <&> (.unit)) <$> distance,
+        Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
+        Beam.distanceValue = Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance,
         Beam.estimatedDistance = Kernel.Utils.Common.distanceToHighPrecMeters <$> estimatedDistance,
-        Beam.estimatedDistanceValue = Kernel.Utils.Common.distanceToHighPrecDistance (distance <&> (.unit)) <$> estimatedDistance,
+        Beam.estimatedDistanceValue = Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,
         Beam.currency = Just $ (.currency) estimatedFare,
         Beam.estimatedFare = (.amount) estimatedFare,

@@ -108,12 +108,12 @@ Merchant:
     driverOnTheWayNotifyExpiry: (Just driverOnTheWayNotifyExpiry)|E
     distanceUnit: (Just $ (.unit) editPickupDistanceThreshold)|E
     editPickupDistanceThreshold: Kernel.Utils.Common.distanceToHighPrecMeters|I
-    editPickupDistanceThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance (Just $ (.unit) editPickupDistanceThreshold) editPickupDistanceThreshold)|E
+    editPickupDistanceThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) editPickupDistanceThreshold)|E
     driverDistanceThresholdFromPickup: (Kernel.Utils.Common.distanceToHighPrecMeters driverDistanceThresholdFromPickup)|E
-    driverDistanceThresholdFromPickupValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance (Just $ (.unit) editPickupDistanceThreshold) driverDistanceThresholdFromPickup)|E
+    driverDistanceThresholdFromPickupValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) driverDistanceThresholdFromPickup)|E
     arrivedPickupThreshold: (Just $ Kernel.Utils.Common.distanceToMeters arrivedPickupThreshold)|E
-    arrivedPickupThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance (Just $ (.unit) editPickupDistanceThreshold) arrivedPickupThreshold)|E
-    arrivingPickupThreshold: (Kernel.Utils.Common.distanceToHighPrecDistance (Just $ (.unit) editPickupDistanceThreshold) arrivingPickupThreshold)|E
+    arrivedPickupThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivedPickupThreshold)|E
+    arrivingPickupThreshold: (Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivingPickupThreshold)|E
 
   fromTType:
     defaultCity: city|E

@@ -36,6 +36,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     customerCancellationDues :: Kernel.Types.Common.HighPrecMoney,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverAvailableTime :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     driverDefaultStepFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,

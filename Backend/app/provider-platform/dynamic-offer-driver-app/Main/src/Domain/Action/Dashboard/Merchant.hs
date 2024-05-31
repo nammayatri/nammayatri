@@ -93,6 +93,7 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
+import Kernel.Types.Value (MandatoryValue, OptionalValue)
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
 import qualified Lib.Queries.GateInfo as QGI
@@ -217,9 +218,29 @@ merchantCommonConfig merchantShortId opCity = do
   pure $ mkMerchantCommonConfigRes config
 
 mkMerchantCommonConfigRes :: DTC.TransporterConfig -> Common.MerchantCommonConfigRes
-mkMerchantCommonConfigRes DTC.TransporterConfig {..} = Common.MerchantCommonConfigRes {..}
+mkMerchantCommonConfigRes DTC.TransporterConfig {..} =
+  Common.MerchantCommonConfigRes
+    { pickupLocThresholdWithUnit = convertMetersToDistance distanceUnit pickupLocThreshold,
+      dropLocThresholdWithUnit = convertMetersToDistance distanceUnit dropLocThreshold,
+      actualRideDistanceDiffThresholdWithUnit = convertHighPrecMetersToDistance distanceUnit actualRideDistanceDiffThreshold,
+      upwardsRecomputeBufferWithUnit = convertHighPrecMetersToDistance distanceUnit upwardsRecomputeBuffer,
+      approxRideDistanceDiffThresholdWithUnit = convertHighPrecMetersToDistance distanceUnit approxRideDistanceDiffThreshold,
+      ..
+    }
 
 ---------------------------------------------------------------------
+mkDistanceField :: Meters -> Maybe (MandatoryValue Distance) -> Maybe (MandatoryValue Meters) -> Meters
+mkDistanceField oldField reqFieldWithUnit reqField =
+  fromMaybe oldField $
+    (distanceToMeters . (.value) <$> reqFieldWithUnit)
+      <|> ((.value) <$> reqField)
+
+mkOptionalDistanceField :: Maybe Meters -> Maybe (OptionalValue Distance) -> Maybe (OptionalValue Meters) -> Maybe Meters
+mkOptionalDistanceField oldField reqFieldWithUnit reqField =
+  fromMaybe oldField $
+    ((distanceToMeters <$>) . (.value) <$> reqFieldWithUnit)
+      <|> ((.value) <$> reqField)
+
 merchantCommonConfigUpdate :: ShortId DM.Merchant -> Context.City -> Common.MerchantCommonConfigUpdateReq -> Flow APISuccess
 merchantCommonConfigUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateMerchantCommonConfigUpdateReq req
@@ -227,8 +248,8 @@ merchantCommonConfigUpdate merchantShortId opCity req = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   config <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let updConfig =
-        config{pickupLocThreshold = maybe config.pickupLocThreshold (.value) req.pickupLocThreshold,
-               dropLocThreshold = maybe config.dropLocThreshold (.value) req.dropLocThreshold,
+        config{pickupLocThreshold = mkDistanceField config.pickupLocThreshold req.pickupLocThresholdWithUnit req.pickupLocThreshold,
+               dropLocThreshold = mkDistanceField config.dropLocThreshold req.dropLocThresholdWithUnit req.dropLocThreshold,
                rideTimeEstimatedThreshold = maybe config.rideTimeEstimatedThreshold (.value) req.rideTimeEstimatedThreshold,
                defaultPopupDelay = maybe config.defaultPopupDelay (.value) req.defaultPopupDelay,
                popupDelayToAddAsPenalty = maybe config.popupDelayToAddAsPenalty (.value) req.popupDelayToAddAsPenalty,
@@ -304,10 +325,13 @@ schedulerTrigger merchantShortId _ req = do
         _ -> throwError $ InternalError "invalid job name"
 
 ---------------------------------------------------------------------
-driverPoolConfig :: ShortId DM.Merchant -> Context.City -> Maybe Meters -> Flow Common.DriverPoolConfigRes
-driverPoolConfig merchantShortId opCity mbTripDistance = do
+driverPoolConfig :: ShortId DM.Merchant -> Context.City -> Maybe Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Flow Common.DriverPoolConfigRes
+driverPoolConfig merchantShortId opCity reqTripDistance reqTripDistance_ reqDistanceUnit = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let mbTripDistance =
+        distanceToMeters <$> (Distance <$> reqTripDistance_ <*> reqDistanceUnit)
+          <|> reqTripDistance
   configs <- case mbTripDistance of
     Nothing -> CQDPC.findAllByMerchantOpCityId merchantOpCityId
     Just tripDistance -> maybeToList <$> CQDPC.findByMerchantOpCityIdAndTripDistance merchantOpCityId tripDistance
@@ -317,6 +341,14 @@ mkDriverPoolConfigRes :: DDPC.DriverPoolConfig -> Common.DriverPoolConfigItem
 mkDriverPoolConfigRes DDPC.DriverPoolConfig {..} =
   Common.DriverPoolConfigItem
     { poolSortingType = castDPoolSortingType poolSortingType,
+      minRadiusOfSearchWithUnit = convertMetersToDistance distanceUnit minRadiusOfSearch,
+      maxRadiusOfSearchWithUnit = convertMetersToDistance distanceUnit maxRadiusOfSearch,
+      radiusStepSizeWithUnit = convertMetersToDistance distanceUnit radiusStepSize,
+      actualDistanceThresholdWithUnit = convertMetersToDistance distanceUnit <$> actualDistanceThreshold,
+      tripDistanceWithUnit = convertMetersToDistance distanceUnit tripDistance,
+      radiusShrinkValueForDriversOnRideWithUnit = convertMetersToDistance distanceUnit radiusShrinkValueForDriversOnRide,
+      driverToDestinationDistanceThresholdWithUnit = convertMetersToDistance distanceUnit driverToDestinationDistanceThreshold,
+      actualDistanceThresholdOnRideWithUnit = convertMetersToDistance distanceUnit <$> actualDistanceThresholdOnRide,
       ..
     }
 
@@ -330,25 +362,28 @@ driverPoolConfigUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Meters ->
+  Maybe HighPrecDistance ->
+  Maybe DistanceUnit ->
   SL.Area ->
   Maybe Common.Variant ->
   Maybe Text ->
   Common.DriverPoolConfigUpdateReq ->
   Flow APISuccess
-driverPoolConfigUpdate merchantShortId opCity tripDistance area mbVariant mbTripCategory req = do
+driverPoolConfigUpdate merchantShortId opCity reqTripDistance reqTripDistance_ reqDistanceUnit area mbVariant mbTripCategory req = do
   runRequestValidation Common.validateDriverPoolConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let tripDistance = maybe reqTripDistance distanceToMeters (Distance <$> reqTripDistance_ <*> reqDistanceUnit)
   let tripCategory = fromMaybe "All" mbTripCategory
   let serviceTier = DriverPool.castVariantToServiceTier <$> (castVehicleVariant <$> mbVariant)
   config <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId tripDistance serviceTier tripCategory area >>= fromMaybeM (DriverPoolConfigDoesNotExist merchantOpCityId.getId tripDistance)
   let updConfig =
-        config{minRadiusOfSearch = maybe config.minRadiusOfSearch (.value) req.minRadiusOfSearch,
-               maxRadiusOfSearch = maybe config.maxRadiusOfSearch (.value) req.maxRadiusOfSearch,
-               radiusStepSize = maybe config.radiusStepSize (.value) req.radiusStepSize,
+        config{minRadiusOfSearch = mkDistanceField config.minRadiusOfSearch req.minRadiusOfSearchWithUnit req.minRadiusOfSearch,
+               maxRadiusOfSearch = mkDistanceField config.maxRadiusOfSearch req.maxRadiusOfSearchWithUnit req.maxRadiusOfSearch,
+               radiusStepSize = mkDistanceField config.radiusStepSize req.radiusStepSizeWithUnit req.radiusStepSize,
                driverPositionInfoExpiry = maybe config.driverPositionInfoExpiry (.value) req.driverPositionInfoExpiry,
-               actualDistanceThreshold = maybe config.actualDistanceThreshold (.value) req.actualDistanceThreshold,
-               actualDistanceThresholdOnRide = maybe config.actualDistanceThresholdOnRide (.value) req.actualDistanceThresholdOnRide,
+               actualDistanceThreshold = mkOptionalDistanceField config.actualDistanceThreshold req.actualDistanceThresholdWithUnit req.actualDistanceThreshold,
+               actualDistanceThresholdOnRide = mkOptionalDistanceField config.actualDistanceThresholdOnRide req.actualDistanceThresholdOnRideWithUnit req.actualDistanceThresholdOnRide,
                maxDriverQuotesRequired = maybe config.maxDriverQuotesRequired (.value) req.maxDriverQuotesRequired,
                driverQuoteLimit = maybe config.driverQuoteLimit (.value) req.driverQuoteLimit,
                driverRequestCountLimit = maybe config.driverRequestCountLimit (.value) req.driverRequestCountLimit,
@@ -377,27 +412,31 @@ castOnRideSplitByPickupDistance :: Common.BatchSplitByPickupDistanceOnRide -> Dr
 castOnRideSplitByPickupDistance Common.BatchSplitByPickupDistanceOnRide {..} = DriverPool.BatchSplitByPickupDistanceOnRide {..}
 
 castOnRideRadiusConfig :: Common.OnRideRadiusConfig -> DriverPool.OnRideRadiusConfig
-castOnRideRadiusConfig Common.OnRideRadiusConfig {..} = DriverPool.OnRideRadiusConfig {..}
+castOnRideRadiusConfig Common.OnRideRadiusConfig {..} = DriverPool.OnRideRadiusConfig {onRideRadius = maybe onRideRadius distanceToMeters onRideRadiusWithUnit, ..}
 
 ---------------------------------------------------------------------
 driverPoolConfigCreate ::
   ShortId DM.Merchant ->
   Context.City ->
   Meters ->
+  Maybe HighPrecDistance ->
+  Maybe DistanceUnit ->
   SL.Area ->
   Maybe Common.Variant ->
   Maybe Text ->
   Common.DriverPoolConfigCreateReq ->
   Flow APISuccess
-driverPoolConfigCreate merchantShortId opCity tripDistance area mbVariant mbTripCategory req = do
+driverPoolConfigCreate merchantShortId opCity reqTripDistance reqTripDistance_ reqDistanceUnit area mbVariant mbTripCategory req = do
   runRequestValidation Common.validateDriverPoolConfigCreateReq req
   merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just opCity)
+  let (distanceUnit, merchantOpCityId) = (merchantOpCity.distanceUnit, merchantOpCity.id)
+  let tripDistance = maybe reqTripDistance distanceToMeters (Distance <$> reqTripDistance_ <*> reqDistanceUnit)
   let tripCategory = fromMaybe "All" mbTripCategory
   let serviceTier = DriverPool.castVariantToServiceTier <$> (castVehicleVariant <$> mbVariant)
   mbConfig <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId tripDistance serviceTier tripCategory area
   whenJust mbConfig $ \_ -> throwError (DriverPoolConfigAlreadyExists merchantOpCityId.getId tripDistance)
-  newConfig <- buildDriverPoolConfig merchant.id merchantOpCityId tripDistance area serviceTier tripCategory req
+  newConfig <- buildDriverPoolConfig merchant.id merchantOpCityId tripDistance distanceUnit area serviceTier tripCategory req
   _ <- CQDPC.create newConfig
   -- We should clear cache here, because cache contains list of all configs for current merchantId
   CQDPC.clearCache merchantOpCityId
@@ -409,12 +448,13 @@ buildDriverPoolConfig ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Meters ->
+  DistanceUnit ->
   SL.Area ->
   Maybe DVST.ServiceTierType ->
   Text ->
   Common.DriverPoolConfigCreateReq ->
   m DDPC.DriverPoolConfig
-buildDriverPoolConfig merchantId merchantOpCityId tripDistance area vehicleVariant tripCategory Common.DriverPoolConfigCreateReq {..} = do
+buildDriverPoolConfig merchantId merchantOpCityId tripDistance distanceUnit area vehicleVariant tripCategory Common.DriverPoolConfigCreateReq {..} = do
   now <- getCurrentTime
   id <- generateGUID
   pure
@@ -431,6 +471,13 @@ buildDriverPoolConfig merchantId merchantOpCityId tripDistance area vehicleVaria
         onRideRadiusConfig = map castOnRideRadiusConfig onRideRadiusConfig,
         batchSizeOnRide = batchSizeOnRide,
         timeBounds = Unbounded,
+        minRadiusOfSearch = maybe minRadiusOfSearch distanceToMeters minRadiusOfSearchWithUnit,
+        maxRadiusOfSearch = maybe maxRadiusOfSearch distanceToMeters maxRadiusOfSearchWithUnit,
+        radiusStepSize = maybe radiusStepSize distanceToMeters radiusStepSizeWithUnit,
+        actualDistanceThreshold = distanceToMeters <$> actualDistanceThresholdWithUnit <|> actualDistanceThreshold,
+        radiusShrinkValueForDriversOnRide = maybe radiusShrinkValueForDriversOnRide distanceToMeters radiusShrinkValueForDriversOnRideWithUnit,
+        driverToDestinationDistanceThreshold = maybe driverToDestinationDistanceThreshold distanceToMeters driverToDestinationDistanceThresholdWithUnit,
+        actualDistanceThresholdOnRide = distanceToMeters <$> actualDistanceThresholdOnRideWithUnit <|> actualDistanceThresholdOnRide,
         ..
       }
 
@@ -796,34 +843,37 @@ verificationServiceConfigUpdate merchantShortId city req = do
 
 ---------------------------------------------------------------------
 
-createFPDriverExtraFee :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
-createFPDriverExtraFee merchantShortId city farePolicyId startDistance req = do
+createFPDriverExtraFee :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
+createFPDriverExtraFee merchantShortId city farePolicyId reqStartDistance reqStartDistance_ reqDistanceUnit req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOperatingCity <- CQMOC.getMerchantOpCity merchant (Just city)
+  let startDistance = maybe reqStartDistance distanceToMeters (Distance <$> reqStartDistance_ <*> reqDistanceUnit)
   SMerchant.checkCurrencies merchantOperatingCity.currency [req.minFeeWithCurrency, req.maxFeeWithCurrency, req.stepFeeWithCurrency, req.defaultStepFeeWithCurrency]
   mbFarePolicy <- QFPEFB.findByFarePolicyIdAndStartDistance farePolicyId startDistance
   whenJust mbFarePolicy $ \_ -> throwError $ InvalidRequest "Fare policy with the same id and startDistance already exists"
-  farePolicyDetails <- buildFarePolicy farePolicyId startDistance req
+  farePolicyDetails <- buildFarePolicy farePolicyId startDistance req merchantOperatingCity.distanceUnit
   _ <- QFPEFB.create farePolicyDetails
   CQFP.clearCacheById farePolicyId
   pure Success
   where
-    buildFarePolicy fpId strtDistance request = do
+    buildFarePolicy fpId strtDistance request distanceUnit = do
       let driverExtraFeeBounds =
             DFPEFB.DriverExtraFeeBounds
               { startDistance = strtDistance,
                 minFee = fromMaybe (toHighPrecMoney request.minFee) $ request.minFeeWithCurrency <&> (.amount),
                 maxFee = fromMaybe (toHighPrecMoney request.maxFee) $ request.maxFeeWithCurrency <&> (.amount),
                 stepFee = fromMaybe (toHighPrecMoney request.stepFee) $ request.stepFeeWithCurrency <&> (.amount),
-                defaultStepFee = fromMaybe (toHighPrecMoney request.defaultStepFee) $ request.defaultStepFeeWithCurrency <&> (.amount)
+                defaultStepFee = fromMaybe (toHighPrecMoney request.defaultStepFee) $ request.defaultStepFeeWithCurrency <&> (.amount),
+                distanceUnit
               }
       return (fpId, driverExtraFeeBounds)
 
 ---------------------------------------------------------------------
-updateFPDriverExtraFee :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
-updateFPDriverExtraFee merchantShortId city farePolicyId startDistance req = do
+updateFPDriverExtraFee :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
+updateFPDriverExtraFee merchantShortId city farePolicyId reqStartDistance reqStartDistance_ reqDistanceUnit req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOperatingCity <- CQMOC.getMerchantOpCity merchant (Just city)
+  let startDistance = maybe reqStartDistance distanceToMeters (Distance <$> reqStartDistance_ <*> reqDistanceUnit)
   SMerchant.checkCurrencies merchantOperatingCity.currency [req.minFeeWithCurrency, req.maxFeeWithCurrency, req.stepFeeWithCurrency, req.defaultStepFeeWithCurrency]
   let reqMinFee = fromMaybe (toHighPrecMoney req.minFee) $ req.minFeeWithCurrency <&> (.amount)
   let reqMaxFee = fromMaybe (toHighPrecMoney req.maxFee) $ req.maxFeeWithCurrency <&> (.amount)
@@ -865,7 +915,7 @@ updateFarePolicy _ _ farePolicyId req = do
         FarePolicy.FarePolicy
           { serviceCharge = (req.serviceChargeWithCurrency <&> (.amount)) <|> (toHighPrecMoney <$> req.serviceCharge) <|> serviceCharge,
             nightShiftBounds = req.nightShiftBounds <|> nightShiftBounds,
-            allowedTripDistanceBounds = req.allowedTripDistanceBounds <|> allowedTripDistanceBounds,
+            allowedTripDistanceBounds = (FarePolicy.mkAllowedTripDistanceBounds distanceUnit <$> req.allowedTripDistanceBounds) <|> allowedTripDistanceBounds,
             govtCharges = req.govtCharges <|> govtCharges,
             perMinuteRideExtraTimeCharge = (req.perMinuteRideExtraTimeChargeWithCurrency <&> (.amount)) <|> req.perMinuteRideExtraTimeCharge <|> perMinuteRideExtraTimeCharge,
             tollCharges = req.tollCharges <|> tollCharges,
@@ -884,10 +934,10 @@ updateFarePolicy _ _ farePolicyId req = do
         FarePolicy.RentalDetails _ -> pure fPDetails
         FarePolicy.InterCityDetails _ -> pure fPDetails
 
-    mkUpdatedFPProgressiveDetails FarePolicy.FPProgressiveDetails {..} =
+    mkUpdatedFPProgressiveDetails FarePolicy.FPProgressiveDetails {..} = do
       FarePolicy.FPProgressiveDetails
         { baseFare = fromMaybe baseFare $ (req.baseFareWithCurrency <&> (.amount)) <|> (toHighPrecMoney <$> req.baseFare),
-          baseDistance = fromMaybe baseDistance req.baseDistance,
+          baseDistance = fromMaybe baseDistance $ distanceToMeters <$> req.baseDistanceWithUnit <|> req.baseDistance,
           deadKmFare = fromMaybe deadKmFare $ (req.deadKmFareWithCurrency <&> (.amount)) <|> (toHighPrecMoney <$> req.deadKmFare),
           waitingChargeInfo = FarePolicy.mkWaitingChargeInfo <$> req.waitingChargeInfo <|> waitingChargeInfo,
           nightShiftCharge = FarePolicy.mkNightShiftCharge <$> req.nightShiftCharge <|> nightShiftCharge,
@@ -978,7 +1028,7 @@ upsertFarePolicy merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   logTagInfo "Updating Fare Policies for merchant: " (show merchant.id <> " and city: " <> show opCity)
-  flatFarePolicies <- readCsv req.file
+  flatFarePolicies <- readCsv merchantOpCity.distanceUnit req.file
   logTagInfo "Read file: " (show flatFarePolicies)
   farePolicyErrors <- (foldlM (processFarePolicyGroup merchantOpCity) [] . groupFarePolices) flatFarePolicies
   return $
@@ -989,11 +1039,11 @@ upsertFarePolicy merchantShortId opCity req = do
   where
     cleanField = replaceEmpty . T.strip
 
-    readCsv csvFile = do
+    readCsv distanceUnit csvFile = do
       csvData <- L.runIO $ BS.readFile csvFile
       case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector FarePolicyCSVRow)) of
         Left err -> throwError (InvalidRequest $ show err)
-        Right (_, v) -> V.imapM makeFarePolicy v >>= (pure . V.toList)
+        Right (_, v) -> V.imapM (makeFarePolicy distanceUnit) v >>= (pure . V.toList)
 
     readCSVField :: Read a => Int -> Text -> Text -> Flow a
     readCSVField idx fieldValue fieldName =
@@ -1025,7 +1075,7 @@ upsertFarePolicy merchantShortId opCity req = do
                 let driverExtraFeeBoundsDuplicateRemoved = (NE.nubBy (\a b -> a.startDistance == b.startDistance)) <$> driverExtraFeeBounds'
                 farePolicyDetails' <-
                   case farePolicyDetails of
-                    FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {currency = _currency', ..} -> do
+                    FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {currency = _currency', distanceUnit = _distanceUnit', ..} -> do
                       remainingPerKmSections <-
                         mapM
                           ( \f ->
@@ -1065,8 +1115,8 @@ upsertFarePolicy merchantShortId opCity req = do
 
           return errors
 
-    makeFarePolicy :: Int -> FarePolicyCSVRow -> Flow (Context.City, DVST.ServiceTierType, DTC.TripCategory, SL.Area, TimeBound, FarePolicy.FarePolicy)
-    makeFarePolicy idx row = do
+    makeFarePolicy :: DistanceUnit -> Int -> FarePolicyCSVRow -> Flow (Context.City, DVST.ServiceTierType, DTC.TripCategory, SL.Area, TimeBound, FarePolicy.FarePolicy)
+    makeFarePolicy distanceUnit idx row = do
       now <- getCurrentTime
       let createdAt = now
       let updatedAt = now
@@ -1098,7 +1148,7 @@ upsertFarePolicy merchantShortId opCity req = do
       let nightShiftBounds = Just $ Common.NightShiftBounds nightShiftStart nightShiftEnd
       minAllowedTripDistance :: Meters <- readCSVField idx row.minAllowedTripDistance "Min Allowed Trip Distance"
       maxAllowedTripDistance :: Meters <- readCSVField idx row.maxAllowedTripDistance "Max Allowed Trip Distance"
-      let allowedTripDistanceBounds = Just $ Common.AllowedTripDistanceBounds maxAllowedTripDistance minAllowedTripDistance
+      let allowedTripDistanceBounds = Just $ FarePolicy.AllowedTripDistanceBounds {distanceUnit, minAllowedTripDistance, maxAllowedTripDistance}
       let serviceCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.serviceCharge "Service Charge"
       let tollCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.tollCharges "Toll Charge"
       let perMinuteRideExtraTimeCharge = Nothing
@@ -1154,7 +1204,7 @@ upsertFarePolicy merchantShortId opCity req = do
                       }
             startDistance :: Meters <- readCSVField idx row.extraKmRateStartDistance "Extra Km Rate Start Distance"
             perExtraKmRate :: HighPrecMoney <- readCSVField idx row.perExtraKmRate "Per Extra Km Rate"
-            let perExtraKmRateSections = NE.fromList $ [FarePolicy.FPProgressiveDetailsPerExtraKmRateSection startDistance perExtraKmRate]
+            let perExtraKmRateSections = NE.fromList [FarePolicy.FPProgressiveDetailsPerExtraKmRateSection {startDistance, distanceUnit, perExtraKmRate}]
             return $ FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {nightShiftCharge = Just nightCharges, ..}
           _ -> throwError $ InvalidRequest "Fare Policy Type not supported"
 
@@ -1381,7 +1431,8 @@ createMerchantOperatingCity merchantShortId city req = do
             country = req.country,
             supportNumber = req.supportNumber <|> baseCity.supportNumber,
             language = fromMaybe baseCity.language req.primaryLanguage,
-            currency = fromMaybe baseCity.currency req.currency
+            currency = fromMaybe baseCity.currency req.currency,
+            distanceUnit = fromMaybe baseCity.distanceUnit req.distanceUnit
           }
 
     buildIntelligentPoolConfig newCityId DDIPC.DriverIntelligentPoolConfig {..} = do
