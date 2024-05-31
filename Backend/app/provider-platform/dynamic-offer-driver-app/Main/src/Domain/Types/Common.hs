@@ -79,16 +79,6 @@ instance ToHttpApiData OneWayMode where
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
-instance FromHttpApiData TripCategory where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData TripCategory where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
-
 $(mkBeamInstancesForEnum ''TripCategory)
 
 instance Show TripCategory where
@@ -150,6 +140,12 @@ instance Read TripCategory where
     where
       app_prec = 10
       stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r
+
+instance FromHttpApiData TripCategory where
+  parseQueryParam = readEither
+
+instance ToHttpApiData TripCategory where
+  toUrlPiece = show
 
 isRideOtpBooking :: TripCategory -> Bool
 isRideOtpBooking (OneWay OneWayRideOtp) = True

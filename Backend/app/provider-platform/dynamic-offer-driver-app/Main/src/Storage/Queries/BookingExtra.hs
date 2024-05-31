@@ -88,15 +88,15 @@ findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbDay status mbTripCat
       let day_ = DT.utctDay now
       pure (DT.UTCTime (DT.addDays (-1) day_) (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)), DT.UTCTime day_ (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)))
   findAllWithOptionsKV
-    [ Se.And
+    [ Se.And $
         [ Se.Is BeamB.startTime $ Se.GreaterThanOrEq from,
           Se.Is BeamB.startTime $ Se.LessThanOrEq to,
           Se.Is BeamB.vehicleVariant $ Se.In serviceTiers,
           Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just merchanOperatingCityId),
           Se.Is BeamB.isScheduled $ Se.Eq (Just isScheduled),
-          Se.Is BeamB.tripCategory $ Se.Eq mbTripCategory,
           Se.Is BeamB.status $ Se.Eq status
         ]
+          <> [Se.Is BeamB.tripCategory $ Se.Eq mbTripCategory | isJust mbTripCategory]
     ]
     (Se.Desc BeamB.startTime)
     (Just limitVal)
