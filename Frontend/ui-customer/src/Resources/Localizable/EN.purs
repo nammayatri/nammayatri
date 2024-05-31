@@ -1087,7 +1087,7 @@ getEN stringKey =
         ADD_TIP -> "Add Tip"
         CHANGE_RIDE_TYPE -> "Change Ride Type"
         TRY_ADDING_TIP_OR_CHANGE_RIDE_TYPE -> "Try adding a tip or changing your ride type"
-        APPLICABLE_TOLL_CHARGES -> "Applicable Toll charges are included in the fares"
+        APPLICABLE_TOLL_CHARGES -> "Toll Charges are included in your fare"
         UPDATE_TIP_STR -> "Update Tip"
         BOOK name -> "Book " <> name
         FARE_FOR limit -> "Fare for " <> limit
@@ -1260,11 +1260,13 @@ getEN stringKey =
         UNKNOWN_ERROR -> "Unknown Error"
         CONNECTION_REFUSED -> "Connection Refused"
         TIMEOUT -> "Timeout"
-        WAS_TOLL_EXP_SMOOTH -> "Was your toll experience smooth?"
+        WAS_TOLL_EXP_SMOOTH -> "Was toll experience smooth?"
         WAS_TOLL_EXP_SMOOTH_DESC -> "Were the toll charges calculated and\ncollected correctly ?"
         WAS_RIDE_SAFE -> "Did you have a safe journey?"
         WAS_RIDE_SAFE_DESC -> "Was your ride satisfactorily safe and\nworry-free?"
         WAS_DRIVER_HELPFUL -> "Did the driver offer assistance?"
-        WAS_DRIVER_HELPFUL_DESC -> "Was your driver understanding of your needs\nand accommodate them on the journey?"
+        WAS_DRIVER_HELPFUL_DESC -> "Was your driver understanding\nof your needs?"
         COLLECT_TOLL_SEP -> "Please collect it separately from customer <b>only if a toll was crossed</b>"
         FINAL_FARE_EXCLUDES_TOLL -> "Final fare excludes toll charges"
+        TOLL_CHARGES_MAYBE_APPLICABLE -> "Toll charges may be applicable"
+        

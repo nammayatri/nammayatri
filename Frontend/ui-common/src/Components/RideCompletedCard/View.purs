@@ -97,7 +97,6 @@ tollTextVew config =
     imageView[
       height $ V 20
     , width $ V 20
-    , visibility config.imageVisibility
     , imageWithFallback config.image 
     ]
   , textView $

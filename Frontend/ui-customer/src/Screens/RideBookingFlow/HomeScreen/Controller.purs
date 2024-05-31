@@ -1326,36 +1326,7 @@ eval (RideCompletedAC (RideCompletedCard.SelectButton selectedYes pageIndex)) st
                 userRespondedIssuesCount = length userRespondedIssues
 
               if noOfAvailableBanners == userRespondedIssuesCount then do
-                let 
-                  postiveResp = filter (\issueResp -> issueResp.selectedYes == Just true) updatedIssueResponseArrObj 
-                  negativeResp = filter (\issueResp -> issueResp.selectedYes == Just false) updatedIssueResponseArrObj
-
-                  hasAssistenceIssue = any (\issueResp -> issueResp.issueType == CTP.Accessibility) negativeResp 
-                  hasSafetyIssue = any (\issueResp -> issueResp.issueType == CTP.NightSafety) negativeResp
-                  hasTollIssue = any (\issueResp -> issueResp.issueType == CTP.TollCharge) negativeResp
-
-                  priorityIssue = case hasSafetyIssue, hasTollIssue of
-                    true, _ -> CTP.NightSafety
-                    false, true -> CTP.TollCharge
-                    _, _ -> CTP.NoIssue
-
-                  ratingUpdatedState = updatedState {
-                    data{
-                      rideCompletedData {
-                        issueReportData {
-                          showIssueBanners = false
-                        }
-                      }
-                    , ratingViewState{
-                        wasOfferedAssistance = Just $ not hasAssistenceIssue
-                      }
-                    }
-                  }
-                
-                if priorityIssue == CTP.NoIssue then 
-                  continue ratingUpdatedState 
-                else 
-                  exit $ GoToIssueReportChatScreenWithIssue ratingUpdatedState priorityIssue
+                continue updatedState{data {rideCompletedData { issueReportData {respondedValidIssues = true}}}}
               else 
                 continue updatedState{data {rideCompletedData { issueReportData {currentPageIndex = if  (pageIndex + 1) < noOfAvailableBanners then pageIndex + 1 else pageIndex}}}}  
             Nothing -> update state
@@ -1364,16 +1335,48 @@ eval (RideCompletedAC (RideCompletedCard.SelectButton selectedYes pageIndex)) st
 
 eval (RideCompletedAC RideCompletedCard.Support) state = continue state {props {callSupportPopUp = true}}
 
-eval (RideCompletedAC RideCompletedCard.RideDetails) state = exit $ RideDetailsScreen state -- TODO needs to fill the data
+eval (RideCompletedAC RideCompletedCard.RideDetails) state = exit $ RideDetailsScreen state 
 
 eval (RideCompletedAC RideCompletedCard.HelpAndSupportAC) state = exit $ GoToHelpAndSupport state
 
 eval (RideCompletedAC RideCompletedCard.GoToSOS) state = exit $ GoToNammaSafety state true false 
 
-eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = do
-  void $ pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
-  if state.data.fareProductType == FPT.RENTAL then continue state{data{fareProductType = FPT.ONE_WAY}} 
-  else updateAndExit state $ SubmitRating state{ data {rideRatingState {rating = state.data.ratingViewState.selectedRating }}}
+eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = 
+  if state.data.rideCompletedData.issueReportData.respondedValidIssues  && state.data.rideCompletedData.issueReportData.showIssueBanners then do
+    let 
+      negativeResp = filter (\issueResp -> issueResp.selectedYes == Just false) state.data.rideCompletedData.issueReportData.customerResponse
+
+      hasAssistenceIssue = any (\issueResp -> issueResp.issueType == CTP.Accessibility) negativeResp 
+      hasSafetyIssue = any (\issueResp -> issueResp.issueType == CTP.NightSafety) negativeResp
+      hasTollIssue = any (\issueResp -> issueResp.issueType == CTP.TollCharge) negativeResp
+
+      priorityIssue = case hasSafetyIssue, hasTollIssue of
+        true, _ -> CTP.NightSafety
+        false, true -> CTP.TollCharge
+        _, _ -> CTP.NoIssue
+
+      ratingUpdatedState = state {
+        data{
+          rideCompletedData {
+            issueReportData {
+              showIssueBanners = false
+            }
+          }
+        , ratingViewState{
+            wasOfferedAssistance = Just $ not hasAssistenceIssue
+          }
+        }
+      }
+    
+    if priorityIssue == CTP.NoIssue then do
+      void $ pure $ toggleBtnLoader "" false
+      continue ratingUpdatedState 
+    else 
+      exit $ GoToIssueReportChatScreenWithIssue ratingUpdatedState priorityIssue
+  else do
+    void $ pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
+    if state.data.fareProductType == FPT.RENTAL then continue state{data{fareProductType = FPT.ONE_WAY}} 
+    else updateAndExit state $ SubmitRating state{ data {rideRatingState {rating = state.data.ratingViewState.selectedRating }}}
 
 ------------------------------- Ride Completed Screen - End --------------------------
 
@@ -3204,7 +3207,7 @@ eval UpdateRateCardCache state = do
                   Just rateCard -> Just $ runFn2 setInCache (show RATE_CARD_INFO) rateCard
         Just val -> Just val
 
-eval (TollChargeAmbigousPopUpAction PopUpModal.OnButton2Click) state = continue state { data { rideCompletedData { issueReportData {showTollChargeAmbigousPopUp = false }}}}
+eval (TollChargeAmbigousPopUpAction PopUpModal.OnButton2Click) state = continue state { data { rideCompletedData { toll {showAmbiguousPopUp = false }}}}
 
 eval _ state = update state
 
