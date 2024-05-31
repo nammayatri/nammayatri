@@ -370,6 +370,7 @@ library
       API.Action.UI.EditLocation
       API.Action.UI.FavouriteDriver
       API.Action.UI.EstimateBP
+      API.Action.UI.FavouriteDriver
       API.Action.UI.FollowRide
       API.Action.UI.FRFSTicketService
       API.Action.UI.Invoice
@@ -378,6 +379,8 @@ library
       API.Action.UI.TicketService
       API.Types.UI.CustomerReferral
       API.Types.UI.EditLocation
+      API.Types.UI.EstimateBP
+      API.Types.UI.FavouriteDriver
       API.Types.UI.FollowRide
       API.Types.UI.FRFSTicketService
       API.Types.UI.Invoice

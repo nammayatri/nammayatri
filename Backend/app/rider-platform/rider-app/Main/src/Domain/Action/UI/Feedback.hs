@@ -22,7 +22,6 @@ where
 import qualified Domain.Action.Internal.Rating as DRating
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.Person as Person
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.VehicleServiceTier as DVST
