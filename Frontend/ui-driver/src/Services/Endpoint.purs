@@ -336,3 +336,6 @@ getRideStatusPastDays _ = (getBaseUrl "") <> "/coins/rideStatusPastDays"
 
 updateAirConditioned :: String -> String
 updateAirConditioned _ = (getBaseUrl "") <> "/driver/updateAirCondition"
+
+scheduleBookingAccept :: String -> String
+scheduleBookingAccept bookingId = (getBaseUrl "") <> "/driver/accept/scheduledBooking?bookingId="<>bookingId

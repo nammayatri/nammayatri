@@ -112,7 +112,7 @@ headerLeft state push  =
             [ width $ V 30
             , height $ V 30
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
-            -- , onClick push $ const $ BackPressed
+            , onClick push $ const $ BackPressed
             , margin $ Margin 5 0 0 0
             , rippleColor Color.rippleShade
             ]
@@ -183,7 +183,7 @@ cabInfoLayout state push =
   , textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text state.data.tripType
+      , text "Rs.2300"
       , textSize FontSize.a_18
       , gravity LEFT 
       , color Color.black900
@@ -769,6 +769,7 @@ acceptButton state push =
         , cornerRadius 8.0
         , gravity CENTER
         , background Color.blue800
+        , onClick push $ const AcceptClick
         ]
         [ textView $ 
             [ width WRAP_CONTENT

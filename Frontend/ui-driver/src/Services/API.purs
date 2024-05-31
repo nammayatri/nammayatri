@@ -4648,3 +4648,28 @@ instance standardEncodeUpdateAirConditionUpdateResponse :: StandardEncode Update
 instance showUpdateAirConditionUpdateResponse :: Show UpdateAirConditionUpdateResponse where show = genericShow
 instance decodeUpdateAirConditionUpdateResponse :: Decode UpdateAirConditionUpdateResponse where decode = defaultDecode
 instance encodeUpdateAirConditionUpdateResponse  :: Encode UpdateAirConditionUpdateResponse where encode = defaultEncode
+
+
+
+
+data ScheduleBookingAcceptReq = ScheduleBookingAcceptReq String 
+
+newtype ScheduleBookingAcceptRes = ScheduleBookingAcceptRes ApiSuccessResult
+
+instance makeScheduleBookingAcceptReq  :: RestEndpoint ScheduleBookingAcceptReq ScheduleBookingAcceptRes where
+    makeRequest reqBody@(ScheduleBookingAcceptReq bookingId) headers = defaultMakeRequest POST (EP.scheduleBookingAccept bookingId) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericScheduleBookingAcceptReq :: Generic ScheduleBookingAcceptReq _
+instance showScheduleBookingAcceptReq :: Show ScheduleBookingAcceptReq where show = genericShow
+instance standardEncodeScheduleBookingAcceptReq :: StandardEncode ScheduleBookingAcceptReq where standardEncode (ScheduleBookingAcceptReq bookingId) = standardEncode{}
+instance decodeScheduleBookingAcceptReq :: Decode ScheduleBookingAcceptReq where decode = defaultDecode
+instance encodeScheduleBookingAcceptReq :: Encode ScheduleBookingAcceptReq where encode = defaultEncode
+
+derive instance genericScheduleBookingAcceptRes :: Generic ScheduleBookingAcceptRes _
+derive instance newtypeScheduleBookingAcceptRes :: Newtype ScheduleBookingAcceptRes _
+instance standardEncodeScheduleBookingAcceptRes :: StandardEncode ScheduleBookingAcceptRes where standardEncode (ScheduleBookingAcceptRes req) = standardEncode req
+instance showScheduleBookingAcceptRes :: Show ScheduleBookingAcceptRes where show = genericShow
+instance decodeScheduleBookingAcceptRes :: Decode ScheduleBookingAcceptRes where decode = defaultDecode
+instance encodeScheduleBookingAcceptRes :: Encode ScheduleBookingAcceptRes where encode = defaultEncode

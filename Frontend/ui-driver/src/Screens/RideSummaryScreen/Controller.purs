@@ -28,11 +28,14 @@ data Action = BackPressed
               | IncludedChargesOpen 
               | PickUpOpen
               | SourceToDestinationActionController SourceToDestinationController.Action
+              | AcceptClick
               | NoAction
 
-data ScreenOutput = GoBack
+data ScreenOutput = GoBack | AcceptScheduleRide
 
-eval ::  Action -> RideSummaryScreenState -> Eval Action ScreenOutput RideSummaryScreenState
+eval :: Action -> RideSummaryScreenState -> Eval Action ScreenOutput RideSummaryScreenState
+eval BackPressed state = exit GoBack
+eval AcceptClick state = exit AcceptScheduleRide
 eval TermsConditionOpen state = do
                   let old = state.props.termsAndConditionOpen
                   continue state{ props{termsAndConditionOpen = not old}}
