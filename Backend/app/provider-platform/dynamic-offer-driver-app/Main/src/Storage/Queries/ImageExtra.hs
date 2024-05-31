@@ -55,9 +55,21 @@ updateVerificationStatus verificationStatus (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
   updateWithKV [Se.Set BeamI.verificationStatus (Just verificationStatus), Se.Set BeamI.updatedAt _now] [Se.Is BeamI.id $ Se.Eq id]
 
+updateVerificationStatusByIdAndType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> DocumentType -> m ())
+updateVerificationStatusByIdAndType verificationStatus (Kernel.Types.Id.Id id) imageType = do
+  updateOneWithKV
+    [Se.Set BeamI.verificationStatus (Just verificationStatus)]
+    [ Se.And
+        [ Se.Is BeamI.id $ Se.Eq id,
+          Se.Is BeamI.imageType $ Se.Eq imageType
+        ]
+    ]
+
 updateVerificationStatusAndFailureReason ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Documents.VerificationStatus -> Kernel.Prelude.Maybe DriverOnboardingError -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
+  (Kernel.Types.Documents.VerificationStatus -> DriverOnboardingError -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
 updateVerificationStatusAndFailureReason verificationStatus failureReason (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set BeamI.verificationStatus (Just verificationStatus), Se.Set BeamI.failureReason failureReason, Se.Set BeamI.updatedAt _now] [Se.Is BeamI.id $ Se.Eq id]
+  updateOneWithKV [Se.Set BeamI.verificationStatus (Just verificationStatus), Se.Set BeamI.failureReason (Just failureReason), Se.Set BeamI.updatedAt _now] [Se.Is BeamI.id $ Se.Eq id]

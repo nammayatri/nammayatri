@@ -996,7 +996,7 @@ registerRCForFleetWithoutDriver merchantShortId opCity fleetOwnerId req = do
   pure Success
 
 createRCInputFromVehicle :: Common.AddVehicleReq -> CreateRCInput
-createRCInputFromVehicle Common.AddVehicleReq {..} =
+createRCInputFromVehicle req@Common.AddVehicleReq {..} =
   CreateRCInput
     { registrationNumber = Just registrationNo,
       fitnessUpto = Nothing,
@@ -1014,7 +1014,9 @@ createRCInputFromVehicle Common.AddVehicleReq {..} =
       manufacturerModel = Just model,
       bodyType = Nothing,
       fuelType = energyType,
-      color = Just colour
+      color = Just colour,
+      dateOfRegistration = req.dateOfRegistration,
+      vehicleModelYear = req.vehicleModelYear
     }
 
 checkRCAssociationForFleet :: Text -> VehicleRegistrationCertificate -> Flow ()

@@ -15,7 +15,8 @@ import Tools.Beam.UtilsTH
 import qualified Tools.Error
 
 data ImageT f = ImageT
-  { failureReason :: B.C f (Kernel.Prelude.Maybe Tools.Error.DriverOnboardingError),
+  { documentExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    failureReason :: B.C f (Kernel.Prelude.Maybe Tools.Error.DriverOnboardingError),
     id :: B.C f Kernel.Prelude.Text,
     imageType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
     merchantId :: B.C f Kernel.Prelude.Text,

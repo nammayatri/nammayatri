@@ -6,6 +6,7 @@ module Storage.Queries.VehicleRegistrationCertificateExtra where
 import Data.Either (fromRight)
 import qualified Database.Beam as B
 import qualified Domain.Types.IdfyVerification as IV
+import Domain.Types.Image
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Vehicle as Vehicle
 import Domain.Types.VehicleRegistrationCertificate
@@ -79,6 +80,9 @@ findByRCAndExpiry certNumber expiry = do
 
 findAllById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
 findAllById rcIds = findAllWithKV [Se.Is BeamVRC.id $ Se.In $ map (.getId) rcIds]
+
+findAllByImageId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Image] -> m [VehicleRegistrationCertificate]
+findAllByImageId imageIds = findAllWithKV [Se.Is BeamVRC.documentImageId $ Se.In $ map (.getId) imageIds]
 
 findLastVehicleRCWrapper :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRCWrapper certNumber = do
