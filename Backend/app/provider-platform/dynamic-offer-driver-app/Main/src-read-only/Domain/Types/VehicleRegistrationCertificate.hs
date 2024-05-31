@@ -18,6 +18,7 @@ import qualified Tools.Beam.UtilsTH
 data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
   { airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     certificateNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
+    dateOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     documentImageId :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     failedRules :: [Kernel.Prelude.Text],
     fitnessExpiry :: Kernel.Prelude.UTCTime,
@@ -38,6 +39,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     vehicleEnergyType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleManufacturer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleModelYear :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     vehicleSeatBelts :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant,
@@ -61,6 +63,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
       VehicleRegistrationCertificate
         { airConditioned = airConditioned entity,
           certificateNumber = certificateNumber_,
+          dateOfRegistration = dateOfRegistration entity,
           documentImageId = documentImageId entity,
           failedRules = failedRules entity,
           fitnessExpiry = fitnessExpiry entity,
@@ -81,6 +84,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
           vehicleEnergyType = vehicleEnergyType entity,
           vehicleManufacturer = vehicleManufacturer entity,
           vehicleModel = vehicleModel entity,
+          vehicleModelYear = vehicleModelYear entity,
           vehicleRating = vehicleRating entity,
           vehicleSeatBelts = vehicleSeatBelts entity,
           vehicleVariant = vehicleVariant entity,
@@ -96,6 +100,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
       ( VehicleRegistrationCertificate
           { airConditioned = airConditioned entity,
             certificateNumber = certificateNumber_,
+            dateOfRegistration = dateOfRegistration entity,
             documentImageId = documentImageId entity,
             failedRules = failedRules entity,
             fitnessExpiry = fitnessExpiry entity,
@@ -116,6 +121,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
             vehicleEnergyType = vehicleEnergyType entity,
             vehicleManufacturer = vehicleManufacturer entity,
             vehicleModel = vehicleModel entity,
+            vehicleModelYear = vehicleModelYear entity,
             vehicleRating = vehicleRating entity,
             vehicleSeatBelts = vehicleSeatBelts entity,
             vehicleVariant = vehicleVariant entity,

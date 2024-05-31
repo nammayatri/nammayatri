@@ -17,6 +17,7 @@ data DriverLicenseT f = DriverLicenseT
   { classOfVehicles :: B.C f [Kernel.Prelude.Text],
     consent :: B.C f Kernel.Prelude.Bool,
     consentTimestamp :: B.C f Kernel.Prelude.UTCTime,
+    dateOfIssue :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     documentImageId1 :: B.C f Kernel.Prelude.Text,
     documentImageId2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverDob :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

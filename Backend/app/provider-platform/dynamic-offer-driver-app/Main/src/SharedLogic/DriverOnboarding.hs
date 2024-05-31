@@ -304,7 +304,9 @@ data CreateRCInput = CreateRCInput
     airConditioned :: Maybe Bool,
     bodyType :: Maybe Text,
     fuelType :: Maybe Text,
-    color :: Maybe Text
+    color :: Maybe Text,
+    dateOfRegistration :: Maybe UTCTime,
+    vehicleModelYear :: Maybe Int
   }
 
 buildRC :: Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> Flow (Maybe VehicleRegistrationCertificate)
@@ -357,6 +359,8 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNu
       luggageCapacity = Nothing,
       vehicleRating = Nothing,
       failedRules = [],
+      dateOfRegistration = input.dateOfRegistration,
+      vehicleModelYear = input.vehicleModelYear,
       createdAt = now,
       updatedAt = now
     }
