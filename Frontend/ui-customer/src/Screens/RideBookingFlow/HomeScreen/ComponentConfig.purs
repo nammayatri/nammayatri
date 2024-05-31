@@ -1021,7 +1021,7 @@ driverInfoCardViewState state = { props:
                                   , showCallPopUp: state.props.showCallPopUp
                                   , isSpecialZone: state.props.isSpecialZone
                                   , estimatedTime : state.data.rideDuration
-                                  , zoneType : state.props.zoneType.priorityTag
+                                  , zoneType : state.props.zoneType
                                   , merchantCity : state.props.city
                                   , showBanner : state.props.currentStage == RideStarted
                                   , isRateCardAvailable : isJust state.data.rateCardCache
@@ -1148,6 +1148,7 @@ driverInfoTransformer state =
     , cityConfig : state.data.currentCityConfig
     , rentalData : cardState.rentalData
     , fareProductType : cardState.fareProductType
+    , spLocationName : cardState.spLocationName
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState

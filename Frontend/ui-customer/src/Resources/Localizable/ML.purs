@@ -1276,3 +1276,5 @@ getML stringKey =
         FINAL_FARE_EXCLUDES_TOLL -> "അന്തിമ നിരക്ക് ടോൾ നിരക്കുകൾ ഒഴിവാക്കുന്നു"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "ടോൾ നിരക്കുകൾ ബാധകമായേക്കാം"
         METRO_BANNER_TITLE appName -> "മെട്രോ ടിക്കറ്റുകൾ ബുക്ക് ചെയ്യുക \n" <> appName <> " ഇപ്പോൾ!"
+        VIEW_ON_GOOGLE_MAPS -> "ഗൂഗിൾ മാപ്പിൽ കാണുക"
+        WALKING_DIRECTIONS_TO_PICKUP -> "പിക്കപ്പിനേയ്ക്ക് നടപടികൾ"

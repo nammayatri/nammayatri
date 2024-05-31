@@ -1274,3 +1274,5 @@ getBN stringKey =
         FINAL_FARE_EXCLUDES_TOLL -> "চূড়ান্ত ভাড়া টোল চার্জ ব্যতীত"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "টোল চার্জ প্রযোজ্য হতে পারে"
         METRO_BANNER_TITLE appName -> "এখন কোচি মেট্রো টিকিট বুক করুন " <> appName <> " এর সাথে"
+        VIEW_ON_GOOGLE_MAPS -> "গুগল ম্যাপে দেখুন"
+        WALKING_DIRECTIONS_TO_PICKUP -> "পিকআপের জন্য হেঁটে যাওয়ার নির্দেশ"

@@ -644,7 +644,7 @@ navigateView push state =
 
 driverInfoView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 driverInfoView push state =
-  let tagConfig = specialZoneTagConfig state.props.zoneType
+  let tagConfig = specialZoneTagConfig state.props.zoneType.priorityTag
       rideStarted = not $ rideNotStarted state
       currentCityConfig = HU.getCityConfig  state.data.config.cityConfig (show state.props.merchantCity)
       brandingBannerViewVis = if currentCityConfig.iopConfig.enable then INVISIBLE else GONE
@@ -661,7 +661,7 @@ driverInfoView push state =
          [ orientation VERTICAL
          , height WRAP_CONTENT
          , width MATCH_PARENT
-         , background if state.props.zoneType /= NOZONE then tagConfig.backgroundColor else Color.grey900
+         , background if state.props.zoneType.priorityTag /= NOZONE then tagConfig.backgroundColor else Color.grey900
          , gravity CENTER
          , cornerRadii $ Corners 24.0 true true false false
          , stroke $ state.data.config.driverInfoConfig.cardStroke
@@ -678,7 +678,7 @@ driverInfoView push state =
                 , gravity CENTER
                 , orientation HORIZONTAL
                 , padding (PaddingVertical 6 6)
-                , visibility $ boolToVisibility $ Array.any (_ == state.props.zoneType) [ METRO, SPECIAL_PICKUP ]
+                , visibility $ boolToVisibility $ Array.any (_ == state.props.zoneType.priorityTag) [ METRO, SPECIAL_PICKUP ]
                 , clickable $ isJust tagConfig.infoPopUpConfig
                 , onClick push $ const $ SpecialZoneInfoTag
                 ][imageView
@@ -692,7 +692,7 @@ driverInfoView push state =
                   [ width WRAP_CONTENT
                   , height WRAP_CONTENT
                   , textSize FontSize.a_14
-                  , accessibility if state.props.zoneType == METRO then ENABLE else DISABLE
+                  , accessibility if state.props.zoneType.priorityTag == METRO then ENABLE else DISABLE
                   , accessibilityHint "Metro Ride"
                   , text tagConfig.text
                   , color Color.white900
@@ -918,11 +918,11 @@ contactView push state =
             , height WRAP_CONTENT
             , color Color.blue900
             , text $ getString SHOW_WALKING_DIRECTION
-            , visibility $ boolToVisibility $ state.props.zoneType == SPECIAL_PICKUP
-            , onClick push $ const $ OnNavigate WALK state.data.sourceLat state.data.sourceLng
+            , visibility $ boolToVisibility $ Array.any (_ == state.props.zoneType.sourceTag) [ AIRPORT, SPECIAL_PICKUP ]
+            , onClick push $ const $ ShowDirections state.data.sourceLat state.data.sourceLng
             ] <> FontStyle.body6 TypoGraphy
          ]
-      , textView [weight 1.0, visibility $ boolToVisibility $ state.props.zoneType /= SPECIAL_PICKUP]
+      , textView [weight 1.0, visibility $ boolToVisibility $ state.props.zoneType.priorityTag /= SPECIAL_PICKUP]
       , chatButtonView push state
     ]
     where 
@@ -1450,7 +1450,7 @@ getTripDetails state = {
 
 driverPickUpStatusText :: DriverInfoCardState -> String -> String
 driverPickUpStatusText state _ = 
-  case state.props.zoneType of
+  case state.props.zoneType.priorityTag of
     SPECIAL_PICKUP -> getString DRIVER_AT_PICKUP_LOCATION
     _ -> if state.data.waitingTime == "--" then getString DRIVER_IS_ON_THE_WAY else getString DRIVER_IS_WAITING_AT_PICKUP 
 

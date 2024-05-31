@@ -24,7 +24,7 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Data.Maybe (Maybe)
 import PrestoDOM
-import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), NavigationMode(..),  FareProductType(..))
+import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), NavigationMode(..),  FareProductType(..), SpecialTags(..))
 import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), FareProductType(..))
 import Components.BannerCarousel as BannerCarousel
 import Common.Types.App as CTP
@@ -54,6 +54,7 @@ data Action = NoAction
             | AddStop 
             | RentalInfo
             | ShowEndOTP
+            | ShowDirections Number Number
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -68,7 +69,7 @@ type DriverInfoCardProps =
     showCallPopUp :: Boolean,
     isSpecialZone :: Boolean,
     estimatedTime :: String,
-    zoneType :: ZoneType,
+    zoneType :: SpecialTags,
     merchantCity :: City,
     showBanner :: Boolean,
     isChatWithEMEnabled :: Boolean,
@@ -125,4 +126,5 @@ type DriverInfoCardData =
   , cityConfig :: CityConfig
   , rentalData :: RentalBookingConfig
   , fareProductType :: FareProductType
+  , spLocationName :: Maybe String
   }

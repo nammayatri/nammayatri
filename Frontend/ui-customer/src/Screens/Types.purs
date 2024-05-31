@@ -1274,6 +1274,8 @@ type DriverInfoCard =
   , fareProductType :: FareProductType
   , driversPreviousRideDropLocLat :: Maybe Number
   , driversPreviousRideDropLocLon :: Maybe Number
+  , spLocationName :: Maybe String
+  , addressWard :: Maybe String
   }
 
 type RatingCard =
@@ -2564,3 +2566,18 @@ data VehicleViewType = LEFT_VIEW | RIGHT_VIEW
 derive instance genericVehicleViewType :: Generic VehicleViewType _
 instance showVehicleViewType :: Show VehicleViewType where show = genericShow
 instance eqVehicleViewType :: Eq VehicleViewType where eq = genericEq
+
+type PickupInstructionsScreenState = {
+  data :: PickupInstructionsScreenData,
+  props :: PickupInstructionsScreenProps
+}
+
+type PickupInstructionsScreenData = {
+  pickupLat :: Number,
+  pickupLong :: Number,
+  pickupInstructions :: Array RC.PickupInstructions
+}
+
+type PickupInstructionsScreenProps = {
+  
+}

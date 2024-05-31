@@ -1276,3 +1276,5 @@ getFR stringKey =
         FINAL_FARE_EXCLUDES_TOLL -> "Le tarif final exclut les frais de péage"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "Des frais de péage peuvent être applicables"
         METRO_BANNER_TITLE appName -> "Réservez des billets de métro avec \n" <> appName <> " maintenant !"
+        VIEW_ON_GOOGLE_MAPS -> "Voir sur Google Maps"
+        WALKING_DIRECTIONS_TO_PICKUP -> "Directions pour marcher jusqu'au lieu de prise en charge"

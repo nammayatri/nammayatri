@@ -472,6 +472,8 @@ dummyDriverInfo =
   , fareProductType : FPT.ONE_WAY
   , driversPreviousRideDropLocLat : Nothing
   , driversPreviousRideDropLocLon : Nothing
+  , spLocationName : Nothing
+  , addressWard : Nothing
   }
 
 dummySettingBar :: SettingSideBarState
@@ -594,7 +596,8 @@ dummyRideBooking = RideBookingRes
   vehicleServiceTierType : Nothing,
   tollConfidence : Nothing,
   driversPreviousRideDropLocLat : Nothing,
-  driversPreviousRideDropLocLon : Nothing
+  driversPreviousRideDropLocLon : Nothing,
+  specialLocationName : Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails

@@ -248,3 +248,6 @@ homeScreen = do
     ReloadFlowStatus updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ CHECK_FLOW_STATUS)
+    ExitToPickupInstructions updatedState lat lon -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GOTO_PICKUP_INSTRUCTIONS updatedState lat lon)

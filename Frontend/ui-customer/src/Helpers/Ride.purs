@@ -176,6 +176,7 @@ checkRideStatus rideAssigned = do
                   (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
                   (RideBookingDetails contents) = bookingDetails.contents
                   (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
+                  (BookingLocationAPIEntity bookingLocationAPIEntity) = resp.fromLocation
                   isDeviceAccessibilityEnabled = isAccessibilityEnabled ""
                   hasAccessibilityIssue' =  resp.hasDisability == Just true || isDeviceAccessibilityEnabled
                   hasSafetyIssue' = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime && not isDeviceAccessibilityEnabled
@@ -218,6 +219,8 @@ checkRideStatus rideAssigned = do
                           , driverInfoCardState {
                             price = resp.estimatedTotalFare,
                             rideId = currRideListItem.id,
+                            spLocationName = resp.specialLocationName,
+                            addressWard = bookingLocationAPIEntity.ward,
                             providerType = maybe CTA.ONUS (\valueAdd -> if valueAdd then CTA.ONUS else CTA.OFFUS) resp.isValueAddNP,
                             rentalData 
                                 { finalDuration = (fromMaybe 0 resp.duration) / (60)

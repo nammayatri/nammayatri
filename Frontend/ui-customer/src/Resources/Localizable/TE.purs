@@ -1289,3 +1289,5 @@ getTE stringKey =
     FINAL_FARE_EXCLUDES_TOLL -> "తుది ఛార్జీ టోల్ ఛార్జీలను మినహాయిస్తుంది"
     TOLL_CHARGES_MAYBE_APPLICABLE -> "టోల్ ఛార్జీలు వర్తించవచ్చు"
     METRO_BANNER_TITLE appName -> "మీరు ఇప్పుడు మెట్రో టికెట్లను బుక్ చేయవచ్చు \n" <> appName <> " తో!"
+    VIEW_ON_GOOGLE_MAPS -> "గూగుల్ మాప్స్‌లో చూడండి"
+    WALKING_DIRECTIONS_TO_PICKUP -> "పికప్ కు వాకింగ్ దిక్కులు"
