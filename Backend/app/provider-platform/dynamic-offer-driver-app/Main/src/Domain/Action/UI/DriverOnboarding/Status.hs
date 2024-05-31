@@ -105,7 +105,7 @@ data VehicleDocumentItem = VehicleDocumentItem
 data DocumentStatusItem = DocumentStatusItem
   { documentType :: DVC.DocumentType,
     verificationStatus :: ResponseStatus,
-    verificationMessage :: Maybe Text
+    verificationMessage :: Maybe Text -- this to be used for showing the message to the driver
   }
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 

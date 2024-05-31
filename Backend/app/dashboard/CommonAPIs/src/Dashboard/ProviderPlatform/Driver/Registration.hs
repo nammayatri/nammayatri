@@ -132,10 +132,10 @@ data VInsuranceApproveDetails = VInsuranceApproveDetails
     insuredName :: Maybe Text,
     issueDate :: Maybe UTCTime,
     limitsOfLiability :: Maybe Text,
-    policyExpiry :: UTCTime,
-    policyNumber :: Text,
-    policyProvider :: Text,
-    rcNumber :: Text
+    policyExpiry :: Maybe UTCTime,
+    policyNumber :: Maybe Text,
+    policyProvider :: Maybe Text,
+    rcNumber :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -143,30 +143,53 @@ data VPermitApproveDetails = VPermitApproveDetails
   { documentImageId :: Id Image,
     issueDate :: Maybe UTCTime,
     nameOfPermitHolder :: Maybe Text,
-    permitExpiry :: UTCTime,
-    permitNumber :: Text,
+    permitExpiry :: Maybe UTCTime,
+    permitNumber :: Maybe Text,
     purposeOfJourney :: Maybe Text,
-    rcNumber :: Text,
-    regionCovered :: Text
+    rcNumber :: Maybe Text,
+    regionCovered :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data VPUCApproveDetails = VPUCApproveDetails
   { documentImageId :: Id Image,
-    pucExpiry :: UTCTime,
-    rcNumber :: Text
+    pucExpiry :: Maybe UTCTime,
+    rcNumber :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data RCApproveDetails = RCApproveDetails
   { documentImageId :: Id Image,
-    vehicleVariant :: Maybe Variant
+    vehicleVariant :: Maybe Variant,
+    vehicleNumberPlate :: Maybe Text,
+    vehicleManufacturer :: Maybe Text,
+    vehicleModel :: Maybe Text,
+    vehicleModelYear :: Maybe Int,
+    vehicleColor :: Maybe Text,
+    vehicleDoors :: Maybe Int,
+    vehicleSeatBelts :: Maybe Int,
+    fitnessExpiry :: Maybe UTCTime,
+    permitExpiry :: Maybe UTCTime
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
+data VInspectionApproveDetails = VInspectionApproveDetails
+  { documentImageId :: Id Image,
+    dateOfExpiry :: Maybe UTCTime
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data DLApproveDetails = DLApproveDetails
+  { documentImageId :: Id Image,
+    driverLicenseNumber :: Maybe Text,
+    driverDateOfBirth :: Maybe UTCTime,
+    dateOfExpiry :: Maybe UTCTime
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
 data ApproveDetails
   = RC RCApproveDetails
-  | DL (Id Image)
+  | DL DLApproveDetails
   | UploadProfile (Id Image)
   | SSNApprove Text
   | ProfilePhoto (Id Image)
@@ -174,6 +197,7 @@ data ApproveDetails
   | VehiclePUC VPUCApproveDetails
   | VehicleInsurance VInsuranceApproveDetails
   | VehicleFitnessCertificate FitnessApproveDetails
+  | VehicleInspectionForm VInspectionApproveDetails
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- driver documents list API --------------
@@ -185,14 +209,46 @@ type DocumentsListAPI =
     :> "list"
     :> Get '[JSON] DocumentsListResponse
 
+data DLDetails = DLDetails
+  { driverLicenseNumber :: Text,
+    operatingCity :: Text,
+    driverDateOfBirth :: Maybe UTCTime,
+    classOfVehicles :: [Text],
+    imageId1 :: Text,
+    imageId2 :: Maybe (Text),
+    dateOfIssue :: Maybe UTCTime,
+    createdAt :: UTCTime
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data RCDetails = RCDetails
+  { vehicleRegistrationCertNumber :: Text,
+    imageId :: Text,
+    operatingCity :: Text,
+    dateOfRegistration :: Maybe UTCTime,
+    vehicleCategory :: Maybe Text,
+    airConditioned :: Maybe Bool,
+    vehicleManufacturer :: Maybe Text,
+    vehicleModel :: Maybe Text,
+    vehicleColor :: Maybe Text,
+    vehicleDoors :: Maybe Int,
+    vehicleSeatBelts :: Maybe Int,
+    vehicleModelYear :: Maybe Int,
+    createdAt :: UTCTime
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data DocumentsListResponse = DocumentsListResponse
   { driverLicense :: [Text],
     vehicleRegistrationCertificate :: [Text],
+    driverLicenseDetails :: [DLDetails],
+    vehicleRegistrationCertificateDetails :: [RCDetails],
     vehicleInsurance :: [Text],
     uploadProfile :: [Text],
     ssn :: Maybe Text,
     vehicleFitnessCertificate :: [Text],
-    profilePhoto :: [Text]
+    profilePhoto :: [Text],
+    vehicleInspectionForm :: [Text]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

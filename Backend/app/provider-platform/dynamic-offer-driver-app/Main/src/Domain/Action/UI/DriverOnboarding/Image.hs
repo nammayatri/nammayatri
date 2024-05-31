@@ -220,6 +220,7 @@ mkImage personId_ merchantId s3Path documentType_ mbRcId = do
         verificationStatus = Just Documents.PENDING,
         failureReason = Nothing,
         rcId = getId <$> mbRcId,
+        documentExpiry = Nothing,
         createdAt = now,
         updatedAt = now
       }
