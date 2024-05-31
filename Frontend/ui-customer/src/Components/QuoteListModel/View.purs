@@ -36,8 +36,7 @@ import Prelude (class Eq, Unit, show, bind, const, map, pure, unit, not, void, (
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, rippleColor, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, fillViewport, alpha)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.Types (Stage(..), QuoteListItemState(..), City(..))
-import Storage (KeyStore(..), getValueToLocalStore)
-import Storage (isLocalStageOn)
+import Storage 
 import Styles.Colors as Color
 import Data.String (replaceAll, Pattern(..), Replacement(..))
 import Data.String (null) as DS
@@ -303,6 +302,14 @@ findingRidesView state push =
         , lineHeight "25"
         , fontStyle $ FontStyle.regular LanguageStyle
         ]
+      , textView $ [
+          text $ getString APPLICABLE_TOLL_CHARGES
+        , color Color.black900
+        , gravity CENTER
+        , height WRAP_CONTENT
+        , width MATCH_PARENT
+        , visibility $ boolToVisibility $ (state.vehicleVariant /= "AUTO_RICKSHAW") && (getValueToLocalStore HAS_TOLL_CHARGES == "true")
+        ] <> FontStyle.subHeading2 TypoGraphy
       ]
     , addTipView state push
     ]

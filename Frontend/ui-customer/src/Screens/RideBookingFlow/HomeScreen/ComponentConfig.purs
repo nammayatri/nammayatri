@@ -251,16 +251,17 @@ skipButtonConfig state =
         , margin = MarginTop 22
         , id = "SkipButton"
         , enableLoader = (JB.getBtnLoader "SkipButton")
-        , visibility = boolToVisibility $ doneButtonVisibility 
-        , isClickable = doneButtonVisibility && state.data.ratingViewState.selectedRating > 0 
-        , alpha = if doneButtonVisibility && state.data.ratingViewState.selectedRating > 0  then 1.0 else 0.4
-        , enableRipple = doneButtonVisibility && state.data.ratingViewState.selectedRating > 0 
+        , isClickable = clickale
+        , alpha = if clickale  then 1.0 else 0.4
+        , enableRipple = clickale
         , rippleColor = Color.rippleShade
         }
   in
     primaryButtonConfig'
   where 
-    doneButtonVisibility = (DA.null $ issueReportBannerConfigs state) || (not state.data.rideCompletedData.issueReportData.showIssueBanners)
+    issueFlowClickable = (DA.null $ issueReportBannerConfigs state) || state.data.rideCompletedData.issueReportData.respondedValidIssues
+    ratingFlowClickable = state.data.ratingViewState.selectedRating > 0
+    clickale = if state.data.rideCompletedData.issueReportData.showIssueBanners then  issueFlowClickable else ratingFlowClickable
 
 
 
@@ -1729,7 +1730,7 @@ rideCompletedCardConfig state =
         serviceTierAndAC = serviceTier
       , toll {
           actualAmount = actualTollCharge
-        , text =if actualTollCharge > 0.0 then getString TOLL_CHARGES_INCLUDED  else getString TOLL_ROAD_CHANGED -- Handle after design finalized 
+        , text = if state.data.rideCompletedData.toll.confidence == (Just Unsure) then (getString TOLL_CHARGES_MAYBE_APPLICABLE) else if actualTollCharge > 0.0 then getString TOLL_CHARGES_INCLUDED  else getString TOLL_ROAD_CHANGED -- Handle after design finalized 
         , visibility = boolToVisibility $ (actualTollCharge > 0.0 || (getValueToLocalStore HAS_TOLL_CHARGES == "true")) && serviceTier /= "Auto"
         , image = fetchImage FF_COMMON_ASSET "ny_ic_grey_toll"
         , imageVisibility = boolToVisibility $ actualTollCharge > 0.0

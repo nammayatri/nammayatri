@@ -2054,6 +2054,7 @@ homeScreenFlow = do
           , selectedRide = Nothing 
           } 
         })
+        void $ pure $ toggleBtnLoader "" false
         flowRouter IssueReportChatScreenFlow
     _ -> homeScreenFlow
 
@@ -5632,6 +5633,10 @@ fcmHandler notification state = do
         lift $ lift $ triggerRideStatusEvent notification (Just finalAmount) (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
         setValueToLocalStore PICKUP_DISTANCE "0"
         liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_ride_completed" (rideCompletedDetails (RideBookingRes resp))
+        let 
+          hasAccessibilityIssue' = resp.hasDisability == Just true
+          hasSafetyIssue' = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime
+          hasTollIssue' = getValueToLocalStore HAS_TOLL_CHARGES == "true"
         modifyScreenState
           $ HomeScreenStateType
               ( \homeScreen ->
@@ -5662,10 +5667,14 @@ fcmHandler notification state = do
                       , vehicleVariant = ride.vehicleVariant
                       , rideCompletedData {
                         issueReportData {
-                          hasAccessibilityIssue = resp.hasDisability == Just true
-                        , hasSafetyIssue = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime
-                        , hasTollIssue = getValueToLocalStore HAS_TOLL_CHARGES == "true"
-                        , showTollChargeAmbigousPopUp = resp.tollConfidence == Just CTA.UNSURE
+                          hasAccessibilityIssue = hasAccessibilityIssue'
+                        , hasSafetyIssue = hasSafetyIssue'
+                        , hasTollIssue = hasTollIssue'
+                        , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
+                        }
+                      , toll {
+                          confidence = ride.tollConfidence
+                        , showAmbiguousPopUp = ride.tollConfidence == Just CTA.Unsure
                         }
                         }
                       }

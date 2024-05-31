@@ -123,7 +123,7 @@ sourceToDestinationConfig state = let
       , color = Color.greyDavy
       , ellipsize = false
       }
-    , showDestination = false
+    , showDestination =  state.data.selectedItem.rideType /= ST.RENTAL
     }
   in sourceToDestinationConfig'
 

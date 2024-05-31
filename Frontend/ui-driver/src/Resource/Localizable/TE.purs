@@ -1405,3 +1405,4 @@ getTE stringKey =
         PLEASE_DO_NOT_DEMAND_EXTRA -> "దయచేసి కస్టమర్ నుండి అదనపు డిమాండ్ చేయవద్దు"
         FINAL_FARE_EXCLUDES_TOLL -> "తుది ఛార్జీలు టోల్ ఛార్జీలను మినహాయించాయి"
         PLEASE_COLLECT_SEPARATELY -> "దయచేసి <b>టోల్ దాటితే మాత్రమే</b> కస్టమర్ నుండి విడిగా సేకరించండి"
+        TOLL_CHARGES_MAYBE_APPLICABLE -> "టోల్ ఛార్జీలు వర్తించవచ్చు"

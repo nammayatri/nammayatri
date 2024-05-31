@@ -1405,3 +1405,4 @@ getTA stringKey =
         PLEASE_DO_NOT_DEMAND_EXTRA -> "தயவுசெய்து வாடிக்கையாளரிடம் கூடுதல் கோர வேண்டாம்"
         FINAL_FARE_EXCLUDES_TOLL -> "இறுதிக் கட்டணம் டோல் கட்டணங்களைத் தவிர்த்து"
         PLEASE_COLLECT_SEPARATELY -> "வாடிக்கையாளரிடமிருந்து <b>கட்டணம் கடந்திருந்தால் மட்டுமே</b> தனித்தனியாக சேகரிக்கவும்"
+        TOLL_CHARGES_MAYBE_APPLICABLE -> "டோல் கட்டணங்கள் பொருந்தலாம்"

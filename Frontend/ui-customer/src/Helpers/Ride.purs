@@ -171,11 +171,16 @@ checkRideStatus rideAssigned = do
               else pure unit
             when (isNothing currRideListItem.rideRating) $ do
               when (length listResp.list > 0) $ do
-                let nightSafetyFlow = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime
-                    fareProductType = getFareProductType ((resp.bookingDetails) ^. _fareProductType)
-                    (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
-                    (RideBookingDetails contents) = bookingDetails.contents
-                    (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
+                let 
+                  fareProductType = getFareProductType ((resp.bookingDetails) ^. _fareProductType)
+                  (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+                  (RideBookingDetails contents) = bookingDetails.contents
+                  (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
+                  hasAccessibilityIssue' =  resp.hasDisability == Just true
+                  hasSafetyIssue' = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime
+                  hasTollIssue' = getValueToLocalStore HAS_TOLL_CHARGES == "true"
+
+
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
                     props { currentStage = RideCompleted
                           , estimatedDistance = contents.estimatedDistance
@@ -233,10 +238,14 @@ checkRideStatus rideAssigned = do
                           , fareProductType = fareProductType
                           , rideCompletedData { 
                               issueReportData { 
-                                hasAccessibilityIssue = resp.hasDisability == Just true
-                              , hasSafetyIssue = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime
-                              , hasTollIssue = getValueToLocalStore HAS_TOLL_CHARGES == "true"
-                              , showTollChargeAmbigousPopUp = resp.tollConfidence == Just CTA.UNSURE
+                                hasAccessibilityIssue = hasAccessibilityIssue'
+                              , hasSafetyIssue = hasSafetyIssue'
+                              , hasTollIssue = hasTollIssue'
+                              , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
+                              }
+                            , toll{
+                                confidence = ride.tollConfidence
+                              , showAmbiguousPopUp = ride.tollConfidence == Just CTA.Unsure
                               }
                             }
                           }

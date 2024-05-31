@@ -2403,7 +2403,7 @@ homeScreenFlow = do
                       endRideData { 
                         actualTollCharge = fromMaybe 0.0 response.tollCharges, 
                         estimatedTollCharge = fromMaybe 0.0 response.estimatedTollCharges, 
-                        tollAmbigous = response.tollConfidence == Just CTA.UNSURE,
+                        tollAmbigous = response.tollConfidence == Just CTA.Unsure,
                         actualRideDuration = response.actualDuration,
                         actualRideDistance = response.chargeableDistance, 
                         finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, 

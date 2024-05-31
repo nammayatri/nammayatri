@@ -262,6 +262,7 @@ dummyRideAPIEntity = RideAPIEntity{
   endOtp : Nothing,
   startOdometerReading : Nothing,
   endOdometerReading : Nothing
+, tollConfidence : Nothing
   }
 
 isForLostAndFound :: Boolean

@@ -18,7 +18,7 @@ module Screens.Types where
 import MerchantConfig.Types
 import PrestoDOM.List
 
-import Common.Types.App as Common
+import Common.Types.App as CTA
 import Components.ChatView.Controller (ChatComponentConfig, Config)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.SettingSideBar.Controller (SettingSideBarState)
@@ -52,7 +52,6 @@ import JBridge (Location)
 import Data.HashMap as DHM
 import Data.Map as DM
 import MerchantConfig.Types as MRC
-import Common.Types.App
 
 type Contacts = {
   name :: String,
@@ -153,7 +152,7 @@ type WelcomeScreenState = {
 }
 
 type WelcomeScreenData = {
-  carouselModal :: Common.CarouselModal,
+  carouselModal :: CTA.CarouselModal,
   logField :: Object Foreign
 }
 
@@ -209,7 +208,7 @@ type EnterMobileNumberScreenStateProps = {
 
 type EnterMobileNumberScreenStateData = {
     mobileNumber :: String
-  , countryObj :: Common.CountryCodeObj
+  , countryObj :: CTA.CountryCodeObj
   , tokenId :: String
   , attempts :: Int
   , otp :: String
@@ -217,7 +216,7 @@ type EnterMobileNumberScreenStateData = {
   , timerID :: String
   , config :: AppConfig
   , logField :: Object Foreign
-  , otpChannel :: Common.OTPChannel
+  , otpChannel :: CTA.OTPChannel
 }
 -- ################################################ AccountSetUpScreenState ##################################################
 
@@ -292,7 +291,7 @@ type TripDetailsScreenData =
     tripId :: String,
     config :: AppConfig,
     vehicleVariant :: Maybe VehicleVariant,
-    categories :: Array Common.CategoryListType
+    categories :: Array CTA.CategoryListType
     -- bookingId :: String
   }
 
@@ -466,7 +465,7 @@ type IndividualRideCardState =
   , vehicleModel :: String
   , rideStartTimeUTC :: String
   , providerName :: String
-  , providerType :: Common.ProviderType
+  , providerType :: CTA.ProviderType
   , showRepeatRide :: String
   , rideType :: FareProductType
   , estimatedDistance :: Int
@@ -734,6 +733,12 @@ type BannerCarousalData = {
 
 type RideCompletedData = {
   issueReportData :: IssueReportData
+, toll :: FinalTollData
+}
+
+type FinalTollData = {
+  confidence :: Maybe CTA.Confidence
+, showAmbiguousPopUp :: Boolean
 }
 
 type IssueReportData = {
@@ -744,8 +749,8 @@ type IssueReportData = {
 , hasAccessibilityIssue :: Boolean
 , hasTollIssue :: Boolean
 , hasSafetyIssue :: Boolean
-, showTollChargeAmbigousPopUp :: Boolean
-, customerResponse :: Array {issueType :: CustomerIssueTypes, selectedYes :: Maybe Boolean}
+, customerResponse :: Array {issueType :: CTA.CustomerIssueTypes, selectedYes :: Maybe Boolean}
+, respondedValidIssues :: Boolean
 }
 
 type DisabilityT = 
@@ -791,7 +796,7 @@ type HomeScreenStateProps =
   , customerTip :: CustomerTipProps
   , expiredQuotes :: Array String
   , isCancelRide :: Boolean
-  , cancellationReasons :: Array Common.OptionButtonList
+  , cancellationReasons :: Array CTA.OptionButtonList
   , cancelRideActiveIndex :: Maybe Int
   , cancelDescription :: String
   , cancelReasonCode :: String
@@ -1050,10 +1055,10 @@ type RateCard =
     additionalFare :: Int,
     createdTime :: String,
     tollCharge :: Number,
-    waitingTimeInfo :: Common.WaitingTimeInfo,
-    currentRateCardType :: Common.RateCardType,
-    driverAdditions :: Array Common.FareList,
-    extraFare :: Array Common.FareList,
+    waitingTimeInfo :: CTA.WaitingTimeInfo,
+    currentRateCardType :: CTA.RateCardType,
+    driverAdditions :: Array CTA.FareList,
+    extraFare :: Array CTA.FareList,
     fareInfoDescription :: Array String,
     isNightShift :: Boolean,
     nightChargeFrom :: String,
@@ -1260,9 +1265,9 @@ type DriverInfoCard =
   , serviceTierName :: Maybe String
   , vehicleModel :: String
   , vehicleColor :: String
-  , providerType :: Common.ProviderType
+  , providerType :: CTA.ProviderType
   , providerName :: String
-  , rentalData :: Common.RentalBookingConfig
+  , rentalData :: CTA.RentalBookingConfig
   , fareProductType :: FareProductType
   }
 
@@ -1286,7 +1291,7 @@ type RatingCard =
   , offeredFare :: Int
   , distanceDifference :: Int
   , feedback :: String
-  , feedbackList :: Array Common.FeedbackAnswer
+  , feedbackList :: Array CTA.FeedbackAnswer
   }
 
 type Address =
@@ -1858,7 +1863,7 @@ type RideScheduledScreenData = {
   , baseDuration :: String
   , baseDistance :: String
   , bookingId :: String
-  , cancellationReasons :: Array Common.OptionButtonList
+  , cancellationReasons :: Array CTA.OptionButtonList
   , config :: AppConfig
   , fareProductType :: FareProductType
   , fromScreen :: String
@@ -2236,7 +2241,7 @@ type FollowRideScreenData = {
 , lastReceivedMessage :: ChatComponent
 , logField :: Object Foreign
 , messageToBeSent:: String
-, sosStatus :: Maybe Common.SosStatus
+, sosStatus :: Maybe CTA.SosStatus
 , emergencyAudioStatus :: EmAudioPlayStatus
 , counter :: Int
 }
@@ -2408,7 +2413,7 @@ instance showNavigationMode :: Show NavigationMode where show = genericShow
 
 type HotSpotProps = {
     selectedSpot :: Maybe Location
-  , centroidPoint :: Maybe Common.Paths
+  , centroidPoint :: Maybe CTA.Paths
 }
 
 type HotSpotData = {
@@ -2472,7 +2477,7 @@ type RentalScreenState = {
 }
 
 type RentalScreenData = {
-    rentalBookingData :: Common.RentalBookingConfig
+    rentalBookingData :: CTA.RentalBookingConfig
   , startTimeUTC :: String
   , currentStage :: RentalScreenStage
   , rentalsQuoteList :: Array QuotesList

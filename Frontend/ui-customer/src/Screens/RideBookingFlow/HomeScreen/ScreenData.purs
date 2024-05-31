@@ -586,8 +586,7 @@ dummyRideBooking = RideBookingRes
   estimatedDistance : Nothing,
   estimatedDuration : Nothing,
   rideScheduledTime : Nothing,
-  vehicleServiceTierType : Nothing,
-  tollConfidence : Nothing
+  vehicleServiceTierType : Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails
@@ -666,7 +665,6 @@ initialRideCompletedData = {
   , hasAccessibilityIssue : false
   , hasTollIssue : false
   , hasSafetyIssue : false
-  , showTollChargeAmbigousPopUp : false
   , customerResponse : [
     {
       issueType : TollCharge
@@ -685,6 +683,11 @@ initialRideCompletedData = {
     , selectedYes : Nothing
     }
   ]
+  , respondedValidIssues : false
+  }
+, toll : {
+    confidence : Nothing
+  , showAmbiguousPopUp : false
   }
 }
 
