@@ -69,6 +69,7 @@ library
       API.Internal.CustomerCancellationDues
       API.Internal.DriverInactiveFCM
       API.Internal.DriverReferee
+      API.Internal.FavouriteDrivers
       API.Internal.FeedbackForm
       API.Internal.ReportACIssue
       API.UI
@@ -161,6 +162,7 @@ library
       Domain.Action.Internal.CustomerCancellationDues
       Domain.Action.Internal.DriverInactiveFCM
       Domain.Action.Internal.DriverReferee
+      Domain.Action.Internal.FavouriteDrivers
       Domain.Action.Internal.FeedbackForm
       Domain.Action.Internal.ReportACIssue
       Domain.Action.UI.Cac

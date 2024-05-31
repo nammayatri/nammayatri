@@ -74,7 +74,12 @@ updateIdleTimes driverIds = do
 incFavRiders :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 incFavRiders (Id driverId) = do
   driver <- findById (Id driverId) >>= fromMaybeM (InternalError ("Driver not found with id:" <> driverId))
-  let newFavRiderCount = driver.favRiderCount + 1
+  updateOneWithKV [Se.Set BeamDS.favRiderCount (driver.favRiderCount + 1)] [Se.Is BeamDS.driverId $ Se.Eq driverId]
+
+decFavRiders :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => (Id Driver) -> m ()
+decFavRiders (Id driverId) = do
+  driver <- findById (Id driverId) >>= fromMaybeM (InternalError ("Driver not found with id:" <> driverId))
+  let newFavRiderCount = driver.favRiderCount - 1
   updateOneWithKV [Se.Set BeamDS.favRiderCount newFavRiderCount] [Se.Is BeamDS.driverId $ Se.Eq driverId]
 
 findFavRiderList :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [Text]
@@ -82,13 +87,14 @@ findFavRiderList (Id driverId) = do
   driverDetail <- findById (Id driverId) >>= fromMaybeM (InternalError "Couldn't find kv_configs table for kafka consumer")
   pure $ driverDetail.favRiderList
 
-updateFavRiderList :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Person -> m ()
-updateFavRiderList riderId (Id driverId) = do
+addToFavRiderList :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Person -> m ()
+addToFavRiderList riderId (Id driverId) = do
   favRiderList <- findFavRiderList (Id driverId)
-  let newFavRiderList = favRiderList <> [riderId]
-  updateOneWithKV
-    [Se.Set BeamDS.favRiderList newFavRiderList]
-    [Se.Is BeamDS.driverId (Se.Eq driverId)]
+  when (riderId `notElem` favRiderList) $
+    incFavRiders (Id driverId)
+      >> updateOneWithKV
+        [Se.Set BeamDS.favRiderList (favRiderList <> [riderId])]
+        [Se.Is BeamDS.driverId (Se.Eq driverId)]
 
 fetchAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [DriverStats]
 fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
@@ -260,3 +266,14 @@ setMissedEarnings (Id driverId') missedEarnings = do
       Se.Set BeamDS.earningsMissed $ roundToIntegral missedEarnings
     ]
     [Se.Is BeamDS.driverId (Se.Eq driverId')]
+
+removeFavouriteRider :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => (Id Driver) -> Text -> m ()
+removeFavouriteRider (Id driverId) riderId = do
+  driverDetail <- findById (Id driverId) >>= fromMaybeM (InternalError $ "Rider not found with person id:" <> show riderId)
+  let favRiderList = driverDetail.favRiderList
+      newFavRiderList = filter (/= riderId) favRiderList
+  when (riderId `elem` favRiderList) $
+    decFavRiders (Id driverId)
+      >> updateOneWithKV
+        [Se.Set BeamDS.favRiderList newFavRiderList]
+        [Se.Is BeamDS.driverId (Se.Eq driverId)]

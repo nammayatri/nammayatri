@@ -10,6 +10,7 @@ import qualified API.Internal.Cac as Cac
 import qualified API.Internal.CustomerCancellationDues as CancellationDues
 import qualified API.Internal.DriverInactiveFCM as DriverInactiveFCM
 import qualified API.Internal.DriverReferee as DriverReferee
+import qualified API.Internal.FavouriteDrivers as FavouriteDrivers
 import qualified API.Internal.FeedbackForm as FeedbackForm
 import qualified API.Internal.ReportACIssue as ReportACIssue
 import Environment
@@ -26,6 +27,7 @@ type API =
            :<|> CancellationDues.API
            :<|> DriverInactiveFCM.API
            :<|> Cac.API
+           :<|> FavouriteDrivers.API
        )
 
 handler :: FlowServer API
@@ -38,3 +40,4 @@ handler =
     :<|> CancellationDues.handler
     :<|> DriverInactiveFCM.handler
     :<|> Cac.handler
+    :<|> FavouriteDrivers.handler

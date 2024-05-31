@@ -108,11 +108,20 @@ updateDisputeChancesUsedAndCancellationDues riderId disputeChancesUsed dues = do
     ]
     [Se.Is BeamRD.id (Se.Eq riderId.getId)]
 
-updateFavDriverList :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Person -> m ()
-updateFavDriverList riderId driverId = do
-  riderDetail <- findById (Id riderId) >>= fromMaybeM (InternalError "Couldn't find kv_configs table for kafka consumer")
+addToFavDriverList :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Person -> m ()
+addToFavDriverList riderId driverId = do
+  riderDetail <- findById (Id riderId) >>= fromMaybeM (InternalError $ "Rider not found with person id:" <> show riderId)
   let favDriverList = riderDetail.favDriverList
-      newFavDriverList = favDriverList <> [driverId.getId]
+  when (driverId.getId `notElem` favDriverList) $
+    updateOneWithKV
+      [Se.Set BeamRD.favDriverList (favDriverList <> [driverId.getId])]
+      [Se.Is BeamRD.id (Se.Eq riderId)]
+
+removeFavouriteDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id RiderDetails -> Text -> m ()
+removeFavouriteDriver (Id riderId) driverId = do
+  riderDetail <- findById (Id riderId) >>= fromMaybeM (InternalError $ "Rider not found with person id:" <> show riderId)
+  let favDriverList = riderDetail.favDriverList
+      newFavDriverList = filter (/= driverId) favDriverList
   updateOneWithKV
     [Se.Set BeamRD.favDriverList newFavDriverList]
     [Se.Is BeamRD.id (Se.Eq riderId)]

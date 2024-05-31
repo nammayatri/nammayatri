@@ -13,16 +13,17 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RatingT f = RatingT
-  { createdAt :: B.C f Kernel.Prelude.UTCTime,
-    driverId :: B.C f Data.Text.Text,
-    feedbackDetails :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    id :: B.C f Data.Text.Text,
-    isSafe :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    issueId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    ratingValue :: B.C f Kernel.Prelude.Int,
-    rideId :: B.C f Data.Text.Text,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    wasOfferedAssistance :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)
+  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    driverId :: (B.C f Data.Text.Text),
+    feedbackDetails :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
+    id :: (B.C f Data.Text.Text),
+    isFavourited :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    isSafe :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    issueId :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
+    ratingValue :: (B.C f Kernel.Prelude.Int),
+    rideId :: (B.C f Data.Text.Text),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    wasOfferedAssistance :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool))
   }
   deriving (Generic, B.Beamable)
 
@@ -32,6 +33,6 @@ instance B.Table RatingT where
 
 type Rating = RatingT Identity
 
-$(enableKVPG ''RatingT ['id] [['rideId]])
+$(enableKVPG (''RatingT) [('id)] [[('rideId)]])
 
-$(mkTableInstances ''RatingT "rating")
+$(mkTableInstances (''RatingT) "rating")

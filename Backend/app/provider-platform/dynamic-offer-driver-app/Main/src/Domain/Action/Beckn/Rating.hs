@@ -61,9 +61,8 @@ handler merchantId req ride = do
       issueId = fromMaybe Nothing (req.feedbackDetails !? 2)
       isSafe = Just $ isNothing issueId
   when (isJust req.shouldFavDriver && isJust req.riderId) $ do
-    SQR.updateFavDriverList (fromJust req.riderId) ride.driverId
-    SQD.incFavRiders ride.driverId
-    SQD.updateFavRiderList (fromJust req.riderId) ride.driverId
+    SQR.addToFavDriverList (fromJust req.riderId) ride.driverId
+    SQD.addToFavRiderList (fromJust req.riderId) ride.driverId
   -- case req.shouldFavDriver of
   --   Just True -> do
   --     SQR.updateFavDriverList (fromJust req.riderId) ride.driverId
@@ -74,14 +73,14 @@ handler merchantId req ride = do
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- buildRating ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance
+      newRating <- buildRating ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance req.shouldFavDriver
       QRating.create newRating
       logDebug "Driver Rating Coin Event"
       fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride.chargeableDistance)
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      QRating.updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance rideRating.id driverId
+      QRating.updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver rideRating.id driverId
       logDebug "Driver Rating Coin Event"
       fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride.chargeableDistance)
   calculateAverageRating driverId merchant.minimumDriverRatesCount
@@ -103,8 +102,8 @@ calculateAverageRating personId minimumDriverRatesCount = do
     logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
     void $ QP.updateAverageRating personId newAverage
 
-buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> m DRating.Rating
-buildRating rideId driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance = do
+buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> m DRating.Rating
+buildRating rideId driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance isFavourited = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
   let createdAt = now

@@ -22,7 +22,6 @@ where
 import qualified Domain.Action.Internal.Rating as DRating
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.Person as Person
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -47,7 +46,6 @@ data FeedbackReq = FeedbackReq
     feedbackDetails :: Maybe Text,
     nightSafety :: Maybe Bool,
     shouldFavDriver :: Maybe Bool,
-    riderId :: Maybe (Id Person),
     wasOfferedAssistance :: Maybe Bool
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
@@ -65,8 +63,7 @@ data FeedbackRes = FeedbackRes
     issueId :: Maybe Text,
     vehicleVariant :: DVeh.VehicleVariant,
     vehicleServiceTierType :: DVST.VehicleServiceTierType,
-    shouldFavDriver :: Maybe Bool,
-    riderId :: Maybe (Id Person)
+    shouldFavDriver :: Maybe Bool
   }
 
 feedback :: FeedbackReq -> App.Flow FeedbackRes
@@ -103,7 +100,6 @@ feedback request = do
         vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType,
         vehicleServiceTierType = booking.vehicleServiceTierType,
         shouldFavDriver = request.shouldFavDriver,
-        riderId = request.riderId,
         ..
       }
   where

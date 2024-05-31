@@ -1,5 +1,6 @@
 module SharedLogic.CallBPPInternal where
 
+import API.Types.UI.FavouriteDriver
 import qualified Data.HashMap.Strict as HM
 import Domain.Types.FeedbackForm
 import EulerHS.Types (EulerClient, client)
@@ -151,6 +152,72 @@ getCancellationDuesDetails ::
 getCancellationDuesDetails apiKey internalUrl merchantId phoneNumber countryCode merchantCity = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getCancellationDuesDetailsClient merchantId merchantCity (Just apiKey) (CancellationDuesReq phoneNumber countryCode)) "GetCancellationDuesDetails" getCancellationDuesDetailsApi
+
+data GetFavouriteDriverInfoReq = GetFavouriteDriverInfoReq
+  { customerMobileNumber :: Text,
+    customerMobileCountryCode :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+type GetFavouriteDriversAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> "getFavouriteDrivers"
+    :> Header "token" Text
+    :> ReqBody '[JSON] GetFavouriteDriverInfoReq
+    :> Get '[JSON] [FavouriteDriverResp]
+
+getFavouriteDriversClient :: Text -> Maybe Text -> GetFavouriteDriverInfoReq -> EulerClient [FavouriteDriverResp]
+getFavouriteDriversClient = client getFavouriteDriversApi
+
+getFavouriteDriversApi :: Proxy GetFavouriteDriversAPI
+getFavouriteDriversApi = Proxy
+
+getFavouriteDriverList ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Text ->
+  Text ->
+  m [FavouriteDriverResp]
+getFavouriteDriverList apiKey internalUrl merchantId phoneNumber countryCode = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getFavouriteDriversClient merchantId (Just apiKey) (GetFavouriteDriverInfoReq phoneNumber countryCode)) "GetFavouriteDrivers" getFavouriteDriversApi
+
+type RemoveFavouriteDriverAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> Capture "driverId" Text
+    :> "removeFavouriteDriver"
+    :> Header "token" Text
+    :> ReqBody '[JSON] GetFavouriteDriverInfoReq
+    :> Post '[JSON] APISuccess
+
+removeFavouriteDriversClient :: Text -> Text -> Maybe Text -> GetFavouriteDriverInfoReq -> EulerClient APISuccess
+removeFavouriteDriversClient = client removeFavouriteDriverApi
+
+removeFavouriteDriverApi :: Proxy RemoveFavouriteDriverAPI
+removeFavouriteDriverApi = Proxy
+
+removeFavouriteDriver ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  m APISuccess
+removeFavouriteDriver apiKey internalUrl merchantId phoneNumber countryCode driverId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (removeFavouriteDriversClient merchantId driverId (Just apiKey) (GetFavouriteDriverInfoReq phoneNumber countryCode)) "RemoveFavouriteDriver" removeFavouriteDriverApi
 
 type CustomerCancellationDuesSyncAPI =
   "internal"
