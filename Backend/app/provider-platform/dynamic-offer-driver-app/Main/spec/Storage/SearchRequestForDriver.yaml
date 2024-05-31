@@ -77,6 +77,7 @@ SearchRequestForDriver:
     backendAppVersion : Maybe Text
     isForwardRequest : Bool
     currency: Currency
+    distanceUnit: DistanceUnit
 
   beamType:
     clientBundleVersion: Maybe Text
@@ -91,6 +92,7 @@ SearchRequestForDriver:
     currency: Maybe Currency
     customerCancellationDues: Maybe HighPrecMoney
     isForwardRequest: Maybe Bool
+    distanceUnit: Maybe DistanceUnit
 
   beamFields:
     clientDevice:
@@ -117,7 +119,6 @@ SearchRequestForDriver:
       driverDefaultStepFee: Maybe Money
       driverDefaultStepFeeAmount: Maybe HighPrecMoney
 
-
   fromTType:
     merchantOperatingCityId: Storage.Queries.Transformers.SearchRequestForDriver.getMerchantOpCId merchantOperatingCityId merchantId requestId|EM
     clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
@@ -136,7 +137,7 @@ SearchRequestForDriver:
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency|E
     customerCancellationDues: getCustomerCancellationDues
     isForwardRequest: Kernel.Prelude.fromMaybe False isForwardRequest|E
-
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
 
   toTType:
     merchantOperatingCityId: Just $ Kernel.Types.Id.getId merchantOperatingCityId|E
@@ -164,6 +165,7 @@ SearchRequestForDriver:
     currency: Kernel.Prelude.Just|I
     customerCancellationDues: Kernel.Prelude.Just|I
     isForwardRequest: Kernel.Prelude.Just|I
+    distanceUnit: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey

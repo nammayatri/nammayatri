@@ -115,6 +115,8 @@ type MerchantCommonConfigAPI =
 data MerchantCommonConfigRes = MerchantCommonConfigRes
   { pickupLocThreshold :: Meters,
     dropLocThreshold :: Meters,
+    pickupLocThresholdWithUnit :: Distance,
+    dropLocThresholdWithUnit :: Distance,
     rideTimeEstimatedThreshold :: Seconds,
     includeDriverCurrentlyOnRide :: Bool,
     defaultPopupDelay :: Seconds,
@@ -130,6 +132,9 @@ data MerchantCommonConfigRes = MerchantCommonConfigRes
     actualRideDistanceDiffThreshold :: HighPrecMeters,
     upwardsRecomputeBuffer :: HighPrecMeters,
     approxRideDistanceDiffThreshold :: HighPrecMeters,
+    actualRideDistanceDiffThresholdWithUnit :: Distance,
+    upwardsRecomputeBufferWithUnit :: Distance,
+    approxRideDistanceDiffThresholdWithUnit :: Distance,
     minLocationAccuracy :: Double,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
@@ -150,6 +155,8 @@ type MerchantCommonConfigUpdateAPI =
 data MerchantCommonConfigUpdateReq = MerchantCommonConfigUpdateReq
   { pickupLocThreshold :: Maybe (MandatoryValue Meters),
     dropLocThreshold :: Maybe (MandatoryValue Meters),
+    pickupLocThresholdWithUnit :: Maybe (MandatoryValue Distance),
+    dropLocThresholdWithUnit :: Maybe (MandatoryValue Distance),
     rideTimeEstimatedThreshold :: Maybe (MandatoryValue Seconds),
     defaultPopupDelay :: Maybe (MandatoryValue Seconds),
     popupDelayToAddAsPenalty :: Maybe (OptionalValue Seconds),
@@ -191,6 +198,8 @@ validateMerchantCommonConfigUpdateReq MerchantCommonConfigUpdateReq {..} =
   sequenceA_
     [ validateField "pickupLocThreshold" pickupLocThreshold $ InMaybe $ InValue $ Min @Meters 0,
       validateField "dropLocThreshold" dropLocThreshold $ InMaybe $ InValue $ Min @Meters 0,
+      validateField "pickupLocThresholdWithUnit" pickupLocThresholdWithUnit $ InMaybe $ InValue $ Min @Distance (Distance 0 Meter),
+      validateField "dropLocThresholdWithUnit" dropLocThresholdWithUnit $ InMaybe $ InValue $ Min @Distance (Distance 0 Meter),
       validateField "defaultPopupDelay" defaultPopupDelay $ InMaybe $ InValue $ Min @Seconds 0,
       validateField "popupDelayToAddAsPenalty" popupDelayToAddAsPenalty $ InMaybe $ InValue $ Min @Seconds 0,
       validateField "thresholdCancellationScore" thresholdCancellationScore $ InMaybe $ InValue $ InRange @Int 0 100,
@@ -224,6 +233,8 @@ type DriverPoolConfigAPI =
   "config"
     :> "driverPool"
     :> QueryParam "tripDistance" Meters
+    :> QueryParam "tripDistanceValue" HighPrecDistance
+    :> QueryParam "distanceUnit" DistanceUnit
     :> Get '[JSON] DriverPoolConfigRes
 
 type DriverPoolConfigRes = [DriverPoolConfigItem]
@@ -232,9 +243,14 @@ data DriverPoolConfigItem = DriverPoolConfigItem
   { minRadiusOfSearch :: Meters,
     maxRadiusOfSearch :: Meters,
     radiusStepSize :: Meters,
+    minRadiusOfSearchWithUnit :: Distance,
+    maxRadiusOfSearchWithUnit :: Distance,
+    radiusStepSizeWithUnit :: Distance,
     driverPositionInfoExpiry :: Maybe Seconds,
     actualDistanceThreshold :: Maybe Meters,
     actualDistanceThresholdOnRide :: Maybe Meters,
+    actualDistanceThresholdWithUnit :: Maybe Distance,
+    actualDistanceThresholdOnRideWithUnit :: Maybe Distance,
     maxDriverQuotesRequired :: Int,
     driverQuoteLimit :: Int,
     driverRequestCountLimit :: Int,
@@ -247,6 +263,9 @@ data DriverPoolConfigItem = DriverPoolConfigItem
     tripDistance :: Meters,
     radiusShrinkValueForDriversOnRide :: Meters,
     driverToDestinationDistanceThreshold :: Meters,
+    tripDistanceWithUnit :: Distance,
+    radiusShrinkValueForDriversOnRideWithUnit :: Distance,
+    driverToDestinationDistanceThresholdWithUnit :: Distance,
     driverToDestinationDuration :: Seconds,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
@@ -266,6 +285,8 @@ type DriverPoolConfigUpdateAPI =
     :> "driverPool"
     :> "update"
     :> MandatoryQueryParam "tripDistance" Meters
+    :> QueryParam "tripDistanceValue" HighPrecDistance
+    :> QueryParam "distanceUnit" DistanceUnit
     :> MandatoryQueryParam "area" SL.Area
     :> QueryParam "vehicleVariant" Variant
     :> QueryParam "tripCategory" Text
@@ -276,9 +297,14 @@ data DriverPoolConfigUpdateReq = DriverPoolConfigUpdateReq
   { minRadiusOfSearch :: Maybe (MandatoryValue Meters),
     maxRadiusOfSearch :: Maybe (MandatoryValue Meters),
     radiusStepSize :: Maybe (MandatoryValue Meters),
+    minRadiusOfSearchWithUnit :: Maybe (MandatoryValue Distance),
+    maxRadiusOfSearchWithUnit :: Maybe (MandatoryValue Distance),
+    radiusStepSizeWithUnit :: Maybe (MandatoryValue Distance),
     driverPositionInfoExpiry :: Maybe (OptionalValue Seconds),
     actualDistanceThreshold :: Maybe (OptionalValue Meters),
     actualDistanceThresholdOnRide :: Maybe (OptionalValue Meters),
+    actualDistanceThresholdWithUnit :: Maybe (OptionalValue Distance),
+    actualDistanceThresholdOnRideWithUnit :: Maybe (OptionalValue Distance),
     maxDriverQuotesRequired :: Maybe (MandatoryValue Int),
     driverQuoteLimit :: Maybe (MandatoryValue Int),
     driverRequestCountLimit :: Maybe (MandatoryValue Int),
@@ -302,9 +328,14 @@ validateDriverPoolConfigUpdateReq DriverPoolConfigUpdateReq {..} =
     [ validateField "minRadiusOfSearch" minRadiusOfSearch $ InMaybe $ InValue $ Min @Meters 1,
       validateField "maxRadiusOfSearch" maxRadiusOfSearch $ InMaybe $ InValue $ Min @Meters (maybe 1 (.value) minRadiusOfSearch),
       validateField "radiusStepSize" radiusStepSize $ InMaybe $ InValue $ Min @Meters 1,
+      validateField "minRadiusOfSearchWithUnit" minRadiusOfSearchWithUnit $ InMaybe $ InValue $ Min @Distance (Distance 1 Meter),
+      validateField "maxRadiusOfSearchWithUnit" maxRadiusOfSearchWithUnit $ InMaybe $ InValue $ Min @Distance (maybe (Distance 1 Meter) (.value) minRadiusOfSearchWithUnit),
+      validateField "radiusStepSizeWithUnit" radiusStepSizeWithUnit $ InMaybe $ InValue $ Min @Distance (Distance 1 Meter),
       validateField "driverPositionInfoExpiry" driverPositionInfoExpiry $ InMaybe $ InValue $ Min @Seconds 1,
       validateField "actualDistanceThreshold" actualDistanceThreshold $ InMaybe $ InValue $ Min @Meters 0,
       validateField "actualDistanceThresholdOnRide" actualDistanceThresholdOnRide $ InMaybe $ InValue $ Min @Meters 0,
+      validateField "actualDistanceThresholdWithUnit" actualDistanceThresholdWithUnit $ InMaybe $ InValue $ Min @Distance (Distance 0 Meter),
+      validateField "actualDistanceThresholdOnRideWithUnit" actualDistanceThresholdOnRideWithUnit $ InMaybe $ InValue $ Min @Distance (Distance 0 Meter),
       validateField "maxDriverQuotesRequired" maxDriverQuotesRequired $ InMaybe $ InValue $ Min @Int 1,
       validateField "driverQuoteLimit" driverQuoteLimit $ InMaybe $ InValue $ Min @Int 1,
       validateField "driverRequestCountLimit" driverRequestCountLimit $ InMaybe $ InValue $ Min @Int 1,
@@ -323,6 +354,8 @@ type DriverPoolConfigCreateAPI =
     :> "driverPool"
     :> "create"
     :> MandatoryQueryParam "tripDistance" Meters
+    :> QueryParam "tripDistanceValue" HighPrecDistance
+    :> QueryParam "distanceUnit" DistanceUnit
     :> MandatoryQueryParam "area" SL.Area
     :> QueryParam "vehiclevariant" Variant
     :> QueryParam "tripCategory" Text
@@ -345,15 +378,19 @@ data BatchSplitByPickupDistanceOnRide = BatchSplitByPickupDistanceOnRide
 
 data OnRideRadiusConfig = OnRideRadiusConfig
   { onRideRadius :: Meters,
+    onRideRadiusWithUnit :: Maybe Distance,
     batchNumber :: Int
   }
-  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
   { minRadiusOfSearch :: Meters,
     maxRadiusOfSearch :: Meters,
     radiusStepSize :: Meters,
+    minRadiusOfSearchWithUnit :: Maybe Distance,
+    maxRadiusOfSearchWithUnit :: Maybe Distance,
+    radiusStepSizeWithUnit :: Maybe Distance,
     driverPositionInfoExpiry :: Maybe Seconds,
     actualDistanceThreshold :: Maybe Meters,
     actualDistanceThresholdOnRide :: Maybe Meters,
@@ -362,6 +399,8 @@ data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
     enableForwardBatching :: Bool,
     currentRideTripCategoryValidForForwardBatching :: [Text],
     batchSizeOnRide :: Int,
+    actualDistanceThresholdWithUnit :: Maybe Distance,
+    actualDistanceThresholdOnRideWithUnit :: Maybe Distance,
     maxDriverQuotesRequired :: Int,
     driverQuoteLimit :: Int,
     driverRequestCountLimit :: Int,
@@ -374,6 +413,8 @@ data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
     singleBatchProcessTime :: Seconds,
     radiusShrinkValueForDriversOnRide :: Meters,
     driverToDestinationDistanceThreshold :: Meters,
+    radiusShrinkValueForDriversOnRideWithUnit :: Maybe Distance,
+    driverToDestinationDistanceThresholdWithUnit :: Maybe Distance,
     driverToDestinationDuration :: Seconds
   }
   deriving stock (Show, Generic)
@@ -388,9 +429,14 @@ validateDriverPoolConfigCreateReq DriverPoolConfigCreateReq {..} =
     [ validateField "minRadiusOfSearch" minRadiusOfSearch $ Min @Meters 1,
       validateField "maxRadiusOfSearch" maxRadiusOfSearch $ Min @Meters minRadiusOfSearch,
       validateField "radiusStepSize" radiusStepSize $ Min @Meters 1,
+      validateField "minRadiusOfSearchWithUnit" minRadiusOfSearchWithUnit $ InMaybe $ Min @Distance (Distance 1 Meter),
+      validateField "maxRadiusOfSearchWithUnit" maxRadiusOfSearchWithUnit $ InMaybe $ Min @Distance $ fromMaybe (convertMetersToDistance Meter minRadiusOfSearch) minRadiusOfSearchWithUnit,
+      validateField "radiusStepSizeWithUnit" radiusStepSizeWithUnit $ InMaybe $ Min @Distance (Distance 1 Meter),
       validateField "driverPositionInfoExpiry" driverPositionInfoExpiry $ InMaybe $ Min @Seconds 1,
       validateField "actualDistanceThreshold" actualDistanceThreshold $ InMaybe $ Min @Meters 0,
       validateField "actualDistanceThresholdOnRide" actualDistanceThresholdOnRide $ InMaybe $ Min @Meters 0,
+      validateField "actualDistanceThresholdWithUnit" actualDistanceThresholdWithUnit $ InMaybe $ Min @Distance (Distance 0 Meter),
+      validateField "actualDistanceThresholdOnRideWithUnit" actualDistanceThresholdOnRideWithUnit $ InMaybe $ Min @Distance (Distance 0 Meter),
       validateField "maxDriverQuotesRequired" maxDriverQuotesRequired $ Min @Int 1,
       validateField "driverQuoteLimit" driverQuoteLimit $ Min @Int 1,
       validateField "driverRequestCountLimit" driverRequestCountLimit $ Min @Int 1,
@@ -401,6 +447,8 @@ validateDriverPoolConfigCreateReq DriverPoolConfigCreateReq {..} =
       validateField "singleBatchProcessTime" singleBatchProcessTime $ Min @Seconds 1,
       validateField "radiusShrinkValueForDriversOnRide" radiusShrinkValueForDriversOnRide $ Min @Meters 1,
       validateField "driverToDestinationDistanceThreshold" driverToDestinationDistanceThreshold $ Min @Meters 1,
+      validateField "radiusShrinkValueForDriversOnRideWithUnit" radiusShrinkValueForDriversOnRideWithUnit $ InMaybe $ Min @Distance (Distance 1 Meter),
+      validateField "driverToDestinationDistanceThresholdWithUnit" driverToDestinationDistanceThresholdWithUnit $ InMaybe $ Min @Distance (Distance 1 Meter),
       validateField "driverToDestinationDuration" driverToDestinationDuration $ Min @Seconds 1
     ]
 
@@ -648,6 +696,8 @@ type CreateFPDriverExtraFee =
     :> "driverExtraFeeBounds"
     :> "create"
     :> MandatoryQueryParam "startDistance" Meters
+    :> QueryParam "startDistanceValue" HighPrecDistance
+    :> QueryParam "distanceUnit" DistanceUnit
     :> ReqBody '[JSON] CreateFPDriverExtraFeeReq
     :> Post '[JSON] APISuccess
 
@@ -677,6 +727,8 @@ type UpdateFPDriverExtraFee =
     :> "driverExtraFeeBounds"
     :> "update"
     :> MandatoryQueryParam "startDistance" Meters
+    :> QueryParam "startDistanceValue" HighPrecDistance
+    :> QueryParam "distanceUnit" DistanceUnit
     :> ReqBody '[JSON] CreateFPDriverExtraFeeReq
     :> Post '[JSON] APISuccess
 
@@ -684,7 +736,7 @@ type UpdateFPPerExtraKmRate =
   "config"
     :> "farePolicy"
     :> Capture "farePolicyId" (Id Common.FarePolicy)
-    :> Capture "startDistance" Meters
+    :> Capture "startDistance" Meters -- FIXME distance units?
     :> "perExtraKmRate"
     :> "update"
     :> ReqBody '[JSON] UpdateFPPerExtraKmRateReq
@@ -712,7 +764,7 @@ data UpdateFarePolicyReq = UpdateFarePolicyReq
   { serviceCharge :: Maybe Money,
     serviceChargeWithCurrency :: Maybe PriceAPIEntity,
     nightShiftBounds :: Maybe NightShiftBounds,
-    allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
+    allowedTripDistanceBounds :: Maybe AllowedTripDistanceBoundsAPIEntity,
     govtCharges :: Maybe Double,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
@@ -720,6 +772,7 @@ data UpdateFarePolicyReq = UpdateFarePolicyReq
     congestionChargeMultiplier :: Maybe CongestionChargeMultiplierAPIEntity,
     description :: Maybe Text,
     baseDistance :: Maybe Meters,
+    baseDistanceWithUnit :: Maybe Distance,
     baseFare :: Maybe Money,
     deadKmFare :: Maybe Money,
     baseFareWithCurrency :: Maybe PriceAPIEntity,
@@ -769,9 +822,11 @@ data NightShiftBounds = NightShiftBounds
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
-data AllowedTripDistanceBounds = AllowedTripDistanceBounds
+data AllowedTripDistanceBoundsAPIEntity = AllowedTripDistanceBoundsAPIEntity
   { maxAllowedTripDistance :: Meters,
-    minAllowedTripDistance :: Meters
+    minAllowedTripDistance :: Meters,
+    maxAllowedTripDistanceWithUnit :: Maybe Distance,
+    minAllowedTripDistanceWithUnit :: Maybe Distance
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 

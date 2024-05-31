@@ -49,10 +49,10 @@ cancelBooking booking mbDriver transporter = do
   unless (transporterId' == Just transporter.id) $ throwError AccessDenied
   mbRide <- QRide.findActiveByRBId booking.id
   bookingCancellationReason <- case mbDriver of
-    Nothing -> buildBookingCancellationReason booking.id Nothing mbRide transporterId'
+    Nothing -> buildBookingCancellationReason Nothing mbRide transporterId'
     Just driver -> do
       updateOnRideStatusWithAdvancedRideCheck driver.id mbRide
-      buildBookingCancellationReason booking.id (Just driver.id) mbRide transporterId'
+      buildBookingCancellationReason (Just driver.id) mbRide transporterId'
 
   QRB.updateStatus booking.id DRB.CANCELLED
   QBCR.upsert bookingCancellationReason
@@ -71,16 +71,17 @@ cancelBooking booking mbDriver transporter = do
         fork "cancelRide - Notify driver" $ do
           Notify.notifyOnCancel booking.merchantOperatingCityId booking driver bookingCancellationReason.source
   where
-    buildBookingCancellationReason bookingId driverId ride merchantId = do
+    buildBookingCancellationReason driverId ride merchantId = do
       return $
         DBCR.BookingCancellationReason
           { driverId = driverId,
-            bookingId,
+            bookingId = booking.id,
             rideId = (.id) <$> ride,
             merchantId = merchantId,
             source = DBCR.ByApplication,
             reasonCode = Nothing,
             additionalInfo = Nothing,
             driverCancellationLocation = Nothing,
-            driverDistToPickup = Nothing
+            driverDistToPickup = Nothing,
+            distanceUnit = booking.distanceUnit
           }

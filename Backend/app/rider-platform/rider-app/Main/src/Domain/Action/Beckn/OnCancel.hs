@@ -25,7 +25,6 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as SRide
 import Environment ()
@@ -85,7 +84,7 @@ onCancel ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ""
   whenJust cancellationSource $ \source -> logTagInfo ("Cancellation source " <> source) ""
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
-  bookingCancellationReason <- mkBookingCancellationReason booking.id (mbRide <&> (.id)) (castCancellatonSource cancellationSource_) booking.merchantId
+  bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) (castCancellatonSource cancellationSource_)
   fork "incrementing fraud counters" $ do
     let merchantOperatingCityId = booking.merchantOperatingCityId
     mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs
@@ -138,18 +137,18 @@ validateRequest BookingCancelledReq {..} = do
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>
-  Id SRB.Booking ->
+  SRB.Booking ->
   Maybe (Id SRide.Ride) ->
   SBCR.CancellationSource ->
-  Id DMerchant.Merchant ->
   m SBCR.BookingCancellationReason
-mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId = do
+mkBookingCancellationReason booking mbRideId cancellationSource = do
   now <- getCurrentTime
   return $
     SBCR.BookingCancellationReason
-      { bookingId = bookingId,
+      { bookingId = booking.id,
         rideId = mbRideId,
-        merchantId = Just merchantId,
+        merchantId = Just booking.merchantId,
+        distanceUnit = booking.distanceUnit,
         source = cancellationSource,
         reasonCode = Nothing,
         reasonStage = Nothing,

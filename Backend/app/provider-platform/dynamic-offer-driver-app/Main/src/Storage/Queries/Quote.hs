@@ -59,6 +59,7 @@ instance FromTType' BeamQSZ.QuoteSpecialZone Quote where
             validTill = T.localTimeToUTC T.utc validTill,
             estimatedFare = mkAmountWithDefault estimatedFareAmount estimatedFare,
             currency = fromMaybe INR currency,
+            distanceUnit = fromMaybe Meter distanceUnit,
             ..
           }
 
@@ -73,6 +74,7 @@ instance ToTType' BeamQSZ.QuoteSpecialZone Quote where
         BeamQSZ.tripCategory = Just tripCategory,
         BeamQSZ.vehicleServiceTierName = vehicleServiceTierName,
         BeamQSZ.distance = distance,
+        BeamQSZ.distanceUnit = Just distanceUnit,
         BeamQSZ.createdAt = T.utcToLocalTime T.utc createdAt,
         BeamQSZ.updatedAt = T.utcToLocalTime T.utc updatedAt,
         BeamQSZ.validTill = T.utcToLocalTime T.utc validTill,

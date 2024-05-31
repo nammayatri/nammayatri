@@ -10,6 +10,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
@@ -55,6 +56,7 @@ instance FromTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCit
           { city = city,
             country = country,
             currency = fromMaybe Kernel.Types.Common.INR currency,
+            distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             id = Kernel.Types.Id.Id id,
             language = language,
             location = Kernel.External.Maps.Types.LatLong lat lon,
@@ -70,6 +72,7 @@ instance ToTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCity.
       { Beam.city = city,
         Beam.country = country,
         Beam.currency = Just currency,
+        Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.language = language,
         Beam.lat = (.lat) location,

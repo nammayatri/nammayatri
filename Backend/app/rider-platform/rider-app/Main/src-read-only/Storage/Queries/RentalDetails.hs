@@ -47,7 +47,7 @@ instance ToTType' Beam.RentalDetails Domain.Types.RentalDetails.RentalDetails wh
         Beam.deadKmFare = (.amount) deadKmFare,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.distanceUnit = Just $ (.unit) includedDistancePerHr,
-        Beam.includedDistancePerHrValue = Just $ Kernel.Utils.Common.distanceToHighPrecDistance (Just $ (.unit) includedDistancePerHr) includedDistancePerHr,
+        Beam.includedDistancePerHrValue = Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) includedDistancePerHr) includedDistancePerHr,
         Beam.includedKmPerHr = Kernel.Utils.Common.metersToKilometers $ Kernel.Utils.Common.distanceToMeters includedDistancePerHr,
         Beam.nightShiftCharge = (.amountInt) . (.nightShiftCharge) <$> nightShiftInfo,
         Beam.nightShiftChargeAmount = (.amount) . (.nightShiftCharge) <$> nightShiftInfo,

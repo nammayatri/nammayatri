@@ -28,6 +28,7 @@ data DriverStats = DriverStats
     lateNightTrips :: Int,
     earningsMissed :: HighPrecMoney,
     totalDistance :: Meters,
+    distanceUnit :: DistanceUnit,
     ridesCancelled :: Maybe Int,
     totalRidesAssigned :: Maybe Int,
     coinCovertedToCashLeft :: HighPrecMoney,

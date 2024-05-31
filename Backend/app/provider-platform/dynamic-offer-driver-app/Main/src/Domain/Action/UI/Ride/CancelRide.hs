@@ -201,6 +201,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
             driverId = mbDriverId,
             driverCancellationLocation = currentDriverLocation,
             driverDistToPickup = disToPickup,
+            distanceUnit = ride.distanceUnit,
             ..
           }
 

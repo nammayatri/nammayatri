@@ -295,8 +295,8 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
       fromLocation
       merchantOperatingCity
       (listToMaybe stopLocations) --- Take first stop, handle multiple stops later
-      (metersToDistance <$> longestRouteDistance)
-      (metersToDistance <$> shortestRouteDistance)
+      (convertMetersToDistance merchantOperatingCity.distanceUnit <$> longestRouteDistance)
+      (convertMetersToDistance merchantOperatingCity.distanceUnit <$> shortestRouteDistance)
       startTime
       returnTime
       roundTrip
@@ -307,6 +307,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
       tag
       shortestRouteDuration
       riderPreferredOption
+      merchantOperatingCity.distanceUnit
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
   let txnId = getId (searchRequest.id)
@@ -362,8 +363,9 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Seconds ->
   SearchRequest.RiderPreferredOption ->
+  DistanceUnit ->
   Flow SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration riderPreferredOption = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration riderPreferredOption distanceUnit = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)
@@ -399,7 +401,8 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         availablePaymentMethods = [],
         selectedPaymentMethodId = Nothing,
         isAdvanceBookingEnabled = Nothing,
-        riderPreferredOption -- this is just to store the rider preference for the ride type to handle backward compatibility
+        riderPreferredOption, -- this is just to store the rider preference for the ride type to handle backward compatibility
+        distanceUnit
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime

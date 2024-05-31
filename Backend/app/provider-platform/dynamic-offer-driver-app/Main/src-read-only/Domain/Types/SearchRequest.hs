@@ -30,6 +30,7 @@ data SearchRequest = SearchRequest
     customerLanguage :: Kernel.Prelude.Maybe Tools.Maps.Language,
     device :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverDefaultExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,

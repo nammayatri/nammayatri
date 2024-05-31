@@ -304,6 +304,10 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         rideDistanceActual = roundToIntegral ride.traveledDistance,
         chargeableDistance = ride.chargeableDistance,
         maxEstimatedDistance = highPrecMetersToMeters <$> booking.maxEstimatedDistance,
+        rideDistanceEstimatedWithUnit = convertMetersToDistance booking.distanceUnit <$> booking.estimatedDistance,
+        rideDistanceActualWithUnit = convertHighPrecMetersToDistance ride.distanceUnit ride.traveledDistance,
+        chargeableDistanceWithUnit = convertMetersToDistance ride.distanceUnit <$> ride.chargeableDistance,
+        maxEstimatedDistanceWithUnit = convertHighPrecMetersToDistance booking.distanceUnit <$> booking.maxEstimatedDistance,
         estimatedRideDuration = secondsToMinutes <$> booking.estimatedDuration,
         estimatedFare = roundToIntegral booking.estimatedFare,
         estimatedFareWithCurrency = PriceAPIEntity booking.estimatedFare booking.currency,
@@ -604,6 +608,7 @@ makeFareParam (DFP.RentalDetails DFP.FParamsRentalDetails {..}) =
         timeBasedFareWithCurrency = PriceAPIEntity timeBasedFare currency,
         distBasedFareWithCurrency = PriceAPIEntity distBasedFare currency,
         deadKmFare = PriceAPIEntity deadKmFare currency,
+        extraDistanceWithUnit = convertMetersToDistance distanceUnit extraDistance,
         ..
       }
 makeFareParam (DFP.InterCityDetails DFP.FParamsInterCityDetails {..}) =

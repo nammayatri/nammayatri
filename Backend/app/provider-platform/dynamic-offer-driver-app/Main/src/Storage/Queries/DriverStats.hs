@@ -33,8 +33,8 @@ import qualified Storage.Beam.DriverStats as BeamDS
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverStats -> m ()
 create = createWithKV
 
-createInitialDriverStats :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Currency -> Id Driver -> m ()
-createInitialDriverStats currency driverId = do
+createInitialDriverStats :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Currency -> DistanceUnit -> Id Driver -> m ()
+createInitialDriverStats currency distanceUnit driverId = do
   now <- getCurrentTime
   let dStats =
         DriverStats
@@ -50,10 +50,11 @@ createInitialDriverStats currency driverId = do
             totalRidesAssigned = Just 0,
             coinCovertedToCashLeft = 0.0,
             totalCoinsConvertedCash = 0.0,
-            currency,
-            updatedAt = now,
+            currency,            
             favRiderCount = 0,
-            favRiderList = []
+            favRiderList = [],
+            distanceUnit,
+            updatedAt = now
           }
   createWithKV dStats
 
@@ -183,10 +184,11 @@ instance FromTType' BeamDS.DriverStats DriverStats where
             earningsMissed = mkAmountWithDefault earningsMissedAmount earningsMissed,
             coinCovertedToCashLeft = fromMaybe 0 coinCovertedToCashLeft,
             totalCoinsConvertedCash = fromMaybe 0 totalCoinsConvertedCash,
-            currency = fromMaybe INR currency,
-            updatedAt = updatedAt,
+            currency = fromMaybe INR currency,            
             favRiderCount = favRiderCount,
-            favRiderList = favRiderList
+            favRiderList = favRiderList,
+            distanceUnit = fromMaybe Meter distanceUnit,
+            updatedAt = updatedAt
           }
 
 instance ToTType' BeamDS.DriverStats DriverStats where
@@ -200,6 +202,7 @@ instance ToTType' BeamDS.DriverStats DriverStats where
         BeamDS.totalRidesAssigned = totalRidesAssigned,
         BeamDS.totalEarnings = roundToIntegral totalEarnings,
         BeamDS.currency = Just currency,
+        BeamDS.distanceUnit = Just distanceUnit,
         BeamDS.bonusEarned = roundToIntegral bonusEarned,
         BeamDS.totalEarningsAmount = Just totalEarnings,
         BeamDS.bonusEarnedAmount = Just bonusEarned,

@@ -61,3 +61,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN return_time timestamp with
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN payment_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN distance_unit character varying(255) ;

@@ -192,7 +192,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         estimatedDistance <- shortestRoute.distance & fromMaybeM (InternalError "No distance found for new destination")
         (duration :: Seconds) <- shortestRoute.duration & fromMaybeM (InternalError "No duration found for new destination")
         logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show duration
-        let routeInfo = RR.RouteInfo {distance = Just estimatedDistance, duration = Just duration, points = Just shortestRoute.points}
+        let routeInfo = RR.RouteInfo {distance = Just estimatedDistance, distanceWithUnit = Just (convertMetersToDistance booking.distanceUnit estimatedDistance), duration = Just duration, points = Just shortestRoute.points}
         Redis.setExp (bookingRequestKeySoftUpdate booking.id.getId) routeInfo 600
         Redis.setExp (multipleRouteKeySoftUpdate booking.id.getId) (map RR.createMultipleRouteInfo routeResponse) 600
         -- TODO: Currently isDashboard flagged is passed as False here, but fix it properly once we have edit destination from dashboard too
@@ -219,7 +219,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                 estimatedRideDuration = Nothing,
                 timeDiffFromUtc = Nothing,
                 tollCharges = mbTollInfo <&> (\(tollCharges, _, _) -> tollCharges),
-                currency = booking.currency
+                currency = booking.currency,
+                distanceUnit = booking.distanceUnit
               }
         QFP.create fareParameters
         let validTill = addUTCTime (fromIntegral transporterConfig.editLocTimeThreshold) now
@@ -251,8 +252,10 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                       stops = Nothing,
                       bookingUpdateRequestId = bookingUpdateReq.id,
                       newEstimatedDistance,
+                      newEstimatedDistanceWithUnit = convertHighPrecMetersToDistance bookingUpdateReq.distanceUnit newEstimatedDistance,
                       newEstimatedFare = bookingUpdateReq.estimatedFare,
                       oldEstimatedDistance,
+                      oldEstimatedDistanceWithUnit = convertHighPrecMetersToDistance bookingUpdateReq.distanceUnit oldEstimatedDistance,
                       oldEstimatedFare = bookingUpdateReq.oldEstimatedFare,
                       validTill = bookingUpdateReq.validTill
                     }
@@ -402,5 +405,6 @@ buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParam
         oldFareParamsId = booking.fareParams.id,
         oldMaxEstimatedDistance = booking.maxEstimatedDistance,
         validTill,
+        distanceUnit = booking.distanceUnit,
         ..
       }

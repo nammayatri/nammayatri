@@ -37,6 +37,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
   updateWithKV
     [ Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
+      Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.estimatedDistance estimatedDistance,
       Se.Set Beam.fareParamsId ((Kernel.Types.Id.getId . (.id) <$>) fareParams),
       Se.Set Beam.farePolicyId ((Kernel.Types.Id.getId . (.id) <$>) farePolicy),
@@ -66,6 +67,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Domain.Types.Estimate.Estimate
           { createdAt = createdAt,
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
+            distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             estimatedDistance = estimatedDistance,
             fareParams = fareParams',
             farePolicy = farePolicy',
@@ -89,6 +91,7 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
     Beam.EstimateT
       { Beam.createdAt = createdAt,
         Beam.currency = Kernel.Prelude.Just currency,
+        Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.estimatedDistance = estimatedDistance,
         Beam.fareParamsId = (Kernel.Types.Id.getId . (.id) <$>) fareParams,
         Beam.farePolicyId = (Kernel.Types.Id.getId . (.id) <$>) farePolicy,

@@ -359,5 +359,6 @@ buildbookingUpdateRequest booking = do
         oldEstimatedFare = booking.estimatedFare.amount,
         oldEstimatedDistance = distanceToHighPrecMeters <$> booking.estimatedDistance,
         totalDistance = Nothing,
-        travelledDistance = Nothing
+        travelledDistance = Nothing,
+        distanceUnit = booking.distanceUnit
       }

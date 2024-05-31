@@ -84,8 +84,8 @@ data RideCompletedInfo = RideCompletedInfo
     fare :: Money,
     totalFare :: Money,
     fareBreakups :: [OnStatusFareBreakup],
-    chargeableDistance :: Distance,
-    traveledDistance :: Distance,
+    chargeableDistance :: HighPrecMeters,
+    traveledDistance :: HighPrecMeters,
     paymentUrl :: Maybe Text
   }
 
@@ -208,7 +208,7 @@ onStatus req = do
       let rideId = case rideEntity of
             UpdatedRide (DUpdatedRide {ride}) -> ride.id
             RenewedRide ride -> ride.id
-      bookingCancellationReason <- mkBookingCancellationReason booking.id (Just rideId) reallocationSource booking.merchantId
+      bookingCancellationReason <- mkBookingCancellationReason booking (Just rideId) reallocationSource
       rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity
       when (isStatusChanged booking.status bookingNewStatus rideEntity) $ do
         QBCR.upsert bookingCancellationReason
@@ -316,22 +316,23 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       clientDevice = Nothing
       clientSdkVersion = Nothing
       tollConfidence = Nothing
+      distanceUnit = booking.distanceUnit
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>
-  Id DB.Booking ->
+  DB.Booking ->
   Maybe (Id DRide.Ride) ->
   DBCR.CancellationSource ->
-  Id DM.Merchant ->
   m DBCR.BookingCancellationReason
-mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId = do
+mkBookingCancellationReason booking mbRideId cancellationSource = do
   now <- getCurrentTime
   return $
     DBCR.BookingCancellationReason
-      { bookingId = bookingId,
+      { bookingId = booking.id,
         rideId = mbRideId,
-        merchantId = Just merchantId,
+        merchantId = Just booking.merchantId,
+        distanceUnit = booking.distanceUnit,
         source = cancellationSource,
         reasonCode = Nothing,
         reasonStage = Nothing,

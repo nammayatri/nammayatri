@@ -34,6 +34,7 @@ data Ride = Ride
     clientId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Client.Client),
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     createdAt :: Kernel.Prelude.UTCTime,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverMobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -111,6 +112,6 @@ data RideAPIEntity = RideAPIEntity
 
 data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 
-$(mkHttpInstancesForEnum (''RideStatus))
+$(mkHttpInstancesForEnum ''RideStatus)

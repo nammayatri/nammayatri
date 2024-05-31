@@ -9,6 +9,8 @@ import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -40,6 +42,7 @@ updateByPrimaryKey (Domain.Types.DriverPoolConfig.DriverPoolConfig {..}) = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currentRideTripCategoryValidForForwardBatching currentRideTripCategoryValidForForwardBatching,
       Se.Set Beam.distanceBasedBatchSplit distanceBasedBatchSplit,
+      Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverBatchSize driverBatchSize,
       Se.Set Beam.driverPositionInfoExpiry driverPositionInfoExpiry,
       Se.Set Beam.driverQuoteLimit driverQuoteLimit,
@@ -83,6 +86,7 @@ instance FromTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPo
             createdAt = createdAt,
             currentRideTripCategoryValidForForwardBatching = currentRideTripCategoryValidForForwardBatching,
             distanceBasedBatchSplit = distanceBasedBatchSplit,
+            distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             driverBatchSize = driverBatchSize,
             driverPositionInfoExpiry = driverPositionInfoExpiry,
             driverQuoteLimit = driverQuoteLimit,
@@ -124,6 +128,7 @@ instance ToTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPool
         Beam.createdAt = createdAt,
         Beam.currentRideTripCategoryValidForForwardBatching = currentRideTripCategoryValidForForwardBatching,
         Beam.distanceBasedBatchSplit = distanceBasedBatchSplit,
+        Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverBatchSize = driverBatchSize,
         Beam.driverPositionInfoExpiry = driverPositionInfoExpiry,
         Beam.driverQuoteLimit = driverQuoteLimit,

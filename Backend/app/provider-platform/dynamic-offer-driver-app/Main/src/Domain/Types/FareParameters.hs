@@ -65,6 +65,7 @@ data FParamsRentalDetails = FParamsRentalDetails
     distBasedFare :: HighPrecMoney,
     currency :: Currency,
     extraDistance :: Meters,
+    distanceUnit :: DistanceUnit,
     extraDuration :: Seconds,
     deadKmFare :: HighPrecMoney
   }

@@ -31,6 +31,7 @@ data Quote = Quote
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     createdAt :: Kernel.Prelude.UTCTime,
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     estimatedFare :: Kernel.Types.Common.Price,
     estimatedPickupDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedTotalFare :: Kernel.Types.Common.Price,

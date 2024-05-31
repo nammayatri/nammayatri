@@ -62,6 +62,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     crossTravelCities :: [Kernel.Types.Beckn.City.City],
     currency :: Kernel.Types.Common.Currency,
     defaultPopupDelay :: Kernel.Types.Common.Seconds,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     dlNumberVerification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverAutoPayExecutionTime :: Kernel.Prelude.NominalDiffTime,
     driverAutoPayExecutionTimeFallBack :: Kernel.Prelude.NominalDiffTime,

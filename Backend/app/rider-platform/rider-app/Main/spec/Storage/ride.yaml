@@ -86,6 +86,7 @@ Ride:
     totalFare: Maybe Price
     chargeableDistance: Maybe Distance
     traveledDistance: Maybe Distance
+    distanceUnit: DistanceUnit
     driverArrivalTime: Maybe UTCTime
     rideStartTime: Maybe UTCTime
     rideEndTime: Maybe UTCTime
@@ -148,6 +149,7 @@ Ride:
     chargeableDistance:
       chargeableDistanceValue: Maybe HighPrecDistance
       chargeableDistance: Maybe HighPrecMeters
+    distanceUnit:
       distanceUnit: Maybe DistanceUnit
     traveledDistance:
       traveledDistanceValue: Maybe HighPrecDistance
@@ -171,6 +173,7 @@ Ride:
     backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
     driversPreviousRideDropLoc: Storage.Queries.Extra.Transformers.Ride.mkLatLong|I
     showDriversPreviousRideDropLoc: Kernel.Prelude.fromMaybe False showDriversPreviousRideDropLoc|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -179,10 +182,10 @@ Ride:
     currency: Kernel.Prelude.fmap (.currency)|I
     trackingUrl: Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl|I
     chargeableDistance: Kernel.Prelude.fmap Kernel.Types.Common.distanceToHighPrecMeters|I
-    chargeableDistanceValue: Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance (Kernel.Prelude.fmap (.unit) chargeableDistance))|I
-    distanceUnit: Kernel.Prelude.fmap (.unit) chargeableDistance|E
+    chargeableDistanceValue: Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit)|I
+    distanceUnit: Kernel.Prelude.Just|I
     traveledDistance: Kernel.Prelude.fmap Kernel.Types.Common.distanceToHighPrecMeters|I
-    traveledDistanceValue: Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance (Kernel.Prelude.fmap (.unit) chargeableDistance))|I
+    traveledDistanceValue: Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit)|I
     clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E

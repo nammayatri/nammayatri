@@ -35,6 +35,7 @@ SearchRequest:
     toLocation: Maybe Location
     distance: Maybe Distance
     maxDistance: Maybe Distance
+    distanceUnit: DistanceUnit
     estimatedRideDuration: Maybe Seconds
     device: Maybe Text
     merchantId: Id Merchant
@@ -86,6 +87,7 @@ SearchRequest:
     distance:
       distance: Maybe Centesimal
       distanceValue: Maybe HighPrecDistance
+    distanceUnit:
       distanceUnit: Maybe DistanceUnit
     maxDistance:
       maxDistance: Maybe Centesimal
@@ -102,15 +104,14 @@ SearchRequest:
       clientOsType: Maybe DeviceType
       clientOsVersion: Maybe Text
 
-
+  # distanceUnit should be the same for all fields
   toTType:
     fromLocationId: (Just $ Kernel.Types.Id.getId ((.id) fromLocation))|E
     toLocationId: (Kernel.Types.Id.getId <$> (toLocation <&> (.id)))|E
     distance: (Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> distance)|E
-    distanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance (distance <&> (.unit)) <$> distance)|E
-    distanceUnit: (distance <&> (.unit))|E
+    distanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance)|E
     maxDistance: (Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> maxDistance)|E
-    maxDistanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance (distance <&> (.unit)) <$> distance)|E
+    maxDistanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit) <$> distance|E
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
     customerExtraFee: (customerExtraFee <&> (.amountInt))|E
     customerExtraFeeAmount: (customerExtraFee <&> (.amount))|E
@@ -122,6 +123,7 @@ SearchRequest:
     clientSdkVersion: Kernel.Utils.Version.versionToText <$> clientSdkVersion|E
     clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
     backendConfigVersion: Kernel.Utils.Version.versionToText <$> backendConfigVersion|E
+    distanceUnit: Kernel.Prelude.Just|I
 
   fromTType:
     merchantOperatingCityId: Storage.Queries.Transformers.SearchRequest.backfillMOCId merchantId merchantOperatingCityId|EM
@@ -136,6 +138,7 @@ SearchRequest:
     clientConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)|EM
     clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion|E
     backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
 
   excludedFields: [updatedAt]
 

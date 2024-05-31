@@ -31,6 +31,7 @@ import Kernel.Types.Common
 data FPProgressiveDetailsD (s :: UsageSafety) = FPProgressiveDetails
   { baseFare :: HighPrecMoney,
     baseDistance :: Meters,
+    distanceUnit :: DistanceUnit,
     perExtraKmRateSections :: NonEmpty (FPProgressiveDetailsPerExtraKmRateSectionD s),
     deadKmFare :: HighPrecMoney,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
@@ -81,6 +82,7 @@ data FPProgressiveDetailsAPIEntity = FPProgressiveDetailsAPIEntity
   { baseFare :: Money,
     baseFareWithCurrency :: PriceAPIEntity,
     baseDistance :: Meters,
+    baseDistanceWithUnit :: Distance,
     perExtraKmRateSections :: NonEmpty FPProgressiveDetailsPerExtraKmRateSectionAPIEntity,
     deadKmFare :: Money,
     deadKmFareWithCurrency :: PriceAPIEntity,

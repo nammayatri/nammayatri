@@ -66,19 +66,20 @@ confirm personId quoteId paymentMethodId = do
 cancelBooking :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => DRB.Booking -> m ()
 cancelBooking booking = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
-  bookingCancellationReason <- buildBookingCancellationReason booking.id
+  bookingCancellationReason <- buildBookingCancellationReason
   _ <- QRideB.updateStatus booking.id DRB.CANCELLED
   _ <- QBCR.upsert bookingCancellationReason
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:- " <> booking.providerId <> "and domain:- " <> show Context.MOBILITY)
   Notify.notifyOnBookingCancelled booking DBCR.ByApplication bppDetails
   where
-    buildBookingCancellationReason bookingId = do
+    buildBookingCancellationReason = do
       now <- getCurrentTime
       return $
         DBCR.BookingCancellationReason
-          { bookingId = bookingId,
+          { bookingId = booking.id,
             rideId = Nothing,
             merchantId = Just booking.merchantId,
+            distanceUnit = booking.distanceUnit,
             source = DBCR.ByApplication,
             reasonCode = Nothing,
             reasonStage = Nothing,

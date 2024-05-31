@@ -9,7 +9,9 @@ import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -53,6 +55,7 @@ updateByPrimaryKey (Domain.Types.MerchantOperatingCity.MerchantOperatingCity {..
   updateWithKV
     [ Se.Set Beam.city city,
       Se.Set Beam.country country,
+      Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.lat lat,
       Se.Set Beam.long long,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -70,6 +73,7 @@ instance FromTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCit
         Domain.Types.MerchantOperatingCity.MerchantOperatingCity
           { city = city,
             country = country,
+            distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             id = Kernel.Types.Id.Id id,
             lat = lat,
             long = long,
@@ -85,6 +89,7 @@ instance ToTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCity.
     Beam.MerchantOperatingCityT
       { Beam.city = city,
         Beam.country = country,
+        Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.lat = lat,
         Beam.long = long,

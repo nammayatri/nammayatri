@@ -33,6 +33,7 @@ data Booking = Booking
     currency :: Kernel.Utils.Common.Currency,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     distanceToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     estimateId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate),
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,

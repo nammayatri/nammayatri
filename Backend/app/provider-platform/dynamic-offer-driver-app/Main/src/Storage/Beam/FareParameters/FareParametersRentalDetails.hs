@@ -25,7 +25,8 @@ data FareParametersRentalDetailsT f = FareParametersRentalDetailsT
     currency :: B.C f (Maybe Currency),
     deadKmFare :: B.C f (Maybe HighPrecMoney),
     extraDuration :: B.C f (Maybe Seconds),
-    extraDistance :: B.C f (Maybe Meters)
+    extraDistance :: B.C f (Maybe Meters),
+    distanceUnit :: B.C f (Maybe DistanceUnit)
   }
   deriving (Generic, B.Beamable)
 

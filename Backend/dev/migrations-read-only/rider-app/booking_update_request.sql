@@ -16,3 +16,8 @@ ALTER TABLE atlas_app.booking_update_request ADD COLUMN total_distance integer ;
 ALTER TABLE atlas_app.booking_update_request ADD COLUMN travelled_distance integer ;
 ALTER TABLE atlas_app.booking_update_request ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.booking_update_request ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking_update_request ADD COLUMN distance_unit character varying(255) ;

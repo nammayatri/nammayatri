@@ -149,6 +149,7 @@ cancel req merchant booking mbActiveSearchTry = do
             additionalInfo = Nothing,
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
+            distanceUnit = booking.distanceUnit,
             ..
           }
 

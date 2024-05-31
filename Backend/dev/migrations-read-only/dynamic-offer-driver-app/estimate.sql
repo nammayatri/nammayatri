@@ -43,3 +43,8 @@ ALTER TABLE atlas_driver_offer_bpp.estimate DROP COLUMN driver_pick_up_charge;
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN min_fare_amount double precision ;
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN max_fare_amount double precision ;
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN currency character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN distance_unit character varying(255) ;

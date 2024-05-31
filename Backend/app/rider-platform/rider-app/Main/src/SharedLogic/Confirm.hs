@@ -270,7 +270,8 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         clientConfigVersion = quote.clientConfigVersion,
         backendConfigVersion = quote.backendConfigVersion,
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
-        paymentStatus = Nothing
+        paymentStatus = Nothing,
+        distanceUnit = searchRequest.distanceUnit
       }
   where
     buildBookingDetails = case quote.quoteDetails of

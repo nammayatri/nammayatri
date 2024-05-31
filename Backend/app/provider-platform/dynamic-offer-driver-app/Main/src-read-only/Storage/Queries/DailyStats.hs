@@ -51,6 +51,7 @@ updateByPrimaryKey (Domain.Types.DailyStats.DailyStats {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.currency (Kernel.Prelude.Just currency),
+      Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.merchantLocalDate merchantLocalDate,
       Se.Set Beam.numRides numRides,

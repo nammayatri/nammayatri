@@ -8,6 +8,7 @@ import qualified Domain.Types.BusinessEvent
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -30,6 +31,7 @@ updateByPrimaryKey (Domain.Types.BusinessEvent.BusinessEvent {..}) = do
   updateWithKV
     [ Se.Set Beam.bookingId (Kernel.Types.Id.getId <$> bookingId),
       Se.Set Beam.distance (Kernel.Types.Common.getMeters <$> distance),
+      Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverId (Kernel.Types.Id.getId <$> driverId),
       Se.Set Beam.duration (Kernel.Types.Common.getSeconds <$> duration),
       Se.Set Beam.eventType eventType,

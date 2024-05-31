@@ -37,4 +37,4 @@ startRideTransaction driverId ride bookingId firstPoint merchantId odometer = do
   QRide.updateStatus ride.id SRide.INPROGRESS
   QRide.updateStartTimeAndLoc ride.id firstPoint
   whenJust odometer $ \odometerReading -> QRide.updateStartOdometerReading ride.id odometerReading
-  QBE.logRideCommencedEvent (cast driverId) bookingId ride.id
+  QBE.logRideCommencedEvent (cast driverId) bookingId ride.id ride.distanceUnit

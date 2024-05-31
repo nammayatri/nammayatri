@@ -111,6 +111,7 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
         BeamFP.parkingCharge = parkingCharge,
         BeamFP.tollCharges = tollCharges,
         BeamFP.currency = Just currency,
+        BeamFP.distanceUnit = Just distanceUnit,
         BeamFP.nightShiftStart = (.nightShiftStart) <$> nightShiftBounds,
         BeamFP.nightShiftEnd = (.nightShiftEnd) <$> nightShiftBounds,
         BeamFP.maxAllowedTripDistance = (.maxAllowedTripDistance) <$> allowedTripDistanceBounds,
@@ -189,12 +190,14 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
               parkingCharge = parkingCharge,
               tollCharges = tollCharges,
               currency = fromMaybe INR currency,
+              distanceUnit = fromMaybe Meter distanceUnit,
               nightShiftBounds = DPM.NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
               allowedTripDistanceBounds =
                 ((,) <$> minAllowedTripDistance <*> maxAllowedTripDistance) <&> \(minAllowedTripDistance', maxAllowedTripDistance') ->
-                  DPM.AllowedTripDistanceBounds
+                  AllowedTripDistanceBounds
                     { minAllowedTripDistance = minAllowedTripDistance',
-                      maxAllowedTripDistance = maxAllowedTripDistance'
+                      maxAllowedTripDistance = maxAllowedTripDistance',
+                      distanceUnit = fromMaybe Meter distanceUnit
                     },
               govtCharges = govtCharges,
               driverExtraFeeBounds = nonEmpty fDEFB,

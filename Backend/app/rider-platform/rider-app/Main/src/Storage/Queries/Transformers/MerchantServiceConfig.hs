@@ -1,18 +1,9 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.Transformers.MerchantServiceConfig where
 
-import qualified Data.Aeson
 import qualified Data.Aeson as A
-import qualified Domain.Types.Extra.MerchantServiceConfig
-import qualified Domain.Types.Merchant
-import Domain.Types.MerchantServiceConfig
 import qualified Domain.Types.MerchantServiceConfig as Domain
-import Kernel.Beam.Functions
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
-import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
@@ -23,9 +14,8 @@ import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Types.Id
 import Kernel.Utils.Common
-import Tools.Error
+import Kernel.Utils.JSON (valueToMaybe)
 
 getServiceConfigFromDomain :: (MonadFlow m) => Domain.ServiceName -> A.Value -> m Domain.ServiceConfig
 getServiceConfigFromDomain serviceName configJSON = do
@@ -48,11 +38,6 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
     Domain.MetroPaymentService Payment.Juspay -> Domain.MetroPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
     Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
-
-valueToMaybe :: FromJSON a => A.Value -> Maybe a
-valueToMaybe value = case A.fromJSON value of
-  A.Success a -> Just a
-  _ -> Nothing
 
 getServiceNameConfigJson :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
 getServiceNameConfigJson = \case

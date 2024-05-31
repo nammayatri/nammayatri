@@ -16,6 +16,7 @@ import Tools.Beam.UtilsTH
 
 data DailyStatsT f = DailyStatsT
   { currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverId :: B.C f Data.Text.Text,
     id :: B.C f Data.Text.Text,
     merchantLocalDate :: B.C f Data.Time.Calendar.Day,

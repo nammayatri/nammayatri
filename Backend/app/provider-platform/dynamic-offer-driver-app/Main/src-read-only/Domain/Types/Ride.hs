@@ -38,6 +38,7 @@ data Ride = Ride
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     distanceCalculationFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverDeviatedFromRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverDeviatedToTollRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

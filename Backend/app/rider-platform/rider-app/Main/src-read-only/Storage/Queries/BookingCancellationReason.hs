@@ -37,11 +37,11 @@ updateByPrimaryKey (Domain.Types.BookingCancellationReason.BookingCancellationRe
   updateWithKV
     [ Se.Set Beam.additionalInfo additionalInfo,
       Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
+      Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverCancellationLocationLat (driverCancellationLocation <&> (.lat)),
       Se.Set Beam.driverCancellationLocationLon (driverCancellationLocation <&> (.lon)),
-      Se.Set Beam.distanceUnit (driverDistToPickup <&> (.unit)),
       Se.Set Beam.driverDistToPickup (Kernel.Types.Common.distanceToMeters <$> driverDistToPickup),
-      Se.Set Beam.driverDistToPickupValue (Kernel.Types.Common.distanceToHighPrecDistance (driverDistToPickup <&> (.unit)) <$> driverDistToPickup),
+      Se.Set Beam.driverDistToPickupValue (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> driverDistToPickup),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.reasonCode reasonCode,
       Se.Set Beam.reasonStage reasonStage,
