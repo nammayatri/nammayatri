@@ -43,7 +43,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
-import qualified Storage.CachedQueries.ValueAddNP as QNP
+-- import qualified Storage.CachedQueries.ValueAddNP as QNP
 import qualified Storage.Queries.Booking as QB
 -- import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Ride as QRide
@@ -78,17 +78,17 @@ getPersonFlowStatus personId merchantId mIsPolling = do
     DPFS.GOT_ESTIMATE _ _ -> expirePersonStatusIfNeeded personStatus Nothing
     DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ -> do
       -- estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-      findValueAddNP _ personStatus
+      findValueAddNP personStatus
     DPFS.DRIVER_OFFERED_QUOTE _ _ -> do
       -- estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-      findValueAddNP _ personStatus
+      findValueAddNP personStatus
     DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ _ -> expirePersonStatusIfNeeded personStatus Nothing
     DPFS.RIDE_PICKUP {} -> handleRideTracking personId merchantId mIsPolling personStatus
     DPFS.RIDE_STARTED {} -> handleRideTracking personId merchantId mIsPolling personStatus
     DPFS.DRIVER_ARRIVED {} -> handleRideTracking personId merchantId mIsPolling personStatus
     a -> return $ GetPersonFlowStatusRes Nothing a Nothing
   where
-    findValueAddNP _ personStatus = do
+    findValueAddNP personStatus = do
       let isValueAddNP_ = True
       expirePersonStatusIfNeeded personStatus (Just isValueAddNP_)
 
