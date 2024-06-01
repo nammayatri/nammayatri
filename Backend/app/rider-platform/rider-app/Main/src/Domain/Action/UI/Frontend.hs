@@ -45,7 +45,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as QNP
 import qualified Storage.Queries.Booking as QB
-import qualified Storage.Queries.Estimate as QEstimate
+-- import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Notifications as Notify
@@ -76,20 +76,20 @@ getPersonFlowStatus personId merchantId mIsPolling = do
   case personStatus of
     DPFS.SEARCHING _ _ -> expirePersonStatusIfNeeded personStatus Nothing
     DPFS.GOT_ESTIMATE _ _ -> expirePersonStatusIfNeeded personStatus Nothing
-    DPFS.WAITING_FOR_DRIVER_OFFERS estimateId _ _ -> do
-      estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-      findValueAddNP estimate.providerId personStatus
-    DPFS.DRIVER_OFFERED_QUOTE estimateId _ -> do
-      estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-      findValueAddNP estimate.providerId personStatus
+    DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ -> do
+      -- estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+      findValueAddNP _ personStatus
+    DPFS.DRIVER_OFFERED_QUOTE _ _ -> do
+      -- estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+      findValueAddNP _ personStatus
     DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ _ -> expirePersonStatusIfNeeded personStatus Nothing
     DPFS.RIDE_PICKUP {} -> handleRideTracking personId merchantId mIsPolling personStatus
     DPFS.RIDE_STARTED {} -> handleRideTracking personId merchantId mIsPolling personStatus
     DPFS.DRIVER_ARRIVED {} -> handleRideTracking personId merchantId mIsPolling personStatus
     a -> return $ GetPersonFlowStatusRes Nothing a Nothing
   where
-    findValueAddNP providerId personStatus = do
-      isValueAddNP_ <- QNP.isValueAddNP providerId
+    findValueAddNP _ personStatus = do
+      let isValueAddNP_ = True
       expirePersonStatusIfNeeded personStatus (Just isValueAddNP_)
 
     expirePersonStatusIfNeeded personStatus isValueAddNp = do
