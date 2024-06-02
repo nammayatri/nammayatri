@@ -37,6 +37,7 @@ import Kernel.Tools.Metrics.CoreMetrics.Types (incrementSystemConfigsFailedCount
 import Kernel.Types.Cac
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified System.Environment as Se
 import Utils.Common.Cac.ContextConstants as Reexport
 import Utils.Common.Cac.KeyNameConstants as Reexport
 import Utils.Common.Cac.PrefixConstants as Reexport
@@ -60,14 +61,15 @@ getCacMetricErrorFromDB tableName = do
     GoHomeConfig -> "go_home_config_from_db_parse_error"
     _ -> "empty_db_parse_error"
 
-pushCacDataToKafka :: EsqDBFlow m r => Maybe CacKey -> [(CacContext, Value)] -> Int -> (String -> [(Text, Value)] -> Int -> IO Value) -> String -> CacPrefix -> m ()
+pushCacDataToKafka :: (MonadFlow m, EsqDBFlow m r) => Maybe CacKey -> [(CacContext, Value)] -> Int -> (String -> [(Text, Value)] -> Int -> IO Value) -> String -> CacPrefix -> m ()
 pushCacDataToKafka stickeyKey context toss getVariants tenant key' = do
-  when (isJust stickeyKey) do
+  enableKafka <- liftIO $ Se.lookupEnv "CAC_PUSH_TO_KAFKA"
+  when (isJust stickeyKey && enableKafka == Just "True") do
     let context' = DBF.first show <$> context
     variantIds <- liftIO $ getVariants tenant context' toss
     let key = fromJust stickeyKey
     let cacData = CACData (getKeyValue key) (getKeyValue key) (Text.pack (show context)) (Text.pack (show key')) (Text.pack (show variantIds))
-    pushToKafka cacData "cac-data" ""
+    fork "push cac data to kafka" $ pushToKafka cacData "cac-data" ""
 
 getConfigListFromCac :: (CacheFlow m r, EsqDBFlow m r, FromJSON a, ToJSON a) => [(CacContext, Value)] -> String -> Int -> CacPrefix -> String -> m (Maybe [a])
 getConfigListFromCac context' tenant toss prefix id = do
