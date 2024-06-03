@@ -235,6 +235,7 @@ getCategoryFromVariant variant = case variant of
   "AUTO_RICKSHAW" -> Just ST.AutoCategory
   _ -> Just ST.CarCategory
 
+<<<<<<< Updated upstream
 rideMoreEarnMorePopupStartTime :: String
 rideMoreEarnMorePopupStartTime = "07:30:00"
 
@@ -255,3 +256,21 @@ serviceTierMapping tierName acRide =
   case acRide, tierName of
     Just true, "AC Mini" -> "Mini"
     _ , _ -> tierName
+=======
+transformVehicleType :: Maybe String -> Maybe ST.VehicleCategory
+transformVehicleType vehicletype =
+  case vehicletype of
+     Just "CAR" -> Just ST.CarCategory
+     Just "AUTO_CATEGORY" -> Just ST.AutoCategory
+     Just "MOTORCYCLE" -> Just ST.BikeCategory
+     Just "AMBULANCE" -> Just ST.AmbulanceCategory
+     _ -> Nothing
+
+decodeVehicleType :: String -> Maybe ST.VehicleCategory
+decodeVehicleType value = case value of
+  "AutoCategory" -> Just ST.AutoCategory
+  "CarCategory" -> Just ST.CarCategory
+  "BikeCategory" -> Just ST.BikeCategory
+  "AmbulanceCategory" -> Just ST.AmbulanceCategory
+  _ -> Nothing
+>>>>>>> Stashed changes

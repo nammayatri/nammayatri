@@ -722,8 +722,24 @@ tabImageView state push =
         Just vehicle -> fromMaybe ST.AutoCategory vehicle.verifiedVehicleCategory
         Nothing -> ST.AutoCategory
 
+<<<<<<< Updated upstream
   getVehicleImage :: ST.VehicleCategory -> String
   getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+=======
+    mkAsset :: CityConfig -> String
+    mkAsset cityConfig = 
+      if state.data.driverVehicleType == "AUTO_RICKSHAW" 
+        then (getAutoImage cityConfig)
+        else if state.data.driverVehicleType == "BIKE" then "ny_ic_bike_side"
+        else if state.data.driverVehicleType == "AMBULANCE" then "ny_ic_ambulance_side"
+        else "ny_ic_silhouette"
+    
+    getAutoImage :: CityConfig -> String
+    getAutoImage cityConfig = 
+      if cityConfig.cityCode == "std:040" 
+        then "ny_ic_black_yellow_auto_side_view"
+        else "ny_ic_auto_side_view"
+>>>>>>> Stashed changes
 
   mkAsset :: ST.VehicleCategory -> CityConfig -> String
   mkAsset category cityConfig =

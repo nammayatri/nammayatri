@@ -291,6 +291,17 @@ getStatusValue value = case value of
   "MANUAL_VERIFICATION_REQUIRED" -> COMPLETED
   _ -> NOT_STARTED
 
+<<<<<<< Updated upstream
+=======
+getCategoryFromVariant :: String -> Mb.Maybe ST.VehicleCategory
+getCategoryFromVariant variant = case variant of
+  "AUTO_RICKSHAW" -> Mb.Just ST.AutoCategory
+  "CAR" -> Mb.Just ST.CarCategory
+  "BIKE" -> Mb.Just ST.BikeCategory
+  "AMBULANCE" -> Mb.Just ST.AmbulanceCategory
+  _ -> Mb.Just ST.CarCategory
+
+>>>>>>> Stashed changes
 getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus
 getStatus step state = 
   case step of
@@ -305,4 +316,16 @@ getStatus step state =
           case findStatus of
             Mb.Nothing -> ST.NOT_STARTED
             Mb.Just docStatus -> docStatus.status
+<<<<<<< Updated upstream
   where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) || (Mb.isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
+=======
+  where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) || (Mb.isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
+
+decodeVehicleType :: String -> Mb.Maybe ST.VehicleCategory
+decodeVehicleType value = case value of
+  "AutoCategory" -> Mb.Just ST.AutoCategory
+  "CarCategory" -> Mb.Just ST.CarCategory
+  "BikeCategory" -> Mb.Just ST.BikeCategory
+  "AmbulanceCategory" -> Mb.Just ST.AmbulanceCategory
+  _ -> Mb.Nothing
+>>>>>>> Stashed changes

@@ -110,6 +110,11 @@ imageSection item =
           SUV       -> "ic_suv"
           Hatchback -> "ic_hatchback"
           Auto      -> "ic_auto"
+<<<<<<< Updated upstream
+=======
+          Bike      -> "ic_bike"
+          Ambulance -> "ic_ambulance"
+>>>>>>> Stashed changes
       ]
   ]
 
@@ -135,6 +140,11 @@ textList item =
               SUV       -> "SUV"
               Hatchback -> "Hatchback"
               Auto      -> "Auto"
+<<<<<<< Updated upstream
+=======
+              Bike      -> "Bike"
+              Ambulance -> "Ambulance"
+>>>>>>> Stashed changes
           ] <> FontStyle.paragraphText TypoGraphy
       ]
     , linearLayout

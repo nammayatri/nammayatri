@@ -283,10 +283,20 @@ getDowngradeOptions variant = case (getMerchant FunctionCall) of
                                                 "TAXI"  -> []
                                                 "SUV"   -> ["SEDAN", "HATCHBACK"]
                                                 "SEDAN" -> ["TAXI", "HATCHBACK"] 
+<<<<<<< Updated upstream
+=======
+                                                "BIKE"  -> []
+                                                "AMBULANCE" -> []
+>>>>>>> Stashed changes
                                                 _       -> ["TAXI"]
                                 _ -> case variant of
                                         "SUV"   -> ["SEDAN", "HATCHBACK"]
                                         "SEDAN" -> ["HATCHBACK"]
+<<<<<<< Updated upstream
+=======
+                                        "BIKE"  -> []
+                                        "AMBULANCE" -> []
+>>>>>>> Stashed changes
                                         _       -> []
 
 
@@ -311,11 +321,17 @@ getUIDowngradeOptions variant = case (getMerchant FunctionCall) of
                                 YATRISATHI -> case variant of
                                                 "TAXI"  -> []
                                                 "SUV"   -> ["SEDAN"]
-                                                "SEDAN" -> ["TAXI"] 
+                                                "SEDAN" -> ["TAXI"]
+                                                "AMBULANCE" -> []
                                                 _       -> ["TAXI"]
                                 _ -> case variant of
                                         "SUV"   -> ["SEDAN", "HATCHBACK"]
                                         "SEDAN" -> ["HATCHBACK"]
+<<<<<<< Updated upstream
+=======
+                                        "BIKE"  -> []
+                                        "AMBULANCE" -> []
+>>>>>>> Stashed changes
                                         _       -> []
   
 getVehicleType :: String -> String
@@ -327,6 +343,11 @@ getVehicleType vehicleType =
     "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
     "TAXI" -> (getString TAXI)
     "TAXI_PLUS" -> (getString TAXI_PLUS)
+<<<<<<< Updated upstream
+=======
+    "BIKE" -> "Bike"
+    "AMBULANCE" -> "Ambulance"
+>>>>>>> Stashed changes
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig
@@ -513,6 +534,11 @@ getCategorizedVariant variant = case variant of
       "HATCHBACK"  -> "AC Taxi"
       "TAXI_PLUS"  -> "AC Taxi"
       "SUV" -> "AC Taxi"
+<<<<<<< Updated upstream
+=======
+      "BIKE" -> "Bike"
+      "AMBULANCE" -> "Ambulance"
+>>>>>>> Stashed changes
       _ -> "Non AC"
     _ -> case var of
       "SEDAN"  -> "Sedan"
@@ -520,6 +546,11 @@ getCategorizedVariant variant = case variant of
       "TAXI_PLUS"  -> "AC Taxi"
       "SUV" -> "Suv"
       "AUTO_RICKSHAW" -> "Auto Rickshaw"
+<<<<<<< Updated upstream
+=======
+      "BIKE" -> "Bike"
+      "AMBULANCE" -> "Ambulance"
+>>>>>>> Stashed changes
       _ -> var
   Nothing -> ""
 
@@ -555,6 +586,7 @@ getVehicleVariantImage variant =
       commonUrl = getCommonAssetLink FunctionCall
   in case getMerchant FunctionCall of
         YATRISATHI -> case variant of
+<<<<<<< Updated upstream
                         "TAXI"      -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"
                         "SUV"       -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
                         "SUV_TIER"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
@@ -581,6 +613,13 @@ getVehicleVariantImage variant =
                             "Chennai"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
                             _           -> fetchImage FF_ASSET "ic_vehicle_front"
                         _ -> fetchImage FF_ASSET "ic_vehicle_front"
+=======
+                        "TAXI" -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"
+                        "SUV"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
+                        "BIKE" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
+                        "AMBULANCE" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        _      -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
+>>>>>>> Stashed changes
         _          -> case variant of
                         "SEDAN"     -> "ny_ic_sedan_car_side," <> url <> "ny_ic_sedan_car_side.png"
                         "SEDAN_TIER" -> "ny_ic_sedan_car_side," <> url <> "ny_ic_sedan_car_side.png"

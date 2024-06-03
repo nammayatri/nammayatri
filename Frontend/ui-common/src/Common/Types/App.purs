@@ -36,7 +36,11 @@ import DecodeUtil (parseJSON)
 
 type FlowBT e st a = BackT (ExceptT e (Free (FlowWrapper st))) a
 
+<<<<<<< Updated upstream
 data VehicalTypes = Sedan | Hatchback | SUV | Auto
+=======
+data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance
+>>>>>>> Stashed changes
 data LazyCheck = LanguageStyle | EndPoint | BaseUrl | TypoGraphy | WithoutOffers | FunctionCall | Config | Language
 
 newtype Place = Place {
@@ -65,6 +69,11 @@ instance showVehicalTypes :: Show VehicalTypes where
     show (Hatchback ) = "Hatchback"
     show (SUV ) = "SUV"
     show (Auto ) = "Auto"
+<<<<<<< Updated upstream
+=======
+    show (Bike ) = "Bike"
+    show (Ambulance ) = "Ambulance"
+>>>>>>> Stashed changes
 
 
 

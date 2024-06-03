@@ -207,11 +207,24 @@ acCheckForDriversView push state =
 
 downgradeVehicleView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 downgradeVehicleView push state =
+<<<<<<< Updated upstream
   let
     compareRidePreferences a b = compare a.priority b.priority
     defaultRidePreferences = DA.sortBy compareRidePreferences state.data.ridePreferences
   in
     linearLayout
+=======
+  let canDowngrade = (not $ DA.null state.data.downgradeOptions) && state.data.vehicleType /= "BIKE"
+      downgradeFrom = case state.data.vehicleType of
+                        "SUV" -> getString AC_SUV
+                        "BIKE" -> "Bike"
+                        "AMBULANCE" -> "Ambulance"
+                        _     -> getString AC_CAB
+      downgradeTo = case state.data.vehicleType of
+                      "SUV" -> getString AC_CAB
+                      _     -> getString TAXI
+  in  linearLayout
+>>>>>>> Stashed changes
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , margin (MarginHorizontal 16 16)

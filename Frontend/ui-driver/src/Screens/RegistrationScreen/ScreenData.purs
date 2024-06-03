@@ -40,6 +40,11 @@ initData = {
         activeIndex : 1,
         registerationStepsCabs : [],
         registerationStepsAuto : [],
+<<<<<<< Updated upstream
+=======
+        registerationStepsBike : [],
+        registerationStepsAmbulance : [],
+>>>>>>> Stashed changes
         drivingLicenseStatus : NOT_STARTED,
         vehicleDetailsStatus : NOT_STARTED,
         permissionsStatus : NOT_STARTED,

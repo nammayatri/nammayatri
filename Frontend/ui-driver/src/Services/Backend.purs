@@ -691,9 +691,19 @@ mkCategory category =
     case category of 
         Just ST.AutoCategory -> Just "AUTO_CATEGORY"
         Just ST.CarCategory -> Just "CAR"
+<<<<<<< Updated upstream
         _ -> case (getValueToLocalStore VEHICLE_CATEGORY) of
                 "CarCategory" -> Just "CAR"
                 "AutoCategory" -> Just "AUTO_CATEGORY"
+=======
+        Just ST.BikeCategory -> Just "MOTORCYCLE"
+        Just ST.AmbulanceCategory -> Just "AMBULANCE"
+        _ -> case (getValueToLocalStore VEHICLE_CATEGORY) of
+                "CarCategory" -> Just "CAR"
+                "AutoCategory" -> Just "AUTO_CATEGORY"
+                "BikeCategory" -> Just "MOTORCYCLE"
+                "AmbulanceCategory" -> Just "AMBULANCE"
+>>>>>>> Stashed changes
                 _ -> Nothing
 
 registerDriverDLBT :: DriverDLReq -> FlowBT String  DriverDLResp

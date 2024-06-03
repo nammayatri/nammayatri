@@ -309,7 +309,13 @@ eval (SelectVehicleTypeModalAction (SelectVehicleTypeModal.OnSelect item)) state
                         Sedan     -> "Sedan"
                         SUV       -> "SUV"
                         Hatchback -> "Hatchback"
+<<<<<<< Updated upstream
                         Auto      -> "Auto")
+=======
+                        Auto      -> "Auto"
+                        Bike      -> "Bike"
+                        Ambulance -> "Ambulance")
+>>>>>>> Stashed changes
       }
     }
 

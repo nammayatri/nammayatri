@@ -715,7 +715,11 @@ instance showRidesInfo :: Show RidesInfo where show = genericShow
 instance decodeRidesInfo :: Decode RidesInfo where decode = defaultDecode
 instance encodeRidesInfo :: Encode RidesInfo where encode = defaultEncode
 
+<<<<<<< Updated upstream
 data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT
+=======
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE | AMBULANCE
+>>>>>>> Stashed changes
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance showVehicleVariant :: Show VehicleVariant where show = genericShow
@@ -727,6 +731,11 @@ instance standardEncodeVehicleVariant :: StandardEncode VehicleVariant
  standardEncode SUV = standardEncode {}
  standardEncode HATCHBACK = standardEncode {}
  standardEncode AUTO_VARIANT = standardEncode {}
+<<<<<<< Updated upstream
+=======
+ standardEncode BIKE = standardEncode {}
+ standardEncode AMBULANCE = standardEncode {}
+>>>>>>> Stashed changes
 
 data Status = NEW | INPROGRESS | COMPLETED | CANCELLED | NOTHING
 
@@ -4414,7 +4423,8 @@ data OnboardingDocsReq = OnboardingDocsReq String
 newtype OnboardingDocsRes = OnboardingDocsRes {
   autos :: Maybe (Array OnboardingDoc),
   cabs :: Maybe (Array OnboardingDoc),
-  bikes :: Maybe (Array OnboardingDoc)
+  bikes :: Maybe (Array OnboardingDoc),
+  ambulance :: Maybe (Array OnboardingDoc)
 }
 
 newtype OnboardingDoc = OnboardingDoc {

@@ -204,7 +204,11 @@ instance showValidationStatus :: Show ValidationStatus where show = genericShow
 instance eqValidationStatus :: Eq ValidationStatus where eq = genericEq
 
 
+<<<<<<< Updated upstream
 data VehicalTypes = Sedan | Hatchback | SUV | Auto
+=======
+data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance
+>>>>>>> Stashed changes
 
  -- ############################################################# UploadingDrivingLicenseScreen ################################################################################
 type UploadDrivingLicenseState = {
@@ -267,6 +271,11 @@ type RegistrationScreenData = {
   activeIndex :: Int,
   registerationStepsAuto :: Array StepProgress,
   registerationStepsCabs :: Array StepProgress,
+<<<<<<< Updated upstream
+=======
+  registerationStepsBike :: Array StepProgress,
+  registerationStepsAmbulance :: Array StepProgress,
+>>>>>>> Stashed changes
   phoneNumber :: String,
   drivingLicenseStatus :: StageStatus,
   vehicleDetailsStatus :: StageStatus,
@@ -357,7 +366,11 @@ data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED
 derive instance genericStageStatus :: Generic StageStatus _
 instance eqStageStatus :: Eq StageStatus where eq = genericEq
 
+<<<<<<< Updated upstream
 data VehicleCategory = AutoCategory | CarCategory | UnKnown
+=======
+data VehicleCategory = AutoCategory | CarCategory | BikeCategory | AmbulanceCategory
+>>>>>>> Stashed changes
 
 derive instance genericVehicleCategory :: Generic VehicleCategory _
 instance eqVehicleCategory :: Eq VehicleCategory where eq = genericEq

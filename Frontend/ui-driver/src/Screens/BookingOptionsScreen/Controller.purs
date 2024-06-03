@@ -92,9 +92,17 @@ downgradeOptionsConfig vehicles vehicleType =
 
 getVehicleCapacity :: String -> String
 getVehicleCapacity vehicleType = case vehicleType of
+<<<<<<< Updated upstream
   "TAXI" -> getString ECONOMICAL <> " · " <> "4 " <> getString PEOPLE
   "SUV" -> getString SPACIOUS <> " · " <> "6 " <> getString PEOPLE
   _ -> getString COMFY <> " · " <> "4 " <> getString PEOPLE
+=======
+  "TAXI" -> getString ECONOMICAL <> " · " <>  "4 " <> getString PEOPLE
+  "SUV"  -> getString SPACIOUS <> " · " <> "6 " <> getString PEOPLE
+  "BIKE" -> "Bike" <> " · " <> "1 " <> getString PEOPLE
+  "Ambulance" -> "Ambulance" <> " · " <> "1 " <> getString PEOPLE
+  _      -> getString COMFY <> " · " <> "4 " <> getString PEOPLE
+>>>>>>> Stashed changes
 
 dummyVehicleP :: VehicleP
 dummyVehicleP =
