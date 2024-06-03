@@ -35,7 +35,10 @@ data IOSSearchRequestForDriverAPIEntity = IOSSearchRequestForDriverAPIEntity
   { searchRequestId :: Id DST.SearchTry, -- TODO: Deprecated, to be removed
     distanceToPickup :: Meters,
     vehicleServiceTier :: Maybe Text,
-    baseFare :: Money
+    baseFare :: Money,
+    searchRequestValidTill :: UTCTime,
+    distanceWithUnit :: Maybe Distance,
+    duration :: Maybe Seconds
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
