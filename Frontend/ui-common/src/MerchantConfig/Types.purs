@@ -110,7 +110,8 @@ type CityConfig = {
   showEarningSection :: Boolean,
   referral :: Referral,
   waitingCharges :: Number,
-  waitingChargesConfig :: WaitingChargesConfig
+  waitingChargesConfig :: WaitingChargesConfig,
+  enableHvSdk :: Boolean
 }
 
 type Referral = {

@@ -56,7 +56,8 @@ initData = {
         enteredDL : "",
         enteredRC : "",
         vehicleCategory : Nothing,
-        linkedRc : Nothing
+        linkedRc : Nothing,
+        accessToken : ""
       },
       props: {
         limitReachedFor : Nothing,
@@ -123,5 +124,6 @@ dummyCityConfig = {
                         freeSeconds : 3,
                         perMinCharges : 1.50
                       }
-                    }
+                    },
+                    enableHvSdk : false
                   }

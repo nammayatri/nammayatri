@@ -236,7 +236,8 @@ window.getMerchantConfig = function () {
           , "customerAppId" : "in.juspay.nammayatri"
           , "driverAppId" : "in.juspay.nammayatripartner"
         },
-        "waitingCharges" : 1.50
+        "waitingCharges" : 1.50,
+        "enableHvSdk" : true
       },
       {
         "cityName" : "Hyderabad",

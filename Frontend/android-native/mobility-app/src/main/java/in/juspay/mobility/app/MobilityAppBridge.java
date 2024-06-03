@@ -31,6 +31,7 @@ import android.os.RemoteException;
 import android.provider.Settings;
 import android.text.Html;
 import android.util.Log;
+import android.util.Base64;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -64,6 +65,7 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.perf.FirebasePerformance;
 import com.google.firebase.perf.metrics.Trace;
+import com.google.gson.Gson;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener;
@@ -77,11 +79,17 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+import co.hyperverge.hyperkyc.data.models.result.HyperKycResult;
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
@@ -135,6 +143,8 @@ public class MobilityAppBridge extends HyperBridge {
 
     private static final ArrayList<SendMessageCallBack> sendMessageCallBacks = new ArrayList<>();
     private CallBack callBack;
+    private String hvCallback;
+    private static final int HV_REQUEST_CODE = 54;
 
     private HashMap<String, SliderComponent> sliderComponentHashMap = new HashMap<>();
     public MobilityAppBridge(BridgeComponents bridgeComponents) {
@@ -1154,7 +1164,29 @@ public class MobilityAppBridge extends HyperBridge {
             cameraUtils.stopRecord();
     }
 
+    @JavascriptInterface
+    public String decodeAndStoreImage(String base64ImageString) {
+        try {
+            byte[] imageBytes = Base64.decode(base64ImageString, Base64.DEFAULT);
+            String fileName = "image_" + System.currentTimeMillis() + ".png";
+            File outputDir = bridgeComponents.getContext().getCacheDir();
+            File outputFile = new File(outputDir, fileName);
+            FileOutputStream fos = new FileOutputStream(outputFile);
+            fos.write(imageBytes);
+            fos.close();
+            return outputFile.getAbsolutePath();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "FAILED";
+        }
+    }
+
     // region Override functions
+
+    @JavascriptInterface
+    public void storeHvCallback(String callback) {
+        hvCallback = callback;
+    }
 
     @Override
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -1166,6 +1198,20 @@ public class MobilityAppBridge extends HyperBridge {
                     String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                             storeDetectPhoneNumbersCallBack, selectedNumber); //mobile_number
                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+                break;
+            case HV_REQUEST_CODE:
+                if (resultCode == RESULT_OK) {
+                    try{
+                        HyperKycResult result = data.getParcelableExtra("hyperKycResult");
+                        Gson gson = new Gson();
+                        String jsonStr = gson.toJson(result);
+                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%d','%s');",
+                                hvCallback, requestCode, jsonStr);
+                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                    }catch (Exception e) {
+                        System.out.println("zxc ex " + e);
+                    }
                 }
                 break;
         }
@@ -1189,6 +1235,13 @@ public class MobilityAppBridge extends HyperBridge {
             }
         });
     }
+
+    @JavascriptInterface
+    public void initHVSdk(String accessToken,  String workFlowId, String transactionId, boolean useLocation, String defLanguageCode, String inputsJson) {
+        HyperVergeSdk sdk = new HyperVergeSdk();
+        sdk.initHyperVergeSdk(accessToken, workFlowId, transactionId, useLocation, defLanguageCode, inputsJson, bridgeComponents);
+    }
+
     @JavascriptInterface
     public void renderSlider(String config) {
         ExecutorManager.runOnMainThread(() -> {

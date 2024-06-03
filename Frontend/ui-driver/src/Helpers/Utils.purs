@@ -63,7 +63,7 @@ import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/), (==), div, mod, not)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3, Fn2, runFn1, runFn2)
-import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
+import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5, EffectFn2(..))
 import Common.Types.App (OptionButtonList)
 import Engineering.Helpers.Commons (parseFloat, setText, convertUTCtoISC, getCurrentUTC) as ReExport
 import Engineering.Helpers.Commons (flowRunner)
@@ -155,6 +155,7 @@ foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
 foreign import getDateAfterNDays :: Int -> String
 foreign import downloadQR  :: String -> Effect Unit
+foreign import getHvCallBack :: EffectFn1 (Int -> String -> Effect Unit) Unit
 
 decodeGeoJson :: String -> Maybe GeoJson
 decodeGeoJson stringGeoJson = 
@@ -696,7 +697,8 @@ getCityConfig cityConfig cityName = do
                               freeSeconds : 3,
                               perMinCharges : 1.50
                             }
-                          }
+                          },
+                          enableHvSdk : false
                         }
   maybe dummyCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig
   where 

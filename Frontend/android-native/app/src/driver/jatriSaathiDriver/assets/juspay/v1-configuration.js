@@ -384,7 +384,8 @@ window.getMerchantConfig = function () {
              "freeSeconds" : 180,
              "perMinCharges" : 1.50
            }
-         }
+         },
+      "enableHvSdk" : false
     }
   ]
   })

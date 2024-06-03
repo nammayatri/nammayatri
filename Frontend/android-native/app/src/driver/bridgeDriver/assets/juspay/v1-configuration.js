@@ -204,7 +204,8 @@ window.getMerchantConfig = function () {
           , "driverAppId" : "in.juspay.nammayatripartner"
         },
         "waitingCharges" : 1.50,
-        "waitingChargesConfig" : defWaitingChargesConfig
+        "waitingChargesConfig" : defWaitingChargesConfig,
+        "enableHvSdk" : true
       },
       {
         "cityName" : "Hyderabad",
@@ -247,7 +248,8 @@ window.getMerchantConfig = function () {
             "freeSeconds" : 180,
             "perMinCharges" : 2.00
           }
-        }
+        },
+        "enableHvSdk" : false
       },
       {
         "cityName" : "Mysore",
@@ -281,7 +283,9 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "enableHvSdk" : false
+
       },
       {
         "cityName" : "Delhi",
@@ -323,7 +327,8 @@ window.getMerchantConfig = function () {
         "auto" : {
           "freeSeconds" : 180,
           "perMinCharges" : 0.75
-        }
+        },
+      "enableHvSdk" : false
       }
       },
       {
@@ -366,7 +371,8 @@ window.getMerchantConfig = function () {
         "auto" : {
           "freeSeconds" : 180,
           "perMinCharges" : 1.0
-        }
+        },
+      "enableHvSdk" : false
       }
       },
       {
@@ -401,7 +407,8 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Puducherry",
@@ -435,7 +442,8 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Tumakuru",
@@ -469,7 +477,8 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Gurugram",
@@ -503,7 +512,8 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Noida",
@@ -537,7 +547,8 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "enableHvSdk" : false
       },
       {
         "cityName" : "TamilNaduCities",
@@ -571,7 +582,8 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Minneapolis",
@@ -605,7 +617,8 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "enableHvSdk" : false
       }
   ]
   , "coinsConfig" : {

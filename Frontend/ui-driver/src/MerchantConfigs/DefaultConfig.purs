@@ -157,7 +157,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              enableHvSdk : true
             },
             {
               cityName : "Hyderabad",
@@ -190,7 +191,8 @@ config =
                 , driverAppId : "in.mobility.manayatripartner"
               },
               waitingCharges : 2.00,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              enableHvSdk : false
             },
             {
               cityName : "Mysore",
@@ -223,7 +225,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              enableHvSdk : false
             },
             {
               cityName : "Delhi",
@@ -256,7 +259,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 0.75,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              enableHvSdk : false
             },
             {
               cityName : "Chennai",
@@ -289,7 +293,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.00,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              enableHvSdk : false
             },
             {
               cityName : "Coimbatore",
@@ -322,7 +327,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              enableHvSdk : false
             },
             {
               cityName : "Puducherry",
@@ -355,7 +361,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              enableHvSdk : false
             },
             {
               cityName : "Gurugram",
@@ -388,7 +395,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              enableHvSdk : false
             },
             {             
               cityName : "Noida",
@@ -421,7 +429,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              enableHvSdk : false
             },
             {
               cityName : "TamilNaduCities",
@@ -454,7 +463,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              enableHvSdk : false
             },
             {
               cityName : "Kolkata",
@@ -491,7 +501,8 @@ config =
                 , driverAppId : "in.juspay.jatrisaathidriver"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              enableHvSdk : false
             }
             --, For future use
             -- {
