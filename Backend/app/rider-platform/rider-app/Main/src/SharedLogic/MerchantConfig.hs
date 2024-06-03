@@ -19,10 +19,10 @@ module SharedLogic.MerchantConfig
     updateTotalRidesCounters,
     updateTotalRidesInWindowCounters,
     anyFraudDetected,
-    searchFraudDetected,
     mkCancellationKey,
     mkCancellationByDriverKey,
     blockCustomer,
+    getRidesCountInWindow,
   )
 where
 
@@ -118,9 +118,6 @@ getRidesCountInWindow riderId start window currTime =
 anyFraudDetected :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Id Person.Person -> Id DMOC.MerchantOperatingCity -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
 anyFraudDetected riderId merchantOperatingCityId = checkFraudDetected riderId merchantOperatingCityId [MoreCancelling, MoreCancelledByDriver, MoreSearching, TotalRides, TotalRidesInWindow]
 
-searchFraudDetected :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Id Person.Person -> Id DMOC.MerchantOperatingCity -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
-searchFraudDetected riderId merchantOperatingCityId = checkFraudDetected riderId merchantOperatingCityId [MoreCancelling, MoreCancelledByDriver, MoreSearching, TotalRides]
-
 checkFraudDetected :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Id Person.Person -> Id DMOC.MerchantOperatingCity -> [Factors] -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
 checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
   useFraudDetection <- maybe False (.useFraudDetection) <$> CMSUC.findByMerchantOperatingCityId merchantOperatingCityId
@@ -154,12 +151,9 @@ checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs = Red
               list = zip3 windowValueList intervals keyList
           rideCount <-
             mapM
-              ( \(key, value, windowKey) -> case key of
+              ( \(key, _, _) -> case key of
                   Just res -> return res
-                  Nothing -> do
-                    rideCount <- getRidesCountInWindow riderId value (fromIntegral timeInterval) actualTime
-                    Redis.setExp windowKey rideCount 86400
-                    return rideCount
+                  Nothing -> return 0
               )
               list
 

@@ -330,7 +330,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
   fork "updating search counters" $ do
     merchantConfigs <- QMC.findAllByMerchantOperatingCityId person.merchantOperatingCityId
     SMC.updateSearchFraudCounters personId merchantConfigs
-    mFraudDetected <- SMC.searchFraudDetected personId merchantOperatingCity.id merchantConfigs
+    mFraudDetected <- SMC.anyFraudDetected personId merchantOperatingCity.id merchantConfigs
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer personId (Just mc.id)
   return dSearchRes
   where
