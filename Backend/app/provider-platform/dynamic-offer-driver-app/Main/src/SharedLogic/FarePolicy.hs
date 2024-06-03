@@ -36,7 +36,8 @@ import Utils.Common.Cac.KeyNameConstants
 data FarePoliciesProduct = FarePoliciesProduct
   { farePolicies :: [FarePolicyD.FullFarePolicy],
     area :: SL.Area,
-    specialLocationTag :: Maybe Text
+    specialLocationTag :: Maybe Text,
+    specialLocationName :: Maybe Text
   }
 
 makeFarePolicyByEstOrQuoteIdKey :: Text -> Text
@@ -111,7 +112,8 @@ getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mb
     FarePoliciesProduct
       { farePolicies,
         area = allFareProducts.area,
-        specialLocationTag = allFareProducts.specialLocationTag
+        specialLocationTag = allFareProducts.specialLocationTag,
+        specialLocationName = allFareProducts.specialLocationName
       }
 
 mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> FarePolicyD.FarePolicy -> [breakupItem]

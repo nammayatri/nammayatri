@@ -62,6 +62,7 @@ data BookingT f = BookingT
     roundTrip :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     serviceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     serviceTierShortDesc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    specialLocationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startTime :: B.C f Kernel.Prelude.UTCTime,
     status :: B.C f Domain.Types.Extra.Booking.BookingStatus,

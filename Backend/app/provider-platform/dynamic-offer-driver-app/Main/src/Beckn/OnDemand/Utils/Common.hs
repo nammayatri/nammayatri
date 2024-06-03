@@ -90,7 +90,8 @@ data Pricing = Pricing
     tollNames :: Maybe [Text],
     currency :: Currency,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
-    vehicleServiceTierAirConditioned :: Maybe Double
+    vehicleServiceTierAirConditioned :: Maybe Double,
+    specialLocationName :: Maybe Text
   }
 
 data RateCardBreakupItem = RateCardBreakupItem
@@ -979,8 +980,8 @@ tfItemDescriptor booking =
         descriptorName = Just $ show booking.vehicleServiceTier
       }
 
-convertEstimateToPricing :: (DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo) -> Pricing
-convertEstimateToPricing (DEst.Estimate {..}, serviceTier, mbDriverLocations) =
+convertEstimateToPricing :: Maybe Text -> (DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo) -> Pricing
+convertEstimateToPricing specialLocationName (DEst.Estimate {..}, serviceTier, mbDriverLocations) =
   Pricing
     { pricingId = id.getId,
       pricingMaxFare = maxFare,
@@ -995,8 +996,8 @@ convertEstimateToPricing (DEst.Estimate {..}, serviceTier, mbDriverLocations) =
       ..
     }
 
-convertQuoteToPricing :: (DQuote.Quote, DVST.VehicleServiceTier, Maybe NearestDriverInfo) -> Pricing
-convertQuoteToPricing (DQuote.Quote {..}, serviceTier, mbDriverLocations) =
+convertQuoteToPricing :: Maybe Text -> (DQuote.Quote, DVST.VehicleServiceTier, Maybe NearestDriverInfo) -> Pricing
+convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDriverLocations) =
   Pricing
     { pricingId = id.getId,
       pricingMaxFare = estimatedFare,
@@ -1035,6 +1036,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       distanceToNearestDriver = Nothing,
       isCustomerPrefferedSearchRoute = Nothing,
       isBlockedRoute = Nothing,
+      specialLocationName = Nothing,
       ..
     }
 
@@ -1054,6 +1056,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
                 },
           tagGroupList =
             specialLocationTagSingleton pricing.specialLocationTag
+              <> specialLocationNameTag pricing.specialLocationName
               <> distanceToNearestDriverTagSingleton pricing.distanceToNearestDriver
               <> isCustomerPrefferedSearchRouteSingleton pricing.isCustomerPrefferedSearchRoute
               <> isBlockedRouteSingleton pricing.isBlockedRoute
@@ -1075,6 +1078,21 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
                       descriptorShortDesc = Nothing
                     },
               tagValue = specialLocationTag
+            }
+    specialLocationNameTag specialLocationName
+      | isNothing specialLocationName = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.SPECIAL_LOCATION_NAME,
+                      descriptorName = Just "Special Location Name",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = specialLocationName
             }
     distanceToNearestDriverTagSingleton distanceToNearestDriver
       | isNothing distanceToNearestDriver = Nothing
