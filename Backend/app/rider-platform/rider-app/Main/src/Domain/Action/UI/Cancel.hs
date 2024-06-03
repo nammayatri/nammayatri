@@ -149,7 +149,7 @@ cancel bookingId _ req = do
         case res of
           Right res' -> do
             let merchantOperatingCityId = booking.merchantOperatingCityId
-            disToPickup <- driverDistanceToPickup booking.merchantId merchantOperatingCityId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
+            disToPickup <- driverDistanceToPickup booking merchantOperatingCityId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
             -- Temporary for debug issue with huge values
             let disToPickupThreshold = Meters 1000000 -- 1000km can be max valid distance
             disToPickupUpd :: Maybe Meters <-
@@ -266,18 +266,19 @@ driverDistanceToPickup ::
     Maps.HasCoordinates tripStartPos,
     Maps.HasCoordinates tripEndPos
   ) =>
-  Id Merchant.Merchant ->
+  SRB.Booking ->
   Id DMOC.MerchantOperatingCity ->
   tripStartPos ->
   tripEndPos ->
   m Meters
-driverDistanceToPickup merchantId merchantOperatingCityId tripStartPos tripEndPos = do
+driverDistanceToPickup booking merchantOperatingCityId tripStartPos tripEndPos = do
   distRes <-
-    Maps.getDistanceForCancelRide merchantId merchantOperatingCityId $
+    Maps.getDistanceForCancelRide booking.merchantId merchantOperatingCityId $
       Maps.GetDistanceReq
         { origin = tripStartPos,
           destination = tripEndPos,
-          travelMode = Just Maps.CAR
+          travelMode = Just Maps.CAR,
+          distanceUnit = booking.distanceUnit
         }
   return distRes.distance
 

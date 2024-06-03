@@ -938,7 +938,8 @@ computeActualDistance orgId merchantOpCityId pickup driverPoolResults = do
       Maps.GetDistancesReq
         { origins = driverPoolResults,
           destinations = pickupLatLong :| [],
-          travelMode = Just Maps.CAR
+          travelMode = Just Maps.CAR,
+          distanceUnit = Meter
         }
   logDebug $ "get distance results" <> show getDistanceResults
   return $ mkDriverPoolWithActualDistResult transporter.defaultPopupDelay <$> getDistanceResults

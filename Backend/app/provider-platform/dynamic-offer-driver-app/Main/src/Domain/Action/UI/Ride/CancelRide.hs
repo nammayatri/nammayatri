@@ -223,6 +223,7 @@ driverDistanceToPickup merchantId merchantOpCityId tripStartPos tripEndPos = do
       Maps.GetDistanceReq
         { origin = tripStartPos,
           destination = tripEndPos,
-          travelMode = Just Maps.CAR
+          travelMode = Just Maps.CAR,
+          distanceUnit = Meter
         }
   return $ distRes.distance

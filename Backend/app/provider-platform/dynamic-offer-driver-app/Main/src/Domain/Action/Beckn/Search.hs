@@ -155,7 +155,8 @@ getRouteServiceability merchantId merchantOpCityId fromLocation toLocation _ _ _
       Maps.GetDistanceReq
         { origin = fromLocation,
           destination = toLocation,
-          travelMode = Just Maps.CAR
+          travelMode = Just Maps.CAR,
+          distanceUnit = Meter
         }
   return $
     RouteServiceability

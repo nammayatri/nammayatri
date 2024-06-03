@@ -59,6 +59,7 @@ data AutoCompleteReq = AutoCompleteReq
     sessionToken :: Maybe Text,
     location :: Text,
     radius :: Integer,
+    radiusWithUnit :: Maybe Distance,
     language :: Maps.Language,
     strictbounds :: Maybe Bool,
     origin :: Maybe Maps.LatLong,
@@ -102,6 +103,7 @@ autoComplete (personId, merchantId) AutoCompleteReq {..} = do
     merchantOperatingCityId
     Maps.AutoCompleteReq
       { country = toInterfaceCountry merchantOperatingCity.country,
+        radiusWithUnit = Just $ fromMaybe (convertMetersToDistance merchantOperatingCity.distanceUnit $ fromInteger radius) radiusWithUnit,
         ..
       }
   where
