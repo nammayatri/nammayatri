@@ -67,3 +67,8 @@ ALTER TABLE atlas_app.estimate ADD COLUMN estimated_pickup_duration integer ;
 
 ALTER TABLE atlas_app.estimate ADD COLUMN vehicle_service_tier_seating_capacity integer ;
 ALTER TABLE atlas_app.estimate ADD COLUMN vehicle_service_tier_air_conditioned double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN special_location_name text ;

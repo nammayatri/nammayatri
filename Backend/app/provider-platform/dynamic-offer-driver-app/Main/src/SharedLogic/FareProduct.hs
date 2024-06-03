@@ -30,6 +30,7 @@ import qualified Storage.CachedQueries.FareProduct as QFareProduct
 data FareProducts = FareProducts
   { fareProducts :: [DFareProduct.FareProduct],
     area :: SL.Area,
+    specialLocationName :: Maybe Text,
     specialLocationTag :: Maybe Text
   }
 
@@ -69,20 +70,24 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
   where
     getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation specialLocationTag = do
       let area = SL.Pickup pickupSpecialLocation.id
+          specialLocationName = pickupSpecialLocation.locationName
       fareProducts <- getFareProducts area
       return $
         FareProducts
           { fareProducts,
             area = area,
+            specialLocationName = Just specialLocationName,
             specialLocationTag = Just specialLocationTag
           }
     getDropFareProductsAndSpecialLocationTag dropSpecialLocation specialLocationTag = do
       let area = SL.Drop dropSpecialLocation.id
+          specialLocationName = dropSpecialLocation.locationName
       fareProducts <- getFareProducts area
       return $
         FareProducts
           { fareProducts,
             area,
+            specialLocationName = Just specialLocationName,
             specialLocationTag = Just specialLocationTag
           }
 
@@ -93,6 +98,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
         FareProducts
           { fareProducts,
             area = SL.Default,
+            specialLocationName = Nothing,
             specialLocationTag = Nothing
           }
 

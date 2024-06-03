@@ -47,6 +47,7 @@ data Quote = Quote
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierShortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tollChargesInfo :: Kernel.Prelude.Maybe Domain.Types.Quote.TollChargesInfo,
     tripTerms :: Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms,

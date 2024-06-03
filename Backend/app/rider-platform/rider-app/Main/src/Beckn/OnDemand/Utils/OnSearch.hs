@@ -340,6 +340,9 @@ buildSpecialLocationTag :: MonadFlow m => Spec.Item -> m (Maybe Text)
 buildSpecialLocationTag item =
   return $ Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_TAG item.itemTags
 
+getSpecialLocationName :: Spec.Item -> Maybe Text
+getSpecialLocationName item = Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_NAME item.itemTags
+
 getIsCustomerPrefferedSearchRoute :: Spec.Item -> Maybe Bool
 getIsCustomerPrefferedSearchRoute item = do
   tagValueStr <- Utils.getTagV2 Tag.INFO Tag.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE item.itemTags
