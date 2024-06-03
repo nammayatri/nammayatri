@@ -110,6 +110,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     mandateExecutionRescheduleInterval :: Kernel.Prelude.NominalDiffTime,
     mandateNotificationRescheduleInterval :: Kernel.Prelude.NominalDiffTime,
     mandateValidity :: Kernel.Prelude.Int,
+    maxCancellationCharge :: Kernel.Types.Common.HighPrecMoney,
     mediaFileSizeUpperLimit :: Kernel.Prelude.Int,
     mediaFileUrlPattern :: Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

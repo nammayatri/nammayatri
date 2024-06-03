@@ -274,16 +274,22 @@ isOnRideWithAdvRideConditionKey driverId = "Driver:SetOnRide:" <> driverId
 lockRide :: Text -> Text
 lockRide rideId = "D:C:Rd-" <> rideId
 
+mkCancellationChargeApplicableKey :: Text -> Text
+mkCancellationChargeApplicableKey rideId = "Bpp:cancelledRideId-" <> rideId
+
 updateOnRideStatusWithAdvancedRideCheck :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Maybe DRide.Ride -> m ()
 updateOnRideStatusWithAdvancedRideCheck personId mbRide = do
-  lockAcquired <- case mbRide of
-    Just ride -> Redis.tryLockRedis (lockRide (ride.id.getId)) 10
-    Nothing -> pure True
+  (lockAcquired, isStatusNew) <- case mbRide of
+    Just ride -> (,ride.status == DRide.NEW) <$> Redis.tryLockRedis (lockRide (ride.id.getId)) 30
+    Nothing -> pure (True, False)
   if lockAcquired
     then do
       Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey personId.getId) 4 4 $ do
         hasAdvancedRide <- QDI.findById (cast personId) <&> maybe False (.hasAdvanceBooking)
-        unless hasAdvancedRide $ QDI.updateOnRide False (cast personId)
+        unless hasAdvancedRide $ do
+          QDI.updateOnRide False (cast personId)
+          whenJust mbRide $ \ride ->
+            when isStatusNew $ Redis.setExp (mkCancellationChargeApplicableKey ride.id.getId) isStatusNew 10
         QDI.updateHasAdvancedRide (cast personId) False
     else throwError $ DriverTransactionTryAgain personId.getId
 

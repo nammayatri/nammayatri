@@ -733,6 +733,7 @@ TransporterConfig:
     cancellationFee: HighPrecMoney
     cancellationChargePerMeter: HighPrecMoney
     cancellationChargePerSecond: HighPrecMoney
+    maxCancellationCharge: HighPrecMoney
     cancellationFeePercentage: Int
     currency: Currency
     distanceUnit: DistanceUnit
@@ -1051,6 +1052,7 @@ TransporterConfig:
     cancellationChargePerMeter: "0"
     cancellationChargePerSecond: "0"
     cancellationFeePercentage: "0"
+    maxCancellationCharge: "0"
 
   excludedDefaultQueries:
     - findByPrimaryKey

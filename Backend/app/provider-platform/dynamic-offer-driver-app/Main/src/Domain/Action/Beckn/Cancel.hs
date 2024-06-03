@@ -36,6 +36,7 @@ import EulerHS.Prelude
 import Kernel.External.Maps
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis.Queries as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -100,11 +101,13 @@ cancel req merchant booking mbActiveSearchTry = do
 
     fork "DriverRideCancelledCoin and CustomerCancellationDuesCalculation Location trakking" $ do
       whenJust mbRide $ \ride -> do
+        transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
         mbLocation <- do
           driverLocations <- try @_ @SomeException $ LF.driversLocation [ride.driverId]
           case driverLocations of
             Left err -> do
               logError ("Failed to fetch Driver Location with error : " <> show err)
+              customerCancellationChargesCalculation transporterConfig booking Nothing ride.id
               return Nothing
             Right locations -> return $ listToMaybe locations
         disToPickup <- forM mbLocation $ \location -> do
@@ -112,11 +115,10 @@ cancel req merchant booking mbActiveSearchTry = do
         logDebug $ "RideCancelled Coin Event by customer distance to pickup" <> show disToPickup
         logDebug "RideCancelled Coin Event by customer"
         DC.driverCoinsEvent ride.driverId merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)
-        transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
 
         whenJust booking.riderId (DP.addDriverToRiderCancelledList ride.driverId)
         when transporterConfig.canAddCancellationFee do
-          customerCancellationChargesCalculation transporterConfig booking disToPickup
+          customerCancellationChargesCalculation transporterConfig booking disToPickup ride.id
 
     whenJust mbRide $ \ride -> do
       triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
@@ -153,39 +155,46 @@ cancel req merchant booking mbActiveSearchTry = do
             ..
           }
 
-customerCancellationChargesCalculation :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DTC.TransporterConfig -> SRB.Booking -> Maybe Meters -> m ()
-customerCancellationChargesCalculation transporterConfig booking disToPickup = do
+customerCancellationChargesCalculation :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DTC.TransporterConfig -> SRB.Booking -> Maybe Meters -> Id SRide.Ride -> m ()
+customerCancellationChargesCalculation transporterConfig booking disToPickup rideId = do
   logInfo $ "Entered CustomerCancellationDuesCalculation: " <> show disToPickup
-  whenJust disToPickup $ \driverDistToPickup -> do
+  driverCancellationApplicable :: Bool <- fromMaybe False <$> Redis.get (mkCancellationChargeApplicableKey (rideId.getId))
+  when driverCancellationApplicable $ do
     now <- getCurrentTime
     let driverBookingDuration = roundToIntegral $ diffUTCTime now booking.createdAt
-    let condition = (driverBookingDuration > transporterConfig.driverTimeSpentOnPickupThresholdOnCancel) && (driverDistToPickup < transporterConfig.driverDistanceToPickupThresholdOnCancel)
-    logInfo $ "Verifying condition1 for cancellation: " <> show condition <> " " <> show driverBookingDuration
-    isChargable <-
-      if not condition
-        then do
-          case booking.distanceToPickup of
-            Just acutalDistanceToPickup ->
-              return $ (acutalDistanceToPickup - driverDistToPickup) > transporterConfig.driverDistanceTravelledOnPickupThresholdOnCancel
-            Nothing -> return condition
-        else return condition
+    (isChargable, distanceTravelled) <- case disToPickup of
+      Just driverDistToPickup -> do
+        let condition =
+              (driverBookingDuration > transporterConfig.driverTimeSpentOnPickupThresholdOnCancel)
+                && (driverDistToPickup < transporterConfig.driverDistanceToPickupThresholdOnCancel)
+        logInfo $ "Verifying condition1 for cancellation: " <> show condition <> " " <> show driverBookingDuration
+        case booking.distanceToPickup of
+          Just actualDistanceToPickup ->
+            let distanceTravelled = actualDistanceToPickup - driverDistToPickup
+                isChargable =
+                  if not condition
+                    then distanceTravelled > transporterConfig.driverDistanceTravelledOnPickupThresholdOnCancel
+                    else condition
+             in return (isChargable, Just distanceTravelled)
+          Nothing -> return (condition, Nothing)
+      Nothing -> return (driverBookingDuration > transporterConfig.driverTimeSpentOnPickupThresholdOnCancel, Nothing)
+
     when isChargable $ do
       riderId <- booking.riderId & fromMaybeM (RiderDetailsDoNotExist "BOOKING" booking.id.getId)
       rider <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
-      cancellationCharge <- getCustomerCancellationCharge transporterConfig booking now
+      cancellationCharge <- getCustomerCancellationCharge transporterConfig booking distanceTravelled driverBookingDuration
       QRD.updateCancellationDues riderId (rider.cancellationDues + cancellationCharge)
 
-getCustomerCancellationCharge :: MonadFlow m => DTC.TransporterConfig -> SRB.Booking -> UTCTime -> m HighPrecMoney
-getCustomerCancellationCharge transporterConfig booking now = do
+getCustomerCancellationCharge :: MonadFlow m => DTC.TransporterConfig -> SRB.Booking -> Maybe Meters -> Seconds -> m HighPrecMoney
+getCustomerCancellationCharge transporterConfig booking distanceTravelled driverBookingDuration = do
   let cancellationFee = transporterConfig.cancellationFee
-      distanceTravelledByDriver = fromMaybe 0 booking.distanceToPickup
-      timeElapsedTillCancellation :: Integer = roundToIntegral $ diffUTCTime now booking.createdAt
+      distanceTravelledByDriver = fromMaybe 0 distanceTravelled
+      timeElapsedTillCancellation :: Int = driverBookingDuration.getSeconds
       cancellationFeeForTravelledDistance = (fromIntegral distanceTravelledByDriver.getMeters) * transporterConfig.cancellationChargePerMeter
       cancellationFeeForTravelledDuration = fromIntegral timeElapsedTillCancellation * transporterConfig.cancellationChargePerSecond
-      cancellationChargeByPercentOfFare = (fromIntegral (transporterConfig.cancellationFeePercentage) * (booking.estimatedFare)) / 100
+      cancellationChargeByPercentOfFare = min ((fromIntegral (transporterConfig.cancellationFeePercentage) * (booking.estimatedFare)) / 100) transporterConfig.maxCancellationCharge
   -- cancellation logic ->  Max(X, Min((distance traveled by driver for pickup * per mile cancellation charge + time elapsed till cancellation * per min cancellation charge), Y% of ride fare)
   let totalCancellationCharge = max cancellationFee (min (cancellationFeeForTravelledDuration + cancellationFeeForTravelledDistance) cancellationChargeByPercentOfFare)
-
   return totalCancellationCharge
 
 cancelSearch ::

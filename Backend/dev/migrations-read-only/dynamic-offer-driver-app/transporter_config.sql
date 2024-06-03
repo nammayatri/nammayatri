@@ -165,4 +165,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_ch
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_cancellation_charge double precision NOT NULL default 0;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN distance_unit character varying(255) ;
