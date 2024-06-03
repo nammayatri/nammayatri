@@ -47,6 +47,7 @@ data QuoteT f = QuoteT
     requestId :: B.C f Kernel.Prelude.Text,
     serviceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     serviceTierShortDesc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    specialLocationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     tollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),

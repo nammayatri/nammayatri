@@ -86,6 +86,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
       Se.Set Beam.serviceTierName serviceTierName,
       Se.Set Beam.serviceTierShortDesc serviceTierShortDesc,
+      Se.Set Beam.specialLocationName specialLocationName,
       Se.Set Beam.specialLocationTag specialLocationTag,
       Se.Set Beam.status status,
       Se.Set Beam.tollCharges (tollChargesInfo <&> ((.amount) . (.tollCharges))),

@@ -66,3 +66,8 @@ ALTER TABLE atlas_app.booking ADD COLUMN return_time timestamp with time zone ;
 
 ALTER TABLE atlas_app.booking ADD COLUMN vehicle_service_tier_seating_capacity integer ;
 ALTER TABLE atlas_app.booking ADD COLUMN vehicle_service_tier_air_conditioned double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN special_location_name text ;

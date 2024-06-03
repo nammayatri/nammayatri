@@ -79,6 +79,7 @@ Quote:
     serviceTierShortDesc: Maybe Text
     merchantOperatingCityId : Id MerchantOperatingCity
     specialLocationTag : Maybe Text
+    specialLocationName : Maybe Text
     clientBundleVersion : Maybe Version
     clientSdkVersion : Maybe Version
     clientConfigVersion : Maybe Version

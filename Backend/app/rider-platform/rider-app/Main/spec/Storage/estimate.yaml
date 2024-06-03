@@ -93,6 +93,7 @@ Estimate:
     waitingCharges : WaitingCharges
     driversLocation : "[LatLong]"
     specialLocationTag : Maybe Text
+    specialLocationName : Maybe Text
     serviceTierName : Maybe Text
     serviceTierShortDesc : Maybe Text
     clientSdkVersion: Maybe Version

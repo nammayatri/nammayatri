@@ -55,6 +55,7 @@ data EstimateT f = EstimateT
     requestId :: B.C f Kernel.Prelude.Text,
     serviceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     serviceTierShortDesc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    specialLocationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Domain.Types.Estimate.EstimateStatus,
     tollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),

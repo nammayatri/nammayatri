@@ -119,7 +119,8 @@ data EstimateInfo = EstimateInfo
     isCustomerPrefferedSearchRoute :: Maybe Bool,
     isBlockedRoute :: Maybe Bool,
     vehicleServiceTierAirConditioned :: Maybe Double,
-    vehicleServiceTierSeatingCapacity :: Maybe Int
+    vehicleServiceTierSeatingCapacity :: Maybe Int,
+    specialLocationName :: Maybe Text
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -165,7 +166,8 @@ data QuoteInfo = QuoteInfo
     isBlockedRoute :: Maybe Bool,
     tollChargesInfo :: Maybe TollChargesInfo,
     vehicleServiceTierAirConditioned :: Maybe Double,
-    vehicleServiceTierSeatingCapacity :: Maybe Int
+    vehicleServiceTierSeatingCapacity :: Maybe Int,
+    specialLocationName :: Maybe Text
   }
 
 data QuoteDetails

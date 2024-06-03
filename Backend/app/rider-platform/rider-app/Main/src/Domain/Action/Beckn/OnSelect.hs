@@ -183,6 +183,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
                     },
             vehicleServiceTierAirConditioned = estimate.vehicleServiceTierAirConditioned,
             vehicleServiceTierSeatingCapacity = estimate.vehicleServiceTierSeatingCapacity,
+            specialLocationName = estimate.specialLocationName,
             ..
           }
   pure quote
