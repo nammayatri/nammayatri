@@ -15,6 +15,7 @@
 module Beckn.OnDemand.Utils.OnUpdate where
 
 import qualified Beckn.ACL.Common as Common
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified BecknV2.OnDemand.Enums as Enums
@@ -24,15 +25,18 @@ import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as List
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
+import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FareParameters as DFParams
+import qualified Domain.Types.FarePolicy as FarePolicyD
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id, (%~))
 import Kernel.Types.Common hiding (mkPrice)
 import qualified Kernel.Types.Common as Common
+import Kernel.Types.Id
 import Kernel.Utils.Common hiding (mkPrice)
 import SharedLogic.FareCalculator as Fare
 import Tools.Error
@@ -158,7 +162,7 @@ mkPaymentParams :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC
 mkPaymentParams _paymentMethodInfo _paymentUrl merchant bppConfig booking = do
   let mPrice = Just $ Common.mkPrice (Just booking.currency) booking.estimatedFare
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
-  mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+  mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice booking.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 mkPaymentParamsSoftUpdate :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC.BecknConfig -> HighPrecMoney -> Currency -> Spec.Payment
 mkPaymentParamsSoftUpdate _paymentMethodInfo _paymentUrl merchant bppConfig estimatedFare currency = do
@@ -369,3 +373,17 @@ mkUpdatedDistanceTags mbDistance =
             tagDisplay = Just False,
             tagValue = Just $ show distance
           }
+
+tfItems :: DRide.Ride -> DBooking.Booking -> Utils.MerchantShortId -> Maybe Meters -> Maybe FarePolicyD.FarePolicy -> Maybe Text -> Maybe [Spec.Item]
+tfItems ride booking shortId estimatedDistance mbFarePolicy mbPaymentId =
+  Just
+    [ Spec.Item
+        { itemDescriptor = Utils.tfItemDescriptor booking,
+          itemFulfillmentIds = Just [ride.id.getId],
+          itemId = Just $ maybe (Common.mkItemId shortId booking.vehicleServiceTier) getId (booking.estimateId),
+          itemLocationIds = Nothing,
+          itemPaymentIds = Utils.tfPaymentId mbPaymentId,
+          itemPrice = Utils.tfItemPrice $ booking.estimatedFare,
+          itemTags = Utils.mkRateCardTag estimatedDistance Nothing mbFarePolicy
+        }
+    ]

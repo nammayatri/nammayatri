@@ -59,7 +59,7 @@ tfCatalogProviders :: Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -
 tfCatalogProviders res bppConfig isValueAddNP = do
   let providerId_ = Just bppConfig.subscriberId
       providerLocations_ = Just $ Beckn.OnDemand.Utils.OnSearch.mkProviderLocations ((map (\(_, _, c) -> c) res.estimates) <> (map (\(_, _, c) -> c) res.quotes))
-      providerPayments_ = Just $ mkPayment res.provider bppConfig
+      providerPayments_ = Just $ mkPayment res.provider bppConfig Nothing
       providerDescriptor_ = tfCatalogDescriptor res
       pricings = (map (Beckn.OnDemand.Utils.Common.convertEstimateToPricing res.specialLocationName) res.estimates) <> (map (Beckn.OnDemand.Utils.Common.convertQuoteToPricing res.specialLocationName) res.quotes)
       providerFulfillments_ = map (tfProviderFulfillments res) pricings & Just
