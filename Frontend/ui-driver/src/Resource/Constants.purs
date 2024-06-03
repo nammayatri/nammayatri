@@ -263,3 +263,6 @@ serviceTierMapping tierName acRide =
 
 defaultSliderDist :: Int
 defaultSliderDist = 4
+
+hvSdkTokenExp :: Int
+hvSdkTokenExp = 86400

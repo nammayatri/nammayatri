@@ -270,7 +270,8 @@ window.getMerchantConfig = function () {
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
           "onboarding_auto_image" : "ny_ic_auto_side"
-        }
+        },
+        "enableHvSdk" : false
       },
       {
         "cityName" : "Hyderabad",
@@ -327,7 +328,8 @@ window.getMerchantConfig = function () {
         "assets" :{
           "auto_image" :  "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow" 
-        }
+        },
+        "enableHvSdk" : false
       },
       {
         "cityName" : "Mysore",
@@ -371,7 +373,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Delhi", 
@@ -428,7 +431,8 @@ window.getMerchantConfig = function () {
          "assets" :{
            "auto_image" : "ic_auto_rickshaw",
            "onboarding_auto_image" : "ny_ic_auto_side"
-         }
+         },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Chennai",
@@ -485,7 +489,8 @@ window.getMerchantConfig = function () {
          "assets" :{
            "auto_image" :  "ny_ic_black_yellow_auto_side_view",
            "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
-         }
+         },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Coimbatore",
@@ -529,7 +534,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
-      }
+      },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Puducherry",
@@ -573,7 +579,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
-      }
+      },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Tumakuru",
@@ -617,7 +624,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Gurugram",
@@ -661,7 +669,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Noida",
@@ -705,7 +714,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "TamilNaduCities",
@@ -749,7 +759,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
-      }
+      },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Minneapolis",
@@ -793,7 +804,8 @@ window.getMerchantConfig = function () {
         "assets" : {
           "auto_image" : "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
-        }
+        },
+        "enableHvSdk" : false
       },
       {
         "cityName" : "Kochi",
@@ -838,7 +850,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_black"
-      }
+      },
+      "enableHvSdk" : true
     },
       {
         "cityName": "Jaipur",
@@ -894,7 +907,8 @@ window.getMerchantConfig = function () {
         "assets": {
           "auto_image": "ic_auto_rickshaw",
           "onboarding_auto_image": "ny_ic_auto_side"
-        }
+        },
+        "enableHvSdk" : false
       },
       {
         "cityName": "Chandigarh",
@@ -951,7 +965,8 @@ window.getMerchantConfig = function () {
         "assets": {
           "auto_image": "ic_auto_rickshaw",
           "onboarding_auto_image": "ny_ic_auto_side"
-        }
+        },
+        "enableHvSdk" : false
       },
       {
         "cityName": "Thrissur",
@@ -995,7 +1010,8 @@ window.getMerchantConfig = function () {
         "assets": {
           "auto_image": "ny_ic_auto_side_view",
           "onboarding_auto_image": "ny_ic_auto_right_side_black"
-        }
+        },
+        "enableHvSdk" : false
       },
       {
         "cityName": "Trivandrum",
@@ -1039,7 +1055,8 @@ window.getMerchantConfig = function () {
         "assets": {
           "auto_image": "ny_ic_auto_side_view",
           "onboarding_auto_image": "ny_ic_auto_right_side_black"
-        }
+        },
+        "enableHvSdk" : false
       },
       {
         "cityName": "Kozhikode",
@@ -1083,7 +1100,8 @@ window.getMerchantConfig = function () {
         "assets": {
           "auto_image": "ny_ic_auto_side_view",
           "onboarding_auto_image": "ny_ic_auto_right_side_black"
-        }
+        },
+        "enableHvSdk" : false
       }
   ]
   , "coinsConfig" : {
@@ -1119,6 +1137,7 @@ window.getMerchantConfig = function () {
   "vehicle" : {
     "validationPrefix" : "KA|AP|TS|DL|TN|PY|UP|HR|TG"
   }
+  , "appUpdatePopupUrl" : "https://play.google.com/store/apps/details?id=net.openkochi.yatripartner&pcampaignid=web_share"
   })
 }
 

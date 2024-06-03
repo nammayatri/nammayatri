@@ -15,7 +15,7 @@
 
 module Screens.AppUpdatePopUpScreen.Handler where
 
-import Prelude (bind, pure, ($), (<$>), unit, Unit)
+import Prelude (bind, pure, ($), (<$>), unit, Unit, discard, void, (==))
 import Presto.Core.Types.Language.Flow (doAff)
 import Screens.AppUpdatePopUpScreen.Controller as CD
 import Screens.AppUpdatePopUpScreen.View as AppUpdatePopUpScreen
@@ -27,16 +27,23 @@ import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
 import Data.Maybe (Maybe(..))
 import PrestoDOM.Core (terminateUI)
+import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import ConfigProvider (getAppConfig, appConfig)
+import JBridge as JB
+import Screens.Types as ST
 
 
 handleAppUpdatePopUp :: FlowBT String APP_UPDATE_POPUP
-handleAppUpdatePopUp  = do
+handleAppUpdatePopUp = do
   (GlobalState state) ← getState
   _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "AppUpdatePopUpScreen" Nothing
   act <- lift $ lift $ showScreenWithNameSpace ( AppUpdatePopUpScreen.screen state.appUpdatePopUpScreen)
   _ <- lift $ lift $ doAff $ liftEffect $ terminateUI $ Just "AppUpdatePopUpScreen"
   case act of
-    CD.Accept -> App.BackT $ App.NoBack <$> pure UpdateNow
+    CD.Accept -> do
+      if state.appUpdatePopUpScreen.appUpdatedView.popupFlowType == ST.REG_PROF_PAN_AADHAAR then void $ liftFlowBT $ JB.openUrlInApp (getAppConfig appConfig).appUpdatePopupUrl else pure unit
+      App.BackT $ App.NoBack <$> pure UpdateNow
     CD.Decline -> App.BackT $ App.BackPoint <$> pure Later
     CD.Exit -> pure Later
   

@@ -2725,3 +2725,69 @@ export const getFromUTC = (timestamp) => (val) => {
       return date.getUTCDate();
   }
 }
+
+export const initHVSdk = function (accessToken, workFLowId, transactionId, useLocation, defLanguageCode, inputJson, action, cb) {
+    try {
+      const callback = callbackMapper.map(function(stringifyPayload) {
+        cb(action(stringifyPayload))();
+      });
+      const jsonObjectPayload = {
+        event : "launchHyperVerge",
+        accessToken: accessToken,
+        workFlowId: workFLowId,
+        transactionId: transactionId,
+        useLocation: useLocation,
+        defLanguageCode: defLanguageCode,
+        inputJson: inputJson,
+        callback: callback
+      };
+      window.JOS.emitEvent("java")("onEvent")(JSON.stringify(jsonObjectPayload))()();
+    }
+    catch (err) {
+      console.error(err);
+    }
+  }
+
+
+
+export const decodeAndStoreImage = function (base64Image) {
+  if (JBridge.decodeAndStoreImage) {
+    return JBridge.decodeAndStoreImage(base64Image);
+  }
+}
+
+
+
+export const encodeToBase64 = function (url, delay, just, nothing, cb) {
+  const callbackFallback = function () {
+    cb(nothing)();
+  };
+  const currentLocationTimer = setTimeout(callbackFallback, delay);
+  if (JBridge.encodeToBase64) {
+    const callback = callbackMapper.map(function(res, image) {
+      clearTimeout(currentLocationTimer);
+      cb(just(image))();
+    });
+    return JBridge.encodeToBase64(url,callback);
+  }
+  else {
+    callbackFallback();
+  }
+}
+
+
+export const isSdkTokenExpired = function (expiry) {
+  const now = new Date();
+  const utcTimeInSeconds = Math.floor(now.getTime() / 1000);
+  return !(utcTimeInSeconds + 1200 < parseInt(expiry));
+}
+
+export const makeSdkTokenExpiry = function (delta) {
+  const now = new Date();
+  const utcTimeInSeconds = Math.floor(now.getTime() / 1000);
+  return String(utcTimeInSeconds + delta);
+}
+
+export const getAppName = function () {
+  return window.appName;
+}

@@ -27,6 +27,7 @@ import Components.RecordAudioModel.Controller as RecordAudioModel
 import Components.RecordAudioModel.Controller as RecordAudioModel
 import Components.RecordAudioModel.Controller as RecordAudioModel
 import Data.Eq.Generic (genericEq)
+import Data.Either as Either
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
@@ -34,9 +35,13 @@ import Data.Show.Generic (genericShow)
 import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
+import Control.Alt ((<|>))
+import Foreign (ForeignError(..), fail) 
 import Halogen.VDom.DOM.Prop (PropValue)
 import MerchantConfig.Types (AppConfig, BottomNavConfig, GradientConfig, SubscriptionConfig, Language(..))
-import Prelude (class Eq, class Show)
+import Prelude (class Eq, class Show, ($), (<$>))
+import Foreign.Index (readProp)
+import Foreign.Generic (class Decode, decode)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
@@ -44,6 +49,7 @@ import PrestoDOM (LetterSpacing, Visibility, visibility)
 import PrestoDOM.List (ListItem)
 import Services.API (QuestionConfirmRes(..), GetDriverInfoResp(..), Route, Status, MediaType, PaymentBreakUp, BookingTypes(..))
 import Styles.Types (FontSize)
+import Control.Monad.Except (runExcept)
 import Components.ChatView.Controller as ChatView
 import Foreign.Object (Object)
 import Foreign (Foreign)
@@ -285,7 +291,8 @@ type RegistrationScreenData = {
   enteredRC :: String,
   vehicleCategory :: Maybe VehicleCategory,
   vehicleTypeMismatch :: Boolean,
-  linkedRc :: Maybe String
+  linkedRc :: Maybe String,
+  accessToken :: String
 }
 
 type DocumentStatus = {
@@ -331,7 +338,8 @@ type RegistrationScreenProps = {
   driverEnabled :: Boolean,
   menuOptions :: Boolean,
   manageVehicle :: Boolean,
-  manageVehicleCategory :: Maybe VehicleCategory
+  manageVehicleCategory :: Maybe VehicleCategory,
+  dontAllowHvRelaunch :: Boolean
 }
 
 data AnimType = HIDE | SHOW | ANIMATING
@@ -355,7 +363,7 @@ data RegisterationStep =
 derive instance genericRegisterationStep :: Generic RegisterationStep _
 instance eqRegisterationStep :: Eq RegisterationStep where eq = genericEq
 
-data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED
+data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED | MANUAL_VERIFICATION_REQUIRED
 derive instance genericStageStatus :: Generic StageStatus _
 instance eqStageStatus :: Eq StageStatus where eq = genericEq
 
@@ -1727,7 +1735,8 @@ type AppUpdatedViewState = {
   primaryText :: String,
   secondaryText :: String,
   optionTwoText :: String,
-  coverImageUrl :: String
+  coverImageUrl :: String,
+  popupFlowType :: AppUpdatePoppupFlowType
 }
 
 data UpdatePopupType =  AppVersion
@@ -2821,3 +2830,86 @@ type RateCardScreenProps = {
   sliderMaxValue :: Int,
   sliderLoading :: Boolean
 }
+-------------------------------------------------- Onboarding LiveSelfie, PAN and Aadhaar Integration ------------------------------------
+data HyperVergeKycResult = HyperVergeKycResult
+  { status :: Maybe String,
+    transactionId :: Maybe String,
+    details :: Maybe Details,
+    errorCode :: Maybe Int,
+    errorMessage :: Maybe String
+  }
+derive instance genericHyperVergeKycResult :: Generic HyperVergeKycResult _
+instance decodeHyperVergeKycReult :: Decode HyperVergeKycResult where decode = defaultDecode
+instance encodeHyperVergeKycReult  :: Encode HyperVergeKycResult where encode = defaultEncode
+
+data Details =
+  LIVE_SELFIE LiveSelfie
+  | PAN_DETAILS PanDetails
+  | AADHAAR_DETAILS AadhaarCardDetails
+
+derive instance genericDetails :: Generic Details _
+instance decodeDetails :: Decode Details
+  where
+   decode body = (AADHAAR_DETAILS <$> decode body) <|> (PAN_DETAILS <$> decode body) <|> (LIVE_SELFIE <$> decode body) <|> (fail $ ForeignError "Unknown response")
+instance encodeDetails  :: Encode Details where encode = defaultEncode
+
+data LiveSelfie = LiveSelfie
+  { selfieImage :: String,
+    selfieURL :: Maybe String,
+    declineReason :: Maybe String,
+    errorCode :: Maybe String
+  }
+  
+derive instance genericLiveSelfie :: Generic LiveSelfie _
+instance decodeLiveSelfie :: Decode LiveSelfie where decode = defaultDecode
+instance encodeLiveSelfie  :: Encode LiveSelfie where encode = defaultEncode
+
+
+data PanDetails = PanDetails
+  { panImage :: String,
+    panURL :: Maybe String,
+    pan :: Maybe String,
+    name :: Maybe String,
+    dob :: Maybe String,
+    gender :: Maybe String,
+    panDB_name :: Maybe String,
+    declineReason :: Maybe String,
+    errorCode :: Maybe String
+  }
+
+derive instance genericPanDetails :: Generic PanDetails _
+instance decodePanDetails :: Decode PanDetails where decode = defaultDecode
+instance encodePanDetails  :: Encode PanDetails where encode = defaultEncode
+
+data AadhaarCardDetails = AadhaarCardDetails
+  { aadhaarFrontImage :: String,
+    aadhaarBackImage :: Maybe String,
+    aadhaarFrontURL :: Maybe String,
+    aadhaarBackURL :: Maybe String,
+    idNumber :: Maybe String,
+    fullName :: Maybe String,
+    dob :: Maybe String,
+    address :: Maybe String,
+    city :: Maybe String,
+    pincode :: Maybe String,
+    declineReason :: Maybe String,
+    errorCode :: Maybe String
+  }
+
+derive instance genericAadhaarCardDetails :: Generic AadhaarCardDetails _
+instance decodeAadhaarCardDetails :: Decode AadhaarCardDetails where decode = defaultDecode
+instance encodeAadhaarCardDetails  :: Encode AadhaarCardDetails where encode = defaultEncode
+
+data HvErrorCode = HvErrorCode
+  { errorCode :: Int
+  }
+
+derive instance genericHvErrorCode :: Generic HvErrorCode _
+instance decodeHvErrorCode :: Decode HvErrorCode where decode = defaultDecode
+instance encodeHvErrorCode  :: Encode HvErrorCode where encode = defaultEncode
+
+data AppUpdatePoppupFlowType = REG_PROF_PAN_AADHAAR | NORMAL
+
+derive instance genericAppUpdatePoppupFlowType :: Generic AppUpdatePoppupFlowType _
+instance showAppUpdatePoppupFlowType :: Show AppUpdatePoppupFlowType where show = genericShow
+instance eqAppUpdatePoppupFlowType :: Eq AppUpdatePoppupFlowType where eq = genericEq

@@ -164,7 +164,8 @@ config =
               assets :{
                 auto_image : "ny_ic_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side"
-              }
+              },
+              enableHvSdk : true
             },
             {
               cityName : "Hyderabad",
@@ -204,7 +205,8 @@ config =
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow" 
-              }
+              },
+              enableHvSdk : false
             },
             {
               cityName : "Mysore",
@@ -244,7 +246,8 @@ config =
               assets :{
                 auto_image : "ny_ic_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side"
-              }
+              },
+              enableHvSdk : false
             },
             {
               cityName : "Delhi",
@@ -284,7 +287,8 @@ config =
               assets :{
                 auto_image : "ny_ic_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side"
-              }
+              },
+              enableHvSdk : false
             },
             {
               cityName : "Chennai",
@@ -324,7 +328,8 @@ config =
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow"
-              }
+              },
+              enableHvSdk : false
             },
             {
               cityName : "Coimbatore",
@@ -364,7 +369,8 @@ config =
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow"
-              }
+              },
+              enableHvSdk : false
             },
             {
               cityName : "Puducherry",
@@ -404,7 +410,8 @@ config =
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow"
-              }
+              },
+              enableHvSdk : false
             },
             {
               cityName : "Gurugram",
@@ -444,7 +451,8 @@ config =
               assets :{
                 auto_image : "ny_ic_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side"
-              }
+              },
+              enableHvSdk : false
             },
             {             
               cityName : "Noida",
@@ -484,7 +492,8 @@ config =
               assets :{
                 auto_image : "ny_ic_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side"
-              }
+              },
+              enableHvSdk : false
             },
             {
               cityName : "TamilNaduCities",
@@ -524,7 +533,8 @@ config =
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow"
-              }
+              },
+              enableHvSdk : false
             },
             {
               cityName : "Kolkata",
@@ -568,7 +578,8 @@ config =
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side"
-              }
+              },
+              enableHvSdk : false
             }, 
             {
               cityName : "Kochi",
@@ -612,7 +623,8 @@ config =
             assets :{
               auto_image : "ic_auto_rickshaw",
               onboarding_auto_image : "ny_ic_auto_right_side_black"
-            }
+            },
+            enableHvSdk : false
           }
             --, For future use
             -- {
@@ -742,6 +754,8 @@ config =
     startTime : "21:00:00"
   , endTime : "06:00:00"
   }
+  , appUpdatePopupUrl : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner&pcampaignid=web_share"
+  , showProfileAadhaarPan : true
 }
 
 registrationConfig :: CTC.RegistrationConfig

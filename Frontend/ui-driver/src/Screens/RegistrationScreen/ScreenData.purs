@@ -57,7 +57,8 @@ initData = {
         enteredDL : "",
         enteredRC : "",
         vehicleCategory : Nothing,
-        linkedRc : Nothing
+        linkedRc : Nothing,
+        accessToken : ""
       },
       props: {
         limitReachedFor : Nothing,
@@ -75,7 +76,8 @@ initData = {
         driverEnabled : false,
         menuOptions : false,
         manageVehicle : false,
-        manageVehicleCategory : Nothing
+        manageVehicleCategory : Nothing,
+        dontAllowHvRelaunch : false
       }
   }
 
@@ -151,5 +153,6 @@ dummyCityConfig = {
                         auto_image :  "ny_ic_black_yellow_auto_side_view",
                         onboarding_auto_image : ""
                       },
-                    gstPercentage : "18"
+                    gstPercentage : "18",
+                    enableHvSdk : false
 }

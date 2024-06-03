@@ -40,7 +40,9 @@ type AppConfigDriver a =
     coinsConfig :: CoinsConfig,
     inAppKeyboardModalConfig :: InAppKeyboardModalConfig,
     chooseCity :: ChooseCityScreenConfig,
-    safetyRide :: SafetyRideConfig
+    safetyRide :: SafetyRideConfig,
+    appUpdatePopupUrl :: String,
+    showProfileAadhaarPan :: Boolean
     | a
   } 
 

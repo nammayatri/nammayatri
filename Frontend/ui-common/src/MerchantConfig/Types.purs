@@ -115,7 +115,8 @@ type CityConfig = {
   rentalWaitingChargesConfig :: WaitingChargesConfig,
   rateCardConfig :: RateCardConfig,
   gstPercentage :: String,
-  assets :: Assets
+  assets :: Assets,
+  enableHvSdk :: Boolean
 }
 
 type RateCardConfig = {

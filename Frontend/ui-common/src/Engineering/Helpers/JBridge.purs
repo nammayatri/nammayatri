@@ -292,6 +292,7 @@ foreign import isAccessibilityEnabled :: String -> Boolean
 foreign import getFromUTC :: String -> String -> String
 foreign import getDeviceID :: Unit -> String
 foreign import getAndroidId :: Unit -> String
+foreign import getAppName :: String
 
 type SliderConfig = { 
   id :: String,
@@ -326,6 +327,11 @@ sliderConfig = {
   bgAlpha : 50
 }
 
+foreign import initHVSdk :: forall action. EffectFn8 String String String Boolean String String (String -> action) (action -> Effect Unit) Unit
+foreign import decodeAndStoreImage :: Fn1 String String
+foreign import encodeToBase64 :: forall action. EffectFn5 String Int (String -> Maybe String) (Maybe String) (action -> Effect Unit) (Effect String)
+foreign import isSdkTokenExpired :: Fn1 String Boolean
+foreign import makeSdkTokenExpiry :: Fn1 Int String
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
 setMapPadding = runEffectFn4 setMapPaddingImpl
 
@@ -928,3 +934,6 @@ data RouteKeysType  = DEFAULT | RENTAL | ADVANCED
 derive instance genericRouteKeysType :: Generic RouteKeysType _
 instance showRouteKeysType :: Show RouteKeysType where show = genericShow
 instance eqRouteKeysType :: Eq RouteKeysType where eq = genericEq
+
+encodeToBase64Type :: String -> Int ->  Aff (Maybe String)
+encodeToBase64Type url delay =  makeAff (\cb -> runEffectFn5 encodeToBase64 url delay (Just) (Nothing) ((cb <<< Right)) $> nonCanceler)

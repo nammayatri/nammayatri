@@ -27,3 +27,9 @@ type RCSubscription = {
     low_dues_warning_limit :: Number,
     high_due_warning_limit :: Number
 }
+
+type HVConfigs = {
+  selfie_flow_id :: String,
+  pan_flow_id :: String,
+  aadhaar_flow_id :: String
+}
