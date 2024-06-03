@@ -384,6 +384,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         totalCount <- B.runInReplica $ QRB.findCountByRideIdStatusAndVehicleServiceTierType booking.riderId BT.COMPLETED (getListOfServiceTireTypes $ DVST.castServiceTierToCategory booking.vehicleServiceTierType)
         personClientInfo <- buildPersonClientInfo booking.riderId booking.clientId booking.merchantOperatingCityId booking.merchantId (DVST.castServiceTierToCategory booking.vehicleServiceTierType) (totalCount + 1)
         QCP.create personClientInfo
+        when (totalCount + 1 == 1) $ do
+          Notify.notifyFirstRideEvent booking.riderId (DVST.castServiceTierToCategory booking.vehicleServiceTierType)
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
   when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId

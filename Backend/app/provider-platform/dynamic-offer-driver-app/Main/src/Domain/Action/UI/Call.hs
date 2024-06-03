@@ -119,7 +119,7 @@ initiateCallToCustomer rideId merchantOpCityId = do
   let callReq =
         InitiateCallReq
           { fromPhoneNum = providerPhone,
-            toPhoneNum = customerPhone,
+            toPhoneNum = Just customerPhone,
             attachments = Attachments $ CallAttachments {callStatusId = callStatusId, entityId = rideId.getId}
           }
   exotelResponse <- initiateCall booking.providerId merchantOpCityId callReq
@@ -155,7 +155,7 @@ getDriverMobileNumber (driverId, merchantId, merchantOpCityId) rcNo = do
   let callReq =
         InitiateCallReq
           { fromPhoneNum = linkedDriverNumber,
-            toPhoneNum = driverRequestedNumber,
+            toPhoneNum = Just driverRequestedNumber,
             attachments = Attachments $ CallAttachments {callStatusId = callStatusId, entityId = vehicleRC.id.getId}
           }
   exotelResponse <- initiateCall merchantId merchantOpCityId callReq
