@@ -19,6 +19,7 @@ module SharedLogic.MerchantConfig
     updateTotalRidesCounters,
     updateTotalRidesInWindowCounters,
     anyFraudDetected,
+    searchFraudDetected,
     mkCancellationKey,
     mkCancellationByDriverKey,
     blockCustomer,
@@ -116,6 +117,9 @@ getRidesCountInWindow riderId start window currTime =
 
 anyFraudDetected :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Id Person.Person -> Id DMOC.MerchantOperatingCity -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
 anyFraudDetected riderId merchantOperatingCityId = checkFraudDetected riderId merchantOperatingCityId [MoreCancelling, MoreCancelledByDriver, MoreSearching, TotalRides, TotalRidesInWindow]
+
+searchFraudDetected :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Id Person.Person -> Id DMOC.MerchantOperatingCity -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
+searchFraudDetected riderId merchantOperatingCityId = checkFraudDetected riderId merchantOperatingCityId [MoreCancelling, MoreCancelledByDriver, MoreSearching, TotalRides]
 
 checkFraudDetected :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Id Person.Person -> Id DMOC.MerchantOperatingCity -> [Factors] -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
 checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
