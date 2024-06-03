@@ -22,6 +22,7 @@ module SharedLogic.MerchantConfig
     mkCancellationKey,
     mkCancellationByDriverKey,
     blockCustomer,
+    getRidesCountInWindow,
   )
 where
 
@@ -150,12 +151,9 @@ checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs = Red
               list = zip3 windowValueList intervals keyList
           rideCount <-
             mapM
-              ( \(key, value, windowKey) -> case key of
+              ( \(key, _, _) -> case key of
                   Just res -> return res
-                  Nothing -> do
-                    rideCount <- getRidesCountInWindow riderId value (fromIntegral timeInterval) actualTime
-                    Redis.setExp windowKey rideCount 86400
-                    return rideCount
+                  Nothing -> return 0
               )
               list
 
