@@ -282,6 +282,9 @@ window.onMerchantEvent = function (_event, payload) {
         if (!checkForReferral(parsedPayload.payload.viewParamNewIntent, "REFERRAL_NEW_INTENT")) {
           purescript.onNewIntent(makeEvent("DEEP_VIEW_NEW_INTENT", parsedPayload.payload.viewParamNewIntent))();
         }
+      } else if (parsedPayload.payload.action == "process_hv_resp" && parsedPayload.payload.callback && parsedPayload.payload.hv_response) {
+        console.log(parsedPayload.payload.callback);
+        window.callUICallback(parsedPayload.payload.callback, parsedPayload.payload.hv_response);
       } else {
         purescript.main(makeEvent("", ""))(parsedPayload.payload.driverInfoResponse)();
       }

@@ -123,10 +123,10 @@ onConnectivityEvent triggertype = do
   pure unit
 
 onBundleUpdatedEvent :: FCMBundleUpdate -> Effect Unit
-onBundleUpdatedEvent description= do 
+onBundleUpdatedEvent description = do 
   _ <- launchAff $ flowRunner defaultGlobalState $ do
     _ ← runExceptT $ runBackT $ do
-      Flow.appUpdatedFlow description
+      Flow.appUpdatedFlow description ST.NORMAL
     pure unit
   pure unit
 

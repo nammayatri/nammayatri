@@ -28,6 +28,8 @@ import Data.Either (Either(..), either)
 import Data.Int as INT
 import Data.Number as Number
 import Data.String as DS
+import Data.String.Common as DSC
+import Data.Foldable as DF
 import Debug (spy)
 import Effect.Class (liftEffect)
 import Data.Function.Uncurried (runFn2)
@@ -678,6 +680,12 @@ getCorrespondingErrorMessage errorPayload = do
         "null" -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
         "" -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
         "RC_ACTIVE_ON_OTHER_ACCOUNT" -> "RC " <> getString ACTIVE_RC_ON_ANOTHER_DRIVER
+        "DOCUMENT_ALREADY_VALIDATED" -> getString DOCUMENT_ALREADY_VALIDATED
+        "DOCUMENT_UNDER_MANUAL_REVIEW" -> getString DOCUMENT_UNDER_MANUAL_REVIEW
+        "DOCUMENT_ALREADY_LINKED_TO_ANOTHER_DRIVER" -> getString DOCUMENT_ALREADY_LINKED_TO_ANOTHER_DRIVER
+        "PAN_ALREADY_LINKED" -> getString PAN_ALREADY_LINKED
+        "EXITED_BY_USER" -> getString EXITED_BY_USER
+        "IMAGE_VALIDATION_EXCEED_LIMIT" -> getString IMAGE_VALIDATION_EXCEED_LIMIT
         undefined -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
 
 registerDriverRC :: DriverRCReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
@@ -791,12 +799,14 @@ validateImage payload = do
     where
         unwrapResponse (x) = x
 
-makeValidateImageReq :: String -> String -> Maybe String -> Maybe ST.VehicleCategory ->ValidateImageReq
-makeValidateImageReq image imageType rcNumber category = ValidateImageReq
+makeValidateImageReq :: String -> String -> Maybe String -> Maybe ValidationStatus -> Maybe String -> Maybe ST.VehicleCategory -> ValidateImageReq
+makeValidateImageReq image imageType rcNumber status transactionId category = ValidateImageReq
     {
       "image" : image,
       "imageType" : imageType,
       "rcNumber" : rcNumber,
+      "validationStatus" : status,
+      "workflowTransactionId" : transactionId,
       "vehicleCategory" : mkCategory category
     }
 
@@ -1597,3 +1607,74 @@ payoutRegistration dummy = do
     withAPIResult (EP.registerPayout dummy) unwrapResponse $ callAPI headers (PayoutRegisterReq dummy)
     where
         unwrapResponse (x) = x
+
+------------------------------------------------------------------------ Get Sdk Token -------------------------------------------------------------------------------
+getSdkTokenBT :: String -> ServiceName -> FlowBT String GetSdkTokenResp
+getSdkTokenBT expiry serviceName = do
+        headers <- getHeaders' "" false
+        withAPIResultBT (EP.getSdkToken expiry (show serviceName)) identity errorHandler (lift $ lift $ callAPI headers (GetSdkTokenReq expiry serviceName))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack
+
+----------------------------------------------------------------------- Onboarding Live selfie, aadhaar, and PAN APIs --------------------------------------------------
+
+getLiveSelfie :: String -> Flow GlobalState (Either ErrorResponse GetLiveSelfieResp)
+getLiveSelfie status = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.getLiveSelfie status)  unwrapResponse $ callAPI headers (GetLiveSelfieReq status)
+    where
+        unwrapResponse x = x
+
+registerDriverPAN :: PanCardReq -> Flow GlobalState (Either ErrorResponse DriverPANResp)
+registerDriverPAN req = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.registerPAN "")  unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse x = x
+
+
+makePANCardReq :: Boolean -> String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> String -> ValidationStatus -> Maybe String -> Maybe String -> PanCardReq
+makePANCardReq consent consentTimestamp dateOfBirth nameOnCard imageId1 imageId2 panNumber validationStatus transactionId panDB_name = PanCardReq
+    {
+       "consent" : consent,
+       "consentTimestamp" : consentTimestamp,
+       "dateOfBirth" : convertToMaybeUTC dateOfBirth,
+       "nameOnCard" : nameOnCard,
+       "imageId1" : imageId1,
+       "imageId2" : imageId2,
+       "panNumber" : panNumber,
+       "validationStatus" : validationStatus,
+       "verifiedBy" : FRONTEND_SDK,
+       "transactionId" : transactionId,
+       "nameOnGovtDB" : panDB_name
+    }
+    where
+        convertToMaybeUTC dob = case dob of
+            Just "" -> Nothing
+            Just dob -> Just ((DF.intercalate "-" $ DA.reverse (DSC.split (DS.Pattern "-") dob)) <> "T00:00:00.000Z")
+            Nothing -> Nothing
+
+
+registerDriverAadhaar :: AadhaarCardReq -> Flow GlobalState (Either ErrorResponse DriverAadhaarResp)
+registerDriverAadhaar req = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.registerAadhaar "")  unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse x = x
+
+
+makeAadhaarCardReq :: Maybe String -> Maybe String -> Maybe String -> Boolean -> String -> Maybe String ->  Maybe String -> Maybe String -> ValidationStatus -> String -> AadhaarCardReq
+makeAadhaarCardReq aadhaarBackImageId aadhaarFrontImageId address consent consentTimestamp dateOfBirth maskedAadhaarNumber nameOnCard validationStatus transactionId = AadhaarCardReq
+    {
+       "aadhaarBackImageId" : aadhaarBackImageId,
+       "aadhaarFrontImageId" : aadhaarFrontImageId,
+       "address" : address,
+       "consent" : consent,
+       "consentTimestamp" : consentTimestamp,
+       "dateOfBirth" : dateOfBirth,
+       "maskedAadhaarNumber" : maskedAadhaarNumber,
+       "nameOnCard" : nameOnCard,
+       "validationStatus" : validationStatus,
+       "transactionId" : transactionId
+    }

@@ -63,7 +63,7 @@ import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/), (==), div, mod, not)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3, Fn2, runFn1, runFn2)
-import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
+import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5, EffectFn2(..))
 import Common.Types.App (OptionButtonList)
 import Engineering.Helpers.Commons (parseFloat, setText, convertUTCtoISC, getCurrentUTC) as ReExport
 import Engineering.Helpers.Commons (flowRunner)
@@ -740,7 +740,8 @@ getCityConfig cityConfig cityName = do
                           assets :{
                             auto_image :  "ny_ic_black_yellow_auto_side_view",
                             onboarding_auto_image : "ny_ic_auto_right_side_yellow"
-                          }
+                          },
+                          enableHvSdk : false
                         }
   maybe dummyCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig
   where 
@@ -1005,3 +1006,13 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.RENTALS -> "RENTALS"
   SA.INTERCITY -> "INTERCITY"
   SA.BIKE_TIER -> "BIKE"
+
+getLatestAndroidVersion :: Merchant -> Int
+getLatestAndroidVersion merchant =
+  case merchant of
+    NAMMAYATRI -> 150
+    YATRI -> 150
+    YATRISATHI -> 133
+    MOBILITY_PM -> 1
+    MOBILITY_RS -> 1
+    PASSCULTURE -> 1

@@ -360,3 +360,17 @@ deleteVPA dummy = (getBaseUrl "") <> "/payout/delete/vpa"
 
 registerPayout :: String -> String
 registerPayout dummy = (getBaseUrl "") <> "/payout/registration"
+
+getSdkToken :: String -> String -> String
+getSdkToken expiry serviceName = (getBaseUrl "") <> "/driver/sdkToken?expiry=" <> expiry <> "&service=" <> serviceName
+
+getLiveSelfie :: String -> String
+getLiveSelfie status = (getBaseUrl "") <> "/driver/register/getLiveSelfie?status=" <> status
+
+registerPAN :: String -> String
+registerPAN _ = (getBaseUrl "") <> "/driver/register/pancard"
+
+registerAadhaar ::  String -> String 
+registerAadhaar _ = (getBaseUrl "") <> "/driver/register/aadhaarCard"
+
+

@@ -23,10 +23,11 @@ import Foreign (Foreign)
 import Foreign.Index (readProp)
 import Data.Newtype (class Newtype)
 import Presto.Core.Utils.Encoding (defaultDecode)
-import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig)
+import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig, HVConfigs)
 import Data.Maybe (Maybe(..))
 
 foreign import getSubsRemoteConfig :: String -> Foreign
+foreign import getHVRemoteConfig :: String -> Foreign
 
 foreign import getReelsData :: String -> Foreign
 
@@ -36,6 +37,41 @@ subscriptionRemoteConfig = {
     low_dues_warning_limit : 25.0,
     high_due_warning_limit : 75.0
 }
+
+hvConfigs :: String -> HVConfigs
+hvConfigs appName = case appName of
+    "Namma Yatri Partner" -> {
+      selfie_flow_id : "ny-selfie-flow",
+      pan_flow_id : "ny-pan-flow",
+      aadhaar_flow_id : "ny-aadhaar-flow"
+    }
+    "Yatri Sathi Driver" -> {
+      selfie_flow_id : "yatrisathi-selfie-flow",
+      pan_flow_id : "yatrisathi-pan-flow",
+      aadhaar_flow_id : "yatrisathi-aadhaar-flow"
+    }
+    "Yatri Driver" -> {
+      selfie_flow_id : "yatri-selfie-flow",
+      pan_flow_id : "yatri-pan-flow",
+      aadhaar_flow_id : "yatri-aadhaar-flow"
+    }
+    "Mana Yatri Partner" -> {
+      selfie_flow_id : "manayatri-selfie-flow",
+      pan_flow_id : "manayatri-pan-flow",
+      aadhaar_flow_id : "manayatri-aadhaar-flow"
+    }
+    "Bridge Driver" -> {
+      selfie_flow_id : "bridge-selfie-flow",
+      pan_flow_id : "bridge-pan-flow",
+      aadhaar_flow_id : "bridge-aadhaar-flow"
+    }
+    _ -> {
+      selfie_flow_id : "ny-selfie-flow",
+      pan_flow_id : "ny-pan-flow",
+      aadhaar_flow_id : "ny-aadhaar-flow"
+    }
+
+
 
 subscriptionConfig :: String -> RCSubscription
 subscriptionConfig key = do
