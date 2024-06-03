@@ -111,7 +111,7 @@ tfQuotesInfo provider fulfillments validTill item = do
       let quoteDetails_ = Domain.Action.Beckn.OnSearch.InterCityDetails interCityQuoteInfo
       pure $ Right $ Domain.Action.Beckn.OnSearch.QuoteInfo {descriptions = descriptions_, discount = discount_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, quoteDetails = quoteDetails_, specialLocationTag = specialLocationTag_, specialLocationName = specialLocationName_, vehicleVariant = vehicleVariant_, validTill, serviceTierName = mbServiceTierName, serviceTierType = mbServiceTierType, serviceTierShortDesc = mbServiceTierShortDesc, isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_, isBlockedRoute = isBlockedRoute_, tollChargesInfo = tollChargesInfo_, estimatedPickupDuration = estimatedPickupDuration, vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned_, vehicleServiceTierSeatingCapacity = vehicleCapacity_}
     _ -> do
-      let bppEstimateId_ = Id quoteOrEstId_
+      let bppEstimateId_ = Id itemId_
       driversLocation_ <- Beckn.OnDemand.Utils.OnSearch.getProviderLocation provider vehicleVariant_
       let nightShiftInfo_ = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item currency
       totalFareRange_ <- Beckn.OnDemand.Utils.OnSearch.getTotalFareRange item currency

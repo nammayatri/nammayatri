@@ -19,7 +19,6 @@ where
 
 import qualified Beckn.ACL.Common.Order as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
-import qualified Beckn.OnDemand.Utils.OnUpdate as Utils
 import qualified Beckn.OnDemand.Utils.OnUpdate as UtilsOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType as Event
 import qualified BecknV2.OnDemand.Enums as EventEnum
@@ -92,7 +91,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
   OU.DriverArrivedBuildReq req -> Common.tfArrivedReqToOrder req mbFarePolicy becknConfig
   OU.EstimateRepetitionBuildReq OU.DEstimateRepetitionReq {..} -> do
     let BookingDetails {..} = bookingDetails
-    let previousCancellationReasonsTags = Utils.mkPreviousCancellationReasonsTags cancellationSource
+    let previousCancellationReasonsTags = UtilsOU.mkPreviousCancellationReasonsTags cancellationSource
     fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing previousCancellationReasonsTags Nothing False False (Just $ show Event.ESTIMATE_REPETITION) isValueAddNP Nothing -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.Order
@@ -121,7 +120,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
         }
   OU.NewMessageBuildReq OU.DNewMessageReq {..} -> do
     let BookingDetails {..} = bookingDetails
-    let newMessageTags = Utils.mkNewMessageTags message
+    let newMessageTags = UtilsOU.mkNewMessageTags message
     fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing newMessageTags Nothing False False (Just $ show Event.NEW_MESSAGE) isValueAddNP Nothing -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.Order
@@ -140,7 +139,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
         }
   OU.SafetyAlertBuildReq OU.DSafetyAlertReq {..} -> do
     let BookingDetails {..} = bookingDetails
-    let safetyAlertTags = Utils.mkSafetyAlertTags reason
+    let safetyAlertTags = UtilsOU.mkSafetyAlertTags reason
     fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing safetyAlertTags Nothing False False (Just $ show Event.SAFETY_ALERT) isValueAddNP Nothing -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.Order
@@ -195,7 +194,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
     fulfillment <- case updateType of
       OU.SOFT_UPDATE -> do
         newDestination' <- newDestination & fromMaybeM (InternalError "New Destination not found for SOFT UPDATE")
-        let updateDetailsTagGroup = if isValueAddNP then Utils.mkUpdatedDistanceTags bookingUpdateReqDetails.estimatedDistance else Nothing
+        let updateDetailsTagGroup = if isValueAddNP then UtilsOU.mkUpdatedDistanceTags bookingUpdateReqDetails.estimatedDistance else Nothing
             personTag = if isValueAddNP then Utils.mkLocationTagGroupV2 currentLocation else Nothing
         Utils.mkFulfillmentV2SoftUpdate (Just driver) ride booking (Just vehicle) Nothing updateDetailsTagGroup personTag False False Nothing isValueAddNP newDestination'
       OU.CONFIRM_UPDATE -> Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing Nothing Nothing False False Nothing isValueAddNP Nothing
@@ -216,7 +215,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
         }
   OU.QuoteRepetitionBuildReq OU.DQuoteRepetitionReq {..} -> do
     let BookingDetails {..} = bookingDetails
-    let previousCancellationReasonsTags = Utils.mkPreviousCancellationReasonsTags cancellationSource
+    let previousCancellationReasonsTags = UtilsOU.mkPreviousCancellationReasonsTags cancellationSource
     fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing previousCancellationReasonsTags Nothing False False (Just $ show Event.QUOTE_REPETITION) isValueAddNP Nothing
     pure $
       Spec.Order

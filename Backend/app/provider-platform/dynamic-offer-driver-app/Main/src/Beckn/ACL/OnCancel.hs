@@ -130,7 +130,7 @@ tfOrder booking cancelStatus cancellationSource merchant driverName customerPhon
       orderBilling = Nothing,
       orderCancellationTerms = Just $ tfCancellationTerms becknConfig,
       orderItems = tfItems booking merchant mbFarePolicy,
-      orderPayments = tfPayments (Common.mkPrice (Just booking.currency) booking.estimatedFare) merchant becknConfig,
+      orderPayments = tfPayments (Common.mkPrice (Just booking.currency) booking.estimatedFare) merchant becknConfig booking.paymentId,
       orderProvider = BUtils.tfProvider becknConfig,
       orderQuote = tfQuotation booking,
       orderCreatedAt = Just booking.createdAt,
@@ -209,11 +209,11 @@ mkQuotationBreakup booking =
           quotationBreakupInnerTitle = Just title
         }
 
-tfPayments :: Price -> DM.Merchant -> DBC.BecknConfig -> Maybe [Spec.Payment]
-tfPayments estimatedFare merchant bppConfig = do
+tfPayments :: Price -> DM.Merchant -> DBC.BecknConfig -> Maybe Text -> Maybe [Spec.Payment]
+tfPayments estimatedFare merchant bppConfig mbPaymentId = do
   let mPrice = Just estimatedFare
   let mkParams :: Maybe BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
-  Just . L.singleton $ mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+  Just . L.singleton $ mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice mbPaymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfItems :: DRB.Booking -> DM.Merchant -> Maybe FarePolicyD.FullFarePolicy -> Maybe [Spec.Item]
 tfItems booking merchant mbFarePolicy =
