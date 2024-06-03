@@ -806,15 +806,16 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1717078586,
-        "narHash": "sha256-T+jF3SpF0+UeAAaqfJsI+qX9LAlBJ4hTQMnmP2at/2I=",
+        "lastModified": 1717334952,
+        "narHash": "sha256-vWbOiNWN0dCWvX2W+xR39kheML2rwborbO8mxvIuRRo=",
         "owner": "nammayatri",
         "repo": "euler-hs",
-        "rev": "9854028502a57c5e609ed29db30609694289d88c",
+        "rev": "7d25a5c4686ca5486bab5a6789b1cdfbdb4312cf",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/hedis-library-upgrade",
         "repo": "euler-hs",
         "type": "github"
       }
@@ -1838,15 +1839,16 @@
     "hedis": {
       "flake": false,
       "locked": {
-        "lastModified": 1685620412,
-        "narHash": "sha256-cPRZRbR76M7fBNSXcrSOqLlIcs2KSj/Ynf0AdZ46qrE=",
-        "rev": "92a3d5ab73dcb0ea11139a01d6f2950a8b8e7e0e",
-        "revCount": 712,
+        "lastModified": 1715851947,
+        "narHash": "sha256-R1ykEbhpCXDJ3N309PccIIhAZysKWPS305ECZ7EoF6g=",
+        "ref": "refs/heads/master",
+        "rev": "b04adb840be7119f391afbf009cbbc02135175c0",
+        "revCount": 736,
         "type": "git",
         "url": "https://github.com/juspay/hedis"
       },
       "original": {
-        "rev": "92a3d5ab73dcb0ea11139a01d6f2950a8b8e7e0e",
+        "rev": "b04adb840be7119f391afbf009cbbc02135175c0",
         "type": "git",
         "url": "https://github.com/juspay/hedis"
       }
@@ -4137,11 +4139,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1717169545,
-        "narHash": "sha256-f/lQ8rjyUnyxO0BC+6RuExi2AiqMwd28Kcggzxfup00=",
+        "lastModified": 1717395667,
+        "narHash": "sha256-8nYNgh/kxK1mOnZfyuvqdHmaAnqk+o4EqPcDSFR0NMs=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "34fd660274ba337ff121ef2265c36f864f98ab69",
+        "rev": "57941259ef68ba3bc7f103ae0f769f8aaabb25fa",
         "type": "github"
       },
       "original": {
