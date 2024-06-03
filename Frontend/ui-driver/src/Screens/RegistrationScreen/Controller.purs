@@ -20,15 +20,15 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
 import Components.GenericHeader as GenericHeader
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
-import Helpers.Utils (getStatus, contactSupportNumber)
+import Helpers.Utils (getStatus, contactSupportNumber, getLatestAndroidVersion)
 import JBridge as JB
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Show, class Eq, bind, discard, pure, show, unit, ($), void, (>), (+), (<>), (>=), (-), not, min, (==), (&&), (/=), when, (||))
+import Prelude (class Show, class Eq, bind, discard, pure, show, unit, ($), void, (>),(<), (+), (<>), (>=), (-), not, min, (==), (&&), (/=), when, (||))
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..))
+import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..), HyperVergeKycResult(..))
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Components.PrimaryEditText as PrimaryEditText
 import Components.InAppKeyboardModal as InAppKeyboardModal
@@ -47,6 +47,28 @@ import Data.Array as DA
 import Screens.RegistrationScreen.ScreenData as SD
 import Components.OptionsMenu as OptionsMenu
 import Components.BottomDrawerList as BottomDrawerList
+import Effect.Uncurried (runEffectFn8)
+import Effect.Class (liftEffect)
+import Foreign.Generic (decodeJSON)
+import Services.Backend as Remote
+import Data.Function.Uncurried (runFn1)
+import Data.Either(Either(..))
+import Debug
+import Effect.Aff (launchAff)
+import Engineering.Helpers.Commons as EHC
+import Types.App (defaultGlobalState)
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
+import Control.Monad.Trans.Class (lift)
+import Presto.Core.Types.Language.Flow (doAff)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Control.Monad.Except (runExcept)
+import Services.API as API
+import PrestoDOM.Core (getPushFn)
+import Engineering.Helpers.Commons (liftFlow)
+import Common.RemoteConfig (fetchRemoteConfigString)
+import RemoteConfig
+import DecodeUtil (decodeForeignObject)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -58,6 +80,7 @@ instance loggableAction :: Loggable Action where
       trackAppBackPress appId (getScreen REGISTRATION_SCREEN)
       trackAppEndScreen appId (getScreen REGISTRATION_SCREEN)
     NoAction -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "no_action"
+    UpdateApkAction -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "update_apk_action"
     AppOnboardingNavBarAC act -> case act of
       AppOnboardingNavBar.GenericHeaderAC genericHeaderAction -> case genericHeaderAction of 
         GenericHeader.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "generic_header_on_click"
@@ -98,6 +121,8 @@ data ScreenOutput = GoBack
                   | ReferralCode RegistrationScreenState
                   | DocCapture RegistrationScreenState RegisterationStep
                   | SelectLang RegistrationScreenState
+                  | GoToAadhaarPANSelfieUpload RegistrationScreenState ST.HyperVergeKycResult
+                  | GoToAppUpdatePopUpScreen RegistrationScreenState
 
 data Action = BackPressed 
             | NoAction
@@ -122,6 +147,10 @@ data Action = BackPressed
             | ExpandOptionalDocs
             | OptionsMenuAction OptionsMenu.Action
             | BottomDrawerListAC BottomDrawerList.Action
+            | CallHV String String
+            | OnActivityResult String
+            | CallWorkFlow String
+            | UpdateApkAction 
             
 derive instance genericAction :: Generic Action _
 instance eqAction :: Eq Action where
@@ -140,23 +169,61 @@ eval BackPressed state = do
   else if state.props.manageVehicle then exit $ GoToHomeScreen state
   else do
       void $ pure $ JB.minimizeApp ""
-      continue state
+      continue state 
 
 eval (RegistrationAction step ) state = do
        let item = step.stage
+       let hvFlowIds = decodeForeignObject (getHVRemoteConfig $ fetchRemoteConfigString "app_configs") (hvConfigs JB.getAppName)
        case item of 
           DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state
           VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state step.rcNumberPrefixList
           GRANT_PERMISSION -> exit $ GoToPermissionScreen state
           SUBSCRIPTION_PLAN -> exit $ GoToOnboardSubscription state
-          PROFILE_PHOTO -> exit $ DocCapture state item -- Launch hyperverge
-          AADHAAR_CARD -> exit $ DocCapture state item -- Launch hyperverge
-          PAN_CARD  -> exit $ DocCapture state item -- Launch hyperverge
+          PROFILE_PHOTO -> if state.props.dontAllowHvRelaunch then update state else if state.data.cityConfig.enableHvSdk then continueWithCmd state [ pure $ CallHV hvFlowIds.selfie_flow_id ""] else exit $ DocCapture state item
+          AADHAAR_CARD -> if state.props.dontAllowHvRelaunch then update state else if state.data.cityConfig.enableHvSdk then continueWithCmd state [ pure $ CallWorkFlow hvFlowIds.aadhaar_flow_id] else exit $ DocCapture state item
+          PAN_CARD  -> if state.props.dontAllowHvRelaunch then update state else if state.data.cityConfig.enableHvSdk then continueWithCmd state [ pure $ CallWorkFlow hvFlowIds.pan_flow_id] else exit $ DocCapture state item
           VEHICLE_PERMIT  -> exit $ DocCapture state item
           FITNESS_CERTIFICATE  -> exit $ DocCapture state item
           VEHICLE_INSURANCE -> exit $ DocCapture state item
           VEHICLE_PUC -> exit $ DocCapture state item
           _ -> continue state
+
+eval (CallHV workFLowId inputJson) state = 
+  continueWithCmd state {props {dontAllowHvRelaunch = true}}
+    [ do
+        let transactionId = JB.generateSessionId unit
+        push <- getPushFn Mb.Nothing "RegistrationScreen"
+        if EHC.os == "ANDROID" 
+          then do
+            versionCodeAndroid <- JB.getVersionCode
+            if versionCodeAndroid < (getLatestAndroidVersion (getMerchant FunctionCall)) 
+              then pure UpdateApkAction
+            else do
+              void $ runEffectFn8 JB.initHVSdk state.data.accessToken workFLowId transactionId true (getDefaultAlpha2LanguageCode "") inputJson OnActivityResult push
+              pure NoAction
+        else pure NoAction
+    ]
+
+
+eval (CallWorkFlow flowId) state =
+  continueWithCmd state {props {dontAllowHvRelaunch = true}}
+    [ do
+        void $ launchAff $ EHC.flowRunner defaultGlobalState
+          $ do
+              resp <- Remote.getLiveSelfie "APPROVED"
+              push <- liftFlow $ getPushFn Mb.Nothing "RegistrationScreen"
+              liftFlow $ case resp of
+                Right (API.GetLiveSelfieResp response) -> do
+                  let imagePath = runFn1 JB.decodeAndStoreImage response.image
+                  case imagePath of
+                    "FAILED" -> do
+                      void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+                      push NoAction
+                    _ -> do
+                      push $ CallHV flowId $ "{\"selfie\":\"" <> imagePath <> "\"}"
+                _ -> push  NoAction
+        pure NoAction
+    ]
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
 
@@ -279,6 +346,26 @@ eval (ContinueButtonAction PrimaryButtonController.OnClick) state = do
 
 eval ExpandOptionalDocs state = continue state { props { optionalDocsExpanded = not state.props.optionalDocsExpanded}}
 
+eval (OnActivityResult bundle) state = do
+  -- bundle is the data returned from the activity
+  case runExcept (decodeJSON bundle :: _ ST.HyperVergeKycResult) of
+    Left _ -> do
+      case runExcept (decodeJSON bundle :: _ ST.HvErrorCode) of 
+        Left _ -> void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+        Right (ST.HvErrorCode errorCode) -> if errorCode.errorCode == 106 then void $ pure $ JB.toast $ getString WE_NEED_ACCESS_TO_YOUR_LOCATION else void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+      continue state {props {dontAllowHvRelaunch = false}}
+    Right (ST.HyperVergeKycResult result) -> do
+      if result.status == (Mb.Just "auto_approved") || result.status == (Mb.Just "auto_declined") || result.status == (Mb.Just "needs_review")
+        then exit $ GoToAadhaarPANSelfieUpload (state {props {dontAllowHvRelaunch = false}}) (ST.HyperVergeKycResult result)
+      else do
+        case result.status of
+          Mb.Just "user_cancelled" -> void $ pure unit
+          _ -> if result.errorCode == (Mb.Just 106) then void $ pure $ JB.toast $ getString WE_NEED_ACCESS_TO_YOUR_LOCATION else void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+        continue state {props {dontAllowHvRelaunch = false}} 
+    _ -> continue state {props {dontAllowHvRelaunch = false}}
+
+eval UpdateApkAction state = exit $ GoToAppUpdatePopUpScreen state {props {dontAllowHvRelaunch = false}}
+
 eval _ state = update state
 
 getStatusValue :: String -> StageStatus
@@ -289,8 +376,22 @@ getStatusValue value = case value of
   "NO_DOC_AVAILABLE" -> NOT_STARTED
   "INVALID" -> FAILED
   "LIMIT_EXCEED" -> FAILED
-  "MANUAL_VERIFICATION_REQUIRED" -> COMPLETED
+  "MANUAL_VERIFICATION_REQUIRED" -> MANUAL_VERIFICATION_REQUIRED
   _ -> NOT_STARTED
+
+
+getDefaultAlpha2LanguageCode :: String -> String
+getDefaultAlpha2LanguageCode _ = do
+  let language = JB.getKeyInSharedPrefKeys "LANGUAGE_KEY"
+  case language of
+    "BN_IN" -> "bn"
+    "HI_IN" -> "hi"
+    "KN_IN" -> "kn"
+    "ML_IN" -> "ml"
+    "TA_IN" -> "ta"
+    "TE_IN" -> "te"
+    "FR_FR" -> "fr"
+    _ -> "en"
 
 getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus
 getStatus step state = 

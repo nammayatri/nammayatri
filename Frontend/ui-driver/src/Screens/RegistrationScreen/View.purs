@@ -44,7 +44,7 @@ import JBridge (lottieAnimationConfig, startLottieProcess)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import PaymentPage (consumeBP)
-import Prelude (Unit, bind, const, map, not, pure, show, unit, void, ($), (&&), (+), (-), (<<<), (<>), (==), (>=), (||), (/=), (*), (>), (/))
+import Prelude (Unit, bind, const, map, not, pure, show, unit, void, ($), (&&), (+), (-), (<<<), (<>), (==), (>=), (||), (/=), (*), (>), (/), discard)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollView, scrollBarY, fillViewport, alpha, textFromHtml)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
@@ -61,6 +61,8 @@ import Resource.Constants as Constant
 import Data.Int (toNumber, floor)
 import Components.OptionsMenu as OptionsMenu
 import Components.BottomDrawerList as BottomDrawerList
+import Helpers.Utils as HU
+import Effect.Uncurried (runEffectFn2)
 
 screen :: ST.RegistrationScreenState -> Screen Action ST.RegistrationScreenState ScreenOutput
 screen initialState =
@@ -83,7 +85,7 @@ view ::
   PrestoDOM (Effect Unit) w
 view push state =
   let showSubscriptionsOption = (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true") && state.data.config.bottomNavConfig.subscription.isVisible
-      completedStatusCount = length $ filter (\doc -> (getStatus doc.stage state) == ST.COMPLETED) documentList
+      completedStatusCount = length $ filter (\doc -> statusCompOrManual (getStatus doc.stage state)) documentList
       progressPercent = floor $ (toNumber completedStatusCount) / toNumber (length documentList) * 100.0
       variantImage = case state.data.vehicleCategory of
         Just ST.AutoCategory -> "ny_ic_auto_side"
@@ -178,6 +180,7 @@ view push state =
                                       _ -> VISIBLE
                                   , background case getStatus item.stage state of
                                       ST.COMPLETED -> Color.green900
+                                      ST.MANUAL_VERIFICATION_REQUIRED -> Color.green900
                                       ST.IN_PROGRESS -> Color.yellow900
                                       ST.FAILED -> Color.red
                                       ST.NOT_STARTED -> Color.grey900
@@ -230,7 +233,7 @@ view push state =
       where 
         callSupportVisibility = (state.data.drivingLicenseStatus == ST.FAILED && state.data.enteredDL /= "__failed") || (state.data.vehicleDetailsStatus == ST.FAILED && state.data.enteredRC /= "__failed")
         documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs else state.data.registerationStepsAuto
-        buttonVisibility = if state.props.manageVehicle then all (\docType -> (getStatus docType.stage state) == ST.COMPLETED) $ filter(\elem -> elem.isMandatory) documentList
+        buttonVisibility = if state.props.manageVehicle then all (\docType -> statusCompOrManual (getStatus docType.stage state)) $ filter(\elem -> elem.isMandatory) documentList
                             else state.props.driverEnabled
 
 
@@ -443,6 +446,7 @@ listItem push item state =
         let strokeWidth = "1,"
             colour = case getStatus item.stage state of
                       ST.COMPLETED -> Color.green900
+                      ST.MANUAL_VERIFICATION_REQUIRED -> Color.green900
                       ST.IN_PROGRESS -> Color.yellow900
                       ST.NOT_STARTED -> Color.black500
                       ST.FAILED -> Color.red
@@ -453,6 +457,7 @@ listItem push item state =
       compBg state item = 
         case getStatus item.stage state of
           ST.COMPLETED -> Color.greenOpacity10
+          ST.MANUAL_VERIFICATION_REQUIRED ->  Color.greenOpacity10
           ST.IN_PROGRESS -> Color.yellowOpacity10
           ST.NOT_STARTED -> Color.white900
           ST.FAILED -> Color.redOpacity10
@@ -462,8 +467,8 @@ listItem push item state =
       compClickable state item = dependentDocAvailable item state && not item.isDisabled && not 
         case item.stage of
           ST.DRIVING_LICENSE_OPTION -> state.props.limitReachedFor == Just "DL" || any (_ == state.data.drivingLicenseStatus) [COMPLETED, IN_PROGRESS]
-          ST.GRANT_PERMISSION -> state.data.permissionsStatus == COMPLETED
-          _ -> (getStatus item.stage state) == ST.COMPLETED
+          ST.GRANT_PERMISSION -> statusCompOrManual state.data.permissionsStatus
+          _ -> statusCompOrManual (getStatus item.stage state)
 
       compAlpha :: ST.RegistrationScreenState -> ST.StepProgress -> Number
       compAlpha state item = if dependentDocAvailable item state && not item.isDisabled then 1.0 else 0.5
@@ -472,6 +477,7 @@ listItem push item state =
       compStatusImg state item = 
         case getStatus item.stage state of
           ST.COMPLETED -> fetchImage COMMON_ASSET "ny_ic_green_tick"
+          ST.MANUAL_VERIFICATION_REQUIRED -> fetchImage COMMON_ASSET "ny_ic_green_tick"
           ST.IN_PROGRESS -> fetchImage COMMON_ASSET "ny_ic_pending"
           ST.NOT_STARTED -> fetchImage COMMON_ASSET "ny_ic_chevron_right"
           ST.FAILED -> fetchImage COMMON_ASSET "ny_ic_warning_filled_red"
@@ -694,7 +700,14 @@ getStatus step state =
   where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) ||  (isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
 
 dependentDocAvailable :: ST.StepProgress -> ST.RegistrationScreenState -> Boolean
-dependentDocAvailable item state = all (\docType -> (getStatus docType state) == ST.COMPLETED) item.dependencyDocumentType
+dependentDocAvailable item state = 
+  case item.stage of
+    ST.AADHAAR_CARD -> (getStatus ST.PROFILE_PHOTO state) == ST.COMPLETED
+    ST.PAN_CARD -> (getStatus ST.PROFILE_PHOTO state) == ST.COMPLETED
+    _ -> all (\docType -> statusCompOrManual (getStatus docType state)) item.dependencyDocumentType
 
 compVisibility :: ST.RegistrationScreenState -> ST.StepProgress -> Boolean
-compVisibility state item = not item.isHidden && dependentDocAvailable item state
+compVisibility state item = not item.isHidden && dependentDocAvailable item state && (if item.stage == ST.PAN_CARD || item.stage == ST.AADHAAR_CARD || item.stage == ST.PROFILE_PHOTO then state.data.config.showProfileAadhaarPan else true)
+
+statusCompOrManual :: ST.StageStatus -> Boolean
+statusCompOrManual status = any (_ == status) [ST.COMPLETED, ST.MANUAL_VERIFICATION_REQUIRED]

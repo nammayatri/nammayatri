@@ -303,6 +303,7 @@ window.getMerchantConfig = function () {
           "defCity" : "Kolkata"
         }
       }
+    , "appUpdatePopupUrl" : "https://play.google.com/store/apps/details?id=in.juspay.jatrisaathidriver&pcampaignid=web_share"
     , "permissions" : {
       "locationPermission" : true,
       "notification" : false
@@ -410,7 +411,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk" : true
     },
     {
       "cityName" : "Siliguri",
@@ -480,7 +482,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk" : true
     }
   ]
   })

@@ -221,7 +221,8 @@ window.getMerchantConfig = function () {
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
           "onboarding_auto_image" : "ny_ic_auto_side"
-        }
+        },
+        "enableHvSdk" : true
       },
       {
         "cityName" : "Hyderabad",
@@ -278,7 +279,8 @@ window.getMerchantConfig = function () {
         "assets" :{
           "auto_image" :  "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
-        }
+        },
+        "enableHvSdk" : true
       },
       {
         "cityName" : "Mysore",
@@ -322,7 +324,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk" : true
       },
       {
         "cityName" : "Delhi",
@@ -379,7 +382,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk" : true
       },
       {
         "cityName" : "Chennai",
@@ -436,7 +440,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
-      }
+      },
+      "enableHvSdk" : true
       },
       {
         "cityName" : "Coimbatore",
@@ -480,7 +485,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
-      }
+      },
+      "enableHvSdk" : true
       },
       {
         "cityName" : "Pondicherry",
@@ -524,7 +530,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
-      }
+      },
+      "enableHvSdk" : true
       },
       {
         "cityName" : "Tumakuru",
@@ -568,7 +575,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk" : true
       },
       {
         "cityName" : "Gurugram",
@@ -612,7 +620,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk" : true
       },
       {
         "cityName" : "Noida",
@@ -656,7 +665,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk" : true
       },
       {
         "cityName" : "TamilNaduCities",
@@ -700,7 +710,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
-      }
+      },
+      "enableHvSdk" : true
       },
       {
         "cityName" : "Minneapolis",
@@ -744,7 +755,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Kochi",
@@ -788,7 +800,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_black"
-      }
+      },
+      "enableHvSdk" : true
       },
       {
         "cityName" : "Trichy",
@@ -845,7 +858,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
-      }
+      },
+      "enableHvSdk" : true
       },
       {
         "cityName" : "Thanjavur",
@@ -902,7 +916,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
-      }
+      },
+      "enableHvSdk" : true
       },
       {
         "cityName" : "Salem",
@@ -959,7 +974,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
-      }
+      },
+      "enableHvSdk" : true
       },
       {
         "cityName" : "Tirunelveli",
@@ -1016,7 +1032,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
-      }
+      },
+      "enableHvSdk" : true
       },
       {
         "cityName" : "Hosur",
@@ -1073,7 +1090,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
-      }
+      },
+      "enableHvSdk" : true
       },
       {
         "cityName" : "Madurai",
@@ -1130,7 +1148,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
-      }
+      },
+      "enableHvSdk" : true
       },
       {
         "cityName" : "Vellore",
@@ -1187,7 +1206,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
-      }
+      },
+      "enableHvSdk" : true
       },
       {
         "cityName" : "Davanagere",
@@ -1474,6 +1494,7 @@ window.getMerchantConfig = function () {
     "driverToCustomerRefPopupEndDate" : "2024-08-01T00:00:00",
     "monsoonOfferDate" : "2024-09-01T00:00:00"
   }
+  , "appUpdatePopupUrl" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner&pcampaignid=web_share"
   , "dashboard" : {
         "enable" : true,
         "url" : "https://nammayatri.in/open?source=in-app"
