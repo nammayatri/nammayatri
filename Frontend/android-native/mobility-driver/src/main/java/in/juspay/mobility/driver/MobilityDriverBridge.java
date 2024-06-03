@@ -78,6 +78,7 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.gson.Gson;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView;
 
@@ -621,11 +622,6 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
             e.printStackTrace();
         }
         return 0;
-    }
-    
-    @Override
-    public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
-        return super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
