@@ -38,7 +38,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (any, concat, cons, elem, elemIndex, filter, find, foldl, head, last, length, mapWithIndex, null, snoc, sortBy, (!!))
 import Data.Array as DA
 import Data.Either (Either(..), either, isRight)
-import Data.Function (on)
+import Data.Function (on, flip)
 import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Functor (map)
 import Data.Int (ceil, fromString, round, toNumber)
@@ -73,7 +73,7 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, 
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.API (callApiBT, callApi)
-import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus)
+import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus, getLatestAndroidVersion)
 import Helpers.Utils as HU
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, mkRouteConfig)
 import JBridge as JB
@@ -154,6 +154,8 @@ import Common.Types.App as CTA
 import AssetsProvider (renewFile)
 import Control.Bind
 import Services.Config as SC
+import Presto.Core.Types.Language.Flow (await)
+import Resource.Constants (hvSdkTokenExp)
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -316,16 +318,16 @@ checkVersion versioncode = do
       UpdateNow -> checkVersion versioncode
       Later -> pure unit
 
-appUpdatedFlow :: FCMBundleUpdate -> FlowBT String Unit
-appUpdatedFlow payload = do
+appUpdatedFlow :: FCMBundleUpdate -> ST.AppUpdatePoppupFlowType -> FlowBT String Unit
+appUpdatedFlow payload flowType = do
   liftFlowBT hideSplash
-  modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppUpdated ,appUpdatedView{secondaryText=payload.description,primaryText=payload.title,coverImageUrl=payload.image}})
+  modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppUpdated ,appUpdatedView{secondaryText=payload.description,primaryText=payload.title,coverImageUrl=payload.image, popupFlowType = flowType}})
   fl <- UI.handleAppUpdatePopUp
   case fl of
     UpdateNow -> do 
       liftFlowBT showSplash
       liftFlowBT reboot
-    Later -> pure unit
+    Later -> if flowType == ST.REG_PROF_PAN_AADHAAR then onBoardingFlow else pure unit
 
 checkTimeSettings :: FlowBT String Unit
 checkTimeSettings = do
@@ -340,26 +342,6 @@ checkTimeSettings = do
     liftFlowBT hideSplash
     void $ UI.handleAppUpdatePopUp
     checkTimeSettings
-
-getLatestAndroidVersion :: Merchant -> Int
-getLatestAndroidVersion merchant =
-  case merchant of
-    NAMMAYATRI -> 90
-    YATRI -> 48
-    YATRISATHI -> 16
-    MOBILITY_PM -> 1
-    MOBILITY_RS -> 1
-    PASSCULTURE -> 1
-
-getMerchantName :: Merchant -> String
-getMerchantName merchant =
-  case merchant of
-    NAMMAYATRI -> "Nammayatri"
-    YATRI -> "Yatri"
-    YATRISATHI -> "YatriSathi"
-    MOBILITY_PM -> "MobilityPM"
-    MOBILITY_RS -> "MobilityRS"
-    PASSCULTURE -> "PassCulture"
 
 ifNotRegistered :: Unit -> Boolean
 ifNotRegistered _ = getValueToLocalStore REGISTERATION_TOKEN == "__failed"
@@ -639,9 +621,38 @@ stopGrpcService =
   if grpcServiceRunning then void $ pure $ JB.stopService "in.juspay.mobility.app.GRPCNotificationService"
   else pure unit
 
+convertToRequestStatus :: String -> API.ValidationStatus
+convertToRequestStatus status =
+  case status of 
+    "auto_approved" -> API.AUTO_APPROVED
+    "auto_declined" -> API.AUTO_DECLINED
+    "needs_review" -> API.NEEDS_REVIEW
+    _ -> API.NEEDS_REVIEW
+
+getSdkTokenFromCache :: FlowBT String String
+getSdkTokenFromCache = do
+  let cachedData = getValueToLocalStore CACHED_SDK_TOKEN_DATA
+  if cachedData /= "__failed"
+    then do
+      let splitData = split (Pattern ":") cachedData
+      case splitData of
+        [token, expiry] -> do 
+          let isExpired = runFn1 JB.isSdkTokenExpired expiry
+          if isExpired
+            then cacheNewToken
+          else pure token
+        _ -> cacheNewToken
+  else cacheNewToken
+  where
+    cacheNewToken = do
+      (API.GetSdkTokenResp tokenResp) <- Remote.getSdkTokenBT (show hvSdkTokenExp) API.HyperVerge 
+      let expiry = runFn1 JB.makeSdkTokenExpiry hvSdkTokenExp
+      setValueToLocalStore CACHED_SDK_TOKEN_DATA (tokenResp.token <> ":" <> expiry)
+      pure tokenResp.token
 
 onBoardingFlow :: FlowBT String Unit
 onBoardingFlow = do
+  token <- getSdkTokenFromCache
   logField_ <- lift $ lift $ getLogFields
   void $ pure $ hideKeyboardOnNavigation true
   config <- getAppConfigFlowBT Constants.appConfig
@@ -705,7 +716,8 @@ onBoardingFlow = do
                       vehicleTypeMismatch = vehicleTypeMismatch,
                       permissionsStatus = if permissions then ST.COMPLETED else ST.NOT_STARTED,
                       cityConfig = cityConfig,
-                      vehicleCategory = uiCurrentCategory
+                      vehicleCategory = uiCurrentCategory,
+                      accessToken = token
                   }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded, driverEnabled = driverEnabled}})
   liftFlowBT hideSplash
   flow <- UI.registration
@@ -728,6 +740,82 @@ onBoardingFlow = do
     PERMISSION_SCREEN state -> do
       modifyScreenState $ PermissionsScreenStateType $ \permissionsScreen -> permissionsScreen { data {driverMobileNumber = state.data.phoneNumber}}
       permissionsScreenFlow Nothing Nothing Nothing
+    AADHAAR_PAN_SELFIE_UPLOAD state (ST.HyperVergeKycResult result) -> do 
+      let currentTime = getCurrentUTC ""
+      let status = fromMaybe "needs_review" result.status
+      let convertedStatus = convertToRequestStatus status
+      void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+      void $ lift $ lift $ toggleLoader true
+      case result.details of 
+        Just (ST.LIVE_SELFIE (ST.LiveSelfie detail)) | (isJust detail.selfieURL) -> do
+          if result.status == (Just "auto_declined")
+            then if isJust detail.errorCode then void $ pure $ JB.toast $ getHvErrorMsg detail.errorCode else pure unit
+          else pure unit
+          image' <- lift $ lift $ doAff $ JB.encodeToBase64Type (fromMaybe "" detail.selfieURL) 10000
+          case image' of 
+            Nothing -> void $ pure $ toast (getString TIMEOUT)
+            Just image -> do
+              resp <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq image "ProfilePhoto" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
+              case resp of
+                Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
+                Right response -> pure unit
+        Just (ST.PAN_DETAILS (ST.PanDetails detail)) | (isJust detail.panURL) -> do
+          if result.status == (Just "auto_declined")
+            then if isJust detail.errorCode then void $ pure $ JB.toast $ getHvErrorMsg detail.errorCode else pure unit
+          else pure unit
+          let panNum = fromMaybe "" detail.pan
+          if STR.null panNum
+            then do
+              if result.status /= (Just "auto_declined") then void $ pure $ toast (getString CANNOT_DETECT_PAN_CARD) else pure unit
+              void $ lift $ lift $ delay $ Milliseconds 100.0 -- This delay is added for toggleloader to work.
+          else do
+            image' <- lift $ lift $ doAff $ JB.encodeToBase64Type (fromMaybe "" detail.panURL) 10000
+            case image' of
+              Nothing -> void $ pure $ toast (getString TIMEOUT)
+              Just image -> do
+                resp <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq image "PanCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
+                case resp of
+                  Right (ValidateImageRes response)-> do
+                    resp <- lift $ lift $ Remote.registerDriverPAN (Remote.makePANCardReq true currentTime detail.dob detail.name (Just response.imageId) Nothing panNum (convertedStatus) result.transactionId detail.panDB_name)
+                    case resp of
+                      Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
+                      Right response -> pure unit
+                  Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
+        Just (ST.AADHAAR_DETAILS (ST.AadhaarCardDetails detail)) | (isJust detail.aadhaarFrontURL && isJust detail.aadhaarBackURL)-> do
+          if result.status == (Just "auto_declined")
+            then if isJust detail.errorCode then void $ pure $ JB.toast $ getHvErrorMsg detail.errorCode else pure unit
+          else pure unit
+          let aadhaarNum = fromMaybe "" detail.idNumber
+          if STR.null aadhaarNum || detail.errorCode == Just "113" -- or condition added to make sure both sides are detected
+            then do
+              if result.status /= (Just "auto_declined") then void $ pure $ toast (getString CANNOT_DETECT_AADHAAR) else pure unit
+              void $ lift $ lift $ delay $ Milliseconds 100.0 -- This delay is added for toggleloader to work.
+          else do
+            imageFrontControl <- lift $ lift $ fork $ doAff $ JB.encodeToBase64Type (fromMaybe "" detail.aadhaarFrontURL) 10000
+            imageBack <- lift $ lift $ doAff $ JB.encodeToBase64Type (fromMaybe "" detail.aadhaarBackURL) 10000
+            imageFront <- lift $ lift  $ await imageFrontControl
+            case imageFront, imageBack of
+              Just imageFront, Just imageBack -> do
+                respFrontImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq imageFront "AadhaarCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
+                respBackImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq imageBack "AadhaarCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
+                case respFrontImage, respBackImage of
+                  Right (ValidateImageRes frontResp), Right (ValidateImageRes backResp) | isJust result.transactionId -> do
+                    resp <- lift $ lift $ Remote.registerDriverAadhaar (Remote.makeAadhaarCardReq (Just backResp.imageId) (Just frontResp.imageId) detail.address true currentTime detail.dob (Just aadhaarNum) detail.fullName (convertedStatus) (fromMaybe "" result.transactionId))
+                    case resp of
+                      Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
+                      Right response -> pure unit
+                  Left errPayload , _ -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
+                  _, Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit 
+                  _, _ -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER else pure unit 
+              _, _ -> void $ pure $ toast (getString TIMEOUT)
+            pure unit
+        _ -> do
+          void $ lift $ lift $ delay $ Milliseconds 100.0 -- This delay is added for toggleloader to work.
+          void $ pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+      void $ lift $ lift $ toggleLoader false
+      onBoardingFlow
+    GO_TO_APP_UPDATE_POPUP_SCREEN _ -> appUpdatedFlow {title : (getString APP_UPDATE), description : (getString APP_UPDATE_MESSAGE), image : ""} ST.REG_PROF_PAN_AADHAAR
+    AADHAAR_PAN_SELFIE_UPLOAD state _ -> onBoardingFlow
     LOGOUT_FROM_REGISTERATION_SCREEN -> logoutFlow
     GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN state -> 
       if state.props.manageVehicle then driverProfileFlow
@@ -754,6 +842,7 @@ onBoardingFlow = do
       modifyScreenState $ DocumentCaptureScreenStateType (\_ -> defState { data { cityConfig = state.data.cityConfig, docType = doctype, vehicleCategory = state.data.vehicleCategory, linkedRc = state.data.linkedRc}})
       documentcaptureScreenFlow
     SELECT_LANG_FROM_REGISTRATION -> do
+      modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
       modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
       selectLanguageFlow
   where 
@@ -909,7 +998,7 @@ uploadDrivingLicenseFlow = do
   flow <- UI.uploadDrivingLicense
   case flow of
     VALIDATE_DL_DETAILS state -> do
-      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.imageFront "DriverLicense" Nothing state.data.vehicleCategory)
+      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.imageFront "DriverLicense" Nothing Nothing Nothing state.data.vehicleCategory)
       case validateImageResp of
        Right (ValidateImageRes resp) -> do
         liftFlowBT $ logEvent logField_ "ny_driver_dl_photo_confirmed"
@@ -981,6 +1070,7 @@ uploadDrivingLicenseFlow = do
       deleteValueFromLocalStore VEHICLE_CATEGORY
       onBoardingFlow
     CHANGE_LANG_FROM_DL_SCREEN -> do
+      modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
       modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
       selectLanguageFlow
 
@@ -993,7 +1083,7 @@ addVehicleDetailsflow addRcFromProf = do
   flow <- UI.addVehicleDetails
   case flow of
     VALIDATE_DETAILS state -> do
-      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.rc_base64 "VehicleRegistrationCertificate" Nothing state.data.vehicleCategory)
+      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.rc_base64 "VehicleRegistrationCertificate" Nothing Nothing Nothing state.data.vehicleCategory)
       void $ pure $ setValueToLocalStore ENTERED_RC state.data.vehicle_registration_number
       case validateImageResp of
        Right (ValidateImageRes resp) -> do
@@ -1129,6 +1219,7 @@ addVehicleDetailsflow addRcFromProf = do
       deleteValueFromLocalStore VEHICLE_CATEGORY
       onBoardingFlow
     CHANGE_LANG_FROM_RC_SCREEN -> do
+      modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
       modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
       selectLanguageFlow
 
@@ -4081,10 +4172,11 @@ documentcaptureScreenFlow = do
       deleteValueFromLocalStore VEHICLE_CATEGORY
       onBoardingFlow
     TA.CHANGE_LANG_FROM_DOCUMENT_CAPTURE -> do
+      modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
       modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
       selectLanguageFlow
     TA.UPLOAD_DOC_API state imageType -> do
-      validateImageResp <- lift $ lift $ Remote.validateImage $ makeValidateImageReq state.data.imageBase64 imageType state.data.linkedRc state.data.vehicleCategory
+      validateImageResp <- lift $ lift $ Remote.validateImage $ makeValidateImageReq state.data.imageBase64 imageType state.data.linkedRc Nothing Nothing state.data.vehicleCategory
       case validateImageResp of
         Right (ValidateImageRes resp) -> do
           void $ pure $ toast $ getString DOCUMENT_UPLOADED_SUCCESSFULLY
@@ -4120,3 +4212,36 @@ getSrcDestConfig state =
       source : state.data.activeRide.source,
       destination : fromMaybe "" state.data.activeRide.destination
   }
+
+getMerchantName :: Merchant -> String
+getMerchantName merchant =
+  case merchant of
+    NAMMAYATRI -> "Nammayatri"
+    YATRI -> "Yatri"
+    YATRISATHI -> "YatriSathi"
+    MOBILITY_PM -> "MobilityPM"
+    MOBILITY_RS -> "MobilityRS"
+    PASSCULTURE -> "PassCulture"
+
+
+getHvErrorMsg :: Maybe String -> String
+getHvErrorMsg errorCode = 
+  case errorCode of
+    Just "112" -> getString AADHAAR_FRONT_NOT_DETECTED
+    Just "113" -> getString AADHAAR_BACK_NOT_DETECTED
+    Just "151" -> getString UNABLE_TO_EXTRACT_NAME
+    Just "152" -> getString UNABLE_TO_EXTRACT_DOB
+    Just "134" -> getString UNABLE_TO_EXTRACT_ID
+    Just "128" -> getString IMAGE_B_W
+    Just "136" -> getString PARTIAL_DOC_DETECTED
+    Just "127" -> getString DOC_IS_BLURRED
+    Just "165" -> getString FACE_MATCH_FAILED
+    Just "114" -> getString PAN_NOT_DETECTED
+    Just "120" -> getString UNABLE_TO_VERIFY_SELFIE
+    Just "123" -> getString BLURRED_SELFIE
+    Just "124" -> getString EYES_CLOSED_SELFIE
+    Just "125" -> getString MULTIPLE_FACES_IN_SELFIE
+    Just "126" -> getString FACE_BLOCKED
+    Just "140" -> getString REMOVE_EYEWERE
+    Just "170" -> getString DB_CHECK_AND_NAME_MATCH_FAILED
+    _ -> getString UNKNOWN_ERROR

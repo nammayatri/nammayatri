@@ -146,6 +146,7 @@ data KeyStore = USER_NAME
                 | PREVIOUS_LOCAL_STAGE
                 | COIN_EARNED_POPUP_TYPE
                 | SHOW_TOLL_POPUP
+                | CACHED_SDK_TOKEN_DATA
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
