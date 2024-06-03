@@ -495,7 +495,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk": true 
     },
     {
       "cityName" : "Asansol",

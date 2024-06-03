@@ -1020,7 +1020,7 @@ getLatestAndroidVersion merchant =
   case merchant of
     NAMMAYATRI -> 150
     YATRI -> 150
-    YATRISATHI -> 129
+    YATRISATHI -> 133
     MOBILITY_PM -> 1
     MOBILITY_RS -> 1
     PASSCULTURE -> 1

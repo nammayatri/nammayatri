@@ -375,12 +375,12 @@ listItem push item state =
     , orientation HORIZONTAL
     , padding $ Padding 12 12 12 12
     , cornerRadius 8.0
-    , visibility $ boolToVisibility $ compVisibility state item
+    , visibility $ boolToVisibility $ (compVisibility state item && ( if item.stage == ST.PAN_CARD || item.stage == ST.AADHAAR_CARD || item.stage == ST.PROFILE_PHOTO then state.data.config.showProfileAadhaarPan else true))
     , stroke $ componentStroke state item
     , background $ compBg state item
     , clickable $ compClickable state item
     , alpha $ compAlpha state item
-    , onClick push $ const $ RegistrationAction item
+    , onClick push $ const $ (if not state.props.dontAllowHvRelaunch then RegistrationAction item else NoAction)
     , margin (MarginBottom 20)
     , gravity CENTER_VERTICAL
     ][  linearLayout

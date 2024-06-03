@@ -560,4 +560,3 @@ export const renderSlider = function (cb) {
   // window.activityResultListeners[requestCode] = function (reqCode, bundle) {
   //   cb(reqCode)(bundle)(); 
   // };
-}
