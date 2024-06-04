@@ -602,6 +602,13 @@
       "tip_banner_rectangle" : true,
       "up_hand_arrow" : true,
       "widget_close_gradient" : true,
-      "ny_ic_bike_onboard" : true
+      "ny_ic_bike_onboard" : true,
+      "ny_driver_location_permission" : true,
+      "ny_ic_driver_location_undetectable": true,
+      "ny_ic_welcome_screen" : true,
+      "ny_ic_welcome_screen_2" : true,
+      "ny_ic_welcome_screen_3" : true,
+      "ys_ic_kolkata_map" : true,
+      "ys_ic_siliguri_map" : true
    }
 }

@@ -449,6 +449,7 @@ config =
     startTime : "21:00:00"
   , endTime : "06:00:00"
   }
+  , clientName : ""
 }
 
 registrationConfig :: CTC.RegistrationConfig

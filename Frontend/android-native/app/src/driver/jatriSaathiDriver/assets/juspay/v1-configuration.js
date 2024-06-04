@@ -253,10 +253,11 @@ window.getMerchantConfig = function () {
     }
     , "enableMockLocation" : false
     , "flowConfig" : {
-      "chooseCity" : {
-        "runFlow" : false
+        "chooseCity" : {
+          "runFlow" : true,
+          "defCity" : "Kolkata"
+        }
       }
-    }
     , "permissions" : {
       "locationPermission" : true,
       "notification" : false
@@ -279,7 +280,7 @@ window.getMerchantConfig = function () {
   , "cityConfig" : [
     {
       "cityName" : "Kolkata",
-      "mapImage" : "",
+      "mapImage" : "ys_ic_kolkata_map",
       "cityCode" : "std:033",
       "showSubscriptions" : true,
       "cityLat" : 22.5354064,
@@ -299,6 +300,41 @@ window.getMerchantConfig = function () {
       "variantSubscriptionConfig" : {
         "enableVariantBasedSubscription" : false,
         "variantList" : []
+      },
+      "referral" : {
+          "domain" : "https://www.yatrisathi.in"
+        , "customerAppId" : "in.juspay.jatrisaathi"
+        , "driverAppId" : "in.juspay.jatrisaathidriver"
+      }
+    },
+    {
+      "cityName" : "Siliguri",
+      "mapImage" : "ys_ic_siliguri_map",
+      "cityCode" : "std:0353",
+      "showSubscriptions" : true,
+      "cityLat" : 26.708845,
+      "cityLong" : 88.434362,
+      "supportNumber" : "",
+      "languageKey" : "BN_IN",
+      "showDriverReferral" : true,
+      "showCustomerReferral" : true,
+      "uploadRCandDL" : true, 
+      "enableYatriCoins" : true,
+      "vehicleNSImg" : "",
+      "showEarningSection" : true,
+      "registration" : {
+          "supportWAN" : "",
+          "callSupport" : true,
+          "whatsappSupport" : false
+      },
+      "variantSubscriptionConfig" : {
+        "enableVariantBasedSubscription" : false,
+        "variantList" : []
+      },
+      "referral" : {
+          "domain" : "https://www.yatrisathi.in"
+        , "customerAppId" : "in.juspay.jatrisaathi"
+        , "driverAppId" : "in.juspay.jatrisaathidriver"
       }
     }
   ]
