@@ -29,6 +29,7 @@ initData :: HomeScreenState
 initData =
   { data:
       { linkedVehicleCategory: ""
+      , linkedVehicleVariant: ""
       , snappedOrigin: Nothing
       , config: getAppConfig appConfig
       , driverName: ""

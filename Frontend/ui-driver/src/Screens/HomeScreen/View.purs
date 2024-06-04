@@ -537,7 +537,7 @@ bannersCarousal view bottomMargin state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , margin if bottomMargin then MarginVertical 12 0 else MarginTop 12
+  , margin if bottomMargin && state.data.linkedVehicleCategory /= "AUTO_RICKSHAW" then MarginTop 12 else MarginVertical 12 12
   ][CarouselHolder.carouselView push $ getCarouselConfig view state]
 
 getCarouselConfig ∷ forall a. ListItem → HomeScreenState → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
