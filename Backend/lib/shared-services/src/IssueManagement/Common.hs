@@ -21,7 +21,7 @@ import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
+import Database.PostgreSQL.Simple.FromField
 import EulerHS.Prelude hiding (id, state)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Encryption
@@ -193,5 +193,33 @@ data MerchantConfig = MerchantConfig
 data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE
   deriving stock (Eq, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+data KaptureConfig = KaptureConfig
+  { queue :: Text,
+    sosQueue :: Maybe Text,
+    disposition :: Text
+  }
+  deriving stock (Eq, Show, Generic, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+fromFieldKaptureConfig ::
+  Field ->
+  Maybe ByteString ->
+  Conversion KaptureConfig
+fromFieldKaptureConfig f mbValue = do
+  value <- fromField f mbValue
+  case fromJSON value of
+    Success a -> pure a
+    _ -> returnError ConversionFailed f "Conversion failed"
+
+instance FromField KaptureConfig where
+  fromField = fromFieldKaptureConfig
+
+instance HasSqlValueSyntax be Value => HasSqlValueSyntax be KaptureConfig where
+  sqlValueSyntax = sqlValueSyntax . toJSON
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be KaptureConfig
+
+instance FromBackendRow Postgres KaptureConfig
 
 $(mkHttpInstancesForEnum ''IssueReportType)
