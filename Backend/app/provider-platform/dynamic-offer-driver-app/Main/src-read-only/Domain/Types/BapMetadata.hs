@@ -12,8 +12,9 @@ import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
 
 data BapMetadata = BapMetadata
-  { id :: Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata,
-    logoUrl :: Servant.Client.Core.BaseUrl,
+  { domain :: Kernel.Prelude.Maybe Data.Text.Text,
+    id :: Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata,
+    logoUrl :: Kernel.Prelude.Maybe Servant.Client.Core.BaseUrl,
     name :: Data.Text.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

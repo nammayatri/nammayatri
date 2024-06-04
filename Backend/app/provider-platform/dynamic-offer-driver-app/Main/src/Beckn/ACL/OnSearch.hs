@@ -33,7 +33,6 @@ mkOnSearchRequest ::
   Context.Domain ->
   Text ->
   Maybe Text ->
-  Text ->
   BaseUrl ->
   Maybe Text ->
   Maybe BaseUrl ->
@@ -41,7 +40,7 @@ mkOnSearchRequest ::
   Context.Country ->
   Bool ->
   m Spec.OnSearchReq
-mkOnSearchRequest res@DSearch.DSearchRes {..} action domain messageId transactionId bapId bapUri bppId bppUri city country isValueAddNP = do
+mkOnSearchRequest res@DSearch.DSearchRes {..} action domain messageId transactionId bapUri bppId bppUri city country isValueAddNP = do
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle provider.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show provider.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show AUTO_RICKSHAW)
   ttl <- bppConfig.onSearchTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   TOnSearch.buildOnSearchRideReq ttl bppConfig res action domain messageId transactionId bapId bapUri bppId bppUri city country isValueAddNP

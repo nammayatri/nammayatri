@@ -69,6 +69,7 @@ import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common
 import Kernel.Types.Confidence
 import Kernel.Types.Id
@@ -238,7 +239,7 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
     rideRating <- runInReplica $ QR.findRatingForRide ride.id
     driverNumber <- RD.getDriverNumber rideDetail
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
-    bapMetadata <- CQSM.findById (Id booking.bapId)
+    bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
     isValueAddNP <- CQVAN.isValueAddNP booking.bapId
     let goHomeReqId = ride.driverGoHomeRequestId
     mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP
@@ -308,7 +309,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         customerExtraFee = roundToIntegral <$> fareParams.customerExtraFee,
         customerExtraFeeWithCurrency = flip PriceAPIEntity fareParams.currency <$> fareParams.customerExtraFee,
         bapName = bapMetadata <&> (.name),
-        bapLogo = bapMetadata <&> (.logoUrl),
+        bapLogo = bapMetadata >>= (.logoUrl),
         disabilityTag = booking.disabilityTag,
         requestedVehicleVariant = castServiceTierToVariant booking.vehicleServiceTier,
         isOdometerReadingsRequired = DTC.isOdometerReadingsRequired booking.tripCategory,
@@ -399,7 +400,7 @@ otpRideCreate driver otpCode booking clientId = do
 
   driverNumber <- RD.getDriverNumber rideDetails
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
-  bapMetadata <- CQSM.findById (Id booking.bapId)
+  bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP
   where

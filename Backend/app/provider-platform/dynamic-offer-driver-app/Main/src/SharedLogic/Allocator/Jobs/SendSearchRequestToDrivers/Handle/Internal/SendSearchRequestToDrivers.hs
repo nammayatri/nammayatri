@@ -33,6 +33,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (DeploymentVersion (..))
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -72,7 +73,7 @@ sendSearchRequestToDrivers ::
   m ()
 sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig driverPool prevBatchDrivers goHomeConfig = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
-  bapMetadata <- CQSM.findById (Id searchReq.bapId)
+  bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id searchReq.bapId) Domain.MOBILITY
   validTill <- getSearchRequestValidTill
   batchNumber <- getPoolBatchNum searchTry.id
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool

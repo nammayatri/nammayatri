@@ -13,8 +13,9 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data BapMetadataT f = BapMetadataT
-  { id :: B.C f Data.Text.Text,
-    logoUrl :: B.C f Data.Text.Text,
+  { domain :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    id :: B.C f Data.Text.Text,
+    logoUrl :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     name :: B.C f Data.Text.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
