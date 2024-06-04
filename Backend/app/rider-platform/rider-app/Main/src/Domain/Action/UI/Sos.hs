@@ -107,15 +107,14 @@ getSosGetDetails (mbPersonId, _) rideId_ = do
         }
 
 postSosCreate :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> SosReq -> Flow SosRes
-postSosCreate (mbPersonId, merchantId) req = do
+postSosCreate (mbPersonId, _merchantId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   Redis.del $ CQSos.mockSosKey personId
   ride <- QRide.findById req.rideId >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
-  merchantConfig <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
-  sosId <- createTicketForNewSos person ride riderConfig trackLink req merchantConfig.kaptureDisposition riderConfig.kaptureQueue
+  sosId <- createTicketForNewSos person ride riderConfig trackLink req
   message <-
     MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
       MessageBuilder.BuildSOSAlertMessageReq
@@ -149,8 +148,8 @@ enableFollowRideInSos emergencyContacts = do
     )
     emergencyContacts
 
-createTicketForNewSos :: Person.Person -> DRide.Ride -> DRC.RiderConfig -> Text -> SosReq -> Text -> Text -> Flow (Id DSos.Sos)
-createTicketForNewSos person ride riderConfig trackLink req kaptureDisposition kaptureQueue = do
+createTicketForNewSos :: Person.Person -> DRide.Ride -> DRC.RiderConfig -> Text -> SosReq -> Flow (Id DSos.Sos)
+createTicketForNewSos person ride riderConfig trackLink req = do
   sosRes <- CQSos.findByRideId ride.id
   case sosRes of
     Just sosDetails -> do
@@ -161,10 +160,11 @@ createTicketForNewSos person ride riderConfig trackLink req kaptureDisposition k
     Nothing -> do
       phoneNumber <- mapM decrypt person.mobileNumber
       let rideInfo = buildRideInfo ride person phoneNumber
+          kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
       ticketId <- do
         if riderConfig.enableSupportForSafety
           then do
-            ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink] rideInfo req.flow kaptureDisposition kaptureQueue))
+            ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink] rideInfo req.flow riderConfig.kaptureConfig.disposition kaptureQueue))
             case ticketResponse of
               Right ticketResponse' -> return (Just ticketResponse'.ticketId)
               Left _ -> return Nothing
@@ -265,8 +265,9 @@ addSosVideo sosId personId SOSVideoUploadReq {..} = do
       phoneNumber <- mapM decrypt person.mobileNumber
       let rideInfo = buildRideInfo ride person phoneNumber
           trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
+          kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
       when riderConfig.enableSupportForSafety $
-        void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo DSos.SafetyFlow merchantConfig.kaptureDisposition riderConfig.kaptureQueue))
+        void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo DSos.SafetyFlow riderConfig.kaptureConfig.disposition kaptureQueue))
       createMediaEntry Common.AddLinkAsMedia {url = fileUrl, fileType}
   where
     validateContentType = do

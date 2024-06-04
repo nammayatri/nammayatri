@@ -7,6 +7,7 @@ module Storage.Beam.RiderConfig where
 
 import qualified Database.Beam as B
 import qualified Email.Types
+import qualified IssueManagement.Common
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -25,6 +26,7 @@ data RiderConfigT f = RiderConfigT
     enableLocalPoliceSupport :: B.C f Kernel.Prelude.Bool,
     enableSupportForSafety :: B.C f Kernel.Prelude.Bool,
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
+    kaptureConfig :: B.C f IssueManagement.Common.KaptureConfig,
     kaptureQueue :: B.C f Kernel.Prelude.Text,
     localPoliceNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
