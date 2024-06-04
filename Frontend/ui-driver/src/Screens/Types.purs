@@ -989,6 +989,7 @@ type HomeScreenData =  {
   noOfLocations :: Int,
   isVehicleSupported :: Boolean,
   linkedVehicleCategory :: String,
+  linkedVehicleVariant :: String,
   cityConfig :: CityConfig
 }
 

@@ -18,7 +18,7 @@ import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..))
 import DecodeUtil (decodeForeignObject, parseJSON)
 import Data.String (null)
 import Data.Maybe (Maybe(..))
-import Prelude (not, ($), (==))
+import Prelude (not, ($), (==), (||))
 import Data.Maybe (fromMaybe)
 import Data.Array (elem, filter, uncons)
 import Data.Array as DA
@@ -49,8 +49,8 @@ defaultRemoteConfig =
   , config: Nothing
   }
 
-carouselConfigData :: String -> String -> String -> String -> String -> Array RCCarousel
-carouselConfigData city configKey default userId categoryFilter =
+carouselConfigData :: String -> String -> String -> String -> String -> String -> Array RCCarousel
+carouselConfigData city configKey default userId categoryFilter variantFilter =
   let
     remoteConfig = fetchRemoteConfigString configKey
 
@@ -58,11 +58,11 @@ carouselConfigData city configKey default userId categoryFilter =
 
     decodedConfg = decodeForeignObject (parseJSON parseVal) defaultRemoteConfig
   in
-    filterWhiteListedConfigs userId $ filterCategoryBasedCarousel categoryFilter $ getCityBasedConfig decodedConfg city
+    filterWhiteListedConfigs userId $ filterCategoryBasedCarousel categoryFilter variantFilter $ getCityBasedConfig decodedConfg city
 
 -- Each RCCarousel has a category field which is an array of strings, If the array is empty I want to include that RCCarousel in output array, but if it has some values I want to match check `elem` if the categoryFilter is present in the array or not. If it is present then include that RCCarousel in the output array.
-filterCategoryBasedCarousel :: String -> Array RCCarousel -> Array RCCarousel
-filterCategoryBasedCarousel allowedFilter configs =
+filterCategoryBasedCarousel :: String -> String -> Array RCCarousel -> Array RCCarousel
+filterCategoryBasedCarousel allowedFilter variantFilter configs =
   let
     filteredConfigs = filter (\x -> validateConfig x) configs
   in
@@ -73,7 +73,7 @@ filterCategoryBasedCarousel allowedFilter configs =
     let
       categoryList = fromMaybe [] config.categoryFilter
     in
-      if DA.null categoryList then true else elem allowedFilter categoryList
+      if DA.null categoryList then true else elem allowedFilter categoryList || elem variantFilter categoryList
 
 fetchWhiteListedUser :: String -> Array String
 fetchWhiteListedUser configKey = fetchRemoteConfig configKey
