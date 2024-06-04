@@ -62,7 +62,7 @@ Merchant:
     scheduleRideBufferTime: NominalDiffTime
     fakeOtpMobileNumbers: "[Text]"
     fakeOtpEmails: "[Text]"
-    kaptureDisposition: Text
+    kaptureDisposition: Text # deprecated
     arrivedPickupThreshold: Distance
     arrivingPickupThreshold: Distance
     driverOnTheWayNotifyExpiry: Seconds
