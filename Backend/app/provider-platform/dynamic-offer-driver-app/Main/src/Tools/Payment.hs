@@ -17,6 +17,7 @@ module Tools.Payment where
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
+import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -24,32 +25,33 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QOMC
 
 createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
-createOrder = runWithServiceConfig Payment.createOrder
+createOrder = runWithServiceConfigAndName Payment.createOrder
 
 orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
-orderStatus = runWithServiceConfig Payment.orderStatus
+orderStatus = runWithServiceConfigAndName Payment.orderStatus
 
 offerList :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.OfferListReq -> m Payment.OfferListResp
-offerList = runWithServiceConfig Payment.offerList
+offerList = runWithServiceConfigAndName Payment.offerList
 
 offerApply :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.OfferApplyReq -> m Payment.OfferApplyResp
-offerApply = runWithServiceConfig Payment.offerApply
+offerApply = runWithServiceConfigAndName Payment.offerApply
 
 mandateRevoke :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.MandateRevokeReq -> m Payment.MandateRevokeRes
-mandateRevoke = runWithServiceConfig Payment.mandateRevoke
+mandateRevoke = runWithServiceConfigAndName Payment.mandateRevoke
 
 mandateNotification :: (ServiceFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.MandateNotificationReq -> m Payment.MandateNotificationRes
-mandateNotification = runWithServiceConfig Payment.mandateNotification
+mandateNotification = runWithServiceConfigAndName Payment.mandateNotification
 
 mandateNotificationStatus :: (ServiceFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.NotificationStatusReq -> m Payment.NotificationStatusResp
-mandateNotificationStatus = runWithServiceConfig Payment.mandateNotificationStatus
+mandateNotificationStatus = runWithServiceConfigAndName Payment.mandateNotificationStatus
 
 mandateExecution :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.MandateExecutionReq -> m Payment.MandateExecutionRes
-mandateExecution = runWithServiceConfig Payment.mandateExecution
+mandateExecution = runWithServiceConfigAndName Payment.mandateExecution
 
-runWithServiceConfig ::
+runWithServiceConfigAndName ::
   ServiceFlow m r =>
   (Payment.PaymentServiceConfig -> req -> m resp) ->
   Id DM.Merchant ->
@@ -57,11 +59,52 @@ runWithServiceConfig ::
   DMSC.ServiceName ->
   req ->
   m resp
-runWithServiceConfig func merchantId merchantOperatingCity serviceName req = do
+runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName req = do
   merchantServiceConfig <-
     CQMSC.findByMerchantIdAndServiceWithCity merchantId serviceName merchantOperatingCity
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig vsc -> func vsc req
     DMSC.RentalPaymentServiceConfig vsc -> func vsc req
+    _ -> throwError $ InternalError "Unknown Service Config"
+
+createIndividualConnectAccount ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Payment.IndividualConnectAccountReq ->
+  m Payment.IndividualConnectAccountResp
+createIndividualConnectAccount = runWithServiceConfig Payment.createIndividualConnectAccount (.createBankAccount)
+
+retryAccountLink ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Payment.AccountId ->
+  m Payment.RetryAccountLink
+retryAccountLink = runWithServiceConfig Payment.retryAccountLink (.retryBankAccountLink)
+
+getAccount ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Payment.AccountId ->
+  m Payment.ConnectAccountResp
+getAccount = runWithServiceConfig Payment.getAccount (.getBankAccount)
+
+runWithServiceConfig ::
+  ServiceFlow m r =>
+  (Payment.PaymentServiceConfig -> req -> m resp) ->
+  (DMSUC.MerchantServiceUsageConfig -> Payment.PaymentService) ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  req ->
+  m resp
+runWithServiceConfig func getCfg merchantId merchantOpCityId req = do
+  orgPaymentsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  orgPaymentServiceConfig <-
+    CQMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.PaymentService $ getCfg orgPaymentsConfig) merchantOpCityId
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Payments" (show $ getCfg orgPaymentsConfig))
+  case orgPaymentServiceConfig.serviceConfig of
+    DMSC.PaymentServiceConfig msc -> func msc req
     _ -> throwError $ InternalError "Unknown Service Config"

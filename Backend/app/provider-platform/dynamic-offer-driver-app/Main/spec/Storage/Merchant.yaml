@@ -18,6 +18,7 @@ imports:
   AadhaarVerificationService: Kernel.External.AadhaarVerification.Types
   CallService: Kernel.External.Call
   MapsService: Kernel.External.Maps.Types
+  PaymentService: Kernel.External.Payment.Types
   NotificationService: Kernel.External.Notification.Types
   SmsService: Kernel.External.SMS.Types
   IssueTicketService: Kernel.External.Ticket.Types
@@ -446,6 +447,9 @@ MerchantServiceUsageConfig:
     updatedAt: UTCTime
     createdAt: UTCTime
     verificationProvidersPriorityList: "[VerificationService]"
+    createBankAccount: PaymentService
+    retryBankAccountLink: PaymentService
+    getBankAccount: PaymentService
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -486,6 +490,9 @@ MerchantServiceUsageConfig:
     snapToRoadProvidersList: "'{\"OSRM\", \"Google\"}'"
     verificationProvidersPriorityList: "'{\"Idfy\"}'"
     rectifyDistantPointsFailure: "'OSRM'"
+    createBankAccount: "'Stripe'"
+    retryBankAccountLink: "'Stripe'"
+    getBankAccount: "'Stripe'"
 
   queries:
     findByMerchantOpCityId:

@@ -30,8 +30,6 @@ type API =
       :> "driver"
       :> "rateCard"
       :> QueryParam "distance" Kernel.Types.Common.Meters
-      :> QueryParam "distanceValue" Kernel.Types.Common.HighPrecDistance
-      :> QueryParam "distanceUnit" Kernel.Types.Common.DistanceUnit
       :> QueryParam
            "vehicleServiceTier"
            Domain.Types.ServiceTierType.ServiceTierType
@@ -82,10 +80,26 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "driver"
+      :> "register"
+      :> "bankAccount"
+      :> "link"
+      :> Get
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
+      :<|> TokenAuth
+      :> "driver"
+      :> "register"
+      :> "bankAccount"
+      :> "status"
+      :> Get
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.BankAccountResp
   )
 
 handler :: Environment.FlowServer API
-handler = getOnboardingConfigs :<|> getDriverRateCard :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverRegisterPancard
+handler = getOnboardingConfigs :<|> getDriverRateCard :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus
 
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -103,12 +117,10 @@ getDriverRateCard ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Maybe Kernel.Types.Common.Meters ->
-    Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance ->
-    Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit ->
     Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType ->
     Environment.FlowHandler [API.Types.UI.DriverOnboardingV2.RateCardResp]
   )
-getDriverRateCard a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRateCard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getDriverRateCard a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRateCard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postDriverUpdateAirCondition ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -158,3 +170,21 @@ postDriverRegisterPancard ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postDriverRegisterPancard a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterPancard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getDriverRegisterBankAccountLink ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.FlowHandler API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
+  )
+getDriverRegisterBankAccountLink a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRegisterBankAccountLink (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+
+getDriverRegisterBankAccountStatus ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.FlowHandler API.Types.UI.DriverOnboardingV2.BankAccountResp
+  )
+getDriverRegisterBankAccountStatus a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRegisterBankAccountStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)

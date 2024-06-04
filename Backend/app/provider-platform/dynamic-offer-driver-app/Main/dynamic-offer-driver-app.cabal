@@ -606,6 +606,7 @@ library
       Domain.Types.Client
       Domain.Types.DailyStats
       Domain.Types.DocumentVerificationConfig
+      Domain.Types.DriverBankAccount
       Domain.Types.DriverBlockReason
       Domain.Types.DriverFee
       Domain.Types.DriverInformation
@@ -690,6 +691,7 @@ library
       Storage.Beam.Client
       Storage.Beam.DailyStats
       Storage.Beam.DocumentVerificationConfig
+      Storage.Beam.DriverBankAccount
       Storage.Beam.DriverBlockReason
       Storage.Beam.DriverFee
       Storage.Beam.DriverInformation
@@ -774,6 +776,7 @@ library
       Storage.Queries.Client
       Storage.Queries.DailyStats
       Storage.Queries.DocumentVerificationConfig
+      Storage.Queries.DriverBankAccount
       Storage.Queries.DriverBlockReason
       Storage.Queries.DriverFee
       Storage.Queries.DriverInformation

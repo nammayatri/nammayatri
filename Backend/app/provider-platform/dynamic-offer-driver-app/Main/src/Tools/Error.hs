@@ -1109,6 +1109,9 @@ data DriverOnboardingError
   | PanAlreadyLinked
   | RCNotLinkedWithFleet
   | RCAssociationNotFound
+  | DriverSSNNotFound Text
+  | DriverDLNotFound Text
+  | DriverBankAccountNotFound Text
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1143,6 +1146,9 @@ instance IsBaseError DriverOnboardingError where
     PanAlreadyLinked -> Just "PAN already linked with driver."
     RCNotLinkedWithFleet -> Just "Vehicle Registration Certificate is not linked with Fleet."
     RCAssociationNotFound -> Just "RC association not found."
+    DriverSSNNotFound id_ -> Just $ "Driver SSN not found for driverId \"" <> id_ <> "\"."
+    DriverDLNotFound id_ -> Just $ "Driver DL not found for driverId \"" <> id_ <> "\"."
+    DriverBankAccountNotFound id_ -> Just $ "Driver Bank Account not found for driverId \"" <> id_ <> "\"."
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1176,6 +1182,9 @@ instance IsHTTPError DriverOnboardingError where
     PanAlreadyLinked -> "PAN_ALREADY_LINKED"
     RCNotLinkedWithFleet -> "RC_NOT_LINKED_WITH_FLEET"
     RCAssociationNotFound -> "RC_ASSOCIATION_NOT_FOUND"
+    DriverSSNNotFound _ -> "DRIVER_SSN_NOT_FOUND"
+    DriverDLNotFound _ -> "DRIVER_DL_NOT_FOUND"
+    DriverBankAccountNotFound _ -> "DRIVER_BANK_ACCOUNT_NOT_FOUND"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1207,6 +1216,9 @@ instance IsHTTPError DriverOnboardingError where
     PanAlreadyLinked -> E400
     RCNotLinkedWithFleet -> E400
     RCAssociationNotFound -> E400
+    DriverSSNNotFound _ -> E400
+    DriverDLNotFound _ -> E400
+    DriverBankAccountNotFound _ -> E400
 
 instance IsAPIError DriverOnboardingError
 

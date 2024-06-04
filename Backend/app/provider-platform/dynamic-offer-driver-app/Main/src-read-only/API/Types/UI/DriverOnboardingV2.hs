@@ -14,6 +14,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Servant
+import qualified Servant.Client.Core
 import Tools.Auth
 
 data AirConditionedTier = AirConditionedTier
@@ -22,6 +23,11 @@ data AirConditionedTier = AirConditionedTier
     usageRestrictionType :: Domain.Types.DriverInformation.AirConditionedRestrictionType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data BankAccountLinkResp = BankAccountLinkResp {accountLink :: Servant.Client.Core.BaseUrl, accountUrlExpiry :: Kernel.Prelude.UTCTime, chargesEnabled :: Kernel.Prelude.Bool, detailsSubmitted :: Kernel.Prelude.Bool}
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data BankAccountResp = BankAccountResp {chargesEnabled :: Kernel.Prelude.Bool, detailsSubmitted :: Kernel.Prelude.Bool} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
   { checkExpiry :: Kernel.Prelude.Bool,

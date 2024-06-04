@@ -95,8 +95,10 @@ cacheMerchantServiceConfig merchantServiceConfig = do
         Notification.GRPCConfig _ -> NotificationService Notification.GRPC
       PaymentServiceConfig paymentCfg -> case paymentCfg of
         Payment.JuspayConfig _ -> PaymentService Payment.Juspay
+        Payment.StripeConfig _ -> PaymentService Payment.Stripe
       MetroPaymentServiceConfig paymentCfg -> case paymentCfg of
         Payment.JuspayConfig _ -> MetroPaymentService Payment.Juspay
+        Payment.StripeConfig _ -> MetroPaymentService Payment.Stripe
       IssueTicketServiceConfig ticketCfg -> case ticketCfg of
         Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
 
