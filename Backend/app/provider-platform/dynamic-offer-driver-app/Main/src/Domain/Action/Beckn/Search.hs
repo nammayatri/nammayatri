@@ -31,6 +31,7 @@ import qualified Data.Map as M
 import Data.Ord
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Maps as DMaps
+import Domain.Types.BapMetadata
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
@@ -52,6 +53,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
@@ -70,6 +72,7 @@ import SharedLogic.Ride
 import SharedLogic.TollsDetector
 import Storage.Cac.DriverPoolConfig as CDP
 import Storage.Cac.TransporterConfig as CCT
+import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -130,7 +133,8 @@ data DSearchRes = DSearchRes
     now :: UTCTime,
     quotes :: [(DQuote.Quote, DVST.VehicleServiceTier, Maybe NearestDriverInfo)],
     estimates :: [(DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo)],
-    transporterConfig :: DTMT.TransporterConfig
+    transporterConfig :: DTMT.TransporterConfig,
+    bapId :: Text
   }
 
 data NearestDriverInfo = NearestDriverInfo
@@ -165,6 +169,8 @@ getRouteServiceability merchantId merchantOpCityId fromLocation toLocation _ _ _
 
 handler :: ValidatedDSearchReq -> DSearchReq -> Flow DSearchRes
 handler ValidatedDSearchReq {..} sReq = do
+  bapMetadata <- mkBapMetaData
+  CQBapMetaData.createIfNotPresent bapMetadata (Id sReq.bapId) (show Domain.MOBILITY)
   searchMetricsMVar <- Metrics.startSearchMetrics merchant.name
   let merchantId = merchant.id
   sessiontoken <- generateGUIDText
@@ -256,6 +262,7 @@ handler ValidatedDSearchReq {..} sReq = do
       return $
         DSearchRes
           { provider = merchant,
+            bapId = sReq.bapId,
             ..
           }
 
@@ -280,6 +287,19 @@ handler ValidatedDSearchReq {..} sReq = do
                   includedKm = (timeInHr * det.includedKmPerHr.getKilometers)
                   maxAllowed = min (min det.maxAdditionalKmsLimit.getKilometers includedKm) (det.totalAdditionalKmsLimit.getKilometers - includedKm)
                in distInKm - includedKm <= maxAllowed
+
+    mkBapMetaData :: Flow BapMetadata
+    mkBapMetaData = do
+      now <- getCurrentTime
+      return $
+        BapMetadata
+          { id = Id sReq.bapId,
+            domain = Just $ show Domain.MOBILITY,
+            name = "THIRD PARTY BAP",
+            logoUrl = Nothing, -- TODO: Parse this from on_search req
+            createdAt = now,
+            updatedAt = now
+          }
 
 addNearestDriverInfo ::
   (HasField "vehicleServiceTier" a DVST.ServiceTierType) =>

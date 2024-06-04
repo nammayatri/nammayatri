@@ -102,7 +102,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
         { searchRequestId = nearbyReq.searchTryId,
           searchTryId = nearbyReq.searchTryId,
           bapName = bapMetadata <&> (.name),
-          bapLogo = bapMetadata <&> (.logoUrl),
+          bapLogo = bapMetadata >>= (.logoUrl),
           startTime = nearbyReq.startTime,
           searchRequestValidTill = nearbyReq.searchRequestValidTill,
           distanceToPickup = nearbyReq.actualDistanceToPickup,
