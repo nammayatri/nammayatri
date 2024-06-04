@@ -3252,6 +3252,7 @@ updateDriverDataToStates = do
         , driverAlternateMobile =getDriverInfoResp.alternateNumber
         , profileImg = getDriverInfoResp.aadhaarCardPhoto
         , linkedVehicleCategory = fromMaybe linkedVehicle.variant linkedVehicle.serviceTierType
+        , linkedVehicleVariant = linkedVehicle.variant
         , gender = fromMaybe "UNKNOWN" getDriverInfoResp.gender
         , driverGotoState { gotoCount = driverGoHomeInfo.cnt,
                             gotoValidTill = fromMaybe "-" driverGoHomeInfo.validTill,
