@@ -609,7 +609,7 @@ public class RideRequestUtils {
 
     @SuppressLint("SetTextI18n")
     public static void updateRateView(SheetAdapter.SheetViewHolder holder, SheetModel model) {
-        double baseFare = model.getBaseFare() + model.getOfferedPrice();
+        double baseFare = model.getBaseFare() + model.getOfferedPrice() - model.getTollCharges();
         float dist = model.getDistanceToBeCovFloat()/1000;
         String rate = RideRequestUtils.getUptoDecStr((float) (baseFare/dist), 1);
         String currency = model.getCurrency();;
