@@ -57,11 +57,13 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name name,
+      Se.Set Beam.oxygen oxygen,
       Se.Set Beam.priority priority,
       Se.Set Beam.seatingCapacity seatingCapacity,
       Se.Set Beam.serviceTierType serviceTierType,
       Se.Set Beam.shortDescription shortDescription,
       Se.Set Beam.vehicleRating vehicleRating,
+      Se.Set Beam.ventilator ventilator,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -83,11 +85,13 @@ instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehi
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             name = name,
+            oxygen = oxygen,
             priority = priority,
             seatingCapacity = seatingCapacity,
             serviceTierType = serviceTierType,
             shortDescription = shortDescription,
             vehicleRating = vehicleRating,
+            ventilator = ventilator,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -106,11 +110,13 @@ instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehicl
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.name = name,
+        Beam.oxygen = oxygen,
         Beam.priority = priority,
         Beam.seatingCapacity = seatingCapacity,
         Beam.serviceTierType = serviceTierType,
         Beam.shortDescription = shortDescription,
         Beam.vehicleRating = vehicleRating,
+        Beam.ventilator = ventilator,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

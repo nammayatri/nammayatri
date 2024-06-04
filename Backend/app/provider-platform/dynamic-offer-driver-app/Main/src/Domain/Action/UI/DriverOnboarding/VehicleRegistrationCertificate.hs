@@ -99,6 +99,8 @@ data DriverRCReq = DriverRCReq
     dateOfRegistration :: Maybe UTCTime, -- updatable
     vehicleCategory :: Maybe Vehicle.Category,
     airConditioned :: Maybe Bool,
+    oxygen :: Maybe Bool,
+    ventilator :: Maybe Bool,
     multipleRC :: Maybe Bool,
     vehicleDetails :: Maybe DriverVehicleDetails -- updatable
   }
@@ -159,7 +161,8 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
   when (person.role == Person.DRIVER) $ do
     allLinkedRCs <- DAQuery.findAllLinkedByDriverId personId
     unless (length allLinkedRCs < (transporterConfig.rcLimit + (if isDashboard then 1 else 0))) $ throwError (RCLimitReached transporterConfig.rcLimit)
-  let mbAirConditioned = maybe req.airConditioned (\category -> if category == Vehicle.CAR then req.airConditioned else Just False) req.vehicleCategory
+  let mbAirConditioned = maybe req.airConditioned (\category -> if category `elem` [Vehicle.CAR, Vehicle.AMBULANCE] then req.airConditioned else Just False) req.vehicleCategory
+      (mbOxygen, mbVentilator) = maybe (req.oxygen, req.ventilator) (\category -> if category == Vehicle.AMBULANCE then (req.oxygen, req.ventilator) else (Just False, Just False)) req.vehicleCategory
   when
     ( isNothing req.vehicleDetails && isNothing req.dateOfRegistration && documentVerificationConfig.checkExtraction
         && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)
@@ -185,8 +188,8 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
     case req.vehicleDetails of
       Just vDetails@DriverVehicleDetails {..} -> do
         vehicleDetails <- CQVD.findByMakeAndModel vehicleManufacturer vehicleModel
-        void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel) req.vehicleCategory mbAirConditioned req.imageId ((vehicleDetails <&> (.vehicleVariant)) <|> Just Vehicle.HATCHBACK) vehicleDoors vehicleSeatBelts req.dateOfRegistration vDetails.vehicleModelYear
-      Nothing -> verifyRCFlow person merchantOpCityId documentVerificationConfig.checkExtraction req.vehicleRegistrationCertNumber req.imageId req.dateOfRegistration req.multipleRC req.vehicleCategory mbAirConditioned
+        void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel) req.vehicleCategory mbAirConditioned req.imageId ((vehicleDetails <&> (.vehicleVariant)) <|> Just Vehicle.HATCHBACK) vehicleDoors vehicleSeatBelts req.dateOfRegistration vDetails.vehicleModelYear mbOxygen mbVentilator
+      Nothing -> verifyRCFlow person merchantOpCityId documentVerificationConfig.checkExtraction req.vehicleRegistrationCertNumber req.imageId req.dateOfRegistration req.multipleRC req.vehicleCategory mbAirConditioned mbOxygen mbVentilator
   return Success
   where
     getImage :: Id Image.Image -> Flow Text
@@ -220,8 +223,8 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
           status = Nothing
         }
 
-verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe Vehicle.Category -> Maybe Bool -> Flow ()
-verifyRCFlow person merchantOpCityId imageExtraction rcNumber imageId dateOfRegistration multipleRC mbVehicleCategory mbAirConditioned = do
+verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe Vehicle.Category -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Flow ()
+verifyRCFlow person merchantOpCityId imageExtraction rcNumber imageId dateOfRegistration multipleRC mbVehicleCategory mbAirConditioned mbOxygen mbVentilator = do
   now <- getCurrentTime
   encryptedRC <- encrypt rcNumber
   let imageExtractionValidation =
@@ -258,6 +261,8 @@ verifyRCFlow person merchantOpCityId imageExtraction rcNumber imageId dateOfRegi
             multipleRC,
             vehicleCategory = mbVehicleCategory,
             airConditioned = mbAirConditioned,
+            oxygen = mbOxygen,
+            ventilator = mbVentilator,
             retryCount = Just 0,
             nameOnCard = Nothing,
             merchantId = Just person.merchantId,
@@ -272,12 +277,14 @@ onVerifyRC person mbVerificationReq rcVerificationResponse = do
     then IVQuery.updateExtractValidationStatus Domain.Failed (maybe "" (.requestId) mbVerificationReq) >> return Ack
     else do
       let mbVehicleCategory = mbVerificationReq >>= (.vehicleCategory)
-      let mbAirConditioned = mbVerificationReq >>= (.airConditioned)
-      void $ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned (maybe "" (.documentImageId1) mbVerificationReq) Nothing Nothing Nothing Nothing Nothing
+          mbAirConditioned = mbVerificationReq >>= (.airConditioned)
+          mbOxygen = mbVerificationReq >>= (.oxygen)
+          mbVentilator = mbVerificationReq >>= (.ventilator)
+      void $ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned (maybe "" (.documentImageId1) mbVerificationReq) Nothing Nothing Nothing Nothing Nothing mbOxygen mbVentilator
       return Ack
 
-onVerifyRCHandler :: Person.Person -> VT.RCVerificationResponse -> Maybe Vehicle.Category -> Maybe Bool -> Id Image.Image -> Maybe Vehicle.Variant -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe Int -> Flow ()
-onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear = do
+onVerifyRCHandler :: Person.Person -> VT.RCVerificationResponse -> Maybe Vehicle.Category -> Maybe Bool -> Id Image.Image -> Maybe Vehicle.Variant -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe Int -> Maybe Bool -> Maybe Bool -> Flow ()
+onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator = do
   mbFleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) rcVerificationResponse.registrationNumber
   now <- getCurrentTime
   let rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear
@@ -331,6 +338,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           fleetOwnerId,
           vehicleCategory,
           airConditioned = mbAirConditioned,
+          oxygen = mbOxygen,
+          ventilator = mbVentilator,
           documentImageId,
           vehicleClass = rcVerificationResponse.vehicleClass,
           vehicleClassCategory = rcVerificationResponse.vehicleCategory,
@@ -380,6 +389,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             merchantOperatingCityId = Just merchantOperatingCityId,
             userPassedVehicleCategory = input.vehicleCategory,
             airConditioned = input.airConditioned,
+            oxygen = input.oxygen,
+            ventilator = input.ventilator,
             luggageCapacity = Nothing,
             vehicleRating = Nothing,
             failedRules = [],

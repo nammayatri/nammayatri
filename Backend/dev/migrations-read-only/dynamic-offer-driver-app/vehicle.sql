@@ -30,3 +30,9 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN air_conditioned boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN selected_service_tiers text[] NOT NULL default '{}';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN ventilator boolean ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN oxygen boolean ;

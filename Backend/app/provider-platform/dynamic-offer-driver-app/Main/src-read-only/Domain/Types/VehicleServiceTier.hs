@@ -26,11 +26,13 @@ data VehicleServiceTier = VehicleServiceTier
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     name :: Kernel.Prelude.Text,
+    oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     priority :: Kernel.Prelude.Int,
     seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     serviceTierType :: Domain.Types.ServiceTierType.ServiceTierType,
     shortDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

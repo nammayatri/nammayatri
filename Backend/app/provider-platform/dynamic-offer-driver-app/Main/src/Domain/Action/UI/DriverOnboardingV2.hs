@@ -102,16 +102,19 @@ getOnboardingConfigs (mbPersonId, _, merchantOpCityId) mbOnlyVehicle = do
   cabConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.CAR
   autoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.AUTO_CATEGORY
   bikeConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.MOTORCYCLE
+  ambulanceConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.AMBULANCE
 
   cabConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments cabConfigsRaw)
   autoConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments autoConfigsRaw)
   bikeConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments bikeConfigsRaw)
+  ambulanceConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments ambulanceConfigsRaw)
 
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
       { cabs = toMaybe cabConfigs,
         autos = toMaybe autoConfigs,
-        bikes = toMaybe bikeConfigs
+        bikes = toMaybe bikeConfigs,
+        ambulances = toMaybe ambulanceConfigs
       }
   where
     toMaybe :: [a] -> Kernel.Prelude.Maybe [a]
@@ -306,6 +309,7 @@ postDriverUpdateServiceTiers ::
     Environment.Flow APISuccess
   )
 postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers {..} = do
+  -- Todo: Handle oxygen,ventilator here also. For now, frontend can handle
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId

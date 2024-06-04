@@ -27,6 +27,7 @@ instance FromTType' Beam.Vehicle Domain.Types.Vehicle.Vehicle where
             make = make,
             merchantId = Kernel.Types.Id.Id merchantId,
             model = model,
+            oxygen = oxygen,
             registrationCategory = registrationCategory,
             registrationNo = registrationNo,
             selectedServiceTiers = selectedServiceTiers,
@@ -35,6 +36,7 @@ instance FromTType' Beam.Vehicle Domain.Types.Vehicle.Vehicle where
             vehicleClass = vehicleClass,
             vehicleName = vehicleName,
             vehicleRating = vehicleRating,
+            ventilator = ventilator,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -53,6 +55,7 @@ instance ToTType' Beam.Vehicle Domain.Types.Vehicle.Vehicle where
         Beam.make = make,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.model = model,
+        Beam.oxygen = oxygen,
         Beam.registrationCategory = registrationCategory,
         Beam.registrationNo = registrationNo,
         Beam.selectedServiceTiers = selectedServiceTiers,
@@ -61,6 +64,7 @@ instance ToTType' Beam.Vehicle Domain.Types.Vehicle.Vehicle where
         Beam.vehicleClass = vehicleClass,
         Beam.vehicleName = vehicleName,
         Beam.vehicleRating = vehicleRating,
+        Beam.ventilator = ventilator,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

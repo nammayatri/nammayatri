@@ -35,6 +35,9 @@ updateAirConditioned airConditioned (Kernel.Types.Id.Id driverId) = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.airConditioned airConditioned, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
 
+updateOxygen :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateOxygen oxygen (Kernel.Types.Id.Id driverId) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.oxygen oxygen, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
+
 updateSelectedServiceTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ServiceTierType.ServiceTierType] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateSelectedServiceTiers selectedServiceTiers (Kernel.Types.Id.Id driverId) = do
   _now <- getCurrentTime
@@ -58,6 +61,11 @@ updateVehicleName vehicleName (Kernel.Types.Id.Id driverId) = do
 updateVehicleVariant :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Vehicle.Variant -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateVehicleVariant variant (Kernel.Types.Id.Id driverId) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.variant variant, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
 
+updateVentilator :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateVentilator ventilator (Kernel.Types.Id.Id driverId) = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.ventilator ventilator, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Vehicle.Vehicle))
 findByPrimaryKey (Kernel.Types.Id.Id driverId) = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId]]
 
@@ -74,6 +82,7 @@ updateByPrimaryKey (Domain.Types.Vehicle.Vehicle {..}) = do
       Se.Set Beam.make make,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.model model,
+      Se.Set Beam.oxygen oxygen,
       Se.Set Beam.registrationCategory registrationCategory,
       Se.Set Beam.registrationNo registrationNo,
       Se.Set Beam.selectedServiceTiers selectedServiceTiers,
@@ -82,6 +91,7 @@ updateByPrimaryKey (Domain.Types.Vehicle.Vehicle {..}) = do
       Se.Set Beam.vehicleClass vehicleClass,
       Se.Set Beam.vehicleName vehicleName,
       Se.Set Beam.vehicleRating vehicleRating,
+      Se.Set Beam.ventilator ventilator,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now

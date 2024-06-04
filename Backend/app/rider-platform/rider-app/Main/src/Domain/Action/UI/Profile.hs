@@ -99,6 +99,7 @@ data ProfileRes = ProfileRes
     hasTakenValidAutoRide :: Bool,
     hasTakenValidCabRide :: Bool,
     hasTakenValidBikeRide :: Bool,
+    hasTakenValidAmbulanceRide :: Bool,
     referralCode :: Maybe Text,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
     language :: Maybe Maps.Language,
@@ -190,8 +191,9 @@ getPersonDetails (personId, _) mbToss = do
   isSafetyCenterDisabled_ <- SLP.checkSafetyCenterDisabled person
   hasTakenValidRide <- QCP.findAllByPersonId personId
   let hasTakenValidFirstCabRide = validRideCount hasTakenValidRide BecknConfig.CAB
-  let hasTakenValidFirstAutoRide = validRideCount hasTakenValidRide BecknConfig.AUTO_RICKSHAW
-  let hasTakenValidFirstBikeRide = validRideCount hasTakenValidRide BecknConfig.MOTORCYCLE
+      hasTakenValidFirstAutoRide = validRideCount hasTakenValidRide BecknConfig.AUTO_RICKSHAW
+      hasTakenValidFirstBikeRide = validRideCount hasTakenValidRide BecknConfig.MOTORCYCLE
+      hasTakenValidAmbulanceRide = validRideCount hasTakenValidRide BecknConfig.AMBULANCE
   newCustomerReferralCode <-
     if (isNothing person.customerReferralCode)
       then do
@@ -203,9 +205,9 @@ getPersonDetails (personId, _) mbToss = do
             pure $ Just newCustomerReferralCode
           else pure Nothing
       else pure person.customerReferralCode
-  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide =
+    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide =
       ProfileRes
         { maskedMobileNumber = maskText <$> mobileNumber,
           maskedDeviceToken = maskText <$> deviceToken,
@@ -214,6 +216,7 @@ getPersonDetails (personId, _) mbToss = do
           hasTakenValidAutoRide = hasTakenAutoRide,
           hasTakenValidCabRide = hasTakenCabRide,
           hasTakenValidBikeRide = hasTakenValidFirstBikeRide,
+          hasTakenValidAmbulanceRide = hasTakenValidAmbulanceRide,
           isSafetyCenterDisabled = isSafetyCenterDisabled_,
           customerReferralCode = newCustomerReferralCode,
           bundleVersion = clientBundleVersion,

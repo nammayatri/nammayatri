@@ -23,7 +23,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Utils.GenericPretty
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
-data VehicleServiceTierType = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | ECO | COMFY | PREMIUM | BIKE
+data VehicleServiceTierType = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | ECO | COMFY | PREMIUM | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR
   deriving
     ( Show,
       Eq,
@@ -54,6 +54,11 @@ castServiceTierToVariant ECO = VehicleVariant.HATCHBACK
 castServiceTierToVariant COMFY = VehicleVariant.SEDAN
 castServiceTierToVariant PREMIUM = VehicleVariant.SEDAN
 castServiceTierToVariant BIKE = VehicleVariant.BIKE
+castServiceTierToVariant AMBULANCE_TAXI = VehicleVariant.AMBULANCE_TAXI
+castServiceTierToVariant AMBULANCE_TAXI_OXY = VehicleVariant.AMBULANCE_TAXI_OXY
+castServiceTierToVariant AMBULANCE_AC = VehicleVariant.AMBULANCE_AC
+castServiceTierToVariant AMBULANCE_AC_OXY = VehicleVariant.AMBULANCE_AC_OXY
+castServiceTierToVariant AMBULANCE_VENTILATOR = VehicleVariant.AMBULANCE_VENTILATOR
 
 castVariantToServiceTier :: VehicleVariant.VehicleVariant -> VehicleServiceTierType
 castVariantToServiceTier VehicleVariant.SEDAN = SEDAN
@@ -63,6 +68,11 @@ castVariantToServiceTier VehicleVariant.AUTO_RICKSHAW = AUTO_RICKSHAW
 castVariantToServiceTier VehicleVariant.TAXI = TAXI
 castVariantToServiceTier VehicleVariant.TAXI_PLUS = TAXI_PLUS
 castVariantToServiceTier VehicleVariant.BIKE = BIKE
+castVariantToServiceTier VehicleVariant.AMBULANCE_TAXI = AMBULANCE_TAXI
+castVariantToServiceTier VehicleVariant.AMBULANCE_TAXI_OXY = AMBULANCE_TAXI_OXY
+castVariantToServiceTier VehicleVariant.AMBULANCE_AC = AMBULANCE_AC
+castVariantToServiceTier VehicleVariant.AMBULANCE_AC_OXY = AMBULANCE_AC_OXY
+castVariantToServiceTier VehicleVariant.AMBULANCE_VENTILATOR = AMBULANCE_VENTILATOR
 
 castServiceTierToCategory :: VehicleServiceTierType -> BecknConfig.VehicleCategory
 castServiceTierToCategory SEDAN = BecknConfig.CAB
@@ -75,3 +85,8 @@ castServiceTierToCategory ECO = BecknConfig.CAB
 castServiceTierToCategory COMFY = BecknConfig.CAB
 castServiceTierToCategory PREMIUM = BecknConfig.CAB
 castServiceTierToCategory BIKE = BecknConfig.MOTORCYCLE
+castServiceTierToCategory AMBULANCE_TAXI = BecknConfig.AMBULANCE
+castServiceTierToCategory AMBULANCE_TAXI_OXY = BecknConfig.AMBULANCE
+castServiceTierToCategory AMBULANCE_AC = BecknConfig.AMBULANCE
+castServiceTierToCategory AMBULANCE_AC_OXY = BecknConfig.AMBULANCE
+castServiceTierToCategory AMBULANCE_VENTILATOR = BecknConfig.AMBULANCE

@@ -843,6 +843,11 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               SV.SUV -> [DVST.SUV] <> [DVST.SEDAN | canDowngradeToSedan] <> [DVST.COMFY | canDowngradeToSedan] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
               SV.TAXI_PLUS -> [DVST.TAXI_PLUS]
               SV.BIKE -> [DVST.BIKE]
+              SV.AMBULANCE_TAXI -> [DVST.AMBULANCE_TAXI] -- deprecated, only for compilation
+              SV.AMBULANCE_TAXI_OXY -> [DVST.AMBULANCE_TAXI_OXY]
+              SV.AMBULANCE_AC -> [DVST.AMBULANCE_AC]
+              SV.AMBULANCE_AC_OXY -> [DVST.AMBULANCE_AC_OXY]
+              SV.AMBULANCE_VENTILATOR -> [DVST.AMBULANCE_VENTILATOR]
 
       QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity availableUpiApps person.id
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $

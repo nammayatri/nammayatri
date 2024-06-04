@@ -45,7 +45,8 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data DocumentVerificationConfigList = DocumentVerificationConfigList
-  { autos :: Kernel.Prelude.Maybe [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity],
+  { ambulances :: Kernel.Prelude.Maybe [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity],
+    autos :: Kernel.Prelude.Maybe [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity],
     bikes :: Kernel.Prelude.Maybe [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity],
     cabs :: Kernel.Prelude.Maybe [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity]
   }

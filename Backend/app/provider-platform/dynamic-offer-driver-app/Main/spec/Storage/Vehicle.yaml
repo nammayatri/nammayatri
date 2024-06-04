@@ -10,13 +10,13 @@ Vehicle:
 
   types:
     Category:
-      enum: "CAR,MOTORCYCLE,TRAIN,BUS,FLIGHT,AUTO_CATEGORY"
+      enum: "CAR,MOTORCYCLE,TRAIN,BUS,FLIGHT,AUTO_CATEGORY,AMBULANCE"
       derive: "HttpInstance"
     RegistrationCategory:
       enum: "COMMERCIAL,PERSONAL,OTHER,PUBLIC"
       derive: "HttpInstance"
     Variant:
-      enum: "SEDAN,SUV,HATCHBACK,AUTO_RICKSHAW,TAXI,TAXI_PLUS,BIKE"
+      enum: "SEDAN,SUV,HATCHBACK,AUTO_RICKSHAW,TAXI,TAXI_PLUS,BIKE,AMBULANCE_TAXI,AMBULANCE_TAXI_OXY,AMBULANCE_AC,AMBULANCE_AC_OXY,AMBULANCE_VENTILATOR"
       derive: "HttpInstance,Enum,Bounded"
     VehicleAPIEntity:
       driverId: Id Person
@@ -46,6 +46,8 @@ Vehicle:
     registrationCategory: Maybe RegistrationCategory
     vehicleClass: Text
     airConditioned: Maybe Bool
+    oxygen: Maybe Bool
+    ventilator: Maybe Bool
     luggageCapacity: Maybe Int
     vehicleRating: Maybe Double
     selectedServiceTiers: '[ServiceTierType]'
@@ -93,4 +95,12 @@ Vehicle:
     updateAirConditioned:
       kvFunction: updateWithKV
       params: [airConditioned]
+      where: driverId
+    updateOxygen:
+      kvFunction: updateWithKV
+      params: [oxygen]
+      where: driverId
+    updateVentilator:
+      kvFunction: updateWithKV
+      params: [ventilator]
       where: driverId

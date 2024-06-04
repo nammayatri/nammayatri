@@ -19,6 +19,7 @@ types:
     autos: Maybe [DocumentVerificationConfigAPIEntity]
     cabs: Maybe [DocumentVerificationConfigAPIEntity]
     bikes: Maybe [DocumentVerificationConfigAPIEntity]
+    ambulances: Maybe [DocumentVerificationConfigAPIEntity]
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
     title: Text

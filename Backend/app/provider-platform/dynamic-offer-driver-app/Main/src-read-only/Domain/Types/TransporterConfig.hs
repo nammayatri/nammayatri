@@ -166,7 +166,8 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
 data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, Show, ToJSON, FromJSON, Read)
 
 data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
-  { autorickshaw :: Kernel.Types.Common.Kilometers,
+  { ambulance :: Kernel.Types.Common.Kilometers,
+    autorickshaw :: Kernel.Types.Common.Kilometers,
     bike :: Kernel.Types.Common.Kilometers,
     hatchback :: Kernel.Types.Common.Kilometers,
     sedan :: Kernel.Types.Common.Kilometers,

@@ -268,7 +268,7 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
       model = fromMaybe "Unkown" rc.vehicleModel,
       size = Nothing,
       merchantId,
-      variant = fromMaybe AUTO_RICKSHAW rc.vehicleVariant, -- Value will be always Just if reaching here
+      variant = fromMaybe AUTO_RICKSHAW rc.vehicleVariant,
       color = fromMaybe "Unkown" rc.vehicleColor,
       energyType = rc.vehicleEnergyType,
       registrationNo = certificateNumber,
@@ -277,6 +277,8 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
       merchantOperatingCityId = Just merchantOpCityId,
       vehicleName = Nothing,
       airConditioned = rc.airConditioned,
+      oxygen = rc.oxygen,
+      ventilator = rc.ventilator,
       luggageCapacity = rc.luggageCapacity,
       vehicleRating = rc.vehicleRating,
       selectedServiceTiers = [],
@@ -302,6 +304,8 @@ data CreateRCInput = CreateRCInput
     manufacturer :: Maybe Text,
     manufacturerModel :: Maybe Text,
     airConditioned :: Maybe Bool,
+    oxygen :: Maybe Bool,
+    ventilator :: Maybe Bool,
     bodyType :: Maybe Text,
     fuelType :: Maybe Text,
     color :: Maybe Text,
@@ -356,6 +360,8 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNu
       merchantOperatingCityId = Just merchantOperatingCityId,
       userPassedVehicleCategory = input.vehicleCategory,
       airConditioned = input.airConditioned,
+      oxygen = input.oxygen,
+      ventilator = input.ventilator,
       luggageCapacity = Nothing,
       vehicleRating = Nothing,
       failedRules = [],
@@ -371,13 +377,13 @@ validateRCStatus input rcconfigs now expiry = do
     DVC.RCValidClasses [] -> (Documents.INVALID, Nothing, Nothing, Nothing)
     DVC.RCValidClasses vehicleClassVariantMap -> do
       let validCOVsCheck = rcconfigs.vehicleClassCheckType
-      let (isCOVValid, reviewRequired, variant, mbVehicleModel) = maybe (False, Nothing, Nothing, Nothing) (isValidCOVRC input.vehicleClassCategory input.seatingCapacity input.manufacturer input.bodyType input.manufacturerModel vehicleClassVariantMap validCOVsCheck) (input.vehicleClass <|> input.vehicleClassCategory)
+      let (isCOVValid, reviewRequired, variant, mbVehicleModel) = maybe (False, Nothing, Nothing, Nothing) (isValidCOVRC input.airConditioned input.oxygen input.ventilator input.vehicleClassCategory input.seatingCapacity input.manufacturer input.bodyType input.manufacturerModel vehicleClassVariantMap validCOVsCheck) (input.vehicleClass <|> input.vehicleClassCategory)
       let validInsurance = True -- (not rcInsurenceConfigs.checkExpiry) || maybe False (now <) insuranceValidity
       if ((not rcconfigs.checkExpiry) || now < expiry) && isCOVValid && validInsurance then (Documents.VALID, reviewRequired, variant, mbVehicleModel) else (Documents.INVALID, reviewRequired, variant, mbVehicleModel)
     _ -> (Documents.INVALID, Nothing, Nothing, Nothing)
 
-isValidCOVRC :: Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> [DVC.VehicleClassVariantMap] -> DVC.VehicleClassCheckType -> Text -> (Bool, Maybe Bool, Maybe Variant, Maybe Text)
-isValidCOVRC mVehicleCategory capacity manufacturer bodyType manufacturerModel vehicleClassVariantMap validCOVsCheck cov = do
+isValidCOVRC :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> [DVC.VehicleClassVariantMap] -> DVC.VehicleClassCheckType -> Text -> (Bool, Maybe Bool, Maybe Variant, Maybe Text)
+isValidCOVRC mbAirConditioned mbOxygen mbVentilator mVehicleCategory capacity manufacturer bodyType manufacturerModel vehicleClassVariantMap validCOVsCheck cov = do
   let sortedVariantMap = sortMaybe vehicleClassVariantMap
   let vehicleClassVariant = DL.find checkIfMatch sortedVariantMap
   case vehicleClassVariant of
@@ -391,7 +397,16 @@ isValidCOVRC mVehicleCategory capacity manufacturer bodyType manufacturerModel v
       let manufacturerMatched = manufacturerCheckFunction obj.manufacturer manufacturer
       let manufacturerModelMatched = manufacturerModelCheckFunction obj.manufacturerModel manufacturerModel
       let bodyTypeMatched = bodyTypeCheckFunction obj.bodyType bodyType
-      (classMatched || categoryMatched) && capacityMatched && manufacturerMatched && manufacturerModelMatched && bodyTypeMatched
+      let ambulanceMatched = if obj.vehicleVariant `elem` ambulanceVariants then checkAmbulanceVariant obj.vehicleVariant else True
+      (classMatched || categoryMatched) && capacityMatched && manufacturerMatched && manufacturerModelMatched && bodyTypeMatched && ambulanceMatched
+
+    ambulanceVariants = [AMBULANCE_TAXI, AMBULANCE_TAXI_OXY, AMBULANCE_AC, AMBULANCE_AC_OXY, AMBULANCE_VENTILATOR] -- Todo: Create a fn to get variants by category
+    checkAmbulanceVariant variant = case (mbAirConditioned, mbOxygen, mbVentilator) of
+      (_, _, Just True) -> variant == AMBULANCE_VENTILATOR
+      (Just True, Just True, _) -> variant == AMBULANCE_AC_OXY
+      (Just True, _, _) -> variant == AMBULANCE_AC
+      (Just False, Just True, _) -> variant == AMBULANCE_TAXI_OXY
+      _ -> variant == AMBULANCE_TAXI
 
 -- capacityCheckFunction validCapacity rcCapacity
 capacityCheckFunction :: Maybe Int -> Maybe Int -> Bool
@@ -461,3 +476,8 @@ getCategory AUTO_RICKSHAW = AUTO_CATEGORY
 getCategory TAXI = CAR
 getCategory TAXI_PLUS = CAR
 getCategory BIKE = MOTORCYCLE
+getCategory AMBULANCE_TAXI = AMBULANCE
+getCategory AMBULANCE_TAXI_OXY = AMBULANCE
+getCategory AMBULANCE_AC = AMBULANCE
+getCategory AMBULANCE_AC_OXY = AMBULANCE
+getCategory AMBULANCE_VENTILATOR = AMBULANCE

@@ -24,6 +24,7 @@ data VehicleT f = VehicleT
     make :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f Kernel.Prelude.Text,
     model :: B.C f Kernel.Prelude.Text,
+    oxygen :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     registrationCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.RegistrationCategory),
     registrationNo :: B.C f Kernel.Prelude.Text,
     selectedServiceTiers :: B.C f [Domain.Types.ServiceTierType.ServiceTierType],
@@ -32,6 +33,7 @@ data VehicleT f = VehicleT
     vehicleClass :: B.C f Kernel.Prelude.Text,
     vehicleName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    ventilator :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

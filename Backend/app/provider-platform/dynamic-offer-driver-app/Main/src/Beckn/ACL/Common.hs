@@ -38,6 +38,11 @@ castVariant Variant.AUTO_RICKSHAW = Common.AUTO_RICKSHAW
 castVariant Variant.TAXI = Common.TAXI
 castVariant Variant.TAXI_PLUS = Common.TAXI_PLUS
 castVariant Variant.BIKE = Common.BIKE
+castVariant Variant.AMBULANCE_TAXI = Common.AMBULANCE_TAXI
+castVariant Variant.AMBULANCE_TAXI_OXY = Common.AMBULANCE_TAXI_OXY
+castVariant Variant.AMBULANCE_AC = Common.AMBULANCE_AC
+castVariant Variant.AMBULANCE_AC_OXY = Common.AMBULANCE_AC_OXY
+castVariant Variant.AMBULANCE_VENTILATOR = Common.AMBULANCE_VENTILATOR
 
 castDPaymentCollector :: DMPM.PaymentCollector -> Payment.PaymentCollector
 castDPaymentCollector DMPM.BAP = Payment.BAP

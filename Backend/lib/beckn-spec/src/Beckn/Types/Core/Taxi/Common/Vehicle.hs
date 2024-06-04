@@ -21,7 +21,7 @@ newtype Vehicle = Vehicle
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR
   deriving
     ( Show,
       Eq,

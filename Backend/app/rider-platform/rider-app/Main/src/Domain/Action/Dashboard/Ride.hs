@@ -196,6 +196,11 @@ castVehicleVariant = \case
   VehVar.TAXI -> Common.TAXI
   VehVar.TAXI_PLUS -> Common.TAXI_PLUS
   VehVar.BIKE -> Common.BIKE
+  VehVar.AMBULANCE_TAXI -> Common.AMBULANCE_TAXI
+  VehVar.AMBULANCE_TAXI_OXY -> Common.AMBULANCE_TAXI_OXY
+  VehVar.AMBULANCE_AC -> Common.AMBULANCE_AC
+  VehVar.AMBULANCE_AC_OXY -> Common.AMBULANCE_AC_OXY
+  VehVar.AMBULANCE_VENTILATOR -> Common.AMBULANCE_VENTILATOR
 
 ---------------------------------------------------------------------
 
