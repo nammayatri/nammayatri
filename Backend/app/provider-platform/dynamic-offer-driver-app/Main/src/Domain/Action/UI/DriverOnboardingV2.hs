@@ -6,9 +6,12 @@ module Domain.Action.UI.DriverOnboardingV2 where
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as APITypes
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as T
+import qualified Data.Time as DT
 import Domain.Types.Common
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DTO
+import qualified Domain.Types.DriverBankAccount as DDBA
 import Domain.Types.DriverInformation
 import qualified Domain.Types.DriverPanCard as Domain
 import Domain.Types.DriverSSN
@@ -26,9 +29,11 @@ import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Prelude
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (Language (..))
 import qualified Kernel.Prelude
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
@@ -43,8 +48,11 @@ import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverPanCardExtra as SQDPC
 import qualified Storage.Queries.DriverSSN as QDriverSSN
@@ -55,6 +63,7 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import Tools.Auth
 import Tools.Error
+import qualified Tools.Payment as TPayment
 import Utils.Common.Cac.KeyNameConstants
 
 stringToPrice :: Currency -> Text -> Maybe Price
@@ -86,13 +95,13 @@ getOnboardingConfigs ::
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
   )
-getOnboardingConfigs (mbPersonId, _, merchanOperatingCityId) mbOnlyVehicle = do
+getOnboardingConfigs (mbPersonId, _, merchantOpCityId) mbOnlyVehicle = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let personLangauge = fromMaybe ENGLISH person.language
-  cabConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchanOperatingCityId DTV.CAR
-  autoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchanOperatingCityId DTV.AUTO_CATEGORY
-  bikeConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchanOperatingCityId DTV.MOTORCYCLE
+  cabConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.CAR
+  autoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.AUTO_CATEGORY
+  bikeConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.MOTORCYCLE
 
   cabConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments cabConfigsRaw)
   autoConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments autoConfigsRaw)
@@ -121,16 +130,12 @@ getDriverRateCard ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Maybe Meters ->
-    Kernel.Prelude.Maybe HighPrecDistance ->
-    Kernel.Prelude.Maybe DistanceUnit ->
     Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType ->
     Environment.Flow [API.Types.UI.DriverOnboardingV2.RateCardResp]
   )
-getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDistance_ reqDistanceUnit mbServiceTierType = do
+getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance mbServiceTierType = do
   distanceUnit <- SMerchant.getDistanceUnitByMerchantOpCity merchantOperatingCityId
-  let mbDistance =
-        distanceToMeters <$> (Distance <$> reqDistance_ <*> reqDistanceUnit)
-          <|> reqDistance
+  let mbDistance = reqDistance
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast personId)))
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -225,9 +230,9 @@ postDriverUpdateAirCondition ::
     API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postDriverUpdateAirCondition (mbPersonId, _, merchanOperatingCityId) API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest {..} = do
+postDriverUpdateAirCondition (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchanOperatingCityId
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
   checkAndUpdateAirConditioned False isAirConditioned personId cityVehicleServiceTiers
   now <- getCurrentTime
   QDI.updateLastACStatusCheckedAt (Just now) personId
@@ -240,12 +245,12 @@ getDriverVehicleServiceTiers ::
     ) ->
     Environment.Flow API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers
   )
-getDriverVehicleServiceTiers (mbPersonId, _, merchanOperatingCityId) = do
+getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchanOperatingCityId
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
   let personLangauge = fromMaybe ENGLISH person.language
 
   let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction False person driverInfo vehicle cityVehicleServiceTiers
@@ -300,10 +305,10 @@ postDriverUpdateServiceTiers ::
     API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers ->
     Environment.Flow APISuccess
   )
-postDriverUpdateServiceTiers (mbPersonId, _, merchanOperatingCityId) API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers {..} = do
+postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchanOperatingCityId
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
 
   whenJust airConditioned $ \ac -> checkAndUpdateAirConditioned False ac.isWorking personId cityVehicleServiceTiers
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
@@ -407,3 +412,126 @@ buildPanCard merchantId person API.Types.UI.DriverOnboardingV2.DriverPanReq {..}
         createdAt = now,
         updatedAt = now
       }
+
+getDriverRegisterBankAccountLink ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
+  )
+getDriverRegisterBankAccountLink (mbPersonId, _, _) = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+
+  mDriverBankAccount <- runInReplica $ QDBA.findByPrimaryKey personId
+  now <- getCurrentTime
+  case mDriverBankAccount of
+    Just bankAccount -> do
+      when bankAccount.chargesEnabled $ throwError $ InvalidRequest "Bank account already enabled"
+      case (bankAccount.currentAccountLink, bankAccount.currentAccountLinkExpiry) of
+        (Just link, Just expiry) -> do
+          if expiry > now
+            then
+              return $
+                API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
+                  { chargesEnabled = bankAccount.chargesEnabled,
+                    accountLink = link,
+                    accountUrlExpiry = expiry,
+                    detailsSubmitted = bankAccount.detailsSubmitted
+                  }
+            else refreshLink person bankAccount
+        _ -> refreshLink person bankAccount
+    _ -> createAccount person now
+  where
+    refreshLink :: Domain.Types.Person.Person -> DDBA.DriverBankAccount -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
+    refreshLink person bankAccount = do
+      resp <- TPayment.retryAccountLink person.merchantId person.merchantOperatingCityId bankAccount.accountId
+      accountUrl <- Kernel.Prelude.parseBaseUrl resp.accountUrl
+      QDBA.updateAccountLink (Just accountUrl) (Just resp.accountUrlExpiry) person.id
+      return $
+        API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
+          { chargesEnabled = bankAccount.chargesEnabled,
+            accountLink = accountUrl,
+            accountUrlExpiry = resp.accountUrlExpiry,
+            detailsSubmitted = bankAccount.detailsSubmitted
+          }
+
+    createAccount :: Domain.Types.Person.Person -> UTCTime -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
+    createAccount person now = do
+      merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
+      when (merchantOpCity.country /= Context.USA) $ throwError $ InvalidRequest "Bank account creation is only supported for USA"
+
+      mbMobileNumber <- mapM decrypt person.mobileNumber
+      mobileNumber <- mbMobileNumber & fromMaybeM (InvalidRequest "Mobile number is required for opening a bank account")
+
+      driverLicense <- runInReplica $ QDL.findByDriverId person.id >>= fromMaybeM (DriverDLNotFound person.id.getId)
+      driverDob <- driverLicense.driverDob & fromMaybeM (InvalidRequest "Driver DOB is required for opening a bank account")
+      idNumber <- decrypt driverLicense.licenseNumber
+
+      driverSSN <- runInReplica $ QDriverSSN.findByDriverId person.id >>= fromMaybeM (DriverSSNNotFound person.id.getId)
+      ssnNumber <- decrypt driverSSN.ssn
+      let ssnLast4 = T.takeEnd 4 ssnNumber
+
+      let createAccountReq =
+            Payment.IndividualConnectAccountReq
+              { country = merchantOpCity.country,
+                email = person.email,
+                dateOfBirth = DT.utctDay driverDob,
+                firstName = person.firstName,
+                lastName = person.lastName,
+                address = Nothing, -- will add later
+                ssnLast4 = Just ssnLast4,
+                idNumber = Just idNumber,
+                mobileNumber
+              }
+      resp <- TPayment.createIndividualConnectAccount person.merchantId person.merchantOperatingCityId createAccountReq
+      accountUrl <- Kernel.Prelude.parseBaseUrl resp.accountUrl
+      let driverBankAccount =
+            DDBA.DriverBankAccount
+              { accountId = resp.accountId,
+                chargesEnabled = resp.chargesEnabled,
+                currentAccountLink = Just accountUrl,
+                currentAccountLinkExpiry = Just resp.accountUrlExpiry,
+                detailsSubmitted = resp.detailsSubmitted,
+                driverId = person.id,
+                merchantId = Just person.merchantId,
+                merchantOperatingCityId = Just person.merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+      QDBA.create driverBankAccount
+      return $
+        API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
+          { chargesEnabled = resp.chargesEnabled,
+            accountLink = accountUrl,
+            accountUrlExpiry = resp.accountUrlExpiry,
+            detailsSubmitted = resp.detailsSubmitted
+          }
+
+getDriverRegisterBankAccountStatus ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountResp
+  )
+getDriverRegisterBankAccountStatus (mbPersonId, _, _) = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  driverBankAccount <- runInReplica $ QDBA.findByPrimaryKey personId >>= fromMaybeM (DriverBankAccountNotFound personId.getId)
+  if driverBankAccount.chargesEnabled
+    then
+      return $
+        API.Types.UI.DriverOnboardingV2.BankAccountResp
+          { chargesEnabled = driverBankAccount.chargesEnabled,
+            detailsSubmitted = driverBankAccount.detailsSubmitted
+          }
+    else do
+      resp <- TPayment.getAccount person.merchantId person.merchantOperatingCityId driverBankAccount.accountId
+      QDBA.updateAccountStatus resp.chargesEnabled resp.detailsSubmitted personId
+      return $
+        API.Types.UI.DriverOnboardingV2.BankAccountResp
+          { chargesEnabled = resp.chargesEnabled,
+            detailsSubmitted = resp.detailsSubmitted
+          }

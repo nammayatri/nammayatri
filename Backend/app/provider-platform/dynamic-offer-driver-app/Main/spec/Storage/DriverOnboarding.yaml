@@ -12,6 +12,10 @@ imports:
   Image: Domain.Types.Image
   DriverOnboardingError: Tools.Error
   VerificationStatus: Kernel.Types.Documents
+  BaseUrl: Servant.Client.Core
+  showBaseUrl: Kernel.Prelude
+  parseBaseUrl: Kernel.Prelude
+  AccountId: Kernel.External.Payment.Stripe.Types
 
 IdfyVerification:
   tableName: idfy_verification
@@ -529,10 +533,6 @@ DriverSSN:
   extraOperations:
     - EXTRA_QUERY_FILE
   excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
-  extraOperations:
-    - EXTRA_QUERY_FILE
-
-
 
 DriverPanCard:
   tableName: driver_pan_card
@@ -565,6 +565,34 @@ DriverPanCard:
       where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE
+
+DriverBankAccount:
+  tableName: driver_bank_account
+  fields:
+    driverId: Id Person
+    accountId: AccountId
+    chargesEnabled: Bool
+    detailsSubmitted: Bool
+    currentAccountLink: Maybe BaseUrl
+    currentAccountLinkExpiry: Maybe UTCTime
+  constraints:
+    driverId: PrimaryKey
+    accountId: SecondaryKey
+  beamType:
+    currentAccountLink: Maybe Text
+  toTType:
+    currentAccountLink: Kernel.Prelude.fmap showBaseUrl|I
+  fromTType:
+    currentAccountLink: Kernel.Prelude.mapM parseBaseUrl|MI
+  queries:
+    updateAccountLink:
+      kvFunction: updateOneWithKV
+      params: [currentAccountLink, currentAccountLinkExpiry]
+      where: driverId
+    updateAccountStatus:
+      kvFunction: updateOneWithKV
+      params: [chargesEnabled, detailsSubmitted]
+      where: driverId
 
 FleetOwnerDocumentVerificationConfig:
   tableName: fleet_owner_document_verification_config

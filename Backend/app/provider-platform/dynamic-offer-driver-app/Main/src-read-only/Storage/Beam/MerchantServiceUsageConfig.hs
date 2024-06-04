@@ -11,6 +11,7 @@ import qualified Kernel.External.Call
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Notification.Types
+import qualified Kernel.External.Payment.Types
 import qualified Kernel.External.SMS.Types
 import qualified Kernel.External.Ticket.Types
 import qualified Kernel.External.Verification.Types
@@ -22,9 +23,11 @@ import Tools.Beam.UtilsTH
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
   { aadhaarVerificationService :: B.C f Kernel.External.AadhaarVerification.Types.AadhaarVerificationService,
     autoComplete :: B.C f Kernel.External.Maps.Types.MapsService,
+    createBankAccount :: B.C f Kernel.External.Payment.Types.PaymentService,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     driverBackgroundVerificationService :: B.C f Kernel.External.Verification.Types.DriverBackgroundVerificationService,
     faceVerificationService :: B.C f Kernel.External.Verification.Types.VerificationService,
+    getBankAccount :: B.C f Kernel.External.Payment.Types.PaymentService,
     getDistances :: B.C f Kernel.External.Maps.Types.MapsService,
     getDistancesForCancelRide :: B.C f Kernel.External.Maps.Types.MapsService,
     getEstimatedPickupDistances :: B.C f Kernel.External.Maps.Types.MapsService,
@@ -39,6 +42,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     rectifyDistantPointsFailure :: B.C f Kernel.External.Maps.Types.MapsService,
+    retryBankAccountLink :: B.C f Kernel.External.Payment.Types.PaymentService,
     sendSearchRequestToDriver :: B.C f [Kernel.External.Notification.Types.NotificationService],
     smsProvidersPriorityList :: B.C f [Kernel.External.SMS.Types.SmsService],
     snapToRoad :: B.C f Kernel.External.Maps.Types.MapsService,

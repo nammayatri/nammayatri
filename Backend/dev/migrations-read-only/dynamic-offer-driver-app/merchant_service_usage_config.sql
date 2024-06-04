@@ -28,3 +28,10 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN veri
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN verification_service character varying(30) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN whatsapp_providers_priority_list text[] NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD PRIMARY KEY ( merchant_operating_city_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN retry_bank_account_link text NOT NULL default 'Stripe';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_bank_account text NOT NULL default 'Stripe';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN create_bank_account text NOT NULL default 'Stripe';

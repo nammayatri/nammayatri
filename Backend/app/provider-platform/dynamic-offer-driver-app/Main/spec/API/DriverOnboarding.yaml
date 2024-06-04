@@ -11,7 +11,7 @@ imports:
   Driver: Domain.Types.Person
   TripCategory: Domain.Types.Common
   Image: Domain.Types.Image
-
+  BaseUrl: Servant.Client.Core
 
 module: DriverOnboardingV2
 types:
@@ -78,7 +78,14 @@ types:
     imageId1 : Id Image
     imageId2 : Maybe (Id Image)
     consent: Bool
-
+  BankAccountLinkResp:
+    chargesEnabled: Bool
+    detailsSubmitted: Bool
+    accountLink: BaseUrl
+    accountUrlExpiry: UTCTime
+  BankAccountResp:
+    chargesEnabled: Bool
+    detailsSubmitted: Bool
 
 apis:
   - GET:
@@ -129,3 +136,13 @@ apis:
         type: DriverPanReq
       response:
         type: APISuccess
+  - GET:
+      endpoint: /driver/register/bankAccount/link
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: BankAccountLinkResp
+  - GET:
+      endpoint: /driver/register/bankAccount/status
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: BankAccountResp
