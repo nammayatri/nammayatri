@@ -2,6 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   EmailOTPConfig: Email.Types
+  KaptureConfig: IssueManagement.Common
 
 RiderConfig:
   tableName: rider_config
@@ -26,7 +27,8 @@ RiderConfig:
     autoUnblockSafetyCenterAfterDays: Int
     placeNameCacheExpiryDays: Maybe Int
     bookingSyncStatusCallSecondsDiffThreshold: Maybe Int
-    kaptureQueue: Text
+    kaptureQueue: Text # deprecated
+    kaptureConfig: IssueManagement.Common.KaptureConfig
     emailOtpConfig: Maybe Email.Types.EmailOTPConfig
 
   constraints:
@@ -47,6 +49,7 @@ RiderConfig:
     isAvoidToll: "true"
     autoUnblockSafetyCenterAfterDays: "14"
     kaptureQueue: "''"
+    kaptureConfig: "'{\"kaptureQueue\":\"\", \"disposition\":\"\"}'"
 
   queries:
     findByMerchantOperatingCityId:
@@ -54,3 +57,4 @@ RiderConfig:
       where: merchantOperatingCityId
   sqlType:
     emailOtpConfig: "json"
+    kaptureConfig: "json"
