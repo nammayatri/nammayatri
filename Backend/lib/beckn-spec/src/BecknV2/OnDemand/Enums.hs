@@ -31,6 +31,7 @@ data VehicleCategory
     AUTO_RICKSHAW
   | CAB
   | MOTORCYCLE
+  | AMBULANCE
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data FulfillmentType

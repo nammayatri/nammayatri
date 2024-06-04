@@ -27,12 +27,12 @@ selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected person driverInf
     mapUsageRestriction :: DVST.VehicleServiceTier -> (DVST.VehicleServiceTier, Bool)
     mapUsageRestriction vehicleServiceTier = do
       let _seatingCapacityCheck = compareNumber vehicle.capacity vehicleServiceTier.seatingCapacity
-      let luggageCapacityCheck = compareNumber vehicle.luggageCapacity vehicleServiceTier.luggageCapacity
-      let airConditionedCheck =
+          luggageCapacityCheck = compareNumber vehicle.luggageCapacity vehicleServiceTier.luggageCapacity
+          airConditionedCheck =
             (compareNumber vehicleServiceTier.airConditioned driverInfo.airConditionScore)
               && (isNothing vehicleServiceTier.airConditioned || vehicle.airConditioned /= Just False)
-      let driverRatingCheck = compareNumber person.rating vehicleServiceTier.driverRating
-      let vehicleRatingCheck = compareNumber vehicle.vehicleRating vehicleServiceTier.vehicleRating
+          driverRatingCheck = compareNumber person.rating vehicleServiceTier.driverRating
+          vehicleRatingCheck = compareNumber vehicle.vehicleRating vehicleServiceTier.vehicleRating
 
       let usageRestricted = not (luggageCapacityCheck && airConditionedCheck && driverRatingCheck && vehicleRatingCheck) -- && seatingCapacityCheck)
       (vehicleServiceTier, usageRestricted)

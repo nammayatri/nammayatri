@@ -627,6 +627,7 @@ TransporterConfig:
       taxi: Kilometers
       taxiplus: Kilometers
       bike: Kilometers
+      ambulance: Kilometers
       derive': Generic, Show, ToJSON, FromJSON, Read
     DashboardMediaSendingLimit:
       sms: Int

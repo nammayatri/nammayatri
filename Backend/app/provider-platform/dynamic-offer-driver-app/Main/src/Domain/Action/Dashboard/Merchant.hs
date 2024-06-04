@@ -43,6 +43,7 @@ module Domain.Action.Dashboard.Merchant
     upsertSpecialLocation,
     deleteSpecialLocation,
     castCategory,
+    castDVehicleVariant,
   )
 where
 
@@ -569,6 +570,11 @@ castDVehicleVariant = \case
   DVeh.TAXI -> Common.TAXI
   DVeh.TAXI_PLUS -> Common.TAXI_PLUS
   DVeh.BIKE -> Common.BIKE
+  DVeh.AMBULANCE_TAXI -> Common.AMBULANCE_TAXI
+  DVeh.AMBULANCE_TAXI_OXY -> Common.AMBULANCE_TAXI_OXY
+  DVeh.AMBULANCE_AC -> Common.AMBULANCE_AC
+  DVeh.AMBULANCE_AC_OXY -> Common.AMBULANCE_AC_OXY
+  DVeh.AMBULANCE_VENTILATOR -> Common.AMBULANCE_VENTILATOR
 
 castDVehicleClassCheckType :: DVC.VehicleClassCheckType -> Common.VehicleClassCheckType
 castDVehicleClassCheckType = \case
@@ -632,6 +638,11 @@ castVehicleVariant = \case
   Common.TAXI -> DVeh.TAXI
   Common.TAXI_PLUS -> DVeh.TAXI_PLUS
   Common.BIKE -> DVeh.BIKE
+  Common.AMBULANCE_TAXI -> DVeh.AMBULANCE_TAXI
+  Common.AMBULANCE_TAXI_OXY -> DVeh.AMBULANCE_TAXI_OXY
+  Common.AMBULANCE_AC -> DVeh.AMBULANCE_AC
+  Common.AMBULANCE_AC_OXY -> DVeh.AMBULANCE_AC_OXY
+  Common.AMBULANCE_VENTILATOR -> DVeh.AMBULANCE_VENTILATOR
 
 castVehicleClassCheckType :: Common.VehicleClassCheckType -> DVC.VehicleClassCheckType
 castVehicleClassCheckType = \case
@@ -652,6 +663,7 @@ castCategory = \case
   Common.BUS -> DVeh.BUS
   Common.FLIGHT -> DVeh.FLIGHT
   Common.AUTO_CATEGORY -> DVeh.AUTO_CATEGORY
+  Common.AMBULANCE -> DVeh.AMBULANCE
 
 ---------------------------------------------------------------------
 documentVerificationConfigCreate ::

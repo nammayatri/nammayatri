@@ -987,6 +987,8 @@ registerRCForFleetWithoutDriver merchantShortId opCity fleetOwnerId req = do
             operatingCity = req.operatingCity,
             dateOfRegistration = req.dateOfRegistration,
             airConditioned = req.airConditioned,
+            oxygen = req.oxygen,
+            ventilator = req.ventilator,
             multipleRC = req.multipleRC,
             vehicleDetails = Nothing,
             vehicleCategory = Nothing
@@ -1003,6 +1005,8 @@ createRCInputFromVehicle req@Common.AddVehicleReq {..} =
       fleetOwnerId = Nothing,
       vehicleCategory = Nothing,
       airConditioned,
+      oxygen,
+      ventilator,
       documentImageId = "",
       vehicleClass = Just vehicleClass,
       vehicleClassCategory = Nothing,
@@ -1397,6 +1401,8 @@ runVerifyRCFlow personId merchant merchantOpCityId operatingCity req isFleet = d
             operatingCity = show operatingCity, -- Fixed
             dateOfRegistration = Nothing,
             airConditioned = req.airConditioned,
+            oxygen = req.oxygen,
+            ventilator = req.ventilator,
             multipleRC = Nothing,
             vehicleDetails = Nothing,
             vehicleCategory = vehicleCategory
@@ -1412,6 +1418,11 @@ castVehicleVariant = \case
   Common.TAXI -> DVeh.TAXI
   Common.TAXI_PLUS -> DVeh.TAXI_PLUS
   Common.BIKE -> DVeh.BIKE
+  Common.AMBULANCE_TAXI -> DVeh.AMBULANCE_TAXI
+  Common.AMBULANCE_TAXI_OXY -> DVeh.AMBULANCE_TAXI_OXY
+  Common.AMBULANCE_AC -> DVeh.AMBULANCE_AC
+  Common.AMBULANCE_AC_OXY -> DVeh.AMBULANCE_AC_OXY
+  Common.AMBULANCE_VENTILATOR -> DVeh.AMBULANCE_VENTILATOR
 
 castVehicleVariantDashboard :: Maybe DVeh.Variant -> Maybe Common.Variant
 castVehicleVariantDashboard = \case
@@ -1422,6 +1433,11 @@ castVehicleVariantDashboard = \case
   Just DVeh.TAXI -> Just Common.TAXI
   Just DVeh.TAXI_PLUS -> Just Common.TAXI_PLUS
   Just DVeh.BIKE -> Just Common.BIKE
+  Just DVeh.AMBULANCE_TAXI -> Just Common.AMBULANCE_TAXI
+  Just DVeh.AMBULANCE_TAXI_OXY -> Just Common.AMBULANCE_TAXI_OXY
+  Just DVeh.AMBULANCE_AC -> Just Common.AMBULANCE_AC
+  Just DVeh.AMBULANCE_AC_OXY -> Just Common.AMBULANCE_AC_OXY
+  Just DVeh.AMBULANCE_VENTILATOR -> Just Common.AMBULANCE_VENTILATOR
   _ -> Nothing
 
 ---------------------------------------------------------------------

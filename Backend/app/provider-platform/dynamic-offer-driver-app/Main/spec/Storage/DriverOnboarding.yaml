@@ -36,6 +36,8 @@ IdfyVerification:
     multipleRC: Maybe Bool
     retryCount: Maybe Int
     airConditioned: Maybe Bool
+    oxygen: Maybe Bool
+    ventilator: Maybe Bool
     nameOnCard: Maybe Text
   beamInstance: MakeTableInstancesWithTModifier [("multipleRC", "multiple_r_c")]
   types:
@@ -218,6 +220,8 @@ VehicleRegistrationCertificate:
     verificationStatus: VerificationStatus
     fleetOwnerId: Maybe Text
     airConditioned: Maybe Bool
+    oxygen: Maybe Bool
+    ventilator: Maybe Bool
     luggageCapacity: Maybe Int
     vehicleRating: Maybe Double
     userPassedVehicleCategory: Maybe Category
@@ -245,6 +249,14 @@ VehicleRegistrationCertificate:
     updateAirConditioned:
       kvFunction: updateOneWithKV
       params: [airConditioned]
+      where: id
+    updateOxygen:
+      kvFunction: updateWithKV
+      params: [oxygen]
+      where: id
+    updateVentilator:
+      kvFunction: updateWithKV
+      params: [ventilator]
       where: id
     updateVerificationStatus:
       kvFunction: updateOneWithKV

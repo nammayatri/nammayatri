@@ -741,6 +741,8 @@ data AddVehicleReq = AddVehicleReq
     driverName :: Text,
     imageId :: Maybe (Id Image),
     vehicleCategory :: Maybe Category,
+    oxygen :: Maybe Bool,
+    ventilator :: Maybe Bool,
     dateOfRegistration :: Maybe UTCTime,
     vehicleModelYear :: Maybe Int
   }

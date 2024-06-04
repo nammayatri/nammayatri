@@ -30,6 +30,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Commo
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.Text as T
+import qualified Domain.Action.Dashboard.Merchant as DM
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
@@ -43,7 +44,6 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt, getDbHash)
@@ -327,7 +327,7 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         bookingToRideStartDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just booking.createdAt),
         distanceCalculationFailed = ride.distanceCalculationFailed,
         driverDeviatedFromRoute = ride.driverDeviatedFromRoute,
-        vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant,
+        vehicleVariant = DM.castDVehicleVariant <$> rideDetails.vehicleVariant,
         nextStopLocation = mkLocationAPIEntity <$> nextStopLoc,
         lastStopLocation = mkLocationAPIEntity <$> lastStopLoc,
         vehicleServiceTierName = booking.vehicleServiceTierName,
@@ -404,16 +404,6 @@ mkBookingStatus ride now = do
     DRide.INPROGRESS -> Common.ONGOING_6HRS
     DRide.COMPLETED -> Common.COMPLETED
     DRide.CANCELLED -> Common.CANCELLED
-
-castDVehicleVariant :: DVeh.Variant -> Common.Variant
-castDVehicleVariant = \case
-  DVeh.SUV -> Common.SUV
-  DVeh.HATCHBACK -> Common.HATCHBACK
-  DVeh.SEDAN -> Common.SEDAN
-  DVeh.AUTO_RICKSHAW -> Common.AUTO_RICKSHAW
-  DVeh.TAXI -> Common.TAXI
-  DVeh.TAXI_PLUS -> Common.TAXI_PLUS
-  DVeh.BIKE -> Common.BIKE
 
 ---------------------------------------------------------------------
 rideSync :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow Common.RideSyncRes

@@ -234,6 +234,8 @@ data RCDetails = RCDetails
     vehicleDoors :: Maybe Int,
     vehicleSeatBelts :: Maybe Int,
     vehicleModelYear :: Maybe Int,
+    oxygen :: Maybe Bool,
+    ventilator :: Maybe Bool,
     createdAt :: UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -350,6 +352,8 @@ data RegisterRCReq = RegisterRCReq
     dateOfRegistration :: Maybe UTCTime,
     airConditioned :: Maybe Bool,
     multipleRC :: Maybe Bool,
+    oxygen :: Maybe Bool,
+    ventilator :: Maybe Bool,
     vehicleDetails :: Maybe DriverVehicleDetails
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)

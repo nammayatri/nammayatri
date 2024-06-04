@@ -221,6 +221,8 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
             merchantId = Just person.merchantId,
             merchantOperatingCityId = Just merchantOpCityId,
             airConditioned = Nothing,
+            oxygen = Nothing,
+            ventilator = Nothing,
             createdAt = now,
             updatedAt = now
           }

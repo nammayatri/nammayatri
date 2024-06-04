@@ -40,3 +40,9 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN priority inte
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN auto_selected_vehicle_variant text[] NOT NULL default '{}';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN ventilator integer ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN oxygen double precision ;

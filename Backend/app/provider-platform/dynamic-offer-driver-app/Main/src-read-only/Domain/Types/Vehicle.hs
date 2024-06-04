@@ -25,6 +25,7 @@ data Vehicle = Vehicle
     make :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     model :: Kernel.Prelude.Text,
+    oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     registrationCategory :: Kernel.Prelude.Maybe Domain.Types.Vehicle.RegistrationCategory,
     registrationNo :: Kernel.Prelude.Text,
     selectedServiceTiers :: [Domain.Types.ServiceTierType.ServiceTierType],
@@ -33,17 +34,31 @@ data Vehicle = Vehicle
     vehicleClass :: Kernel.Prelude.Text,
     vehicleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY | AMBULANCE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data RegistrationCategory = COMMERCIAL | PERSONAL | OTHER | PUBLIC deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
+data Variant
+  = SEDAN
+  | SUV
+  | HATCHBACK
+  | AUTO_RICKSHAW
+  | TAXI
+  | TAXI_PLUS
+  | BIKE
+  | AMBULANCE_TAXI
+  | AMBULANCE_TAXI_OXY
+  | AMBULANCE_AC
+  | AMBULANCE_AC_OXY
+  | AMBULANCE_VENTILATOR
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data VehicleAPIEntity = VehicleAPIEntity
   { capacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

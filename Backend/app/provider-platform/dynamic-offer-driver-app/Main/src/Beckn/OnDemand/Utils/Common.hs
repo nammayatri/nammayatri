@@ -210,6 +210,11 @@ castVariant Variant.AUTO_RICKSHAW = (show Enums.AUTO_RICKSHAW, "AUTO_RICKSHAW")
 castVariant Variant.TAXI = (show Enums.CAB, "TAXI")
 castVariant Variant.TAXI_PLUS = (show Enums.CAB, "TAXI_PLUS")
 castVariant Variant.BIKE = (show Enums.MOTORCYCLE, "BIKE")
+castVariant Variant.AMBULANCE_TAXI = (show Enums.AMBULANCE, "AMBULANCE_TAXI")
+castVariant Variant.AMBULANCE_TAXI_OXY = (show Enums.AMBULANCE, "AMBULANCE_TAXI_OXY")
+castVariant Variant.AMBULANCE_AC = (show Enums.AMBULANCE, "AMBULANCE_AC")
+castVariant Variant.AMBULANCE_AC_OXY = (show Enums.AMBULANCE, "AMBULANCE_AC_OXY")
+castVariant Variant.AMBULANCE_VENTILATOR = (show Enums.AMBULANCE, "AMBULANCE_VENTILATOR")
 
 mkFulfillmentType :: DCT.TripCategory -> Text
 mkFulfillmentType = \case
@@ -784,6 +789,11 @@ mapServiceTierToCategory serviceTier =
     DVST.PREMIUM -> CAB
     DVST.AUTO_RICKSHAW -> AUTO_RICKSHAW
     DVST.BIKE -> MOTORCYCLE
+    DVST.AMBULANCE_TAXI -> AMBULANCE
+    DVST.AMBULANCE_TAXI_OXY -> AMBULANCE
+    DVST.AMBULANCE_AC -> AMBULANCE
+    DVST.AMBULANCE_AC_OXY -> AMBULANCE
+    DVST.AMBULANCE_VENTILATOR -> AMBULANCE
 
 mapRideStatus :: Maybe DRide.RideStatus -> Enums.FulfillmentState
 mapRideStatus rideStatus =
@@ -1180,7 +1190,13 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
                 Variant.AUTO_RICKSHAW -> avgSpeed.autorickshaw.getKilometers
                 Variant.BIKE -> avgSpeed.bike.getKilometers
                 Variant.TAXI -> avgSpeed.taxi.getKilometers
-                Variant.TAXI_PLUS -> avgSpeed.taxiplus.getKilometers
+                Variant.TAXI_PLUS -> avgSpeed.ambulance.getKilometers
+                Variant.AMBULANCE_TAXI -> avgSpeed.ambulance.getKilometers
+                Variant.AMBULANCE_TAXI_OXY -> avgSpeed.ambulance.getKilometers
+                Variant.AMBULANCE_AC -> avgSpeed.ambulance.getKilometers
+                Variant.AMBULANCE_AC_OXY -> avgSpeed.ambulance.getKilometers
+                Variant.AMBULANCE_VENTILATOR -> avgSpeed.ambulance.getKilometers
+
           getDuration pricing.distanceToNearestDriver variantSpeed
 
         getDuration :: Maybe Meters -> Int -> Maybe Text

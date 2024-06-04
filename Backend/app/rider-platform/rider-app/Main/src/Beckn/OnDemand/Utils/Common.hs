@@ -191,6 +191,11 @@ castVehicleVariant = \case
   VehVar.TAXI -> (show Enums.CAB, "TAXI")
   VehVar.TAXI_PLUS -> (show Enums.CAB, "TAXI_PLUS")
   VehVar.BIKE -> (show Enums.MOTORCYCLE, "BIKE")
+  VehVar.AMBULANCE_TAXI -> (show Enums.AMBULANCE, "AMBULANCE_TAXI")
+  VehVar.AMBULANCE_TAXI_OXY -> (show Enums.AMBULANCE, "AMBULANCE_TAXI_OXY")
+  VehVar.AMBULANCE_AC -> (show Enums.AMBULANCE, "AMBULANCE_AC")
+  VehVar.AMBULANCE_AC_OXY -> (show Enums.AMBULANCE, "AMBULANCE_AC_OXY")
+  VehVar.AMBULANCE_VENTILATOR -> (show Enums.AMBULANCE, "AMBULANCE_VENTILATOR")
 
 parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
 parseVehicleVariant mbCategory mbVariant =
@@ -202,6 +207,11 @@ parseVehicleVariant mbCategory mbVariant =
     (Just "CAB", Just "TAXI") -> Just VehVar.TAXI
     (Just "CAB", Just "TAXI_PLUS") -> Just VehVar.TAXI_PLUS
     (Just "MOTORCYCLE", Just "BIKE") -> Just VehVar.BIKE
+    (Just "AMBULANCE", Just "AMBULANCE_TAXI") -> Just VehVar.AMBULANCE_TAXI
+    (Just "AMBULANCE", Just "AMBULANCE_TAXI_OXY") -> Just VehVar.AMBULANCE_TAXI_OXY
+    (Just "AMBULANCE", Just "AMBULANCE_AC") -> Just VehVar.AMBULANCE_AC
+    (Just "AMBULANCE", Just "AMBULANCE_AC_OXY") -> Just VehVar.AMBULANCE_AC_OXY
+    (Just "AMBULANCE", Just "AMBULANCE_VENTILATOR") -> Just VehVar.AMBULANCE_VENTILATOR
     _ -> Nothing
 
 castCancellationSourceV2 :: Text -> SBCR.CancellationSource
@@ -330,6 +340,11 @@ mapVariantToVehicle variant = do
     VehVar.TAXI_PLUS -> CAB
     VehVar.BIKE -> MOTORCYCLE
     VehVar.AUTO_RICKSHAW -> AUTO_RICKSHAW
+    VehVar.AMBULANCE_TAXI -> AMBULANCE
+    VehVar.AMBULANCE_TAXI_OXY -> AMBULANCE
+    VehVar.AMBULANCE_AC -> AMBULANCE
+    VehVar.AMBULANCE_AC_OXY -> AMBULANCE
+    VehVar.AMBULANCE_VENTILATOR -> AMBULANCE
 
 getServiceTierType :: Spec.Item -> Maybe DVST.VehicleServiceTierType
 getServiceTierType item = item.itemDescriptor >>= (.descriptorCode) >>= (readMaybe . T.unpack)
