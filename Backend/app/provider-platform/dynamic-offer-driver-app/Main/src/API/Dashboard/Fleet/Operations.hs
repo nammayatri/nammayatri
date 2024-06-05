@@ -17,6 +17,7 @@ module API.Dashboard.Fleet.Operations where
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
 import qualified Domain.Action.Dashboard.Driver as DDriver
+import qualified Domain.Action.Dashboard.Fleet.Registration as Fleet
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
@@ -45,6 +46,8 @@ type API =
            :<|> SetVehicleDriverRcStatusForFleetAPI
            :<|> Common.UpdateFleetOwnerInfoAPI
            :<|> Common.GetFleetOwnerInfoAPI
+           :<|> SendFleetJoiningOtpAPI
+           :<|> VerifyFleetJoiningOtpAPI
        )
 
 -----------------------------------
@@ -193,6 +196,22 @@ type GetFleetVehicleAssociationAPI =
     :> QueryParam "status" Common.FleetVehicleStatus
     :> Get '[JSON] Common.DrivertoVehicleAssociationRes
 
+type SendFleetJoiningOtpAPI =
+  Capture "fleetOwnerName" Text
+    :> "fleet"
+    :> "driver"
+    :> "sendJoiningOtp"
+    :> ReqBody '[JSON] Common.AuthReq
+    :> Post '[JSON] APISuccess
+
+type VerifyFleetJoiningOtpAPI =
+  Capture "fleetOwnerId" Text
+    :> "fleet"
+    :> "driver"
+    :> "verifyJoiningOtp"
+    :> ReqBody '[JSON] Common.VerifyFleetJoiningOtpReq
+    :> Post '[JSON] APISuccess
+
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city =
   addVehicleForFleet merchantId city
@@ -211,6 +230,8 @@ handler merchantId city =
     :<|> setVehicleDriverRcStatusForFleet merchantId city
     :<|> updateFleetOwnerInfo merchantId city
     :<|> getFleetOwnerInfo merchantId city
+    :<|> sendFleetJoiningOtp merchantId city
+    :<|> verifyFleetJoiningOtp merchantId city
 
 addVehicleForFleet :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Text -> Common.AddVehicleReq -> FlowHandler APISuccess
 addVehicleForFleet merchantShortId opCity phoneNo mbMobileCountryCode fleetOwnerId = withFlowHandlerAPI . DDriver.addVehicleForFleet merchantShortId opCity phoneNo mbMobileCountryCode fleetOwnerId
@@ -259,3 +280,9 @@ updateFleetOwnerInfo merchantShortId opCity driverId req = withFlowHandlerAPI $ 
 
 getFleetOwnerInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler Common.FleetOwnerInfoRes
 getFleetOwnerInfo merchantShortId opCity driverId = withFlowHandlerAPI $ DDriver.getFleetOwnerInfo merchantShortId opCity driverId
+
+sendFleetJoiningOtp :: ShortId DM.Merchant -> Context.City -> Text -> Common.AuthReq -> FlowHandler APISuccess
+sendFleetJoiningOtp merchantShortId opCity fleetOwnerName req = withFlowHandlerAPI $ Fleet.sendFleetJoiningOtp merchantShortId opCity fleetOwnerName req
+
+verifyFleetJoiningOtp :: ShortId DM.Merchant -> Context.City -> Text -> Common.VerifyFleetJoiningOtpReq -> FlowHandler APISuccess
+verifyFleetJoiningOtp merchantShortId opCity fleetOwnerId req = withFlowHandlerAPI $ Fleet.verifyFleetJoiningOtp merchantShortId opCity fleetOwnerId req

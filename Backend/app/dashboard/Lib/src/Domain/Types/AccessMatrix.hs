@@ -245,6 +245,8 @@ data UserActionType
   | GET_TICKET_BOOKING_DETAILS
   | UPDATE_FLEET_OWNER_INFO
   | GET_FLEET_OWNER_INFO
+  | SEND_FLEET_JOINING_OTP
+  | VERIFY_FLEET_JOINING_OTP
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

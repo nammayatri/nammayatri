@@ -75,6 +75,7 @@ data DriverEndpoint
   | RemoveACUsageRestrictionEndpoint
   | UpdateDriverTagEndPoint
   | UpdateFleetOwnerEndPoint
+  | SendFleetJoiningOtpEndPoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "DriverEndpoint"
@@ -1325,4 +1326,28 @@ data FleetOwnerInfoRes = FleetOwnerInfoRes
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance HideSecrets FleetOwnerInfoRes where
+  hideSecrets = identity
+
+---------------- Fleet Driver Joining API  ------------------------------------------------
+
+type SendFleetJoiningOtpAPI =
+  "driver"
+    :> "sendJoiningOtp"
+    :> ReqBody '[JSON] Registration.AuthReq
+    :> Post '[JSON] APISuccess
+
+type VerifyFleetJoiningOtpAPI =
+  "driver"
+    :> "verifyJoiningOtp"
+    :> ReqBody '[JSON] VerifyFleetJoiningOtpReq
+    :> Post '[JSON] APISuccess
+
+data VerifyFleetJoiningOtpReq = VerifyFleetJoiningOtpReq
+  { mobileCountryCode :: Text,
+    mobileNumber :: Text,
+    otp :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+instance HideSecrets VerifyFleetJoiningOtpReq where
   hideSecrets = identity
