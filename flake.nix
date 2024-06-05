@@ -15,7 +15,7 @@
     };
 
     haskell-cac = {
-      url = "github:piyushKumar-1/haskell_cac_client/Testing";
+      url = "github:piyushKumar-1/haskell_cac_client/version1";
       inputs = {
         common.follows = "common";
         nixpkgs.follows = "common/nixpkgs"; # nix eval is failing in pipeline without giving proper error message #36 for nix update https://github.com/srid/nixci/issues/36
