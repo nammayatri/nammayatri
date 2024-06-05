@@ -368,7 +368,6 @@ library
       API.Action.UI.Cac
       API.Action.UI.CustomerReferral
       API.Action.UI.EditLocation
-      API.Action.UI.FavouriteDriver
       API.Action.UI.EstimateBP
       API.Action.UI.FavouriteDriver
       API.Action.UI.FollowRide
