@@ -79,7 +79,10 @@ getConfigListFromCac context' tenant toss prefix id = do
 getConfigFromCac :: (CacheFlow m r, EsqDBFlow m r, FromJSON a, ToJSON a) => [(CacContext, Value)] -> String -> Int -> CacPrefix -> m (Maybe a)
 getConfigFromCac context' tenant toss prefix = do
   let context = fmap (DBF.first KP.show) context'
-  liftIO $ CM.getConfigFromCAC context tenant toss (KP.show prefix)
+  logDebug $ "Trying to find in getConfigFromCac" <> getTableName prefix <> " in cac."
+  res <- liftIO $ CM.getConfigFromCAC context tenant toss (KP.show prefix)
+  logDebug $ "Trying to find after getConfigFromCac" <> getTableName prefix <> " in cac."
+  pure res
 
 ---------------------------------------------------- Common Cac Application Usage functions ------------------------------------------------------------
 
@@ -163,23 +166,27 @@ getConfigFromCacOrDB ::
 getConfigFromCacOrDB cachedConfig context stickyKey fromCacTyp cpf = do
   systemConfigs' <- L.getOption KBT.Tables
   systemConfigs <- maybe (KSQS.findById "kv_configs" >>= pure . decodeFromText' @Tables) (pure . Just) systemConfigs'
+  logDebug $ "Attempting to fetch the config in CAC"
   let useCACConfig = maybe [] (.useCAC) systemConfigs
-  maybe
-    ( do
-        if getTableName cpf `GL.elem` useCACConfig
-          then do
-            config <-
-              getConfigFromCACCommon context stickyKey fromCacTyp cpf `safeCatch` \(err :: SomeException) -> do
-                logError $ "CAC failed us: " <> show err
-                incrementSystemConfigsFailedCounter $ getCacMetricErrorFromDB cpf
-                pure Nothing
-            when (isJust config) do
-              logDebug $ "Config found in CAC for " <> getTableName cpf <> " with context " <> show context <> " is: " <> show config
-            pure config
-          else pure Nothing
-    )
-    (pure . Just)
-    cachedConfig
+  result <-
+    maybe
+      ( do
+          if getTableName cpf `GL.elem` useCACConfig
+            then do
+              config <-
+                getConfigFromCACCommon context stickyKey fromCacTyp cpf `safeCatch` \(err :: SomeException) -> do
+                  logError $ "CAC failed us: " <> show err
+                  incrementSystemConfigsFailedCounter $ getCacMetricErrorFromDB cpf
+                  pure Nothing
+              when (isJust config) do
+                logDebug $ "Config found in CAC for " <> getTableName cpf <> " with context " <> show context <> " is: " <> show config
+              pure config
+            else pure Nothing
+      )
+      (pure . Just)
+      cachedConfig
+  logDebug $ "Config found for " <> getTableName cpf <> " in CAC: " <> show result
+  pure result
 
 setConfigInMemoryCommon :: (CacheFlow m r, T.OptionEntity k v, MonadFlow m) => k -> Bool -> Maybe v -> m (Maybe v)
 setConfigInMemoryCommon key isExp val = do
