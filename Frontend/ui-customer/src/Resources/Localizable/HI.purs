@@ -1308,3 +1308,4 @@ getHI stringKey =
         CHARGEABLE -> "चार्ज योग्य"
         BOOKED -> "बुक किया गया"
         SURCHARGES -> "अधिभार"
+        SILIGURI -> "सिलीगुड़ी"

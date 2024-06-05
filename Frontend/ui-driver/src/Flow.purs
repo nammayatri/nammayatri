@@ -656,8 +656,9 @@ onBoardingFlow = do
       uiCurrentCategory = if manageVehicle then registrationState.props.manageVehicleCategory else  RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY
       registerationStepsCabs = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.cabs) updatedGs.globalProps.onBoardingDocs
       registerationStepsAutos = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.autos) updatedGs.globalProps.onBoardingDocs
+      registerationStepsBike = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.bikes) updatedGs.globalProps.onBoardingDocs
       checkAvailability field = maybe false (\(API.OnboardingDocsRes mbDoc) -> isJust (field mbDoc)) updatedGs.globalProps.onBoardingDocs
-      variantList = (if checkAvailability _.autos then [ST.AutoCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else [])
+      variantList = (if checkAvailability _.bikes then [ST.BikeCategory] else []) <> (if checkAvailability _.autos then [ST.AutoCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else [])
       mismatchLogic vehicleDocument = (uiCurrentCategory == (RC.transformVehicleType $ Just vehicleDocument.userSelectedVehicleCategory)) && isJust vehicleDocument.verifiedVehicleCategory && (Just vehicleDocument.userSelectedVehicleCategory /= vehicleDocument.verifiedVehicleCategory)
       vehicleTypeMismatch = not registrationState.props.manageVehicle && any (\(API.VehicleDocumentItem item) -> mismatchLogic item) driverRegistrationResp.vehicleDocuments
       documentStatusList = mkStatusList (DriverRegistrationStatusResp driverRegistrationResp)
@@ -681,6 +682,7 @@ onBoardingFlow = do
                       registerationStepsCabs = registerationStepsCabs,
                       registerationStepsAuto = registerationStepsAutos,
                       documentStatusList = filteredVehicleDocs,
+                      registerationStepsBike = registerationStepsBike,
                       variantList = variantList,
                       linkedRc = rcNo,
                       vehicleTypeMismatch = vehicleTypeMismatch,
@@ -723,8 +725,9 @@ onBoardingFlow = do
     REFRESH_REGISTERATION_SCREEN -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> registerScreen { props { refreshAnimation = false}})
       onBoardingFlow
-    GO_TO_ONBOARD_SUBSCRIPTION -> do
+    GO_TO_ONBOARD_SUBSCRIPTION state -> do
       let onBoardingSubscriptionViewCount =  fromMaybe 0 (fromString (getValueToLocalNativeStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT))
+      modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{data{vehicleCategory = state.data.vehicleCategory}})
       onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount
     REFERRAL_CODE_SUBMIT state -> do
       activateReferralCode state state.data.referralCode
@@ -1637,7 +1640,7 @@ bookingOptionsFlow = do
 
   modifyScreenState $ BookingOptionsScreenType (\bookingOptions ->  bookingOptions
    { data { airConditioned = resp.airConditioned
-           , vehicleType = show defaultRide.serviceTierType
+           , vehicleType = HU.getVehicleMapping defaultRide.serviceTierType
            , vehicleName = defaultRide.name
            , ridePreferences = ridePreferences'
            , defaultRidePreference = defaultRide 
@@ -3137,7 +3140,7 @@ subScriptionFlow = do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen{props{isEndRideModal = isEndRideModal}})
       subScriptionFlow
     GO_TO_MANAGE_PLAN state -> do
-      uiPlans <- Remote.getUiPlansBT ""
+      uiPlans <- Remote.getUiPlansBT "null"
       modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{ data { managePlanData { alternatePlans = alternatePlansTransformer uiPlans state}}, props {subView = ManagePlan, showShimmer = false}})
       subScriptionFlow
     GO_TO_FIND_HELP_CENTRE state -> do

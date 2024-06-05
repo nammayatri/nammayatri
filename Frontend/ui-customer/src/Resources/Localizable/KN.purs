@@ -1309,3 +1309,4 @@ getKN stringKey =
         CHARGEABLE -> "ಚಾರ್ಜ್ ಮಾಡುವ"
         BOOKED -> "ಬುಕ್ ಮಾಡಲಾಗಿದೆ"
         SURCHARGES -> "ಹೆಚ್ಚುವರಿ ಶುಲ್ಕ"
+        SILIGURI -> "ಸಿಲಿಗುರಿ"

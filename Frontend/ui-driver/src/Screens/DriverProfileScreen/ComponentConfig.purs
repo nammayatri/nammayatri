@@ -452,7 +452,7 @@ addRCButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-      { text = "Add Vehicle"
+      { text = getString ADD_VEHICLE
       , color = Color.blue900}
       , margin = (Margin 16 15 16 0)
       , cornerRadius = 10.0

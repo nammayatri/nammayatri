@@ -1310,3 +1310,4 @@ getFR stringKey =
         CHARGEABLE -> "Facturable"
         BOOKED -> "Réservé"
         SURCHARGES -> "Suppléments"
+        SILIGURI -> "Siliguri"
