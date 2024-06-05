@@ -117,6 +117,8 @@ type API =
            :<|> UpdateDriverTagAPI
            :<|> UpdateFleetOwnerInfoAPI
            :<|> GetFleetOwnerInfoAPI
+           :<|> SendFleetJoiningOtpAPI
+           :<|> VerifyFleetJoiningOtpAPI
        )
 
 type DriverDocumentsInfoAPI =
@@ -379,6 +381,14 @@ type GetFleetOwnerInfoAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'FLEET 'GET_FLEET_OWNER_INFO
     :> Common.GetFleetOwnerInfoAPI
 
+type SendFleetJoiningOtpAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'FLEET 'SEND_FLEET_JOINING_OTP
+    :> Common.SendFleetJoiningOtpAPI
+
+type VerifyFleetJoiningOtpAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'FLEET 'VERIFY_FLEET_JOINING_OTP
+    :> Common.VerifyFleetJoiningOtpAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   driverDocuments merchantId city
@@ -446,6 +456,8 @@ handler merchantId city =
     :<|> updateDriverTag merchantId city
     :<|> updateFleetOwnerInfo merchantId city
     :<|> getFleetOwnerInfo merchantId city
+    :<|> sendFleetJoiningOtp merchantId city
+    :<|> verifyFleetJoiningOtp merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -931,3 +943,17 @@ getFleetOwnerInfo merchantShortId opCity apiTokenInfo driverId =
       throwError AccessDenied
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
     Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.getFleetOwnerInfo) driverId
+
+sendFleetJoiningOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Registration.AuthReq -> FlowHandler APISuccess
+sendFleetJoiningOtp merchantShortId opCity apiTokenInfo req =
+  withFlowHandlerAPI' $ do
+    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+    person <- QP.findById apiTokenInfo.personId >>= fromMaybeM (PersonNotFound apiTokenInfo.personId.getId)
+    let dashboardUserName = person.firstName <> " " <> person.lastName
+    Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.sendFleetJoiningOtp) dashboardUserName req
+
+verifyFleetJoiningOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.VerifyFleetJoiningOtpReq -> FlowHandler APISuccess
+verifyFleetJoiningOtp merchantShortId opCity apiTokenInfo req =
+  withFlowHandlerAPI' $ do
+    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+    Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.verifyFleetJoiningOtp) apiTokenInfo.personId.getId req

@@ -58,6 +58,7 @@ data MessageKey
   | YATRI_RENTAL_PAUSE
   | YATRI_RENTAL_RESUME
   | WHATSAPP_SEND_MANUAL_PAYMENT_LINK
+  | FLEET_JOINING_MESSAGE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe

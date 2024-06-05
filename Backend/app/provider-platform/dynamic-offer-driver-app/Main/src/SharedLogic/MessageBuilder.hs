@@ -31,6 +31,8 @@ module SharedLogic.MessageBuilder
     BuildGenericMessageReq (..),
     buildGenericMessage,
     addBroadcastMessageToKafka,
+    BuildFleetJoiningMessageReq (..),
+    buildFleetJoiningMessage,
   )
 where
 
@@ -196,3 +198,18 @@ addBroadcastMessageToKafka check msg driverId = do
 
     addTranslation Message.RawMessage {..} trans =
       (show trans.language, Message.RawMessage {title = trans.title, description = trans.description, shortDescription = trans.shortDescription, label = trans.label, ..})
+
+data BuildFleetJoiningMessageReq = BuildFleetJoiningMessageReq
+  { fleetOwnerName :: Text,
+    otp :: Text
+  }
+
+buildFleetJoiningMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildFleetJoiningMessageReq -> m Text
+buildFleetJoiningMessage merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOpCityIdAndMessageKey merchantOperatingCityId DMM.FLEET_JOINING_MESSAGE
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.FLEET_JOINING_MESSAGE))
+  return $
+    merchantMessage.message
+      & T.replace (templateText "fleetOwnerName") req.fleetOwnerName
+      & T.replace (templateText "otp") req.otp
