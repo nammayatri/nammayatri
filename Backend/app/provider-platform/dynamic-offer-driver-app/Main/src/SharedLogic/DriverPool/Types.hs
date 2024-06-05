@@ -158,6 +158,7 @@ data TripQuoteDetail = TripQuoteDetail
     driverStepFee :: Maybe HighPrecMoney,
     driverDefaultStepFee :: Maybe HighPrecMoney,
     driverPickUpCharge :: Maybe HighPrecMoney,
+    driverParkingCharge :: Maybe HighPrecMoney,
     estimateOrQuoteId :: Text
   }
 
