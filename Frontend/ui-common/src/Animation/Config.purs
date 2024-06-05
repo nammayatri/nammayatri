@@ -55,3 +55,14 @@ listExpandingAnimationConfig isAnim = animConfig
   , ifAnim = isAnim
   , duration = 50
     }
+
+estimateExpandingAnimationConfig :: Int -> Number -> Boolean -> AnimConfig
+estimateExpandingAnimationConfig fromY' fromScaleY' isAnim = animConfig 
+  { fromScaleY = if isAnim then fromScaleY' else 1.0
+  , toScaleY =if isAnim then 1.0 else fromScaleY'
+  , fromY = if isAnim then fromY' else 0
+  , toY = if isAnim then 0 else fromY'
+  , repeatCount = (PrestoAnim.Repeat 0)
+  , ifAnim = isAnim
+  , duration = 100
+}
