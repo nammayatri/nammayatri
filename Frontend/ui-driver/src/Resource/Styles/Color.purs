@@ -33,9 +33,6 @@ textListItemDescription = "#999999"
 textDanger :: Color
 textDanger = "#fa6259"
 
-greyBackDarkColor :: Color
-greyBackDarkColor = "#D3D3D3"
-
 blueTextColor :: Color
 blueTextColor = "#2172FF"
 

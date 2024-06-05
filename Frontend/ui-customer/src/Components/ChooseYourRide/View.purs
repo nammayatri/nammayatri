@@ -698,10 +698,10 @@ getMinMaxCapacity bookAnyProps quote estimates =
 getQuoteListViewHeight :: Config -> Int -> Int
 getQuoteListViewHeight config len =
   let quoteHeight = HU.getDefaultPixelSize $ config.selectedEstimateHeight
-      height = if quoteHeight == 0 then 84 else quoteHeight
+      height = if quoteHeight == 0 then 72 else quoteHeight
       rideHeaderLayout = HU.getDefaultPixelSize (runFn1 getLayoutBounds $ EHC.getNewIDWithTag "rideEstimateHeaderLayout").height
       rideHeaderHeight = if rideHeaderLayout == 0 then 81 else rideHeaderLayout
-  in (if len >= 4 then (if EHC.os == "IOS" then 3 else 5) * height else 3 * height) + rideHeaderHeight + 24
+  in ((if len >= 4 then (if EHC.os == "IOS" then 3 else 5) * height else 3 * height) + rideHeaderHeight + 24) + (if len > 0 then len-1 else len) * 8
 
 getScrollViewHeight :: Config -> Int -> Int
 getScrollViewHeight config len = 

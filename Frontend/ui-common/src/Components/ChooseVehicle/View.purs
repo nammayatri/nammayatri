@@ -5,8 +5,8 @@ import Common.Types.App
 import Components.ChooseVehicle.Controller (Action(..), Config, SearchType(..))
 import Effect (Effect)
 import Font.Style as FontStyle
-import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||), negate, (*), (/), (>), (-), (/=), discard, void)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout, onAnimationEnd, shimmerFrameLayout, alpha)
+import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||), negate, (*), (/), (>), (-), (/=), (<), discard, void)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Shadow(..), Accessiblity(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout, onAnimationEnd, shimmerFrameLayout, alpha, shadow, pivotY, accessibility, clipChildren, maxLines)
 import Common.Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -23,8 +23,9 @@ import Engineering.Helpers.Utils as EHU
 import JBridge as JB
 import PrestoDOM.Elements.Keyed as Keyed
 import Data.Tuple (Tuple(..))
-import Data.Array (length, mapWithIndex, findIndex, elem)
+import Data.Array (length, mapWithIndex, findIndex, elem, length)
 import Engineering.Helpers.Commons(os)
+import Common.Animation.Config (estimateExpandingAnimationConfig)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -32,33 +33,33 @@ view push config =
     isActiveIndex = config.index == config.activeIndex
     stroke' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then "2," <> Color.blue800 else "1," <> Color.white900
     background' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then Color.blue600 else Color.white900
-    padding' = PaddingVertical 16 16
+    padding' = Padding 8 12 8 12
     isBookAny = config.vehicleVariant == "BOOK_ANY" && config.activeIndex == config.index
-    selectedEstimateHeight = if config.selectedEstimateHeight == 0 then 80 else config.selectedEstimateHeight
-    currentEstimateHeight = if config.currentEstimateHeight == 0 then 184 else config.currentEstimateHeight
+    selectedEstimateHeight = if config.selectedEstimateHeight == 0 then 72 else config.selectedEstimateHeight
+    currentEstimateHeight = if config.currentEstimateHeight < 80 then 176 else config.currentEstimateHeight
+    margin' = MarginTop $ if config.index == 0 then 0 else 8
   in
     frameLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , onClick push $ const $ OnSelect config
       , clickable config.isEnabled
-      ][  
-       PrestoAnim.animationSet
-            [ Anim.fadeInWithDuration 100 isActiveIndex
-            , Anim.fadeOutWithDuration 100 $ not isActiveIndex
-            ]
-            $ 
-            linearLayout
-                [ width MATCH_PARENT
-                , height $ if os == "IOS" then (if isBookAny then V currentEstimateHeight else V selectedEstimateHeight) else MATCH_PARENT
-                , background background'
-                , cornerRadius 6.0
-                , stroke stroke'
-                , gravity RIGHT
-                , afterRender push $ const $ NoAction config
-                ][]
-      , linearLayout
-          [ width MATCH_PARENT
+      , margin margin'
+      ][PrestoAnim.animationSet
+        ([ Anim.fadeInWithDuration 100 isActiveIndex
+        , Anim.fadeOutWithDuration 100 $ not isActiveIndex
+        ] <> (if os == "IOS" then [] else [Anim.listExpandingAnimation $ estimateExpandingAnimationConfig (0) (0.0) isBookAny]))
+        $ linearLayout
+          ([ width MATCH_PARENT
+          , height $ if os == "IOS" then (if isBookAny then V currentEstimateHeight else V selectedEstimateHeight) else MATCH_PARENT
+          , background background'
+          , cornerRadius 6.0
+          , stroke stroke'
+          , gravity RIGHT
+          , afterRender push $ const $ NoAction config
+          ] <> if os == "IOS" then [] else [pivotY 1.0])[]
+        , linearLayout
+            [ width MATCH_PARENT
           , height WRAP_CONTENT
           , cornerRadius 6.0
           , id $ EHC.getNewIDWithTag config.id
@@ -66,67 +67,41 @@ view push config =
           , padding padding'
           , orientation VERTICAL
           , afterRender push $ const $ NoAction config
-          ]
-          [ linearLayout
+          ][ linearLayout
               [ height WRAP_CONTENT
               , width MATCH_PARENT
               , afterRender push $ const $ NoAction config
-              ]
-              [ linearLayout
-                  [ height $ V 48
-                  , width $ V 60
-                  ]
-                  [ imageView
-                    [ imageWithFallback config.vehicleImage
-                    , height $ V if config.vehicleVariant == "AUTO_RICKSHAW" then 45 else 48
-                    , width $ V 60
+              ][ linearLayout
+                 [ height $ V 48
+                 , width $ V 60
+                 ][ imageView
+                   [ imageWithFallback config.vehicleImage
+                   , height $ V if config.vehicleVariant == "AUTO_RICKSHAW" then 45 else 48
+                   , width $ V 60
+                   ]
+                 ]
+               , linearLayout
+                 [ height WRAP_CONTENT
+                 , weight 1.0
+                 , orientation VERTICAL
+                 , gravity CENTER_VERTICAL
+                 , padding $ PaddingLeft 8
+                 ][ linearLayout
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , gravity CENTER_VERTICAL
+                    ][ vehicleDetailsView push config ]
+                  , linearLayout
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , padding $ PaddingTop 5
+                    , gravity CENTER_VERTICAL
+                    ][ capacityView push config
                     ]
                   ]
-              , linearLayout
-                  [ width WRAP_CONTENT
-                  , height WRAP_CONTENT
-                  , orientation VERTICAL
-                  , weight 1.0
-                  ]
-                  [ linearLayout
-                      [ height WRAP_CONTENT
-                      , width MATCH_PARENT
-                      ]
-                      [ linearLayout
-                          [ height WRAP_CONTENT
-                          , width MATCH_PARENT
-                          , orientation VERTICAL
-                          , gravity CENTER_VERTICAL
-                          , padding $ PaddingLeft 8
-                          ]
-                          [ linearLayout
-                              [ width MATCH_PARENT
-                              , height WRAP_CONTENT
-                              , gravity CENTER_VERTICAL
-                              ]
-                              [ vehicleDetailsView push config
-                              , linearLayout [ weight 1.0 ] []
-                              , linearLayout
-                                  [ width WRAP_CONTENT
-                                  , height WRAP_CONTENT
-                                  , orientation VERTICAL
-                                  , afterRender push (const $ NoAction config)
-                                  ][ priceDetailsView push config ]
-                              ]
-                          , linearLayout
-                              [ width WRAP_CONTENT
-                              , height WRAP_CONTENT
-                              , padding $ PaddingTop 5
-                              , gravity CENTER_VERTICAL
-                              ]
-                              [ capacityView push config
-                              , descriptionView config.serviceTierShortDesc config.vehicleVariant config.airConditioned
-                              ]
-                          ]
-                      ]
-                  ]
-              ]
-            , if isBookAny then bookAnyView push config else dummyView config
+              , priceDetailsView push config
+            ]
+          , if isBookAny then bookAnyView push config else dummyView config
           ]
       , linearLayout
         [ height $ V selectedEstimateHeight
@@ -146,25 +121,33 @@ view push config =
 
 bookAnyView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 bookAnyView push state = 
-  linearLayout
-  [ height MATCH_PARENT
+  let isBookAny = state.vehicleVariant == "BOOK_ANY" && state.activeIndex == state.index 
+  in 
+  PrestoAnim.animationSet
+  ([ Anim.fadeInWithDuration 200 isBookAny ] <>
+  (if os == "IOS" then []
+  else [ Anim.listExpandingAnimation $ estimateExpandingAnimationConfig (0) (0.6) isBookAny ]))
+  $ linearLayout
+  ([ height MATCH_PARENT
   , width MATCH_PARENT
   , background Color.white900
   , cornerRadius 6.0
   , afterRender push $ const $ NoAction state
   , margin $ MarginTop 16
-  , padding $ Padding 8 8 8 8
-  ][ variantsView push state ]
+  , padding $ Padding 4 4 4 4
+  ] <> if os == "IOS" then [] else [pivotY 0.6])[ variantsView push state ]
 
 variantsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 variantsView push state =
   let
-    tipValuesArr = EHU.splitIntoEqualParts 3 state.services
+    bookAnyVariants = fromMaybe [] $ EHU.splitArrayByLengths state.services [2,3]
   in
     linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
+      , clipChildren false
       , orientation VERTICAL
+      , afterRender push $ const $ NoAction state
       ]
       ( mapWithIndex
           ( \listIndex listItem ->
@@ -172,6 +155,7 @@ variantsView push state =
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , orientation HORIZONTAL
+                , clipChildren false
                 , gravity CENTER_HORIZONTAL
                 ]
                 ( mapWithIndex
@@ -182,13 +166,17 @@ variantsView push state =
                             Nothing -> 0
                           isActiveIndex = elem item state.selectedServices
                           isInActive = not $ elem item state.availableServices
+                          widthFactor = if (length listItem < 3) && item == "Non-AC Mini" then 20 else 34
+                          shadowOpacity = if isInActive then 0.0 else 1.0
                         in
                           linearLayout
                             [ height $ V 32
-                            , width $ V ((EHC.screenWidth unit / 3) - 31)
-                            , margin $ itemMargin itemIndex listIndex listItem
-                            , cornerRadius 4.0
-                            , stroke $ (if isInActive then "0," else "1,") <> (if isActiveIndex then Color.blue800 else Color.blue600)
+                            , width $ V ((EHC.screenWidth unit / 3) - widthFactor)
+                            , clipChildren false
+                            , margin $ Margin 4 4 4 4
+                            , cornerRadius 6.0
+                            , shadow $ Shadow 0.0 1.0 4.0 0.0 Color.black12 shadowOpacity
+                            , stroke $ "1," <> (if isActiveIndex then Color.blue800 else Color.grey900)
                             , clickable $ true
                             , alpha if isInActive then 0.5 else 1.0
                             , background $ if isInActive then Color.grey900 else if isActiveIndex then Color.blue600 else Color.white900
@@ -197,25 +185,36 @@ variantsView push state =
                                                      void $ pure $ JB.toast "Not available at this moment"
                                                      pure unit
                                                   else push action ) $ const $ ServicesOnClick state item
-                            ]
-                            [ textView
-                                $ [ text $ item
-                                  , height MATCH_PARENT
-                                  , width MATCH_PARENT
-                                  , color $ if isActiveIndex && (not isInActive) then Color.blue800 else Color.black800
-                                  , gravity CENTER
-                                  ]
-                                <> FontStyle.tags LanguageStyle
-                            ]
+                            ][ linearLayout
+                              [ height MATCH_PARENT
+                              , width MATCH_PARENT
+                              , gravity CENTER
+                              ][ imageView
+                                 [ width $ V 14
+                                 , height $ V 14
+                                 , margin $ MarginRight 2
+                                 , gravity CENTER
+                                 , visibility $ boolToVisibility $ isActiveIndex && (not isInActive)
+                                 , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_check_blue"
+                                 ] 
+                              , textView $ 
+                                 [ text $ item
+                                 , height MATCH_PARENT
+                                 , width WRAP_CONTENT
+                                 , gravity CENTER
+                                 , singleLine true
+                                 , maxLines 1
+                                 , padding $ PaddingBottom $ if isActiveIndex && (not isInActive) then 2 else 0
+                                 , color $ if isActiveIndex && (not isInActive) then Color.blue800 else Color.black800
+                                 ] <> FontStyle.tags LanguageStyle
+                              ]
+                          ]
                     )
                     listItem
                 )
           )
-          tipValuesArr
+          bookAnyVariants
       )
-  where
-  itemMargin :: Int -> Int -> Array String -> Margin
-  itemMargin index listIndex listItem = Margin 0 (if listIndex > 0 then 8 else 0) (if (index + 1) == (length listItem) then 0 else 8) 0
 
 vehicleDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 vehicleDetailsView push config =
@@ -283,34 +282,73 @@ priceDetailsView push config =
   let isActiveIndex = config.index == config.activeIndex
       infoIcon ="ny_ic_info_blue_lg"
       enableRateCard = config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY"
+      isBookAny = config.vehicleVariant == "BOOK_ANY"
   in
   linearLayout
     [ height MATCH_PARENT
-    , width $  WRAP_CONTENT
-    , orientation HORIZONTAL
+    , width WRAP_CONTENT
     , padding $ PaddingLeft 8
-    , gravity CENTER_VERTICAL
     , clickable isActiveIndex
+    , afterRender push (const $ NoAction config)
     , onClick push $ case enableRateCard of
                           false -> const $ NoAction config
                           true  -> const $ ShowRateCard config
-    ]
-    [ textView
-        $ [ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , text config.price
-          , color Color.black800
-          ]
-        <> FontStyle.body7 TypoGraphy
-      , imageView
-        [ imageWithFallback $ fetchImage FF_COMMON_ASSET infoIcon
-        , width $ V 15
-        , height $ V 15
-        , gravity CENTER_VERTICAL
-        , margin $ MarginLeft 4
-        , visibility $ boolToVisibility enableRateCard
-        ]
-    ]
+    ][linearLayout
+      ([ height MATCH_PARENT
+      , width $ if (isBookAny && os == "IOS") then V (((EHC.screenWidth unit) * 7) / 20) else WRAP_CONTENT
+      , orientation VERTICAL
+      ] <> if isBookAny then [gravity RIGHT] else [])
+      [ linearLayout
+         [ height WRAP_CONTENT
+         , width WRAP_CONTENT
+         ][ textView $ 
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , text config.price
+            , color Color.black800
+            ] <> FontStyle.body7 TypoGraphy
+          , linearLayout
+            [ height MATCH_PARENT
+            , width WRAP_CONTENT
+            , gravity CENTER_VERTICAL
+            ] $ if enableRateCard then 
+                   [imageView
+                    [ imageWithFallback $ fetchImage FF_COMMON_ASSET infoIcon
+                    , width $ V 15
+                    , height $ V 15
+                    , gravity CENTER_VERTICAL
+                    , margin $ MarginLeft 4
+                    ] 
+                   ]
+                else []
+         ]
+       , linearLayout
+         [ height $ V 20
+         , width WRAP_CONTENT
+         , cornerRadius 10.0
+         , background Color.green900
+         , margin $ MarginTop 4
+         , gravity CENTER_VERTICAL
+         , padding $ PaddingHorizontal 6 6
+         , visibility $ boolToVisibility isBookAny
+         ][ imageView
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_faster_lightning"
+            , width $ V 12
+            , height $ V 12
+            , gravity CENTER_VERTICAL
+            , margin $ MarginRight 4
+            ]
+          , textView $ 
+            [ width WRAP_CONTENT
+            , height MATCH_PARENT
+            , text "Fastest"
+            , gravity CENTER_VERTICAL
+            , color Color.white900
+            , padding $ PaddingBottom $ if os == "IOS" then 0 else 5
+            ] <> FontStyle.body15 TypoGraphy
+         ]
+      ]
+  ]
 
 shimmerView :: forall w. Config -> PrestoDOM (Effect Unit) w
 shimmerView state =
@@ -350,7 +388,9 @@ capacityView push config =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    ][ vehicleInfoView "ic_user_filled" config.capacity]
+    ][ vehicleInfoView "ic_user_filled" config.capacity
+     , descriptionView config.serviceTierShortDesc config.vehicleVariant config.airConditioned
+     ]
 
 vehicleInfoView :: forall w. String -> String -> PrestoDOM (Effect Unit) w
 vehicleInfoView imageName description = do

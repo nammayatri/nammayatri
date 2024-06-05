@@ -251,7 +251,8 @@ window.getMerchantConfig = function () {
         },
         "bookAny" : {
           "name" : "Book Any",
-          "image" : "ny_ic_auto_cab_yellow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_cab_yellow.png"
+          "image" : "ny_ic_cab_auto_yellow,https://assets.moving.tech/beckn/common/user/images/ny_ic_cab_auto_yellow.png",
+          "leftViewImage" : ","
         },
       }
       , "enableOnlyAuto" : true

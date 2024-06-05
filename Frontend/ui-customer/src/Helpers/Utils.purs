@@ -628,30 +628,57 @@ getVehicleVariantImage variant =
   let variantConfig = (getAppConfig appConfig).estimateAndQuoteConfig.variantInfo
       city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in 
-    case variant of
-      "TAXI"          ->  variantConfig.taxi.image 
-      "TAXI_PLUS"     -> variantConfig.taxiPlus.image
-      "SEDAN"         -> variantConfig.sedan.image
-      "SUV"           -> variantConfig.suv.image
-      "HATCHBACK"     -> variantConfig.hatchback.image
-      "ECO"           -> variantConfig.hatchback.image
-      "COMFY"         -> variantConfig.sedan.image
-      "PREMIUM"       -> variantConfig.sedan.image
-      "AUTO_RICKSHAW" -> case city of 
-                          Kochi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
-                          Chennai -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
-                          Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
-                          Delhi -> variantConfig.autoRickshaw.image
-                          _ -> variantConfig.autoRickshaw.image
-      "BOOK_ANY"      -> case getMerchant FunctionCall of 
-                           YATRISATHI -> variantConfig.bookAny.image
-                           _ -> case city of 
-                                  Hyderabad -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
-                                  Chennai -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
-                                  Kochi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
-                                  Delhi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
-                                  _ -> variantConfig.bookAny.image
-      _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
+    if viewType == LEFT_VIEW
+      then do 
+        case variant of
+          "TAXI"          -> variantConfig.taxi.leftViewImage 
+          "TAXI_PLUS"     -> variantConfig.taxiPlus.leftViewImage
+          "SEDAN"         -> variantConfig.sedan.leftViewImage
+          "SUV"           -> variantConfig.suv.leftViewImage
+          "HATCHBACK"     -> variantConfig.hatchback.leftViewImage
+          "ECO"           -> variantConfig.hatchback.leftViewImage
+          "COMFY"         -> variantConfig.sedan.leftViewImage
+          "PREMIUM"       -> variantConfig.sedan.leftViewImage
+          "AUTO_RICKSHAW" -> case city of 
+                              Kochi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
+                              Chennai -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
+                              Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
+                              Delhi -> variantConfig.autoRickshaw.image
+                              _ -> variantConfig.autoRickshaw.leftViewImage
+          "BOOK_ANY"      -> case getMerchant FunctionCall of 
+                              YATRISATHI -> variantConfig.bookAny.leftViewImage
+                              _ -> case city of 
+                                      Hyderabad -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
+                                      Chennai -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
+                                      Kochi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
+                                      Delhi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
+                                      _ -> variantConfig.bookAny.leftViewImage
+          _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
+      else do
+        case variant of
+          "TAXI"          -> variantConfig.taxi.image 
+          "TAXI_PLUS"     -> variantConfig.taxiPlus.image
+          "SEDAN"         -> variantConfig.sedan.image
+          "SUV"           -> variantConfig.suv.image
+          "HATCHBACK"     -> variantConfig.hatchback.image
+          "ECO"           -> variantConfig.hatchback.image
+          "COMFY"         -> variantConfig.sedan.image
+          "PREMIUM"       -> variantConfig.sedan.image
+          "AUTO_RICKSHAW" -> case city of 
+                              Kochi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
+                              Chennai -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
+                              Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
+                              Delhi -> fetchImage FF_ASSET "ny_ic_auto_shadow"
+                              _ -> variantConfig.autoRickshaw.image
+          "BOOK_ANY"      -> case getMerchant FunctionCall of 
+                              YATRISATHI -> variantConfig.bookAny.image
+                              _ -> case city of 
+                                      Hyderabad -> fetchImage COMMON_ASSET "ny_ic_cab_auto_yellow"
+                                      Chennai -> fetchImage COMMON_ASSET "ny_ic_cab_auto_yellow"
+                                      Kochi -> fetchImage COMMON_ASSET "ny_ic_cab_auto_black"
+                                      Delhi -> fetchImage COMMON_ASSET "ny_ic_cab_auto_green"
+                                      _ -> variantConfig.bookAny.image
+          _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
 getVariantRideType :: String -> String
 getVariantRideType variant =
@@ -866,16 +893,16 @@ getAllServices :: LazyCheck -> Array String
 getAllServices dummy = 
   let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in case city of 
-    Bangalore -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
-    Tumakuru -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
-    Hyderabad -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
-    Delhi -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
-    Chennai -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
-    Mysore -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
+    Bangalore -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
+    Tumakuru -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
+    Hyderabad -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
+    Delhi -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
+    Chennai -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
+    Mysore -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     Kolkata -> ["Non-AC", "Hatchback", "Sedan", "SUV"]
-    Kochi -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
-    Pondicherry -> ["Eco", "Auto"]
-    _ ->  ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+    Kochi -> ["Eco", "Hatchback", "Sedan", "SUV"]
+    Pondicherry -> ["Auto", "Eco"]
+    _ ->  ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
 
 getSelectedServices :: LazyCheck -> Array String
 getSelectedServices dummy = 
