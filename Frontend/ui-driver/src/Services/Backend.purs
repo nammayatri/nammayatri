@@ -207,7 +207,7 @@ makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
     where 
         mkOperatingCity :: String -> Maybe String
         mkOperatingCity operatingCity
-            | operatingCity `DA.elem` ["__failed", "--"] = Nothing
+            | operatingCity `DA.elem` ["__failed", "--", ""] = Nothing
             | operatingCity == "Puducherry"          = Just "Pondicherry"
             | operatingCity == "Tamil Nadu"          = Just "TamilNaduCities"
             | otherwise                              = Just operatingCity
@@ -723,7 +723,7 @@ makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> Maybe ST.Vehic
 makeDriverRCReq regNo imageId dateOfRegistration multipleRc category airConditioned = DriverRCReq
     {
       "vehicleRegistrationCertNumber" : regNo,
-      "operatingCity" : "BANGALORE",
+      "operatingCity" : DS.toUpper $ getValueToLocalStore DRIVER_LOCATION,
       "imageId" : imageId,
       "dateOfRegistration" : dateOfRegistration,
       "vehicleCategory" : mkCategory category,
@@ -735,9 +735,11 @@ mkCategory category =
     case category of 
         Just ST.AutoCategory -> Just "AUTO_CATEGORY"
         Just ST.CarCategory -> Just "CAR"
+        Just ST.BikeCategory -> Just "MOTORCYCLE"
         _ -> case (getValueToLocalStore VEHICLE_CATEGORY) of
                 "CarCategory" -> Just "CAR"
                 "AutoCategory" -> Just "AUTO_CATEGORY"
+                "BikeCategory" -> Just "MOTORCYCLE"
                 _ -> Nothing
 
 registerDriverDLBT :: DriverDLReq -> FlowBT String  DriverDLResp
@@ -1158,16 +1160,16 @@ getKioskLocations dummy = do
         unwrapResponse (x) = x
 
 getUiPlans :: String -> Flow GlobalState (Either ErrorResponse UiPlansResp)
-getUiPlans dummy = do
+getUiPlans vehicleVariant = do
     headers <- getHeaders "" false
-    withAPIResult (EP.getUiPlans "") unwrapResponse $ callAPI headers (UiPlansReq "")
+    withAPIResult (EP.getUiPlans vehicleVariant) unwrapResponse $ callAPI headers (UiPlansReq vehicleVariant)
     where
         unwrapResponse (x) = x
 
 getUiPlansBT :: String -> FlowBT String UiPlansResp
-getUiPlansBT dummy = do
+getUiPlansBT vehicleVariant = do
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.getUiPlans "") identity errorHandler (lift $ lift $ callAPI headers (UiPlansReq ""))
+    withAPIResultBT (EP.getUiPlans vehicleVariant) identity errorHandler (lift $ lift $ callAPI headers (UiPlansReq vehicleVariant))
     where
         errorHandler (ErrorPayload errorPayload) =  do
             pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage

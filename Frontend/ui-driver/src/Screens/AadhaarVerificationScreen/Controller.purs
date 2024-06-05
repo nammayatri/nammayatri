@@ -93,7 +93,9 @@ eval :: Action -> AadhaarVerificationScreenState -> Eval Action ScreenOutput Aad
 eval action state = case action of
   AfterRender -> continue state
   BackPressed ->  if state.props.currentStage == VerifyAadhaar then continue state{props{currentStage = EnterAadhaar}}
-                  else exit $ GoBack
+                  else do
+                    pure $ hideKeyboardOnNavigation true
+                    exit $ GoBack
 
   (PrimaryButtonAC (PrimaryButton.OnClick)) ->
     case state.props.currentStage of

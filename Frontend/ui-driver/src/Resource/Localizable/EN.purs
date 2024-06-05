@@ -1469,3 +1469,8 @@ getEN stringKey =
         ONLY_3_MORE_RIDES_FOR_50_COINS -> "Only 3 more rides for 50 coins"
         YOU_GOT_50_COINS -> "You got 50 coins"
         YOU_GOT_10_COINS -> "You got 10 coins"
+        REGISTER_YOUR_BIKE -> "Register your bike"
+        BIKE_TAXI -> "Bike Taxi"
+        FIRST_RIDE_FREE count -> "First " <> count <> " ride free"
+        FIRST_RIDES_FREE count -> "First " <> count <> " rides free"
+

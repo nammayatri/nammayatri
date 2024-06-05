@@ -1469,3 +1469,8 @@ getML stringKey =
         ONLY_3_MORE_RIDES_FOR_50_COINS -> "മാത്രം മൂന്ന് റൈഡുകൾ ഉള്ളതിനാൽ 50 കോയിനുകൾ"
         YOU_GOT_50_COINS -> "നിങ്ങൾ 50 കോയിനുകൾ ലഭിച്ചു"
         YOU_GOT_10_COINS -> "നിങ്ങൾ 10 കോയിനുകൾ ലഭിച്ചു"
+        REGISTER_YOUR_BIKE -> "നിങ്ങളുടെ ബൈക്ക് രജിസ്റ്റർ ചെയ്യുക"
+        BIKE_TAXI -> "ബൈക്ക് ടാക്സി"
+        FIRST_RIDE_FREE count -> "ആദ്യം " <> count <> " റൈഡ് സൗജന്യം"
+        FIRST_RIDES_FREE count -> "ആദ്യം " <> count <> " റൈഡുകൾ സൗജന്യം"
+
