@@ -76,6 +76,7 @@ module Domain.Action.UI.Driver
   )
 where
 
+import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import AWS.S3 as S3
 import Control.Monad.Extra (mapMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
@@ -94,6 +95,7 @@ import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummy
 import qualified Domain.Action.UI.DriverGoHomeRequest as DDGR
 import qualified Domain.Action.UI.DriverHomeLocation as DDHL
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
+import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Action.UI.Merchant as DM
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Action.UI.Plan as DAPlan
@@ -132,6 +134,7 @@ import qualified Domain.Types.Vehicle as SV
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, state)
+import qualified EulerHS.Prelude as Prelude
 import qualified GHC.List as GHCL
 import GHC.Records.Extra
 import qualified IssueManagement.Domain.Types.MediaFile as Domain
@@ -142,7 +145,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
-import Kernel.External.Payment.Interface hiding (Currency)
+import Kernel.External.Payment.Interface hiding (Currency, INR)
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
 import Kernel.Prelude (NominalDiffTime, roundToIntegral)
@@ -336,9 +339,15 @@ data UpdateDriverReq = UpdateDriverReq
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 newtype ScheduledBookingRes = ScheduledBookingRes
-  { bookings :: [BookingAPIEntity]
+  { bookings :: [ScheduleBooking]
   }
-  deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data ScheduleBooking = ScheduleBooking
+  { bookingDetails :: BookingAPIEntity,
+    fareDetails :: [DOVT.RateCardItem]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data BookingAPIEntity = BookingAPIEntity
   { id :: Id DRB.Booking,
@@ -364,10 +373,12 @@ data BookingAPIEntity = BookingAPIEntity
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     stopLocationId :: Maybe (Id DLoc.Location),
+    roundTrip :: Maybe Bool,
+    returnTime :: Maybe UTCTime,
     distanceToPickup :: Maybe Meters,
     isScheduled :: Bool
   }
-  deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 newtype UpdateProfileInfoPoints = UpdateProfileInfoPoints {isAdvancedBookingEnabled :: Maybe Bool}
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
@@ -1902,9 +1913,23 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbDay mbTripCategor
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
   let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False person driverInfo vehicle cityServiceTiers))
   scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbDay DRB.NEW mbTripCategory availableServiceTiers True cityId transporterConfig.timeDiffFromUtc
-  return (ScheduledBookingRes $ buildBookingAPIEntityFromBooking <$> scheduledBookings)
+  bookings <- mapM buildBookingAPIEntityFromBooking scheduledBookings
+  return (ScheduledBookingRes bookings)
   where
-    buildBookingAPIEntityFromBooking DRB.Booking {..} = BookingAPIEntity {..}
+    buildBookingAPIEntityFromBooking DRB.Booking {..} = do
+      quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
+      let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkBreakupItem estimatedDistance Nothing) quote.farePolicy
+      return $ ScheduleBooking BookingAPIEntity {..} (catMaybes farePolicyBreakups)
+
+    mkBreakupItem :: Text -> Text -> Maybe DOVT.RateCardItem
+    mkBreakupItem title valueInText = do
+      priceObject <- DOV.stringToPrice INR valueInText
+      return $
+        DOVT.RateCardItem
+          { title,
+            price = priceObject.amountInt,
+            priceWithCurrency = mkPriceAPIEntity priceObject
+          }
 
 acceptScheduledBooking ::
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->

@@ -48,12 +48,3 @@ findFPSlabsDetailsSlabByDistance dist slabList = do
   case NE.filter (\slab -> slab.startDistance <= dist) $ NE.sortBy (comparing (.startDistance)) slabList of
     [] -> error $ "Slab for dist = " <> show dist <> " not found. Non-emptiness supposed to be guaranteed by app logic."
     a -> last a
-
------------------------------------------------------------------------------------------------------------------------------------------
-------------------------------------------------APIEntity--------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------------------------------------------------
-
-newtype FPSlabsDetailsAPIEntity = FPSlabsDetailsAPIEntity
-  { slabs :: NonEmpty FPSlabsDetailsSlabAPIEntity
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

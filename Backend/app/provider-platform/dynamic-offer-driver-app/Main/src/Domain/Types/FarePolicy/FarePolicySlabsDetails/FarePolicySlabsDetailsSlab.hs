@@ -15,7 +15,6 @@
 
 module Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab where
 
-import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant
 import Data.Aeson as DA
 import Domain.Types.Common
 import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
@@ -56,20 +55,5 @@ data PlatformFeeInfo = PlatformFeeInfo
     sgst :: Double
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
-
------------------------------------------------------------------------------------------------------------------------------------------
-------------------------------------------------APIEntity--------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------------------------------------------------
-
-data FPSlabsDetailsSlabAPIEntity = FPSlabsDetailsSlabAPIEntity
-  { startDistance :: Meters,
-    startDistanceWithUnit :: Distance,
-    baseFare :: Money,
-    baseFareWithCurrency :: PriceAPIEntity,
-    waitingChargeInfo :: Maybe WaitingChargeInfoAPIEntity,
-    platformFeeInfo :: Maybe PlatformFeeInfo,
-    nightShiftCharge :: Maybe NightShiftChargeAPIEntity
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 $(mkBeamInstancesForJSON ''PlatformFeeCharge)
