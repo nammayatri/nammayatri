@@ -18,7 +18,6 @@ import qualified Storage.Beam.Booking as Beam
 import qualified Storage.Queries.LocationMapping
 import Storage.Queries.Transformers.Booking
 import qualified Storage.Queries.Transformers.Booking
-import qualified Storage.Queries.Transformers.Distance
 import qualified Storage.Queries.TripTerms
 
 instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
@@ -106,9 +105,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.createdAt = createdAt,
         Beam.discount = discount <&> (.amount),
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
-        Beam.distanceValue = Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) estimatedDistance,
         Beam.estimatedDistance = estimatedDistance,
-        Beam.estimatedDistanceValue = Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,
         Beam.currency = Just $ (.currency) estimatedFare,
         Beam.estimatedFare = (.amount) estimatedFare,

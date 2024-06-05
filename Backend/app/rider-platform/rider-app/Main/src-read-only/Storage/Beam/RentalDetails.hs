@@ -20,7 +20,6 @@ data RentalDetailsT f = RentalDetailsT
     deadKmFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     id :: B.C f Kernel.Prelude.Text,
-    includedDistancePerHrValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     includedKmPerHr :: B.C f Kernel.Types.Common.Kilometers,
     nightShiftCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Money),
     nightShiftChargeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),

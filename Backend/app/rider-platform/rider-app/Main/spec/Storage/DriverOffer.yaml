@@ -31,13 +31,7 @@ DriverOffer:
 
   beamType:
     createdAt: Maybe UTCTime
-
-  beamFields:
-    distanceToPickup:
-      distanceToPickup: Maybe HighPrecMeters
-      distanceToPickupValue: Maybe HighPrecDistance
-    distanceUnit:
-      distanceUnit: Maybe DistanceUnit
+    distanceUnit: Maybe DistanceUnit
 
   fromTType:
     createdAt: Kernel.Prelude.fromMaybe updatedAt|I
@@ -46,7 +40,6 @@ DriverOffer:
 
   toTType:
     createdAt: Kernel.Prelude.Just|I
-    distanceToPickupValue: Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit)|I
     distanceUnit: Kernel.Prelude.Just|I
 
   constraints:

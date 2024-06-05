@@ -16,7 +16,6 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.Estimate as Beam
 import qualified Storage.Queries.EstimateBreakup
-import qualified Storage.Queries.Transformers.Distance
 import Storage.Queries.Transformers.Estimate
 
 instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
@@ -95,7 +94,6 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driversLocation = driversLocation,
         Beam.estimatedDistance = estimatedDistance,
-        Beam.estimatedDistanceValue = Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,
         Beam.estimatedFare = (.amount) estimatedFare,
         Beam.estimatedPickupDuration = estimatedPickupDuration,

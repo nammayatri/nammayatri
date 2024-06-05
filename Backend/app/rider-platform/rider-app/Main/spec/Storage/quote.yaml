@@ -103,12 +103,9 @@ Quote:
         currency: Maybe Currency
         fareProductType: FareProductType
         distanceToNearestDriver: Maybe HighPrecMeters
-        distanceToNearestDriverValue: Maybe HighPrecDistance
         rentalDetailsId: Maybe Text
         driverOfferId: Maybe Text
         specialZoneQuoteId: Maybe Text
-      distanceUnit:
-        distanceUnit: Maybe Kernel.Types.Common.DistanceUnit
       vehicleServiceTierType:
         vehicleVariant: VehicleServiceTierType
       clientDevice:
@@ -129,7 +126,7 @@ Quote:
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
     clientOsVersion: Maybe Text
-
+    distanceUnit: Maybe Kernel.Types.Common.DistanceUnit
 
   fromTType:
     providerUrl: parseBaseUrl|MI
@@ -159,7 +156,6 @@ Quote:
     tripTermsId: (Kernel.Types.Id.getId <$> (tripTerms <&> (.id)))|E
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
     distanceToNearestDriver: Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)|E
-    distanceToNearestDriverValue: Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit <$> Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)|E
     rentalDetailsId: (Storage.Queries.Transformers.Quote.getRentalDetailsId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails))|E
     driverOfferId: (Storage.Queries.Transformers.Quote.getDriverOfferId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails))|E
     specialZoneQuoteId: (Storage.Queries.Transformers.Quote.getSpecialZoneQuoteId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails))|E

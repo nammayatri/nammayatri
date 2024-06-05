@@ -17,7 +17,6 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as Beam
 import Storage.Queries.BookingCancellationReasonExtra as ReExport
 import Storage.Queries.Transformers.BookingCancellationReason
-import qualified Storage.Queries.Transformers.Distance
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingCancellationReason.BookingCancellationReason -> m ())
 create = createWithKV
@@ -41,7 +40,6 @@ updateByPrimaryKey (Domain.Types.BookingCancellationReason.BookingCancellationRe
       Se.Set Beam.driverCancellationLocationLat (driverCancellationLocation <&> (.lat)),
       Se.Set Beam.driverCancellationLocationLon (driverCancellationLocation <&> (.lon)),
       Se.Set Beam.driverDistToPickup driverDistToPickup,
-      Se.Set Beam.driverDistToPickupValue (Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) driverDistToPickup),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.reasonCode reasonCode,
       Se.Set Beam.reasonStage reasonStage,

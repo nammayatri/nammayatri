@@ -16,7 +16,6 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.RentalDetails as Beam
-import qualified Storage.Queries.Transformers.Distance
 import qualified Storage.Queries.Transformers.RentalDetails
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RentalDetails.RentalDetails -> m ())
@@ -51,7 +50,6 @@ instance ToTType' Beam.RentalDetails Domain.Types.RentalDetails.RentalDetails wh
         Beam.deadKmFare = (.amount) deadKmFare,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.includedDistancePerHrValue = (Kernel.Prelude.Just . Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) includedKmPerHr,
         Beam.includedKmPerHr = includedKmPerHr,
         Beam.nightShiftCharge = (.amountInt) . (.nightShiftCharge) <$> nightShiftInfo,
         Beam.nightShiftChargeAmount = (.amount) . (.nightShiftCharge) <$> nightShiftInfo,

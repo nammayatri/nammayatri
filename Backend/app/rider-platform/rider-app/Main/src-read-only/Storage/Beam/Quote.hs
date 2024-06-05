@@ -27,7 +27,6 @@ data QuoteT f = QuoteT
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     discount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     distanceToNearestDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
-    distanceToNearestDriverValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     driverOfferId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fareProductType :: B.C f Domain.Types.FarePolicy.FareProductType.FareProductType,
     rentalDetailsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

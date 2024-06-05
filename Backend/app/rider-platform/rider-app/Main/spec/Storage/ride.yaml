@@ -145,12 +145,6 @@ Ride:
       fare: Maybe HighPrecMoney
     totalFare:
       totalFare: Maybe HighPrecMoney
-    chargeableDistance:
-      chargeableDistanceValue: Maybe HighPrecDistance
-      chargeableDistance: Maybe HighPrecMeters
-    traveledDistance:
-      traveledDistanceValue: Maybe HighPrecDistance
-      traveledDistance: Maybe HighPrecMeters
     driversPreviousRideDropLoc:
       driversPreviousRideDropLat: Maybe Double
       driversPreviousRideDropLon: Maybe Double
@@ -177,9 +171,7 @@ Ride:
     totalFare: Kernel.Prelude.fmap (.amount)|I
     currency: Kernel.Prelude.fmap (.currency)|I
     trackingUrl: Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl|I
-    chargeableDistanceValue: Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit)|I
     distanceUnit: Kernel.Prelude.Just|I
-    traveledDistanceValue: Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit)|I
     clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E

@@ -188,12 +188,6 @@ Booking:
     backendAppVersion: Maybe Text
 
   beamFields:
-    estimatedDistance:
-      estimatedDistance: Maybe HighPrecMeters
-      estimatedDistanceValue: Maybe HighPrecDistance
-      distanceValue: Maybe HighPrecDistance
-    distanceUnit:
-      distanceUnit: Maybe DistanceUnit
     vehicleServiceTierType:
       vehicleVariant: VehicleServiceTierType
     transactionId:
@@ -230,6 +224,7 @@ Booking:
     clientSdkVersion: Maybe Text
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
+    distanceUnit: Maybe DistanceUnit
 
   sqlType:
     id: character(36)
@@ -275,8 +270,6 @@ Booking:
     currency: character varying(255)
     serviceTierShortDesc: text
     distanceUnit: character varying(255)
-    distanceValue: double precision
-    estimatedDistanceValue: double precision
 
   default:
     fareProductType: "'ONE_WAY'"
@@ -287,9 +280,7 @@ Booking:
     fareProductType: getFareProductType
     toLocationId: getToLocationId
     distance: distance|E
-    distanceValue: Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit)|I
     distanceUnit: Kernel.Prelude.Just|I
-    estimatedDistanceValue: Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit)|I
     stopLocationId: getStopLocationId
     otpCode: getOtpCode
     providerUrl: (showBaseUrl providerUrl)|E

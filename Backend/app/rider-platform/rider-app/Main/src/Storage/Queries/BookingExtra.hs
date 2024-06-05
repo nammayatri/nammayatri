@@ -319,13 +319,11 @@ upsertToLocationAndMappingForOldData toLocationId bookingId merchantId merchantO
 
 updateMultipleById :: (MonadFlow m, EsqDBFlow m r) => HighPrecMoney -> HighPrecMoney -> Maybe Distance -> Id Booking -> m ()
 updateMultipleById estimatedFare estimatedTotalFare mbEstimatedDistance bookingId = do
-  let estimatedDistanceValue = (\estimatedDistance -> distanceToHighPrecDistance estimatedDistance.unit estimatedDistance) <$> mbEstimatedDistance
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamB.estimatedFare estimatedFare,
       Se.Set BeamB.estimatedTotalFare estimatedTotalFare,
       Se.Set BeamB.estimatedDistance $ distanceToHighPrecMeters <$> mbEstimatedDistance,
-      Se.Set BeamB.estimatedDistanceValue estimatedDistanceValue,
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]

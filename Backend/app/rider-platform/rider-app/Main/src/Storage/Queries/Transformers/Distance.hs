@@ -3,11 +3,6 @@ module Storage.Queries.Transformers.Distance where
 import Kernel.Prelude
 import Kernel.Utils.Common
 
--- class TTypeValue a t where
---   type TTypePayload a
---   fromTTypeValue :: TTypePayload a -> t -> a
---   toTTypeValue :: a -> t
-
 -- TODO use similar class for other entities conversion
 class DistanceValue distance where
   toDistance :: DistanceUnit -> distance -> Distance

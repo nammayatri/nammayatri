@@ -80,3 +80,9 @@ ALTER TABLE atlas_app.ride ADD COLUMN drivers_previous_ride_drop_lat double prec
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN toll_confidence text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride DROP COLUMN traveled_distance_value;
+ALTER TABLE atlas_app.ride DROP COLUMN chargeable_distance_value;

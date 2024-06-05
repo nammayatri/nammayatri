@@ -72,6 +72,9 @@ SearchRequest:
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
     riderPreferredOption: Maybe RiderPreferredOption
+    distanceUnit: Maybe DistanceUnit
+    distance: Maybe Centesimal
+    maxDistance: Maybe Centesimal
 
   sqlType:
     toLocationId : character varying(36)
@@ -84,14 +87,6 @@ SearchRequest:
     fromLocationId: character varying(36)
 
   beamFields:
-    distance:
-      distance: Maybe Centesimal
-      distanceValue: Maybe HighPrecDistance
-    distanceUnit:
-      distanceUnit: Maybe DistanceUnit
-    maxDistance:
-      maxDistance: Maybe Centesimal
-      maxDistanceValue: Maybe HighPrecDistance
     fromLocation:
       fromLocationId: Maybe Text
     toLocation:
@@ -108,9 +103,7 @@ SearchRequest:
     fromLocationId: (Just $ Kernel.Types.Id.getId ((.id) fromLocation))|E
     toLocationId: (Kernel.Types.Id.getId <$> (toLocation <&> (.id)))|E
     distance: (Kernel.Utils.Common.getHighPrecMeters <$> distance)|E
-    distanceValue: Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit)|I
     maxDistance: (Kernel.Utils.Common.getHighPrecMeters <$> maxDistance)|E
-    maxDistanceValue: Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit)|I
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
     customerExtraFee: (customerExtraFee <&> (.amountInt))|E
     customerExtraFeeAmount: (customerExtraFee <&> (.amount))|E

@@ -68,3 +68,10 @@ ALTER TABLE atlas_app.merchant ADD COLUMN arriving_pickup_threshold double preci
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant ADD COLUMN arriving_pickup_threshold_meters integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant DROP COLUMN edit_pickup_distance_threshold_value;
+ALTER TABLE atlas_app.merchant DROP COLUMN driver_distance_threshold_from_pickup_value;
+ALTER TABLE atlas_app.merchant DROP COLUMN arrived_pickup_threshold_value;

@@ -45,9 +45,6 @@ RentalDetails:
     deadKmFare: "0"
 
   beamFields:
-    includedKmPerHr:
-      includedDistancePerHrValue: Maybe HighPrecDistance # FIXME can we remove this field from Beam code?
-      includedKmPerHr: Kilometers
     baseFare:
       baseFare: Money
       currency: Maybe Currency
@@ -90,7 +87,6 @@ RentalDetails:
     currency: Just $ (.currency) baseFare|E
     nightShiftStart: (.nightShiftStart) <$> nightShiftInfo|E
     nightShiftEnd: (.nightShiftEnd) <$> nightShiftInfo|E
-    includedDistancePerHrValue: Kernel.Prelude.Just . Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit|I
     distanceUnit: Kernel.Prelude.Just|I
     deadKmFare: (.amount)|I
 

@@ -16,7 +16,6 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.Ride as Beam
 import qualified Storage.Queries.Extra.Transformers.Ride
-import qualified Storage.Queries.Transformers.Distance
 
 instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
   fromTType' (Beam.RideT {..}) = do
@@ -90,7 +89,6 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.bookingId = Kernel.Types.Id.getId bookingId,
         Beam.bppRideId = Kernel.Types.Id.getId bppRideId,
         Beam.chargeableDistance = chargeableDistance,
-        Beam.chargeableDistanceValue = Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) chargeableDistance,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
         Beam.clientOsType = clientDevice <&> (.deviceType),
@@ -129,7 +127,6 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.totalFare = Kernel.Prelude.fmap (.amount) totalFare,
         Beam.trackingUrl = Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl trackingUrl,
         Beam.traveledDistance = traveledDistance,
-        Beam.traveledDistanceValue = Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) traveledDistance,
         Beam.updatedAt = updatedAt,
         Beam.vehicleColor = vehicleColor,
         Beam.vehicleModel = vehicleModel,

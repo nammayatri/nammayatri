@@ -15,7 +15,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.Quote as Beam
-import qualified Storage.Queries.Transformers.Distance
 import Storage.Queries.Transformers.Quote
 import qualified Storage.Queries.Transformers.Quote
 
@@ -81,7 +80,6 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.currency = Just ((.currency) estimatedFare),
         Beam.discount = discount <&> (.amount),
         Beam.distanceToNearestDriver = Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails),
-        Beam.distanceToNearestDriverValue = Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit <$> Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails),
         Beam.driverOfferId = Storage.Queries.Transformers.Quote.getDriverOfferId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails),
         Beam.fareProductType = Storage.Queries.Transformers.Quote.getfareProduct (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails),
         Beam.rentalDetailsId = Storage.Queries.Transformers.Quote.getRentalDetailsId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails),

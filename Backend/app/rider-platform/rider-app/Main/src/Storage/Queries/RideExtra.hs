@@ -36,7 +36,6 @@ import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.OrphanInstances.Ride ()
 import Storage.Queries.Person ()
-import Storage.Queries.Transformers.Distance (toDistanceValue)
 import Tools.Metrics (CoreMetrics)
 
 createRide' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
@@ -102,7 +101,6 @@ updateMultiple rideId ride = do
       Se.Set BeamR.totalFare (ride.totalFare <&> (.amount)),
       Se.Set BeamR.currency (ride.fare <&> (.currency)),
       Se.Set BeamR.chargeableDistance $ ride.chargeableDistance,
-      Se.Set BeamR.chargeableDistanceValue $ toDistanceValue distanceUnit <$> ride.chargeableDistance,
       Se.Set BeamR.distanceUnit $ Just distanceUnit,
       Se.Set BeamR.rideStartTime ride.rideStartTime,
       Se.Set BeamR.rideEndTime ride.rideEndTime,

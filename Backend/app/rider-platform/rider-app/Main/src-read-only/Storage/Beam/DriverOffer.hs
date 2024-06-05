@@ -17,7 +17,6 @@ data DriverOfferT f = DriverOfferT
   { bppQuoteId :: B.C f Kernel.Prelude.Text,
     createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     distanceToPickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
-    distanceToPickupValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverName :: B.C f Kernel.Prelude.Text,
     durationToPickup :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

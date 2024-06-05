@@ -15,7 +15,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.BookingCancellationReason as Beam
 import Storage.Queries.Transformers.BookingCancellationReason
-import qualified Storage.Queries.Transformers.Distance
 
 instance FromTType' Beam.BookingCancellationReason Domain.Types.BookingCancellationReason.BookingCancellationReason where
   fromTType' (Beam.BookingCancellationReasonT {..}) = do
@@ -48,7 +47,6 @@ instance ToTType' Beam.BookingCancellationReason Domain.Types.BookingCancellatio
         Beam.driverCancellationLocationLat = driverCancellationLocation <&> (.lat),
         Beam.driverCancellationLocationLon = driverCancellationLocation <&> (.lon),
         Beam.driverDistToPickup = driverDistToPickup,
-        Beam.driverDistToPickupValue = Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) driverDistToPickup,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.reasonCode = reasonCode,
         Beam.reasonStage = reasonStage,

@@ -32,16 +32,12 @@ BookingCancellationReason:
   beamType:
     createdAt: Maybe UTCTime
     updatedAt: Maybe UTCTime
+    distanceUnit: Maybe DistanceUnit
 
   beamFields:
     driverCancellationLocation:
       driverCancellationLocationLat: Maybe Double
       driverCancellationLocationLon: Maybe Double
-    driverDistToPickup:
-      driverDistToPickup: Maybe Meters
-      driverDistToPickupValue : Maybe HighPrecDistance
-    distanceUnit:
-      distanceUnit: Maybe DistanceUnit
 
   fromTType:
     driverCancellationLocation: Kernel.External.Maps.LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon|E
@@ -55,7 +51,6 @@ BookingCancellationReason:
     driverCancellationLocationLon: (driverCancellationLocation <&> (.lon))|E
     createdAt: Kernel.Prelude.Just|I
     updatedAt: Kernel.Prelude.Just|I
-    driverDistToPickupValue: Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit)|I
     distanceUnit: Kernel.Prelude.Just|I
 
   constraints:

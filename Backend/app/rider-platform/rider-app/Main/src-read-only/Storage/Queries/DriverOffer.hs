@@ -16,7 +16,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOffer as Beam
-import qualified Storage.Queries.Transformers.Distance
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverOffer.DriverOffer -> m ())
 create = createWithKV
@@ -43,7 +42,6 @@ updateByPrimaryKey (Domain.Types.DriverOffer.DriverOffer {..}) = do
     [ Se.Set Beam.bppQuoteId bppQuoteId,
       Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
       Se.Set Beam.distanceToPickup distanceToPickup,
-      Se.Set Beam.distanceToPickupValue (Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) distanceToPickup),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverName driverName,
       Se.Set Beam.durationToPickup durationToPickup,
@@ -84,7 +82,6 @@ instance ToTType' Beam.DriverOffer Domain.Types.DriverOffer.DriverOffer where
       { Beam.bppQuoteId = bppQuoteId,
         Beam.createdAt = Kernel.Prelude.Just createdAt,
         Beam.distanceToPickup = distanceToPickup,
-        Beam.distanceToPickupValue = Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) distanceToPickup,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverName = driverName,
         Beam.durationToPickup = durationToPickup,

@@ -71,3 +71,9 @@ ALTER TABLE atlas_app.booking ADD COLUMN vehicle_service_tier_air_conditioned do
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN special_location_name text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking DROP COLUMN estimated_distance_value;
+ALTER TABLE atlas_app.booking DROP COLUMN distance_value;

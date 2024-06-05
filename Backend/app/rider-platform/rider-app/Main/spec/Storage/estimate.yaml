@@ -131,12 +131,6 @@ Estimate:
     vehicleServiceTierType:
       vehicleVariant: VehicleServiceTierType
 
-    estimatedDistance:
-      estimatedDistance: Maybe HighPrecMeters
-      estimatedDistanceValue: Maybe HighPrecDistance
-    distanceUnit:
-      distanceUnit: Maybe DistanceUnit
-
     tripTerms:
       tripTermsId: Maybe Text
 
@@ -166,6 +160,7 @@ Estimate:
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
     clientOsVersion: Maybe Text
+    distanceUnit: Maybe DistanceUnit
 
   fromTType:
     totalFareRange: mkFareRange
@@ -204,7 +199,6 @@ Estimate:
     oldNightShiftCharge: ((.oldNightShiftCharge) =<< nightShiftInfo)|E
     nightShiftStart: (nightShiftInfo <&> (.nightShiftStart))|E
     nightShiftEnd: (nightShiftInfo <&> (.nightShiftEnd))|E
-    estimatedDistanceValue: Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit)|I
     distanceUnit: Kernel.Prelude.Just|I
     clientBundleVersion: (fmap Kernel.Utils.Version.versionToText clientBundleVersion)|E
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E

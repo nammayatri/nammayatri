@@ -17,7 +17,6 @@ import qualified Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as Beam
 import Storage.Queries.EstimateExtra as ReExport
-import qualified Storage.Queries.Transformers.Distance
 import Storage.Queries.Transformers.Estimate
 
 findAllBySRId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Estimate.Estimate])
@@ -63,7 +62,6 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driversLocation driversLocation,
       Se.Set Beam.estimatedDistance estimatedDistance,
-      Se.Set Beam.estimatedDistanceValue (Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) estimatedDistance),
       Se.Set Beam.estimatedDuration estimatedDuration,
       Se.Set Beam.estimatedFare ((.amount) estimatedFare),
       Se.Set Beam.estimatedPickupDuration estimatedPickupDuration,

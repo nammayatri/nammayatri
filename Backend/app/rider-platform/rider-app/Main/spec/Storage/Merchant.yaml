@@ -79,15 +79,6 @@ Merchant:
     geofencingConfig:
       originRestriction: GeoRestriction
       destinationRestriction: GeoRestriction
-    editPickupDistanceThreshold:
-      editPickupDistanceThreshold: HighPrecMeters
-      editPickupDistanceThresholdValue: Maybe HighPrecDistance
-    driverDistanceThresholdFromPickup:
-      driverDistanceThresholdFromPickup: HighPrecMeters
-      driverDistanceThresholdFromPickupValue: Maybe HighPrecDistance
-    arrivedPickupThreshold:
-      arrivedPickupThreshold: Maybe Meters
-      arrivedPickupThresholdValue: Maybe HighPrecDistance
     arrivingPickupThreshold:
       arrivingPickupThresholdMeters: Maybe Meters
       arrivingPickupThreshold: Maybe HighPrecDistance
@@ -99,6 +90,7 @@ Merchant:
     driverOnTheWayNotifyExpiry: Maybe Seconds
     arrivingPickupThreshold: HighPrecDistance
     distanceUnit: Maybe DistanceUnit
+    arrivedPickupThreshold: Maybe Meters
 
   toTType:
     city: defaultCity|E
@@ -111,10 +103,7 @@ Merchant:
     scheduleRideBufferTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     driverOnTheWayNotifyExpiry: (Just driverOnTheWayNotifyExpiry)|E
     distanceUnit: Kernel.Prelude.Just|I
-    editPickupDistanceThresholdValue: Kernel.Prelude.Just . Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit|I
-    driverDistanceThresholdFromPickupValue: Kernel.Prelude.Just . Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit|I
     arrivedPickupThreshold: Kernel.Prelude.Just|I
-    arrivedPickupThresholdValue: Kernel.Prelude.Just . Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit|I
     arrivingPickupThreshold: Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit|I
     arrivingPickupThresholdMeters: Kernel.Prelude.Just|I
 

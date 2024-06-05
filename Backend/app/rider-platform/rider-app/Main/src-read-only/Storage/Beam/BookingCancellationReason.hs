@@ -22,7 +22,6 @@ data BookingCancellationReasonT f = BookingCancellationReasonT
     driverCancellationLocationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     driverCancellationLocationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     driverDistToPickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
-    driverDistToPickupValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     reasonCode :: B.C f (Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationReasonCode),
     reasonStage :: B.C f (Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationStage),
