@@ -231,23 +231,25 @@ buildTripQuoteDetail ::
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   Text ->
   m TripQuoteDetail
-buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge estimateOrQuoteId = do
+buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId = do
   vehicleServiceTierName <-
     case mbVehicleServiceTierName of
       Just name -> return name
       _ -> do
         item <- CQDVST.findByServiceTierTypeAndCityId vehicleServiceTier searchReq.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
         return item.name
-  (driverPickUpCharge, driverMinFee, driverMaxFee, driverStepFee, driverDefaultStepFee) <-
-    case (mDriverPickUpCharge, mbDriverMinFee, mbDriverMaxFee, mbStepFee, mbDefaultStepFee) of
-      (Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee) -> return (Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee)
+  (driverParkingCharge, driverPickUpCharge, driverMinFee, driverMaxFee, driverStepFee, driverDefaultStepFee) <-
+    case (mbDriverParkingCharge, mDriverPickUpCharge, mbDriverMinFee, mbDriverMaxFee, mbStepFee, mbDefaultStepFee) of
+      (Just parkingCharge, Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee) -> return (Just parkingCharge, Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee)
       _ -> do
         farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId (Just (TransactionId (Id searchReq.transactionId)))
         let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
         return $
-          ( USRD.extractDriverPickupCharges farePolicy.farePolicyDetails,
+          ( farePolicy.parkingCharge,
+            USRD.extractDriverPickupCharges farePolicy.farePolicyDetails,
             mbDriverExtraFeeBounds <&> (.minFee),
             mbDriverExtraFeeBounds <&> (.maxFee),
             mbDriverExtraFeeBounds <&> (.stepFee),

@@ -131,6 +131,7 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData isValueAdd
           specialZoneExtraTip = Nothing,
           specialZoneExtraTipWithCurrency = Nothing,
           driverPickUpCharges = Nothing,
+          parkingCharge = Nothing,
           driverPickUpChargesWithCurrency = Nothing,
           useSilentFCMForForwardBatch = False,
           isOnRide = False,

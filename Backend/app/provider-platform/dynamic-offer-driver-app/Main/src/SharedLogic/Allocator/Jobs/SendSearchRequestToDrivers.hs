@@ -95,12 +95,14 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
           estimate <- B.runInReplica $ QEst.findById (Id estimateId) >>= fromMaybeM (EstimateNotFound estimateId)
           let mbDriverExtraFeeBounds = ((,) <$> estimate.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> estimate.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
               driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
-          SST.buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge estimate.id.getId
+              driverParkingCharge = join $ (.parkingCharge) <$> estimate.farePolicy
+          SST.buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId
         else do
           quote <- B.runInReplica $ QQuote.findById (Id estimateId) >>= fromMaybeM (QuoteNotFound estimateId)
           let mbDriverExtraFeeBounds = ((,) <$> searchReq.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> quote.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
               driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> quote.farePolicy)
-          SST.buildTripQuoteDetail searchReq quote.tripCategory quote.vehicleServiceTier quote.vehicleServiceTierName (quote.estimatedFare + fromMaybe 0 searchTry.customerExtraFee) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge quote.id.getId
+              driverParkingCharge = join $ (.parkingCharge) <$> quote.farePolicy
+          SST.buildTripQuoteDetail searchReq quote.tripCategory quote.vehicleServiceTier quote.vehicleServiceTierName (quote.estimatedFare + fromMaybe 0 searchTry.customerExtraFee) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge quote.id.getId
   let driverSearchBatchInput =
         DriverSearchBatchInput
           { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
