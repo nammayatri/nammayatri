@@ -1303,3 +1303,4 @@ getBN stringKey =
         NOIDA -> "নয়ডা"
         GURUGRAM -> "গুরুগ্রাম"
         WAITING_CHARGES -> "অপেক্ষার খরচ"
+        SILIGURI -> "শিলিগুড়ি"

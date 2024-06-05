@@ -1468,3 +1468,8 @@ getKN stringKey =
         ONLY_3_MORE_RIDES_FOR_50_COINS -> "ಮಾತ್ರ 3 ಸವಾರಿಗಳಿಗಾಗಿ 50 ನಾಣ್ಯಗಳು"
         YOU_GOT_50_COINS -> "ನೀವು 50 ನಾಣ್ಯಗಳನ್ನು ಪಡೆದಿದ್ದೀರಿ"
         YOU_GOT_10_COINS -> "ನೀವು 10 ನಾಣ್ಯಗಳನ್ನು ಪಡೆದಿದ್ದೀರಿ"
+        REGISTER_YOUR_BIKE -> "ನಿಮ್ಮ ಬೈಕನ್ನು ನೋಂದಣಿ ಮಾಡಿ"
+        BIKE_TAXI -> "ಬೈಕ್ ಟ್ಯಾಕ್ಸಿ"
+        FIRST_RIDE_FREE count -> "ಮೊದಲ " <> count <> " ಪ್ರಯಾಣ ಉಚಿತ"
+        FIRST_RIDES_FREE count -> "ಮೊದಲ " <> count <> " ಪ್ರಯಾಣಗಳು ಉಚಿತ"
+
