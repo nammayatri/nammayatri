@@ -432,7 +432,6 @@ driverMapsHeaderView push state =
                       ]
                   ]
                 , offlineNavigationLinks push state
-                , accessibilityHeaderView push state (getAccessibilityHeaderText state)
               ] <> [gotoRecenterAndSupport state push]
                 <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
             , linearLayout
@@ -904,11 +903,12 @@ driverDetail push state =
   , background Color.white900
   , clickable true
   , margin (MarginTop 5)
-  ] if rideAccStage then [
+  ] if rideAccStage && state.data.cityConfig.enableAdvancedBooking then [
         tripStageTopBar push state
     ]
     else [ 
       driverProfile push state,
+      accessibilityHeaderView push state (getAccessibilityHeaderText state),
       defaultTopBar
     ]
 
@@ -924,8 +924,9 @@ driverDetail push state =
               else if state.props.driverStatusSet == Online then ("2," <> Color.darkMint)
               else ("2," <> Color.blue800)
       , cornerRadius 50.0
+      , alpha if rideAccStage then 0.5 else 1.0
       , margin (Margin 0 10 10 10)
-      , visibility $ boolToVisibility $ not $ rideAccStage
+      , visibility $ boolToVisibility $ isNothing state.data.activeRide.disabilityTag
       ](DA.mapWithIndex (\index item ->
           driverStatusPill item push state index
         ) driverStatusIndicators
@@ -943,7 +944,7 @@ driverProfile push state =
   in
    linearLayout
     [ width WRAP_CONTENT
-    , height MATCH_PARENT
+    , height WRAP_CONTENT
     , gravity CENTER
     , padding $ Padding 16 20 12 16
     ][ linearLayout [
@@ -973,22 +974,23 @@ tripStageTopBar push state =
         width MATCH_PARENT,
         height WRAP_CONTENT,
         background Color.white900,
-        margin $ MarginRight 16
+        margin $ MarginRight 16,
+        gravity CENTER_VERTICAL
       ] $ [ 
         driverProfile push state
+      , advanceBookingSwitch
       ] 
-      <> (if cityConfig.enableAdvancedBooking then [advanceBookingSwitch] else [])
       <> ( 
-        map (\(Tuple childs action) -> (tripStageTopBarPill action) childs) [
-          -- [
-          --   pillIcon  "ny_ic_blue_shield_white_plus",
-          --   pillText  "Safety Center"
-          -- ],
-         ( Tuple [ pillIcon "ny_ic_red_triangle_warning",
-            pillText $ getString REPORT_ISSUE
-          ] (const HelpAndSupportScreen))
-        ]
-      )
+            map (\(Tuple childs action) -> (tripStageTopBarPill action) childs) [
+              -- [
+              --   pillIcon  "ny_ic_blue_shield_white_plus",
+              --   pillText  "Safety Center"
+              -- ],
+            ( Tuple [ pillIcon "ny_ic_red_triangle_warning",
+                pillText $ getString REPORT_ISSUE
+              ] (const HelpAndSupportScreen))
+            ]
+          )
     ]
   where 
     tripStageTopBarPill action = 
@@ -1048,7 +1050,7 @@ accessibilityHeaderView push state accessibilityHeaderconfig =
   , height WRAP_CONTENT
   , gravity LEFT
   , visibility $ boolToVisibility $ isJust state.data.activeRide.disabilityTag && not (isJust state.data.advancedRideData)
-  , margin $ Margin 12 16 12 0
+  , margin $ MarginHorizontal 12 12
   , background accessibilityHeaderconfig.background
   , cornerRadius 50.0
   , padding $ Padding 16 8 16 8
