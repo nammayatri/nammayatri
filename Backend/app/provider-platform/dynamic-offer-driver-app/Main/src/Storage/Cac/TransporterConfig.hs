@@ -53,7 +53,7 @@ findByMerchantOpCityId id mbstickId = do
                 logDebug $ "TransporterConfig not found in memory, fetching from DB for context: " <> show context
                 CMTC.getTransporterConfigFromDB id
             )
-  pure config
+  setConfigInMemory id config
 
 --------------------------------------------------------- Things can't be handled by cac --------------------------------------------------
 
