@@ -20,7 +20,7 @@ module Utils.Common.CacUtils
 where
 
 import qualified Client.Main as CM
-import qualified Control.Concurrent as CC
+-- import qualified Control.Concurrent as CC
 import Data.Aeson
 import qualified Data.Bifunctor as DBF
 import Data.Text as Text
@@ -35,7 +35,7 @@ import qualified Kernel.Storage.Beam.SystemConfigs as BeamSC
 import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
 import Kernel.Tools.Metrics.CoreMetrics.Types (incrementSystemConfigsFailedCounter)
 import Kernel.Types.Cac
-import Kernel.Types.Error
+-- import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified System.Environment as Se
 import Utils.Common.Cac.ContextConstants as Reexport
@@ -99,14 +99,16 @@ runPolling tenant = do
   pure ()
 
 createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, FromJSON b, ToJSON b, HasSchemaName BeamSC.SystemConfigsT) => Int -> [(CacContext, Value)] -> CacPrefix -> m (Maybe b)
-createThroughConfigHelper toss context cpf = do
-  cacConfig <- asks (.cacConfig)
-  config' <- KSQS.findById $ Text.pack cacConfig.tenant
-  logError $ "Config not found for " <> getTableName cpf <> " in cac. Creating client through config"
-  config <- maybe (throwError $ InternalError ("config not found for" <> getTableName cpf <> " in db")) pure config'
-  _ <- initializeCACThroughConfig CM.createClientFromConfig config cacConfig.tenant cacConfig.host (fromIntegral cacConfig.interval)
-  _ <- liftIO . CC.forkIO $ runPolling cacConfig.tenant
-  getConfigFromCACStrictCommon toss context cpf
+createThroughConfigHelper _ _ _ = do
+  pure Nothing
+
+-- cacConfig <- asks (.cacConfig)
+-- config' <- KSQS.findById $ Text.pack cacConfig.tenant
+-- logError $ "Config not found for " <> getTableName cpf <> " in cac. Creating client through config"
+-- config <- maybe (throwError $ InternalError ("config not found for" <> getTableName cpf <> " in db")) pure config'
+-- _ <- initializeCACThroughConfig CM.createClientFromConfig config cacConfig.tenant cacConfig.host (fromIntegral cacConfig.interval)
+-- _ <- liftIO . CC.forkIO $ runPolling cacConfig.tenant
+-- getConfigFromCACStrictCommon toss context cpf
 
 getConfigFromCACCommon ::
   ( CacheFlow m r,
