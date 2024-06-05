@@ -20,7 +20,7 @@ DriverOffer:
     merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
     driverName : Text
     durationToPickup : Maybe Int
-    distanceToPickup : Maybe Distance
+    distanceToPickup : Maybe HighPrecMeters
     distanceUnit : DistanceUnit
     validTill : UTCTime
     bppQuoteId : Text
@@ -41,14 +41,12 @@ DriverOffer:
 
   fromTType:
     createdAt: Kernel.Prelude.fromMaybe updatedAt|I
-    distanceToPickup: Kernel.Types.Common.mkDistanceWithDefault distanceUnit distanceToPickupValue <$> distanceToPickup|E
+    distanceToPickup: distanceToPickup|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
 
-  # distanceUnit should be the same for all fields
   toTType:
     createdAt: Kernel.Prelude.Just|I
-    distanceToPickup: (Kernel.Types.Common.distanceToHighPrecMeters <$> distanceToPickup)|E
-    distanceToPickupValue: (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> distanceToPickup)|E
+    distanceToPickupValue: Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit)|I
     distanceUnit: Kernel.Prelude.Just|I
 
   constraints:

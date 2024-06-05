@@ -26,7 +26,7 @@ import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Tools.Error
 
-getDistance :: (Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Types.Common.Distance)
+getDistance :: (Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters)
 getDistance = \case
   DRB.OneWayDetails details -> Just details.distance
   DRB.RentalDetails _ -> Nothing
@@ -79,7 +79,7 @@ getInitialPickupLocation mappings fl = do
       let initialPickupLocMapping = last sortedPickupLocationMap
       QL.findById initialPickupLocMapping.locationId >>= fromMaybeM (InternalError "Incorrect Location Mapping")
 
-fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings distance fareProductType toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue = do
+fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings distance fareProductType toLocationId fromLocationId stopLocationId otpCode = do
   logTagDebug ("bookingId:-" <> id) $ "Location Mappings:-" <> show mappings
   if null mappings
     then do
@@ -122,7 +122,7 @@ fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings dis
     buildOneWayDetails mbToLocid = do
       toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
       toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for one way booking")
-      distance' <- (mkDistanceWithDefault distanceUnit distanceValue <$> distance) & fromMaybeM (InternalError "distance is null for one way booking")
+      distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
       pure
         DRB.OneWayBookingDetails
           { toLocation = toLocation,
@@ -131,7 +131,7 @@ fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings dis
     buildInterCityDetails mbToLocid = do
       toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
       toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for one way booking")
-      distance' <- (mkDistanceWithDefault distanceUnit distanceValue <$> distance) & fromMaybeM (InternalError "distance is null for one way booking")
+      distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
       pure
         DRB.InterCityBookingDetails
           { toLocation = toLocation,
@@ -140,7 +140,7 @@ fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings dis
     buildOneWaySpecialZoneDetails mbToLocid = do
       toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
       toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for one way special zone booking")
-      distance' <- (mkDistanceWithDefault distanceUnit distanceValue <$> distance) & fromMaybeM (InternalError "distance is null for one way booking")
+      distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
       pure
         DRB.OneWaySpecialZoneBookingDetails
           { distance = distance',

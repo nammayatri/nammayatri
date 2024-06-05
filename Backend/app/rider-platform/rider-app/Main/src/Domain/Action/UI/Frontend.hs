@@ -159,10 +159,10 @@ handleRideTracking personId merchantId (Just isPolling) DPFS.RIDE_PICKUP {..} = 
             unless (isJust mbIsOnTheWayNotified) $ do
               Notify.notifyDriverOnTheWay personId
               Redis.setExp driverOnTheWay () merchant.driverOnTheWayNotifyExpiry.getSeconds
-            when (isNothing mbHasReachedNotified && distance <= distanceToMeters merchant.arrivedPickupThreshold) $ do
+            when (isNothing mbHasReachedNotified && distance <= merchant.arrivedPickupThreshold) $ do
               Notify.notifyDriverHasReached personId otp vehicleNumber
               Redis.setExp driverHasReached () 1500
-            when (isNothing mbHasReachingNotified && distance <= distanceToMeters merchant.arrivingPickupThreshold) $ do
+            when (isNothing mbHasReachingNotified && distance <= merchant.arrivingPickupThreshold) $ do
               Notify.notifyDriverReaching personId otp vehicleNumber
               Redis.setExp driverReaching () 1500
       where

@@ -16,8 +16,9 @@ import qualified Tools.Beam.UtilsTH
 data RentalDetails = RentalDetails
   { baseFare :: Kernel.Types.Common.Price,
     deadKmFare :: Kernel.Types.Common.Price,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     id :: Kernel.Types.Id.Id Domain.Types.RentalDetails.RentalDetails,
-    includedDistancePerHr :: Kernel.Types.Common.Distance,
+    includedKmPerHr :: Kernel.Types.Common.Kilometers,
     nightShiftInfo :: Kernel.Prelude.Maybe Domain.Types.Extra.RentalDetails.NightShiftInfo,
     perExtraKmRate :: Kernel.Types.Common.Price,
     perExtraMinRate :: Kernel.Types.Common.Price,

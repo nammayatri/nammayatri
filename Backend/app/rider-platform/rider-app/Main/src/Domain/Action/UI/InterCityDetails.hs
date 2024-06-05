@@ -18,5 +18,8 @@ mkInterCityDetailsAPIEntity InterCityDetails {..} tollCharges = do
       plannedPerKmRateOneWay = mkPriceAPIEntity plannedPerKmRateOneWay,
       plannedPerKmRateRoundTrip = mkPriceAPIEntity plannedPerKmRateRoundTrip,
       nightShiftInfo = mkNightShiftInfoAPIEntity <$> nightShiftInfo,
+      kmPerPlannedExtraHour = convertMetersToDistance distanceUnit . kilometersToMeters $ kmPerPlannedExtraHour,
       ..
     }
+
+-- kmPerPlannedExtraHour = kmPerPlannedExtraHour,

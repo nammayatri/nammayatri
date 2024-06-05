@@ -66,7 +66,7 @@ data OneWayQuoteAPIDetails = OneWayQuoteAPIDetails
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data OneWayQuoteDetails = OneWayQuoteDetails {distanceToNearestDriver :: Kernel.Types.Common.Distance} deriving (Generic, Show)
+data OneWayQuoteDetails = OneWayQuoteDetails {distanceToNearestDriver :: Kernel.Types.Common.HighPrecMeters} deriving (Generic, Show)
 
 data OneWaySpecialZoneQuoteAPIDetails = OneWaySpecialZoneQuoteAPIDetails {distanceToNearestDriver :: Kernel.Types.Common.HighPrecMeters, quoteId :: Kernel.Prelude.Text}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

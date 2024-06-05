@@ -150,10 +150,10 @@ getDriverLoc rideId = do
         unless (isJust mbIsOnTheWayNotified) $ do
           Notify.notifyDriverOnTheWay booking.riderId
           Redis.setExp driverOnTheWay () merchant.driverOnTheWayNotifyExpiry.getSeconds
-        when (isNothing mbHasReachedNotified && distance <= distanceToMeters merchant.arrivedPickupThreshold) $ do
+        when (isNothing mbHasReachedNotified && distance <= merchant.arrivedPickupThreshold) $ do
           Notify.notifyDriverHasReached booking.riderId ride.otp ride.vehicleNumber
           Redis.setExp driverHasReached () 1500
-        when (isNothing mbHasReachingNotified && distance <= distanceToMeters merchant.arrivingPickupThreshold) $ do
+        when (isNothing mbHasReachingNotified && distance <= merchant.arrivingPickupThreshold) $ do
           Notify.notifyDriverReaching booking.riderId ride.otp ride.vehicleNumber
           Redis.setExp driverReaching () 1500
   return $
@@ -240,7 +240,7 @@ editLocation rideId (_, merchantId) req = do
       let initialLatLong = Maps.LatLong {lat = initialLocationForRide.lat, lon = initialLocationForRide.lon}
           currentLatLong = pickup.gps
       let distance = CD.distanceBetweenInMeters initialLatLong currentLatLong
-      when (distance > distanceToHighPrecMeters merchant.editPickupDistanceThreshold) do
+      when (distance > merchant.editPickupDistanceThreshold) do
         throwError EditPickupLocationNotServiceable
 
       res <- try @_ @SomeException (CallBPP.callGetDriverLocation ride.trackingUrl)
@@ -248,7 +248,7 @@ editLocation rideId (_, merchantId) req = do
         Right res' -> do
           let curDriverLocation = res'.currPoint
           let distanceOfDriverFromChangingPickup = CD.distanceBetweenInMeters curDriverLocation currentLatLong
-          when (distanceOfDriverFromChangingPickup < distanceToHighPrecMeters merchant.driverDistanceThresholdFromPickup) do
+          when (distanceOfDriverFromChangingPickup < merchant.driverDistanceThresholdFromPickup) do
             throwError $ DriverAboutToReachAtInitialPickup (show distanceOfDriverFromChangingPickup)
         Left err -> do
           logTagInfo "DriverLocationFetchFailed" $ show err
@@ -292,7 +292,7 @@ editLocation rideId (_, merchantId) req = do
       QL.create newDropLocation
       startLocMapping <- QLM.getLatestStartByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> booking.id.getId)
       oldDropLocMapping <- QLM.getLatestEndByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingId: " <> booking.id.getId)
-      bookingUpdateReq <- buildbookingUpdateRequest booking
+      bookingUpdateReq <- buildBookingUpdateRequest booking
       QBUR.create bookingUpdateReq
       startLocMap <- SLM.buildPickUpLocationMapping startLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
       oldDropLocMap <- SLM.buildDropLocationMapping oldDropLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
@@ -339,8 +339,8 @@ buildLocation location = do
         address = location.address
       }
 
-buildbookingUpdateRequest :: MonadFlow m => DB.Booking -> m DBUR.BookingUpdateRequest
-buildbookingUpdateRequest booking = do
+buildBookingUpdateRequest :: MonadFlow m => DB.Booking -> m DBUR.BookingUpdateRequest
+buildBookingUpdateRequest booking = do
   guid <- generateGUID
   now <- getCurrentTime
   return $
@@ -357,7 +357,7 @@ buildbookingUpdateRequest booking = do
         estimatedFare = Nothing,
         estimatedDistance = Nothing,
         oldEstimatedFare = booking.estimatedFare.amount,
-        oldEstimatedDistance = distanceToHighPrecMeters <$> booking.estimatedDistance,
+        oldEstimatedDistance = booking.estimatedDistance,
         totalDistance = Nothing,
         travelledDistance = Nothing,
         distanceUnit = booking.distanceUnit

@@ -38,7 +38,7 @@ data Booking = Booking
     createdAt :: Kernel.Prelude.UTCTime,
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
-    estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
+    estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedFare :: Kernel.Types.Common.Price,
     estimatedTotalFare :: Kernel.Types.Common.Price,
@@ -84,11 +84,11 @@ data BookingDetails
   | InterCityDetails Domain.Types.Booking.InterCityBookingDetails
   deriving (Show)
 
-data InterCityBookingDetails = InterCityBookingDetails {distance :: Kernel.Types.Common.Distance, toLocation :: Domain.Types.Location.Location} deriving (Show)
+data InterCityBookingDetails = InterCityBookingDetails {distance :: Kernel.Types.Common.HighPrecMeters, toLocation :: Domain.Types.Location.Location} deriving (Show)
 
-data OneWayBookingDetails = OneWayBookingDetails {distance :: Kernel.Types.Common.Distance, toLocation :: Domain.Types.Location.Location} deriving (Show)
+data OneWayBookingDetails = OneWayBookingDetails {distance :: Kernel.Types.Common.HighPrecMeters, toLocation :: Domain.Types.Location.Location} deriving (Show)
 
-data OneWaySpecialZoneBookingDetails = OneWaySpecialZoneBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
+data OneWaySpecialZoneBookingDetails = OneWaySpecialZoneBookingDetails {distance :: Kernel.Types.Common.HighPrecMeters, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
   deriving (Show)
 
 data RentalBookingDetails = RentalBookingDetails {stopLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location} deriving (Show)

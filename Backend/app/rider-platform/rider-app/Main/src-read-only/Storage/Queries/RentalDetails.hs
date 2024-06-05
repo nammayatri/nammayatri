@@ -8,12 +8,15 @@ import qualified Domain.Types.RentalDetails
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.RentalDetails as Beam
+import qualified Storage.Queries.Transformers.Distance
 import qualified Storage.Queries.Transformers.RentalDetails
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RentalDetails.RentalDetails -> m ())
@@ -29,8 +32,9 @@ instance FromTType' Beam.RentalDetails Domain.Types.RentalDetails.RentalDetails 
         Domain.Types.RentalDetails.RentalDetails
           { baseFare = Kernel.Utils.Common.mkPriceWithDefault baseFareAmount currency baseFare,
             deadKmFare = Kernel.Utils.Common.mkPrice currency deadKmFare,
+            distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             id = Kernel.Types.Id.Id id,
-            includedDistancePerHr = Kernel.Utils.Common.mkDistanceWithDefaultMeters distanceUnit includedDistancePerHrValue $ Kernel.Utils.Common.kilometersToMeters includedKmPerHr,
+            includedKmPerHr = includedKmPerHr,
             nightShiftInfo = Storage.Queries.Transformers.RentalDetails.mkNightShiftInfo nightShiftCharge nightShiftChargeAmount nightShiftEnd nightShiftStart currency,
             perExtraKmRate = Kernel.Utils.Common.mkPriceWithDefault perExtraKmRateAmount currency perExtraKmRate,
             perExtraMinRate = Kernel.Utils.Common.mkPriceWithDefault perExtraMinRateAmount currency perExtraMinRate,
@@ -45,10 +49,10 @@ instance ToTType' Beam.RentalDetails Domain.Types.RentalDetails.RentalDetails wh
         Beam.baseFareAmount = Just $ (.amount) baseFare,
         Beam.currency = Just $ (.currency) baseFare,
         Beam.deadKmFare = (.amount) deadKmFare,
+        Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.distanceUnit = Just $ (.unit) includedDistancePerHr,
-        Beam.includedDistancePerHrValue = Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) includedDistancePerHr) includedDistancePerHr,
-        Beam.includedKmPerHr = Kernel.Utils.Common.metersToKilometers $ Kernel.Utils.Common.distanceToMeters includedDistancePerHr,
+        Beam.includedDistancePerHrValue = (Kernel.Prelude.Just . Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) includedKmPerHr,
+        Beam.includedKmPerHr = includedKmPerHr,
         Beam.nightShiftCharge = (.amountInt) . (.nightShiftCharge) <$> nightShiftInfo,
         Beam.nightShiftChargeAmount = (.amount) . (.nightShiftCharge) <$> nightShiftInfo,
         Beam.nightShiftEnd = (.nightShiftEnd) <$> nightShiftInfo,

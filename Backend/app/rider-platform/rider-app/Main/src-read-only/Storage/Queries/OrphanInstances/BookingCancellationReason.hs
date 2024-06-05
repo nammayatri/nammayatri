@@ -15,6 +15,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.BookingCancellationReason as Beam
 import Storage.Queries.Transformers.BookingCancellationReason
+import qualified Storage.Queries.Transformers.Distance
 
 instance FromTType' Beam.BookingCancellationReason Domain.Types.BookingCancellationReason.BookingCancellationReason where
   fromTType' (Beam.BookingCancellationReasonT {..}) = do
@@ -28,7 +29,7 @@ instance FromTType' Beam.BookingCancellationReason Domain.Types.BookingCancellat
             createdAt = createdAt',
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             driverCancellationLocation = Kernel.External.Maps.LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon,
-            driverDistToPickup = Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit driverDistToPickupValue <$> driverDistToPickup,
+            driverDistToPickup = driverDistToPickup,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             reasonCode = reasonCode,
             reasonStage = reasonStage,
@@ -46,8 +47,8 @@ instance ToTType' Beam.BookingCancellationReason Domain.Types.BookingCancellatio
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverCancellationLocationLat = driverCancellationLocation <&> (.lat),
         Beam.driverCancellationLocationLon = driverCancellationLocation <&> (.lon),
-        Beam.driverDistToPickup = Kernel.Types.Common.distanceToMeters <$> driverDistToPickup,
-        Beam.driverDistToPickupValue = Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> driverDistToPickup,
+        Beam.driverDistToPickup = driverDistToPickup,
+        Beam.driverDistToPickupValue = Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) driverDistToPickup,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.reasonCode = reasonCode,
         Beam.reasonStage = reasonStage,

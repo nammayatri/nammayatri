@@ -13,18 +13,18 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Kernel.Utils.Common
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.Booking as Beam
 import qualified Storage.Queries.LocationMapping
 import Storage.Queries.Transformers.Booking
 import qualified Storage.Queries.Transformers.Booking
+import qualified Storage.Queries.Transformers.Distance
 import qualified Storage.Queries.TripTerms
 
 instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
   fromTType' (Beam.BookingT {..}) = do
     mappings <- Storage.Queries.LocationMapping.findByEntityId id
-    fromLocationAndBookingDetails' <- Storage.Queries.Transformers.Booking.fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings distance fareProductType toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue
+    fromLocationAndBookingDetails' <- Storage.Queries.Transformers.Booking.fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings distance fareProductType toLocationId fromLocationId stopLocationId otpCode
     backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
     clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
     clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
@@ -49,7 +49,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             createdAt = createdAt,
             discount = Kernel.Types.Common.mkPrice currency <$> discount,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
-            estimatedDistance = Kernel.Utils.Common.mkDistanceWithDefault distanceUnit estimatedDistanceValue <$> estimatedDistance,
+            estimatedDistance = estimatedDistance,
             estimatedDuration = estimatedDuration,
             estimatedFare = Kernel.Types.Common.mkPrice currency estimatedFare,
             estimatedTotalFare = Kernel.Types.Common.mkPrice currency estimatedTotalFare,
@@ -90,7 +90,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
     Beam.BookingT
       { Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = Kernel.Utils.Version.versionToText <$> backendConfigVersion,
-        Beam.distance = Kernel.Utils.Common.distanceToHighPrecMeters <$> distance,
+        Beam.distance = distance,
         Beam.fareProductType = getFareProductType bookingDetails,
         Beam.otpCode = getOtpCode bookingDetails,
         Beam.stopLocationId = getStopLocationId bookingDetails,
@@ -106,9 +106,9 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.createdAt = createdAt,
         Beam.discount = discount <&> (.amount),
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
-        Beam.distanceValue = Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance,
-        Beam.estimatedDistance = Kernel.Utils.Common.distanceToHighPrecMeters <$> estimatedDistance,
-        Beam.estimatedDistanceValue = Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> estimatedDistance,
+        Beam.distanceValue = Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) estimatedDistance,
+        Beam.estimatedDistance = estimatedDistance,
+        Beam.estimatedDistanceValue = Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,
         Beam.currency = Just $ (.currency) estimatedFare,
         Beam.estimatedFare = (.amount) estimatedFare,

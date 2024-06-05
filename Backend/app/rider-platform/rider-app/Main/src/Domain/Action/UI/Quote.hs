@@ -111,7 +111,7 @@ makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
         { agencyName = bppDetails.name,
           agencyNumber = Just providerNum,
           tripTerms = maybe [] (.descriptions) tripTerms,
-          quoteDetails = mkQuoteAPIDetails (tollChargesInfo <&> (mkPriceAPIEntity . (.tollCharges))) quoteDetails,
+          quoteDetails = mkQuoteAPIDetails distanceUnit (tollChargesInfo <&> (mkPriceAPIEntity . (.tollCharges))) quoteDetails,
           estimatedFare = estimatedFare.amountInt,
           estimatedTotalFare = estimatedTotalFare.amountInt,
           discount = discount <&> (.amountInt),
@@ -131,19 +131,18 @@ instance FromJSON QuoteAPIDetails where
 instance ToSchema QuoteAPIDetails where
   declareNamedSchema = genericDeclareNamedSchema S.fareProductSchemaOptions
 
-mkQuoteAPIDetails :: Maybe PriceAPIEntity -> QuoteDetails -> QuoteAPIDetails
-mkQuoteAPIDetails tollCharges = \case
+mkQuoteAPIDetails :: DistanceUnit -> Maybe PriceAPIEntity -> QuoteDetails -> QuoteAPIDetails
+mkQuoteAPIDetails distanceUnit tollCharges = \case
   DQuote.RentalDetails details -> DQuote.RentalAPIDetails $ DRentalDetails.mkRentalDetailsAPIEntity details tollCharges
   DQuote.OneWayDetails OneWayQuoteDetails {..} ->
     DQuote.OneWayAPIDetails
       OneWayQuoteAPIDetails
-        { distanceToNearestDriver = distanceToHighPrecMeters distanceToNearestDriver,
-          distanceToNearestDriverWithUnit = distanceToNearestDriver,
+        { distanceToNearestDriverWithUnit = convertHighPrecMetersToDistance distanceUnit distanceToNearestDriver,
           ..
         }
-  DQuote.DriverOfferDetails DDriverOffer.DriverOffer {..} ->
-    let distanceToPickup' = (distanceToHighPrecMeters <$> distanceToPickup) <|> (Just . HighPrecMeters $ toCentesimal 0) -- TODO::remove this default value
-        distanceToPickupWithUnit' = distanceToPickup <|> Just (Distance 0 Meter) -- TODO::remove this default value
+  DQuote.DriverOfferDetails DDriverOffer.DriverOffer {distanceUnit = _distanceUnit, ..} ->
+    let distanceToPickup' = distanceToPickup <|> (Just . HighPrecMeters $ toCentesimal 0) -- TODO::remove this default value
+        distanceToPickupWithUnit' = convertHighPrecMetersToDistance distanceUnit <$> distanceToPickup <|> Just (Distance 0 distanceUnit) -- TODO::remove this default value
         durationToPickup' = durationToPickup <|> Just 0 -- TODO::remove this default value
         rating' = rating <|> Just (toCentesimal 500) -- TODO::remove this default value
      in DQuote.DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickupWithUnit', durationToPickup = durationToPickup', rating = rating', ..}
@@ -261,8 +260,8 @@ getOffers searchRequest = do
         SQuote.OneWayDetails details -> Just details.distanceToNearestDriver
         SQuote.RentalDetails _ -> Nothing
         SQuote.DriverOfferDetails details -> details.distanceToPickup
-        SQuote.OneWaySpecialZoneDetails _ -> Just $ Distance 0 Meter
-        SQuote.InterCityDetails _ -> Just $ Distance 0 Meter
+        SQuote.OneWaySpecialZoneDetails _ -> Just 0
+        SQuote.InterCityDetails _ -> Just 0
     creationTime :: OfferRes -> UTCTime
     creationTime (OnDemandCab QuoteAPIEntity {createdAt}) = createdAt
     creationTime (Metro Metro.MetroOffer {createdAt}) = createdAt

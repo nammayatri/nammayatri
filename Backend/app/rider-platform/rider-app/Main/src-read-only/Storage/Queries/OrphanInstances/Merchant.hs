@@ -14,6 +14,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
 import qualified Storage.Beam.Merchant as Beam
+import qualified Storage.Queries.Transformers.Distance
 import Storage.Queries.Transformers.Merchant
 
 instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
@@ -26,8 +27,8 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Domain.Types.Merchant.Merchant
           { aadhaarKeyExpiryTime = aadhaarKeyExpiryTime,
             aadhaarVerificationTryLimit = aadhaarVerificationTryLimit,
-            arrivedPickupThreshold = maybe (Kernel.Types.Common.Distance 50 Kernel.Types.Common.Meter) (Kernel.Utils.Common.mkDistanceWithDefaultMeters distanceUnit arrivedPickupThresholdValue) arrivedPickupThreshold,
-            arrivingPickupThreshold = Kernel.Types.Common.Distance arrivingPickupThreshold (fromMaybe Kernel.Types.Common.Meter distanceUnit),
+            arrivedPickupThreshold = fromMaybe 50 arrivedPickupThreshold,
+            arrivingPickupThreshold = fromMaybe (fromDistanceValue (Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit) arrivingPickupThreshold) arrivingPickupThresholdMeters,
             bapId = bapId,
             bapUniqueKeyId = bapUniqueKeyId,
             cipherText = cipherText,
@@ -35,12 +36,13 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
             createdAt = createdAt,
             defaultCity = city,
             defaultState = state,
-            driverDistanceThresholdFromPickup = Kernel.Utils.Common.mkDistanceWithDefault distanceUnit driverDistanceThresholdFromPickupValue driverDistanceThresholdFromPickup,
+            distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
+            driverDistanceThresholdFromPickup = driverDistanceThresholdFromPickup,
             driverOfferApiKey = driverOfferApiKey,
             driverOfferBaseUrl = driverOfferBaseUrl',
             driverOfferMerchantId = driverOfferMerchantId,
             driverOnTheWayNotifyExpiry = fromMaybe 3600 driverOnTheWayNotifyExpiry,
-            editPickupDistanceThreshold = Kernel.Utils.Common.mkDistanceWithDefault distanceUnit editPickupDistanceThresholdValue editPickupDistanceThreshold,
+            editPickupDistanceThreshold = editPickupDistanceThreshold,
             fakeOtpEmails = fakeOtpEmails,
             fakeOtpMobileNumbers = fakeOtpMobileNumbers,
             fallbackShortId = Kernel.Types.Id.ShortId fallbackShortId,
@@ -70,9 +72,10 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
     Beam.MerchantT
       { Beam.aadhaarKeyExpiryTime = aadhaarKeyExpiryTime,
         Beam.aadhaarVerificationTryLimit = aadhaarVerificationTryLimit,
-        Beam.arrivedPickupThreshold = Just $ Kernel.Utils.Common.distanceToMeters arrivedPickupThreshold,
-        Beam.arrivedPickupThresholdValue = Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivedPickupThreshold,
-        Beam.arrivingPickupThreshold = Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivingPickupThreshold,
+        Beam.arrivedPickupThreshold = Kernel.Prelude.Just arrivedPickupThreshold,
+        Beam.arrivedPickupThresholdValue = (Kernel.Prelude.Just . Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) arrivedPickupThreshold,
+        Beam.arrivingPickupThreshold = Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit arrivingPickupThreshold,
+        Beam.arrivingPickupThresholdMeters = Kernel.Prelude.Just arrivingPickupThreshold,
         Beam.bapId = bapId,
         Beam.bapUniqueKeyId = bapUniqueKeyId,
         Beam.cipherText = cipherText,
@@ -80,15 +83,15 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.createdAt = createdAt,
         Beam.city = defaultCity,
         Beam.state = defaultState,
-        Beam.driverDistanceThresholdFromPickup = Kernel.Utils.Common.distanceToHighPrecMeters driverDistanceThresholdFromPickup,
-        Beam.driverDistanceThresholdFromPickupValue = Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) driverDistanceThresholdFromPickup,
+        Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
+        Beam.driverDistanceThresholdFromPickup = driverDistanceThresholdFromPickup,
+        Beam.driverDistanceThresholdFromPickupValue = (Kernel.Prelude.Just . Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) driverDistanceThresholdFromPickup,
         Beam.driverOfferApiKey = driverOfferApiKey,
         Beam.driverOfferBaseUrl = Kernel.Prelude.showBaseUrl driverOfferBaseUrl,
         Beam.driverOfferMerchantId = driverOfferMerchantId,
         Beam.driverOnTheWayNotifyExpiry = Just driverOnTheWayNotifyExpiry,
-        Beam.distanceUnit = Just $ (.unit) editPickupDistanceThreshold,
-        Beam.editPickupDistanceThreshold = Kernel.Utils.Common.distanceToHighPrecMeters editPickupDistanceThreshold,
-        Beam.editPickupDistanceThresholdValue = Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) editPickupDistanceThreshold,
+        Beam.editPickupDistanceThreshold = editPickupDistanceThreshold,
+        Beam.editPickupDistanceThresholdValue = (Kernel.Prelude.Just . Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) editPickupDistanceThreshold,
         Beam.fakeOtpEmails = fakeOtpEmails,
         Beam.fakeOtpMobileNumbers = fakeOtpMobileNumbers,
         Beam.fallbackShortId = Kernel.Types.Id.getShortId fallbackShortId,

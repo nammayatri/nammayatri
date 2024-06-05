@@ -84,8 +84,8 @@ Ride:
     trackingUrl: Maybe BaseUrl
     fare: Maybe Price
     totalFare: Maybe Price
-    chargeableDistance: Maybe Distance
-    traveledDistance: Maybe Distance
+    chargeableDistance: Maybe HighPrecMeters
+    traveledDistance: Maybe HighPrecMeters
     distanceUnit: DistanceUnit
     driverArrivalTime: Maybe UTCTime
     rideStartTime: Maybe UTCTime
@@ -134,7 +134,6 @@ Ride:
     vehicleNumber: character varying(255)
     vehicleVariant: character varying(60)
 
-# FIXME separate distanceUnit/currency for each column
   beamFields:
     toLocation: {}
     fromLocation: {}
@@ -149,8 +148,6 @@ Ride:
     chargeableDistance:
       chargeableDistanceValue: Maybe HighPrecDistance
       chargeableDistance: Maybe HighPrecMeters
-    distanceUnit:
-      distanceUnit: Maybe DistanceUnit
     traveledDistance:
       traveledDistanceValue: Maybe HighPrecDistance
       traveledDistance: Maybe HighPrecMeters
@@ -164,8 +161,8 @@ Ride:
     fare: fmap (Kernel.Types.Common.mkPrice currency) fare|E
     totalFare: fmap (Kernel.Types.Common.mkPrice currency) totalFare|E
     trackingUrl: Kernel.Prelude.mapM Kernel.Prelude.parseBaseUrl|IM
-    chargeableDistance: Kernel.Types.Common.mkDistanceWithDefault distanceUnit chargeableDistanceValue <$> chargeableDistance|E
-    traveledDistance: Kernel.Types.Common.mkDistanceWithDefault distanceUnit traveledDistanceValue <$> traveledDistance|E
+    chargeableDistance: chargeableDistance|E
+    traveledDistance: traveledDistance|E
     clientBundleVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)|EM
     clientSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)|EM
     clientConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)|EM
@@ -175,27 +172,24 @@ Ride:
     showDriversPreviousRideDropLoc: Kernel.Prelude.fromMaybe False showDriversPreviousRideDropLoc|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
 
-  # distanceUnit should be the same for all fields
   toTType:
     fare: Kernel.Prelude.fmap (.amount)|I
     totalFare: Kernel.Prelude.fmap (.amount)|I
     currency: Kernel.Prelude.fmap (.currency)|I
     trackingUrl: Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl|I
-    chargeableDistance: Kernel.Prelude.fmap Kernel.Types.Common.distanceToHighPrecMeters|I
-    chargeableDistanceValue: Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit)|I
+    chargeableDistanceValue: Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit)|I
     distanceUnit: Kernel.Prelude.Just|I
-    traveledDistance: Kernel.Prelude.fmap Kernel.Types.Common.distanceToHighPrecMeters|I
-    traveledDistanceValue: Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit)|I
+    traveledDistanceValue: Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit)|I
     clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
     clientOsType: clientDevice <&> (.deviceType)|E
     clientOsVersion: clientDevice <&> (.deviceVersion)|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
-
     driversPreviousRideDropLat: Kernel.Prelude.fmap (.lat)|I
     driversPreviousRideDropLon: Kernel.Prelude.fmap (.lon)|I
     showDriversPreviousRideDropLoc: Kernel.Prelude.Just showDriversPreviousRideDropLoc|E
+
   beamType:
     fare: Maybe HighPrecMoney
     totalFare: Maybe HighPrecMoney
@@ -205,6 +199,7 @@ Ride:
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
     showDriversPreviousRideDropLoc : Maybe Bool
+    distanceUnit: Maybe DistanceUnit
 
   constraints:
     id: PrimaryKey

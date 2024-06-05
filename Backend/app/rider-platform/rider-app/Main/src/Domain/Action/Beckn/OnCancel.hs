@@ -70,7 +70,7 @@ onCancel ::
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
+    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r,
@@ -119,7 +119,7 @@ validateRequest ::
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasField "minTripDistanceForReferralCfg" r (Maybe Distance)
+    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
   ) =>
   OnCancelReq ->
   m ValidatedOnCancelReq

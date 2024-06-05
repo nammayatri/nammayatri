@@ -42,7 +42,7 @@ import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
 import Kernel.Types.App
 import Kernel.Types.Cache
 import qualified Kernel.Types.CacheFlow as CF
-import Kernel.Types.Common (Distance, DistanceUnit (Meter), HighPrecMeters, Seconds, convertHighPrecMetersToDistance)
+import Kernel.Types.Common (HighPrecMeters, Seconds)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Error
 import Kernel.Types.Flow
@@ -207,7 +207,7 @@ data AppEnv = AppEnv
     cacheTranslationConfig :: CacheTranslationConfig,
     cacheFeedbackFormConfig :: CacheFeedbackFormConfig,
     maxEmergencyNumberCount :: Int,
-    minTripDistanceForReferralCfg :: Maybe Distance,
+    minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
@@ -265,7 +265,7 @@ buildAppEnv cfg@AppCfg {..} = do
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   -- let tokenMap :: (M.Map Text (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
   let ondcTokenHashMap = HM.fromList $ M.toList ondcTokenMap
-  return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, ..}
+  return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do

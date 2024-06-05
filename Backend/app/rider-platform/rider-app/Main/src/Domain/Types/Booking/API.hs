@@ -184,8 +184,8 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
       bookingDetails,
       rideStartTime = activeRide >>= (.rideStartTime),
       rideEndTime = activeRide >>= (.rideEndTime),
-      estimatedDistance = distanceToHighPrecMeters <$> booking.estimatedDistance,
-      estimatedDistanceWithUnit = booking.estimatedDistance,
+      estimatedDistance = booking.estimatedDistance,
+      estimatedDistanceWithUnit = convertHighPrecMetersToDistance booking.distanceUnit <$> booking.estimatedDistance,
       estimatedDuration = booking.estimatedDuration,
       duration = getRideDuration activeRide,
       merchantExoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
@@ -226,8 +226,8 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
         mkOneWayAPIDetails OneWayBookingDetails {..} =
           OneWayBookingAPIDetails
             { toLocation = SLoc.makeLocationAPIEntity toLocation,
-              estimatedDistance = distanceToHighPrecMeters distance,
-              estimatedDistanceWithUnit = distance
+              estimatedDistance = distance,
+              estimatedDistanceWithUnit = convertHighPrecMetersToDistance booking.distanceUnit distance
             }
         mkRentalAPIDetails RentalBookingDetails {..} =
           RentalBookingAPIDetails
@@ -236,15 +236,15 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
         mkOneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingDetails {..} =
           OneWaySpecialZoneBookingAPIDetails
             { toLocation = SLoc.makeLocationAPIEntity toLocation,
-              estimatedDistance = distanceToHighPrecMeters distance,
-              estimatedDistanceWithUnit = distance,
+              estimatedDistance = distance,
+              estimatedDistanceWithUnit = convertHighPrecMetersToDistance booking.distanceUnit distance,
               ..
             }
         mkInterCityAPIDetails InterCityBookingDetails {..} =
           InterCityBookingAPIDetails
             { toLocation = SLoc.makeLocationAPIEntity toLocation,
-              estimatedDistance = distanceToHighPrecMeters distance,
-              estimatedDistanceWithUnit = distance
+              estimatedDistance = distance,
+              estimatedDistanceWithUnit = convertHighPrecMetersToDistance booking.distanceUnit distance
             }
 
 getActiveSos :: (CacheFlow m r, EsqDBFlow m r) => Maybe DRide.Ride -> Id Person.Person -> m (Maybe DSos.SosStatus)
@@ -296,8 +296,8 @@ makeRideAPIEntity Ride {..} =
           rideOtp = otp,
           computedPrice = totalFare <&> (.amountInt),
           computedPriceWithCurrency = mkPriceAPIEntity <$> totalFare,
-          chargeableRideDistance = distanceToHighPrecMeters <$> chargeableDistance,
-          chargeableRideDistanceWithUnit = chargeableDistance,
+          chargeableRideDistance = chargeableDistance,
+          chargeableRideDistanceWithUnit = convertHighPrecMetersToDistance distanceUnit <$> chargeableDistance,
           vehicleColor = vehicleColor',
           ..
         }

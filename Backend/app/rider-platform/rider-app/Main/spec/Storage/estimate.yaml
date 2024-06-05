@@ -74,7 +74,7 @@ Estimate:
     estimatedTotalFare : Price
     totalFareRange : FareRange
     estimatedDuration : Maybe Seconds
-    estimatedDistance : Maybe Distance
+    estimatedDistance : Maybe HighPrecMeters
     estimatedPickupDuration : Maybe Seconds
     device : Maybe Text
     providerId : Text
@@ -178,7 +178,7 @@ Estimate:
     discount: Kernel.Types.Common.mkPrice currency <$> discount|E
     estimatedFare: Kernel.Types.Common.mkPrice currency estimatedFare|E
     estimatedTotalFare: Kernel.Types.Common.mkPrice currency estimatedTotalFare|E
-    estimatedDistance: Kernel.Types.Common.mkDistanceWithDefault distanceUnit estimatedDistanceValue <$> estimatedDistance|E
+    estimatedDistance: estimatedDistance|E
     clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
     clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
@@ -204,8 +204,7 @@ Estimate:
     oldNightShiftCharge: ((.oldNightShiftCharge) =<< nightShiftInfo)|E
     nightShiftStart: (nightShiftInfo <&> (.nightShiftStart))|E
     nightShiftEnd: (nightShiftInfo <&> (.nightShiftEnd))|E
-    estimatedDistance: (Kernel.Types.Common.distanceToHighPrecMeters <$> estimatedDistance)|E
-    estimatedDistanceValue: (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> estimatedDistance)|E
+    estimatedDistanceValue: Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit)|I
     distanceUnit: Kernel.Prelude.Just|I
     clientBundleVersion: (fmap Kernel.Utils.Version.versionToText clientBundleVersion)|E
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E

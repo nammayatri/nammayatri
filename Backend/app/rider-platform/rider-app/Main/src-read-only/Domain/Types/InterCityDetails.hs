@@ -16,8 +16,9 @@ import qualified Tools.Beam.UtilsTH
 data InterCityDetails = InterCityDetails
   { baseFare :: Kernel.Types.Common.Price,
     deadKmFare :: Kernel.Types.Common.Price,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     id :: Kernel.Types.Id.Id Domain.Types.InterCityDetails.InterCityDetails,
-    kmPerPlannedExtraHour :: Kernel.Types.Common.Distance,
+    kmPerPlannedExtraHour :: Kernel.Types.Common.Kilometers,
     nightShiftInfo :: Kernel.Prelude.Maybe Domain.Types.Extra.RentalDetails.NightShiftInfo,
     perDayMaxHourAllowance :: Kernel.Types.Common.Hours,
     perExtraKmRate :: Kernel.Types.Common.Price,

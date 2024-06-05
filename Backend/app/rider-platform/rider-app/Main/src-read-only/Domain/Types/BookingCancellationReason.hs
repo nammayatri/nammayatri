@@ -21,7 +21,7 @@ data BookingCancellationReason = BookingCancellationReason
     createdAt :: Kernel.Prelude.UTCTime,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverCancellationLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
-    driverDistToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
+    driverDistToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     reasonCode :: Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationReasonCode,
     reasonStage :: Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationStage,

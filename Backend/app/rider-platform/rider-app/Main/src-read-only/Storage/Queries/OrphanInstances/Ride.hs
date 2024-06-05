@@ -16,6 +16,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.Ride as Beam
 import qualified Storage.Queries.Extra.Transformers.Ride
+import qualified Storage.Queries.Transformers.Distance
 
 instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
   fromTType' (Beam.RideT {..}) = do
@@ -34,7 +35,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             backendConfigVersion = backendConfigVersion',
             bookingId = Kernel.Types.Id.Id bookingId,
             bppRideId = Kernel.Types.Id.Id bppRideId,
-            chargeableDistance = Kernel.Types.Common.mkDistanceWithDefault distanceUnit chargeableDistanceValue <$> chargeableDistance,
+            chargeableDistance = chargeableDistance,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
             clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion,
@@ -71,7 +72,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             tollConfidence = tollConfidence,
             totalFare = fmap (Kernel.Types.Common.mkPrice currency) totalFare,
             trackingUrl = trackingUrl',
-            traveledDistance = Kernel.Types.Common.mkDistanceWithDefault distanceUnit traveledDistanceValue <$> traveledDistance,
+            traveledDistance = traveledDistance,
             updatedAt = updatedAt,
             vehicleColor = vehicleColor,
             vehicleModel = vehicleModel,
@@ -88,8 +89,8 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.bookingId = Kernel.Types.Id.getId bookingId,
         Beam.bppRideId = Kernel.Types.Id.getId bppRideId,
-        Beam.chargeableDistance = Kernel.Prelude.fmap Kernel.Types.Common.distanceToHighPrecMeters chargeableDistance,
-        Beam.chargeableDistanceValue = Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit) chargeableDistance,
+        Beam.chargeableDistance = chargeableDistance,
+        Beam.chargeableDistanceValue = Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) chargeableDistance,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
         Beam.clientOsType = clientDevice <&> (.deviceType),
@@ -127,8 +128,8 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.tollConfidence = tollConfidence,
         Beam.totalFare = Kernel.Prelude.fmap (.amount) totalFare,
         Beam.trackingUrl = Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl trackingUrl,
-        Beam.traveledDistance = Kernel.Prelude.fmap Kernel.Types.Common.distanceToHighPrecMeters traveledDistance,
-        Beam.traveledDistanceValue = Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit) traveledDistance,
+        Beam.traveledDistance = traveledDistance,
+        Beam.traveledDistanceValue = Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) traveledDistance,
         Beam.updatedAt = updatedAt,
         Beam.vehicleColor = vehicleColor,
         Beam.vehicleModel = vehicleModel,

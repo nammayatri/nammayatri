@@ -295,8 +295,8 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
       fromLocation
       merchantOperatingCity
       (listToMaybe stopLocations) --- Take first stop, handle multiple stops later
-      (convertMetersToDistance merchantOperatingCity.distanceUnit <$> longestRouteDistance)
-      (convertMetersToDistance merchantOperatingCity.distanceUnit <$> shortestRouteDistance)
+      (metersToHighPrecMeters <$> longestRouteDistance)
+      (metersToHighPrecMeters <$> shortestRouteDistance)
       startTime
       returnTime
       roundTrip
@@ -351,8 +351,8 @@ buildSearchRequest ::
   Location.Location ->
   DMOC.MerchantOperatingCity ->
   Maybe Location.Location ->
-  Maybe Distance ->
-  Maybe Distance ->
+  Maybe HighPrecMeters ->
+  Maybe HighPrecMeters ->
   UTCTime ->
   Maybe UTCTime ->
   Bool ->

@@ -10,7 +10,6 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -18,6 +17,7 @@ import qualified Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.Quote as Beam
 import Storage.Queries.QuoteExtra as ReExport
+import qualified Storage.Queries.Transformers.Distance
 import Storage.Queries.Transformers.Quote
 import qualified Storage.Queries.Transformers.Quote
 
@@ -44,8 +44,8 @@ updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currency (Just ((.currency) estimatedFare)),
       Se.Set Beam.discount (discount <&> (.amount)),
-      Se.Set Beam.distanceToNearestDriver (Kernel.Types.Common.distanceToHighPrecMeters <$> Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
-      Se.Set Beam.distanceToNearestDriverValue (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
+      Se.Set Beam.distanceToNearestDriver (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
+      Se.Set Beam.distanceToNearestDriverValue (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit <$> Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
       Se.Set Beam.driverOfferId (Storage.Queries.Transformers.Quote.getDriverOfferId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
       Se.Set Beam.fareProductType (Storage.Queries.Transformers.Quote.getfareProduct (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
       Se.Set Beam.rentalDetailsId (Storage.Queries.Transformers.Quote.getRentalDetailsId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),

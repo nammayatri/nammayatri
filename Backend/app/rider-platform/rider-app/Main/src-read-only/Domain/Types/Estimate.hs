@@ -35,7 +35,7 @@ data Estimate = Estimate
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driversLocation :: [Kernel.External.Maps.LatLong],
     estimateBreakupList :: [Domain.Types.Estimate.EstimateBreakup],
-    estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
+    estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedFare :: Kernel.Types.Common.Price,
     estimatedPickupDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,

@@ -283,7 +283,7 @@ onUpdate ::
     HasLongDurationRetryCfg r c,
     ClickhouseFlow m r,
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
-    HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
+    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasField "storeRidesTimeLimit" r Int,
@@ -367,7 +367,7 @@ validateRequest ::
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasField "minTripDistanceForReferralCfg" r (Maybe Distance)
+    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
   ) =>
   OnUpdateReq ->
   m ValidatedOnUpdateReq

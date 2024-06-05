@@ -55,16 +55,17 @@ Merchant:
     aadhaarKeyExpiryTime: Seconds
     mediaFileSizeUpperLimit: Int
     mediaFileUrlPattern: Text
-    editPickupDistanceThreshold: Distance
-    driverDistanceThresholdFromPickup: Distance
+    editPickupDistanceThreshold: HighPrecMeters
+    driverDistanceThresholdFromPickup: HighPrecMeters
     numOfAllowedEditPickupLocationAttemptsThreshold: Int
     publicMediaFileUrlPattern: Text
     scheduleRideBufferTime: NominalDiffTime
     fakeOtpMobileNumbers: "[Text]"
     fakeOtpEmails: "[Text]"
     kaptureDisposition: Text
-    arrivedPickupThreshold: Distance
-    arrivingPickupThreshold: Distance
+    arrivedPickupThreshold: Meters
+    arrivingPickupThreshold: Meters
+    distanceUnit: DistanceUnit
     driverOnTheWayNotifyExpiry: Seconds
 
   excludedFields:
@@ -81,13 +82,15 @@ Merchant:
     editPickupDistanceThreshold:
       editPickupDistanceThreshold: HighPrecMeters
       editPickupDistanceThresholdValue: Maybe HighPrecDistance
-      distanceUnit: Maybe DistanceUnit
     driverDistanceThresholdFromPickup:
       driverDistanceThresholdFromPickup: HighPrecMeters
       driverDistanceThresholdFromPickupValue: Maybe HighPrecDistance
     arrivedPickupThreshold:
       arrivedPickupThreshold: Maybe Meters
       arrivedPickupThresholdValue: Maybe HighPrecDistance
+    arrivingPickupThreshold:
+      arrivingPickupThresholdMeters: Maybe Meters
+      arrivingPickupThreshold: Maybe HighPrecDistance
   beamType:
     gatewayUrl: Text
     registryUrl: Text
@@ -95,6 +98,7 @@ Merchant:
     scheduleRideBufferTime: Seconds
     driverOnTheWayNotifyExpiry: Maybe Seconds
     arrivingPickupThreshold: HighPrecDistance
+    distanceUnit: Maybe DistanceUnit
 
   toTType:
     city: defaultCity|E
@@ -106,14 +110,13 @@ Merchant:
     driverOfferBaseUrl: Kernel.Prelude.showBaseUrl|I
     scheduleRideBufferTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     driverOnTheWayNotifyExpiry: (Just driverOnTheWayNotifyExpiry)|E
-    distanceUnit: (Just $ (.unit) editPickupDistanceThreshold)|E
-    editPickupDistanceThreshold: Kernel.Utils.Common.distanceToHighPrecMeters|I
-    editPickupDistanceThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) editPickupDistanceThreshold)|E
-    driverDistanceThresholdFromPickup: (Kernel.Utils.Common.distanceToHighPrecMeters driverDistanceThresholdFromPickup)|E
-    driverDistanceThresholdFromPickupValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) driverDistanceThresholdFromPickup)|E
-    arrivedPickupThreshold: (Just $ Kernel.Utils.Common.distanceToMeters arrivedPickupThreshold)|E
-    arrivedPickupThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivedPickupThreshold)|E
-    arrivingPickupThreshold: (Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivingPickupThreshold)|E
+    distanceUnit: Kernel.Prelude.Just|I
+    editPickupDistanceThresholdValue: Kernel.Prelude.Just . Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit|I
+    driverDistanceThresholdFromPickupValue: Kernel.Prelude.Just . Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit|I
+    arrivedPickupThreshold: Kernel.Prelude.Just|I
+    arrivedPickupThresholdValue: Kernel.Prelude.Just . Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit|I
+    arrivingPickupThreshold: Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit|I
+    arrivingPickupThresholdMeters: Kernel.Prelude.Just|I
 
   fromTType:
     defaultCity: city|E
@@ -123,11 +126,12 @@ Merchant:
     registryUrl: Kernel.Prelude.parseBaseUrl|IM
     driverOfferBaseUrl: Kernel.Prelude.parseBaseUrl|IM
     scheduleRideBufferTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
-    arrivedPickupThreshold: maybe (Kernel.Types.Common.Distance 50 Kernel.Types.Common.Meter) (Kernel.Utils.Common.mkDistanceWithDefaultMeters distanceUnit arrivedPickupThresholdValue) arrivedPickupThreshold|E
-    arrivingPickupThreshold: Kernel.Types.Common.Distance arrivingPickupThreshold (fromMaybe Kernel.Types.Common.Meter distanceUnit)|E
-    editPickupDistanceThreshold: Kernel.Utils.Common.mkDistanceWithDefault distanceUnit editPickupDistanceThresholdValue editPickupDistanceThreshold|E
-    driverDistanceThresholdFromPickup: Kernel.Utils.Common.mkDistanceWithDefault distanceUnit driverDistanceThresholdFromPickupValue driverDistanceThresholdFromPickup|E
+    arrivedPickupThreshold: fromMaybe 50 arrivedPickupThreshold|E
+    arrivingPickupThreshold: fromMaybe (fromDistanceValue (Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit) arrivingPickupThreshold) arrivingPickupThresholdMeters|E
+    editPickupDistanceThreshold: editPickupDistanceThreshold|E
+    driverDistanceThresholdFromPickup: driverDistanceThresholdFromPickup|E
     driverOnTheWayNotifyExpiry: (fromMaybe 3600 driverOnTheWayNotifyExpiry)|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
 
   sqlType:
     editPickupDistanceThreshold: double precision

@@ -63,3 +63,8 @@ ALTER TABLE atlas_app.merchant ADD COLUMN fake_otp_emails text[] NOT NULL defaul
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant ADD COLUMN arriving_pickup_threshold double precision NOT NULL default 100;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant ADD COLUMN arriving_pickup_threshold_meters integer ;

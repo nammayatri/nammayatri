@@ -163,7 +163,7 @@ isStatusChanged bookingOldStatus bookingNewStatus rideEntity = do
 
 onStatus ::
   ( MonadFlow m,
-    HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
+    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     CacheFlow m r,
     EsqDBFlow m r,
     ClickhouseFlow m r,
@@ -219,7 +219,7 @@ onStatus req = do
 
 validateRequest ::
   ( MonadFlow m,
-    HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
+    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     CacheFlow m r,
     EsqDBFlow m r,
     HasBAPMetrics m r,

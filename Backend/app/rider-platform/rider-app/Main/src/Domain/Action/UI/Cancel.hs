@@ -192,7 +192,7 @@ cancel bookingId _ req = do
             reasonStage = Just reasonStage,
             additionalInfo = additionalInfo,
             driverCancellationLocation = currentDriverLocation,
-            driverDistToPickup = convertMetersToDistance distanceUnit <$> disToPickup,
+            driverDistToPickup = disToPickup,
             createdAt = now,
             updatedAt = now,
             ..

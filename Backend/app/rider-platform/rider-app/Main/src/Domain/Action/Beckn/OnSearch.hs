@@ -203,7 +203,7 @@ data RentalQuoteDetails = RentalQuoteDetails
     baseFare :: Price,
     perHourCharge :: Price,
     perExtraMinRate :: Price,
-    includedDistancePerHr :: Kilometers,
+    includedKmPerHr :: Kilometers,
     plannedPerKmRate :: Price,
     perExtraKmRate :: Price,
     deadKmFare :: Price,
@@ -361,7 +361,7 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
   tripTerms <- buildTripTerms descriptions
   quoteDetails' <- case quoteDetails of
     OneWayDetails oneWayDetails ->
-      pure.DQuote.OneWayDetails $ mkOneWayQuoteDetails searchRequest.distanceUnit oneWayDetails
+      pure.DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
     RentalDetails rentalDetails -> do
       DQuote.RentalDetails <$> buildRentalDetails searchRequest.distanceUnit rentalDetails
     OneWaySpecialZoneDetails details -> do
@@ -395,12 +395,8 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
         ..
       }
 
-mkOneWayQuoteDetails :: DistanceUnit -> OneWayQuoteDetails -> DQuote.OneWayQuoteDetails
-mkOneWayQuoteDetails distanceUnit OneWayQuoteDetails {..} =
-  DQuote.OneWayQuoteDetails
-    { distanceToNearestDriver = convertHighPrecMetersToDistance distanceUnit distanceToNearestDriver,
-      ..
-    }
+mkOneWayQuoteDetails :: OneWayQuoteDetails -> DQuote.OneWayQuoteDetails
+mkOneWayQuoteDetails OneWayQuoteDetails {..} = DQuote.OneWayQuoteDetails {..}
 
 buildOneWaySpecialZoneQuoteDetails :: MonadFlow m => OneWaySpecialZoneQuoteDetails -> m DSpecialZoneQuote.SpecialZoneQuote
 buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
@@ -424,7 +420,6 @@ buildInterCityQuoteDetails distanceUnit InterCityQuoteDetails {..} = do
   pure
     DInterCityDetails.InterCityDetails
       { nightShiftInfo = nightShiftinfo',
-        kmPerPlannedExtraHour = convertMetersToDistance distanceUnit . kilometersToMeters $ kmPerPlannedExtraHour,
         ..
       }
 
@@ -440,7 +435,6 @@ buildRentalDetails distanceUnit RentalQuoteDetails {..} = do
     DRentalDetails.RentalDetails
       { id = quoteId,
         nightShiftInfo = nightShiftinfo',
-        includedDistancePerHr = convertMetersToDistance distanceUnit . kilometersToMeters $ includedDistancePerHr,
         ..
       }
 

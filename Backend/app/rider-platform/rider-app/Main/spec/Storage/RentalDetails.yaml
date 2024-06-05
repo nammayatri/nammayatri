@@ -24,7 +24,8 @@ RentalDetails:
     perHourCharge: Price
     perExtraMinRate: Price
     perExtraKmRate: Price
-    includedDistancePerHr: Distance
+    includedKmPerHr: Kilometers
+    distanceUnit: DistanceUnit
     plannedPerKmRate: Price
     deadKmFare: Price
     nightShiftInfo: Maybe NightShiftInfo
@@ -44,9 +45,8 @@ RentalDetails:
     deadKmFare: "0"
 
   beamFields:
-    includedDistancePerHr:
-      includedDistancePerHrValue: Maybe HighPrecDistance
-      distanceUnit: Maybe DistanceUnit
+    includedKmPerHr:
+      includedDistancePerHrValue: Maybe HighPrecDistance # FIXME can we remove this field from Beam code?
       includedKmPerHr: Kilometers
     baseFare:
       baseFare: Money
@@ -72,6 +72,7 @@ RentalDetails:
 
   beamType:
     deadKmFare: HighPrecMoney
+    distanceUnit: Maybe DistanceUnit
 
   toTType:
     baseFare: (.amountInt)|I
@@ -89,9 +90,8 @@ RentalDetails:
     currency: Just $ (.currency) baseFare|E
     nightShiftStart: (.nightShiftStart) <$> nightShiftInfo|E
     nightShiftEnd: (.nightShiftEnd) <$> nightShiftInfo|E
-    includedDistancePerHrValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) includedDistancePerHr) includedDistancePerHr)|E
-    distanceUnit: (Just $ (.unit) includedDistancePerHr)|E
-    includedKmPerHr: (Kernel.Utils.Common.metersToKilometers $ Kernel.Utils.Common.distanceToMeters includedDistancePerHr)|E
+    includedDistancePerHrValue: Kernel.Prelude.Just . Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit|I
+    distanceUnit: Kernel.Prelude.Just|I
     deadKmFare: (.amount)|I
 
   fromTType:
@@ -102,7 +102,8 @@ RentalDetails:
     plannedPerKmRate: Kernel.Utils.Common.mkPriceWithDefault plannedPerKmRateAmount currency plannedPerKmRate|E
     deadKmFare: Kernel.Utils.Common.mkPrice currency deadKmFare|E
     nightShiftInfo: Storage.Queries.Transformers.RentalDetails.mkNightShiftInfo nightShiftCharge nightShiftChargeAmount nightShiftEnd nightShiftStart currency|E
-    includedDistancePerHr: (Kernel.Utils.Common.mkDistanceWithDefaultMeters distanceUnit includedDistancePerHrValue $ Kernel.Utils.Common.kilometersToMeters includedKmPerHr)|E
+    includedKmPerHr: includedKmPerHr|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
 
   excludedFields: [updatedAt,createdAt,merchantId,merchantOperatingCityId]
 

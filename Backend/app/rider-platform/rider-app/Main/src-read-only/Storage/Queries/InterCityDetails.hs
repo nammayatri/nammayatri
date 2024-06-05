@@ -15,6 +15,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.InterCityDetails as Beam
+import qualified Storage.Queries.Transformers.Distance
 import qualified Storage.Queries.Transformers.RentalDetails
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.InterCityDetails.InterCityDetails -> m ())
@@ -30,8 +31,9 @@ instance FromTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCit
         Domain.Types.InterCityDetails.InterCityDetails
           { baseFare = Kernel.Utils.Common.mkPrice (Just currency) baseFare,
             deadKmFare = Kernel.Utils.Common.mkPrice (Just currency) deadKmFare,
+            distanceUnit = distanceUnit,
             id = Kernel.Types.Id.Id id,
-            kmPerPlannedExtraHour = Kernel.Utils.Common.Distance kmPerPlannedExtraHour distanceUnit,
+            kmPerPlannedExtraHour = fromMaybe (Storage.Queries.Transformers.Distance.fromDistanceValue distanceUnit kmPerPlannedExtraHour) kmPerPlannedExtraHourMeters,
             nightShiftInfo = Storage.Queries.Transformers.RentalDetails.mkNightShiftInfo (Kernel.Prelude.roundToIntegral <$> nightShiftCharge) nightShiftCharge nightShiftEnd nightShiftStart (Just currency),
             perDayMaxHourAllowance = perDayMaxHourAllowance,
             perExtraKmRate = Kernel.Utils.Common.mkPrice (Just currency) perExtraKmRate,
@@ -49,9 +51,10 @@ instance ToTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCityD
       { Beam.baseFare = (.amount) baseFare,
         Beam.currency = (.currency) baseFare,
         Beam.deadKmFare = (.amount) deadKmFare,
+        Beam.distanceUnit = distanceUnit,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.distanceUnit = (.unit) kmPerPlannedExtraHour,
-        Beam.kmPerPlannedExtraHour = Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) kmPerPlannedExtraHour) kmPerPlannedExtraHour,
+        Beam.kmPerPlannedExtraHour = Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit kmPerPlannedExtraHour,
+        Beam.kmPerPlannedExtraHourMeters = Kernel.Prelude.Just kmPerPlannedExtraHour,
         Beam.nightShiftCharge = (.amount) . (.nightShiftCharge) <$> nightShiftInfo,
         Beam.nightShiftEnd = (.nightShiftEnd) <$> nightShiftInfo,
         Beam.nightShiftStart = (.nightShiftStart) <$> nightShiftInfo,

@@ -10,7 +10,6 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -18,6 +17,7 @@ import qualified Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as Beam
 import Storage.Queries.EstimateExtra as ReExport
+import qualified Storage.Queries.Transformers.Distance
 import Storage.Queries.Transformers.Estimate
 
 findAllBySRId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Estimate.Estimate])
@@ -62,8 +62,8 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.discount (discount <&> (.amount)),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driversLocation driversLocation,
-      Se.Set Beam.estimatedDistance (Kernel.Types.Common.distanceToHighPrecMeters <$> estimatedDistance),
-      Se.Set Beam.estimatedDistanceValue (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> estimatedDistance),
+      Se.Set Beam.estimatedDistance estimatedDistance,
+      Se.Set Beam.estimatedDistanceValue (Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) estimatedDistance),
       Se.Set Beam.estimatedDuration estimatedDuration,
       Se.Set Beam.estimatedFare ((.amount) estimatedFare),
       Se.Set Beam.estimatedPickupDuration estimatedPickupDuration,

@@ -16,6 +16,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.Common
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.SearchRequest as Beam
+import qualified Storage.Queries.Transformers.Distance
 import qualified Storage.Queries.Transformers.SearchRequest
 
 instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest where
@@ -44,14 +45,14 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             customerExtraFee = Kernel.Utils.Common.mkPriceWithDefault customerExtraFeeAmount currency <$> customerExtraFee,
             device = device,
             disabilityTag = disabilityTag,
-            distance = Kernel.Utils.Common.mkDistanceWithDefault distanceUnit distanceValue . Kernel.Types.Common.HighPrecMeters <$> distance,
+            distance = Kernel.Types.Common.HighPrecMeters <$> distance,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             estimatedRideDuration = estimatedRideDuration,
             fromLocation = fromLocation',
             id = Kernel.Types.Id.Id id,
             isAdvanceBookingEnabled = isAdvanceBookingEnabled,
             language = language,
-            maxDistance = Kernel.Utils.Common.mkDistanceWithDefault distanceUnit maxDistanceValue . Kernel.Types.Common.HighPrecMeters <$> maxDistance,
+            maxDistance = Kernel.Types.Common.HighPrecMeters <$> maxDistance,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
             returnTime = returnTime,
@@ -84,16 +85,16 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.customerExtraFeeAmount = customerExtraFee <&> (.amount),
         Beam.device = device,
         Beam.disabilityTag = disabilityTag,
-        Beam.distance = Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> distance,
-        Beam.distanceValue = Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance,
+        Beam.distance = Kernel.Utils.Common.getHighPrecMeters <$> distance,
+        Beam.distanceValue = Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) distance,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.estimatedRideDuration = estimatedRideDuration,
         Beam.fromLocationId = Just $ Kernel.Types.Id.getId ((.id) fromLocation),
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAdvanceBookingEnabled = isAdvanceBookingEnabled,
         Beam.language = language,
-        Beam.maxDistance = Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> maxDistance,
-        Beam.maxDistanceValue = Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance,
+        Beam.maxDistance = Kernel.Utils.Common.getHighPrecMeters <$> maxDistance,
+        Beam.maxDistanceValue = Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) maxDistance,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.returnTime = returnTime,

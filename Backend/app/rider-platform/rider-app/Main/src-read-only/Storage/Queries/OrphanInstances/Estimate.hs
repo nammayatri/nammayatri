@@ -16,6 +16,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.Estimate as Beam
 import qualified Storage.Queries.EstimateBreakup
+import qualified Storage.Queries.Transformers.Distance
 import Storage.Queries.Transformers.Estimate
 
 instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
@@ -43,7 +44,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             driversLocation = driversLocation,
             estimateBreakupList = estimateBreakupList',
-            estimatedDistance = Kernel.Types.Common.mkDistanceWithDefault distanceUnit estimatedDistanceValue <$> estimatedDistance,
+            estimatedDistance = estimatedDistance,
             estimatedDuration = estimatedDuration,
             estimatedFare = Kernel.Types.Common.mkPrice currency estimatedFare,
             estimatedPickupDuration = estimatedPickupDuration,
@@ -93,8 +94,8 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.discount = discount <&> (.amount),
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driversLocation = driversLocation,
-        Beam.estimatedDistance = Kernel.Types.Common.distanceToHighPrecMeters <$> estimatedDistance,
-        Beam.estimatedDistanceValue = Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> estimatedDistance,
+        Beam.estimatedDistance = estimatedDistance,
+        Beam.estimatedDistanceValue = Kernel.Prelude.fmap (Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit) estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,
         Beam.estimatedFare = (.amount) estimatedFare,
         Beam.estimatedPickupDuration = estimatedPickupDuration,

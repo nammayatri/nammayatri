@@ -25,7 +25,8 @@ InterCityDetails:
     perExtraMinRate: Price
     perExtraKmRate: Price
     deadKmFare: Price
-    kmPerPlannedExtraHour: Distance
+    kmPerPlannedExtraHour: Kilometers
+    distanceUnit: DistanceUnit
     plannedPerKmRateOneWay: Price
     plannedPerKmRateRoundTrip: Price
     perDayMaxHourAllowance: Hours
@@ -47,7 +48,7 @@ InterCityDetails:
   beamFields:
     kmPerPlannedExtraHour:
       kmPerPlannedExtraHour: HighPrecDistance
-      distanceUnit: DistanceUnit
+      kmPerPlannedExtraHourMeters: Maybe Kilometers
     baseFare:
       baseFare: HighPrecMoney
       currency: Currency
@@ -76,8 +77,8 @@ InterCityDetails:
     currency: (.currency) baseFare|E
     nightShiftStart: (.nightShiftStart) <$> nightShiftInfo|E
     nightShiftEnd: (.nightShiftEnd) <$> nightShiftInfo|E
-    kmPerPlannedExtraHour: (Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) kmPerPlannedExtraHour) kmPerPlannedExtraHour)|E
-    distanceUnit: ((.unit) kmPerPlannedExtraHour)|E
+    kmPerPlannedExtraHour: Storage.Queries.Transformers.Distance.toDistanceValue distanceUnit|I
+    kmPerPlannedExtraHourMeters: Kernel.Prelude.Just|I
 
   fromTType:
     baseFare: Kernel.Utils.Common.mkPrice (Just currency) baseFare|E
@@ -88,7 +89,7 @@ InterCityDetails:
     plannedPerKmRateRoundTrip: Kernel.Utils.Common.mkPrice (Just currency) plannedPerKmRateRoundTrip|E
     deadKmFare: Kernel.Utils.Common.mkPrice (Just currency) deadKmFare|E
     nightShiftInfo: Storage.Queries.Transformers.RentalDetails.mkNightShiftInfo (Kernel.Prelude.roundToIntegral <$> nightShiftCharge) nightShiftCharge nightShiftEnd nightShiftStart (Just currency)|E
-    kmPerPlannedExtraHour: (Kernel.Utils.Common.Distance kmPerPlannedExtraHour distanceUnit)|E
+    kmPerPlannedExtraHour: fromMaybe (Storage.Queries.Transformers.Distance.fromDistanceValue distanceUnit kmPerPlannedExtraHour) kmPerPlannedExtraHourMeters|E
 
   excludedFields: [merchantId,merchantOperatingCityId]
 

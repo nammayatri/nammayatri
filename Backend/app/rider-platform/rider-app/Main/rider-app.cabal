@@ -329,6 +329,7 @@ library
       Storage.Queries.Transformers.Booking
       Storage.Queries.Transformers.BookingCancellationReason
       Storage.Queries.Transformers.CancellationReason
+      Storage.Queries.Transformers.Distance
       Storage.Queries.Transformers.Estimate
       Storage.Queries.Transformers.Merchant
       Storage.Queries.Transformers.MerchantConfig

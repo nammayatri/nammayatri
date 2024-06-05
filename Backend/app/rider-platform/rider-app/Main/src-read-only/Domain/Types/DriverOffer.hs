@@ -16,7 +16,7 @@ import qualified Tools.Beam.UtilsTH
 data DriverOffer = DriverOffer
   { bppQuoteId :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
-    distanceToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
+    distanceToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverName :: Kernel.Prelude.Text,
     durationToPickup :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
