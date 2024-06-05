@@ -32,12 +32,12 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityConfig)
 import JBridge (isLocationPermissionEnabled)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, map, not, pure, unit, ($), (<<<), (<>), (==), (&&), when, void)
+import Prelude (Unit, bind, const, discard, map, not, pure, unit, ($), (<<<), (<>), (==), (&&), when, void, (||), show)
 import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), accessibility, afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.ChooseCityScreen.Controller (Action(..), ScreenOutput, eval)
@@ -51,6 +51,7 @@ import Components.ErrorModal as ErrorModal
 import Mobility.Prelude
 import Locale.Utils
 import ConfigProvider
+import Data.String.Common as DSC
 
 screen :: ChooseCityScreenState -> Screen Action ChooseCityScreenState ScreenOutput
 screen initialState =
@@ -149,7 +150,7 @@ currentLocationView state push =
   ][  imageView
       [ height $ V 220
       , width $ V 220
-      , imageWithFallback $ fetchImage FF_ASSET $ getLocationMapImage state
+      , imageWithFallback $ getLocationMapImage state
       ]
     , textView $
       [ text $ getString LOCATION_UNSERVICEABLE
@@ -184,6 +185,13 @@ currentLocationView state push =
       , visibility GONE -- Disable change city for now
       ] <> FontStyle.tags TypoGraphy
   ]
+  where
+    getLocationMapImage :: ChooseCityScreenState -> String
+    getLocationMapImage state =
+      fetchImage FF_ASSET $ if shouldShowUndetectable then "ny_ic_driver_location_undetectable" else cityConfig.mapImage
+      where 
+        cityConfig = getCityConfig state.data.config.cityConfig $ Mb.fromMaybe "" state.data.locationSelected
+        shouldShowUndetectable = state.props.locationUnserviceable || state.props.locationDetectionFailed || DSC.null cityConfig.mapImage
 
 currentLanguageView :: forall w. ChooseCityScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 currentLanguageView state push = 

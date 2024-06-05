@@ -230,7 +230,7 @@ baseAppFlow baseFlow event = do
 
 authenticationFlow :: String -> FlowBT String Unit
 authenticationFlow _ = 
-  if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) 
+  if (EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) || (getMerchant FunctionCall) == YATRISATHI)
     then do 
       liftFlowBT hideSplash
       loginFlow

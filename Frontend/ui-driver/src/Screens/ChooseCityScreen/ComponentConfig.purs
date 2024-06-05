@@ -16,7 +16,6 @@ import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
 import Styles.Colors as Color
 import Components.ErrorModal as ErrorModal
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Data.String.Common as DSC
 import MerchantConfig.Types (AppConfig)
 import Components.SelectMenuButton as MenuButton
 import MerchantConfig.Types as MT
@@ -89,13 +88,6 @@ getLangFromVal value =
 --                   "Coimbatore" -> "ny_ic_coimbatore_map"
 --                   _ -> "ny_ic_driver_location_undetectable"
 --     Mb.Nothing -> "ny_ic_driver_location_undetectable"
-
-getLocationMapImage :: ChooseCityScreenState -> String
-getLocationMapImage state =
-  if shouldShowUndetectable then "ny_ic_driver_location_undetectable" else cityConfig.mapImage
-  where 
-    cityConfig = getCityConfig state.data.config.cityConfig $ Mb.fromMaybe "" state.data.locationSelected
-    shouldShowUndetectable = state.props.locationUnserviceable || state.props.locationDetectionFailed || DSC.null cityConfig.mapImage
 
 getChangeLanguageText :: Maybe String -> AppConfig -> String
 getChangeLanguageText value config = 
