@@ -129,7 +129,7 @@ onVerify resp respDump = do
       person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
       ack_ <- maybe (pure Ack) (verifyDocument person verificationReq) resp.result
       -- running statusHandler to enable Driver
-      void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) verificationReq.multipleRC
+      void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) verificationReq.multipleRC Nothing
       return ack_
   where
     getResultStatus mbResult = mbResult >>= (\rslt -> (rslt.extraction_output >>= (.status)) <|> (rslt.source_output >>= (.status)))

@@ -87,7 +87,9 @@ data StatusRes = StatusRes
     --- use these fields
     driverDocuments :: [DocumentStatusItem],
     vehicleDocuments :: [VehicleDocumentItem],
-    enabled :: Bool
+    enabled :: Bool,
+    driverLicenseDetails :: Maybe [DLDetails],
+    vehicleRegistrationCertificateDetails :: Maybe [RCDetails]
   }
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -109,8 +111,37 @@ data DocumentStatusItem = DocumentStatusItem
   }
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Flow StatusRes
-statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
+data DLDetails = DLDetails
+  { driverLicenseNumber :: Text,
+    operatingCity :: Text,
+    driverDateOfBirth :: Maybe UTCTime,
+    classOfVehicles :: [Text],
+    imageId1 :: Text,
+    imageId2 :: Maybe (Text),
+    dateOfIssue :: Maybe UTCTime,
+    createdAt :: UTCTime
+  }
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data RCDetails = RCDetails
+  { vehicleRegistrationCertNumber :: Text,
+    imageId :: Text,
+    operatingCity :: Text,
+    dateOfRegistration :: Maybe UTCTime,
+    vehicleCategory :: Maybe Text,
+    airConditioned :: Maybe Bool,
+    vehicleManufacturer :: Maybe Text,
+    vehicleModel :: Maybe Text,
+    vehicleColor :: Maybe Text,
+    vehicleDoors :: Maybe Int,
+    vehicleSeatBelts :: Maybe Int,
+    vehicleModelYear :: Maybe Int,
+    createdAt :: UTCTime
+  }
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Flow StatusRes
+statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = do
   -- multipleRC flag is temporary to support backward compatibility
   person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -228,8 +259,18 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
       when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC) $
         activateRCAutomatically personId merchantId merchantOpCityId vehicleDoc.registrationNo
       if allVehicleDocsVerified then return $ VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
-
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  (dlDetails, rcDetails) <-
+    case prefillData of
+      Just True -> do
+        dlImgIds <- map (.id) <$> runInReplica (IQuery.findImagesByPersonAndType merchantId personId DVC.DriverLicense)
+        vehRegImgIds <- map (.id) <$> runInReplica (IQuery.findImagesByPersonAndType merchantId personId DVC.VehicleRegistrationCertificate)
+        allDlImgs <- runInReplica $ DLQuery.findAllByImageId dlImgIds
+        allRCImgs <- runInReplica $ RCQuery.findAllByImageId vehRegImgIds
+        allDLDetails <- mapM (convertDLToDLDetails merchantOperatingCity) allDlImgs
+        allRCDetails <- mapM (convertRCToRCDetails merchantOperatingCity) allRCImgs
+        return $ (Just allDLDetails, Just allRCDetails)
+      _ -> return $ (Nothing, Nothing)
   return $
     StatusRes
       { dlVerificationStatus = dlStatus,
@@ -239,8 +280,42 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
         aadhaarVerificationStatus = aadhaarStatus,
         driverDocuments,
         vehicleDocuments,
-        enabled = driverInfo.enabled
+        enabled = driverInfo.enabled,
+        driverLicenseDetails = dlDetails,
+        vehicleRegistrationCertificateDetails = rcDetails
       }
+  where
+    convertDLToDLDetails merchantOperatingCity dl = do
+      driverLicenseNumberDec <- decrypt dl.licenseNumber
+      pure $
+        DLDetails
+          { driverLicenseNumber = driverLicenseNumberDec,
+            operatingCity = show merchantOperatingCity.city,
+            driverDateOfBirth = dl.driverDob,
+            classOfVehicles = dl.classOfVehicles,
+            imageId1 = dl.documentImageId1.getId,
+            imageId2 = getId <$> dl.documentImageId2,
+            createdAt = dl.createdAt,
+            dateOfIssue = dl.dateOfIssue
+          }
+    convertRCToRCDetails merchantOperatingCity rc = do
+      certificateNumberDec <- decrypt rc.certificateNumber
+      pure $
+        RCDetails
+          { vehicleRegistrationCertNumber = certificateNumberDec,
+            imageId = rc.documentImageId.getId,
+            operatingCity = show merchantOperatingCity.city,
+            vehicleCategory = show <$> rc.userPassedVehicleCategory,
+            airConditioned = rc.airConditioned,
+            vehicleManufacturer = rc.vehicleManufacturer,
+            vehicleModel = rc.vehicleModel,
+            vehicleColor = rc.vehicleColor,
+            vehicleDoors = rc.vehicleDoors,
+            vehicleSeatBelts = rc.vehicleSeatBelts,
+            createdAt = rc.createdAt,
+            dateOfRegistration = rc.dateOfRegistration,
+            vehicleModelYear = rc.vehicleModelYear
+          }
 
 enableDriver :: Id DMOC.MerchantOperatingCity -> Id SP.Person -> Maybe DL.DriverLicense -> Flow ()
 enableDriver _ _ Nothing = return ()
