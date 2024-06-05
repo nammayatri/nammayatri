@@ -1064,7 +1064,7 @@ dropDownFields push state idx item =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         ]$
-        [] <> if item.isExpanded then [dropDownList item push (idx + 3)] else []
+        [] <> if item.isExpanded then [dropDownList item push (idx + 2)] else []
     ] <> if item.showEditText then [PrimaryEditText.view (push <<< (ModelEditText item.type)) $ modelEditTextConfig state] else []
 
 
@@ -1148,7 +1148,7 @@ getDropDownList state =
           }
         , { isExpanded: false
           , "type": SEATBELTS
-          , options: [ "1" , "2", "3", "4", "5", "6"]
+          , options: [ "4" , "5", "6", "7"]
           , selected: "Select"
           , title : "Seatbelts"
           , showEditText :false
