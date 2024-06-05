@@ -146,7 +146,7 @@ verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
               aadhaarEntity <- mkAadhaar personId res.name res.gender res.date_of_birth (Just aadhaarNumberHash) Nothing True (Just orgImageFilePath)
               Q.create aadhaarEntity
               DriverInfo.updateAadhaarVerifiedState True (cast personId)
-              Status.statusHandler (person.id, person.merchantId, merchantOpCityId) Nothing
+              Status.statusHandler (person.id, person.merchantId, merchantOpCityId) Nothing Nothing
               uploadCompressedAadhaarImage person merchantOpCityId res.image imageType >> pure ()
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res
