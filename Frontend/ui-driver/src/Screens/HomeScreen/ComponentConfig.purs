@@ -2240,3 +2240,37 @@ topAcDriverPopUpConfig state = let
       }
     }
   in config'
+
+documentPendingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+documentPendingPopupConfig state = 
+  PopUpModal.config {
+    gravity = CENTER,
+    backgroundClickable = false,
+    optionButtonOrientation = "HORIZONTAL",
+    buttonLayoutMargin = Margin 16 0 16 20,
+    margin = MarginHorizontal 25 25, 
+    primaryText {
+      text = "Upload documents to take rides"
+    , textStyle = Heading2
+    , margin = Margin 16 0 16 20},
+    secondaryText{visibility = GONE },
+    option1 {
+      text = "Upload now"
+    , color = Color.yellow900
+    , background = Color.black900
+    , strokeColor = Color.transparent
+    , textStyle = FontStyle.SubHeading1
+    , width = MATCH_PARENT
+    },
+    option2 {
+    visibility = false
+  },
+    cornerRadius = PTD.Corners 15.0 true true true true,
+    coverImageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_img_doc_pending"
+    , visibility = VISIBLE
+    , margin = MarginHorizontal 16 16
+    , width = V 300
+    , height = V 315
+    }
+  }

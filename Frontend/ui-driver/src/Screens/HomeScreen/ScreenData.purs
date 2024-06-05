@@ -265,6 +265,7 @@ initData =
       , odometerImageUploading: false
       , showAcWorkingPopup: Nothing
       , acExplanationPopup : false
+      , documentPendingPopup : false
       , toll : initialTollState
       }
   }

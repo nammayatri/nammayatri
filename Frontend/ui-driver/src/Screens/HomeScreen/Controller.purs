@@ -299,6 +299,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToNewStop ST.HomeScreenState
                     | UpdateAirConditioned ST.HomeScreenState Boolean
                     | GoToBookingPreferences ST.HomeScreenState
+                    | ExitUploadPending ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -423,6 +424,7 @@ data Action = NoAction
             | OpenLink String
             | TollChargesPopUpAC PopUpModal.Action
             | TollChargesAmbigousPopUpAC PopUpModal.Action
+            | DocumentPendingPopupAC PopUpModal.Action
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -446,6 +448,8 @@ eval (BgLocationPopupAC PopUpModal.OnButton1Click) state =
     void $ JB.requestBackgroundLocation unit
     pure NoAction
   ]
+
+eval (DocumentPendingPopupAC PopUpModal.OnButton1Click) state = exit $ ExitUploadPending state { props { documentPendingPopup = false}}
 
 eval (ConfirmDisableGoto PopUpModal.OnButton2Click) state = continue state { data { driverGotoState { confirmGotoCancel = false } }} 
 
@@ -1182,6 +1186,7 @@ eval RecenterButtonAction state = continue state
 
 eval (SwitchDriverStatus status) state =
   if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
+  else if true then continue state { props { documentPendingPopup = true}} -- addCondition for document pending
   else if state.data.paymentState.driverBlocked then continue state { data{paymentState{ showBlockingPopup = true}}}
   else if not state.props.rcActive then do
     void $ pure $ toast $ getString PLEASE_ADD_RC

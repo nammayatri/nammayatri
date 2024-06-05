@@ -339,7 +339,8 @@ view push state =
         state.data.driverGotoState.confirmGotoCancel,
         state.props.accountBlockedPopup,
         state.props.vehicleNSPopup && not state.props.rcDeactivePopup,
-        state.props.acExplanationPopup && not onRide && (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.CarCategory
+        state.props.acExplanationPopup && not onRide && (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.CarCategory,
+        state.props.documentPendingPopup
       ])
     onRide = DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted]
     showEnterOdometerReadingModalView = state.data.activeRide.tripType == ST.Rental && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
@@ -1925,6 +1926,7 @@ popupModals push state =
           ST.VehicleNotSupported -> vehicleNotSupportedPopup state
           ST.BgLocationPopup -> bgLocPopup state
           ST.TopAcDriver -> topAcDriverPopUpConfig state
+          ST.DocumentPendingPopup -> documentPendingPopupConfig state
       ]
   where 
   
@@ -1935,6 +1937,7 @@ popupModals push state =
       else if state.props.vehicleNSPopup then ST.VehicleNotSupported
       else if state.props.bgLocationPopup then ST.BgLocationPopup
       else if state.props.acExplanationPopup then ST.TopAcDriver
+      else if state.props.documentPendingPopup then ST.DocumentPendingPopup
       else ST.KnowMore
 
     clickAction popupType = case popupType of
@@ -1945,6 +1948,7 @@ popupModals push state =
           ST.VehicleNotSupported -> VehicleNotSupportedAC
           ST.BgLocationPopup -> BgLocationPopupAC
           ST.TopAcDriver -> ACExpController
+          ST.DocumentPendingPopup -> DocumentPendingPopupAC
 
 enableCurrentLocation :: HomeScreenState -> Boolean
 enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true

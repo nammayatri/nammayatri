@@ -412,6 +412,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | UPDATE_SPECIAL_LOCATION_LIST
                           | UPDATE_AIR_CONDITIONED Boolean
                           | GO_TO_BOOKING_PREFERENCES
+                          | EXIT_UPLOAD_PENDING_DOCS HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

@@ -2709,6 +2709,14 @@ homeScreenFlow = do
         Left _ -> do
           pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
       homeScreenFlow
+    EXIT_UPLOAD_PENDING_DOCS updatedState ->
+      if false then onBoardingFlow -- multiple document pending
+      else do
+        let defState = DocumentCaptureData.initData
+            doctype = ST.PAN_CARD
+            vehicleCategory = RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY
+        modifyScreenState $ DocumentCaptureScreenStateType (\_ -> defState { data { cityConfig = updatedState.data.cityConfig, docType = doctype, vehicleCategory = vehicleCategory, linkedRc = Nothing}})
+        documentcaptureScreenFlow
   homeScreenFlow
 
 categoryTransformer :: Array Category -> String -> Array CategoryListType 

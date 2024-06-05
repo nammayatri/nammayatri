@@ -1226,8 +1226,9 @@ type HomeScreenProps =  {
   odometerUploadAttempts :: Int,
   odometerImageUploading :: Boolean,
   showAcWorkingPopup :: Maybe Boolean,
-  acExplanationPopup :: Boolean
-, toll :: TollState
+  acExplanationPopup :: Boolean,
+  toll :: TollState,
+  documentPendingPopup :: Boolean
  }
 
 type TollState = {
@@ -2343,7 +2344,7 @@ instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where stand
 instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
 instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
 
-data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver
+data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | DocumentPendingPopup
 
 derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
 instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow
