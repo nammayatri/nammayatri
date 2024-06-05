@@ -1469,3 +1469,8 @@ getHI stringKey =
         ONLY_3_MORE_RIDES_FOR_50_COINS -> "केवल 3 और सवारियां बाकी हैं और 50 सिक्के प्राप्त करें"
         YOU_GOT_50_COINS -> "आपको 50 सिक्के मिले"
         YOU_GOT_10_COINS -> "आपको 10 सिक्के मिले"
+        REGISTER_YOUR_BIKE -> "अपनी बाइक पंजीकृत करें"
+        BIKE_TAXI -> "बाइक टैक्सी"
+        FIRST_RIDE_FREE count -> "पहली " <> count <> " राइड फ्री"
+        FIRST_RIDES_FREE count -> "पहले " <> count <> " राइड्स फ्री"
+

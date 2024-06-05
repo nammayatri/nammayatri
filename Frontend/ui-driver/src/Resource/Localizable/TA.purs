@@ -1469,3 +1469,8 @@ getTA stringKey =
         ONLY_3_MORE_RIDES_FOR_50_COINS -> "மேலும் 3 சவாரிகள் செய்து 50 நாணயங்களைப் பெறுங்கள்"
         YOU_GOT_50_COINS -> "நீங்கள் 50 நாணயங்களைப் பெற்றுள்ளீர்கள்"
         YOU_GOT_10_COINS -> "நீங்கள் 10 நாணயங்களைப் பெற்றுள்ளீர்கள்"
+        REGISTER_YOUR_BIKE -> "உங்கள் பைக் பதிவு செய்யவும்"
+        BIKE_TAXI -> "பைக் டாக்ஸி"
+        FIRST_RIDE_FREE count -> "முதலாவது " <> count <> " சவாரி இலவசம்"
+        FIRST_RIDES_FREE count -> "முதலாவது " <> count <> " சவாரிகள் இலவசம்"
+

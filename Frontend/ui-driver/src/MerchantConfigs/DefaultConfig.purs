@@ -750,6 +750,10 @@ defWaitingChargesConfig = {
   auto : {
     freeSeconds : 180,
     perMinCharges : 1.50
+  },
+  bike : {
+    freeSeconds : 180,
+    perMinCharges : 1.50
   }
 }
 
@@ -762,6 +766,10 @@ defRentalWaitingChargesConfig = {
   auto : {
     freeSeconds : 180,
     perMinCharges : 2.0
+  },
+  bike: {
+    freeSeconds : 180,
+    perMinCharges : 1.5
   }
 }
 
