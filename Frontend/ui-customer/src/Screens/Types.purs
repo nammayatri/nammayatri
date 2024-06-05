@@ -971,6 +971,7 @@ data City
   | Pune
   | Mysore
   | Tumakuru
+  | Siliguri
   | AnyCity
   | Gurugram
   | Noida

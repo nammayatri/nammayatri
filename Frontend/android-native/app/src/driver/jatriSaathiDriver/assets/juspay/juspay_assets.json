@@ -240,6 +240,7 @@
       "ny_ic_benefits_inactive" : true,
       "ny_ic_bgloc" : true,
       "ny_ic_bhim" : true,
+      "ny_ic_bike_side" : true,
       "ny_ic_bin" : true,
       "ny_ic_black_headphone" : true,
       "ny_ic_blind_arrival" : true,
@@ -568,6 +569,7 @@
       "ny_ic_rupee_per_km" : true,
       "ny_ic_sedan" : true,
       "ny_ic_sedan_ac_side" : true,
+      "ny_ic_sedan_side" : true,
       "ny_ic_selected_icon" : true,
       "ny_ic_selected_zone_pickup_marker_green" : true,
       "ny_ic_selected_zone_pickup_marker_yellow" : true,
@@ -683,6 +685,11 @@
       "tip_banner_rectangle" : true,
       "up_hand_arrow" : true,
       "widget_close_gradient" : true,
-      "zone_curve" : true
+      "zone_curve" : true,
+      "ny_ic_bike_onboard" : true,
+      "ny_ic_driver_location_undetectable" : true,
+      "ny_driver_location_permission" : true,
+      "ys_ic_kolkata_map" : true,
+      "ys_ic_siliguri_map" : true
    }
 }
