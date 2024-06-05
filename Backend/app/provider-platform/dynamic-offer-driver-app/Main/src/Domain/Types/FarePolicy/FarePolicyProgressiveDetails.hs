@@ -78,19 +78,6 @@ $(mkBeamInstancesForJSON ''WaitingCharge)
 ------------------------------------------------APIEntity--------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------
 
-data FPProgressiveDetailsAPIEntity = FPProgressiveDetailsAPIEntity
-  { baseFare :: Money,
-    baseFareWithCurrency :: PriceAPIEntity,
-    baseDistance :: Meters,
-    baseDistanceWithUnit :: Distance,
-    perExtraKmRateSections :: NonEmpty FPProgressiveDetailsPerExtraKmRateSectionAPIEntity,
-    deadKmFare :: Money,
-    deadKmFareWithCurrency :: PriceAPIEntity,
-    waitingChargeInfo :: Maybe Common.WaitingChargeInfoAPIEntity,
-    nightShiftCharge :: Maybe Common.NightShiftChargeAPIEntity
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
 mkWaitingChargeInfo :: Common.WaitingChargeInfoAPIEntity -> WaitingChargeInfo
 mkWaitingChargeInfo Common.WaitingChargeInfoAPIEntity {..} =
   WaitingChargeInfo
