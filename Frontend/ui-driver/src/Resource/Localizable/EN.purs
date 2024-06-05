@@ -1463,3 +1463,5 @@ getEN stringKey =
         CHOOSE_RIDE_DIST -> "Choose Ride Distance"
         RATES_CHANGE_AS_THE_DIST -> "Rates change as the distance of your ride changes"
         VIEW_BOOKING_PREF -> "View Booking Preferences"
+        REGISTER_YOUR_BIKE -> "Register your bike"
+        BIKE_TAXI -> "Bike Taxi"

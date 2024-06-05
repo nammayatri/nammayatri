@@ -964,6 +964,7 @@ data City
   | Pune
   | Mysore
   | Tumakuru
+  | Siliguri
   | AnyCity
 
 derive instance genericCity :: Generic City _

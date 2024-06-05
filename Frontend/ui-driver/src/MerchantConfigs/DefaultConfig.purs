@@ -608,6 +608,7 @@ config =
     startTime : "21:00:00"
   , endTime : "06:00:00"
   }
+  , clientName : ""
 }
 
 registrationConfig :: CTC.RegistrationConfig
@@ -631,6 +632,10 @@ defWaitingChargesConfig = {
     perMinCharges : 1.0
   },
   auto : {
+    freeSeconds : 180,
+    perMinCharges : 1.50
+  },
+  bike : {
     freeSeconds : 180,
     perMinCharges : 1.50
   }

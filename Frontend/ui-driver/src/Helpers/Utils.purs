@@ -289,10 +289,12 @@ getDowngradeOptions variant = case (getMerchant FunctionCall) of
                                                 "TAXI"  -> []
                                                 "SUV"   -> ["SEDAN", "HATCHBACK"]
                                                 "SEDAN" -> ["TAXI", "HATCHBACK"] 
+                                                "BIKE"  -> []
                                                 _       -> ["TAXI"]
                                 _ -> case variant of
                                         "SUV"   -> ["SEDAN", "HATCHBACK"]
                                         "SEDAN" -> ["HATCHBACK"]
+                                        "BIKE"  -> []
                                         _       -> []
 
 
@@ -316,12 +318,14 @@ getUIDowngradeOptions :: String -> Array String
 getUIDowngradeOptions variant = case (getMerchant FunctionCall) of
                                 YATRISATHI -> case variant of
                                                 "TAXI"  -> []
+                                                "BIKE"  -> []
                                                 "SUV"   -> ["SEDAN"]
                                                 "SEDAN" -> ["TAXI"] 
                                                 _       -> ["TAXI"]
                                 _ -> case variant of
                                         "SUV"   -> ["SEDAN", "HATCHBACK"]
                                         "SEDAN" -> ["HATCHBACK"]
+                                        "BIKE"  -> []
                                         _       -> []
   
 getVehicleType :: String -> String
@@ -333,6 +337,7 @@ getVehicleType vehicleType =
     "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
     "TAXI" -> (getString TAXI)
     "TAXI_PLUS" -> (getString TAXI_PLUS)
+    "BIKE" -> "Bike"
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig
@@ -524,6 +529,7 @@ getCategorizedVariant variant = case variant of
       "HATCHBACK"  -> "AC Taxi"
       "TAXI_PLUS"  -> "AC Taxi"
       "SUV" -> "AC Taxi"
+      "BIKE" -> "Bike"
       _ -> "Non AC"
     _ -> case var of
       "SEDAN"  -> "Sedan"
@@ -531,6 +537,7 @@ getCategorizedVariant variant = case variant of
       "TAXI_PLUS"  -> "AC Taxi"
       "SUV" -> "Suv"
       "AUTO_RICKSHAW" -> "Auto Rickshaw"
+      "BIKE" -> "Bike"
       _ -> var
   Nothing -> ""
 
@@ -571,6 +578,7 @@ getVehicleVariantImage variant =
                         "SUV_TIER"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
                         "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
                         "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
+                        "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
                         _           -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
         NAMMAYATRI -> case variant of
                         "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
@@ -591,7 +599,8 @@ getVehicleVariantImage variant =
                             "Hyderabad" -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
                             "Chennai"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
                             _           -> fetchImage FF_ASSET "ic_vehicle_front"
-                        _ -> fetchImage FF_ASSET "ic_vehicle_front"
+                        "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
+                        _           -> fetchImage FF_ASSET "ic_vehicle_front"
         _          -> case variant of
                         "SEDAN"     -> "ny_ic_sedan_car_side," <> url <> "ny_ic_sedan_car_side.png"
                         "SEDAN_TIER" -> "ny_ic_sedan_car_side," <> url <> "ny_ic_sedan_car_side.png"
@@ -603,6 +612,7 @@ getVehicleVariantImage variant =
                         "TAXI_PLUS" -> "ic_sedan_ac," <> url <> "ic_sedan_ac.png"
                         "RENTALS"   -> "ic_rentals," <> url <> "ic_rentals.png"
                         "INTERCITY" -> "ic_intercity," <> url <> "ic_intercity.png"
+                        "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
                         _           -> "ic_sedan_ac," <> url <> "ic_sedan_ac.png"
 
 getVariantRideType :: String -> String
@@ -611,6 +621,7 @@ getVariantRideType variant =
     YATRISATHI -> case variant of
                     "TAXI" -> getString TAXI
                     "SUV"  -> getString AC_SUV
+                    "BIKE" -> getString BIKE_TAXI
                     _      -> getString AC_CAB
     _          -> case variant of
                     "TAXI"          -> getString TAXI
@@ -619,6 +630,7 @@ getVariantRideType variant =
                     "TAXI_PLUS"     -> getString TAXI_PLUS
                     "SUV"           -> getString SUV
                     "AUTO_RICKSHAW" -> getString AUTO_RICKSHAW
+                    "BIKE"          -> getString BIKE_TAXI
                     _               -> variant
                     
 getStatus :: String -> PaymentStatus
@@ -695,6 +707,10 @@ getCityConfig cityConfig cityName = do
                               perMinCharges : 1.0
                             },
                             auto : {
+                              freeSeconds : 3,
+                              perMinCharges : 1.50
+                            },
+                            bike: {
                               freeSeconds : 3,
                               perMinCharges : 1.50
                             }
@@ -908,6 +924,7 @@ getChargesOb :: CTC.CityConfig -> String -> CTC.ChargesEntity
 getChargesOb cityConfig driverVehicle = 
   case driverVehicle of
     "AUTO_RICKSHAW" -> cityConfig.waitingChargesConfig.auto
+    "BIKE" -> cityConfig.waitingChargesConfig.bike
     _ -> cityConfig.waitingChargesConfig.cab
 
 getRideInfoEntityBasedOnBookingType :: HomeScreenState -> ST.ActiveRide
@@ -952,3 +969,4 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.TAXI_PLUS -> "TAXI_PLUS"
   SA.RENTALS -> "RENTALS"
   SA.INTERCITY -> "INTERCITY"
+  SA.BIKE_TIER -> "BIKE"

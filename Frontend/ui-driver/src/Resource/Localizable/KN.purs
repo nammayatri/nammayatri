@@ -1462,3 +1462,5 @@ getKN stringKey =
         CHOOSE_RIDE_DIST -> "ಸವಾರಿ ದೂರವನ್ನು ಆಯ್ಕೆಮಾಡಿ"
         RATES_CHANGE_AS_THE_DIST -> "ನಿಮ್ಮ ಸವಾರಿ ದೂರವು ಬದಲಾವಣೆಯಾದಂತೆ ದರಗಳು ಬದಲಾವಣೆಯಾಗುತ್ತವೆ"
         VIEW_BOOKING_PREF -> "ಬುಕಿಂಗ್ ಆದ್ಯತೆಗಳನ್ನು ವೀಕ್ಷಿಸಿ"
+        REGISTER_YOUR_BIKE -> "ನಿಮ್ಮ ಬೈಕನ್ನು ನೋಂದಣಿ ಮಾಡಿ"
+        BIKE_TAXI -> "ಬೈಕ್ ಟ್ಯಾಕ್ಸಿ"

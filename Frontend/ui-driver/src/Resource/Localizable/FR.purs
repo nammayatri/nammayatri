@@ -1025,4 +1025,6 @@ getFR stringKey =
         BOOKING_FROM bapName -> "Réservation depuis: " <> bapName
         YOU_ARE_ON_A_INTERCITY_RIDE -> "Vous êtes sur un trajet interurbain"
         PICK_UP -> "Ramasser"
+        REGISTER_YOUR_BIKE -> "Enregistrez votre vélo"
+        BIKE_TAXI -> "Taxi Moto"
         _ -> ""

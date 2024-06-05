@@ -756,7 +756,7 @@ instance showRidesInfo :: Show RidesInfo where show = genericShow
 instance decodeRidesInfo :: Decode RidesInfo where decode = defaultDecode
 instance encodeRidesInfo :: Encode RidesInfo where encode = defaultEncode
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance showVehicleVariant :: Show VehicleVariant where show = genericShow
@@ -768,6 +768,7 @@ instance standardEncodeVehicleVariant :: StandardEncode VehicleVariant
  standardEncode SUV = standardEncode {}
  standardEncode HATCHBACK = standardEncode {}
  standardEncode AUTO_VARIANT = standardEncode {}
+ standardEncode BIKE = standardEncode {}
 
 data Status = NEW | INPROGRESS | COMPLETED | CANCELLED | NOTHING
 
@@ -2748,7 +2749,7 @@ instance decodePromotionPopupConfig :: Decode PromotionPopupConfig where decode 
 instance encodePromotionPopupConfig :: Encode PromotionPopupConfig where encode = defaultEncode 
 
 instance makeUiPlansReq :: RestEndpoint UiPlansReq UiPlansResp where
- makeRequest reqBody@(UiPlansReq dummy) headers = defaultMakeRequest GET (EP.getUiPlans "") headers reqBody Nothing
+ makeRequest reqBody@(UiPlansReq vehicleVariant) headers = defaultMakeRequest GET (EP.getUiPlans vehicleVariant) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
@@ -2837,7 +2838,7 @@ newtype DuesEntity = DuesEntity {
 
 
 instance makePaymentDuesReq :: RestEndpoint PaymentDuesReq PaymentDuesResp where
- makeRequest reqBody@(PaymentDuesReq dummy ) headers = defaultMakeRequest GET (EP.getUiPlans "") headers reqBody Nothing
+ makeRequest reqBody@(PaymentDuesReq dummy) headers = defaultMakeRequest GET (EP.paymentDues dummy) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
@@ -4506,6 +4507,7 @@ data ServiceTierType
   | TAXI_PLUS
   | RENTALS
   | INTERCITY
+  | BIKE_TIER
 
 data AirConditionedRestrictionType
   = ToggleAllowed
@@ -4565,6 +4567,7 @@ instance decodeServiceTierType :: Decode ServiceTierType
                   "TAXI_PLUS"    -> except $ Right TAXI_PLUS
                   "RENTALS"      -> except $ Right RENTALS
                   "INTERCITY"    -> except $ Right INTERCITY
+                  "BIKE"         -> except $ Right BIKE_TIER
                   _              -> except $ Right COMFY
 instance encodeServiceTierType :: Encode ServiceTierType where encode = defaultEnumEncode
 instance eqServiceTierType :: Eq ServiceTierType where eq = genericEq
@@ -4579,6 +4582,7 @@ instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
     standardEncode SEDAN_TIER = standardEncode "SEDAN"
     standardEncode TAXI = standardEncode "TAXI"
     standardEncode TAXI_PLUS = standardEncode "TAXI_PLUS"
+    standardEncode BIKE_TIER = standardEncode "BIKE"
     standardEncode RENTALS = standardEncode "RENTALS"
     standardEncode INTERCITY = standardEncode "INTERCITY"
 

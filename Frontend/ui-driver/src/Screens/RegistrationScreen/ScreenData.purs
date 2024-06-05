@@ -40,6 +40,7 @@ initData = {
         activeIndex : 1,
         registerationStepsCabs : [],
         registerationStepsAuto : [],
+        registerationStepsBike : [],
         drivingLicenseStatus : NOT_STARTED,
         vehicleDetailsStatus : NOT_STARTED,
         permissionsStatus : NOT_STARTED,
@@ -120,6 +121,10 @@ dummyCityConfig = {
                         perMinCharges : 1.0
                       },
                       auto : {
+                        freeSeconds : 3,
+                        perMinCharges : 1.50
+                      },
+                      bike : {
                         freeSeconds : 3,
                         perMinCharges : 1.50
                       }

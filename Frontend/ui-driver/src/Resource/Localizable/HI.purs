@@ -1463,3 +1463,5 @@ getHI stringKey =
         CHOOSE_RIDE_DIST -> "सवारी दूरी चुनें"
         RATES_CHANGE_AS_THE_DIST -> "आपकी सवारी की दूरी बदलने के साथ दरें बदल जाती हैं"
         VIEW_BOOKING_PREF -> "बुकिंग प्राथमिकताएँ देखें"
+        REGISTER_YOUR_BIKE -> "अपनी बाइक पंजीकृत करें"
+        BIKE_TAXI -> "बाइक टैक्सी"

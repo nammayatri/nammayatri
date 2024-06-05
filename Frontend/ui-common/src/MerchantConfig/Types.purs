@@ -127,7 +127,8 @@ type Referral = {
 
 type WaitingChargesConfig = {
   cab :: ChargesEntity,
-  auto :: ChargesEntity
+  auto :: ChargesEntity,
+  bike :: ChargesEntity
 }
 
 type ChargesEntity = {

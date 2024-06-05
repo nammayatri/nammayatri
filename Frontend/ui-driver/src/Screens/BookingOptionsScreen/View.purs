@@ -368,6 +368,7 @@ rentalPreferenceView push state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
+    , visibility $ MP.boolToVisibility state.props.canSwitchToRental
     ][serviceTierItem state push item state.props.canSwitchToRental false (-1)]
   where 
     item :: ST.RidePreference

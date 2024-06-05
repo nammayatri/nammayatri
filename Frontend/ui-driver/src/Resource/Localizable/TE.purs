@@ -1465,3 +1465,5 @@ getTE stringKey =
         CHOOSE_RIDE_DIST -> "రైడ్ దూరం ఎంచుకోండి"
         RATES_CHANGE_AS_THE_DIST -> "మీ రైడ్ దూరం మారితే రేట్‌లు మారవచ్చు"
         VIEW_BOOKING_PREF -> "బుకింగ్ ప్రిఫరెన్సులను చూడండి"
+        REGISTER_YOUR_BIKE -> "మీ బైక్ నమోదు చేయండి"
+        BIKE_TAXI -> "బైక్ టాక్సీ"

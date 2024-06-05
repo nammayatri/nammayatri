@@ -1464,3 +1464,5 @@ getBN stringKey =
         CHOOSE_RIDE_DIST -> "রাইড দূরত্ব নির্বাচন করুন"
         RATES_CHANGE_AS_THE_DIST -> "ভাড়া আপডেট হয় যখন আপনার রাইডের দূরত্ব পরিবর্তিত হয়"
         VIEW_BOOKING_PREF -> "বুকিং পছন্দ দেখুন"
+        REGISTER_YOUR_BIKE -> "আপনার বাইক নিবন্ধন করুন"
+        BIKE_TAXI -> "বাইক ট্যাক্সি"

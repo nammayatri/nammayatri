@@ -1463,3 +1463,5 @@ getML stringKey =
         CHOOSE_RIDE_DIST -> "യാത്ര ദൂരം തിരഞ്ഞെടുക്കുക"
         RATES_CHANGE_AS_THE_DIST -> "നിങ്ങളുടെ യാത്രാ ദൂരം മാറുന്നതിനുശേഷം നിരക്കുകൾ മാറും"
         VIEW_BOOKING_PREF -> "ബുക്കിംഗ് പ്രിഫറൻസുകൾ കാണുക"
+        REGISTER_YOUR_BIKE -> "നിങ്ങളുടെ ബൈക്ക് രജിസ്റ്റർ ചെയ്യുക"
+        BIKE_TAXI -> "ബൈക്ക് ടാക്സി"

@@ -800,6 +800,7 @@ getCityFromString cityString =
     "Pune" -> Pune
     "Mysore" -> Mysore
     "Tumakuru" -> Tumakuru
+    "Siliguri" -> Siliguri
     _ -> AnyCity
 
 getCityNameFromCode :: Maybe String -> City

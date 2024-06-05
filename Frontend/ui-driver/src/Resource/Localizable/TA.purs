@@ -1463,3 +1463,5 @@ getTA stringKey =
         CHOOSE_RIDE_DIST -> "சவாரி தூரத்தைத் தேர்ந்தெடுக்கவும்"
         RATES_CHANGE_AS_THE_DIST -> "உங்கள் சவாரியின் தூரம் மாறும்போது விலைகள் மாறுகின்றன"
         VIEW_BOOKING_PREF -> "சவாரி முன்மேல் விருப்பங்களைக் காண்க"
+        REGISTER_YOUR_BIKE -> "உங்கள் பைக் பதிவு செய்யவும்"
+        BIKE_TAXI -> "பைக் டாக்ஸி"

@@ -48,6 +48,7 @@ import Components.RequestInfoCard as RequestInfoCard
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
+    appConfigV = getAppConfig appConfig
     feature = (getAppConfig appConfig).feature
     imageUploadCondition = state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL
     rcMatch = caseInsensitiveCompare state.data.vehicle_registration_number state.data.reEnterVehicleRegistrationNumber

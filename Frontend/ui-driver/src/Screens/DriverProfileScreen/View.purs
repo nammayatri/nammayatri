@@ -419,6 +419,8 @@ manageVehicleItem state vehicle push =
       (getAutoImage cityConfig)
     else if category == ST.CarCategory then
       "ny_ic_sedan"
+    else if category == ST.BikeCategory then
+      "ny_ic_bike_side"
     else
       "ny_ic_silhouette"
 
@@ -728,12 +730,11 @@ tabImageView state push =
 
   mkAsset :: ST.VehicleCategory -> CityConfig -> String
   mkAsset category cityConfig =
-    if category == ST.AutoCategory then
-      (getAutoImage cityConfig)
-    else if category == ST.CarCategory then
-      "ny_ic_sedan"
-    else
-      "ny_ic_silhouette"
+    case category of
+      ST.AutoCategory -> getAutoImage cityConfig
+      ST.CarCategory -> "ny_ic_sedan"
+      ST.BikeCategory -> "ny_ic_bike_side"
+      _ -> "ny_ic_silhouette"
 
   getAutoImage :: CityConfig -> String
   getAutoImage cityConfig =
@@ -1534,6 +1535,8 @@ vehicleListItem state push vehicle =
       (getAutoImage cityConfig)
     else if category == ST.CarCategory then
       "ny_ic_sedan"
+    else if category == ST.BikeCategory then
+      "ny_ic_bike_side"
     else
       "ny_ic_silhouette"
 
