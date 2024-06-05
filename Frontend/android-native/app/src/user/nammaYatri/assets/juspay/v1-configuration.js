@@ -314,7 +314,7 @@ window.getMerchantConfig = function () {
         },
         "bookAny" : {
           "name" : "Book Any",
-          "image" : "ny_ic_auto_cab_green,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_cab_green.png",
+          "image" : "ny_ic_cab_auto_green,https://assets.moving.tech/beckn/common/user/images/ny_ic_cab_auto_green.png",
           "leftViewImage" : ","
         },
       }

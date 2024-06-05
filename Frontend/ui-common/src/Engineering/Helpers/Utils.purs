@@ -47,7 +47,7 @@ import Presto.Core.Types.Language.Flow (Flow, doAff, getState, modifyState, dela
 import PrestoDOM.Core (terminateUI)
 import Types.App (FlowBT, GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
-import Data.Array (elem, slice, cons)
+import Data.Array (elem, slice, cons, uncons)
 import Data.Array as DA
 import Data.Tuple (Tuple(..), fst, snd)
 import ConfigProvider
@@ -391,6 +391,21 @@ splitIntoEqualParts n arr =
     rest = slice n (DA.length arr) arr
   in 
     cons part (splitIntoEqualParts n rest)
+
+splitArrayByLengths :: forall a. Array a -> Array Int -> Maybe (Array (Array a))
+splitArrayByLengths array lengths = split array lengths []
+  where
+    split :: Array a -> Array Int -> Array (Array a) -> Maybe (Array (Array a))
+    split remaining [] result = Just result
+    split remaining lenArray result =
+      case uncons lenArray of 
+         Just {head: len, tail: restLenArray} -> if len <= DA.length remaining then
+                                                  let part = DA.take len remaining
+                                                      rest = DA.drop len remaining
+                                                  in split rest restLenArray (result <> [part])
+                                                 else
+                                                  Just $ result <> [remaining]
+         Nothing -> Just $ result <> [remaining]
 
 getFlexBoxCompatibleVersion :: String -> String  
 getFlexBoxCompatibleVersion _ = 

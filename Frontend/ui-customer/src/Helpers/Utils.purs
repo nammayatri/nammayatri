@@ -679,15 +679,15 @@ getVehicleVariantImage variant viewType =
                               Kochi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
                               Chennai -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
                               Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
-                              Delhi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
+                              Delhi -> fetchImage FF_ASSET "ny_ic_auto_shadow"
                               _ -> variantConfig.autoRickshaw.image
           "BOOK_ANY"      -> case getMerchant FunctionCall of 
                               YATRISATHI -> variantConfig.bookAny.image
                               _ -> case city of 
-                                      Hyderabad -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
-                                      Chennai -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
-                                      Kochi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
-                                      Delhi -> variantConfig.bookAny.image
+                                      Hyderabad -> fetchImage COMMON_ASSET "ny_ic_cab_auto_yellow"
+                                      Chennai -> fetchImage COMMON_ASSET "ny_ic_cab_auto_yellow"
+                                      Kochi -> fetchImage COMMON_ASSET "ny_ic_cab_auto_black"
+                                      Delhi -> fetchImage COMMON_ASSET "ny_ic_cab_auto_green"
                                       _ -> variantConfig.bookAny.image
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
@@ -904,16 +904,16 @@ getAllServices :: LazyCheck -> Array String
 getAllServices dummy = 
   let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in case city of 
-    Bangalore -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
-    Tumakuru -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
-    Hyderabad -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
-    Delhi -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
-    Chennai -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
-    Mysore -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
+    Bangalore -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
+    Tumakuru -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
+    Hyderabad -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
+    Delhi -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
+    Chennai -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
+    Mysore -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     Kolkata -> ["Non-AC", "Hatchback", "Sedan", "SUV"]
-    Kochi -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
-    Pondicherry -> ["Eco", "Auto"]
-    _ ->  ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+    Kochi -> ["Eco", "Hatchback", "Sedan", "SUV"]
+    Pondicherry -> ["Auto", "Eco"]
+    _ ->  ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
 
 getSelectedServices :: LazyCheck -> Array String
 getSelectedServices dummy = 

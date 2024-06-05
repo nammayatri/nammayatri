@@ -364,3 +364,9 @@ transparentWhite = "#30FFFFFF"
 
 greyDark :: Color
 greyDark = "#D8D8D8"
+
+greyBackDarkColor :: Color
+greyBackDarkColor = "#D3D3D3"
+
+black12 :: Color
+black12 = "#1F000000"
