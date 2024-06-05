@@ -414,7 +414,13 @@ vehicleRegistrationNumber state push =
           ]
         ]
       ]
-      where validateRegistrationNumber regNum = regNum `DA.elem` state.data.rcNumberPrefixList
+      where 
+        validateRegistrationNumber regNum = regNum `DA.elem` state.data.rcNumberPrefixList || (validateWithRCPrefixlist regNum && state.props.addRcFromProfile)
+
+        validateWithRCPrefixlist regNum =
+          let vehicleConfig = (getAppConfig appConfig).vehicle
+              values = DS.split (DS.Pattern "|") $ vehicleConfig.validationPrefix
+          in regNum `DA.elem` values
 
 
 
