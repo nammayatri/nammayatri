@@ -911,7 +911,7 @@ getAllServices dummy =
     Chennai -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
     Mysore -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     Kolkata -> ["Non-AC", "Hatchback", "Sedan", "SUV"]
-    Kochi -> ["Eco", "Hatchback", "Sedan", "SUV"]
+    Kochi -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
     Pondicherry -> ["Auto", "Eco"]
     _ ->  ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
 
