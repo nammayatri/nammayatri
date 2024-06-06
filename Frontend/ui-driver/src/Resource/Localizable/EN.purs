@@ -1406,3 +1406,10 @@ getEN stringKey =
         TOLL_CHARGES_MAYBE_APPLICABLE -> "Toll charges may be applicable"        
         YOU_ARE_ALL_SET_TO_TAKE_RIDES -> "You're all set to take rides on Namma Yatri"
         TOP_AC_DRIVER appName -> "See how to be a top AC driver on " <> appName
+        GO_TO_ADVANCED_RIDE -> "Go to Advanced Ride"
+        GET_ADVANCED_RIDE -> "Get rides even before your current ride ends!"
+        ADVANCE -> "Advance"
+        CURRENT_BUTTON_TEXT -> "Current"
+        ADVANCE_BOOKING -> "Advance Booking"
+        FEATURE_UPDATE -> "Feature Update"
+        ADVANCED_RIDE_POPUP_TITLE -> "Get rides even before your current ride ends!"

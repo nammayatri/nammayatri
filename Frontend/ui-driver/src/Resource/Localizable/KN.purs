@@ -1405,3 +1405,10 @@ getKN stringKey =
         TOLL_CHARGES_MAYBE_APPLICABLE -> "ಟೋಲ್ ಶುಲ್ಕಗಳು ಅನ್ವಯವಾಗಬಹುದು"
         YOU_ARE_ALL_SET_TO_TAKE_RIDES -> "ನೀವು ನಮ್ಮ ಯಾತ್ರಿಯಲ್ಲಿ ಸವಾರಿ ಮಾಡಲು ಸಿದ್ಧವಾಗಿದ್ದೀರಿ"
         TOP_AC_DRIVER appName -> "ಹೇಗೆ ಶೀರ್ಷ AC ಚಾಲಕನಾಗಬೇಕು ನೋಡಿ " <> appName
+        GO_TO_ADVANCED_RIDE -> "ಮುಂಗಡ ಸವಾರಿಗೆ ಹೋಗಿ"
+        CURRENT_BUTTON_TEXT -> "ಪ್ರಸ್ತುತ"
+        ADVANCE -> "ಮುಂಚಿತ"
+        ADVANCE_BOOKING -> "ಮುಂಚಿತವಾಗಿ ಬುಕ್ ಮಾಡುವಿಕೆ"
+        FEATURE_UPDATE -> "ಫೀಚರ್ ನವೀಕರಣ"
+        GET_ADVANCED_RIDE -> "ನಿಮ್ಮ ಪ್ರಸ್ತುತ ಸವಾರಿ ಮುಗಿಯುವುದಕ್ಕಿಂತ ಮೊದಲೇ ಸವಾರಿಗಳನ್ನು ಪಡೆಯಿರಿ!"
+        ADVANCED_RIDE_POPUP_TITLE -> "ನಿಮ್ಮ ಪ್ರಸ್ತುತ ಸವಾರಿ ಮುಗಿಯುವುದಕ್ಕಿಂತ ಮೊದಲೇ ಸವಾರಿಗಳನ್ನು ಪಡೆಯಿರಿ!"

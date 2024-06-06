@@ -209,6 +209,8 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , vehicleModel : rideList.vehicleModel
       , vehicleColor : rideList.vehicleColor
       , fareProductType : fareProductType
+      , driversPreviousRideDropLocLat : resp.driversPreviousRideDropLocLat
+      , driversPreviousRideDropLocLon : resp.driversPreviousRideDropLocLon
       }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity

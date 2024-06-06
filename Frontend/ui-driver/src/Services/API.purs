@@ -433,7 +433,12 @@ instance encodeLogOutRes :: Encode LogOutRes where encode = defaultEncode
 ------------------------------------------------------------GET DRIVER PROFILE----------------------------------------------------------------------------------------------------------------------------------------------
 
 -- GetDriverInfo API request, response types
-data GetDriverInfoReq = GetDriverInfoReq { }
+newtype GetDriverInfoReq = GetDriverInfoReq {
+ }
+
+newtype DriverInfoReq = DriverInfoReq {
+  isAdvancedBookingEnabled :: Maybe Boolean
+ }
 
 newtype GetDriverInfoResp = GetDriverInfoResp
     { id                    :: String
@@ -509,6 +514,17 @@ newtype Vehicle = Vehicle
         serviceTierType  :: Maybe String
     }
 
+instance makeDriverInfoReq :: RestEndpoint DriverInfoReq UpdateFeatureInDInfoResp where
+    makeRequest reqBody headers = defaultMakeRequest POST (EP.getDriverInfoV2 "") headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericDriverInfoReq :: Generic DriverInfoReq _
+instance showDriverInfoReq :: Show DriverInfoReq where show = genericShow
+instance standardEncodeDriverInfoReq :: StandardEncode DriverInfoReq where standardEncode (DriverInfoReq req) = standardEncode req
+instance decodeDriverInfoReq :: Decode DriverInfoReq where decode = defaultDecode
+instance encodeDriverInfoReq :: Encode DriverInfoReq where encode = defaultEncode
+
 instance makeGetDriverInfoReq :: RestEndpoint GetDriverInfoReq GetDriverInfoResp where
     makeRequest reqBody headers = defaultMakeRequest GET (EP.getDriverInfo "") headers reqBody Nothing
     decodeResponse = decodeJSON
@@ -519,6 +535,14 @@ instance showGetDriverInfoReq :: Show GetDriverInfoReq where show = genericShow
 instance standardEncodeGetDriverInfoReq :: StandardEncode GetDriverInfoReq where standardEncode (GetDriverInfoReq req) = standardEncode req
 instance decodeGetDriverInfoReq :: Decode GetDriverInfoReq where decode = defaultDecode
 instance encodeGetDriverInfoReq :: Encode GetDriverInfoReq where encode = defaultEncode
+
+newtype UpdateFeatureInDInfoResp = UpdateFeatureInDInfoResp GetDriverInfoResp
+
+derive instance genericUpdateFeatureInDInfoResp :: Generic UpdateFeatureInDInfoResp _
+derive instance newtypeUpdateFeatureInDInfoResp :: Newtype UpdateFeatureInDInfoResp _
+instance standardEncodeUpdateFeatureInDInfoResp :: StandardEncode UpdateFeatureInDInfoResp where standardEncode (UpdateFeatureInDInfoResp req) = standardEncode req
+instance decodeUpdateFeatureInDInfoResp :: Decode UpdateFeatureInDInfoResp where decode = defaultDecode
+instance encodeUpdateFeatureInDInfoResp :: Encode UpdateFeatureInDInfoResp where encode = defaultEncode
 
 derive instance genericOrganizationInfo :: Generic OrganizationInfo _
 derive instance newtypeOrganizationInfo :: Newtype OrganizationInfo _
@@ -603,8 +627,9 @@ newtype RidesInfo = RidesInfo
       vehicleServiceTierName :: String,
       vehicleServiceTier :: String,
       isVehicleAirConditioned :: Maybe Boolean,
-      vehicleCapacity :: Maybe Int
-    , tollConfidence :: Maybe CTA.Confidence
+      vehicleCapacity :: Maybe Int,
+      tollConfidence :: Maybe CTA.Confidence,
+      bookingType :: Maybe BookingTypes
   }
 
 newtype OdometerReading = OdometerReading
@@ -682,6 +707,18 @@ newtype LocationInfo = LocationInfo
         lon :: Number
       }
 
+data BookingTypes = CURRENT | ADVANCED
+
+derive instance genericBookingTypesMethods :: Generic BookingTypes _
+instance showBookingTypesMethods :: Show BookingTypes where show = genericShow
+instance decodeBookingTypesMethods :: Decode BookingTypes where decode = defaultEnumDecode
+instance encodeBookingTypesMethods :: Encode BookingTypes where encode = defaultEnumEncode
+instance eqBookingTypes :: Eq BookingTypes where eq = genericEq
+instance standardEncodeBookingTypesMethods :: StandardEncode BookingTypes
+  where
+  standardEncode CURRENT = standardEncode $ show CURRENT
+  standardEncode ADVANCED = standardEncode $ show ADVANCED
+  standardEncode _ = standardEncode $ show CURRENT
 
 instance makeGetRidesHistoryReq :: RestEndpoint GetRidesHistoryReq GetRidesHistoryResp where
     makeRequest reqBody@(GetRidesHistoryReq limit offset isActive status day) headers = defaultMakeRequest GET (EP.getRideHistory limit offset isActive status day) headers reqBody Nothing

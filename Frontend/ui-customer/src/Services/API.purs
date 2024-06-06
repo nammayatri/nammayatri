@@ -1007,7 +1007,10 @@ newtype RideBookingRes = RideBookingRes {
   status :: String,
   tripTerms :: Array String,
   updatedAt :: String,
-  vehicleServiceTierType :: Maybe String
+  vehicleServiceTierType :: Maybe String,
+  tollConfidence :: Maybe CTA.Confidence,
+  driversPreviousRideDropLocLat :: Maybe Number,
+  driversPreviousRideDropLocLon :: Maybe Number
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
@@ -1133,7 +1136,8 @@ newtype DEstimateSelect = DEstimateSelect
     customerExtraFee :: Maybe Int,
     autoAssignEnabled :: Boolean,
     autoAssignEnabledV2 :: Boolean,
-    otherSelectedEstimates :: Array String
+    otherSelectedEstimates :: Array String,
+    isAdvancedBookingEnabled :: Boolean
   }
 
 newtype SelectEstimateRes = SelectEstimateRes

@@ -70,7 +70,7 @@ import Screens as ScreenNames
 import Screens.DriverProfileScreen.ScreenData (dummyDriverInfo)
 import Screens.SubscriptionScreen.Controller (Action(..), ScreenOutput, eval, getAllFareFromArray, getPlanPrice)
 import Screens.Types (AutoPayStatus(..), DueItem, GlobalProps, KioskLocation(..), MyPlanData, OfferBanner, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscriptionScreenState, SubscriptionSubview(..))
-import Services.API (ReelsResp, FeeType(..), GetCurrentPlanResp(..), GetDriverInfoResp(..), KioskLocationRes(..), KioskLocationResp(..), OrderStatusRes(..), PaymentBreakUp(..), UiPlansResp(..), GetDriverInfoReq(..), LastPaymentType(..))
+import Services.API (ReelsResp, FeeType(..), GetCurrentPlanResp(..), GetDriverInfoResp(..), KioskLocationRes(..), KioskLocationResp(..), OrderStatusRes(..), PaymentBreakUp(..), UiPlansResp(..), DriverInfoReq(..), LastPaymentType(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalStore, isOnFreeTrial)
 import Styles.Colors as Color
@@ -145,7 +145,8 @@ getDriverInfoDataFromCache resp = do
   case resp of 
     Just cacheResp -> pure cacheResp
     Nothing -> do
-      driverInfoResp <- Remote.getDriverInfoApi (GetDriverInfoReq {})
+      (GlobalState state) <- getState
+      driverInfoResp <- Remote.getDriverInfoApi (DriverInfoReq {isAdvancedBookingEnabled : Just state.homeScreen.data.cityConfig.enableAdvancedBooking})
       case driverInfoResp of
         Right latestResp -> pure latestResp
         Left _ -> pure dummyDriverInfo
