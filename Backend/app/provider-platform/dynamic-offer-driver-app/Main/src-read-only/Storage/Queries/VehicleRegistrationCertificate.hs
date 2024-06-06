@@ -81,6 +81,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.manufacturerModel manufacturerModel,
       Se.Set Beam.permitExpiry permitExpiry,
       Se.Set Beam.pucExpiry pucExpiry,
+      Se.Set Beam.rejectReason rejectReason,
       Se.Set Beam.reviewRequired reviewRequired,
       Se.Set Beam.reviewedAt reviewedAt,
       Se.Set Beam.userPassedVehicleCategory userPassedVehicleCategory,

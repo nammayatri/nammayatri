@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.VehicleInsurance where
+module Storage.Queries.VehicleInsurance (module Storage.Queries.VehicleInsurance, module ReExport) where
 
 import qualified Domain.Types.Image
 import qualified Domain.Types.Person
@@ -17,6 +17,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.VehicleInsurance as Beam
+import Storage.Queries.VehicleInsuranceExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleInsurance.VehicleInsurance -> m ())
 create = createWithKV
@@ -54,6 +55,7 @@ updateByPrimaryKey (Domain.Types.VehicleInsurance.VehicleInsurance {..}) = do
       Se.Set Beam.policyNumberHash (policyNumber & hash),
       Se.Set Beam.policyProvider policyProvider,
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
+      Se.Set Beam.rejectReason rejectReason,
       Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -61,46 +63,3 @@ updateByPrimaryKey (Domain.Types.VehicleInsurance.VehicleInsurance {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.VehicleInsurance Domain.Types.VehicleInsurance.VehicleInsurance where
-  fromTType' (Beam.VehicleInsuranceT {..}) = do
-    pure $
-      Just
-        Domain.Types.VehicleInsurance.VehicleInsurance
-          { documentImageId = Kernel.Types.Id.Id documentImageId,
-            driverId = Kernel.Types.Id.Id driverId,
-            id = Kernel.Types.Id.Id id,
-            insuredName = insuredName,
-            issueDate = issueDate,
-            limitsOfLiability = limitsOfLiability,
-            policyExpiry = policyExpiry,
-            policyNumber = EncryptedHashed (Encrypted policyNumberEncrypted) policyNumberHash,
-            policyProvider = policyProvider,
-            rcId = Kernel.Types.Id.Id rcId,
-            verificationStatus = verificationStatus,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.VehicleInsurance Domain.Types.VehicleInsurance.VehicleInsurance where
-  toTType' (Domain.Types.VehicleInsurance.VehicleInsurance {..}) = do
-    Beam.VehicleInsuranceT
-      { Beam.documentImageId = Kernel.Types.Id.getId documentImageId,
-        Beam.driverId = Kernel.Types.Id.getId driverId,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.insuredName = insuredName,
-        Beam.issueDate = issueDate,
-        Beam.limitsOfLiability = limitsOfLiability,
-        Beam.policyExpiry = policyExpiry,
-        Beam.policyNumberEncrypted = policyNumber & unEncrypted . encrypted,
-        Beam.policyNumberHash = policyNumber & hash,
-        Beam.policyProvider = policyProvider,
-        Beam.rcId = Kernel.Types.Id.getId rcId,
-        Beam.verificationStatus = verificationStatus,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
-      }
