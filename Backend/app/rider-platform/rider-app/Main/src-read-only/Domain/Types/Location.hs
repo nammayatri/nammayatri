@@ -19,7 +19,7 @@ data Location = Location
     lon :: Kernel.Prelude.Double,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show, Eq, Kernel.External.Maps.HasCoordinates)
+  deriving (Generic, Show, Eq, Kernel.External.Maps.HasCoordinates, ToJSON, FromJSON, ToSchema)
 
 data LocationAPIEntity = LocationAPIEntity
   { area :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

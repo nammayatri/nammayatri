@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN fav_driver_list Text[] Not Null DEFAULT '{}';

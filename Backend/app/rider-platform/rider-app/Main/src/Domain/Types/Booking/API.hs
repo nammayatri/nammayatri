@@ -26,7 +26,7 @@ import Domain.Types.CancellationReason
 import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.Extra.Ride (RideAPIEntity (..))
 import Domain.Types.FareBreakup as DFareBreakup
-import Domain.Types.Location (LocationAPIEntity)
+import Domain.Types.Location (Location, LocationAPIEntity)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.Sos as DSos
@@ -40,6 +40,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Sequelize as Se
+import qualified Storage.Beam.Ride as BeamR
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Sos as CQSos
@@ -116,6 +118,16 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     isBookingUpdated :: Bool,
     bookingStatus :: BookingStatus,
     rideStatus :: Maybe DRide.RideStatus
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data FavouriteBookingAPIEntity = FavouriteBookingAPIEntity
+  { id :: Id Booking,
+    rideRating :: Maybe Int,
+    fromLocation :: Location, 
+    toLocation :: Maybe Location,
+    totalFare :: Maybe Money,
+    startTime :: Maybe UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -291,6 +303,19 @@ mkBookingAPIDetails = \case
           estimatedDistanceWithUnit = distance
         }
 
+makeFavouriteBookingAPIEntity :: Booking -> Ride -> FavouriteBookingAPIEntity
+makeFavouriteBookingAPIEntity booking ride = do
+  let money = (fromJust ride.totalFare)
+
+  FavouriteBookingAPIEntity
+    { id = booking.id,
+      rideRating = ride.rideRating,
+      fromLocation = ride.fromLocation,
+      toLocation = ride.toLocation,
+      totalFare = Just money.amountInt,
+      startTime = ride.rideStartTime
+    }
+
 getActiveSos :: (CacheFlow m r, EsqDBFlow m r) => Maybe DRide.Ride -> Id Person.Person -> m (Maybe DSos.SosStatus)
 getActiveSos mbRide personId = do
   case mbRide of
@@ -342,6 +367,11 @@ buildBookingStatusAPIEntity booking = do
   mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
   rideStatus <- maybe (pure Nothing) (\ride -> pure $ Just ride.status) mbActiveRide
   return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus
+
+favouritebuildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m (Maybe FavouriteBookingAPIEntity)
+favouritebuildBookingAPIEntity booking = do
+  ride <- findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq $ booking.id.getId]]
+  pure $ makeFavouriteBookingAPIEntity booking <$> ride
 
 -- TODO move to Domain.Types.Ride.Extra
 makeRideAPIEntity :: DRide.Ride -> RideAPIEntity

@@ -53,6 +53,15 @@ type API =
              :> QueryParam "status" SRB.BookingStatus
              :> QueryParam "clientId" (Id DC.Client)
              :> Get '[JSON] DBooking.BookingListRes
+           :<|> "favouriteList"
+             :> TokenAuth
+             :> QueryParam "limit" Integer
+             :> QueryParam "offset" Integer
+             :> QueryParam "onlyActive" Bool
+             :> QueryParam "status" SRB.BookingStatus
+             :> QueryParam "clientId" (Id DC.Client)
+             :> ReqBody '[JSON] DBooking.DriverNo
+             :> Get '[JSON] DBooking.FavouriteBookingListRes
            :<|> Capture "rideBookingId" (Id SRB.Booking)
              :> TokenAuth
              :> "addStop"
@@ -70,6 +79,7 @@ handler =
   bookingStatus
     :<|> bookingStatusPolling
     :<|> bookingList
+    :<|> favouriteBookingList
     :<|> addStop
     :<|> editStop
 
@@ -87,3 +97,6 @@ editStop bookingId (personId, merchantId) editStopReq = withFlowHandlerAPI . wit
 
 bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> FlowHandler DBooking.BookingListRes
 bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId = withFlowHandlerAPI . DBooking.bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId
+
+favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DBooking.DriverNo -> FlowHandler DBooking.FavouriteBookingListRes
+favouriteBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId driver = withFlowHandlerAPI . DBooking.favouriteBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId driver
