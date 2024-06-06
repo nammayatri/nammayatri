@@ -69,7 +69,8 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     public static class SheetViewHolder extends RecyclerView.ViewHolder{
         TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip, rateText, vehicleServiceTier, rideStartTime, rideStartDate, rideDuration, rideDistance, tollTag, thirdPartyTagText;
         Button reqButton, rejectButton;
-        View buttonDecreasePrice, buttonIncreasePrice, progressBar, vcTierAndACView, rateViewDot;
+        View buttonDecreasePrice, buttonIncreasePrice, progressBar, rateViewDot, acView, nonAcView;
+        MaterialCardView vcTierAndACView;
         ImageView assetZonePickup, assetZoneDrop, rideTypeImage, locationDashedLine;
         LinearLayout tagsBlock, accessibilityTag, customerTipTag, gotoTag, rideTypeTag, testRequestTag, specialLocTag, acNonAcView, rentalRideTypeTag, intercityRideTypeTag, rentalDurationDistanceTag, rideStartDateTimeTag, thirdPartyTag;
         CardView locationDestinationPinTag;
@@ -129,6 +130,8 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             rateViewDot = itemView.findViewById(R.id.rateViewDot);
             thirdPartyTag = itemView.findViewById(R.id.thirdPartyTag);
             thirdPartyTagText = itemView.findViewById(R.id.thirdPartyTagText);
+            acView = itemView.findViewById(R.id.acView);
+            nonAcView = itemView.findViewById(R.id.nonAcView);
         }
     }
 
