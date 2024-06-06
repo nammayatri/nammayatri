@@ -199,8 +199,7 @@ config =
         },
         bookAny : {
           name : "Book Any",
-          image : "ny_ic_cab_auto_green,https://assets.moving.tech/beckn/common/user/images/ny_ic_cab_auto_green.png",
-          leftViewImage : ","
+          image : "ny_ic_cab_auto_green,https://assets.moving.tech/beckn/common/user/images/ny_ic_cab_auto_green.png"
         }
       }
       , enableOnlyAuto : false

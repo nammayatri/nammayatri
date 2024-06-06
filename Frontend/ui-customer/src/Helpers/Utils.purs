@@ -628,34 +628,7 @@ getVehicleVariantImage variant =
   let variantConfig = (getAppConfig appConfig).estimateAndQuoteConfig.variantInfo
       city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in 
-    if viewType == LEFT_VIEW
-      then do 
-        case variant of
-          "TAXI"          -> variantConfig.taxi.leftViewImage 
-          "TAXI_PLUS"     -> variantConfig.taxiPlus.leftViewImage
-          "SEDAN"         -> variantConfig.sedan.leftViewImage
-          "SUV"           -> variantConfig.suv.leftViewImage
-          "HATCHBACK"     -> variantConfig.hatchback.leftViewImage
-          "ECO"           -> variantConfig.hatchback.leftViewImage
-          "COMFY"         -> variantConfig.sedan.leftViewImage
-          "PREMIUM"       -> variantConfig.sedan.leftViewImage
-          "AUTO_RICKSHAW" -> case city of 
-                              Kochi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
-                              Chennai -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
-                              Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
-                              Delhi -> variantConfig.autoRickshaw.image
-                              _ -> variantConfig.autoRickshaw.leftViewImage
-          "BOOK_ANY"      -> case getMerchant FunctionCall of 
-                              YATRISATHI -> variantConfig.bookAny.leftViewImage
-                              _ -> case city of 
-                                      Hyderabad -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
-                                      Chennai -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
-                                      Kochi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
-                                      Delhi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
-                                      _ -> variantConfig.bookAny.leftViewImage
-          _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
-      else do
-        case variant of
+    case variant of
           "TAXI"          -> variantConfig.taxi.image 
           "TAXI_PLUS"     -> variantConfig.taxiPlus.image
           "SEDAN"         -> variantConfig.sedan.image
