@@ -424,7 +424,7 @@ enterOTPFlow = do
 
 getDriverInfoFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> Maybe (Either ErrorResponse GetDriverInfoResp) -> Boolean -> FlowBT String Unit
 getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription = do
-  void $ lift $ lift $ fork $ liftFlow $ runEffectFn1 HU.startRideRequestMApp ""
+  when (EHC.os == "IOS") $ void $ lift $ lift $ fork $ liftFlow $ runEffectFn1 HU.startRideRequestMApp ""
   liftFlowBT $ markPerformance "GET_DRIVER_INFO_FLOW_START"
   case driverInfoResp of
     Just driverInfoResp -> runDriverInfoFlow driverInfoResp
@@ -642,7 +642,7 @@ onBoardingFlow = do
   void $ pure $ hideKeyboardOnNavigation true
   config <- getAppConfigFlowBT Constants.appConfig
   GlobalState allState <- getState
-  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq { }
+  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq ""
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState allState) false
   let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       registrationState = allState.registrationScreen
@@ -1032,7 +1032,7 @@ addVehicleDetailsflow addRcFromProf = do
                 modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { data { vehicleDetailsStatus = ST.COMPLETED}})
                 addVehicleDetailsflow state.props.addRcFromProfile
               else do
-                (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
+                (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq "")
                 let multiRcStatus  = getStatusValue resp.rcVerificationStatus
                 modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {validating = false, multipleRCstatus = multiRcStatus, validateProfilePicturePopUp = false}}
                 addVehicleDetailsflow state.props.addRcFromProfile
@@ -2083,7 +2083,7 @@ currentRideFlow activeRideResp isActiveRide = do
   void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign $ if getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" then "No" else "Yes"}]
   
   when (allState.homeScreen.data.config.profileVerification.aadharVerificationRequired) $ do -- TODO :: Should be moved to global events as an async event
-    (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
+    (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT (DriverRegistrationStatusReq "")
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showlinkAadhaarPopup = (resp.aadhaarVerificationStatus == "INVALID" || resp.aadhaarVerificationStatus == "NO_DOC_AVAILABLE")}})
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {tobeLogged = true}})
   liftFlowBT $ markPerformance "CURRENT_RIDE_FLOW_END"
