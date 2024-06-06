@@ -599,12 +599,23 @@ public class RideRequestUtils {
 
     public static void updateTierAndAC(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
         boolean showTier = model.getVehicleServiceTier() != null;
-        int acRide = model.isAirConditioned();
-        boolean showAC = acRide == 1 && showAcConfig(context);
-        holder.vcTierAndACView.setVisibility((showTier || showAC) ? View.VISIBLE : View.GONE);
+        int airConditioned = model.isAirConditioned();
+        boolean showAC = airConditioned == 1 && showAcConfig(context);
+        boolean showNonAC = airConditioned == 0 && showAcConfig(context);
+        if (showAC) {
+            holder.acView.setVisibility(View.VISIBLE);
+        }else if (showNonAC){
+            holder.nonAcView.setVisibility(View.VISIBLE);
+        }else {
+            holder.acView.setVisibility(View.GONE);
+            holder.nonAcView.setVisibility(View.GONE);
+        }
+        holder.vcTierAndACView.setVisibility((showTier || showAC || showNonAC) ? View.VISIBLE : View.GONE);
+        holder.vcTierAndACView.setCardBackgroundColor(Color.parseColor(showNonAC ? "#F4F7FF" : "#1A0066FF"));
         holder.vehicleServiceTier.setText(model.getVehicleServiceTier() != null ? getSTMapping (model.getVehicleServiceTier(), context) : "");
+        holder.vehicleServiceTier.setTextColor(context.getColor(showNonAC ? R.color.black650 : R.color.blue800));
         holder.vehicleServiceTier.setVisibility(showTier ? View.VISIBLE : View.GONE);
-        holder.acNonAcView.setVisibility( showAC ? View.VISIBLE : View.GONE);
+        holder.acNonAcView.setVisibility( showAC || showNonAC ? View.VISIBLE : View.GONE);
     }
 
     @SuppressLint("SetTextI18n")

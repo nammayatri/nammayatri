@@ -461,42 +461,87 @@
                                                 android:id="@+id/acNonAcView"
                                                 android:orientation="horizontal">
 
-                                                <com.google.android.material.card.MaterialCardView
+                                                <RelativeLayout
                                                     android:layout_width="wrap_content"
-                                                    android:layout_height="wrap_content"
-                                                    android:layout_gravity="center"
-                                                    app:cardBackgroundColor="@color/blue800"
-                                                    android:theme="@style/Theme.MaterialComponents.Light"
-                                                    app:cardCornerRadius="28dp"
-                                                    app:contentPadding="5dp"
-                                                    app:cardElevation="0dp"
-                                                    android:layout_marginLeft="5dp">
+                                                    android:layout_height="wrap_content">
 
-                                                    <LinearLayout
-                                                        android:layout_width="match_parent"
-                                                        android:layout_height="match_parent"
-                                                        android:gravity="center_vertical"
-                                                        android:orientation="horizontal">
+                                                    <com.google.android.material.card.MaterialCardView
+                                                        android:id="@+id/acView"
+                                                        android:layout_width="wrap_content"
+                                                        android:layout_height="wrap_content"
+                                                        android:layout_gravity="center"
+                                                        app:cardBackgroundColor="@color/blue800"
+                                                        android:theme="@style/Theme.MaterialComponents.Light"
+                                                        app:cardCornerRadius="28dp"
+                                                        android:layout_marginRight="6dp"
+                                                        app:contentPadding="5dp"
+                                                        app:cardElevation="0dp">
 
-                                                        <ImageView
-                                                            android:layout_width="16dp"
-                                                            android:layout_height="16dp"
-                                                            android:src="@drawable/ny_ic_ac_white" />
+                                                        <LinearLayout
+                                                            android:layout_width="match_parent"
+                                                            android:layout_height="match_parent"
+                                                            android:gravity="center_vertical"
+                                                            android:orientation="horizontal">
 
-                                                        <TextView
-                                                            android:layout_width="wrap_content"
-                                                            android:layout_height="wrap_content"
-                                                            android:textSize="18dp"
-                                                            android:layout_marginStart="5dp"
-                                                            android:gravity="center"
-                                                            android:textColor="@color/white"
-                                                            android:textFontWeight="600"
-                                                            android:fontFamily="@font/dmsans_bold"
-                                                            android:text="AC"/>
-                                                    </LinearLayout>
+                                                            <ImageView
+                                                                android:layout_width="16dp"
+                                                                android:layout_height="16dp"
+                                                                android:src="@drawable/ny_ic_ac_white" />
 
-                                                </com.google.android.material.card.MaterialCardView>
+                                                            <TextView
+                                                                android:layout_width="wrap_content"
+                                                                android:layout_height="wrap_content"
+                                                                android:textSize="18dp"
+                                                                android:layout_marginLeft="5dp"
+                                                                android:gravity="center"
+                                                                android:textColor="@color/white"
+                                                                android:layout_marginRight="4dp"
+                                                                android:textFontWeight="600"
+                                                                android:fontFamily="@font/dmsans_bold"
+                                                                android:text="AC"/>
+                                                        </LinearLayout>
 
+                                                    </com.google.android.material.card.MaterialCardView>
+                                                    <com.google.android.material.card.MaterialCardView
+                                                        android:id="@+id/nonAcView"
+                                                        android:layout_width="wrap_content"
+                                                        android:layout_height="wrap_content"
+                                                        android:layout_gravity="center"
+                                                        app:cardBackgroundColor="@color/Black700"
+                                                        android:theme="@style/Theme.MaterialComponents.Light"
+                                                        app:cardCornerRadius="28dp"
+                                                        android:layout_marginRight="6dp"
+                                                        android:visibility="gone"
+                                                        app:contentPadding="5dp"
+                                                        app:cardElevation="0dp">
+
+                                                        <LinearLayout
+                                                            android:layout_width="match_parent"
+                                                            android:layout_height="match_parent"
+                                                            android:gravity="center_vertical"
+                                                            android:orientation="horizontal">
+
+                                                            <ImageView
+                                                                android:layout_width="16dp"
+                                                                android:layout_height="16dp"
+                                                                android:src="@drawable/ny_ic_non_ac_white" />
+
+                                                            <TextView
+                                                                android:layout_width="wrap_content"
+                                                                android:layout_height="wrap_content"
+                                                                android:textSize="18dp"
+                                                                android:layout_marginLeft="5dp"
+                                                                android:gravity="center"
+                                                                android:textColor="@color/white"
+                                                                android:layout_marginRight="4dp"
+                                                                android:textFontWeight="600"
+                                                                android:fontFamily="@font/dmsans_bold"
+                                                                android:text="Non-AC"/>
+                                                        </LinearLayout>
+
+                                                    </com.google.android.material.card.MaterialCardView>
+
+                                                </RelativeLayout>
 
                                             </LinearLayout>
 
@@ -505,11 +550,11 @@
                                                 android:layout_width="wrap_content"
                                                 android:layout_height="wrap_content"
                                                 android:textSize="16dp"
-                                                android:layout_marginStart="5dp"
                                                 android:textColor="@color/blue800"
                                                 android:gravity="center"
                                                 android:singleLine="false"
                                                 android:textFontWeight="600"
+                                                android:layout_marginLeft="1dp"
                                                 android:paddingBottom="2dp"
                                                 android:fontFamily="@font/plus_jakartasans_semibold"
                                                 android:text="Comfy"/>
@@ -682,10 +727,12 @@
                                     android:src="@drawable/ic_metro_shape"/>
                             </LinearLayout>
 
+
                             <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:orientation="horizontal">
+
                                 <TextView
                                     android:id="@+id/distanceToBeCovered"
                                     android:layout_width="wrap_content"
@@ -715,9 +762,10 @@
                                     android:lineHeight="20dp"
                                     android:textColor="#2C2F3A"
                                     android:textSize="16dp"
-                                    android:visibility="visible"/>
-                            </LinearLayout>
+                                    android:visibility="gone"
+                                    android:layout_marginLeft="8dp"/>
 
+                            </LinearLayout>
 
                             <LinearLayout
                                 android:layout_width="match_parent"
