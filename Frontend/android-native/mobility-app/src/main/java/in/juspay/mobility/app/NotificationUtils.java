@@ -51,6 +51,7 @@ import androidx.core.app.NotificationManagerCompat;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -70,6 +71,7 @@ import java.util.TimeZone;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.common.services.TLSSocketFactory;
 
@@ -102,6 +104,8 @@ public class NotificationUtils {
     public static MediaPlayer mediaPlayer;
     public static Bundle lastRideReq = new Bundle();
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
+
+    private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
 
     public static void registerCallback(CallBack notificationCallback) {
         callBack.add(notificationCallback);
@@ -793,7 +797,24 @@ public class NotificationUtils {
 
     public static boolean overlayFeatureNotAvailable(Context context) {
         ActivityManager activityManager = (ActivityManager) context.getSystemService(ACTIVITY_SERVICE);
-        return activityManager.isLowRamDevice();
+        boolean modelNotSupported = false;
+        boolean isLowRamDevice = activityManager.isLowRamDevice();
+        String buildModel = uniqueDeviceDetails();
+        try {
+            if (remoteConfigs.hasKey("overlay_not_supported_devices")){
+                String devices = remoteConfigs.getString("overlay_not_supported_devices");
+                JSONArray jsonArray = new JSONArray(devices);
+                for ( int i = 0 ; i < jsonArray.length() ; i ++){
+                    if (jsonArray.getString(i).equals(buildModel)){
+                        modelNotSupported = true;
+                        break;
+                    }
+                }
+            }
+        }catch (Exception e){
+            firebaseLogEventWithParams(context, "exception_in_overlayFeatureNotAvailable","","");
+        }
+        return isLowRamDevice || modelNotSupported;
     }
 
     public static void createChatNotification(String sentBy, String message, Context context) {
@@ -874,5 +895,21 @@ public class NotificationUtils {
                 }
             default:return NO_VARIANT;
         }
+    }
+
+    public static String uniqueDeviceDetails() {
+        String deviceDetails = "";
+        String bDevice = Build.DEVICE;
+        String bModel = Build.MODEL;
+        String bManufacturer = Build.MANUFACTURER;
+        String bBoard = Build.BOARD;
+        String bHardware = Build.HARDWARE;
+        bDevice = bDevice == null || bDevice.isEmpty() ? "null" : bDevice;
+        bModel = bModel == null || bModel.isEmpty() ? "null" : bModel;
+        bManufacturer = bManufacturer == null || bManufacturer.isEmpty() ? "null" : bManufacturer;
+        bBoard = bBoard == null || bBoard.isEmpty() ? "null" : bBoard;
+        bHardware = bHardware == null || bHardware.isEmpty() ? "null" : bHardware;
+        deviceDetails = bManufacturer + "/" + bModel + "/" + bDevice + "/" + bBoard + "/" + bHardware;
+        return deviceDetails;
     }
 }

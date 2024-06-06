@@ -417,6 +417,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         sharedPref.edit().putString("DEVICE_DETAILS", getDeviceDetails()).apply();
+        sharedPref.edit().putString("UNIQUE_DD", NotificationUtils.uniqueDeviceDetails()).apply();
         sharedPref.registerOnSharedPreferenceChangeListener(mListener);
         sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onCreate").apply();
 
