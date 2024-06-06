@@ -20,8 +20,10 @@ import Data.Data (Data, gmapQ)
 import Data.Generics.Aliases (ext1Q)
 import qualified Data.Text as T
 import qualified Data.UUID as UUID
-import EulerHS.Prelude
-import Kernel.Prelude (intToNominalDiffTime)
+import EulerHS.Prelude as EP
+-- import Kernel.Prelude (intToNominalDiffTime)
+
+import Kernel.Prelude as KP
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Error
 import Kernel.Types.TimeRFC339 (convertRFC3339ToUTC)
@@ -29,16 +31,19 @@ import Kernel.Utils.Common
 import Text.Printf (printf)
 
 allNothing :: (Data d) => d -> Bool
-allNothing = not . or . gmapQ (const True `ext1Q` isJust)
+allNothing = not . EP.or . gmapQ (const True `ext1Q` isJust)
 
 getStartLocation :: [Spec.Stop] -> Maybe Spec.Stop
-getStartLocation = find (\stop -> stop.stopType == Just (show Enums.START))
+getStartLocation = EP.find (\stop -> stop.stopType == Just (show Enums.START))
 
 getDropLocation :: [Spec.Stop] -> Maybe Spec.Stop
-getDropLocation = find (\stop -> stop.stopType == Just (show Enums.END))
+getDropLocation = EP.find (\stop -> stop.stopType == Just (show Enums.END))
 
 getTransactionId :: (MonadFlow m) => Spec.Context -> m Text
 getTransactionId context = context.contextTransactionId <&> UUID.toText & fromMaybeM (InvalidRequest "Transaction Id not found")
+
+getDriverNumber :: (MonadFlow m) => Spec.Order -> m Text
+getDriverNumber message = message.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentContact) >>= (.contactPhone) & fromMaybeM (InvalidRequest "driverMobileNumber is not present in RideAssigned Event.")
 
 getMessageId :: (MonadFlow m) => Spec.Context -> m Text
 getMessageId context = context.contextMessageId <&> UUID.toText & fromMaybeM (InvalidRequest "Transaction Id not found")
