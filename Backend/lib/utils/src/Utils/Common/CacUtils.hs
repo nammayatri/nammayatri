@@ -129,6 +129,7 @@ getConfigFromCACCommon context stickyId fromCactyp cpf = do
   isExp <- liftIO $ CM.isExperimentsRunning cacConfig.tenant
   toss <- bool (pure 1) (getToss (getKeyValue <$> stickyId)) isExp
   res :: (Maybe b) <- getConfigFromCac context cacConfig.tenant toss cpf
+  logDebug $ "Config found for " <> getTableName cpf <> " in CAC: " <> show res
   config' <-
     maybe
       ( do
