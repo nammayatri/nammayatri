@@ -82,8 +82,8 @@ getConnectionString dbConfig =
       <> " port="
       <> show dbConfig.connectPort
 
-createPoolConfig :: EsqDBConfig -> PoolConfig Connection
-createPoolConfig dbConfig =
+createPoolConfig :: Int -> EsqDBConfig -> PoolConfig Connection
+createPoolConfig noOfStripes dbConfig =
   let connectionString = getConnectionString dbConfig
       createConnection = connectPostgreSQL connectionString
    in PoolConfig
@@ -91,10 +91,11 @@ createPoolConfig dbConfig =
           freeResource = close,
           poolCacheTTL = 600,
           poolMaxResources = dbConfig.connectionPoolCount,
-          poolNumStripes = Nothing
+          poolNumStripes = Just $ max 1 noOfStripes
         }
 
 createDbPool :: EsqDBConfig -> IO (Pool Connection)
-createDbPool dbConfig =
-  let poolConfig = createPoolConfig dbConfig
+createDbPool dbConfig = do
+  noOfStripes <- Env.getThreadPerPodCount
+  let poolConfig = createPoolConfig noOfStripes dbConfig
    in newPool poolConfig
