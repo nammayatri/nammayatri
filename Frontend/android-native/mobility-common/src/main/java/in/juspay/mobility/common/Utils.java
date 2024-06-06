@@ -2,6 +2,7 @@ package in.juspay.mobility.common;
 
 import static in.juspay.hyper.core.JuspayCoreLib.getApplicationContext;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;

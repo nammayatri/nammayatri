@@ -53,7 +53,7 @@ import Data.String as STR
 import Data.String.CodeUnits (splitAt)
 import Data.String.Common (joinWith, split, toUpper, trim)
 import Data.Time.Duration (Milliseconds(..))
-import Data.Traversable (traverse)
+import Data.Traversable (traverse, for_)
 import Data.Tuple (Tuple(..), fst, snd)
 import Debug (spy)
 import DecodeUtil (stringifyJSON)
@@ -62,7 +62,7 @@ import Domain.Payments (PaymentStatus(..))
 import Effect (Effect)
 import Effect.Aff (makeAff, nonCanceler, launchAff, launchAff_)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn1, runEffectFn5, runEffectFn2, runEffectFn9)
+import Effect.Uncurried (runEffectFn1, runEffectFn5, runEffectFn2, runEffectFn9, runEffectFn10)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, getNewIDWithTag, getVersionByKey, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, markPerformance, setEventTimestamp, getTimeStampObject)
 import Engineering.Helpers.Commons as EHC
@@ -75,7 +75,7 @@ import Foreign.Class (class Encode, encode, decode)
 import Helpers.API (callApiBT, callApi)
 import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus)
 import Helpers.Utils as HU
-import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
+import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, mkRouteConfig)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -123,7 +123,7 @@ import Screens.DriverEarningsScreen.Transformer (checkPopupShowToday, isPopupSho
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, UpdateRouteSrcDestConfig(..), KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..))
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
-import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), UploadOdometerImageResp(UploadOdometerImageResp))
+import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp))
 import Services.API as API
 import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
@@ -277,14 +277,14 @@ checkRideAndInitiate event driverInfoResponse = do
         modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { driverInformation = Just (GetDriverInfoResp driverInfoResp) }
         pure (Tuple Nothing driverInfoResp.onRide)
       _ -> do
-        GetRidesHistoryResp rideListResponse <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
+        GetRidesHistoryResp rideListResponse <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
         let activeRide = not (null rideListResponse.list)
         pure (Tuple (Just $ GetRidesHistoryResp rideListResponse) activeRide)
   void $ lift $ lift $ fork $ checkAndDownloadMLModel
   liftFlowBT $ markPerformance "CHECK_RIDE_AND_INITIATE_END"
   activeRide ?
     currentRideFlow mbRideListResponse (Just activeRide)
-    $ getDriverInfoFlow event mbRideListResponse driverInfoResponse true
+    $ getDriverInfoFlow event mbRideListResponse driverInfoResponse true Nothing
     where 
       checkAndDownloadMLModel :: Flow GlobalState Unit
       checkAndDownloadMLModel = do
@@ -397,7 +397,7 @@ enterOTPFlow = do
       else pure unit
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ mkUpdateDriverInfoReq ""
       void $ lift $ lift $ toggleLoader false
-      getDriverInfoFlow Nothing Nothing Nothing true
+      getDriverInfoFlow Nothing Nothing Nothing true Nothing
     RETRY updatedState -> do
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen -> updatedState)
       (ResendOTPResp resp_resend) <- Remote.resendOTPBT updatedState.data.tokenId
@@ -405,23 +405,26 @@ enterOTPFlow = do
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data { tokenId = resp_resend.authId, attemptCount = resp_resend.attempts}})
       enterOTPFlow
 
-getDriverInfoFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> Maybe (Either ErrorResponse GetDriverInfoResp) -> Boolean -> FlowBT String Unit
-getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription = do
+getDriverInfoFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> Maybe (Either ErrorResponse GetDriverInfoResp) -> Boolean -> Maybe Boolean -> FlowBT String Unit
+getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isAdvancedBookingEnabled = do
   liftFlowBT $ markPerformance "GET_DRIVER_INFO_FLOW_START"
   case driverInfoResp of
-    Just driverInfoResp -> runDriverInfoFlow driverInfoResp
+    Just driverInfoResp -> runDriverInfoFlow driverInfoResp true
     Nothing -> do
-      getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
-      runDriverInfoFlow getDriverInfoApiResp
+      getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (DriverInfoReq{isAdvancedBookingEnabled : isAdvancedBookingEnabled})
+      runDriverInfoFlow getDriverInfoApiResp false
   where    
-    runDriverInfoFlow driverInfoRes = do
-      config <- getAppConfigFlowBT Constants.appConfig  
+    runDriverInfoFlow driverInfoRes updateFeatureFlags = do
+      config <- getAppConfigFlowBT Constants.appConfig
       case driverInfoRes of
         Right (GetDriverInfoResp getDriverInfoResp) -> do
           void $ pure $ setValueToLocalStore DRIVER_LOCATION <$> (capitalize <$> getCityFromCode <$> getDriverInfoResp.operatingCity)
           updateFirebaseToken getDriverInfoResp.maskedDeviceToken getUpdateToken
           liftFlowBT $ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
           maybe (pure unit) (setValueToLocalStore MOBILE_NUMBER_KEY) getDriverInfoResp.mobileNumber
+          let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+          when (updateFeatureFlags && cityConfig.callDriverInfoPost) $ do
+            void $ lift $ lift $ fork $ Remote.getDriverInfoApi (DriverInfoReq{isAdvancedBookingEnabled : isAdvancedBookingEnabled})
           if getDriverInfoResp.enabled 
             then do
               deleteValueFromLocalStore ENTERED_RC
@@ -711,7 +714,7 @@ onBoardingFlow = do
           description = Just $ getString YOU_ARE_ALL_SET_TO_TAKE_RIDES,
           primaryButtonText = Just $ getString CONTINUE,
           illustrationAsset = "success_lottie.json"}}
-        ackScreenFlow $ getDriverInfoFlow Nothing Nothing Nothing false
+        ackScreenFlow $ getDriverInfoFlow Nothing Nothing Nothing false (Just state.data.cityConfig.enableAdvancedBooking)
     REFRESH_REGISTERATION_SCREEN -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> registerScreen { props { refreshAnimation = false}})
       onBoardingFlow
@@ -824,7 +827,7 @@ aadhaarVerificationFlow = do
       void $ lift $ lift $ toggleLoader false
       case res of
         Right (VerifyAadhaarOTPResp resp) -> do
-          if resp.code == 200 then if state.props.fromHomeScreen then getDriverInfoFlow Nothing Nothing Nothing false else onBoardingFlow
+          if resp.code == 200 then if state.props.fromHomeScreen then getDriverInfoFlow Nothing Nothing Nothing false Nothing else onBoardingFlow
             else do
               void $ pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
               modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = EnterAadhaar, btnActive = false}})
@@ -859,7 +862,7 @@ aadhaarVerificationFlow = do
     GO_TO_HOME_FROM_AADHAAR -> do
       (GlobalState state) <- getState
       modifyScreenState $ AadhaarVerificationScreenType (\_ -> state.aadhaarVerificationScreen)
-      getDriverInfoFlow Nothing Nothing Nothing false
+      getDriverInfoFlow Nothing Nothing Nothing false Nothing
     LOGOUT_FROM_AADHAAR -> logoutFlow
     SEND_UNVERIFIED_AADHAAR_DATA state -> do
       void $ lift $ lift $ toggleLoader true
@@ -867,7 +870,7 @@ aadhaarVerificationFlow = do
       case unVerifiedAadhaarDataResp of
         Right resp -> do
           void $ lift $ lift $ toggleLoader false
-          if state.props.fromHomeScreen then getDriverInfoFlow Nothing Nothing Nothing false else onBoardingFlow
+          if state.props.fromHomeScreen then getDriverInfoFlow Nothing Nothing Nothing false Nothing else onBoardingFlow
         Left errorPayload -> do
           void $ lift $ lift $ toggleLoader false
           void $ pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
@@ -1091,7 +1094,7 @@ addVehicleDetailsflow addRcFromProf = do
           driverProfileFlow
         where 
           refreshDriverProfile = do 
-            getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+            getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (DriverInfoReq{isAdvancedBookingEnabled : Nothing})
             case getDriverInfoApiResp of
               Right getDriverInfoResp -> do
                 modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just getDriverInfoResp}
@@ -1111,7 +1114,7 @@ applicationSubmittedFlow screenType = do
   action <- UI.applicationStatus screenType
   setValueToLocalStore TEST_FLOW_FOR_REGISTRATOION "COMPLETED"
   case action of
-    GO_TO_HOME_FROM_APPLICATION_STATUS -> getDriverInfoFlow Nothing Nothing Nothing false
+    GO_TO_HOME_FROM_APPLICATION_STATUS -> getDriverInfoFlow Nothing Nothing Nothing false Nothing
     GO_TO_UPLOAD_DL_SCREEN -> do
       let (GlobalState defaultEpassState') = defaultGlobalState
       modifyScreenState $ UploadDrivingLicenseScreenStateType (\_ -> defaultEpassState'.uploadDrivingLicenseScreen)
@@ -1250,7 +1253,7 @@ driverProfileFlow = do
           driverProfileFlow
       where 
           refreshDriverProfile = do 
-            getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+            getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (DriverInfoReq{isAdvancedBookingEnabled : Nothing})
             case getDriverInfoApiResp of
               Right getDriverInfoResp -> do
                 modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just getDriverInfoResp}
@@ -2003,8 +2006,8 @@ currentRideFlow activeRideResp isActiveRide = do
         if (getValueToLocalNativeStore RIDE_REQUEST_TIME) == "__failed" then false
           else ceil ((toNumber (rideRequestPollingData.duration - (getExpiryTime (getValueToLocalNativeStore RIDE_REQUEST_TIME) true)) * 1000.0)/rideRequestPollingData.delay) > 0
       onBoardingSubscriptionViewCount =  fromMaybe 0 (fromString (getValueToLocalNativeStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT))
-  
 
+  
   (isLocalStageOn RideRequested && (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "false" && isRequestExpired) ? homeScreenFlow $ pure unit
 
   (GlobalState allState) <- getState
@@ -2019,12 +2022,12 @@ currentRideFlow activeRideResp isActiveRide = do
           let (GetRidesHistoryResp activeRideResponse) = fromMaybe (GetRidesHistoryResp{list:[]}) activeRideResp
           (not (null activeRideResponse.list)) ? do
             void $ liftFlowBT $ startLocationPollingAPI
-            activeRidePatch activeRideResponse allState onBoardingSubscriptionViewCount
+            activeRidePatch (GetRidesHistoryResp activeRideResponse) allState onBoardingSubscriptionViewCount
             $ noActiveRidePatch allState onBoardingSubscriptionViewCount
         else do
-          (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
+          (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
           (not (null activeRideResponse.list)) ?
-            activeRidePatch activeRideResponse allState onBoardingSubscriptionViewCount
+            activeRidePatch (GetRidesHistoryResp activeRideResponse) allState onBoardingSubscriptionViewCount
             $ noActiveRidePatch allState onBoardingSubscriptionViewCount
     
   void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign $ if getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" then "No" else "Yes"}]
@@ -2036,55 +2039,9 @@ currentRideFlow activeRideResp isActiveRide = do
   liftFlowBT $ markPerformance "CURRENT_RIDE_FLOW_END"
   homeScreenFlow
   where
-    activeRidePatch activeRideResponse allState onBoardingSubscriptionViewCount = 
-      case (activeRideResponse.list !! 0 ) of 
-        Just (RidesInfo ride) -> do
-          let decodedSource = decodeAddress ride.fromLocation true 
-              decodedDestination = (\toLocation -> decodeAddress toLocation true) <$> ride.toLocation
-              decodeNextStopAddress = (\(API.StopLocation {address,lat,lon}) -> decodeAddress (RC.getLocationInfoFromStopLocation address lat lon) true) <$> ride.nextStopLocation
-              decodeLastStopAddress = (\(API.StopLocation {address,lat,lon}) -> decodeAddress (RC.getLocationInfoFromStopLocation address lat lon) true) <$> ride.lastStopLocation
-              state = allState.homeScreen
-              activeRide = (activeRideDetail state (RidesInfo ride))
-              stage = if activeRide.status == NEW then (if state.props.currentStage == ChatWithCustomer then ChatWithCustomer else RideAccepted) else RideStarted
-          sourceMod <- translateString decodedSource 500
-          destinationMod <- maybe (pure Nothing) (\decodedDestination' -> do 
-            destMod <- translateString decodedDestination' 500
-            pure $ Just destMod)  decodedDestination
-          nextStopAddressMod <- maybe (pure Nothing) (\decodedNextStopAddress' -> do 
-            nextStopMod <- translateString decodedNextStopAddress' 500
-            pure $ Just nextStopMod)  decodeNextStopAddress
-          lastStopAddressMod <- maybe (pure Nothing) (\decodedLastStopAddress' -> do 
-            lastStopMod <- translateString decodedLastStopAddress' 500
-            pure $ Just lastStopMod)  decodeLastStopAddress
-
-          setValueToLocalNativeStore IS_RIDE_ACTIVE  "true"
-          
-           -- Night Ride Safety PopUp 
-          when (activeRide.disabilityTag == Just ST.SAFETY) $ do 
-            let curr_time = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
-                withInTime =JB.withinTimeRange curr_time (state.data.config.safetyRide.startTime) (state.data.config.safetyRide.endTime)
-                localVal =  getValueToLocalStore NIGHT_SAFETY_POP_UP
-                isShown = localVal == "true"
-            if withInTime then do
-              when (not isShown) $ setValueToLocalStore NIGHT_SAFETY_POP_UP "true"
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showAccessbilityPopup = not isShown, safetyAudioAutoPlay = not isShown}})
-            else
-              setValueToLocalStore NIGHT_SAFETY_POP_UP "false"
-         
-          void $ updateStage $ HomeScreenStage stage
-          void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "Yes"}]
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {
-             data{ 
-                activeRide = activeRide{
-                  source = sourceMod, 
-                  destination = destinationMod, lastStopAddress = lastStopAddressMod, nextStopAddress = nextStopAddressMod 
-                }
-              }, 
-              props{ 
-                silentPopUpView = false, 
-                goOfflineModal = false
-              }})
-        Nothing -> do
+    activeRidePatch (GetRidesHistoryResp activeRideResponse) allState onBoardingSubscriptionViewCount = 
+      case activeRideResponse.list of
+        [] -> do
           setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
           void $ updateStage $ HomeScreenStage HomeScreen
           updateDriverDataToStates
@@ -2093,6 +2050,46 @@ currentRideFlow activeRideResp isActiveRide = do
               setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT $ show (onBoardingSubscriptionViewCount + 1)
               pure unit
             else pure unit
+        _ -> do
+          for_ activeRideResponse.list $ \(RidesInfo ride) -> do
+            let decodedSource = decodeAddress ride.fromLocation true
+                decodedDestination = (\toLocation -> decodeAddress toLocation true) <$> ride.toLocation
+                decodeNextStopAddress = (\(API.StopLocation {address,lat,lon}) -> decodeAddress (RC.getLocationInfoFromStopLocation address lat lon) true) <$> ride.nextStopLocation
+                decodeLastStopAddress = (\(API.StopLocation {address,lat,lon}) -> decodeAddress (RC.getLocationInfoFromStopLocation address lat lon) true) <$> ride.lastStopLocation
+                state = allState.homeScreen
+                activeRide = (activeRideDetail state (RidesInfo ride))
+                stage = (if activeRide.status == NEW then (if (any (\c -> c == ChatWithCustomer) [state.props.currentStage, state.props.advancedRideStage]) then ChatWithCustomer else RideAccepted) else RideStarted)
+            sourceMod <- translateString decodedSource 500
+            destinationMod <- maybe (pure Nothing) (\decodedDestination' -> do 
+              destMod <- translateString decodedDestination' 500
+              pure $ Just destMod)  decodedDestination
+            nextStopAddressMod <- maybe (pure Nothing) (\decodedNextStopAddress' -> do 
+              nextStopMod <- translateString decodedNextStopAddress' 500
+              pure $ Just nextStopMod)  decodeNextStopAddress
+            lastStopAddressMod <- maybe (pure Nothing) (\decodedLastStopAddress' -> do 
+              lastStopMod <- translateString decodedLastStopAddress' 500
+              pure $ Just lastStopMod)  decodeLastStopAddress
+
+            setValueToLocalNativeStore IS_RIDE_ACTIVE  "true"
+            
+            -- Night Ride Safety PopUp 
+            when (activeRide.disabilityTag == Just ST.SAFETY) $ do 
+              let curr_time = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
+                  withInTime =JB.withinTimeRange curr_time (state.data.config.safetyRide.startTime) (state.data.config.safetyRide.endTime)
+                  localVal =  getValueToLocalStore NIGHT_SAFETY_POP_UP
+                  isShown = localVal == "true"
+              if withInTime then do
+                when (not isShown) $ setValueToLocalStore NIGHT_SAFETY_POP_UP "true"
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showAccessbilityPopup = not isShown, safetyAudioAutoPlay = not isShown}})
+              else
+                setValueToLocalStore NIGHT_SAFETY_POP_UP "false"
+          
+            void $ updateStage $ HomeScreenStage stage
+            void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "Yes"}]
+            let stateChange = if (ride.bookingType == Just ADVANCED) 
+                                  then (HomeScreenStateType (\homeScreen -> homeScreen { data{ advancedRideData = Just activeRide{source = sourceMod, destination = destinationMod}}, props{ silentPopUpView = false, goOfflineModal = false}})) 
+                                  else (HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod,destination = destinationMod, lastStopAddress = lastStopAddressMod, nextStopAddress = nextStopAddressMod}}, props{ silentPopUpView = false, goOfflineModal = false}}))
+            modifyScreenState $ stateChange
     noActiveRidePatch allState onBoardingSubscriptionViewCount = do
       setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
       void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
@@ -2315,7 +2312,7 @@ homeScreenFlow = do
       case (endRideResp) of
         Right (API.EndRideResponse response) -> do
           when state.data.driverGotoState.isGotoEnabled do
-            getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+            getDriverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq {isAdvancedBookingEnabled : Nothing })
             modifyScreenState $ GlobalPropsType (\globalProps -> globalProps 
               { driverInformation = Just getDriverInfoResp,
                 gotoPopupType = case response.homeLocationReached of 
@@ -2326,10 +2323,10 @@ homeScreenFlow = do
           onSuccessEndRide
         Left errorPayload -> do
           (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
-          case (head rideHistoryResponse.list) of
-            Nothing -> do
+          case Tuple (head rideHistoryResponse.list) (isJust state.data.advancedRideData)  of
+            Tuple Nothing _-> do
                 onSuccessEndRide
-            Just _ -> do
+            Tuple (Just _) true -> do
               void $ lift $ lift $ toggleLoader false
               let errResp = errorPayload.response
               let codeMessage = decodeErrorCode errResp.errorMessage
@@ -2338,9 +2335,11 @@ homeScreenFlow = do
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, enterOtpModal = endRideOtpModalOnError, otpAttemptsExceeded = false, rideOtp = "",enterOdometerReadingModal= false, endRideOdometerReadingModal = false, enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
               else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = false,otpAttemptsExceeded = true, enterOtpModal = endRideOtpModalOnError, rideOtp = "",enterOdometerReadingModal= false,endRideOdometerReadingModal = false, enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
-              else
+              else do
                 pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-              homeScreenFlow
+                homeScreenFlow
+            Tuple (Just _) false -> do
+              onSuccessEndRide
       where
         onSuccessEndRide = do
             void $ pure $ cleverTapCustomEvent "ny_driver_ride_ended"
@@ -2355,10 +2354,11 @@ homeScreenFlow = do
             void $ pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
             void $ Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
             void $ pure $ setValueToLocalNativeStore TRIP_STATUS "ended"
-            resp <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (getcurrentdate ""))
-            modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverRideStats = Just resp}
+            liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ride_completed" $ [{key : "Service Tier", value : unsafeToForeign state.data.activeRide.serviceTier},
+                                                                                            {key : "Driver Vehicle", value : unsafeToForeign state.data.activeRide.driverVehicle}]
+            void $ pure $ setValueToLocalStore IS_DRIVER_STATS_CALLED "false"
             if getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "true" then do
-              getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+              getDriverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq { isAdvancedBookingEnabled : Just state.data.cityConfig.enableAdvancedBooking})
 
               let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
               modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp)}
@@ -2369,7 +2369,7 @@ homeScreenFlow = do
                 else pure unit
               setValueToLocalStore HAS_TAKEN_FIRST_RIDE "false"
               else pure unit
-            (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false" "null" "null"
+            (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false" "COMPLETED" "null"
             case (head rideHistoryResponse.list) of
               Nothing -> pure unit
               Just (RidesInfo response) -> do
@@ -2456,7 +2456,7 @@ homeScreenFlow = do
       void $ pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
       void $ updateStage $ HomeScreenStage HomeScreen
       when state.data.driverGotoState.isGotoEnabled do
-        driverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+        driverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq { isAdvancedBookingEnabled : Just state.data.cityConfig.enableAdvancedBooking})
         modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp, gotoPopupType = if (fromMaybe false cancelRideResp.isGoHomeDisabled) then ST.REDUCED 0 else ST.NO_POPUP_VIEW})
       updateDriverDataToStates
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps { gotoPopupType = ST.NO_POPUP_VIEW })
@@ -2489,7 +2489,7 @@ homeScreenFlow = do
     REFRESH_HOME_SCREEN_FLOW -> do
       void $ pure $ removeAllPolylines ""
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {rideActionModal = false, cancelRideModalShow = false, enterOtpModal = false, routeVisible = false, refreshAnimation = false}})
-      getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+      getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (DriverInfoReq{isAdvancedBookingEnabled : Nothing})
       case getDriverInfoApiResp of
         Right resp -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
         Left _ -> pure unit
@@ -2549,7 +2549,7 @@ homeScreenFlow = do
           routeType = if state.props.currentStage == RideAccepted then "pickup" else "trip"
 
           srcMarkerConfig = JB.defaultMarkerConfig{ markerId = "ny_ic_src_marker", pointerIcon = "ny_ic_src_marker", primaryText = source }
-          destMarkerConfig = JB.defaultMarkerConfig{ markerId = "ny_ic_dest_marker", pointerIcon = "ny_ic_dest_marker", primaryText = destination }
+          destMarkerConfig = JB.defaultMarkerConfig{ markerId = "ny_ic_dest_marker", pointerIcon = "ny_ic_dest_marker", primaryText = destination, anchorU = 0.5, anchorV = 1.0}
           
       if (state.data.activeRide.tripType == ST.Rental) && (state.props.currentStage == RideStarted ) && isNothing state.data.activeRide.nextStopAddress then do
           void $ pure $ removeAllPolylines ""
@@ -2574,7 +2574,8 @@ homeScreenFlow = do
         let coors = (walkCoordinate srcLon srcLat destLon destLat)
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
         void $ pure $ removeAllPolylines ""
-        liftFlowBT $ drawRoute [coors] "DOT" false srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) (getNewIDWithTag "DriverTrackingHomeScreenMap")
+        let normalRoute = JB.mkRouteConfig coors srcMarkerConfig destMarkerConfig "NORMAL" "DOT" false JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+        liftFlowBT $ drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
         homeScreenFlow
       else if not null state.data.route then do
         let shortRoute = (state.data.route !! 0)
@@ -2584,7 +2585,8 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
             pure $ removeMarker "ic_vehicle_side"
             void $ pure $ removeAllPolylines ""
-            liftFlowBT $ drawRoute [coor] "LineString" true srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) (getNewIDWithTag "DriverTrackingHomeScreenMap")
+            let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+            liftFlowBT $ drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
             pure unit
           Nothing -> pure unit
       else do
@@ -2596,9 +2598,10 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
             pure $ removeMarker "ny_ic_auto"
             void $ pure $ removeAllPolylines ""
-            liftFlowBT $ drawRoute [coor] "ic_vehicle_side" true srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) (getNewIDWithTag "DriverTrackingHomeScreenMap")
+            let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+            liftFlowBT $ drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
             pure unit
-          Nothing -> pure unit
+          Nothing -> pure unit                
       homeScreenFlow
     UPDATE_STAGE stage -> do
       void $ updateStage $ HomeScreenStage stage
@@ -2648,7 +2651,7 @@ homeScreenFlow = do
         Right resp -> do 
           void $ pure $ toast $ getString GOTO_LOC_IS_ENABLED
           modifyScreenState $ HomeScreenStateType (\_ -> state { data { driverGotoState { showGoto = false}}})
-          driverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+          driverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq {isAdvancedBookingEnabled : Just state.data.cityConfig.enableAdvancedBooking})
           modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp})
           updateDriverDataToStates
         Left errorPayload ->if (decodeErrorCode errorPayload.response.errorMessage) == "DRIVER_CLOSE_TO_HOME_LOCATION" then modifyScreenState $ HomeScreenStateType (\_ -> state{data { driverGotoState {gotoLocInRange = true
@@ -2670,7 +2673,7 @@ homeScreenFlow = do
         Right _ -> do
           void $ pure $ toast $ getString GOTO_LOC_IS_DISABLED
           void $ pure $ clearTimerWithId state.data.driverGotoState.timerId
-          driverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+          driverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq {isAdvancedBookingEnabled : Just state.data.cityConfig.enableAdvancedBooking })
           modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp})
           updateDriverDataToStates
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
@@ -2684,7 +2687,7 @@ homeScreenFlow = do
     REFRESH_GOTO state -> do
       let defState = HomeScreenData.initData
       modifyScreenState $ HomeScreenStateType (\_ -> state { data { driverGotoState = defState.data.driverGotoState}})
-      driverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+      driverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq {isAdvancedBookingEnabled : Just state.data.cityConfig.enableAdvancedBooking })
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp, gotoPopupType = ST.NO_POPUP_VIEW})
       updateDriverDataToStates
       homeScreenFlow
@@ -2708,6 +2711,29 @@ homeScreenFlow = do
           modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp updatedResponse)}
         Left _ -> do
           pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+    UPDATE_ROUTE_ON_STAGE_SWITCH state -> do
+      let srcDestConfig = getSrcDestConfig state
+          srcLat = srcDestConfig.srcLat
+          srcLon = srcDestConfig.srcLon
+          destLat = srcDestConfig.destLat
+          destLon = srcDestConfig.destLon
+          source = srcDestConfig.source
+          destination = srcDestConfig.destination
+          routeType = if state.props.currentStage == RideAccepted then "pickup" else "trip"
+          srcMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_src_marker", primaryText = source }
+          destMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_dest_marker", primaryText = destination, anchorU = 0.5, anchorV = 1.0 }
+      GetRouteResp routeApiResponse <- Remote.getRouteBT (makeGetRouteReq srcLat srcLon destLat destLon) routeType
+      let shortRoute = (routeApiResponse !! 0)
+      case shortRoute of
+        Just (Route route) -> do
+          let coor = walkCoordinates route.points
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
+          pure $ removeMarker "ny_ic_auto"
+          void $ pure $ removeAllPolylines ""
+          let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+          liftFlowBT $ drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
+          pure unit
+        Nothing -> pure unit
       homeScreenFlow
   homeScreenFlow
 
@@ -2760,7 +2786,7 @@ clearPendingDuesFlow showLoader = do
             Nothing -> pure unit
         Left err -> pure $ toast $ Remote.getCorrespondingErrorMessage err 
     Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
-  getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+  getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (DriverInfoReq{isAdvancedBookingEnabled : Nothing})
   case getDriverInfoApiResp of
     Right resp -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
     Left _ -> pure unit
@@ -2817,12 +2843,13 @@ nyPaymentFlow planCardConfig fromScreen = do
 
 setSubscriptionStatus :: PaymentStatus -> PS.APIPaymentStatus -> PlanCardConfig -> FlowBT String Unit
 setSubscriptionStatus paymentStatus apiPaymentStatus planCardConfig = do
+  (GlobalState globalState) <- getState
   case paymentStatus of
     Success -> do 
       void $ pure $ cleverTapCustomEvent "ny_driver_subscription_success"
       void $ pure $ JB.metaLogEvent "ny_driver_subscription_success"
       liftFlowBT $ JB.firebaseLogEvent "ny_driver_subscription_success"
-      getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+      getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (DriverInfoReq{isAdvancedBookingEnabled : Just globalState.homeScreen.data.cityConfig.enableAdvancedBooking})
       case getDriverInfoApiResp of
         Right resp -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
         Left _ -> pure unit
@@ -2847,7 +2874,7 @@ paymentHistoryFlow = do
         resumeMandate <- lift $ lift $ Remote.resumeMandate ""
         case resumeMandate of 
           Right resp -> do
-            getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+            getDriverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq { isAdvancedBookingEnabled : Nothing})
             modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just getDriverInfoResp})
             updateDriverDataToStates
             let (GlobalState defGlobalState) = defaultGlobalState
@@ -2996,7 +3023,7 @@ subScriptionFlow = do
       suspendMandate <- lift $ lift $ Remote.suspendMandate state.data.driverId
       case suspendMandate of 
         Right resp -> do 
-          getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+          getDriverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq {isAdvancedBookingEnabled : Nothing })
           modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just getDriverInfoResp})
           updateDriverDataToStates
           let (GlobalState defGlobalState) = defaultGlobalState
@@ -3025,7 +3052,7 @@ subScriptionFlow = do
       resumeMandate <- lift $ lift $ Remote.resumeMandate state.data.driverId
       case resumeMandate of 
         Right resp -> do
-          getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+          getDriverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq { isAdvancedBookingEnabled : Nothing})
           modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just getDriverInfoResp})
           updateDriverDataToStates
           let (GlobalState defGlobalState) = defaultGlobalState
@@ -3044,8 +3071,8 @@ subScriptionFlow = do
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       subScriptionFlow
     REFRESH_SUSCRIPTION -> do
-      getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
       (GlobalState state) <- getState
+      getDriverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq {isAdvancedBookingEnabled : Nothing })
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just getDriverInfoResp})
       updateDriverDataToStates
       let (GlobalState defGlobalState) = defaultGlobalState
@@ -3176,7 +3203,7 @@ getDriverInfoDataFromCache (GlobalState globalState) mkCall = do
     let driverInfoResp = fromMaybe dummyDriverInfo globalState.globalProps.driverInformation
     pure driverInfoResp
   else do
-    driverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq {})
+    driverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq {isAdvancedBookingEnabled : Just globalState.homeScreen.data.cityConfig.enableAdvancedBooking})
     modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just $ driverInfoResp}
     updateDriverDataToStates
     pure driverInfoResp

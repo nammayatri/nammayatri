@@ -72,3 +72,21 @@ derive instance genericConfig :: Generic Config _
 
 instance decodeConfig :: Decode Config where
   decode = defaultDecode
+
+
+newtype ForwardBatchConfigData = ForwardBatchConfigData
+  { is_Forward_Dispatch_Feature_Enabled :: Boolean,
+    advancedRidePopUpYoutubeLink :: String,
+    callDriverInfoPost :: Boolean
+  }
+derive instance genericForwardBatchConfigData :: Generic ForwardBatchConfigData _
+
+instance decodeForwardBatchConfigData :: Decode ForwardBatchConfigData where
+  decode = defaultDecode
+
+defaultForwardBatchConfigData :: ForwardBatchConfigData
+defaultForwardBatchConfigData = ForwardBatchConfigData
+  { is_Forward_Dispatch_Feature_Enabled: false,
+    advancedRidePopUpYoutubeLink: "",
+    callDriverInfoPost: false
+  }

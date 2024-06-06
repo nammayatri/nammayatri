@@ -1406,3 +1406,10 @@ getTE stringKey =
         TOLL_CHARGES_MAYBE_APPLICABLE -> "టోల్ ఛార్జీలు వర్తించవచ్చు"
         YOU_ARE_ALL_SET_TO_TAKE_RIDES -> "మీరు నమ్మ యాత్రిలో రైడ్లు తీసుకోవడానికి సిద్ధంగా ఉన్నారు"
         TOP_AC_DRIVER appName -> "టాప్ AC డ్రైవర్ ఎలా అవ్వాలంటే చూడండి " <> appName
+        GET_ADVANCED_RIDE -> "మీ ప్రస్తుత రైడ్ ముగిసేలోపు రైడ్లను పొందండి!"
+        GO_TO_ADVANCED_RIDE -> "అడ్వాన్స్డ్ రైడ్‌కు వెళ్ళండి"
+        ADVANCE_BOOKING -> "ముందస్తు బుకింగ్"
+        ADVANCE -> "ముందుగా"
+        CURRENT_BUTTON_TEXT -> "ప్రస్తుత"
+        FEATURE_UPDATE -> "ఫీచర్ అప్డేట్"
+        ADVANCED_RIDE_POPUP_TITLE -> "మీ ప్రస్తుత రైడ్ ముగిసేలోపు రైడ్లను పొందండి!"

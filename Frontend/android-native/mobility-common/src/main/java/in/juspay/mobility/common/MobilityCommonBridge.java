@@ -187,6 +187,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -243,8 +244,8 @@ public class MobilityCommonBridge extends HyperBridge {
     protected Marker userPositionMarker;
     private final UICallBacks callBack;
     private final FusedLocationProviderClient client;
-    protected Polyline polyline = null;
-    protected Polyline rentalPolyline = null;
+
+    protected static Hashtable<String, Hashtable<String, PolylineDataPoints>> polylinesByMapInstance = new Hashtable<>();
     protected HashMap<String, HashMap <String, Marker>> markersElement = new HashMap<>();
     protected HashMap<String, GoogleMap> googleMapInstance = new HashMap<>();
     //Location
@@ -270,7 +271,18 @@ public class MobilityCommonBridge extends HyperBridge {
     // Others
     private LottieAnimationView animationView;
     protected Method[] methods = null;
-    protected Polyline overlayPolylines = null;
+    protected class PolylineDataPoints {
+        public Polyline polyline = null;
+        public Polyline overlayPolylines = null;
+
+        public void setPolyline(Polyline polyline) {
+            this.polyline = polyline;
+        }
+
+        public void setOverlayPolylines(Polyline polyline) {
+            this.overlayPolylines = polyline;
+        }
+    }
     protected boolean isAnimationNeeded = false;
     private PaymentPage paymentPage;
 
@@ -339,7 +351,36 @@ public class MobilityCommonBridge extends HyperBridge {
             this.animationDuration = animationDuration;
         }
     }
+    public Polyline getPolyLine(Boolean isOverPolyLine, PolylineDataPoints polylineData)
+    {
+        if (isOverPolyLine && polylineData != null){
+            return polylineData.overlayPolylines;
+        }
+        else if (!isOverPolyLine && polylineData != null)
+        {
+            return polylineData.polyline;
+        }
+        else {
+            return null;
+        }
+    }
+    public static PolylineDataPoints getPolyLineDataByMapInstance(String mapKey, String polyLineKey)
+    {
+        Hashtable<String, PolylineDataPoints> polylines = polylinesByMapInstance.get(mapKey);
+        if (polylines != null) { return polylines.get(polyLineKey);}
+        else{ return null;}
+    }
 
+    public static void setPolyLineDataByMapInstance(String mapKey, String polyLineKey, PolylineDataPoints polyLineData) {
+        Hashtable<String, PolylineDataPoints> polylines = polylinesByMapInstance.get(mapKey);
+        if (polylines != null) {
+            polylines.put(polyLineKey, polyLineData);
+        } else {
+            Hashtable<String, PolylineDataPoints> polylinesNew = new Hashtable<>();
+            polylinesNew.put(polyLineKey, polyLineData);
+            polylinesByMapInstance.put(mapKey, polylinesNew);
+        }
+    }
     public static class LocateOnMapManager {
         GeoJsonFeature focusedGeoJsonFeature = null;
         HashMap<String, GeoJsonFeature> gatesSpecialZone = new HashMap<>();
@@ -402,7 +443,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     public MapRemoteConfig getMapRemoteConfig() {
-        try {
+                try {
             if(this.mapRemoteConfig == null) {
                 mapRemoteConfig = new MapRemoteConfig();
                 String mapConfig = getKeyInNativeSharedPrefKeys("MAP_REMOTE_CONFIG");
@@ -436,7 +477,7 @@ public class MobilityCommonBridge extends HyperBridge {
             receivers.deRegister();
             receivers = null;
         }
-        polyline = null;
+        polylinesByMapInstance = new Hashtable<>();
         googleMap = null;
         markers = new HashMap<>();
         zoneMarkers = new HashMap<>();
@@ -1315,23 +1356,25 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    protected void dottedLineFromCurrentPosition(Double lat,Double lon,Boolean dottedLineVisible,Double dottedLineRange,String dottedLineColor) {
+    protected void dottedLineFromCurrentPosition(String key , Double lat,Double lon,Boolean dottedLineVisible,Double dottedLineRange,String dottedLineColor, String gmapKey) {
+        PolylineDataPoints polyline = getPolyLineDataByMapInstance(gmapKey,key);
         if (googleMap != null && dottedLineVisible) {
             if (polyline != null) {
-                polyline.remove();
-                polyline = null;
+                polyline.polyline.remove();
+                polyline.setPolyline(null);
+                setPolyLineDataByMapInstance(gmapKey,key, polyline);
             }
             if (SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(lastLatitudeValue, lastLongitudeValue)) < dottedLineRange)
-                drawDottedLine(googleMap.getCameraPosition().target.latitude, googleMap.getCameraPosition().target.longitude, lastLatitudeValue, lastLongitudeValue, dottedLineColor);
+                drawDottedLine(key, googleMap.getCameraPosition().target.latitude, googleMap.getCameraPosition().target.longitude, lastLatitudeValue, lastLongitudeValue, dottedLineColor,gmapKey);
         }
     }
 
-    private void drawDottedLine(Double srcLat, Double srcLon, Double destLat, Double destLon, String color) {
+    private void drawDottedLine(String key ,Double srcLat, Double srcLon, Double destLat, Double destLon, String color, String gmapKey) {
         if (googleMap != null) {
             PolylineOptions polylineOptions = new PolylineOptions();
             polylineOptions.add(new LatLng(srcLat, srcLon));
             polylineOptions.add(new LatLng(destLat, destLon));
-            polyline = setRouteCustomTheme(polylineOptions, Color.parseColor(color), "DOT", 8, null, googleMap);
+            setPolyLineDataByMapInstance(gmapKey,key, setRouteCustomTheme(polylineOptions, Color.parseColor(color), "DOT", 8, null,googleMap,false, key, gmapKey));
         }
     }
 
@@ -1477,6 +1520,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 if (markers.containsKey(title)) {
                     Marker m = (Marker) markers.get(title);
                     m.setVisible(false);
+                    markers.remove(title);
                     Log.i(MAPS, "Removed marker " + title);
                 }
             } catch (Exception e) {
@@ -1631,10 +1675,11 @@ public class MobilityCommonBridge extends HyperBridge {
         ExecutorManager.runOnMainThread(() -> {
             try {
                 GoogleMap gMap = googleMapInstance.get(pureScripID);
-                String title = markerConfig.markerId;
+                String title = markerConfig.markerId.equals("") ? markerConfig.markerId: markerConfig.pointerIcon;
                 String imageName = markerConfig.pointerIcon;
                 float rotation = markerConfig.rotation;
                 float alpha = (markerConfig.animationType == AnimationType.FADE_IN) ? 0 : 1;
+                System.out.println("marker ids" + title);
                 if (lat != null && lng != null) {
                     double latitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lat);
                     double longitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lng);
@@ -2222,26 +2267,17 @@ public class MobilityCommonBridge extends HyperBridge {
         groundOverlays.clear();
     }
     
-    private void drawRentalsPolyline(final int staticColor, final String style, final int polylineWidth, PolylineOptions polylineOptions, JSONObject mapRouteConfigObject, GoogleMap gMap){
-        try{
-            mapRouteConfigObject.put("dashUnit",30);
-            mapRouteConfigObject.put("gapUnit", 20);
-            rentalPolyline = setRouteCustomTheme(polylineOptions, staticColor, style, polylineWidth, mapRouteConfigObject, gMap);
-            return ;
-        }catch(Exception e){
 
-        }}
 
-    private void checkAndAnimatePolyline(final int staticColor, final String style, final int polylineWidth, PolylineOptions polylineOptions, JSONObject mapRouteConfigObject, final GoogleMap gMap){
+    private void checkAndAnimatePolyline(final String polyLineKey, final int staticColor, final String style, final int polylineWidth, PolylineOptions polylineOptions, JSONObject mapRouteConfigObject, final GoogleMap gMap, String gmapKey){
         try{
             isAnimationNeeded = mapRouteConfigObject != null && mapRouteConfigObject.optBoolean("isAnimation", false);
-
+            
             if(!isAnimationNeeded || Utils.getDeviceRAM() <= 3){
                 if(polylineAnimationTimer != null){
                     polylineAnimationTimer.cancel();
                 }
-
-                polyline = setRouteCustomTheme(polylineOptions, staticColor, style, polylineWidth, mapRouteConfigObject, gMap);
+                setPolyLineDataByMapInstance(gmapKey,polyLineKey , setRouteCustomTheme(polylineOptions, staticColor, style, polylineWidth, mapRouteConfigObject, gMap, false, polyLineKey, gmapKey));
                 return ;
             }
             JSONObject polylineAnimationConfigObject = mapRouteConfigObject.optJSONObject("polylineAnimationConfig");
@@ -2250,10 +2286,9 @@ public class MobilityCommonBridge extends HyperBridge {
             }
 
             int animateColor = Color.parseColor(polylineAnimationConfigObject.optString("color", "#D1D5DB"));
-            polyline = setRouteCustomTheme(polylineOptions, animateColor, style, polylineWidth, mapRouteConfigObject, gMap);
+            setPolyLineDataByMapInstance(gmapKey,polyLineKey , setRouteCustomTheme(polylineOptions, animateColor, style, polylineWidth, mapRouteConfigObject,gMap, false, polyLineKey, gmapKey));
             PolylineOptions overlayPolylineOptions = new PolylineOptions();
-            overlayPolylines = setRouteCustomTheme(overlayPolylineOptions, animateColor, style, polylineWidth, null, gMap);
-
+            setPolyLineDataByMapInstance(gmapKey,polyLineKey , setRouteCustomTheme(overlayPolylineOptions, animateColor, style, polylineWidth, null, gMap, true, polyLineKey,gmapKey));
 
             if(polylineAnimationTimer!=null){
                 polylineAnimationTimer.cancel();
@@ -2280,6 +2315,9 @@ public class MobilityCommonBridge extends HyperBridge {
                     if(drawDone >= 0 && drawDone <= 100){ // Drawing Phase
                         ExecutorManager.runOnMainThread(() -> {
                             try{
+                                PolylineDataPoints polyDataPoints = getPolyLineDataByMapInstance(gmapKey,polyLineKey);
+                                Polyline polyline =  getPolyLine(false,polyDataPoints);
+                                Polyline overlayPolylines = getPolyLine(false,polyDataPoints);
                                 if (polyline != null) {
                                     List<LatLng> foregroundPoints = polyline.getPoints();
                                     Collections.reverse(foregroundPoints);
@@ -2303,6 +2341,8 @@ public class MobilityCommonBridge extends HyperBridge {
                     }else if(drawDone > 100 && drawDone <= 200){ // Fading Phase
                         ExecutorManager.runOnMainThread(() -> {
                             try {
+                                PolylineDataPoints polylineDataPoints = getPolyLineDataByMapInstance(gmapKey,polyLineKey);
+                                Polyline polyline = getPolyLine(false,polylineDataPoints);
                                 float alpha = (float) ((drawDone - 100.0) / 100.0);
                                 final float[] fromColor = new float[3], toColor =   new float[3], currColor = new float[3];
                                 Color.colorToHSV(animateColor, fromColor);
@@ -2314,7 +2354,9 @@ public class MobilityCommonBridge extends HyperBridge {
 
                                 int newColor = Color.HSVToColor(currColor);
                                 if (polyline != null && polyline.getColor() != newColor)
-                                    polyline.setColor(newColor);
+                                 polyline.setColor(newColor);
+                                polylineDataPoints.setPolyline(polyline);
+                                setPolyLineDataByMapInstance(gmapKey,polyLineKey,polylineDataPoints);
 
                             } catch (Exception e) {
                                 e.printStackTrace();
@@ -2327,6 +2369,7 @@ public class MobilityCommonBridge extends HyperBridge {
             e.printStackTrace();
         }
     }
+
     @JavascriptInterface
     public void drawRouteV2 (final String drawRouteConfig) {
         onMapUpdate(null,null);
@@ -2335,176 +2378,155 @@ public class MobilityCommonBridge extends HyperBridge {
             try{
                 JSONObject drawRouteConfigObject = new JSONObject(drawRouteConfig);
                 String purescriptId = drawRouteConfigObject.optString("pureScriptID", "");
-                JSONObject routes = drawRouteConfigObject.getJSONObject("routes");
+                JSONArray routesConfigs = drawRouteConfigObject.getJSONArray("routeConfigs");
+                System.out.println(routesConfigs);
+                for (int j = 0, size = routesConfigs.length(); j < size; j++) {
+                    JSONObject drawRouteEntity = routesConfigs.getJSONObject(j);
+                    String key = drawRouteEntity.optString("routeKey", "DEFAULT");
+                    JSONObject locations = drawRouteEntity.getJSONObject("locations");
+                    JSONArray coordinates = locations.getJSONArray("points");
 
-                JSONObject normalRoute = routes.getJSONObject("normalRoute");
-                JSONObject locations = normalRoute.getJSONObject("locations");
-                JSONArray coordinates = locations.getJSONArray("points");
+                    JSONObject startMarkerConfig = new JSONObject(drawRouteEntity.getString("startMarkerConfig"));
+                    JSONObject endMarkerConfig = new JSONObject(drawRouteEntity.getString("endMarkerConfig"));
+                    JSONObject stopMarkerConfig = new JSONObject(drawRouteEntity.getString("endMarkerConfig"));
+                    Double sourceAnchorVD = startMarkerConfig.optDouble("anchorV", 0.5);
+                    Double sourceAnchorUD = startMarkerConfig.optDouble("anchorU", 0.5);
+                    Double destinationMarkerAnchorVD = endMarkerConfig.optDouble("anchorV", 0.5);
+                    Double destinationMarkerAnchorUD = endMarkerConfig.optDouble("anchorU", 0.5);
+                    float destinationAnchorV = destinationMarkerAnchorVD.floatValue();
+                    float destinationAnchorU = destinationMarkerAnchorUD.floatValue();
+                    float sourceAnchorV = sourceAnchorVD.floatValue();
+                    float sourceAnchorU = sourceAnchorUD.floatValue();
+                    String sourceIcon = startMarkerConfig.optString("pointerIcon", "");
+                    String destIcon = endMarkerConfig.optString("pointerIcon", "");
+                    String stopIcon = stopMarkerConfig.optString("pointerIcon", "");
+                    String sourceIconId = startMarkerConfig.optString("markerId", "");
+                    String destIconId = endMarkerConfig.optString("markerId", "");
+                    String stopIconId = stopMarkerConfig.optString("markerId", "");
+System.out.println("printing marker ids" + sourceIconId + "--- " + destIconId + " --- " + stopIconId);
 
-                JSONObject rentalRoute = routes.getJSONObject("rentalRoute");
-                JSONObject rentalLocations = rentalRoute.getJSONObject("locations");
-                JSONArray rentalCoordinates = rentalLocations.getJSONArray("points");
+                    int polylineWidth = drawRouteEntity.optInt("routeWidth", 8);
 
-                JSONObject startMarkerConfig = new JSONObject(normalRoute.getString("startMarkerConfig"));
-                JSONObject endMarkerConfig = new JSONObject(normalRoute.getString("endMarkerConfig"));
-                JSONObject stopMarkerConfig = new JSONObject(rentalRoute.getString("endMarkerConfig"));
+                    String style = drawRouteEntity.optString("style", "LineString");
+                    String trackColor = drawRouteEntity.optString("routeColor", "#000000");
+                    String type = drawRouteEntity.optString("routeType", "DRIVER_LOCATION_UPDATE");
 
-                String sourceIcon = startMarkerConfig.optString("pointerIcon", "");
-                String destIcon = endMarkerConfig.optString("pointerIcon", "");
-                String stopIcon = stopMarkerConfig.optString("pointerIcon", "");
-
-                String sourceIconId = startMarkerConfig.optString("markerId", "");
-                String destIconId = endMarkerConfig.optString("markerId", "");
-                String stopIconId = stopMarkerConfig.optString("markerId", "");
-
-                int polylineWidth = normalRoute.optInt("routeWidth", 8);
-
-                String style = normalRoute.optString("style", "LineString");
-                String trackColor = normalRoute.optString("routeColor", "#000000");
-                String type = normalRoute.optString("routeType", "DRIVER_LOCATION_UPDATE");
-
-                JSONObject mapRouteConfigObject = normalRoute.optJSONObject("mapRouteConfig");
+                    JSONObject mapRouteConfigObject = drawRouteEntity.optJSONObject("mapRouteConfig");
                 
 
-                boolean isActual = normalRoute.optBoolean("isActual", true);
+                    boolean isActual = drawRouteEntity.optBoolean("isActual", true);
 
-                GoogleMap gMap = googleMapInstance.get(purescriptId);
+                    GoogleMap gMap = googleMapInstance.get(purescriptId);
 
-                if (gMap != null) {
-                PolylineOptions polylineOptions = new PolylineOptions();
-                PolylineOptions rentalPolylineOption = new PolylineOptions();
-                int color = Color.parseColor(trackColor);
-
-                
-                try {
-                    if (coordinates.length() <= 1) {
-                        JSONObject coordinate = (JSONObject) coordinates.get(0);
-                        double lng = coordinate.getDouble("lng");
-                        double lat = coordinate.getDouble("lat");
-                        int vehicleSizeTagIcon = mapRouteConfigObject != null ? mapRouteConfigObject.getInt("vehicleSizeTagIcon") : 90;
-                        MarkerConfig mConfig = getMarkerConfigWithIdAndName(sourceIcon, sourceIconId);
-                        upsertMarkerV2(mConfig, String.valueOf(lat), String.valueOf(lng), vehicleSizeTagIcon, 0.5f, 0.5f, purescriptId);
-                        animateCameraV2(lat, lng, 20.0f, ZoomType.ZOOM, purescriptId);
-                        return;
-                    }
-
-                    JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
-                    JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length() - 1);
-
-                    double sourceLat = sourceCoordinates.getDouble("lat");
-                    double sourceLong = sourceCoordinates.getDouble("lng");
-                    double destLat = destCoordinates.getDouble("lat");
-                    double destLong = destCoordinates.getDouble("lng");
-
-                    JSONObject rentalEndCoordinates = null;
-                    double rentalDestLat = 0.0;
-                    double rentalDestLong = 0.0;
-
-                    if ( rentalCoordinates.length() >= 1) {
-                        rentalEndCoordinates = (JSONObject) rentalCoordinates.get(rentalCoordinates.length() - 1);
-                        rentalDestLat = rentalEndCoordinates.getDouble("lat");
-                        rentalDestLong = rentalEndCoordinates.getDouble("lng");
-                    }
+                    if (gMap != null) {
+                    setPolyLineDataByMapInstance(purescriptId,key, new PolylineDataPoints());
+                    PolylineOptions polylineOptions = new PolylineOptions();
+                    int color = Color.parseColor(trackColor);
 
                     
-                    if (isActual) {
-                        for (int i = coordinates.length() - 1; i >= 0; i--) {
-                            JSONObject coordinate = (JSONObject) coordinates.get(i);
+                    try {
+                        if (coordinates.length() <= 1) {
+                            JSONObject coordinate = (JSONObject) coordinates.get(0);
                             double lng = coordinate.getDouble("lng");
                             double lat = coordinate.getDouble("lat");
-                            polylineOptions.add(new LatLng(lat, lng));
-                        }
-                        for (int i = rentalCoordinates.length() - 1; i >= 0; i--) {
-                            JSONObject coordinate = (JSONObject) rentalCoordinates.get(i);
-                            double lng = coordinate.getDouble("lng");
-                            double lat = coordinate.getDouble("lat");
-                            coordinates.put(rentalCoordinates.get(i));
-                            rentalPolylineOption.add(new LatLng(lat, lng));
-                        }
-                    } else {
-                        LatLng fromPointObj = new LatLng(sourceLat, sourceLong);
-                        LatLng toPointObj = new LatLng(destLat, destLong);
-                        polylineOptions.add(toPointObj);
-                        polylineOptions.add(fromPointObj);
-                    }
-
-                    if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0) {
-                        double destinationLat = rentalDestLat == 0.0 ? destLat : rentalDestLat;
-                        double destinationLong = rentalDestLong == 0.0 ? destLong : rentalDestLong;
-                        moveCameraV2(sourceLat, sourceLong, destinationLat, destinationLong, coordinates, purescriptId);
-                    }
-                    System.out.println("Inside drawRouteV2" + sourceIcon + " destination ICOn" + destIcon);
-                    String sourceSpecialTagIcon = startMarkerConfig.getString("labelImage");//mapRouteConfigObject != null ? mapRouteConfigObject.optString("sourceSpecialTagIcon", "") : "";
-                    String destinationSpecialTagIcon = endMarkerConfig.getString("labelImage");//mapRouteConfigObject != null ? mapRouteConfigObject.optString("destSpecialTagIcon", "") : "";
-                    MarkerConfig markerConfig = new MarkerConfig();
-                    checkAndAnimatePolyline(color, style, polylineWidth, polylineOptions, mapRouteConfigObject, gMap);
-                    
-                    if (rentalPolyline != null) {
-                        rentalPolyline.remove();
-                        rentalPolyline = null;
-                    }
-                    if (rentalPolylineOption.getPoints().size() > 1) {
-                        drawRentalsPolyline(color, "DASH", polylineWidth, rentalPolylineOption, mapRouteConfigObject, gMap);
-                    }
-
-// Adding Markers
-// Destination Marker
-                    if (!destIcon.equals("")) {
-                        List<LatLng> points = polylineOptions.getPoints();
-                        LatLng dest = points.get(0);
-                        markerConfig.locationName(endMarkerConfig.optString("primaryText", ""), endMarkerConfig.optString("secondaryText", ""));
-                        markerConfig.setLabelImage(destinationSpecialTagIcon);
-                        MarkerOptions markerObj = new MarkerOptions()
-                                .title("")
-                                .position(dest)
-                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destIcon, false, null, MarkerType.NORMAL_MARKER, markerConfig)));
-
-                        Marker tempmarker = gMap.addMarker(markerObj);
-                        markers.put(destIconId, tempmarker);
-
-                    }
-
-// Source Marker
-                    if (!sourceIcon.equals("")) {
-                        List<LatLng> points = polylineOptions.getPoints();
-                        LatLng source = points.get(points.size() - 1);
-                        if (type.equals("DRIVER_LOCATION_UPDATE")) {
                             int vehicleSizeTagIcon = mapRouteConfigObject != null ? mapRouteConfigObject.getInt("vehicleSizeTagIcon") : 90;
                             MarkerConfig mConfig = getMarkerConfigWithIdAndName(sourceIcon, sourceIconId);
-                            upsertMarkerV2(mConfig,String.valueOf(source.latitude),String.valueOf(source.longitude), vehicleSizeTagIcon, 0.5f, 0.5f,purescriptId);
-                            Marker currMarker = (Marker) markers.get(sourceIconId);
-                            int index = polyline.getPoints().size() - 1;
-                            float rotation = (float) SphericalUtil.computeHeading(polyline.getPoints().get(index), polyline.getPoints().get(index - 1));
-                            if (rotation != 0.0) currMarker.setRotation(rotation);
-                            currMarker.setAnchor(0.5f, 0.5f);
-                            markers.put(sourceIconId, currMarker);
+                            upsertMarkerV2(mConfig, String.valueOf(lat), String.valueOf(lng), vehicleSizeTagIcon, sourceAnchorU, sourceAnchorV, purescriptId);
+                            animateCameraV2(lat, lng, 20.0f, ZoomType.ZOOM, purescriptId);
+                            return;
+                        }
+
+                        JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
+                        JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length() - 1);
+
+                        double sourceLat = sourceCoordinates.getDouble("lat");
+                        double sourceLong = sourceCoordinates.getDouble("lng");
+                        double destLat = destCoordinates.getDouble("lat");
+                        double destLong = destCoordinates.getDouble("lng");
+
+                        
+                        if (isActual) {
+                            for (int i = coordinates.length() - 1; i >= 0; i--) {
+                                JSONObject coordinate = (JSONObject) coordinates.get(i);
+                                double lng = coordinate.getDouble("lng");
+                                double lat = coordinate.getDouble("lat");
+                                polylineOptions.add(new LatLng(lat, lng));
+                            }
                         } else {
-                            markerConfig.locationName(startMarkerConfig.optString("primaryText", ""), startMarkerConfig.optString("secondaryText", ""));
-                            markerConfig.setLabelImage(sourceSpecialTagIcon);
+                            LatLng fromPointObj = new LatLng(sourceLat, sourceLong);
+                            LatLng toPointObj = new LatLng(destLat, destLong);
+                            polylineOptions.add(toPointObj);
+                            polylineOptions.add(fromPointObj);
+                        }
+
+                        if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0) {
+                            double destinationLat = destLat;
+                            double destinationLong = destLong;
+                            moveCameraV2(sourceLat, sourceLong, destinationLat, destinationLong, coordinates, purescriptId);
+                        }
+                        String sourceSpecialTagIcon = startMarkerConfig.getString("labelImage");//mapRouteConfigObject != null ? mapRouteConfigObject.optString("sourceSpecialTagIcon", "") : "";
+                        String destinationSpecialTagIcon = endMarkerConfig.getString("labelImage");//mapRouteConfigObject != null ? mapRouteConfigObject.optString("destSpecialTagIcon", "") : "";
+                        MarkerConfig markerConfig = new MarkerConfig();
+                        checkAndAnimatePolyline(key,color, style, polylineWidth, polylineOptions, mapRouteConfigObject, gMap, purescriptId);
+                        // Destination Marker
+                        if (!destIcon.equals("")) {
+                            List<LatLng> points = polylineOptions.getPoints();
+                        LatLng dest = points.get(0);
+                            markerConfig.locationName(endMarkerConfig.optString("primaryText", ""), endMarkerConfig.optString("secondaryText", ""));
+                            markerConfig.setLabelImage(destinationSpecialTagIcon);
                             MarkerOptions markerObj = new MarkerOptions()
                                     .title("")
-                                    .position(source)
-                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceIcon, false, null, MarkerType.NORMAL_MARKER, markerConfig)));
-                            Marker tempmarker = gMap.addMarker(markerObj);
-                            markers.put(sourceIcon, tempmarker);
-                        }
-                    }
-// Rental Marker
-                    if (rentalPolylineOption.getPoints().size() > 1 && !stopIcon.equals("")) {
-                        List<LatLng> points = rentalPolylineOption.getPoints();
-                        LatLng source = points.get(0);
-                        MarkerConfig mConfig = getMarkerConfigWithIdAndName(stopIcon, stopIconId);
-                        upsertMarkerV2(mConfig,String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 1.0f,purescriptId);
-                        Marker currMarker = (Marker) markers.get(stopIcon);
-                        markers.put(stopIcon, currMarker);
-                    }
+                                    .position(dest)
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destIcon, false, null, MarkerType.NORMAL_MARKER, markerConfig)))
+                                    .anchor(destinationAnchorU, destinationAnchorV);
 
-                } catch (JSONException e) {
-                    System.out.println("Exception inside drawRouteV2" + e);
-                    e.printStackTrace();
+                            Marker tempmarker = gMap.addMarker(markerObj);
+                            markers.put(destIconId, tempmarker);
+
+                        }
+
+                        if (!sourceIcon.equals("")) {
+                            List<LatLng> points = polylineOptions.getPoints();
+                            LatLng source = points.get(points.size() - 1);
+                            if (type.equals("DRIVER_LOCATION_UPDATE")) {
+                                Polyline polyline = getPolyLine(false , getPolyLineDataByMapInstance(purescriptId,key));
+                                int vehicleSizeTagIcon = mapRouteConfigObject != null ? mapRouteConfigObject.getInt("vehicleSizeTagIcon") : 90;
+                                MarkerConfig mConfig = getMarkerConfigWithIdAndName(sourceIcon, sourceIconId);
+                                upsertMarkerV2(mConfig,String.valueOf(source.latitude),String.valueOf(source.longitude), vehicleSizeTagIcon, sourceAnchorU, sourceAnchorV, purescriptId);
+                                Marker currMarker = (Marker) markers.get(sourceIconId);
+                                float rotation = 0.0f;
+                                if (polyline != null){
+                                int index = polyline.getPoints().size() - 1;
+                                rotation = (float) SphericalUtil.computeHeading(polyline.getPoints().get(index), polyline.getPoints().get(index - 1));
+                                }
+                                if (rotation != 0.0) currMarker.setRotation(rotation);
+                                currMarker.setAnchor(sourceAnchorU, sourceAnchorV);
+                                markers.put(sourceIconId, currMarker);
+                            } else {
+                                markerConfig.locationName(startMarkerConfig.optString("primaryText", ""), startMarkerConfig.optString("secondaryText", ""));
+                                markerConfig.setLabelImage(sourceSpecialTagIcon);
+                                MarkerOptions markerObj = new MarkerOptions()
+                                        .title("")
+                                        .position(source)
+                                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceIcon, false, null, MarkerType.NORMAL_MARKER, markerConfig)));
+                                Marker tempmarker = gMap.addMarker(markerObj);
+                                markers.put(sourceIcon, tempmarker);
+                            }
+                        }
+                        if (!stopIcon.equals("")) {
+                            List<LatLng> points = polylineOptions.getPoints();
+                            LatLng source = points.get(0);
+                            MarkerConfig mConfig = getMarkerConfigWithIdAndName(stopIcon, stopIconId);
+                            upsertMarkerV2(mConfig,String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 1.0f,purescriptId);
+                            Marker currMarker = (Marker) markers.get(stopIcon);
+                            markers.put(stopIcon, currMarker);
+                        }
+                    }  catch (JSONException e) {
+                        System.out.println("Exception inside drawRouteV2" + e);
+                        e.printStackTrace();
+                    }
                 }
-            }
-        }   catch (JSONException e) {
+        } }  catch (JSONException e) {
                 throw new RuntimeException(e);
             }
     });
@@ -2516,6 +2538,9 @@ public class MobilityCommonBridge extends HyperBridge {
         onMapUpdate(null,null);
         ExecutorManager.runOnMainThread(() -> {
             if (googleMap != null) {
+                String key = "DEFAULT";
+                String mapKey = "DEFAULT";
+                setPolyLineDataByMapInstance("DEFAULT","DEFAULT", new PolylineDataPoints());
                 PolylineOptions polylineOptions = new PolylineOptions();
                 int color = Color.parseColor(trackColor);
                 try {
@@ -2564,7 +2589,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     String destinationSpecialTagIcon = destMarkerConfig.getString("labelImage");
                     MarkerConfig markerConfig = new MarkerConfig();
 
-                    checkAndAnimatePolyline(color, style, polylineWidth, polylineOptions, mapRouteConfigObject, googleMap);
+                    checkAndAnimatePolyline(key,color, style, polylineWidth, polylineOptions, mapRouteConfigObject, googleMap, "DEFAULT");
 
                     if (!destinationIcon.equals("")) {
                         List<LatLng> points = polylineOptions.getPoints();
@@ -2575,14 +2600,14 @@ public class MobilityCommonBridge extends HyperBridge {
                                 .title("")
                                 .position(dest)
                                 .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationIcon, false,null, MarkerType.NORMAL_MARKER, markerConfig)));
-
                         Marker tempmarker = googleMap.addMarker(markerObj);
                         markers.put(destMarkerId, tempmarker);
                     }
                     if (!sourceIcon.equals("")) {
                         List<LatLng> points = polylineOptions.getPoints();
                         LatLng source = points.get(points.size() - 1);
-                        if (type.equals("DRIVER_LOCATION_UPDATE")) {
+                        Polyline polyline = getPolyLine(false,getPolyLineDataByMapInstance(mapKey,key));;
+                        if (type.equals("DRIVER_LOCATION_UPDATE") ) {
                             int vehicleSizeTagIcon = mapRouteConfigObject.getInt("vehicleSizeTagIcon");
                             upsertMarker(sourceIcon,String.valueOf(source.latitude),String.valueOf(source.longitude), vehicleSizeTagIcon, 0.5f, 0.5f);
                             Marker currMarker = (Marker) markers.get(sourceMarkerId);
@@ -2854,10 +2879,16 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void removeAllPolylines(String stringifyArray) {
+    public void removeAllPolylines(String removePolyLineConfig) {
         ExecutorManager.runOnMainThread(() -> {
-            System.out.println("Inside remove all polylines");
-            if (stringifyArray.equals("")) {
+            System.out.println("Inside remove all polylines" + removePolyLineConfig);
+            JSONArray jsonMarkersArray = null;
+            JSONObject jsonObject = null;
+            JSONArray jsonPolylineArray = null;
+            String jsonGMapKey = null;
+            Hashtable<String, PolylineDataPoints> polylineData = null;
+            ArrayList<String> mapkeys = new ArrayList<>();
+            if (removePolyLineConfig.equals("")) {
                 // TODO:: TO BE DEPRECATED AS THIS BLOCK OF CODE IS NOT IN USE
                 removeMarker("ic_auto_nav_on_map");
                 removeMarker("ny_ic_vehicle_nav_on_map");
@@ -2865,26 +2896,70 @@ public class MobilityCommonBridge extends HyperBridge {
                 removeMarker("ny_ic_src_marker");
                 removeMarker("ny_ic_dest_marker");
                 removeMarker("ny_ic_blue_marker");
-            } else{
-                try {
-                    JSONArray jsonArray = null;
-                    jsonArray = new JSONArray(stringifyArray);
-                    for (int i = 0; i < jsonArray.length(); i++) {
-                        removeMarker(jsonArray.getString(i));
+                if (polylinesByMapInstance != null) {
+                    for (String i : polylinesByMapInstance.keySet()) {
+                        mapkeys.add(i);
                     }
+                }
+            } else {
+                try {
+                    jsonObject = new JSONObject(removePolyLineConfig);
+                    jsonMarkersArray = jsonObject.getJSONArray("markersToRemove");
+                    jsonPolylineArray = jsonObject.getJSONArray("polyLinesToRemove");
+                    jsonGMapKey = jsonObject.optString("gmapPursId", "DEFAULT");
+                    mapkeys.add(jsonGMapKey);
                 } catch (JSONException e) {
-                    e.printStackTrace();
+                    try {
+                        jsonMarkersArray = new JSONArray(removePolyLineConfig);
+                        System.out.println("array of markers" + jsonMarkersArray);
+                        if (jsonMarkersArray == null || (jsonMarkersArray != null && jsonMarkersArray.length() <= 0))
+                        { removeAllMarkers();}
+                        if (polylinesByMapInstance != null) {
+                            for (String i : polylinesByMapInstance.keySet()) {
+                                mapkeys.add(i);
+                            }
+                        }
+                    } catch (JSONException k) {
+                        k.printStackTrace();
+                    }
                 }
             }
             isAnimationNeeded = false;
             removeOnMapUpdate();
-            if (polyline != null) {
-                polyline.remove();
-                polyline = null;
+
+            for (int i = 0; jsonMarkersArray != null && i < jsonMarkersArray.length(); i++) {
+                removeMarker(jsonMarkersArray.optString(i,""));
             }
-            if (overlayPolylines != null) {
-                overlayPolylines.remove();
-                overlayPolylines = null;
+            for (int i = 0; jsonPolylineArray != null && polylineData != null && i < jsonPolylineArray.length(); i++) {
+                polylineData.remove(jsonPolylineArray.optString(i,""));
+            }
+
+            if( polylinesByMapInstance != null && (jsonPolylineArray == null || (jsonPolylineArray != null && jsonPolylineArray.length() <= 0))) {
+                for (String mapKey : mapkeys) {
+                    polylineData = polylinesByMapInstance.get(mapKey);
+                    if (polylineData != null) {
+                        for (PolylineDataPoints i : polylineData.values()) {
+                            if (i != null) {
+                                Polyline polyline = i.polyline;
+                                Polyline overlayPolylines = i.overlayPolylines;
+
+                                if (polyline != null) {
+                                    polyline.remove();
+                                }
+                                if (overlayPolylines != null) {
+                                    overlayPolylines.remove();
+                                }
+                            }
+                        }
+                        polylineData.clear();
+                        polylinesByMapInstance.put(mapKey, polylineData);
+                    }
+                }
+
+            }
+            if (polylinesByMapInstance != null && polylineData != null && jsonGMapKey != null)
+            {
+                polylinesByMapInstance.put(jsonGMapKey, polylineData);
             }
             if(polylineAnimationTimer != null){
                 polylineAnimationTimer.cancel();
@@ -2968,7 +3043,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    public Polyline setRouteCustomTheme(PolylineOptions options, int color, String style, final int width,  JSONObject mapRouteConfigObject, GoogleMap gMap) {
+    public PolylineDataPoints setRouteCustomTheme(PolylineOptions options, int color, String style, final int width, JSONObject mapRouteConfigObject,GoogleMap gMap, Boolean isOverLine, String key, String gmapKey) {
         PatternItem DOT = new Dot();
         PatternItem GAP = new Gap(10);
         options.width(width);
@@ -2992,10 +3067,11 @@ public class MobilityCommonBridge extends HyperBridge {
             default:
                 break;
         }
-        if ( gMap!= null){
-            return gMap.addPolyline(options);
-        }
-        return googleMap.addPolyline(options);
+        Polyline polylineData = gMap!= null ? gMap.addPolyline(options) : googleMap.addPolyline(options);
+        PolylineDataPoints polylineDataPoints = getPolyLineDataByMapInstance(gmapKey,key);
+        if (isOverLine) { polylineDataPoints.setOverlayPolylines(polylineData);}
+        else {polylineDataPoints.setPolyline(polylineData);}
+        return polylineDataPoints;
     }
     // endregion
 

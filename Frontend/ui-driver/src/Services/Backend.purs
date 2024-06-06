@@ -22,6 +22,7 @@ import Services.API
 import Common.Types.App (Version(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
+import ConfigProvider
 import Data.Array as DA
 import Data.Either (Either(..), either)
 import Data.Int as INT
@@ -35,7 +36,7 @@ import Engineering.Helpers.Utils (toggleLoader)
 import Foreign.Generic (encode)
 import Foreign.NullOrUndefined (undefined)
 import Foreign.Object (empty)
-import Helpers.Utils (decodeErrorCode, getTime, toStringJSON, decodeErrorMessage, LatLon(..))
+import Helpers.Utils (decodeErrorCode, getTime, toStringJSON, decodeErrorMessage, LatLon(..), getCityConfig)
 import Engineering.Helpers.Events as Events
 import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
 import Juspay.OTP.Reader as Readers
@@ -372,24 +373,64 @@ logOutBT payload = do
 
 --------------------------------- getDriverInfoBT ---------------------------------------------------------------------------------------------------------------------------------
 
-getDriverInfoBT :: GetDriverInfoReq -> FlowBT String GetDriverInfoResp
+getDriverInfoBT :: DriverInfoReq -> FlowBT String GetDriverInfoResp
 getDriverInfoBT payload = do
      headers <- getHeaders' "" true
-     withAPIResultBT ((EP.getDriverInfo "" )) identity errorHandler (lift $ lift $ callAPI headers payload)
+     let config = getAppConfig appConfig
+         cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+     if (not cityConfig.callDriverInfoPost)
+        then getDriverInfoBTGet
+        else getDriverInfoBTPost cityConfig.enableAdvancedBooking
+   
+getDriverInfoBTGet :: FlowBT String GetDriverInfoResp
+getDriverInfoBTGet = do
+    headers <- getHeaders' "" true
+    withAPIResultBT ((EP.getDriverInfo "" )) identity errorHandler (lift $ lift $ callAPI headers  (GetDriverInfoReq {}))
     where
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
+getDriverInfoBTPost :: Boolean -> FlowBT String GetDriverInfoResp
+getDriverInfoBTPost enabled = do
+    headers <- getHeaders' "" true
+    (UpdateFeatureInDInfoResp resp1) <- withAPIResultBT ((EP.getDriverInfoV2 "" )) identity errorHandler (lift $ lift $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just enabled}))
+    pure (resp1)
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+                BackT $ pure GoBack
+
+getDriverInfoApi :: DriverInfoReq -> Flow GlobalState (Either ErrorResponse GetDriverInfoResp)
 getDriverInfoApi payload = do
      _ <-pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) after" (getValueToLocalStore REGISTERATION_TOKEN)
      _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) before" (getValueToLocalStore REGISTERATION_TOKEN)
     --  _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) before effect" (liftEffect $ (getValueToLocalStoreNew REGISTERATION_TOKEN))
      headers <- getHeaders "" true
+     let config = getAppConfig appConfig
+         cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
     --  pure $ printLog "headers" headers
      _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) after" (getValueToLocalStore REGISTERATION_TOKEN)
      _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) after" (getValueToLocalStore REGISTERATION_TOKEN)
     --  _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) after effetct" (liftEffect $ (getValueToLocalStoreNew REGISTERATION_TOKEN))
-     withAPIResult (EP.getDriverInfo "") unwrapResponse $ callAPI headers (GetDriverInfoReq { })
+     if (not cityConfig.callDriverInfoPost)
+        then getDriverInfoApiGet
+        else getDriverInfoApiPost cityConfig.enableAdvancedBooking
+
+getDriverInfoApiGet :: Flow GlobalState (Either ErrorResponse GetDriverInfoResp)
+getDriverInfoApiGet = do
+    headers <- getHeaders "" true
+    withAPIResult (EP.getDriverInfo "") unwrapResponse $ callAPI headers  (GetDriverInfoReq {})
+    where
+        unwrapResponse (x) = x
+
+getDriverInfoApiPost :: Boolean -> Flow GlobalState (Either ErrorResponse GetDriverInfoResp)
+getDriverInfoApiPost enableAdvancedBooking = do
+    headers <- getHeaders "" true
+    resp1 <- withAPIResult ((EP.getDriverInfoV2 "" )) unwrapResponse $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just enableAdvancedBooking})
+    case resp1 of
+        Right (UpdateFeatureInDInfoResp resp1) -> do
+            let (GetDriverInfoResp resp ) = resp1
+            pure (Right resp1)
+        Left err -> pure $ Left err
     where
         unwrapResponse (x) = x
 

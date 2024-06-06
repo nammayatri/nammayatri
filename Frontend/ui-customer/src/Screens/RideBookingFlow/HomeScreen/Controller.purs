@@ -1229,7 +1229,9 @@ eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
                                   baseDistance = (fromMaybe 0 resp.estimatedDistance) / 1000 
                                 },
                                 destination =  decodeAddress (Booking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation))), 
-                                destinationLat = toLocation.lat , destinationLng = toLocation.lon , destinationAddress = getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation))
+                                destinationLat = toLocation.lat , destinationLng = toLocation.lon , destinationAddress = getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation)),
+                                driversPreviousRideDropLocLat = resp.driversPreviousRideDropLocLat,
+                                driversPreviousRideDropLocLon = resp.driversPreviousRideDropLocLon
                               }
                         , fareProductType = fareProductType
                         }

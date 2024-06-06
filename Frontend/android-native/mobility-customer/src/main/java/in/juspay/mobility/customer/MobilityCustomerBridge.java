@@ -44,6 +44,7 @@ import com.google.android.gms.maps.model.Gap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.PatternItem;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.maps.android.PolyUtil;
 import com.google.maps.android.SphericalUtil;
 
@@ -166,59 +167,62 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 GoogleMap gMap = pureScriptID.isEmpty() ? googleMap : googleMapInstance.get(pureScriptID);
                 if (gMap != null) {
                     try {
-
-                        MapRemoteConfig mapRemoteConfig = getMapRemoteConfig();
-                        float zoomLevel;
-                        try {
-                            zoomLevel = (float) mapRemoteConfig.zoomLevel;
-                        }catch (Exception e){
-                            zoomLevel = 20.0f;
-                        }
-
-                        String json = payload.optString("json", "");
-                        String dest = payload.optString("destMarker", "");
-                        String eta = payload.optString("eta", "");
-                        String src = payload.optString("srcMarker", "");
-                        String specialLocation = payload.optString("specialLocation", "");
-                        JSONObject specialLocationObject = new JSONObject(specialLocation);
-                        int dashUnit = specialLocationObject.optInt("dashUnit", 1);
-                        int gapUnit = specialLocationObject.optInt("gapUnit", 0);
-                        boolean autoZoom = payload.optBoolean("autoZoom", true);
-                        ArrayList<LatLng> path = new ArrayList<>();
-                        JSONObject jsonObject = new JSONObject(json);
-                        JSONArray coordinates = jsonObject.getJSONArray("points");
-                        for (int i = coordinates.length() - 1; i >= 0; i--) {
-                            JSONObject coordinate = (JSONObject) coordinates.get(i);
-                            double lng = coordinate.getDouble("lng");
-                            double lat = coordinate.getDouble("lat");
-                            LatLng tempPoint = new LatLng(lat, lng);
-                            path.add(tempPoint);
-                        }
-                        Marker currMarker = (Marker) markers.get(src);
-                        currMarker.setTitle("Vehicle Icon On Map");
-                        Marker destMarker = (Marker) markers.get(dest);
-                        String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
-                        MarkerConfig markerConfig = new MarkerConfig();
-                        markerConfig.locationName(eta);
-                        markerConfig.setLabelImage(destinationSpecialTagIcon);
-                        destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(dest, false, null, MarkerType.NORMAL_MARKER, markerConfig))));
-                        destMarker.setTitle("Driver is " + eta);
-                        if (polyline != null) {
-                            polyline.setEndCap(new ButtCap());
-                            if (path.isEmpty()) {
-                                LatLng destination = destMarker.getPosition();
-                                animateMarkerNew(src, destination, currMarker);
-                                if(overlayPolylines != null) {
-                                    overlayPolylines.remove();
-                                    overlayPolylines = null;
-                                }
-                                polyline.remove();
-                                polyline = null;
-                                mapUpdate.isMapMoved = false;
-                                mapUpdate.isMapIdle = true;
-                                currMarker.setAnchor(0.5f, 0);
-                                animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, zoomLevel, ZoomType.ZOOM);
-                            } else {
+                    MapRemoteConfig mapRemoteConfig = getMapRemoteConfig();
+                    float zoomLevel;
+                    try {
+                        zoomLevel = (float) mapRemoteConfig.zoomLevel;
+                    }catch (Exception e){
+                        zoomLevel = 20.0f;
+                    }
+                    String json = payload.optString("json", "");
+                    String dest = payload.optString("destMarker", "");
+                    String eta = payload.optString("eta", "");
+                    String src = payload.optString("srcMarker", "");
+                    String specialLocation = payload.optString("specialLocation", "");
+                    String polylineKey = payload.optString("polylineKey", "DEFAULT");
+                    JSONObject specialLocationObject = new JSONObject(specialLocation);
+                    int dashUnit = specialLocationObject.optInt("dashUnit", 1);
+                    int gapUnit = specialLocationObject.optInt("gapUnit", 0);
+                    boolean autoZoom = payload.optBoolean("autoZoom", true);
+                    ArrayList<LatLng> path = new ArrayList<>();
+                    JSONObject jsonObject = new JSONObject(json);
+                    JSONArray coordinates = jsonObject.getJSONArray("points");
+                    for (int i = coordinates.length() - 1; i >= 0; i--) {
+                        JSONObject coordinate = (JSONObject) coordinates.get(i);
+                        double lng = coordinate.getDouble("lng");
+                        double lat = coordinate.getDouble("lat");
+                        LatLng tempPoint = new LatLng(lat, lng);
+                        path.add(tempPoint);
+                    }
+                    Marker currMarker = (Marker) markers.get(src);
+                    currMarker.setTitle("Vehicle Icon On Map");
+                    Marker destMarker = (Marker) markers.get(dest);
+                    String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
+                    MarkerConfig markerConfig = new MarkerConfig();
+                    markerConfig.locationName(eta);
+                    markerConfig.setLabelImage(destinationSpecialTagIcon);
+                    destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(dest, false,null, MarkerType.NORMAL_MARKER, markerConfig))));
+                    destMarker.setTitle("Driver is " + eta);
+                    PolylineDataPoints polylineDataPoints = getPolyLineDataByMapInstance(pureScriptID,polylineKey);
+                    Polyline polyline = getPolyLine(false, polylineDataPoints);
+                    if (polyline != null) {
+                        polyline.setEndCap(new ButtCap());
+                        if (path.size() == 0) {
+                            LatLng destination = destMarker.getPosition();
+                            animateMarkerNew(src, destination, currMarker);
+                            Polyline overlayPolylines = getPolyLine(true, polylineDataPoints);
+                            if(overlayPolylines != null) {
+                                overlayPolylines.remove();
+                            }
+                            polyline.remove();
+                            polylineDataPoints.setPolyline(null);
+                            polylineDataPoints.setOverlayPolylines(null);
+                            setPolyLineDataByMapInstance(pureScriptID,polylineKey,polylineDataPoints);
+                            currMarker.setAnchor(0.5f, 0);
+                            mapUpdate.isMapMoved = false;
+                            mapUpdate.isMapIdle = true;
+                            animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, zoomLevel, ZoomType.ZOOM);
+                        } else {
                                 double destinationLat = path.get(0).latitude;
                                 double destinationLon = path.get(0).longitude;
                                 double sourceLat = path.get(path.size() - 1).latitude;

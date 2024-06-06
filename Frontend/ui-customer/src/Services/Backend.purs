@@ -58,7 +58,7 @@ import ConfigProvider as CP
 import Locale.Utils
 import MerchantConfig.Types (GeoCodeConfig)
 import Debug
-import Effect.Uncurried (runEffectFn9)
+import Effect.Uncurried (runEffectFn10)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import SessionCache
 import LocalStorage.Cache (removeValueFromCache)
@@ -432,12 +432,13 @@ selectEstimate payload estimateId = do
     where
         unwrapResponse (x) = x
 
-makeEstimateSelectReq :: Boolean -> Maybe Int -> Array String -> DEstimateSelect
-makeEstimateSelectReq isAutoAssigned tipForDriver otherSelectedEstimates = DEstimateSelect {
+makeEstimateSelectReq :: Boolean -> Maybe Int -> Array String -> Boolean -> DEstimateSelect
+makeEstimateSelectReq isAutoAssigned tipForDriver otherSelectedEstimates isAdvancedBookingEnabled = DEstimateSelect {
       "customerExtraFee": tipForDriver,
       "autoAssignEnabled": isAutoAssigned,
       "autoAssignEnabledV2": isAutoAssigned,
-      "otherSelectedEstimates": otherSelectedEstimates 
+      "otherSelectedEstimates": otherSelectedEstimates,
+      "isAdvancedBookingEnabled": isAdvancedBookingEnabled
     }
 
 ------------------------------------------------------------------------ SelectList Function ------------------------------------------------------------------------------------------
@@ -777,10 +778,16 @@ drawMapRoute srcLat srcLng destLat destLng sourceMarkerConfig destMarkerConfig r
         callDrawRoute route = do 
             case route of
                 Just (Route routes) -> do
-                    lift $ lift $ liftFlow $ drawRoute [ (walkCoordinates routes.points)] "LineString" true sourceMarkerConfig destMarkerConfig 8 routeType specialLocation (getNewIDWithTag "CustomerHomeScreen")
+                    let routeConfig = JB.mkRouteConfig (walkCoordinates routes.points) sourceMarkerConfig destMarkerConfig routeType "LineString" true JB.DEFAULT specialLocation
+                    lift $ lift $ liftFlow $ drawRoute [routeConfig] (getNewIDWithTag "CustomerHomeScreen")
                     pure route
                     
                 Nothing -> pure route
+
+type Markers = {
+    srcMarker :: String,
+    destMarker :: String
+}
 
 makeSendIssueReq :: Maybe String ->  Maybe String -> String -> String -> Maybe Boolean -> SendIssueReq
 makeSendIssueReq email bookingId reason description nightSafety = SendIssueReq {

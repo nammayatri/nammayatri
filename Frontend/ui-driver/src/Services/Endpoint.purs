@@ -53,11 +53,14 @@ logout dummyString = (getBaseUrl "") <> "/auth/logout"
 getDriverInfo :: String -> String
 getDriverInfo dummyString = (getBaseUrl "") <> "/driver/profile"
 
+getDriverInfoV2 :: String -> String
+getDriverInfoV2 dummyString = (getBaseUrl "") <> "/driver/profile/info"
+
 getRideHistory :: String -> String -> String -> String -> String -> String
 getRideHistory limit offset isActive status day= do
   case status of
     "null" -> (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive <> if day == "null" then "" else "&day=" <> day
-    _ -> (getBaseUrl "") <> "/driver/ride/list?onlyActive="<>isActive<>"&status="<> (show status) <> if day == "null" then "" else "&day=" <> day
+    _ -> (getBaseUrl "") <> "/driver/ride/list?onlyActive="<>isActive<>"&status="<> (show status) <> (if day == "null" then "" else "&day=" <> day) <> (if limit == "null" then "" else "&limit=" <> limit)
 
 getRidesSummaryList :: Array String -> String
 getRidesSummaryList dateList = (getBaseUrl "") <> "/rideSummary/list"

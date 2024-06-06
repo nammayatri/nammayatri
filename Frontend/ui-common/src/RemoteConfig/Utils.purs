@@ -14,9 +14,9 @@
 -}
 module Common.RemoteConfig.Utils where
 
-import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..))
+import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), defaultForwardBatchConfigData)
 import DecodeUtil (decodeForeignObject, parseJSON)
-import Data.String (null)
+import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
 import Prelude (not, ($), (==), (||))
 import Data.Maybe (fromMaybe)
@@ -29,23 +29,23 @@ foreign import fetchRemoteConfig :: forall a. String -> a
 
 foreign import isWhiteListed :: String -> Array String -> Boolean
 
-defaultRemoteConfig :: forall a. RemoteConfig (Array a)
-defaultRemoteConfig =
-  { bangalore: []
-  , kolkata: []
-  , chennai: []
-  , tumakuru: []
-  , mysore: []
-  , kochi: []
-  , delhi: []
-  , hyderabad: []
-  , mumbai: []
-  , coimbatore: []
-  , pondicherry: []
-  , goa: []
-  , pune: []
-  , tamilnaducities: []
-  , default: []
+defaultRemoteConfig :: forall a. a -> RemoteConfig a
+defaultRemoteConfig defaultValue =
+  { bangalore : defaultValue
+  , kolkata : defaultValue
+  , chennai : defaultValue
+  , tumakuru : defaultValue
+  , mysore : defaultValue
+  , kochi : defaultValue
+  , delhi : defaultValue
+  , hyderabad : defaultValue
+  , mumbai : defaultValue
+  , coimbatore : defaultValue
+  , pondicherry : defaultValue
+  , goa : defaultValue
+  , pune : defaultValue
+  , tamilnaducities : defaultValue
+  , default : defaultValue
   , config: Nothing
   }
 
@@ -56,7 +56,7 @@ carouselConfigData city configKey default userId categoryFilter variantFilter =
 
     parseVal = if not null remoteConfig then remoteConfig else fetchRemoteConfigString default
 
-    decodedConfg = decodeForeignObject (parseJSON parseVal) defaultRemoteConfig
+    decodedConfg = decodeForeignObject (parseJSON parseVal) $ defaultRemoteConfig []
   in
     filterWhiteListedConfigs userId $ filterCategoryBasedCarousel categoryFilter variantFilter $ getCityBasedConfig decodedConfg city
 
@@ -100,6 +100,14 @@ filterWhiteListedConfigs userId configs =
       in
         if isWhiteListed userId userList then true else validateUser xs -- TODO:: Need to check why it's not working within PS and replace with Map for optimisation
     Nothing -> false
+
+forwardBatchConfigData :: String -> ForwardBatchConfigData
+forwardBatchConfigData city =
+  let
+    remoteConfig = fetchRemoteConfigString "Forward_Dispatch_Feature"
+    decodedConfg = decodeForeignObject (parseJSON remoteConfig) $ defaultRemoteConfig defaultForwardBatchConfigData
+  in 
+    getCityBasedConfig decodedConfg $ toLower city
 
 getCityBasedConfig :: forall a. RemoteConfig a -> String -> a
 getCityBasedConfig config city = case city of

@@ -27,8 +27,19 @@ import Font.Size as FontSize
 import Engineering.Helpers.Commons (screenHeight, screenWidth, getNewIDWithTag, getVideoID, getYoutubeData)
 import PrestoDOM.Properties (cornerRadii)
 import Common.Types.App
-import Components.PrimaryEditText.View as PrimaryEditText
+import Timers
+import Animation (fadeIn) as Anim
+import Common.Styles.Colors as Color
+import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig)
 import Components.PrimaryEditText.Controller as PrimaryEditTextConfig
+import Components.PrimaryEditText.View as PrimaryEditText
+import Components.TipsView as TipsView
+import Control.Monad.Trans.Class (lift)
+import Data.Array ((!!), mapWithIndex, null, length, findIndex)
+import Data.Function.Uncurried (runFn5)
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.String (replaceAll, Replacement(..), Pattern(..))
+import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (os, getNewIDWithTag)
 import Data.Array ((!!), mapWithIndex, null, length, findIndex)
@@ -39,11 +50,23 @@ import Animation (fadeIn) as Anim
 import Data.String (replaceAll, Replacement(..), Pattern(..))
 import Data.Function.Uncurried (runFn5)
 import PrestoDOM.Animation as PrestoAnim
+import Engineering.Helpers.Commons (screenHeight, screenWidth, getNewIDWithTag, getVideoID, getYoutubeData)
+import Engineering.Helpers.Utils (splitIntoEqualParts)
+import Font.Size as FontSize
+import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Timers
+import JBridge (setYoutubePlayer, supportsInbuildYoutubePlayer, addMediaPlayer)
 import Mobility.Prelude (boolToVisibility)
 import Engineering.Helpers.Utils(splitIntoEqualParts)
 import Animation as Anim
+import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=), not, (<<<), bind, discard, show, pure, map, when, mod)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, rippleColor)
+import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Properties (lineHeight, cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Prim.Boolean (True)
+import Debug
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -94,7 +117,54 @@ view push state =
         , accessibility DISABLE
         , clickable true
         ]
-        [ linearLayout
+        [ linearLayout 
+        [  width state.popUpHeaderConfig.width
+            , height state.popUpHeaderConfig.width
+            , margin state.popUpHeaderConfig.margin
+            , gravity state.popUpHeaderConfig.gravity
+            , visibility state.popUpHeaderConfig.visibility
+            , cornerRadii (Corners (parseConerRadius state.cornerRadius) true true false false)
+            , padding state.popUpHeaderConfig.padding
+            , background state.popUpHeaderConfig.backgroundColor
+            , orientation if state.popUpHeaderConfig.orientation == "VERTICAL" then VERTICAL else HORIZONTAL  -----HORIZONTAL
+        ]   
+        [ 
+            linearLayout
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , cornerRadii (Corners (parseConerRadius state.cornerRadius) true true false false)
+            , orientation VERTICAL
+            , background state.popUpHeaderConfig.backgroundColor
+            , weight 1.0
+            ]
+        [textView $
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , margin state.popUpHeaderConfig.headingText.margin
+            , color state.popUpHeaderConfig.headingText.color
+            , gravity state.popUpHeaderConfig.headingText.gravity
+            , text state.popUpHeaderConfig.headingText.text
+            , visibility state.popUpHeaderConfig.headingText.visibility
+            ] <> (FontStyle.h2 LanguageStyle)
+         , textView $
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , margin state.popUpHeaderConfig.subHeadingText.margin
+            , color state.popUpHeaderConfig.subHeadingText.color
+            , gravity state.popUpHeaderConfig.subHeadingText.gravity
+            , text state.popUpHeaderConfig.subHeadingText.text
+            , visibility state.popUpHeaderConfig.subHeadingText.visibility
+            ] <> (FontStyle.tags LanguageStyle)
+        ],
+        imageView 
+            [  width state.popUpHeaderConfig.imageConfig.width
+                , height state.popUpHeaderConfig.imageConfig.height
+                , imageWithFallback state.popUpHeaderConfig.imageConfig.imageUrl
+                , margin state.popUpHeaderConfig.imageConfig.margin
+                , cornerRadii (Corners (parseConerRadius state.cornerRadius) false true false false)
+            ]
+        ] 
+        ,    linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity CENTER
@@ -110,7 +180,7 @@ view push state =
                 , gravity state.topTitle.gravity
                 , text state.topTitle.text
                 , visibility state.topTitle.visibility
-                ] <> (FontStyle.h2 LanguageStyle)
+                ] <> (FontStyle.getFontStyle state.topTitle.textStyle LanguageStyle)
               , imageView
                 [ height state.coverImageConfig.height
                 , width state.coverImageConfig.width
@@ -587,3 +657,10 @@ tipsViewConfig state = let
   }
   in tipsViewConfig'
 
+
+parseConerRadius :: Corners -> Number
+parseConerRadius corners =
+    let rd = case corners of
+                Corners radius _ _ _ _ -> radius
+                Corner radius -> radius
+    in spy "rd" rd 

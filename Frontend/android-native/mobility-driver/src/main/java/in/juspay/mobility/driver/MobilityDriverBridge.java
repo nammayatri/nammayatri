@@ -371,7 +371,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     // region Maps
     @JavascriptInterface
-    public void mapSnapShot(final String pureScriptId, final String json, final String routeType, final boolean actualRoute, final String callback) {
+    public void mapSnapShot(final String pureScriptId, final String json, final String routeType, final boolean actualRoute, final String callback, final String key) {
         try {
             if (bridgeComponents.getActivity() != null) {
                 ExecutorManager.runOnMainThread(() -> {
@@ -391,7 +391,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                             this.googleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
                                 @Override
                                 public synchronized void onMapLoaded() {
-                                    showRoute(json, routeType, "#323643", actualRoute, "ny_ic_dest_marker", "ny_ic_src_marker", 8);
+                                    showRoute(json, routeType, "#323643", actualRoute, "ny_ic_dest_marker", "ny_ic_src_marker", 8, key, pureScriptId);
                                     final Handler handler = new Handler();
                                     handler.postDelayed(() -> {
                                         GoogleMap.SnapshotReadyCallback callback2 = new GoogleMap.SnapshotReadyCallback() {
@@ -435,7 +435,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
 
     @JavascriptInterface
-    public void showRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth) {
+    public void showRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String key, String gmapKey) {
         ExecutorManager.runOnMainThread(() -> {
             if (googleMap != null) {
                 Log.i(MAPS, "Show Route");
@@ -495,8 +495,8 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                         polylineOptions.add(toPointObj);
                         polylineOptions.add(fromPointObj);
                     }
-                    Polyline polyline = setRouteCustomTheme(polylineOptions, color, style, polylineWidth, null, googleMap);
-
+                    PolylineDataPoints polylineDataPoints = setRouteCustomTheme(polylineOptions, color, style, polylineWidth, null, googleMap,false, key, gmapKey);
+                    Polyline polyline = getPolyLine(false, polylineDataPoints);
                     if (sourceMarker != null && !sourceMarker.equals("")) {
                         Bitmap sourceBitmap = constructBitmap(90, sourceMarker);
                         polyline.setStartCap(
@@ -504,6 +504,8 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                                         BitmapDescriptorFactory.fromBitmap(sourceBitmap)
                                 )
                         );
+                        polylineDataPoints.setPolyline(polyline);
+                        setPolyLineDataByMapInstance(gmapKey,key,polylineDataPoints);
                     }
 
                     if (destMarker != null && !destMarker.equals("")) {

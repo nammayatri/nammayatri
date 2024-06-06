@@ -73,7 +73,7 @@ import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, g
 import Screens.DriverProfileScreen.Transformer (fetchVehicles)
 import Screens.Types (MenuOptions(..), AutoPayStatus(..))
 import Screens.Types as ST
-import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..), DriverRegistrationStatusReq(..))
+import Services.API (DriverInfoReq(..), GetDriverInfoResp(..), DriverRegistrationStatusReq(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
@@ -99,7 +99,8 @@ screen initialState =
                     void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
                     EHU.toggleLoader true
                     summaryResponse <- Remote.driverProfileSummary ""
-                    profileResponse <- Remote.getDriverInfoApi (GetDriverInfoReq {})
+                    let cityConfig = getCityConfig initialState.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+                    profileResponse <- Remote.getDriverInfoApi (DriverInfoReq { isAdvancedBookingEnabled : Just cityConfig.enableAdvancedBooking})
                     case summaryResponse, profileResponse of
                       Right summaryResp, Right profileResp -> do
                         liftFlow $ push $ DriverSummary summaryResp

@@ -342,6 +342,9 @@ window.getMerchantConfig = function () {
       "mapImage" : "",
       "cityCode" : "std:033",
       "showSubscriptions" : true,
+      "enableAdvancedBooking" : false,
+      "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
       "cityLat" : 22.5354064,
       "cityLong" : 88.2649516,
       "supportNumber" : "",

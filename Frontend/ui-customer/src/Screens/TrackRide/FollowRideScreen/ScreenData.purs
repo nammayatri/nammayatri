@@ -208,4 +208,6 @@ mockDriverInfo =
   , providerType : CT.ONUS
   , rentalData : dummyRentalBookingConfig
   , fareProductType : FPT.ONE_WAY
+  , driversPreviousRideDropLocLat : Nothing
+  , driversPreviousRideDropLocLon : Nothing
   }

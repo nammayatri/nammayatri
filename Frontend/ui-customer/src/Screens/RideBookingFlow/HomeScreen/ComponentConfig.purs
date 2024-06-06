@@ -747,6 +747,7 @@ distanceOusideLimitsConfig state =
           , margin = (Margin 16 0 16 EHC.safeMarginBottom)
           , enableRipple = true
           }
+        , popUpHeaderConfig { gravity = CENTER }
         }
   in
     popUpConfig'

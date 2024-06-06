@@ -207,6 +207,9 @@ window.getMerchantConfig = function () {
         "mapImage" : "ny_ic_bangalore_map",
         "cityCode" : "std:080",
         "showSubscriptions" : true,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+        "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 12.971599,
         "cityLong" : 77.594566,
         "supportNumber" : "",
@@ -240,6 +243,9 @@ window.getMerchantConfig = function () {
         "mapImage" : "ny_ic_hyderabad_map",
         "cityCode" : "std:040",
         "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 17.402113,
         "cityLong" : 78.499827,
         "supportNumber" : "+918069724900",
@@ -273,6 +279,9 @@ window.getMerchantConfig = function () {
         "mapImage" : "ny_ic_mysuru_map",
         "cityCode" : "std:0821",
         "showSubscriptions" : true,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 12.295810,
         "cityLong" : 76.639381,
         "supportNumber" : "",
@@ -306,6 +315,9 @@ window.getMerchantConfig = function () {
         "mapImage" : "ny_ic_delhi_map",
         "cityCode" : "std:011",
         "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 28.618978,
         "cityLong" : 77.207795,
         "supportNumber" : "+918069724848",
@@ -339,6 +351,9 @@ window.getMerchantConfig = function () {
         "mapImage" : "ny_ic_chennai_map",
         "cityCode" : "std:044",
         "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 13.067439,
         "cityLong" : 80.237617,
         "supportNumber" : "08069724899",
@@ -372,6 +387,9 @@ window.getMerchantConfig = function () {
         "mapImage" : "ny_ic_coimbatore_map",
         "cityCode" : "std:0422",
         "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 11.023481,
         "cityLong" : 76.966429,
         "supportNumber" : "",
@@ -405,6 +423,9 @@ window.getMerchantConfig = function () {
         "mapImage" : "ny_ic_puducherry_map",
         "cityCode" : "std:0413",
         "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 11.943852,
         "cityLong" : 79.808292,
         "supportNumber" : "08069724899",
@@ -438,6 +459,9 @@ window.getMerchantConfig = function () {
         "mapImage" : "ny_ic_tumakuru_map",
         "cityCode" : "std:0816",
         "showSubscriptions" : true,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 15.32383804957557,
         "cityLong" : 75.88071672412116,
         "supportNumber" : "",
@@ -470,6 +494,9 @@ window.getMerchantConfig = function () {
         "mapImage" : "ny_ic_gurugram_map",
         "cityCode" : "std:0124",
         "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 28.457523,
         "cityLong" : 77.026344,
         "supportNumber" : "+918069724848",
@@ -503,6 +530,9 @@ window.getMerchantConfig = function () {
         "mapImage" : "ny_ic_noida_map",
         "cityCode" : "std:01189",
         "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 28.535517,
         "cityLong" : 77.391029,
         "supportNumber" : "+918069724848",
@@ -535,6 +565,9 @@ window.getMerchantConfig = function () {
         "mapImage" : "ny_ic_tamilnadu_map",
         "cityCode" :  "std:0422",
         "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 11.1271,
         "cityLong" : 78.6569,
         "supportNumber" : "08069724899",
@@ -568,6 +601,9 @@ window.getMerchantConfig = function () {
         "mapImage" : "ny_ic_minneapolis_map",
         "cityCode" : "std:01189",
         "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 44.977753,
         "cityLong" : -93.2650108,
         "supportNumber" : "+918069724848",

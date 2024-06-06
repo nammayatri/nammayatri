@@ -164,6 +164,7 @@ config =
       enableLLtoAddress : true
     , enableAddressToLL : true 
     }
+  , isAdvancedBookingEnabled : true
   , enableWhatsappOTP : ["BD", "US"]
   , notifyRideConfirmationConfig : 
       { notify : false 

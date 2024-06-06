@@ -25,7 +25,7 @@ import Effect.Aff (Error, makeAff, nonCanceler)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (markPerformance)
 import Helpers.Utils (getCurrentLocation, LatLon(..))
-import Helpers.Utils (getDistanceBwCordinates, LatLon(..), getCurrentLocation)
+import Helpers.Utils (getDistanceBwCordinates, LatLon(..), getCurrentLocation, getRideInfoEntityBasedOnBookingType)
 import JBridge (getCurrentPosition, getCurrentPositionWithTimeout)
 import Log (printLog)
 import Presto.Core.Types.Language.Flow (doAff)
@@ -93,8 +93,9 @@ homeScreen = do
       LatLon lat lon ts <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  destLat destLon 700 false false
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_ARRIVED_AT_STOP {id : updatedState.data.activeRide.id, lat : lat, lon : lon, ts :ts} updatedState)
     SelectListModal updatedState -> do
+      let rideData = getRideInfoEntityBasedOnBookingType updatedState
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ GO_TO_CANCEL_RIDE {id : updatedState.data.activeRide.id , info : updatedState.data.cancelRideModal.selectedReasonDescription, reason : updatedState.data.cancelRideModal.selectedReasonCode} updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_CANCEL_RIDE {id : rideData.id , info : updatedState.data.cancelRideModal.selectedReasonDescription, reason : updatedState.data.cancelRideModal.selectedReasonCode} updatedState)
     Refresh updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> pure REFRESH_HOME_SCREEN_FLOW
@@ -167,6 +168,9 @@ homeScreen = do
     UpdateSpecialLocationList updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ UPDATE_SPECIAL_LOCATION_LIST)
+    UpdateRouteOnStageSwitch updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ UPDATE_ROUTE_ON_STAGE_SWITCH updatedState)
     FetchOdometerReading updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CLEAR_PENDING_DUES)
