@@ -1435,6 +1435,8 @@ getTripDetails state = {
   , backgroundColor : Color.white900
   , enablePaddingBottom : true
   , fareProductType : state.data.fareProductType
+  , enableEditDestination : state.data.config.feature.enableEditDestination
+  , editingDestinationLoc : EditingDestination
 }
 
 driverPickUpStatusText :: DriverInfoCardState -> String -> String

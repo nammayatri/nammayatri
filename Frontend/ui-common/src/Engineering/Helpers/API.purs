@@ -16,7 +16,7 @@
 module Engineering.Helpers.API where
 
 import Prelude
-import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, makeRequest, Request(..), Header(..), Headers(..), ErrorResponse)
+import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, makeRequest, Response(..), Request(..), Header(..), Headers(..), ErrorResponse)
 import Presto.Core.Types.Language.Flow (callAPI, APIResult(..), Flow)
 import Common.Types.App (FlowBT)
 import Engineering.Error.Utils
@@ -30,7 +30,7 @@ import Control.Transformers.Back.Trans as App
 callApi :: forall a b st.
   StandardEncode a =>
   Decode b =>
-  RestEndpoint a b =>
+  RestEndpoint a =>
   a ->
   Array Header ->
   Flow st (Either ErrorResponse b)
@@ -38,7 +38,7 @@ callApi payload headers' = do
   logRequest
   result <- callAPI (Headers headers') payload
   case result of
-    Right resp -> pure $ Right $ spy "Response :: " resp.response
+    Right (resp :: (Response b)) -> pure $ Right $ spy "Response :: " resp.response
     Left err -> do
       pure $ Left err
   where
@@ -50,7 +50,7 @@ callApiBT :: forall a b e st.
   ApiErrorHandler e st =>
   StandardEncode a =>
   Decode b =>
-  RestEndpoint a b =>
+  RestEndpoint a =>
   a ->
   Array Header ->
   e ->
@@ -71,7 +71,7 @@ callApiBT payload headers' errorHandler = do
 callGzipApi :: forall a b st.
   StandardEncode a =>
   Decode b =>
-  RestEndpoint a b =>
+  RestEndpoint a =>
   a ->
   Array Header ->
   Flow st (Either ErrorResponse b)
@@ -83,7 +83,7 @@ callGzipApiBT :: forall a b e st.
   ApiErrorHandler e st =>
   StandardEncode a =>
   Decode b =>
-  RestEndpoint a b =>
+  RestEndpoint a =>
   a ->
   Array Header ->
   e ->

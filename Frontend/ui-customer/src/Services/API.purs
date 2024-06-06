@@ -81,9 +81,8 @@ newtype TriggerOTPReq = TriggerOTPReq {
   , otpChannel :: String
 }
 
-instance makeTriggerOTPReq :: RestEndpoint TriggerOTPReq TriggerOTPResp where
+instance makeTriggerOTPReq :: RestEndpoint TriggerOTPReq  where
  makeRequest reqBody headers = defaultMakeRequest POST (EP.triggerOTP "") headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericTriggerOTPResp :: Generic TriggerOTPResp _
@@ -113,9 +112,8 @@ newtype TriggerSignatureOTPResp = TriggerSignatureOTPResp {
 
 newtype TriggerSignatureOTPReq = TriggerSignatureOTPReq String
 
-instance makeTriggerSignatureOTPReq :: RestEndpoint TriggerSignatureOTPReq TriggerSignatureOTPResp where
+instance makeTriggerSignatureOTPReq :: RestEndpoint TriggerSignatureOTPReq  where
  makeRequest (TriggerSignatureOTPReq reqBody) headers = defaultMakeRequestString POST (EP.triggerSignatureOTP "") headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericTriggerSignatureOTPResp :: Generic TriggerSignatureOTPResp _
@@ -152,9 +150,8 @@ newtype ResendOTPResp = ResendOTPResp {
 
 data ResendOTPRequest = ResendOTPRequest String
 
-instance makeResendOTPRequest :: RestEndpoint ResendOTPRequest ResendOTPResp where
+instance makeResendOTPRequest :: RestEndpoint ResendOTPRequest  where
  makeRequest reqBody@(ResendOTPRequest authId) headers = defaultMakeRequest POST (EP.resendOTP authId) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericResendOTPResp :: Generic ResendOTPResp _
@@ -193,9 +190,8 @@ newtype User = User {
   , maskedMobileNumber :: Maybe String
   }
 
-instance makeVerifyTokenReq :: RestEndpoint VerifyTokenRequest VerifyTokenResp where
+instance makeVerifyTokenReq :: RestEndpoint VerifyTokenRequest  where
  makeRequest reqBody@(VerifyTokenRequest token (VerifyTokenReq rqBody)) headers = defaultMakeRequest POST (EP.verifyToken token) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericWhatsappOptMethods :: Generic WhatsappOptMethods _
@@ -239,9 +235,8 @@ data LogOutReq = LogOutReq
 newtype LogOutRes = LogOutRes {
 result :: String
 }
-instance makeLogOutReq  :: RestEndpoint LogOutReq LogOutRes where
+instance makeLogOutReq  :: RestEndpoint LogOutReq  where
  makeRequest reqBody headers = defaultMakeRequest POST (EP.logout "") headers reqBody Nothing
- decodeResponse body = defaultDecodeResponse body
  encodeRequest req = standardEncode req
 
 derive instance genericLogOutReq :: Generic LogOutReq _
@@ -281,9 +276,8 @@ newtype Prediction = Prediction {
  distance :: Maybe Int
 }
 
-instance makeSearchLocationReq :: RestEndpoint SearchLocationReq SearchLocationResp where
+instance makeSearchLocationReq :: RestEndpoint SearchLocationReq  where
   makeRequest reqBody headers = defaultMakeRequest POST (EP.autoComplete "") headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 derive instance genericSearchLocationReq :: Generic SearchLocationReq _
@@ -385,19 +379,16 @@ type PlaceId = String
 newtype GetPlaceNameResp = GetPlaceNameResp (Array PlaceName)
 
 
-instance placeDetailsReq :: RestEndpoint PlaceDetailsReq PlaceDetailsResp where
+instance placeDetailsReq :: RestEndpoint PlaceDetailsReq  where
  makeRequest reqBody@(PlaceDetailsReq id) headers = defaultMakeRequest GET (EP.placeDetails id) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
--- instance getCoordinatesReq :: RestEndpoint GetCoordinatesReq GetCoordinatesResp where
---  makeRequest reqBody@(GetCoordinatesReq id language) headers = defaultMakeRequest GET (EP.getCoordinates id language) headers reqBody
---  decodeResponse = decodeJSON
+-- instance getCoordinatesReq :: RestEndpoint GetCoordinatesReq  where
+--  makeRequest reqBody@(GetCoordinatesReq id language) headers = defaultMakeRequest GET (EP.getCoordinates id language) headers reqBod
 --  encodeRequest req = standardEncode req
 
-instance makeGetPlaceNameReq :: RestEndpoint GetPlaceNameReq GetPlaceNameResp where
+instance makeGetPlaceNameReq :: RestEndpoint GetPlaceNameReq  where
  makeRequest reqBody@(GetPlaceNameReq payload) headers = defaultMakeRequest POST (EP.getPlaceName "") headers reqBody Nothing
- decodeResponse body = defaultDecodeResponse body
  encodeRequest req = standardEncode req
 
 derive instance genericGetPlaceNameReq :: Generic GetPlaceNameReq _
@@ -557,9 +548,8 @@ instance showLocationAddress :: Show LocationAddress where show = genericShow
 instance decodeLocationAddress :: Decode LocationAddress where decode = defaultDecode
 instance encodeLocationAddress  :: Encode LocationAddress where encode = defaultEncode
 
-instance makeSearchReq :: RestEndpoint SearchReq SearchRes where
+instance makeSearchReq :: RestEndpoint SearchReq  where
  makeRequest reqBody headers = defaultMakeRequest POST (EP.searchReq "") headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = encode req
 
 derive instance genericSearchReq :: Generic SearchReq _
@@ -765,9 +755,8 @@ newtype PublicTransportStation = PublicTransportStation {
   name :: String
 }
 
-instance makeGetQuotesReq :: RestEndpoint GetQuotesReq GetQuotesRes where
+instance makeGetQuotesReq :: RestEndpoint GetQuotesReq  where
  makeRequest reqBody@(GetQuotesReq searchId) headers = defaultMakeRequest GET (EP.getQuotes searchId) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericGetQuotesRes :: Generic GetQuotesRes _
@@ -955,9 +944,8 @@ newtype ConfirmRes = ConfirmRes {
   bookingId :: String
 }
 
-instance makeConfirmRequest :: RestEndpoint ConfirmRequest ConfirmRes where
+instance makeConfirmRequest :: RestEndpoint ConfirmRequest  where
  makeRequest reqBody@(ConfirmRequest quoteId) headers = defaultMakeRequest POST (EP.confirmRide quoteId) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericConfirmRes :: Generic ConfirmRes _
@@ -1070,9 +1058,8 @@ newtype BookingLocationAPIEntity = BookingLocationAPIEntity {
   placeId :: Maybe String
 }
 
-instance makeRideBooking :: RestEndpoint RideBookingReq RideBookingRes where
+instance makeRideBooking :: RestEndpoint RideBookingReq  where
  makeRequest reqBody@(RideBookingReq bookingId) headers = defaultMakeRequest POST (EP.ridebooking bookingId) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericRideBookingReq :: Generic RideBookingReq _
@@ -1141,17 +1128,16 @@ newtype SelectEstimateRes = SelectEstimateRes
     result :: String
   }
 
-instance makeSelectEstimateReq :: RestEndpoint SelectEstimateReq SelectEstimateRes where
+instance makeSelectEstimateReq :: RestEndpoint SelectEstimateReq  where
  makeRequest reqBody@(SelectEstimateReq estimateId (DEstimateSelect rqBody)) headers = defaultMakeRequest POST (EP.selectEstimate estimateId) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
-derive instance genericSelectEstimateRes :: Generic SelectEstimateRes _
-derive instance newtypeSelectEstimateRes :: Newtype SelectEstimateRes _
-instance standardEncodeSelectEstimateRes :: StandardEncode SelectEstimateRes where standardEncode (SelectEstimateRes body) = standardEncode body
-instance showSelectEstimateRes :: Show SelectEstimateRes where show = genericShow
-instance decodeSelectEstimateRes :: Decode SelectEstimateRes where decode = defaultDecode
-instance encodeSelectEstimateRes  :: Encode SelectEstimateRes where encode = defaultEncode
+-- derive instance genericSelectEstimateRes :: Generic SelectEstimateRes _
+-- derive instance newtypeSelectEstimateRes :: Newtype SelectEstimateRes _
+-- instance standardEncodeSelectEstimateRes :: StandardEncode SelectEstimateRes where standardEncode (SelectEstimateRes body) = standardEncode body
+-- instance showSelectEstimateRes :: Show SelectEstimateRes where show = genericShow
+-- instance decodeSelectEstimateRes :: Decode SelectEstimateRes where decode = defaultDecode
+-- instance encodeSelectEstimateRes  :: Encode SelectEstimateRes where encode = defaultEncode
 
 derive instance genericDEstimateSelect :: Generic DEstimateSelect _
 derive instance newtypeDEstimateSelect :: Newtype DEstimateSelect _
@@ -1185,9 +1171,8 @@ instance showSelectedQuotes :: Show SelectedQuotes where show = genericShow
 instance decodeSelectedQuotes :: Decode SelectedQuotes where decode = defaultDecode
 instance encodeSelectedQuotes :: Encode SelectedQuotes where encode = defaultEncode
 
-instance makeSelectListReq :: RestEndpoint SelectListReq SelectListRes where
+instance makeSelectListReq :: RestEndpoint SelectListReq  where
  makeRequest reqBody@(SelectListReq estimateId) headers = defaultMakeRequest GET (EP.selectList estimateId) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericSelectListReq :: Generic SelectListReq _
@@ -1218,9 +1203,8 @@ newtype CancelRes = CancelRes {
   result :: String
 }
 
-instance makeCancelReq :: RestEndpoint CancelRequest CancelRes where
+instance makeCancelReq :: RestEndpoint CancelRequest  where
  makeRequest reqBody@(CancelRequest rqBody bookingId) headers = defaultMakeRequest POST (EP.cancelRide bookingId) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericCancelRes :: Generic CancelRes _
@@ -1264,9 +1248,8 @@ instance decodeRideBookingListRes :: Decode RideBookingListRes where decode = de
 instance encodeRideBookingListRes :: Encode RideBookingListRes where encode = defaultEncode
 
 
-instance makeRideBookingListReq :: RestEndpoint RideBookingListReq RideBookingListRes where
+instance makeRideBookingListReq :: RestEndpoint RideBookingListReq  where
  makeRequest reqBody@(RideBookingListReq limit offset onlyActive status clientId ) headers = defaultMakeRequest GET (EP.rideBookingList limit offset onlyActive status clientId) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 
@@ -1279,9 +1262,8 @@ newtype CallDriverRes = CallDriverRes {
   callId :: String
 }
 
-instance makeCallDriverReq :: RestEndpoint CallDriverReq CallDriverRes where
+instance makeCallDriverReq :: RestEndpoint CallDriverReq  where
   makeRequest reqBody@(CallDriverReq rideId) headers = defaultMakeRequest POST (EP.callCustomerToDriver rideId) headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 derive instance genericCallDriverReq :: Generic CallDriverReq _
@@ -1310,9 +1292,8 @@ newtype FeedbackRes = FeedbackRes
     result :: String
   }
 
-instance makeFeedBackReq :: RestEndpoint FeedbackReq FeedbackRes where
+instance makeFeedBackReq :: RestEndpoint FeedbackReq  where
   makeRequest reqBody headers = defaultMakeRequest POST (EP.feedback "") headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 derive instance genericFeedbackReq :: Generic FeedbackReq _
@@ -1321,12 +1302,12 @@ instance showFeedbackReq :: Show FeedbackReq where show = genericShow
 instance decodeFeedbackReq :: Decode FeedbackReq where decode = defaultDecode
 instance encodeFeedbackReq  :: Encode FeedbackReq where encode = defaultEncode
 
-derive instance genericFeedbackRes :: Generic FeedbackRes _
-derive instance newtypeFeedbackRes :: Newtype FeedbackRes _
-instance standardEncodeFeedbackRes :: StandardEncode FeedbackRes where standardEncode (FeedbackRes body) = standardEncode body
-instance showFeedbackRes :: Show FeedbackRes where show = genericShow
-instance decodeFeedbackRes :: Decode FeedbackRes where decode = defaultDecode
-instance encodeFeedbackRes  :: Encode FeedbackRes where encode = defaultEncode
+-- derive instance genericFeedbackRes :: Generic FeedbackRes _
+-- derive instance newtypeFeedbackRes :: Newtype FeedbackRes _
+-- instance standardEncodeFeedbackRes :: StandardEncode FeedbackRes where standardEncode (FeedbackRes body) = standardEncode body
+-- instance showFeedbackRes :: Show FeedbackRes where show = genericShow
+-- instance decodeFeedbackRes :: Decode FeedbackRes where decode = defaultDecode
+-- instance encodeFeedbackRes  :: Encode FeedbackRes where encode = defaultEncode
 
 
 data GetProfileReq = GetProfileReq
@@ -1395,14 +1376,12 @@ instance showDisability :: Show Disability where show = genericShow
 instance decodeDisability :: Decode Disability where decode = defaultDecode
 instance encodeDisability  :: Encode Disability where encode = defaultEncode
 
-instance makeGetProfileReq :: RestEndpoint GetProfileReq GetProfileRes where
+instance makeGetProfileReq :: RestEndpoint GetProfileReq  where
   makeRequest reqBody headers = defaultMakeRequest GET (EP.profile "") headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
-instance makeUpdateProfileReq :: RestEndpoint UpdateProfileReq UpdateProfileRes where
+instance makeUpdateProfileReq :: RestEndpoint UpdateProfileReq  where
   makeRequest reqBody headers = defaultMakeRequest POST (EP.profile "") headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 derive instance genericGetProfileRes :: Generic GetProfileRes _
@@ -1425,12 +1404,12 @@ instance showUpdateProfileReq :: Show UpdateProfileReq where show = genericShow
 instance decodeUpdateProfileReq :: Decode UpdateProfileReq where decode = defaultDecode
 instance encodeUpdateProfileReq  :: Encode UpdateProfileReq where encode = defaultEncode
 
-derive instance genericUpdateProfileRes :: Generic UpdateProfileRes _
-derive instance newtypeUpdateProfileRes :: Newtype UpdateProfileRes _
-instance standardEncodeUpdateProfileRes :: StandardEncode UpdateProfileRes where standardEncode (UpdateProfileRes body) = standardEncode body
-instance showUpdateProfileRes :: Show UpdateProfileRes where show = genericShow
-instance decodeUpdateProfileRes :: Decode UpdateProfileRes where decode = defaultDecode
-instance encodeUpdateProfileRes  :: Encode UpdateProfileRes where encode = defaultEncode
+-- derive instance genericUpdateProfileRes :: Generic UpdateProfileRes _
+-- derive instance newtypeUpdateProfileRes :: Newtype UpdateProfileRes _
+-- instance standardEncodeUpdateProfileRes :: StandardEncode UpdateProfileRes where standardEncode (UpdateProfileRes body) = standardEncode body
+-- instance showUpdateProfileRes :: Show UpdateProfileRes where show = genericShow
+-- instance decodeUpdateProfileRes :: Decode UpdateProfileRes where decode = defaultDecode
+-- instance encodeUpdateProfileRes  :: Encode UpdateProfileRes where encode = defaultEncode
 
 data RouteReq = RouteReq String GetRouteReq
 
@@ -1456,9 +1435,8 @@ newtype BoundingLatLong = BoundingLatLong (Array Number)
 
 newtype Snapped = Snapped (Array LatLong)
 
-instance makeRouteReq :: RestEndpoint RouteReq GetRouteResp where
+instance makeRouteReq :: RestEndpoint RouteReq  where
   makeRequest reqBody@(RouteReq rType (GetRouteReq reqB)) headers = defaultMakeRequest POST (EP.getRoute rType) headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 derive instance genericRouteReq :: Generic RouteReq _
@@ -1520,9 +1498,8 @@ newtype EmergContactsResp = EmergContactsResp {
   result :: String
 }
 
-instance makeEmergContactsReq :: RestEndpoint EmergContactsReq EmergContactsResp where
+instance makeEmergContactsReq :: RestEndpoint EmergContactsReq  where
   makeRequest reqBody headers = defaultMakeRequest POST (EP.emergencyContacts "") headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 derive instance genericEmergContactsReq :: Generic EmergContactsReq _
@@ -1553,9 +1530,8 @@ newtype GetEmergContactsResp = GetEmergContactsResp {
   defaultEmergencyNumbers :: Array ContactDetails
 }
 
-instance makeGetEmergContactsReq :: RestEndpoint GetEmergContactsReq GetEmergContactsResp where
+instance makeGetEmergContactsReq :: RestEndpoint GetEmergContactsReq  where
   makeRequest reqBody headers = defaultMakeRequest GET (EP.emergencyContacts "") headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 derive instance genericGetEmergContactsReq :: Generic GetEmergContactsReq _
@@ -1575,9 +1551,8 @@ data GetDriverLocationReq = GetDriverLocationReq String
 
 newtype GetDriverLocationResp = GetDriverLocationResp LatLong
 
-instance makeGetDriverLocationReq :: RestEndpoint GetDriverLocationReq GetDriverLocationResp where
+instance makeGetDriverLocationReq :: RestEndpoint GetDriverLocationReq  where
   makeRequest reqBody@(GetDriverLocationReq rideId) headers = defaultMakeRequest POST (EP.getCurrentLocation rideId) headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 derive instance genericGetDriverLocationResp :: Generic GetDriverLocationResp _
@@ -1611,9 +1586,8 @@ newtype SavedReqLocationAPIEntity = SavedReqLocationAPIEntity
 
 data AddLocationResp = AddLocationResp
 
-instance makeSavedReqLocationAPIEntity :: RestEndpoint SavedReqLocationAPIEntity AddLocationResp where
+instance makeSavedReqLocationAPIEntity :: RestEndpoint SavedReqLocationAPIEntity  where
  makeRequest reqBody headers = defaultMakeRequest POST (EP.addLocation "") headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericSavedReqLocationAPIEntity :: Generic SavedReqLocationAPIEntity _
@@ -1635,9 +1609,8 @@ newtype SavedLocationsListRes = SavedLocationsListRes
     list :: Array SavedReqLocationAPIEntity
   }
 
-instance savedLocationReq :: RestEndpoint SavedLocationReq SavedLocationsListRes where
+instance savedLocationReq :: RestEndpoint SavedLocationReq  where
  makeRequest reqBody headers = defaultMakeRequest GET (EP.savedLocation "") headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericSavedLocationReq :: Generic SavedLocationReq _
@@ -1656,9 +1629,8 @@ data DeleteSavedLocationReq = DeleteSavedLocationReq String
 
 data DeleteSavedLocationRes = DeleteSavedLocationRes
 
-instance deleteSavedLocationReq :: RestEndpoint DeleteSavedLocationReq DeleteSavedLocationRes where
+instance deleteSavedLocationReq :: RestEndpoint DeleteSavedLocationReq  where
  makeRequest reqBody@(DeleteSavedLocationReq tag) headers = defaultMakeRequest DELETE (EP.deleteLocation tag) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 
@@ -1691,9 +1663,9 @@ newtype SendIssueRes = SendIssueRes {
     result :: String
   }
 
-instance makeSendIssueReq :: RestEndpoint SendIssueReq SendIssueRes where
+instance makeSendIssueReq :: RestEndpoint SendIssueReq  where
     makeRequest reqBody headers = defaultMakeRequest POST (EP.sendIssue "") headers reqBody Nothing
-    decodeResponse = decodeJSON
+
     encodeRequest req = defaultEncode req
 
 derive instance genericSendIssueReq :: Generic SendIssueReq _
@@ -1710,12 +1682,12 @@ instance showIssue :: Show Issue where show = genericShow
 instance decodeIssue :: Decode Issue where decode = defaultDecode
 instance encodeIssue :: Encode Issue where encode = defaultEncode
 
-derive instance genericSendIssueRes :: Generic SendIssueRes _
-derive instance newtypeSendIssueRes :: Newtype SendIssueRes _
-instance standardEncodeSendIssueRes :: StandardEncode SendIssueRes where standardEncode (SendIssueRes res) = standardEncode res
-instance showSendIssueRes :: Show SendIssueRes where show = genericShow
-instance decodeSendIssueRes :: Decode SendIssueRes where decode = defaultDecode
-instance encodeSendIssueRes :: Encode SendIssueRes where encode = defaultEncode
+-- derive instance genericSendIssueRes :: Generic SendIssueRes _
+-- derive instance newtypeSendIssueRes :: Newtype SendIssueRes _
+-- instance standardEncodeSendIssueRes :: StandardEncode SendIssueRes where standardEncode (SendIssueRes res) = standardEncode res
+-- instance showSendIssueRes :: Show SendIssueRes where show = genericShow
+-- instance decodeSendIssueRes :: Decode SendIssueRes where decode = defaultDecode
+-- instance encodeSendIssueRes :: Encode SendIssueRes where encode = defaultEncode
 
 newtype DestinationServiceabilityReq = DestinationServiceabilityReq
   { location  :: LatLong
@@ -1780,9 +1752,9 @@ newtype HotSpotInfo = HotSpotInfo {
 
 data ServiceabilityRequest = ServiceabilityRequest String ServiceabilityReq 
 
-instance makeServiceabilityReq :: RestEndpoint ServiceabilityRequest ServiceabilityRes where 
+instance makeServiceabilityReq :: RestEndpoint ServiceabilityRequest  where 
     makeRequest reqBody@(ServiceabilityRequest serviceabilityType rqBody) headers = defaultMakeRequest POST (EP.locServiceability serviceabilityType) headers reqBody Nothing
-    decodeResponse = decodeJSON
+
     encodeRequest (ServiceabilityRequest serviceabilityType req) = defaultEncode req
 
 
@@ -1852,9 +1824,9 @@ data FlowStatus = IDLE {}
                 | RIDE_ASSIGNED { rideId :: String }
                 | PENDING_RATING { rideId :: String }
 
-instance makeFlowStatusReq :: RestEndpoint FlowStatusReq FlowStatusRes where
+instance makeFlowStatusReq :: RestEndpoint FlowStatusReq  where
     makeRequest reqBody headers = defaultMakeRequest GET (EP.flowStatus "") headers reqBody Nothing
-    decodeResponse = decodeJSON
+
     encodeRequest req = defaultEncode req
 
 derive instance genericFlowStatusReq :: Generic FlowStatusReq _
@@ -1914,9 +1886,8 @@ newtype NotifyFlowEventReq = NotifyFlowEventReq
 newtype NotifyFlowEventRes = NotifyFlowEventRes
   { result :: String }
 
-instance makeNotifyFlowEventReq :: RestEndpoint NotifyFlowEventReq NotifyFlowEventRes where
+instance makeNotifyFlowEventReq :: RestEndpoint NotifyFlowEventReq  where
  makeRequest reqBody headers = defaultMakeRequest POST (EP.notifyFlowEvent "") headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericNotifyFlowEventReq :: Generic NotifyFlowEventReq _
@@ -1926,12 +1897,12 @@ instance showNotifyFlowEventReq :: Show NotifyFlowEventReq where show = genericS
 instance decodeNotifyFlowEventReq :: Decode NotifyFlowEventReq where decode = defaultDecode
 instance encodeNotifyFlowEventReq :: Encode NotifyFlowEventReq where encode = defaultEncode
 
-derive instance genericNotifyFlowEventRes :: Generic NotifyFlowEventRes _
-derive instance newtypeNotifyFlowEventRes :: Newtype NotifyFlowEventRes _
-instance standardEncodeNotifyFlowEventRes :: StandardEncode NotifyFlowEventRes where standardEncode (NotifyFlowEventRes res) = standardEncode res
-instance showNotifyFlowEventRes :: Show NotifyFlowEventRes where show = genericShow
-instance decodeNotifyFlowEventRes :: Decode NotifyFlowEventRes where decode = defaultDecode
-instance encodeNotifyFlowEventRes :: Encode NotifyFlowEventRes where encode = defaultEncode
+-- derive instance genericNotifyFlowEventRes :: Generic NotifyFlowEventRes _
+-- derive instance newtypeNotifyFlowEventRes :: Newtype NotifyFlowEventRes _
+-- instance standardEncodeNotifyFlowEventRes :: StandardEncode NotifyFlowEventRes where standardEncode (NotifyFlowEventRes res) = standardEncode res
+-- instance showNotifyFlowEventRes :: Show NotifyFlowEventRes where show = genericShow
+-- instance decodeNotifyFlowEventRes :: Decode NotifyFlowEventRes where decode = defaultDecode
+-- instance encodeNotifyFlowEventRes :: Encode NotifyFlowEventRes where encode = defaultEncode
 
 
 ----------------------------------------------------------------------- RequestCallback api -------------------------------------------------------------------
@@ -1942,9 +1913,9 @@ newtype RequestCallbackRes = RequestCallbackRes {
   result :: String
 }
 
-instance makeRequestCallbackReq :: RestEndpoint RequestCallbackReq RequestCallbackRes where
+instance makeRequestCallbackReq :: RestEndpoint RequestCallbackReq  where
     makeRequest reqBody@(RequestCallbackReq) headers = defaultMakeRequest POST (EP.callbackRequest "") headers reqBody Nothing
-    decodeResponse = decodeJSON
+
     encodeRequest req = defaultEncode req
 
 derive instance genericRequestCallbackReq :: Generic RequestCallbackReq _
@@ -1952,12 +1923,12 @@ instance standardEncodeRequestCallbackReq :: StandardEncode RequestCallbackReq w
 instance decodeRequestCallbackReq :: Decode RequestCallbackReq where decode = defaultDecode
 instance encodeRequestCallbackReq :: Encode RequestCallbackReq where encode = defaultEncode
 
-derive instance genericRequestCallbackRes :: Generic RequestCallbackRes _
-derive instance newtypeRequestCallbackRes :: Newtype RequestCallbackRes _
-instance showRequestCallbackRes :: Show RequestCallbackRes where show = genericShow
-instance standardEncodeRequestCallbackRes :: StandardEncode RequestCallbackRes where standardEncode (RequestCallbackRes res) = standardEncode res
-instance decodeRequestCallbackRes :: Decode RequestCallbackRes where decode = defaultDecode
-instance encodeRequestCallbackRes :: Encode RequestCallbackRes where encode = defaultEncode
+-- derive instance genericRequestCallbackRes :: Generic RequestCallbackRes _
+-- derive instance newtypeRequestCallbackRes :: Newtype RequestCallbackRes _
+-- instance showRequestCallbackRes :: Show RequestCallbackRes where show = genericShow
+-- instance standardEncodeRequestCallbackRes :: StandardEncode RequestCallbackRes where standardEncode (RequestCallbackRes res) = standardEncode res
+-- instance decodeRequestCallbackRes :: Decode RequestCallbackRes where decode = defaultDecode
+-- instance encodeRequestCallbackRes :: Encode RequestCallbackRes where encode = defaultEncode
 
 ----------------------------------------------------------------------- cancelEstimate api -------------------------------------------------------------------
 
@@ -1968,9 +1939,8 @@ newtype CancelEstimateRes = CancelEstimateRes
     result :: String
   }
 
-instance makeCancelEstimateReq :: RestEndpoint CancelEstimateReq CancelEstimateRes where
+instance makeCancelEstimateReq :: RestEndpoint CancelEstimateReq  where
  makeRequest reqBody@(CancelEstimateReq estimateId) headers = defaultMakeRequest POST (EP.cancelEstimate estimateId) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericCancelEstimateRes :: Generic CancelEstimateRes _
@@ -2006,9 +1976,8 @@ newtype UserSosRes = UserSosRes
     sosId :: String
   }
 
-instance makeUserSosReq :: RestEndpoint UserSosReq UserSosRes where
+instance makeUserSosReq :: RestEndpoint UserSosReq  where
  makeRequest reqBody headers = defaultMakeRequest POST (EP.userSos "") headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericUserSosReq :: Generic UserSosReq _
@@ -2048,9 +2017,8 @@ newtype UserSosStatusRes = UserSosStatusRes
     result :: String
   }
 
-instance makeUserSosStatusReq :: RestEndpoint UserSosStatusReq UserSosStatusRes where
+instance makeUserSosStatusReq :: RestEndpoint UserSosStatusReq  where
  makeRequest reqBody@(UserSosStatusReq sosId (SosStatus rqBody)) headers = defaultMakeRequest POST (EP.userSosStatus sosId) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericUserSosStatusReq :: Generic UserSosStatusReq _
@@ -2059,12 +2027,12 @@ instance showUserSosStatusReq :: Show UserSosStatusReq where show = genericShow
 instance decodeUserSosStatusReq :: Decode UserSosStatusReq where decode = defaultDecode
 instance encodeUserSosStatusReq :: Encode UserSosStatusReq where encode = defaultEncode
 
-derive instance genericUserSosStatusRes :: Generic UserSosStatusRes _
-derive instance newtypeUserSosStausRes :: Newtype UserSosStatusRes _
-instance standardEncodeUserSosStatusRes :: StandardEncode UserSosStatusRes where standardEncode (UserSosStatusRes res) = standardEncode res
-instance showUserSosStausRes :: Show UserSosStatusRes where show = genericShow
-instance decodeUserSosStausRes :: Decode UserSosStatusRes where decode = defaultDecode
-instance encodeUserSosStatusRes :: Encode UserSosStatusRes where encode = defaultEncode
+-- derive instance genericUserSosStatusRes :: Generic UserSosStatusRes _
+-- derive instance newtypeUserSosStausRes :: Newtype UserSosStatusRes _
+-- instance standardEncodeUserSosStatusRes :: StandardEncode UserSosStatusRes where standardEncode (UserSosStatusRes res) = standardEncode res
+-- instance showUserSosStausRes :: Show UserSosStatusRes where show = genericShow
+-- instance decodeUserSosStausRes :: Decode UserSosStatusRes where decode = defaultDecode
+-- instance encodeUserSosStatusRes :: Encode UserSosStatusRes where encode = defaultEncode
 
 derive instance genericSosStatus :: Generic SosStatus _
 derive instance newtypeSosStaus :: Newtype SosStatus _
@@ -2087,9 +2055,8 @@ newtype OnCallRes = OnCallRes
     result :: String
   }
 
-instance makeOnCallReq :: RestEndpoint OnCallReq OnCallRes where
+instance makeOnCallReq :: RestEndpoint OnCallReq  where
  makeRequest reqBody headers = defaultMakeRequest POST (EP.onCall "") headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericOnCallReq :: Generic OnCallReq _
@@ -2099,12 +2066,12 @@ instance showOnCallReq :: Show OnCallReq where show = genericShow
 instance decodeOnCallReq :: Decode OnCallReq where decode = defaultDecode
 instance encodeOnCallReq :: Encode OnCallReq where encode = defaultEncode
 
-derive instance genericOnCallRes :: Generic OnCallRes _
-derive instance newtypeOnCallRes :: Newtype OnCallRes _
-instance standardEncodeOnCallRes :: StandardEncode OnCallRes where standardEncode (OnCallRes res) = standardEncode res
-instance showOnCallRes :: Show OnCallRes where show = genericShow
-instance decodeOnCallRes :: Decode OnCallRes where decode = defaultDecode
-instance encodeOnCallRes :: Encode OnCallRes where encode = defaultEncode
+-- derive instance genericOnCallRes :: Generic OnCallRes _
+-- derive instance newtypeOnCallRes :: Newtype OnCallRes _
+-- instance standardEncodeOnCallRes :: StandardEncode OnCallRes where standardEncode (OnCallRes res) = standardEncode res
+-- instance showOnCallRes :: Show OnCallRes where show = genericShow
+-- instance decodeOnCallRes :: Decode OnCallRes where decode = defaultDecode
+-- instance encodeOnCallRes :: Encode OnCallRes where encode = defaultEncode
 
 newtype RideFeedbackReq = RideFeedbackReq
   {
@@ -2115,9 +2082,8 @@ newtype RideFeedbackReq = RideFeedbackReq
 
 data RideFeedbackRes = RideFeedbackRes
 
-instance makeRideFeedbackReq :: RestEndpoint RideFeedbackReq RideFeedbackRes where
+instance makeRideFeedbackReq :: RestEndpoint RideFeedbackReq  where
   makeRequest reqBody headers = defaultMakeRequest POST (EP.bookingFeedback "") headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 derive instance genericRideFeedbackReq :: Generic RideFeedbackReq _
@@ -2135,9 +2101,8 @@ data GetDisabilityListReq = GetDisabilityListReq
 
 newtype GetDisabilityListResp = GetDisabilityListResp (Array Disability)
 
-instance makeGetDisabilityListReq :: RestEndpoint GetDisabilityListReq GetDisabilityListResp where
+instance makeGetDisabilityListReq :: RestEndpoint GetDisabilityListReq  where
   makeRequest reqBody headers = defaultMakeRequest GET (EP.disabilityList "") headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 derive instance genericGetDisabilityListReq :: Generic GetDisabilityListReq _
@@ -2183,9 +2148,8 @@ newtype PersonStatsRes = PersonStatsRes
   , status :: Maybe String
   }
 
-instance personStatsReq :: RestEndpoint PersonStatsReq PersonStatsRes where
+instance personStatsReq :: RestEndpoint PersonStatsReq  where
  makeRequest reqBody headers = defaultMakeRequest GET (EP.personStats "") headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericPersonStatsReq :: Generic PersonStatsReq _
@@ -2225,9 +2189,8 @@ newtype TicketBookingAPIEntity = TicketBookingAPIEntity
     status :: String
   }
 
-instance getAllBookingsReq :: RestEndpoint GetAllBookingsReq GetAllBookingsRes where
+instance getAllBookingsReq :: RestEndpoint GetAllBookingsReq  where
  makeRequest reqBody@(GetAllBookingsReq status) headers = defaultMakeRequest GET (EP.getAllBookings (show status)) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 
@@ -2309,9 +2272,8 @@ newtype TicketBookingDetails = TicketBookingDetails
     services :: Array TicketBookingServiceDetails
   }
 
-instance getBookingInfoReq :: RestEndpoint GetBookingInfoReq TicketBookingDetails where
+instance getBookingInfoReq :: RestEndpoint GetBookingInfoReq  where
  makeRequest reqBody@(GetBookingInfoReq shortId) headers = defaultMakeRequest GET (EP.ticketBookingDetails shortId) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericGetBookingInfoReq :: Generic GetBookingInfoReq _
@@ -2471,24 +2433,20 @@ data GetTicketStatusReq = GetTicketStatusReq String
 
 data GetTicketStatusResp = GetTicketStatusResp String
 
-instance makeGetTicketStatusReq :: RestEndpoint GetTicketStatusReq GetTicketStatusResp where
+instance makeGetTicketStatusReq :: RestEndpoint GetTicketStatusReq  where
   makeRequest reqBody@(GetTicketStatusReq placeId) headers = defaultMakeRequest GET (EP.ticketStatus placeId) headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
-instance makeTicketServiceReq :: RestEndpoint TicketServiceReq TicketServicesResponse where
+instance makeTicketServiceReq :: RestEndpoint TicketServiceReq  where
  makeRequest reqBody@(TicketServiceReq placeId) headers = defaultMakeRequest GET (EP.ticketPlaceServices placeId) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
-instance makeTicketPlaceReq :: RestEndpoint TicketPlaceReq TicketPlaceResponse where
+instance makeTicketPlaceReq :: RestEndpoint TicketPlaceReq  where
   makeRequest reqBody headers = defaultMakeRequest GET (EP.ticketPlaces "") headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
-instance makeTicketBookingRequest :: RestEndpoint TicketBookingRequest CreateOrderRes where
+instance makeTicketBookingRequest :: RestEndpoint TicketBookingRequest  where
   makeRequest reqBody@(TicketBookingRequest placeId (TicketBookingReq rqBody)) headers = defaultMakeRequest POST (EP.ticketPlaceBook placeId) headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 derive instance genericGetTicketStatusReq :: Generic GetTicketStatusReq _
@@ -2636,9 +2594,9 @@ newtype IssueReportCustomerListItem = IssueReportCustomerListItem
     rideId :: Maybe String
   }
 
-instance makeFetchIssueListReq :: RestEndpoint FetchIssueListReq FetchIssueListResp where
+instance makeFetchIssueListReq :: RestEndpoint FetchIssueListReq  where
     makeRequest reqBody@(FetchIssueListReq language) headers = defaultMakeRequest GET (EP.fetchIssueList language) headers reqBody Nothing
-    decodeResponse = decodeJSON
+
     encodeRequest = standardEncode
 
 derive instance genericFetchIssueListReq :: Generic FetchIssueListReq _
@@ -2671,9 +2629,9 @@ newtype Category = Category
   , issueCategoryId :: String
   }
 
-instance makeGetCategoriesReq :: RestEndpoint GetCategoriesReq GetCategoriesRes where
+instance makeGetCategoriesReq :: RestEndpoint GetCategoriesReq  where
     makeRequest reqBody@(GetCategoriesReq language) headers = defaultMakeRequest GET (EP.getCategories language) headers reqBody Nothing
-    decodeResponse    = decodeJSON
+
     encodeRequest = standardEncode
 
 derive instance genericGetCategoriesReq :: Generic GetCategoriesReq _
@@ -2714,9 +2672,9 @@ newtype Message = Message
   , label :: Maybe String 
   }
 
-instance makeGetOptionsReq :: RestEndpoint GetOptionsReq GetOptionsRes where
+instance makeGetOptionsReq :: RestEndpoint GetOptionsReq  where
     makeRequest reqBody@(GetOptionsReq categoryId optionId issueReportId language) headers = defaultMakeRequest GET (EP.getOptions categoryId optionId issueReportId language) headers reqBody Nothing
-    decodeResponse    = decodeJSON
+
     encodeRequest = standardEncode
 
 derive instance genericGetOptionsReq :: Generic GetOptionsReq _
@@ -2768,9 +2726,9 @@ newtype PostIssueRes = PostIssueRes {
   messages :: Array Message
 }
 
-instance makePostIssueReq :: RestEndpoint PostIssueReq PostIssueRes where
+instance makePostIssueReq :: RestEndpoint PostIssueReq  where
     makeRequest reqBody@(PostIssueReq language issueDetails) headers = defaultMakeRequest POST (EP.postIssue language) headers reqBody Nothing
-    decodeResponse    = decodeJSON
+
     encodeRequest = standardEncode
 
 derive instance genericChat :: Generic Chat _
@@ -2821,9 +2779,9 @@ newtype ChatDetail = ChatDetail
     sender :: String
   }
 
-instance makeIssueInfoReq :: RestEndpoint IssueInfoReq IssueInfoRes where
+instance makeIssueInfoReq :: RestEndpoint IssueInfoReq  where
     makeRequest reqBody@(IssueInfoReq issueId language) headers = defaultMakeRequest GET (EP.issueInfo issueId language) headers reqBody Nothing
-    decodeResponse    = decodeJSON
+
     encodeRequest = standardEncode
 
 derive instance genericIssueInfoReq :: Generic IssueInfoReq _
@@ -2855,9 +2813,9 @@ newtype UpdateIssueRes = UpdateIssueRes {
   messages :: Array Message
 }
 
-instance makeUpdateIssueReq :: RestEndpoint UpdateIssueReq UpdateIssueRes where
+instance makeUpdateIssueReq :: RestEndpoint UpdateIssueReq  where
     makeRequest reqBody@(UpdateIssueReq issueId language req) headers = defaultMakeRequest PUT (EP.updateIssue language issueId) headers reqBody Nothing
-    decodeResponse    = decodeJSON
+
     encodeRequest = standardEncode
   
 derive instance genericUpdateIssueReqBody :: Generic UpdateIssueReqBody _
@@ -2925,14 +2883,12 @@ instance standardEncodeRideShareOptions :: StandardEncode RideShareOptions
   where
     standardEncode _ = standardEncode {}
 
-instance makeGetEmergencySettingsReq :: RestEndpoint GetEmergencySettingsReq GetEmergencySettingsRes where
+instance makeGetEmergencySettingsReq :: RestEndpoint GetEmergencySettingsReq  where
   makeRequest reqBody headers = defaultMakeRequest GET (EP.getEmergencySettings "") headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = encode req
 
-instance makeUpdateEmergencySettingsReq :: RestEndpoint UpdateEmergencySettingsReq UpdateEmergencySettingsRes where
+instance makeUpdateEmergencySettingsReq :: RestEndpoint UpdateEmergencySettingsReq  where
   makeRequest reqBody headers = defaultMakeRequest PUT (EP.updateEmergencySettings "") headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = encode req
 
 derive instance genericGetEmergencySettingsRes :: Generic GetEmergencySettingsRes _
@@ -2942,11 +2898,11 @@ instance showGetEmergencySettingsRes :: Show GetEmergencySettingsRes where show 
 instance decodeGetEmergencySettingsRes :: Decode GetEmergencySettingsRes where decode = defaultDecode
 instance encodeGetEmergencySettingsRes  :: Encode GetEmergencySettingsRes where encode = defaultEncode
 
-derive instance genericUpdateEmergencySettingsRes :: Generic UpdateEmergencySettingsRes _
-instance standardEncodeUpdateEmergencySettingsRes :: StandardEncode UpdateEmergencySettingsRes where standardEncode (UpdateEmergencySettingsRes body) = standardEncode body
-instance showUpdateEmergencySettingsRes :: Show UpdateEmergencySettingsRes where show = genericShow
-instance decodeUpdateEmergencySettingsRes :: Decode UpdateEmergencySettingsRes where decode = defaultDecode
-instance encodeUpdateEmergencySettingsRes  :: Encode UpdateEmergencySettingsRes where encode = defaultEncode
+-- derive instance genericUpdateEmergencySettingsRes :: Generic UpdateEmergencySettingsRes _
+-- instance standardEncodeUpdateEmergencySettingsRes :: StandardEncode UpdateEmergencySettingsRes where standardEncode (UpdateEmergencySettingsRes body) = standardEncode body
+-- instance showUpdateEmergencySettingsRes :: Show UpdateEmergencySettingsRes where show = genericShow
+-- instance decodeUpdateEmergencySettingsRes :: Decode UpdateEmergencySettingsRes where decode = defaultDecode
+-- instance encodeUpdateEmergencySettingsRes  :: Encode UpdateEmergencySettingsRes where encode = defaultEncode
 
 derive instance genericGetEmergencySettingsReq :: Generic GetEmergencySettingsReq _
 instance standardEncodeGetEmergencySettingsReq :: StandardEncode GetEmergencySettingsReq where standardEncode (GetEmergencySettingsReq) = standardEncode {}
@@ -2992,9 +2948,8 @@ newtype Sos = Sos
     status :: CTA.SosStatus
   }
 
-instance makeGetSosDetailsReq :: RestEndpoint GetSosDetailsReq GetSosDetailsRes where
+instance makeGetSosDetailsReq :: RestEndpoint GetSosDetailsReq  where
  makeRequest reqBody@(GetSosDetailsReq rideId) headers = defaultMakeRequest GET (EP.getSosDetails rideId) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericGetSosDetailsReq :: Generic GetSosDetailsReq _
@@ -3028,9 +2983,8 @@ newtype UpdateAsSafeRes = UpdateAsSafeRes {
   result :: String
 }
 
-instance makeUpdateAsSafeReq  :: RestEndpoint UpdateAsSafeReq UpdateAsSafeRes where
+instance makeUpdateAsSafeReq  :: RestEndpoint UpdateAsSafeReq  where
  makeRequest reqBody@(UpdateAsSafeReq sosId req) headers = defaultMakeRequest POST (EP.updateSafeRide sosId) headers reqBody Nothing
- decodeResponse body = defaultDecodeResponse body
  encodeRequest req = standardEncode req
 
 derive instance genericUpdateAsSafeReq :: Generic UpdateAsSafeReq _
@@ -3039,12 +2993,12 @@ instance standardEncodeUpdateAsSafeReq :: StandardEncode UpdateAsSafeReq where s
 instance decodeUpdateAsSafeReq :: Decode UpdateAsSafeReq where decode = defaultDecode
 instance encodeUpdateAsSafeReq :: Encode UpdateAsSafeReq where encode = defaultEncode
 
-derive instance genericUpdateAsSafeRes :: Generic UpdateAsSafeRes _
-derive instance newtypeUpdateAsSafeRes :: Newtype UpdateAsSafeRes _
-instance standardEncodeUpdateAsSafeRes :: StandardEncode UpdateAsSafeRes where standardEncode (UpdateAsSafeRes id) = standardEncode id
-instance showUpdateAsSafeRes :: Show UpdateAsSafeRes where show = genericShow
-instance decodeUpdateAsSafeRes :: Decode UpdateAsSafeRes where decode = defaultDecode
-instance encodeUpdateAsSafeRes :: Encode UpdateAsSafeRes where encode = defaultEncode
+-- derive instance genericUpdateAsSafeRes :: Generic UpdateAsSafeRes _
+-- derive instance newtypeUpdateAsSafeRes :: Newtype UpdateAsSafeRes _
+-- instance standardEncodeUpdateAsSafeRes :: StandardEncode UpdateAsSafeRes where standardEncode (UpdateAsSafeRes id) = standardEncode id
+-- instance showUpdateAsSafeRes :: Show UpdateAsSafeRes where show = genericShow
+-- instance decodeUpdateAsSafeRes :: Decode UpdateAsSafeRes where decode = defaultDecode
+-- instance encodeUpdateAsSafeRes :: Encode UpdateAsSafeRes where encode = defaultEncode
 
 derive instance genericUpdateAsSafeReqBody :: Generic UpdateAsSafeReqBody _
 derive instance newtypeUpdateAsSafeReqBody :: Newtype UpdateAsSafeReqBody _
@@ -3063,17 +3017,17 @@ newtype AskSupportReq = AskSupportReq {
     description :: String
   }
 
-instance makeAskSupportRequest :: RestEndpoint AskSupportReq AskSupportRes where
+instance makeAskSupportRequest :: RestEndpoint AskSupportReq  where
     makeRequest reqBody headers = defaultMakeRequest POST (EP.safetySupport "") headers reqBody Nothing
-    decodeResponse = decodeJSON
+
     encodeRequest req = defaultEncode req
 
-derive instance genericAskSupportRes :: Generic AskSupportRes _
-derive instance newtypeAskSupportRes :: Newtype AskSupportRes _
-instance standardEncodeAskSupportRes :: StandardEncode AskSupportRes where standardEncode (AskSupportRes res) = standardEncode res
-instance showAskSupportRes :: Show AskSupportRes where show = genericShow
-instance decodeAskSupportRes :: Decode AskSupportRes where decode = defaultDecode
-instance encodeAskSupportRes :: Encode AskSupportRes where encode = defaultEncode
+-- derive instance genericAskSupportRes :: Generic AskSupportRes _
+-- derive instance newtypeAskSupportRes :: Newtype AskSupportRes _
+-- instance standardEncodeAskSupportRes :: StandardEncode AskSupportRes where standardEncode (AskSupportRes res) = standardEncode res
+-- instance showAskSupportRes :: Show AskSupportRes where show = genericShow
+-- instance decodeAskSupportRes :: Decode AskSupportRes where decode = defaultDecode
+-- instance encodeAskSupportRes :: Encode AskSupportRes where encode = defaultEncode
 
 derive instance genericAskSupportReq :: Generic AskSupportReq _
 derive instance newtypeAskSupportReq :: Newtype AskSupportReq _
@@ -3091,9 +3045,8 @@ newtype CreateMockSosRes = CreateMockSosRes {
     result :: String
   }
 
-instance makeCreateMockSosReq  :: RestEndpoint CreateMockSosReq CreateMockSosRes where
+instance makeCreateMockSosReq  :: RestEndpoint CreateMockSosReq  where
  makeRequest reqBody headers = defaultMakeRequest POST (EP.createMockSos "") headers reqBody Nothing
- decodeResponse body = defaultDecodeResponse body
  encodeRequest req = standardEncode req
 
 derive instance genericCreateMockSosReq :: Generic CreateMockSosReq _
@@ -3119,9 +3072,9 @@ newtype ShareRideRes = ShareRideRes {
     result :: String
   }
 
-instance makeShareRideRequest :: RestEndpoint ShareRideReq ShareRideRes where
+instance makeShareRideRequest :: RestEndpoint ShareRideReq  where
     makeRequest reqBody headers = defaultMakeRequest POST (EP.shareRide "") headers reqBody Nothing
-    decodeResponse = decodeJSON
+
     encodeRequest req = defaultEncode req
 
 derive instance genericShareRideRes :: Generic ShareRideRes _
@@ -3150,9 +3103,8 @@ newtype Followers = Followers {
   priority :: Int
 }
 
-instance makeFollowRideReq :: RestEndpoint FollowRideReq FollowRideRes where
+instance makeFollowRideReq :: RestEndpoint FollowRideReq  where
   makeRequest reqBody headers = defaultMakeRequest GET (EP.followRide "") headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 derive instance genericFollowRideReq :: Generic FollowRideReq _
@@ -3196,9 +3148,9 @@ instance decodeGetMetroStationResponse :: Decode GetMetroStationResponse where d
 
 data StationType = START | END | TRANSIT | INTERMEDIATE
 
-instance makeGetMetroStationReq :: RestEndpoint GetMetroStationReq GetMetroStationResponse where
+instance makeGetMetroStationReq :: RestEndpoint GetMetroStationReq  where
     makeRequest reqBody@(GetMetroStationReq city) headers = defaultMakeRequest GET (EP.getMetroStations city) headers reqBody Nothing
-    decodeResponse    = decodeJSON
+
     encodeRequest = standardEncode
 
 derive instance genericGetMetroStationReq :: Generic GetMetroStationReq _
@@ -3237,9 +3189,8 @@ newtype SearchMetroResp = SearchMetroResp {
   searchId :: String
 }
 
-instance makeSearchMetroReq :: RestEndpoint SearchMetroReq SearchMetroResp where
+instance makeSearchMetroReq :: RestEndpoint SearchMetroReq  where
   makeRequest reqBody headers = defaultMakeRequest POST (EP.searchMetro "") headers reqBody Nothing
-  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 derive instance genericSearchMetroReq :: Generic SearchMetroReq _
@@ -3315,9 +3266,8 @@ instance showFRFSStationAPI :: Show FRFSStationAPI where show = genericShow
 instance decodeFRFSStationAPI :: Decode FRFSStationAPI where decode = defaultDecode
 instance encodeFRFSStationAPI :: Encode FRFSStationAPI where encode = defaultEncode
 
-instance getMetroQuotesReq :: RestEndpoint GetMetroQuotesReq GetMetroQuotesRes where
+instance getMetroQuotesReq :: RestEndpoint GetMetroQuotesReq  where
  makeRequest reqBody@(GetMetroQuotesReq id) headers = defaultMakeRequest GET (EP.getMetroQuotes id) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
  --------------------------------------------------- confirmMetroQuote ----------------------------------------------------
@@ -3361,9 +3311,8 @@ newtype FRFSTicketAPI = FRFSTicketAPI {
 
 data FRFSTicketStatus = ACTIVE | EXPIRED | USED
 
-instance makeConfirmMetroQuoteReq :: RestEndpoint ConfirmMetroQuoteReq MetroTicketBookingStatus where
+instance makeConfirmMetroQuoteReq :: RestEndpoint ConfirmMetroQuoteReq  where
  makeRequest reqBody@(ConfirmMetroQuoteReq quoteId) headers = defaultMakeRequest POST (EP.confirmMetroQuote quoteId) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericConfirmMetroQuoteResp :: Generic ConfirmMetroQuoteResp _
@@ -3406,9 +3355,8 @@ data GetMetroBookingStatusReq = GetMetroBookingStatusReq String
 
 newtype GetMetroBookingStatusResp = GetMetroBookingStatusResp MetroTicketBookingStatus
 
-instance makeGetMetroBookingStatusReq :: RestEndpoint GetMetroBookingStatusReq GetMetroBookingStatusResp where
+instance makeGetMetroBookingStatusReq :: RestEndpoint GetMetroBookingStatusReq  where
  makeRequest reqBody@(GetMetroBookingStatusReq bookingId) headers = defaultMakeRequest GET (EP.getMetroBookingStatus bookingId) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericGetMetroBookingStatusReq :: Generic GetMetroBookingStatusReq _
@@ -3430,9 +3378,9 @@ data GetMetroBookingListReq = GetMetroBookingListReq
 
 newtype GetMetroBookingListResp = GetMetroBookingListResp (Array MetroTicketBookingStatus)
 
-instance makeGetMetroBookingListReq :: RestEndpoint GetMetroBookingListReq GetMetroBookingListResp where
+instance makeGetMetroBookingListReq :: RestEndpoint GetMetroBookingListReq  where
     makeRequest reqBody headers = defaultMakeRequest GET (EP.getMetroBookingList "") headers reqBody Nothing
-    decodeResponse    = decodeJSON
+
     encodeRequest = standardEncode
 
 derive instance genericGetMetroBookingListReq :: Generic GetMetroBookingListReq _
@@ -3455,9 +3403,8 @@ data RetryMetrTicketPaymentReq = RetryMetrTicketPaymentReq String
 newtype RetryMetrTicketPaymentResp = RetryMetrTicketPaymentResp MetroTicketBookingStatus
 
 
-instance makeRetryMetrTicketPaymentReq :: RestEndpoint RetryMetrTicketPaymentReq RetryMetrTicketPaymentResp where
+instance makeRetryMetrTicketPaymentReq :: RestEndpoint RetryMetrTicketPaymentReq  where
  makeRequest reqBody@(RetryMetrTicketPaymentReq quoteId) headers = defaultMakeRequest POST (EP.retryMetrTicketPayment quoteId) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericRetryMetrTicketPaymentReq :: Generic RetryMetrTicketPaymentReq _
@@ -3488,9 +3435,8 @@ instance showMetroBookingSoftCancelResp :: Show MetroBookingSoftCancelResp where
 instance decodeMetroBookingSoftCancelResp :: Decode MetroBookingSoftCancelResp where decode = defaultDecode
 instance encodeMetroBookingSoftCancelResp :: Encode MetroBookingSoftCancelResp where encode = defaultEncode
 
-instance metroBookingSoftCancelReq :: RestEndpoint MetroBookingSoftCancelReq MetroBookingSoftCancelResp where
+instance metroBookingSoftCancelReq :: RestEndpoint MetroBookingSoftCancelReq  where
  makeRequest reqBody@(MetroBookingSoftCancelReq bookingId) headers = defaultMakeRequest POST (EP.metroBookingSoftCancel bookingId) headers reqBody Nothing
- decodeResponse    = decodeJSON
  encodeRequest = standardEncode
 
 derive instance genericMetroBookingSoftCancelReq :: Generic MetroBookingSoftCancelReq _
@@ -3515,9 +3461,8 @@ instance showMetroBookingSoftCancelStatusResp :: Show MetroBookingSoftCancelStat
 instance decodeMetroBookingSoftCancelStatusResp :: Decode MetroBookingSoftCancelStatusResp where decode = defaultDecode
 instance encodeMetroBookingSoftCancelStatusResp :: Encode MetroBookingSoftCancelStatusResp where encode = defaultEncode
 
-instance metroBookingSoftCancelStatusReq :: RestEndpoint MetroBookingSoftCancelStatusReq MetroBookingSoftCancelStatusResp where
+instance metroBookingSoftCancelStatusReq :: RestEndpoint MetroBookingSoftCancelStatusReq  where
  makeRequest reqBody@(MetroBookingSoftCancelStatusReq bookingId) headers = defaultMakeRequest GET (EP.getMetroBookingSoftCancelStatus bookingId) headers reqBody Nothing
- decodeResponse    = decodeJSON
  encodeRequest = standardEncode
 
 derive instance genericMetroBookingSoftCancelStatusReq :: Generic MetroBookingSoftCancelStatusReq _
@@ -3541,9 +3486,8 @@ instance showMetroBookingHardCancelResp :: Show MetroBookingHardCancelResp where
 instance decodeMetroBookingHardCancelResp :: Decode MetroBookingHardCancelResp where decode = defaultDecode
 instance encodeMetroBookingHardCancelResp :: Encode MetroBookingHardCancelResp where encode = defaultEncode
 
-instance metroBookingHardCancelReq :: RestEndpoint MetroBookingHardCancelReq MetroBookingHardCancelResp where
+instance metroBookingHardCancelReq :: RestEndpoint MetroBookingHardCancelReq  where
  makeRequest reqBody@(MetroBookingHardCancelReq bookingId) headers = defaultMakeRequest POST (EP.metroBookingHardCancel bookingId) headers reqBody Nothing
- decodeResponse    = decodeJSON
  encodeRequest = standardEncode
 
 derive instance genericMetroBookingHardCancelReq :: Generic MetroBookingHardCancelReq _
@@ -3567,9 +3511,8 @@ instance showMetroBookingHardCancelStatusResp :: Show MetroBookingHardCancelStat
 instance decodeMetroBookingHardCancelStatusResp :: Decode MetroBookingHardCancelStatusResp where decode = defaultDecode
 instance encodeMetroBookingHardCancelStatusResp :: Encode MetroBookingHardCancelStatusResp where encode = defaultEncode
 
-instance metroBookingHardCancelStatusReq :: RestEndpoint MetroBookingHardCancelStatusReq MetroBookingHardCancelStatusResp where
+instance metroBookingHardCancelStatusReq :: RestEndpoint MetroBookingHardCancelStatusReq  where
  makeRequest reqBody@(MetroBookingHardCancelStatusReq bookingId) headers = defaultMakeRequest GET (EP.getMetroBookingHardCancelStatus bookingId) headers reqBody Nothing
- decodeResponse    = decodeJSON
  encodeRequest = standardEncode
 
 derive instance genericMetroBookingHardCancelStatusReq :: Generic MetroBookingHardCancelStatusReq _
@@ -3587,9 +3530,8 @@ newtype SDKEventsResp = SDKEventsResp {
   result :: String
 }
 
-instance makeSDKEventsReq :: RestEndpoint SDKEventsReq SDKEventsResp where
+instance makeSDKEventsReq :: RestEndpoint SDKEventsReq  where
  makeRequest reqBody headers = defaultMakeRequest POST (EP.pushSDKEvents "") headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericSDKEventsReq :: Generic SDKEventsReq _
@@ -3632,9 +3574,9 @@ newtype StopRes = StopRes
 
 data StopRequest = StopRequest String Boolean StopReq 
 
-instance makeStopReq :: RestEndpoint StopRequest StopRes where 
+instance makeStopReq :: RestEndpoint StopRequest  where 
     makeRequest reqBody@(StopRequest rideBookingId isEdit rqBody) headers = defaultMakeRequest POST (EP.addOrEditStop isEdit rideBookingId) headers reqBody Nothing
-    decodeResponse = decodeJSON
+
     encodeRequest (StopRequest rideBookingId isEdit rqBody) = defaultEncode rqBody
 
 derive instance genericStopReq :: Generic StopReq _
@@ -3697,14 +3639,12 @@ instance standardEncodeAddStopRes :: StandardEncode AddStopRes where standardEnc
 instance decodeAddStopRes :: Decode  AddStopRes where decode = defaultDecode
 instance encodeAddStopRes :: Encode AddStopRes where encode = defaultEncode
 
-instance makeAddStopReq :: RestEndpoint AddStopRequest AddStopRes where
+instance makeAddStopReq :: RestEndpoint AddStopRequest  where
   makeRequest reqBody@(AddStopRequest bookingId (AddStopReq rqBody)) headers = defaultMakeRequest POST (EP.addStop bookingId ) headers reqBody Nothing
-  decodeResponse    = decodeJSON
   encodeRequest = standardEncode
 
-instance makeEditStopReq :: RestEndpoint EditStopRequest EditStopRes where 
+instance makeEditStopReq :: RestEndpoint EditStopRequest  where 
   makeRequest reqBody@(EditStopRequest bookingId (EditStopReq rqBody)) headers = defaultMakeRequest POST (EP.editStop bookingId ) headers reqBody Nothing
-  decodeResponse    = decodeJSON
   encodeRequest = standardEncode  
 
 
@@ -3731,9 +3671,8 @@ instance makeEditStopReq :: RestEndpoint EditStopRequest EditStopRes where
 --   , now :: String
 --   }
 
--- instance makeRentalSearchReq :: RestEndpoint RentalSearchReq RentalSearchRes where
---   makeRequest reqBody headers = defaultMakeRequest POST (EP.rentalSearch "") headers reqBody Nothing
---   decodeResponse = decodeJSON
+-- instance makeRentalSearchReq :: RestEndpoint RentalSearchReq  where
+--   makeRequest reqBody headers = defaultMakeRequest POST (EP.rentalSearch "") headers reqBody Nothin
 --   encodeRequest req = standardEncode req
 
 -- derive instance genericRentalSearchReq :: Generic RentalSearchReq _
@@ -3749,3 +3688,123 @@ instance makeEditStopReq :: RestEndpoint EditStopRequest EditStopRes where
 -- instance showRentalSearchRes :: Show RentalSearchRes where show = genericShow
 -- instance decodeRentalSearchRes :: Decode RentalSearchRes where decode = defaultDecode
 -- instance encodeRentalSearchRes :: Encode RentalSearchRes where encode = defaultEncode
+
+
+-----------------------Edit Location API --------------------------------------------
+
+data EditLocationRequest = EditLocationRequest String EditLocationReq
+
+newtype EditLocationReq = EditLocationReq {
+  destination :: Maybe SearchReqLocation ,
+  origin :: Maybe SearchReqLocation
+}
+
+data EditLocationRes = EditLocationRes {
+    bookingUpdateRequestId :: Maybe String
+  }
+
+instance makeEditLocationReq :: RestEndpoint EditLocationRequest  where
+ makeRequest reqBody@(EditLocationRequest rideId (EditLocationReq rqBody)) headers = defaultMakeRequest POST (EP.editLocation rideId) headers reqBody Nothing
+ encodeRequest req = standardEncode req
+
+derive instance genericEditLocationRes :: Generic EditLocationRes _
+instance standardEncodeEditLocationRes :: StandardEncode EditLocationRes where standardEncode (EditLocationRes res) = standardEncode res
+instance showEditLocationRes :: Show EditLocationRes where show = genericShow
+instance decodeEditLocationRes :: Decode EditLocationRes where decode = defaultDecode
+instance encodeEditLocationRes :: Encode EditLocationRes where encode = defaultEncode
+
+derive instance genericEditLocationReq :: Generic EditLocationReq _
+derive instance newtypeEditLocationReq :: Newtype EditLocationReq _
+instance standardEncodeEditLocationReq :: StandardEncode EditLocationReq where standardEncode (EditLocationReq reqBody) = standardEncode reqBody
+instance showEditLocationReq :: Show EditLocationReq where show = genericShow
+instance decodeEditLocationReq :: Decode EditLocationReq where decode = defaultDecode
+instance encodeEditLocationReq :: Encode EditLocationReq where encode = defaultEncode
+
+derive instance genericEditLocationRequest :: Generic EditLocationRequest _
+instance standardEncodeEditLocationRequest :: StandardEncode EditLocationRequest where standardEncode (EditLocationRequest rideId reqBody) = standardEncode reqBody
+instance decodeEditLocationRequest :: Decode EditLocationRequest where decode = defaultDecode
+instance encodeEditLocationRequest :: Encode EditLocationRequest where encode = defaultEncode
+
+-----------------------Edit Location Result API --------------------------------------------
+
+data GetEditLocResultReq = GetEditLocResultReq String
+
+newtype GetEditLocResultResp = GetEditLocResultResp {
+    bookingUpdateRequestDetails :: BookingUpdateRequestDetails
+  } 
+
+newtype BookingUpdateRequestDetails = BookingUpdateRequestDetails { 
+  bookingId :: String,
+  currentPointLat :: Maybe Number,
+  currentPointLon :: Maybe Number,
+  estimatedDistance :: Maybe Number,
+  estimatedFare :: Maybe Number,
+  id :: String,
+  oldEstimatedDistance :: Maybe Int,
+  oldEstimatedFare :: Number,
+  status :: String,--BookingUpdateRequestStatus,
+  totalDistance :: Maybe Int,
+  travelledDistance :: Maybe Int
+  }
+
+data BookingUpdateRequestStatus = SOFT | CONFIRM
+
+instance makeGetEditLocResultReq :: RestEndpoint GetEditLocResultReq  where
+ makeRequest reqBody@(GetEditLocResultReq bookingUpdateRequestId) headers = defaultMakeRequest GET (EP.getEditLocResult bookingUpdateRequestId) headers reqBody Nothing
+ encodeRequest req = standardEncode req
+
+derive instance genericGetEditLocResultResp :: Generic GetEditLocResultResp _
+derive instance newtypeGetEditLocResultResp :: Newtype GetEditLocResultResp _
+instance standardEncodeGetEditLocResultResp :: StandardEncode GetEditLocResultResp where standardEncode (GetEditLocResultResp body) = standardEncode body
+instance showGetEditLocResultResp :: Show GetEditLocResultResp where show = genericShow
+instance decodeGetEditLocResultResp :: Decode GetEditLocResultResp where decode = defaultDecode
+instance encodeGetEditLocResultResp  :: Encode GetEditLocResultResp where encode = defaultEncode
+
+derive instance genericGetEditLocResultReq :: Generic GetEditLocResultReq _
+instance standardEncodeGetEditLocResultReq :: StandardEncode GetEditLocResultReq where standardEncode (GetEditLocResultReq body) = standardEncode body
+instance showGetEditLocResultReq :: Show GetEditLocResultReq where show = genericShow
+instance decodeGetEditLocResultReq :: Decode GetEditLocResultReq where decode = defaultDecode
+instance encodeGetEditLocResultReq  :: Encode GetEditLocResultReq where encode = defaultEncode
+
+derive instance genericBookingUpdateRequestDetails :: Generic BookingUpdateRequestDetails _
+derive instance newtypeBookingUpdateRequestDetails :: Newtype BookingUpdateRequestDetails _
+instance standardEncodeBookingUpdateRequestDetails :: StandardEncode BookingUpdateRequestDetails where standardEncode (BookingUpdateRequestDetails req) = standardEncode req
+instance showBookingUpdateRequestDetails :: Show BookingUpdateRequestDetails where show = genericShow
+instance decodeBookingUpdateRequestDetails :: Decode BookingUpdateRequestDetails where decode = defaultDecode
+instance encodeBookingUpdateRequestDetails :: Encode BookingUpdateRequestDetails where encode = defaultEncode
+
+derive instance genericBookingUpdateRequestStatus :: Generic BookingUpdateRequestStatus _
+instance showBookingUpdateRequestStatus :: Show BookingUpdateRequestStatus where show = genericShow
+instance decodeBookingUpdateRequestStatus :: Decode BookingUpdateRequestStatus where decode = defaultDecode
+instance encodeBookingUpdateRequestStatus :: Encode BookingUpdateRequestStatus where encode = defaultEncode
+instance standardEncodeBookingUpdateRequestStatus :: StandardEncode BookingUpdateRequestStatus
+  where
+  standardEncode SOFT = standardEncode $ show SOFT
+  standardEncode CONFIRM = standardEncode $ show CONFIRM
+
+  -----------------------Edit Location Result Confirm API --------------------------------------------
+
+data EditLocResultConfirmReq = EditLocResultConfirmReq String
+
+type EditLocResultConfirmResp = APISuccessResp
+
+instance makeEditLocResultConfirmReq :: RestEndpoint EditLocResultConfirmReq  where
+ makeRequest reqBody@(EditLocResultConfirmReq bookingUpdateRequestId) headers = defaultMakeRequest POST (EP.confirmEditLocResult bookingUpdateRequestId) headers reqBody Nothing
+ encodeRequest req = standardEncode req
+
+derive instance genericEditLocResultConfirmReq :: Generic EditLocResultConfirmReq _
+instance standardEncodeEditLocResultConfirmReq :: StandardEncode EditLocResultConfirmReq where standardEncode (EditLocResultConfirmReq body) = standardEncode body
+instance showEditLocResultConfirmReq :: Show EditLocResultConfirmReq where show = genericShow
+instance decodeEditLocResultConfirmReq :: Decode EditLocResultConfirmReq where decode = defaultDecode
+instance encodeEditLocResultConfirmReq  :: Encode EditLocResultConfirmReq where encode = defaultEncode
+
+newtype APISuccessResp = APISuccessResp {
+  result :: String
+}
+
+derive instance genericAPISuccessResp :: Generic APISuccessResp _
+derive instance newtypeAPISuccessResp :: Newtype APISuccessResp _
+instance standardEncodeAPISuccessResp :: StandardEncode APISuccessResp where standardEncode (APISuccessResp id) = standardEncode id
+instance showAPISuccessResp :: Show APISuccessResp where show = genericShow
+instance decodeAPISuccessResp :: Decode APISuccessResp where decode = defaultDecode
+instance encodeAPISuccessResp :: Encode APISuccessResp where encode = defaultEncode

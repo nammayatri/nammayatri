@@ -333,6 +333,7 @@ window.getMerchantConfig = function () {
         "enableSupport" : false
       , "enableSuggestions" : true
       , "enableRepeatTripBackfilling" : true
+      , "enableEditDestination" : true
     }
     , "appData" : {
       "link" : getAppLink(window.__OS)

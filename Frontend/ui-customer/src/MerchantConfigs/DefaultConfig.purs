@@ -65,6 +65,7 @@ config =
     , showSeparator : false
     , showChargeDesc: false
     , backArrow : "ny_ic_chevron_left_white,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png"
+    , crossIcon : "ny_ic_close_white,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_close_white.png"
     , enableRateCard: true
     , clearTextImage: "ny_ic_close_grey"
     }
@@ -242,7 +243,8 @@ config =
     enableCustomerSupportForSafety : false,
     enableSpecialPickup : EHC.jBridgeMethodExists "locateOnMapV2",
     enableAcPopup : false,
-    enableRentalReallocation : true
+    enableRentalReallocation : true,
+    enableEditDestination : true
   }
 
   , rideCompletedCardConfig : {

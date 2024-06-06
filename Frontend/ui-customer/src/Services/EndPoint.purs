@@ -279,3 +279,68 @@ rentalSearch dummy = (getBaseUrl "49") <> "/rental/search"
 
 addOrEditStop :: Boolean -> String -> String 
 addOrEditStop isEdit rideBookingId = (getBaseUrl "47") <> "/rideBooking/" <> rideBookingId <> if isEdit then "/editStop" else "/addStop" 
+editLocation :: String -> String
+editLocation rideId = (getBaseUrl "58") <> "/ride/" <> rideId <> "/edit/location"
+
+getEditLocResult :: String -> String
+getEditLocResult bookingUpdateRequestId = (getBaseUrl "59") <> "/edit/" <> bookingUpdateRequestId <>  "/result"
+
+confirmEditLocResult :: String -> String
+confirmEditLocResult bookingUpdateRequestId = (getBaseUrl "60") <> "/edit/result/" <> bookingUpdateRequestId <> "/confirm"
+
+
+-- curl --location 'https://api.beckn.juspay.in/pilot/app/v2/ride//edit/location' \
+-- --header 'Content-Type: application/json;charset=utf-8' \
+-- --header 'token;' \
+-- --data '{
+--     "destination" : {
+--         "gps" : {
+--             "lat" : 12.936537133490837, 
+--             "lon" :  77.61626669498922
+            
+            
+--         },
+--         "address" : {
+--             "street" : "Bombay Adda",
+--             "area" : "Bombay Adda",
+--             "areaCode": "560095",
+--             "building": "Bombay Adda Buildings",
+--             "city": "Bangalore",
+--             "country": "India",
+--             "door": "12",
+--             "street": "19th Main",
+--             "state": "Karnataka"
+--         }
+--     }
+-- }'
+
+
+
+
+
+-- 16:49
+-- curl --location 'https://api.beckn.juspay.in/pilot/app/v2/edit/8291c93d-68c7-4ede-aa9d-40a90fc2bd05/result' \
+-- --header 'Content-Type: application/json;charset=utf-8' \
+-- --header 'token;'
+
+-- bookingUpdateRequestDetails : { bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
+--     createdAt :: Kernel.Prelude.UTCTime,
+--     currentPointLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+--     currentPointLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+--     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
+--     estimatedFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+--     id :: Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest,
+--     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+--     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+--     oldEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
+--     oldEstimatedFare :: Kernel.Types.Common.HighPrecMoney,
+--     status :: Domain.Types.BookingUpdateRequest.BookingUpdateRequestStatus,
+--     totalDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
+--     travelledDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
+--     updatedAt :: Kernel.Prelude.UTCTime}
+
+
+-- 16:49
+-- curl --location --request POST 'https://api.beckn.juspay.in/pilot/app/v2/edit/result/:bookingUpdateRequestId/confirm' \
+-- --header 'Content-Type: application/json;charset=utf-8' \
+-- --header 'token;'
