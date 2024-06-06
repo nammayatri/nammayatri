@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
-
 module Storage.Queries.Extra.Transformers.Ride where
 
 import Domain.Types.Location

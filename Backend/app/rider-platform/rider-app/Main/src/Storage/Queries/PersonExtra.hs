@@ -1,10 +1,6 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.PersonExtra where
 
 import Control.Applicative ((<|>))
-import Data.Text (strip)
 import qualified Data.Time as T
 import qualified Database.Beam as B
 import Domain.Action.UI.Person
@@ -17,22 +13,16 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps (Language)
-import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Person as BeamP
-import qualified Storage.CachedQueries.Merchant as CQM
-import Storage.Queries.OrphanInstances.Person
-import Tools.Error
+import Storage.Queries.OrphanInstances.Person ()
 
 -- Extra code goes here --
 

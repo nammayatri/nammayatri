@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.TicketBookingServiceExtra where
 
 import qualified Data.Time.Calendar
@@ -8,14 +5,12 @@ import qualified Domain.Types.BusinessHour as DTBH
 import qualified Domain.Types.TicketBookingService as DTBS
 import qualified Domain.Types.TicketService as DTS
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import qualified Kernel.Types.Id as Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import Sequelize as Se
 import qualified Storage.Beam.TicketBookingService as BeamR
-import Storage.Queries.OrphanInstances.TicketBookingService
+import Storage.Queries.OrphanInstances.TicketBookingService ()
 
 -- Extra code goes here --
 

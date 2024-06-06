@@ -15,9 +15,9 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Sequelize as Se
 import qualified Storage.Beam.Overlay as Beam
-import qualified Storage.Queries.Transformers.Overlay
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Overlay.Overlay -> m ())
 create = createWithKV
@@ -82,7 +82,7 @@ instance FromTType' Beam.Overlay Domain.Types.Overlay.Overlay where
       Just
         Domain.Types.Overlay.Overlay
           { actions = actions,
-            actions2 = fromMaybe [] $ Storage.Queries.Transformers.Overlay.valueToMaybe actions2,
+            actions2 = fromMaybe [] $ Kernel.Utils.JSON.valueToMaybe actions2,
             cancelButtonText = cancelButtonText,
             contactSupportNumber = contactSupportNumber,
             delay = delay,
@@ -99,9 +99,9 @@ instance FromTType' Beam.Overlay Domain.Types.Overlay.Overlay where
             overlayKey = overlayKey,
             reqBody = reqBody,
             secondaryActions = secondaryActions,
-            secondaryActions2 = Storage.Queries.Transformers.Overlay.valueToMaybe =<< secondaryActions2,
+            secondaryActions2 = Kernel.Utils.JSON.valueToMaybe =<< secondaryActions2,
             showPushNotification = showPushNotification,
-            socialMediaLinks = Storage.Queries.Transformers.Overlay.valueToMaybe =<< socialMediaLinks,
+            socialMediaLinks = Kernel.Utils.JSON.valueToMaybe =<< socialMediaLinks,
             title = title,
             toastMessage = toastMessage,
             udf1 = udf1

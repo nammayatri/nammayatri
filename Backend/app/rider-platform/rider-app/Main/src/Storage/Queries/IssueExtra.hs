@@ -1,31 +1,19 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.IssueExtra where
 
 -- Extra code goes here --
 import Domain.Types.Booking as Booking
 import Domain.Types.Issue as Issue
-import qualified Domain.Types.Issue
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
-import qualified Domain.Types.Person
-import qualified Domain.Types.Quote
-import qualified IssueManagement.Common
 import qualified IssueManagement.Common as Domain
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, MonadTime (..), fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, MonadTime (..), getCurrentTime)
 import qualified Sequelize as Se
-import qualified Storage.Beam.Issue as Beam
 import qualified Storage.Beam.Issue as BeamI
 import qualified Storage.Beam.Person as BeamP
-import Storage.Queries.OrphanInstances.Issue
+import Storage.Queries.OrphanInstances.Issue ()
 import qualified Storage.Queries.Person ()
 
 updateIssueStatus :: (MonadFlow m, EsqDBFlow m r) => Text -> Domain.IssueStatus -> m () -- can only send maybe text

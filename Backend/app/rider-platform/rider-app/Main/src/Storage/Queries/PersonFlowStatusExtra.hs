@@ -1,20 +1,14 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.PersonFlowStatusExtra where
 
 import Domain.Types.Person
-import Domain.Types.PersonFlowStatus
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.PersonFlowStatus as BeamPFS
-import Storage.Queries.OrphanInstances.PersonFlowStatus
+import Storage.Queries.OrphanInstances.PersonFlowStatus ()
 
 -- Extra code goes here --
 create :: (MonadFlow m, EsqDBFlow m r) => DPFS.PersonFlowStatus -> m ()

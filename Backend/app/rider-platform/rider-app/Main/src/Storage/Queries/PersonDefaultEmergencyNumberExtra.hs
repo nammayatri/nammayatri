@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.PersonDefaultEmergencyNumberExtra where
 
 import qualified Domain.Types.Merchant as DMerchant
@@ -14,7 +11,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.PersonDefaultEmergencyNumber as BeamPDEN
-import Storage.Queries.OrphanInstances.PersonDefaultEmergencyNumber
+import Storage.Queries.OrphanInstances.PersonDefaultEmergencyNumber ()
 
 create :: (MonadFlow m, EsqDBFlow m r) => PersonDefaultEmergencyNumber -> m ()
 create = createWithKV

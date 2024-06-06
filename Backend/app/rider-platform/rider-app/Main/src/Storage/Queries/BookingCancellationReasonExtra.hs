@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.BookingCancellationReasonExtra where
 
 import qualified Database.Beam as B
@@ -8,18 +5,14 @@ import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
-import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
 import qualified Storage.Beam.Common as BeamCommon
-import Storage.Queries.OrphanInstances.BookingCancellationReason
+import Storage.Queries.OrphanInstances.BookingCancellationReason ()
 
 -- Extra code goes here --
 

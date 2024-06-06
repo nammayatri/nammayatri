@@ -1,20 +1,13 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.CancellationReasonExtra where
 
 import Domain.Types.CancellationReason
-import qualified Domain.Types.CancellationReason as Domain
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as BeamCR
-import Storage.Queries.OrphanInstances.CancellationReason
+import Storage.Queries.OrphanInstances.CancellationReason ()
 
 -- Extra code goes here --
 

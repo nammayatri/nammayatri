@@ -1,25 +1,17 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.Transformers.DriverFee where
 
 import Domain.Types.DriverFee
-import qualified Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, Currency, EsqDBFlow, HighPrecMoney, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, Currency, EsqDBFlow, HighPrecMoney, MonadFlow, fromMaybeM)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
 import qualified Storage.Queries.Person as QP
 
-getMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => (Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Text -> m (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity))
+getMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Text -> m (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
 getMerchantOperatingCityId merchantOperatingCityId driverId id = do
   merchantOperatingCityId' <- case merchantOperatingCityId of
     Nothing -> do

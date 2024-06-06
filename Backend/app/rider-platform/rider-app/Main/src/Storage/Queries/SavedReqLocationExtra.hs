@@ -1,21 +1,16 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.SavedReqLocationExtra where
 
 import Domain.Types.Person (Person)
 import Domain.Types.SavedReqLocation
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.SavedReqLocation as BeamSRL
-import Storage.Queries.OrphanInstances.SavedReqLocation
+import Storage.Queries.OrphanInstances.SavedReqLocation ()
 
 -- Extra code goes here --
 findAllByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m [SavedReqLocation]

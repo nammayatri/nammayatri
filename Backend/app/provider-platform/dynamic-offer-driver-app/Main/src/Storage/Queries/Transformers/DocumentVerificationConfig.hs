@@ -1,15 +1,10 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.Transformers.DocumentVerificationConfig where
 
 import qualified Data.Aeson
 import qualified Domain.Types.DocumentVerificationConfig
-import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime, throwError)
+import Kernel.Utils.Common (MonadFlow, throwError)
 
 getConfigJSON :: Domain.Types.DocumentVerificationConfig.SupportedVehicleClasses -> Data.Aeson.Value
 getConfigJSON = \case

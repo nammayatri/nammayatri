@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.Transformers.Booking where
 
 import Control.Applicative
@@ -14,6 +11,7 @@ import qualified Domain.Types.FarePolicy.FareProductType
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -26,7 +24,7 @@ import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Tools.Error
 
-getDistance :: (Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Types.Common.Distance)
+getDistance :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Types.Common.Distance
 getDistance = \case
   DRB.OneWayDetails details -> Just details.distance
   DRB.RentalDetails _ -> Nothing
@@ -34,7 +32,7 @@ getDistance = \case
   DRB.OneWaySpecialZoneDetails details -> Just details.distance
   DRB.InterCityDetails details -> Just details.distance
 
-getFareProductType :: (Domain.Types.Booking.BookingDetails -> Domain.Types.FarePolicy.FareProductType.FareProductType)
+getFareProductType :: Domain.Types.Booking.BookingDetails -> Domain.Types.FarePolicy.FareProductType.FareProductType
 getFareProductType = \case
   DRB.OneWayDetails _ -> DQuote.ONE_WAY
   DRB.RentalDetails _ -> DQuote.RENTAL
@@ -42,7 +40,7 @@ getFareProductType = \case
   DRB.OneWaySpecialZoneDetails _ -> DQuote.ONE_WAY_SPECIAL_ZONE
   DRB.InterCityDetails _ -> DQuote.INTER_CITY
 
-getOtpCode :: (Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text)
+getOtpCode :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getOtpCode = \case
   DRB.OneWayDetails _ -> Nothing
   DRB.RentalDetails _ -> Nothing
@@ -50,15 +48,15 @@ getOtpCode = \case
   DRB.OneWaySpecialZoneDetails details -> details.otpCode
   DRB.InterCityDetails _ -> Nothing
 
-getStopLocationId :: (Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text)
+getStopLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getStopLocationId = \case
   DRB.OneWayDetails _ -> Nothing
-  DRB.RentalDetails rentalDetails -> (getId . (.id)) <$> rentalDetails.stopLocation
+  DRB.RentalDetails rentalDetails -> getId . (.id) <$> rentalDetails.stopLocation
   DRB.DriverOfferDetails _ -> Nothing
   DRB.OneWaySpecialZoneDetails _ -> Nothing
   DRB.InterCityDetails _ -> Nothing
 
-getToLocationId :: (Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text)
+getToLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getToLocationId = \case
   DRB.OneWayDetails details -> Just (getId details.toLocation.id)
   DRB.RentalDetails _ -> Nothing
@@ -66,10 +64,12 @@ getToLocationId = \case
   DRB.OneWaySpecialZoneDetails details -> Just (getId details.toLocation.id)
   DRB.InterCityDetails details -> Just (getId details.toLocation.id)
 
+backfillMOCId :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Text -> m (Id DMOC.MerchantOperatingCity)
 backfillMOCId merchantOperatingCityId merchantId = case merchantOperatingCityId of
   Just mocId -> pure $ Id mocId
   Nothing -> (.id) <$> CQM.getDefaultMerchantOperatingCity (Id merchantId)
 
+getInitialPickupLocation :: (CacheFlow m r, EsqDBFlow m r) => [DLM.LocationMapping] -> DL.Location -> m DL.Location
 getInitialPickupLocation mappings fl = do
   let pickupLocationMap = filter (\map1 -> map1.order == 0) mappings
       sortedPickupLocationMap = sortBy (comparing (.version)) pickupLocationMap
@@ -79,6 +79,21 @@ getInitialPickupLocation mappings fl = do
       let initialPickupLocMapping = last sortedPickupLocationMap
       QL.findById initialPickupLocMapping.locationId >>= fromMaybeM (InternalError "Incorrect Location Mapping")
 
+fromLocationAndBookingDetails ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Text ->
+  Text ->
+  Maybe Text ->
+  [DLM.LocationMapping] ->
+  Maybe HighPrecMeters ->
+  FareProductType ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe DistanceUnit ->
+  Maybe HighPrecDistance ->
+  m (DL.Location, BookingDetails)
 fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings distance fareProductType toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue = do
   logTagDebug ("bookingId:-" <> id) $ "Location Mappings:-" <> show mappings
   if null mappings

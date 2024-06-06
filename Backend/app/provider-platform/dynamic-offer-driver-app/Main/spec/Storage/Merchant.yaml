@@ -334,9 +334,9 @@ Overlay:
     actions2: toJSON actions2|E
     secondaryActions2: toJSON <$> secondaryActions2|E
   fromTType:
-    socialMediaLinks: Storage.Queries.Transformers.Overlay.valueToMaybe =<< socialMediaLinks|E
-    actions2: fromMaybe [] $ Storage.Queries.Transformers.Overlay.valueToMaybe actions2|E
-    secondaryActions2: Storage.Queries.Transformers.Overlay.valueToMaybe =<< secondaryActions2|E
+    socialMediaLinks: Kernel.Utils.JSON.valueToMaybe =<< socialMediaLinks|E
+    actions2: fromMaybe [] $ Kernel.Utils.JSON.valueToMaybe actions2|E
+    secondaryActions2: Kernel.Utils.JSON.valueToMaybe =<< secondaryActions2|E
   constraints:
     merchantOperatingCityId: SecondaryKey
     overlayKey: SecondaryKey

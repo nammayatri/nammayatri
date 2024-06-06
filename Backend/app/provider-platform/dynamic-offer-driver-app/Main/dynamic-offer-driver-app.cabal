@@ -504,7 +504,6 @@ library
       Storage.Queries.Transformers.Message
       Storage.Queries.Transformers.MessageReport
       Storage.Queries.Transformers.Notification
-      Storage.Queries.Transformers.Overlay
       Storage.Queries.Transformers.Person
       Storage.Queries.Transformers.QuestionInformation
       Storage.Queries.Transformers.ReelsData

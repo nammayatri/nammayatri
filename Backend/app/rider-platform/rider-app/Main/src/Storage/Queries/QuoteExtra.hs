@@ -1,27 +1,19 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.QuoteExtra where
 
 import Domain.Types.DriverOffer as DDO
 import Domain.Types.Estimate
-import Domain.Types.FarePolicy.FareProductType as DFFP
 import Domain.Types.Quote as DQ
-import Domain.Types.SearchRequest
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
-import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverOffer as QueryDO
 import Storage.Queries.InterCityDetails as QueryICD
-import Storage.Queries.OrphanInstances.Quote
+import Storage.Queries.OrphanInstances.Quote ()
 import Storage.Queries.RentalDetails as QueryRD
 import Storage.Queries.SpecialZoneQuote as QuerySZQ
 import qualified Storage.Queries.TripTerms as QTT

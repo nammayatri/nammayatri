@@ -1,17 +1,12 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.CallStatusExtra where
 
 import Domain.Types.CallStatus
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCS
-import Storage.Queries.OrphanInstances.CallStatus
+import Storage.Queries.OrphanInstances.CallStatus ()
 
 -- Extra code goes here --
 

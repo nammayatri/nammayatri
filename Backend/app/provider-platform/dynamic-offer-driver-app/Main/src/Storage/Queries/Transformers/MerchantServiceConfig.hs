@@ -1,22 +1,11 @@
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.Transformers.MerchantServiceConfig where
 
 import qualified Data.Aeson
 import qualified Data.Aeson as A
 import qualified Data.Text as T
-import qualified Domain.Types.Extra.MerchantServiceConfig
-import Domain.Types.Merchant as DOrg
-import qualified Domain.Types.MerchantOperatingCity as DMOC
-import Domain.Types.MerchantServiceConfig
-import qualified Domain.Types.MerchantServiceConfig
 import qualified Domain.Types.MerchantServiceConfig as Domain
-import Kernel.Beam.Functions
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
-import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
@@ -30,12 +19,9 @@ import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude as P
 import Kernel.Types.Common
 import Kernel.Types.Error
-import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Sequelize as Se
-import qualified Storage.Beam.MerchantServiceConfig as BeamMSC
-import Tools.Error
 
+getConfigJSON :: Domain.ServiceConfig -> Data.Aeson.Value
 getConfigJSON = \case
   Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
     Maps.GoogleConfig cfg -> toJSON cfg
@@ -73,7 +59,7 @@ getConfigJSON = \case
   Domain.TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of
     Tokenize.HyperVergeTokenizationServiceConfig cfg -> toJSON cfg
 
-getServiceName :: ServiceConfig -> ServiceName
+getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
   Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
     Maps.GoogleConfig _ -> Domain.MapsService Maps.Google
@@ -111,6 +97,7 @@ getServiceName = \case
   Domain.TokenizationServiceConfig tokenizationConfig -> case tokenizationConfig of
     Tokenize.HyperVergeTokenizationServiceConfig _ -> Domain.TokenizationService Tokenize.HyperVerge
 
+mkServiceConfig :: (MonadThrow m, Log m) => Data.Aeson.Value -> Domain.ServiceName -> m Domain.ServiceConfig
 mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON: " <> show configJSON <> " Error:" <> err)) return $ case serviceName of
   Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> eitherValue configJSON
   Domain.MapsService Maps.OSRM -> Domain.MapsServiceConfig . Maps.OSRMConfig <$> eitherValue configJSON

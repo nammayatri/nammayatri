@@ -1,30 +1,18 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.Transformers.Booking where
 
-import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Domain.Types.Booking
 import qualified Domain.Types.BookingLocation as DBBL
 import qualified Domain.Types.Common
 import qualified Domain.Types.Common as DTC
-import Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
-import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.SearchTry as DST
-import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Queries.BookingLocation as QBBL
-import qualified Storage.Queries.DriverQuote as QDQuote
-import qualified Storage.Queries.FareParameters as QueriesFP
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Tools.Error

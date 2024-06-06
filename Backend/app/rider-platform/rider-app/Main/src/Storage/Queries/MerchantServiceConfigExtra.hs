@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.MerchantServiceConfigExtra where
 
 import qualified Data.Aeson as A
@@ -11,7 +8,6 @@ import qualified Domain.Types.MerchantServiceConfig as Domain
 import Kernel.Beam.Functions
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import qualified Kernel.External.Call as Call
-import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
@@ -29,8 +25,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantServiceConfig as BeamMSC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.Queries.OrphanInstances.MerchantServiceConfig
-import Tools.Error
+import Storage.Queries.OrphanInstances.MerchantServiceConfig ()
 
 -- Extra code goes here --
 findByMerchantOpCityIdAndService ::

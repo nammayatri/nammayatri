@@ -1,21 +1,15 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.RegistrationTokenExtra where
 
 import Domain.Types.Person
 import Domain.Types.RegistrationToken
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RegistrationToken as BeamRT
-import Storage.Queries.OrphanInstances.RegistrationToken
+import Storage.Queries.OrphanInstances.RegistrationToken ()
 
 -- Extra code goes here --
 
