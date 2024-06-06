@@ -39,7 +39,8 @@ findByDriverIdAndFleetOwnerId driverId fleetOwnerId =
   findOneWithKV
     [ Se.And
         [ Se.Is BeamFDVA.driverId $ Se.Eq driverId.getId,
-          Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId
+          Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId,
+          Se.Is BeamFDVA.isActive $ Se.Eq True
         ]
     ]
 

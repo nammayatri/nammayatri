@@ -273,7 +273,7 @@ verifyFleetJoiningOtp merchantShortId _ fleetOwnerId req = do
   otp <- Redis.get key >>= fromMaybeM (InvalidRequest "OTP not found")
   when (otp /= req.otp) $ throwError (InvalidRequest "Invalid OTP")
   checkAssoc <- B.runInReplica $ QFDV.findByDriverIdAndFleetOwnerId person.id fleetOwnerId
-  whenJust checkAssoc $ \assoc -> when (assoc.isActive) $ throwError (InvalidRequest "Driver already associated with fleet")
+  when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
   assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
   QFDV.create assoc
   pure Success
