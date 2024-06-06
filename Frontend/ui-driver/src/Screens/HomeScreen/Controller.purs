@@ -78,7 +78,7 @@ import Engineering.Helpers.GeoHash (encodeGeohash, geohashNeighbours)
 import Foreign.Generic (class Decode, ForeignError, decode, decodeJSON, encode)
 import Foreign (unsafeToForeign)
 import Helpers.Utils as HU
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams, sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, uploadFile, getCurrentLatLong, uploadMultiPartData)
+import JBridge (animateCamera, enableMyLocation, goBackPrevWebPage, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams, sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, uploadFile, getCurrentLatLong, uploadMultiPartData)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -305,6 +305,8 @@ data Action = NoAction
             | BackPressed
             | ScreenClick
             | BookingOptions
+            | BankDetailsWebView
+            | HideBankDetailsWebView String
             | Notification String
             | ChangeStatus Boolean
             | GoOffline Boolean
@@ -461,6 +463,10 @@ eval (AccountBlockedAC PopUpModal.OnButton1Click) state = do
 
 eval BookingOptions state = exit $ GoToBookingPreferences state  
 
+eval BankDetailsWebView state = continue state {props {showBankDetailsWebView = true}} 
+
+eval (HideBankDetailsWebView val) state = continue state {props {showBankDetailsWebView = false}} 
+
 eval UpdateBanner state = do
   if state.data.bannerData.bannerScrollState == "1" then continue state
   else do
@@ -549,6 +555,11 @@ eval BackPressed state = do
   else if state.data.driverGotoState.goToPopUpType /= ST.NO_POPUP_VIEW then continue state { data { driverGotoState { goToPopUpType = ST.NO_POPUP_VIEW }}} 
   else if state.props.showContactSupportPopUp then continue state {props {showContactSupportPopUp = false}}
   else if state.props.accountBlockedPopup then continue state {props {accountBlockedPopup = false}}
+  else if state.props.showBankDetailsWebView then do
+    continueWithCmd state [do
+      _ <- pure $ goBackPrevWebPage (getNewIDWithTag "bankDetailsWebView")
+      pure NoAction
+    ]
   else if state.props.vehicleNSPopup then continue state { props { vehicleNSPopup = false}}
   else if state.props.specialZoneProps.specialZonePopup then continue state { props { specialZoneProps{specialZonePopup = false} }}
   else if state.props.bgLocationPopup then continue state { props { bgLocationPopup = false}}

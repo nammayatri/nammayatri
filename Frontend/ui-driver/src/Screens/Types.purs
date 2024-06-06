@@ -931,6 +931,7 @@ type HomeScreenData =  {
   noOfLocations :: Int,
   isVehicleSupported :: Boolean,
   linkedVehicleCategory :: String,
+  bankChargesEnabled :: Boolean,
   cityConfig :: CityConfig
 }
 
@@ -1150,6 +1151,7 @@ type HomeScreenProps =  {
   waitTimeStatus :: TimerStatus,
   isMockLocation :: Boolean,
   accountBlockedPopup :: Boolean,
+  showBankDetailsWebView :: Boolean,
   showCoinsPopup :: Boolean,
   isStatsModelExpanded :: Boolean,
   tobeLogged :: Boolean,

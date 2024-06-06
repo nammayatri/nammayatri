@@ -29,6 +29,7 @@ initData :: HomeScreenState
 initData =
   { data:
       { linkedVehicleCategory: ""
+      , bankChargesEnabled: false
       , snappedOrigin: Nothing
       , config: getAppConfig appConfig
       , driverName: ""
@@ -248,6 +249,7 @@ initData =
       , waitTimeStatus: NoStatus
       , isMockLocation: false
       , accountBlockedPopup: false
+      , showBankDetailsWebView: false
       , showCoinsPopup: false
       , isStatsModelExpanded: false
       , tobeLogged: false
