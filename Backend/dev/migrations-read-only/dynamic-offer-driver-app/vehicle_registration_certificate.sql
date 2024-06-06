@@ -60,3 +60,14 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN v
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN vehicle_model_year integer ;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN date_of_registration timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN ventilator boolean ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN oxygen boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN reject_reason text ;

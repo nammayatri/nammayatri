@@ -36,10 +36,13 @@ findRecentByPersonIdAndImageType personId imgtype = do
   let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
       onBoardingRetryTimeInHours' = intToNominalDiffTime onboardingRetryTimeInHours
   now <- getCurrentTime
-  findAllWithKV
+  findAllWithOptionsKV
     [ Se.And
         [Se.Is BeamI.personId $ Se.Eq $ getId personId, Se.Is BeamI.imageType $ Se.Eq imgtype, Se.Is BeamI.createdAt $ Se.GreaterThanOrEq (hoursAgo onBoardingRetryTimeInHours' now)]
     ]
+    (Se.Desc BeamI.createdAt)
+    Nothing
+    Nothing
   where
     hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now
 

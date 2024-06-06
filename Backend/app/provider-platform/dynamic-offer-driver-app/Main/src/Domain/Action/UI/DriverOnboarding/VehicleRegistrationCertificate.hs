@@ -387,6 +387,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             vehicleModelYear = input.vehicleModelYear,
             vehicleDoors = mbVehicleDoors,
             vehicleSeatBelts = mbVehicleSeatBelts,
+            rejectReason = Nothing,
             createdAt = now,
             updatedAt = now
           }
