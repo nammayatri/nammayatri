@@ -348,6 +348,7 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
                     merchantOperatingCityId = Just mOpCityId,
                     policyExpiry = policyExp,
                     policyProvider = provider,
+                    rejectReason = Nothing,
                     ..
                   }
           QVI.create insurance
@@ -404,7 +405,8 @@ approveAndUpdateDL req = do
         dl
           { DDL.licenseNumber = fromMaybe dl.licenseNumber licenseNumber,
             DDL.driverDob = req.driverDateOfBirth <|> dl.driverDob,
-            DDL.licenseExpiry = fromMaybe dl.licenseExpiry req.dateOfExpiry
+            DDL.licenseExpiry = fromMaybe dl.licenseExpiry req.dateOfExpiry,
+            DDL.verificationStatus = VALID
           }
   QDL.updateByPrimaryKey updatedDL
   QImage.updateVerificationStatusByIdAndType VALID imageId Domain.DriverLicense
@@ -437,13 +439,17 @@ handleRejectRequest rejectReq _ merchantOperatingCityId = do
         Domain.ProfilePhoto -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
         Domain.UploadProfile -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
         Domain.VehicleInspectionForm -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
-        Domain.VehicleInsurance -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
         Domain.VehicleFitnessCertificate -> QFC.updateVerificationStatus INVALID imageId --At this point the vehicle fitness cert doesn not even exist in this table
+        Domain.VehicleInsurance -> do
+          QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+          vInsurance <- QVI.findByImageId imageId
+          whenJust vInsurance $ \_ -> do
+            QVI.updateVerificationStatusAndRejectReason INVALID imageRejectReq.reason imageId
         Domain.DriverLicense -> do
-          QDL.updateVerificationStatus INVALID imageId
+          QDL.updateVerificationStatusAndRejectReason INVALID imageRejectReq.reason imageId
           QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
         Domain.VehicleRegistrationCertificate -> do
-          QRC.updateVerificationStatus INVALID imageId
+          QRC.updateVerificationStatusAndRejectReason INVALID imageRejectReq.reason imageId
           QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
         _ -> throwError (InternalError "Unknown Config in reject update document")
       driver <- QDriver.findById image.personId >>= fromMaybeM (PersonNotFound image.personId.getId)

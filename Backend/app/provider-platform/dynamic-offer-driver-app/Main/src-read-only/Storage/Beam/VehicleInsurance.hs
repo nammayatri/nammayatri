@@ -25,6 +25,7 @@ data VehicleInsuranceT f = VehicleInsuranceT
     policyNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     policyProvider :: B.C f Kernel.Prelude.Text,
     rcId :: B.C f Kernel.Prelude.Text,
+    rejectReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     verificationStatus :: B.C f Kernel.Types.Documents.VerificationStatus,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

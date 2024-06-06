@@ -33,3 +33,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_license ADD COLUMN class_of_vehicles t
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_license ADD COLUMN date_of_issue timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_license ADD COLUMN reject_reason text ;

@@ -66,3 +66,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN d
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN ventilator boolean ;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN oxygen boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN reject_reason text ;

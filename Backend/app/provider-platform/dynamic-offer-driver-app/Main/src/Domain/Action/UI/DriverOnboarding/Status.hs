@@ -41,6 +41,7 @@ import Domain.Types.Plan as Plan
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleRegistrationCertificate as RC
 import Environment
+import qualified EulerHS.Prelude as EPrelude
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Types
@@ -73,7 +74,7 @@ import Utils.Common.Cac.KeyNameConstants
 -- PENDING means "pending verification"
 -- FAILED is used when verification is failed
 -- INVALID is the state
---   which the doc switches to when, for example, it's expired.
+--   which the doc switches to when, for example, it's expired or when it is invalidated from dashboard.
 data ResponseStatus = NO_DOC_AVAILABLE | PENDING | VALID | FAILED | INVALID | LIMIT_EXCEED | MANUAL_VERIFICATION_REQUIRED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
@@ -100,14 +101,15 @@ data VehicleDocumentItem = VehicleDocumentItem
     isVerified :: Bool,
     isActive :: Bool,
     vehicleModel :: Maybe Text,
-    documents :: [DocumentStatusItem]
+    documents :: [DocumentStatusItem],
+    dateOfUpload :: UTCTime
   }
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data DocumentStatusItem = DocumentStatusItem
   { documentType :: DVC.DocumentType,
     verificationStatus :: ResponseStatus,
-    verificationMessage :: Maybe Text -- this to be used for showing the message to the driver
+    verificationMessage :: Maybe Text
   }
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -153,15 +155,15 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
 
   driverDocuments <-
     driverDocumentTypes `forM` \docType -> do
-      mbStatus <- getProcessedDriverDocuments docType personId
+      (mbStatus, mbProcessedReason) <- getProcessedDriverDocuments docType personId
       case mbStatus of
         Just status -> do
           message <- documentStatusMessage status Nothing docType language
-          return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
+          return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = (EPrelude.<|>) mbProcessedReason (Just message)}
         Nothing -> do
           (status, mbReason) <- getInProgressDriverDocuments docType personId transporterConfig.onboardingTryLimit
           message <- documentStatusMessage status mbReason docType language
-          return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
+          return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = (EPrelude.<|>) mbReason (Just message)}
 
   processedVehicleDocumentsWithRC <- do
     processedVehicles <- do
@@ -171,17 +173,18 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
         else (associations `forM` (\assoc -> RCQuery.findById assoc.rcId >>= (\rc -> return $ (assoc.isRcActive,) <$> rc))) >>= (return . catMaybes)
     processedVehicles `forM` \(isActive, processedVehicle) -> do
       registrationNo <- decrypt processedVehicle.certificateNumber
+      let dateOfUpload = processedVehicle.createdAt
       documents <-
         vehicleDocumentTypes `forM` \docType -> do
-          mbStatus <- getProcessedVehicleDocuments docType personId processedVehicle
+          (mbStatus, mbProcessedReason) <- getProcessedVehicleDocuments docType personId processedVehicle
           case mbStatus of
             Just status -> do
               message <- documentStatusMessage status Nothing docType language
-              return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
+              return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = (EPrelude.<|>) mbProcessedReason (Just message)}
             Nothing -> do
               (status, mbReason) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit
               message <- documentStatusMessage status mbReason docType language
-              return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
+              return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = (EPrelude.<|>) mbReason (Just message)}
       return $
         VehicleDocumentItem
           { registrationNo,
@@ -190,7 +193,8 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
             isVerified = False,
             isActive,
             vehicleModel = processedVehicle.vehicleModel,
-            documents
+            documents,
+            dateOfUpload
           }
 
   processedVehicleDocumentsWithoutRC <- do
@@ -211,7 +215,8 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
                     isVerified = True,
                     isActive = True,
                     vehicleModel = Just vehicle.model,
-                    documents
+                    documents,
+                    dateOfUpload = vehicle.createdAt
                   }
               ]
       Nothing -> return []
@@ -243,7 +248,8 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
                         isVerified = False,
                         isActive = False,
                         vehicleModel = Nothing,
-                        documents
+                        documents,
+                        dateOfUpload = verificationReq.createdAt
                       }
                   ]
       Nothing -> return []
@@ -347,70 +353,70 @@ checkIfDocumentValid merchantOperatingCityId docType category status = do
         else return True
     Nothing -> return True
 
-getProcessedDriverDocuments :: DVC.DocumentType -> Id SP.Person -> Flow (Maybe ResponseStatus)
+getProcessedDriverDocuments :: DVC.DocumentType -> Id SP.Person -> Flow (Maybe ResponseStatus, Maybe Text)
 getProcessedDriverDocuments docType driverId =
   case docType of
     DVC.DriverLicense -> do
-      mbDL <- DLQuery.findByDriverId driverId
-      return $ mapStatus <$> (mbDL <&> (.verificationStatus))
+      mbDL <- DLQuery.findByDriverId driverId -- add failure reason in dl and rc
+      return (mapStatus <$> (mbDL <&> (.verificationStatus)), mbDL >>= (.rejectReason))
     DVC.AadhaarCard -> do
       mbAadhaarCard <- SAV.findByDriverId driverId
-      return $ boolToStatus <$> (mbAadhaarCard <&> (.isVerified))
-    DVC.Permissions -> return $ Just VALID
+      return (boolToStatus <$> (mbAadhaarCard <&> (.isVerified)), Nothing)
+    DVC.Permissions -> return (Just VALID, Nothing)
     DVC.SocialSecurityNumber -> do
       mbSSN <- QDSSN.findByDriverId driverId
-      return $ mapStatus <$> (mbSSN <&> (.verificationStatus))
+      return (mapStatus <$> (mbSSN <&> (.verificationStatus)), mbSSN >>= (.rejectReason))
     DVC.ProfilePhoto -> checkImageValidity DVC.ProfilePhoto driverId
     DVC.UploadProfile -> checkImageValidity DVC.UploadProfile driverId
     DVC.PanCard -> checkImageValidity DVC.PanCard driverId
     DVC.SubscriptionPlan -> do
       (autoPayStatus, mbPlan) <- DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION driverId -- fix later on basis of vehicle category
-      return $ Just $ boolToStatus $ isJust mbPlan && autoPayStatus == Just DI.ACTIVE
-    _ -> return Nothing
+      return (Just $ boolToStatus $ isJust mbPlan && autoPayStatus == Just DI.ACTIVE, Nothing)
+    _ -> return (Nothing, Nothing)
   where
     boolToStatus :: Bool -> ResponseStatus
     boolToStatus = \case
       True -> VALID
       False -> MANUAL_VERIFICATION_REQUIRED
 
-getProcessedVehicleDocuments :: DVC.DocumentType -> Id SP.Person -> RC.VehicleRegistrationCertificate -> Flow (Maybe ResponseStatus)
+getProcessedVehicleDocuments :: DVC.DocumentType -> Id SP.Person -> RC.VehicleRegistrationCertificate -> Flow (Maybe ResponseStatus, Maybe Text)
 getProcessedVehicleDocuments docType driverId vehicleRC =
   case docType of
-    DVC.VehicleRegistrationCertificate -> return $ Just $ mapStatus vehicleRC.verificationStatus
+    DVC.VehicleRegistrationCertificate -> return (Just $ mapStatus vehicleRC.verificationStatus, vehicleRC.rejectReason)
     DVC.VehiclePermit -> do
       mbDoc <- listToMaybe <$> VPQuery.findByRcIdAndDriverId vehicleRC.id driverId
-      return $ mapStatus <$> (mbDoc <&> (.verificationStatus))
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing)
     DVC.VehicleFitnessCertificate -> do
       mbDoc <- listToMaybe <$> VFCQuery.findByRcIdAndDriverId vehicleRC.id driverId
-      return $ mapStatus <$> (mbDoc <&> (.verificationStatus))
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing)
     DVC.VehicleInsurance -> do
       mbDoc <- listToMaybe <$> VIQuery.findByRcIdAndDriverId vehicleRC.id driverId
-      return $ mapStatus <$> (mbDoc <&> (.verificationStatus))
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), (mbDoc >>= (.rejectReason)))
     DVC.VehiclePUC -> do
       mbDoc <- listToMaybe <$> VPUCQuery.findByRcIdAndDriverId vehicleRC.id driverId
-      return $ mapStatus <$> (mbDoc <&> (.verificationStatus))
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing)
     DVC.VehicleInspectionForm -> checkImageValidity DVC.VehicleInspectionForm driverId
-    _ -> return Nothing
+    _ -> return (Nothing, Nothing)
 
-checkImageValidity :: DVC.DocumentType -> Id SP.Person -> Flow (Maybe ResponseStatus)
+checkImageValidity :: DVC.DocumentType -> Id SP.Person -> Flow (Maybe ResponseStatus, Maybe Text)
 checkImageValidity docType driverId = do
   validImages <- IQuery.findImageByPersonIdAndImageTypeAndVerificationStatus driverId docType [Documents.VALID, Documents.MANUAL_VERIFICATION_REQUIRED]
   checkValidity validImages
   where
     checkValidity validImages
-      | any (\img -> img.verificationStatus == (Just Documents.VALID)) validImages = return (Just VALID)
-      | any (\img -> img.verificationStatus == (Just Documents.MANUAL_VERIFICATION_REQUIRED)) validImages = return (Just MANUAL_VERIFICATION_REQUIRED)
-      | otherwise = return Nothing
+      | any (\img -> img.verificationStatus == (Just Documents.VALID)) validImages = return (Just VALID, Nothing)
+      | any (\img -> img.verificationStatus == (Just Documents.MANUAL_VERIFICATION_REQUIRED)) validImages = return (Just MANUAL_VERIFICATION_REQUIRED, Nothing)
+      | otherwise = return (Nothing, Nothing)
 
 getInProgressDriverDocuments :: DVC.DocumentType -> Id SP.Person -> Int -> Flow (ResponseStatus, Maybe Text)
 getInProgressDriverDocuments docType driverId onboardingTryLimit =
   case docType of
     DVC.DriverLicense -> checkIfUnderProgress DVC.DriverLicense driverId onboardingTryLimit
-    DVC.AadhaarCard -> checkIfImageUploaded DVC.AadhaarCard driverId
-    DVC.PanCard -> checkIfImageUploaded DVC.PanCard driverId
+    DVC.AadhaarCard -> checkIfImageUploadedOrInvalidated DVC.AadhaarCard driverId
+    DVC.PanCard -> checkIfImageUploadedOrInvalidated DVC.PanCard driverId
     DVC.Permissions -> return (VALID, Nothing)
-    DVC.ProfilePhoto -> checkIfImageUploaded DVC.ProfilePhoto driverId
-    DVC.UploadProfile -> checkIfImageUploaded DVC.UploadProfile driverId
+    DVC.ProfilePhoto -> checkIfImageUploadedOrInvalidated DVC.ProfilePhoto driverId
+    DVC.UploadProfile -> checkIfImageUploadedOrInvalidated DVC.UploadProfile driverId
     _ -> return (NO_DOC_AVAILABLE, Nothing)
 
 getInProgressVehicleDocuments :: DVC.DocumentType -> Id SP.Person -> Int -> Flow (ResponseStatus, Maybe Text)
@@ -418,19 +424,23 @@ getInProgressVehicleDocuments docType driverId onboardingTryLimit =
   case docType of
     DVC.VehicleRegistrationCertificate -> checkIfUnderProgress DVC.VehicleRegistrationCertificate driverId onboardingTryLimit
     DVC.SubscriptionPlan -> return (NO_DOC_AVAILABLE, Nothing)
-    DVC.VehiclePermit -> checkIfImageUploaded DVC.VehiclePermit driverId
-    DVC.VehicleFitnessCertificate -> checkIfImageUploaded DVC.VehicleFitnessCertificate driverId
-    DVC.VehicleInsurance -> checkIfImageUploaded DVC.VehicleInsurance driverId
-    DVC.VehiclePUC -> checkIfImageUploaded DVC.VehiclePUC driverId
-    DVC.VehicleInspectionForm -> checkIfImageUploaded DVC.VehicleInspectionForm driverId
+    DVC.VehiclePermit -> checkIfImageUploadedOrInvalidated DVC.VehiclePermit driverId
+    DVC.VehicleFitnessCertificate -> checkIfImageUploadedOrInvalidated DVC.VehicleFitnessCertificate driverId
+    DVC.VehicleInsurance -> checkIfImageUploadedOrInvalidated DVC.VehicleInsurance driverId
+    DVC.VehiclePUC -> checkIfImageUploadedOrInvalidated DVC.VehiclePUC driverId
+    DVC.VehicleInspectionForm -> checkIfImageUploadedOrInvalidated DVC.VehicleInspectionForm driverId
     _ -> return (NO_DOC_AVAILABLE, Nothing)
 
-checkIfImageUploaded :: DVC.DocumentType -> Id SP.Person -> Flow (ResponseStatus, Maybe Text)
-checkIfImageUploaded docType driverId = do
+checkIfImageUploadedOrInvalidated :: DVC.DocumentType -> Id SP.Person -> Flow (ResponseStatus, Maybe Text)
+checkIfImageUploadedOrInvalidated docType driverId = do
   images <- IQuery.findRecentByPersonIdAndImageType driverId docType
-  if null images
-    then return (NO_DOC_AVAILABLE, Nothing)
-    else return (MANUAL_VERIFICATION_REQUIRED, Nothing)
+  case images of
+    [] -> return (NO_DOC_AVAILABLE, Nothing)
+    _ -> do
+      let latestImage = head images
+      if latestImage.verificationStatus == Just Documents.INVALID
+        then return (INVALID, show <$> latestImage.failureReason)
+        else return (MANUAL_VERIFICATION_REQUIRED, Nothing)
 
 checkIfUnderProgress :: DVC.DocumentType -> Id SP.Person -> Int -> Flow (ResponseStatus, Maybe Text)
 checkIfUnderProgress docType driverId onboardingTryLimit = do
@@ -442,9 +452,16 @@ checkIfUnderProgress docType driverId onboardingTryLimit = do
         else return (FAILED, verificationReq.idfyResponse)
     Nothing -> do
       images <- IQuery.findRecentByPersonIdAndImageType driverId docType
-      if length images > onboardingTryLimit
-        then return (LIMIT_EXCEED, Nothing)
-        else return (NO_DOC_AVAILABLE, Nothing)
+      handlerImages images
+  where
+    handlerImages images
+      | null images = return (NO_DOC_AVAILABLE, Nothing)
+      | length images > onboardingTryLimit = return (LIMIT_EXCEED, Nothing)
+      | otherwise = do
+        let latestImage = head images
+        if latestImage.verificationStatus == Just Documents.INVALID
+          then return (INVALID, show <$> latestImage.failureReason)
+          else return (MANUAL_VERIFICATION_REQUIRED, Nothing)
 
 documentStatusMessage :: ResponseStatus -> Maybe Text -> DVC.DocumentType -> Language -> Flow Text
 documentStatusMessage status mbReason docType language = do

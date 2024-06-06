@@ -311,6 +311,7 @@ createDL merchantId configs driverId covDetails name dob id imageId1 imageId2 na
       verificationStatus,
       failedRules = [],
       dateOfIssue,
+      rejectReason = Nothing,
       consent = True,
       createdAt = now,
       updatedAt = now,

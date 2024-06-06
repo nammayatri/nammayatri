@@ -205,3 +205,10 @@ countAllActiveRCForFleet fleetOwnerId (Id merchantId') = do
                 driverRcAssociation <- B.join_ (BeamCommon.driverRCAssociation BeamCommon.atlasDB) (\driverRcAssociation -> BeamVRC.id rc B.==. BeamDRA.rcId driverRcAssociation)
                 pure (rc, driverRcAssociation)
   pure $ either (const 0) (\r -> if null r then 0 else head r) res
+
+updateVerificationStatusAndRejectReason ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Documents.VerificationStatus -> Text -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
+updateVerificationStatusAndRejectReason verificationStatus rejectReason (Kernel.Types.Id.Id imageId) = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamVRC.verificationStatus verificationStatus, Se.Set BeamVRC.rejectReason (Just rejectReason), Se.Set BeamVRC.updatedAt _now] [Se.Is BeamVRC.documentImageId $ Se.Eq imageId]

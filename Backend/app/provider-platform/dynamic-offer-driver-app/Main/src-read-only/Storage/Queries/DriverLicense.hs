@@ -61,6 +61,7 @@ updateByPrimaryKey (Domain.Types.DriverLicense.DriverLicense {..}) = do
       Se.Set Beam.licenseExpiry licenseExpiry,
       Se.Set Beam.licenseNumberEncrypted (licenseNumber & unEncrypted . encrypted),
       Se.Set Beam.licenseNumberHash (licenseNumber & hash),
+      Se.Set Beam.rejectReason rejectReason,
       Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.createdAt createdAt,

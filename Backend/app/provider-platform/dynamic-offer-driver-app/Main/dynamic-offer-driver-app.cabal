@@ -516,6 +516,7 @@ library
       Storage.Queries.Vehicle.Internal
       Storage.Queries.VehicleDetailsExtra
       Storage.Queries.VehicleExtra
+      Storage.Queries.VehicleInsuranceExtra
       Storage.Queries.VehicleRegistrationCertificateExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
@@ -887,6 +888,7 @@ library
       Storage.Queries.OrphanInstances.TransporterConfig
       Storage.Queries.OrphanInstances.Vehicle
       Storage.Queries.OrphanInstances.VehicleDetails
+      Storage.Queries.OrphanInstances.VehicleInsurance
       Storage.Queries.OrphanInstances.VehicleRegistrationCertificate
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.Overlay

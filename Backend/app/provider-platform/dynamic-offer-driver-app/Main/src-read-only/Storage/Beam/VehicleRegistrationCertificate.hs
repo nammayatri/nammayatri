@@ -30,6 +30,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     oxygen :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     permitExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     pucExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    rejectReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     reviewRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     reviewedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     userPassedVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Category),
