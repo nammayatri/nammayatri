@@ -33,4 +33,6 @@ type TripDetails a
   , backgroundColor :: String
   , enablePaddingBottom :: Boolean
   , fareProductType :: FareProductType
+  , enableEditDestination :: Boolean
+  , editingDestinationLoc :: a
     }

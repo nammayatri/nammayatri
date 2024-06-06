@@ -101,6 +101,8 @@ initData = {
       }
     , rideDistance : "--"
     , rideDuration : "--"
+    , newEstimatedDistance : Nothing
+    , newEstimatedFare : Nothing
     , showPreferences : false
     , messages : []
     , messagesSize : "-1"
@@ -183,6 +185,8 @@ initData = {
     , isHomescreenExpanded : false
     , canScheduleRide : false
     , isSearchLocation : NoView
+    , bookingUpdateRequestId : Nothing
+    , showConfirmEditDestPopUp : false
     , currentStage : HomeScreen
     , stageBeforeChatScreen : RideAccepted
     , showCallPopUp : false

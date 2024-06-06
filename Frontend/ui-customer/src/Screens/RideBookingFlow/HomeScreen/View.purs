@@ -15,16 +15,40 @@
 
 module Screens.HomeScreen.View where
 
+import Components.MessagingView.Common.Types
+import Components.MessagingView.Common.View
+import ConfigProvider
+import Constants.Configs
+import Data.FoldableWithIndex
+import Engineering.Helpers.BackTrack
+import Locale.Utils
+import Mobility.Prelude
+import Mobility.Prelude
+import PrestoDOM.Core
+import PrestoDOM.List
+import Screens.RideBookingFlow.HomeScreen.Config
+import Services.API
+import SuggestionUtils
+import Timers
+import Types.App
+
 import Accessor (_lat, _lon, _selectedQuotes, _fareProductType)
-import Animation (fadeInWithDelay, fadeIn, fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha , translateInXAnim, translateOutXAnim, translateInXForwardAnim, translateOutXBackwardAnimY, translateInXSidebarAnim, screenAnimation, fadeInWithDuration, fadeOutWithDuration, scaleYAnimWithDelay, shimmerAnimation)
+import Animation (fadeInWithDelay, fadeIn, fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, translateInXAnim, translateOutXAnim, translateInXForwardAnim, translateOutXBackwardAnimY, translateInXSidebarAnim, screenAnimation, fadeInWithDuration, fadeOutWithDuration, scaleYAnimWithDelay, shimmerAnimation)
+import Animation as Anim
+import Animation.Config (AnimConfig, animConfig)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig, messageInAnimConfig, messageOutAnimConfig)
+import CarouselHolder as CarouselHolder
+import Common.Resources.Constants (zoomLevel)
 import Common.Types.App (LazyCheck(..), YoutubeData, CarouselData)
+import Common.Types.App as CT
+import Common.Types.App as CTP
 import Components.Banner.Controller as BannerConfig
+import Components.Banner.View as Banner
+import Components.Banner.View as Banner
+import Components.BannerCarousel as BannerCarousel
 import Components.ChooseVehicle as ChooseVehicle
-import Components.Banner.View as Banner
-import Components.Banner.View as Banner
-import Components.MessagingView as MessagingView
-import Components.ChooseYourRide as ChooseYourRide 
+import Components.ChooseYourRide as ChooseYourRide
+import Components.CommonComponentConfig as CommonComponentConfig
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
 import Components.ErrorModal as ErrorModal
@@ -33,121 +57,102 @@ import Components.LocationListItem.View as LocationListItem
 import Components.LocationTagBar as LocationTagBar
 import Components.LocationTagBarV2 as LocationTagBarV2
 import Components.MenuButton as MenuButton
+import Components.MessagingView as MessagingView
 import Components.PopUpModal as PopUpModal
-import Components.RideCompletedCard as RideCompletedCard
+import Components.PopupWithCheckbox.View as PopupWithCheckbox
 import Components.PricingTutorialModel as PricingTutorialModel
 import Components.PrimaryButton as PrimaryButton
-import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Components.QuoteListModel.View as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
+import Components.Referral as ReferralComponent
 import Components.RequestInfoCard as RequestInfoCard
+import Components.RideCompletedCard as RideCompletedCard
 import Components.SaveFavouriteCard as SaveFavouriteCard
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUp
+import Components.ServiceTierCard.View as ServiceTierCard
 import Components.SettingSideBar as SettingSideBar
-import Components.Referral as ReferralComponent
+import Components.SourceToDestination as SourceToDestination
+import Constants (defaultDensity)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (any, length, mapWithIndex,take, (!!),head, filter, cons, null, tail, drop)
+import Data.Array (any, length, mapWithIndex, take, (!!), head, filter, cons, null, tail, drop)
 import Data.Array as Arr
-import Data.Function.Uncurried (runFn3)
-import DecodeUtil (getAnyFromWindow)
 import Data.Either (Either(..))
-import Data.Int (ceil, floor, fromNumber, fromString, toNumber, pow)
 import Data.Function.Uncurried (runFn1)
+import Data.Function.Uncurried (runFn1, runFn2)
+import Data.Function.Uncurried (runFn3)
+import Data.Int (ceil, floor, fromNumber, fromString, toNumber, pow)
+import Data.Int as INT
 import Data.Lens ((^.))
+import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe, isNothing)
 import Data.Number as NUM
+import Data.String as DS
 import Data.Time.Duration (Milliseconds(..))
+import Data.Tuple (Tuple(..))
 import Debug (spy)
+import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn9)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap, getCurrentUTC, convertUTCtoISC)
-import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion, emChatSuggestion)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, compareUTCDate, getCurrentUTC)
-import Engineering.Helpers.Utils (showAndHideLoader)
-import Engineering.Helpers.LogEvent (logEvent)
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate, getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, compareUTCDate, getCurrentUTC)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate, getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap, getCurrentUTC, convertUTCtoISC)
 import Engineering.Helpers.Events as Events
+import Engineering.Helpers.Events as Events
+import Engineering.Helpers.LogEvent (logEvent)
+import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion, emChatSuggestion)
+import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Halogen.VDom.DOM.Prop (Prop)
+import Helpers.API as HelpersAPI
+import Helpers.Pooling (delay)
+import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getConfirmLocationCategory)
+import Helpers.Utils (decodeBookingTimeList)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage, getRouteMarkers, TrackingType(..))
-import JBridge (showMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, differenceBetweenTwoUTCInMinutes, differenceBetweenTwoUTC)
+import JBridge (showMarker, animateCamera, reallocateMapFragment, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, differenceBetweenTwoUTCInMinutes, differenceBetweenTwoUTC)
+import JBridge as JB
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
+import LocalStorage.Cache (getValueFromCache)
 import Log (printLog, logStatus)
+import MerchantConfig.Types (MarginConfig, ShadowConfig)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||), (<$>), identity, (>=))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, modifyState, getState)
-import Helpers.Pooling (delay)
-import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), scrollBarY,adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, scaleType, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView, onAnimationEnd, clipChildren, enableShift,horizontalScrollView, shadow,onStateChanged,scrollBarX, clipToPadding, onSlide, rotation, rippleColor, shimmerFrameLayout, imageUrl)
+import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), scrollBarY, adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, scaleType, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView, onAnimationEnd, clipChildren, enableShift, horizontalScrollView, shadow, onStateChanged, scrollBarX, clipToPadding, onSlide, rotation, rippleColor, shimmerFrameLayout, imageUrl)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
+import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Resources.Localizable.EN (getEN)
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getPeekHeight, checkRecentRideVariant, findingQuotesSearchExpired)
-import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs)
+import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations, getActiveBooking, getDriverInfo, getFormattedContacts, getFareProductType)
-import Screens.RideBookingFlow.HomeScreen.Config
-import Services.API
+import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.ContactsList (contactCardView)
+import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs)
+import Screens.Types (FareProductType(..)) as FPT
+import Screens.Types (Followers(..), CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..), City(..), BottomNavBarIcon(..), NewContacts, ReferralStatus(..), VehicleViewType(..))
+import Screens.Types as ST
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), RideBookingListRes(..))
-import Screens.Types (Followers(..), CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..),City(..), BottomNavBarIcon(..), NewContacts, ReferralStatus(..), VehicleViewType(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
+import Services.FlowCache as FlowCache
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Types.App (FlowBT, GlobalState(..), defaultGlobalState)
-import Halogen.VDom.DOM.Prop (Prop)
-import Data.String as DS
-import Data.Function.Uncurried (runFn1, runFn2)
-import Components.CommonComponentConfig as CommonComponentConfig
-import Constants.Configs 
-import Common.Resources.Constants (zoomLevel)
-import Constants (defaultDensity)
-import Animation as Anim
-import Animation.Config (AnimConfig, animConfig)
-import Components.SourceToDestination as SourceToDestination
-import Data.Map as Map
-import SuggestionUtils
-import MerchantConfig.Types (MarginConfig, ShadowConfig)
-import ConfigProvider
-import Mobility.Prelude
-import Timers
-import PrestoDOM.Core
-import Locale.Utils
-import CarouselHolder as CarouselHolder
-import PrestoDOM.List
-import Components.BannerCarousel as BannerCarousel
-import Components.MessagingView.Common.Types
-import Components.MessagingView.Common.View
-import Data.FoldableWithIndex
-import Engineering.Helpers.BackTrack (liftFlowBT)
-import LocalStorage.Cache (getValueFromCache)
-import Components.PopupWithCheckbox.View as PopupWithCheckbox
-import Services.FlowCache as FlowCache
-import Engineering.Helpers.BackTrack
-import Engineering.Helpers.Events as Events
-import Types.App
-import Mobility.Prelude
-import Screens.Types as ST
-import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getConfirmLocationCategory)
-import Components.ServiceTierCard.View as ServiceTierCard
-import Common.Types.App as CTP
-import JBridge as JB
-import Common.Types.App as CT
-import Effect.Unsafe (unsafePerformEffect)
-import Screens.Types (FareProductType(..)) as FPT
-import Helpers.Utils (decodeBookingTimeList)
-import Resources.Localizable.EN (getEN)
-import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -175,6 +180,8 @@ screen initialState =
             case initialState.props.currentStage of
               SearchLocationModel -> case initialState.props.isSearchLocation of
                 LocateOnMap -> do
+                  _ <- reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
+                  _ <- pure $ spy "Calling storeCallBackLocateOnMap" "ABCDD"
                   _ <- storeCallBackLocateOnMap push UpdateLocation
                   pure unit
                 _ -> do
@@ -184,6 +191,13 @@ screen initialState =
                       pure unit
                     Nothing -> pure unit
                   pure unit
+              EditingDestinationLoc -> case initialState.props.isSearchLocation of
+                LocateOnMap -> do
+                  _ <- pure $ spy "Calling storeCallBackLocateOnMap" "ABCDD"
+                  _ <- reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
+                  _ <- storeCallBackLocateOnMap push UpdateLocation
+                  pure unit
+                _ -> pure unit
               FindingEstimate -> do
                 logStatus "find_estimate" ("searchId : " <> initialState.props.searchId)
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
@@ -319,6 +333,13 @@ screen initialState =
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 void $ storeCallBackLocateOnMap push UpdatePickupLocation
                 void $ push $ GoToConfirmingLocationStage
+              ConfirmingEditDestinationLoc -> do
+                when ((getValueToLocalStore FINDING_EDIT_LOC_RESULTS) /= "true") $ do
+                  void $ pure $ setValueToLocalStore FINDING_EDIT_LOC_RESULTS "true"
+                  void $ pure $ setValueToLocalStore LOCAL_STAGE (show ConfirmingEditDestinationLoc)
+                  void $ pure $ setValueToLocalStore EDIT_DEST_POLLING_ID (getNewTrackingId unit)
+                  let pollingCount = if any ( _ == getValueToLocalStore EDIT_DEST_POLLING_COUNT) ["_failed", "(null)"] then 5 else INT.round (fromMaybe 5.0 (NUM.fromString (getValueToLocalStore EDIT_DEST_POLLING_COUNT)))
+                  void $ launchAff $ flowRunner defaultGlobalState $ getEditLocResults (getValueToLocalStore EDIT_DEST_POLLING_ID) GetEditLocResult pollingCount (fromMaybe 1000.0 (NUM.fromString (getValueToLocalStore EDIT_DEST_POLLING_INTERVAL))) push initialState
               TryAgain -> do
                 logStatus "find_estimate" ("searchId : " <> initialState.props.searchId)
                 estimatesPolling <- runEffectFn1 getValueFromIdMap "EstimatePolling"
@@ -369,6 +390,7 @@ view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effec
 view push state =
   let 
     showLabel = not $ DS.null state.props.defaultPickUpPoint
+    isEditDestination = spy "isEditDestination -> " $ any (_ == state.props.currentStage) [ConfirmEditDestinationLoc, ConfirmingEditDestinationLoc, RevisedEstimate]
     extraPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize (if os == "IOS" then 50 else 112) else 0
   in
   frameLayout
@@ -420,7 +442,8 @@ view push state =
                   , background Color.transparent
                   ][ 
                     if isHomeScreenView state then homeScreenViewV2 push state else emptyTextView state
-                  , if isHomeScreenView state then emptyTextView state else mapView push state "CustomerHomeScreen"
+                  , if isEditDestination then emptyTextView state else mapView' push state $  "CustomerHomeScreen"
+                  , if isEditDestination then mapView' push state "CustomerHomeScreenEditDest" else emptyTextView state
                     ]
                 , if not state.data.config.feature.enableSpecialPickup then
                     linearLayout
@@ -508,9 +531,12 @@ view push state =
             , if state.props.currentStage /= RideRating && state.props.isMockLocation && (getMerchant FunctionCall == NAMMAYATRI) && state.props.currentStage == HomeScreen then (sourceUnserviceableView push state) else emptyTextView state
             , if state.data.config.feature.enableZooTicketBookingFlow then bottomNavBarView push state else emptyTextView state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
-            , if (state.props.currentStage == SearchLocationModel || state.props.currentStage == FavouriteLocationModel) then searchLocationView push state else emptyTextView state
+            , if (state.props.currentStage == SearchLocationModel || state.props.currentStage == FavouriteLocationModel || state.props.currentStage == FavouriteLocationModelEditDest ) then searchLocationView push state else emptyTextView state
             , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList, TryAgain, ConfirmingQuotes ] || state.data.iopState.providerSelectionStage) then (quoteListModelView push state) else emptyTextView state
+            , if (state.props.currentStage == EditingDestinationLoc || state.props.currentStage == ConfirmEditDestinationLoc || state.props.currentStage == ConfirmingEditDestinationLoc || state.props.currentStage == RevisedEstimate) then searchLocationView push state else emptyTextView state
+            , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList, TryAgain ] || state.data.iopState.providerSelectionStage) then (quoteListModelView push state) else emptyTextView state
             , if (state.props.isCancelRide) then (cancelRidePopUpView push state) else emptyTextView state
+            , if (state.props.showConfirmEditDestPopUp) then confirmEditDestPopUp push state else emptyTextView state
             , if (state.props.isPopUp /= NoPopUp) then (logOutPopUpView push state) else emptyTextView state
             , if (state.props.isLocationTracking) then (locationTrackingPopUp push state) else emptyTextView state
             , if (state.props.isEstimateChanged) then (estimateChangedPopUp push state) else emptyTextView state
@@ -687,6 +713,14 @@ cancelSearchPopUp push state =
   , width MATCH_PARENT
   , accessibility DISABLE
   ][PopUpModal.view (push <<< CancelSearchAction) (cancelAppConfig state)]
+
+confirmEditDestPopUp :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+confirmEditDestPopUp push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , accessibility DISABLE
+  ][PopUpModal.view (push <<< RequestEditAction) (confirmRequestEditConfig state)]
 
 messageWidgetView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 messageWidgetView push state = 
@@ -912,9 +946,10 @@ searchLocationView push state =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  , background if state.props.currentStage == SearchLocationModel && state.props.isSearchLocation == LocateOnMap then Color.transparent else Color.grey800
+  , background if ((state.props.currentStage == SearchLocationModel || state.props.currentStage == EditingDestinationLoc)  && state.props.isSearchLocation == LocateOnMap) || (state.props.currentStage == ConfirmEditDestinationLoc || state.props.currentStage == ConfirmingEditDestinationLoc || state.props.currentStage == RevisedEstimate) then Color.transparent else Color.grey800
   ] [ if state.props.currentStage == SearchLocationModel then (searchLocationModelView push state) else emptyTextView state
-    , if state.props.currentStage == FavouriteLocationModel then (favouriteLocationModel push state) else emptyTextView state
+    , if state.props.currentStage == FavouriteLocationModel || state.props.currentStage == FavouriteLocationModelEditDest then (favouriteLocationModel push state) else emptyTextView state
+    , if (state.props.currentStage == EditingDestinationLoc || state.props.currentStage == ConfirmEditDestinationLoc || state.props.currentStage == ConfirmingEditDestinationLoc || state.props.currentStage == RevisedEstimate) then (editingDestinationLocView push state) else emptyTextView state
 ]
 
 shareAppPopUp :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1455,7 +1490,7 @@ rideRequestFlowView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadii $ Corners 24.0 true true false false
-    , visibility $ boolToVisibility $ isStageInList state.props.currentStage [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain, RideRating, ReAllocated, LoadMap] 
+    , visibility $ boolToVisibility $ isStageInList state.props.currentStage [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingEditDestinationLoc, ConfirmingRide, FindingQuotes, TryAgain, RideRating, ReAllocated, LoadMap, RevisedEstimate] 
     , alignParentBottom "true,-1"
     ]
     [ -- TODO Add Animations
@@ -1471,7 +1506,7 @@ rideRequestFlowView push state =
         , accessibility DISABLE
         ]
         [ PrestoAnim.animationSet [fadeIn true] $ getViewBasedOnStage push state
-        , if isStageInList state.props.currentStage [ FindingEstimate, ConfirmingRide, TryAgain, FindingQuotes, ReAllocated, LoadMap] then
+        , if isStageInList state.props.currentStage [ FindingEstimate, ConfirmingRide, TryAgain, FindingQuotes, ConfirmingEditDestinationLoc, ReAllocated, LoadMap] then
             (loaderView push state)
           else
             emptyTextView state
@@ -1485,6 +1520,7 @@ rideRequestFlowView push state =
             then estimatedFareView push state
           else
             ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
+        else if state.props.currentStage == RevisedEstimate then revisedEstimatedFareView push state
         else if state.props.currentStage == ConfirmingLocation then
           confirmPickUpLocationView push state
         else
@@ -1671,6 +1707,92 @@ estimatedFareView push state =
                 , color Color.black700
                 ] <> FontStyle.body1 LanguageStyle
             ]
+      ]
+  ]
+
+
+revisedEstimatedFareView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+revisedEstimatedFareView push state =
+  let tagConfig = specialZoneTagConfig state.props.zoneType.priorityTag
+      showTag = any (_ == state.props.zoneType.priorityTag) [SPECIAL_PICKUP, METRO]
+  in
+  linearLayout
+  [ orientation VERTICAL
+  , height WRAP_CONTENT
+  , width MATCH_PARENT
+  , background tagConfig.backgroundColor
+  , clickable true
+  , visibility if (state.props.currentStage == RevisedEstimate) then VISIBLE else GONE
+  , stroke ("1," <> Color.grey900)
+  , gravity CENTER
+  , cornerRadii $ Corners 24.0 true true false false
+  ][ linearLayout
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
+      , width MATCH_PARENT
+      , background Color.white900
+      , clickable true
+      , accessibility if state.props.showRateCard then DISABLE_DESCENDANT else DISABLE
+      , accessibilityHint $ "Fare Updated to " <> (show (fromMaybe 0 state.data.newEstimatedFare)) <> "Previously fare was " <> (show state.data.driverInfoCardState.price) <> "New Distance is " <> (show ((fromMaybe 0.0 state.data.newEstimatedDistance)/1000.0)) <> "km ( was " <> state.data.driverInfoCardState.estimatedDistance <> "km " <> ")"
+      , padding (Padding 16 7 16 24)
+      , stroke ("1," <> Color.grey900)
+      , gravity CENTER
+      , cornerRadii $ Corners 24.0 true true false false
+      ][
+          linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , gravity CENTER_HORIZONTAL
+          ]
+          [ textView $
+              [ text $ getString FARE_UPDATED
+              , color Color.black800
+              , gravity CENTER_HORIZONTAL
+              , height WRAP_CONTENT
+              , width MATCH_PARENT
+              ] 
+              <> FontStyle.h1 TypoGraphy
+          ]
+        , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation VERTICAL
+          , gravity CENTER
+          , cornerRadius 8.0
+          , stroke $ "1," <> Color.grey900
+          , margin $ MarginTop 16
+          ][
+            textView $
+            [
+              text $ (getCurrency appConfig) <> (show (fromMaybe 0 state.data.newEstimatedFare))
+              , color Color.black900
+              , gravity CENTER_HORIZONTAL
+              , height WRAP_CONTENT
+              , margin $ MarginTop 8
+              , visibility $ boolToVisibility $ isJust state.data.newEstimatedFare
+              , width MATCH_PARENT
+            ]<> FontStyle.heading TypoGraphy
+            , textView $
+            [
+              text $ (show (fromMaybe 0.0 state.data.newEstimatedDistance)) <> "km ( was " <> state.data.driverInfoCardState.estimatedDistance <> "km " <> ")"
+              , color Color.black700
+              , gravity CENTER_HORIZONTAL
+              , margin $ MarginTop 8
+              , height WRAP_CONTENT
+              , width MATCH_PARENT
+            ]<> FontStyle.paragraphText TypoGraphy
+            , textView $
+            [
+              text $ getString PREVIOUS_FARE <> " :" <> (getCurrency appConfig) <> (show state.data.driverInfoCardState.price)
+              , color Color.black700
+              , gravity CENTER_HORIZONTAL
+              , height WRAP_CONTENT
+              , margin $ Margin 0 8 0 12
+              , width MATCH_PARENT
+            ]<> FontStyle.paragraphText TypoGraphy
+          ]
+        , requestRideButtonView push state
       ]
   ]
 
@@ -2188,8 +2310,9 @@ loaderView push state =
                           FindingEstimate -> getString GETTING_ESTIMATES_FOR_YOU
                           TryAgain -> getString LET_TRY_THAT_AGAIN
                           ReAllocated -> getString LOOKING_FOR_ANOTHER_RIDE
+                          ConfirmingEditDestinationLoc -> getString GETTING_REVISED_ESTIMATE
                           _ -> getString GETTING_ESTIMATES_FOR_YOU
-      loaderVisibility = (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, TryAgain, ReAllocated]) || (state.props.currentStage == LoadMap && state.props.isRepeatRide)
+      loaderVisibility = (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, TryAgain, ReAllocated, ConfirmingEditDestinationLoc]) || (state.props.currentStage == LoadMap && state.props.isRepeatRide)
   in  linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT
@@ -2287,6 +2410,16 @@ searchLocationModelView push state =
     , width MATCH_PARENT
     , background if state.props.isRideServiceable then Color.transparent else Color.white900
     ][ SearchLocationModel.view (push <<< SearchLocationModelActionController) $ searchLocationModelViewState state]
+
+editingDestinationLocView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+editingDestinationLocView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , background if state.props.isRideServiceable then Color.transparent else Color.white900
+    ]
+    [ SearchLocationModel.view (push <<< EditDestSearchLocationModelActionController) $ editDestSearchLocationModelViewState state]
+
 
 ------------------------ quoteListModelView ---------------------------
 quoteListModelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -2603,6 +2736,31 @@ getQuotesPolling pollingId action retryAction count duration push state = do
         let response = SelectListRes { selectedQuotes: Nothing, bookingId : Nothing }
         _ <- pure $ updateLocalStage QuoteList
         doAff do liftEffect $ push $ action response
+
+getEditLocResults :: forall action. String -> (GetEditLocResultResp -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
+getEditLocResults pollingId action count duration push state = do
+  when (pollingId == (getValueToLocalStore EDIT_DEST_POLLING_ID) && (isLocalStageOn ConfirmingEditDestinationLoc)) $ do
+    internetCondition <- liftFlow $ isInternetAvailable unit
+    when (internetCondition && state.props.bookingUpdateRequestId /= Nothing)  $ do
+      let usableCount = count
+      if (spy "USABLECOUNT :- " usableCount > 0) then do
+        resp <- HelpersAPI.callApi $ Remote.makeEditLocationResultRequest (fromMaybe "" state.props.bookingUpdateRequestId)
+        case resp of
+          Right response -> do
+            let (GetEditLocResultResp resp') = response
+            let (BookingUpdateRequestDetails bookingUpdateRequestDetails) = resp'.bookingUpdateRequestDetails
+            _ <- pure $ printLog "Edit loc result api Results ABCD In Right" response
+            if (bookingUpdateRequestDetails.estimatedDistance /= Nothing && bookingUpdateRequestDetails.estimatedFare /= Nothing) then
+              doAff do liftEffect $ push $ action response
+            else do
+              void $ delay $ Milliseconds duration
+              getEditLocResults pollingId action (usableCount - 1) duration push state
+          Left err -> do
+            _ <- pure $ printLog "api error ABCD In left" err
+            void $ delay $ Milliseconds duration
+            getEditLocResults pollingId action (usableCount - 1) duration push state
+      else do
+        void $ pure $ setValueToLocalStore FINDING_EDIT_LOC_RESULTS "false"
 
 -- Polling for IOP estimates
 getEstimatePolling :: forall action. String -> (GetQuotesRes -> Int -> action) -> action  -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
@@ -3083,10 +3241,9 @@ homeScreenViewV2 push state = let
                                       Just followers -> if (showFollowerBar followers state) && state.props.currentStage == HomeScreen 
                                                           then [followView push followers] 
                                                           else [])
-                            <> (if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else [])
-                            <> (if isHomeScreenView state then contentView state else [])
-                            -- <> if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else []
-                            <> [ shimmerView state
+                            <> [ if isHomeScreenView state then mapView' push state "CustomerHomeScreenMap" else emptyLayout state
+                              , if isHomeScreenView state then contentView state else emptyLayout state
+                              , shimmerView state
                               , if state.data.config.feature.enableAdditionalServices || cityConfig.enableRentals then additionalServicesView push state else linearLayout[visibility GONE][]
                               , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][]
                               , suggestionsView push state
@@ -3100,14 +3257,14 @@ homeScreenViewV2 push state = let
           ]
         ]  
   where 
-    contentView state = if state.props.showShimmer then [
+    contentView state = if state.props.showShimmer then 
       PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
         linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT 
         , onAnimationEnd push (const MapReadyAction)
-        ][tagShimmerView state]] 
-      else if state.data.config.banners.homeScreenCabLaunch && Arr.elem state.props.city [ST.Bangalore, ST.Tumakuru, ST.Mysore] then ([
+        ][tagShimmerView state]
+      else if state.data.config.banners.homeScreenCabLaunch && Arr.elem state.props.city [ST.Bangalore, ST.Tumakuru, ST.Mysore] then (
         imageView
           [ imageWithFallback "ny_ic_cab_banner,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_cab_banner.png"
           , height $ V 135
@@ -3117,10 +3274,10 @@ homeScreenViewV2 push state = let
           , onClick push $ const WhereToClick
           , accessibility DISABLE
           ]
-      ])else
+      )else
         (maybe -- TEMP disabling banners in Bangalore
-          ([]) 
-          (\item -> [bannersCarousal item state push]) 
+          (emptyLayout state) 
+          (\item -> bannersCarousal item state push) 
           state.data.bannerData.bannerItem)
       
     followView :: forall w. (Action -> Effect Unit) -> Array Followers -> PrestoDOM (Effect Unit) w
@@ -3386,7 +3543,7 @@ mapView push state idTag =
   let mapDimensions = getMapDimensions state
       bottomPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize extraBottomPadding else 0
       -- banners = getBannerConfigs state BannerCarousel
-      isVisible = if isHomeScreenView state then (not state.props.showShimmer)
+      isVisible = spy "Insdie mapView" $ if isHomeScreenView state then (not state.props.showShimmer)
                       else (not (state.props.currentStage == SearchLocationModel && state.props.isSearchLocation == SearchLocation ))
     
   in
@@ -3404,6 +3561,7 @@ mapView push state idTag =
                 if state.props.sourceLat == 0.0 && state.props.sourceLong == 0.0 then do
                   void $ getCurrentPosition push CurrentLocation
                 else do push RemoveShimmer
+                void $ pure $ spy "Inside MapReady" "ABCD"
                 _ <- showMap (getNewIDWithTag idTag) isCurrentLocationEnabled "satellite" zoomLevel state.props.sourceLat state.props.sourceLong push MAPREADY
                 if os == "IOS" then
                   case state.props.currentStage of  
@@ -3430,6 +3588,81 @@ mapView push state idTag =
           ] <> if state.props.currentStage == HomeScreen then [stroke $ "1,"<> Color.grey900 ] else [])[]
     --  , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][] -- TODO :: Mercy Once rentals is enabled.
      , linearLayout 
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , alignParentBottom "true,-1"
+        , gravity RIGHT
+        , padding $ Padding 16 0 22 16
+        , visibility $ boolToVisibility $ isHomeScreenView state
+        ][ imageView
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_recenter_btn"
+            , accessibility DISABLE
+            , onClick
+                ( \action -> do
+                    _ <- push action
+                    _ <- getCurrentPosition push UpdateCurrentLocation
+                    _ <- pure $ logEvent state.data.logField "ny_user_recenter_btn_click"
+                    pure unit
+                )
+                (const $ RecenterCurrentLocation)
+            , height $ V 40
+            , width $ V 40
+            ]
+
+        ]
+    ]
+
+
+mapView' :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> PrestoDOM (Effect Unit) w
+mapView' push state idTag = 
+  let mapDimensions = getMapDimensions state
+      bottomPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize extraBottomPadding else 0
+      -- banners = getBannerConfigs state BannerCarousel
+      isVisible = spy ("Insdie mapView111 " <> idTag)  $ if isHomeScreenView state then (not state.props.showShimmer)
+                      else (not (state.props.currentStage == SearchLocationModel && state.props.isSearchLocation == SearchLocation ))
+    
+  in
+  PrestoAnim.animationSet[scaleYAnimWithDelay 5000] $
+  Keyed.relativeLayout
+    [ height if (isHomeScreenView state && state.props.showShimmer) then V 0 else mapDimensions.height
+    , width mapDimensions.width 
+    -- , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
+    , margin $ if isHomeScreenView state then MarginTop 16 else MarginTop 0
+    , visibility $ boolToInvisibility isVisible
+    , padding $ PaddingBottom $ bottomPadding
+    ]$[ Tuple ("MapView" <> idTag) $ linearLayout
+          ([ height mapDimensions.height
+          , width $ mapDimensions.width 
+          , accessibility DISABLE_DESCENDANT
+          , id (getNewIDWithTag idTag)
+          , visibility if state.props.isSrcServiceable then VISIBLE else GONE
+          , cornerRadius if state.props.currentStage == HomeScreen && os == "IOS" then 16.0 else 0.0
+          , clickable $ not isHomeScreenView state 
+          , afterRender
+            ( \action -> do
+                _ <- push action
+                if state.props.sourceLat == 0.0 && state.props.sourceLong == 0.0 then do
+                  void $ getCurrentPosition push CurrentLocation
+                else do push RemoveShimmer
+                void $ pure $ spy ("Inside MapReady111" <> idTag)  "ABCD"
+                _ <- showMap (getNewIDWithTag idTag) false "satellite" zoomLevel state.props.sourceLat state.props.sourceLong push MAPREADY
+                if os == "IOS" then
+                  case state.props.currentStage of  
+                    HomeScreen -> void $ setMapPadding 0 0 0 0
+                    ConfirmingLocation -> void $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = state.props.sourceLat, lon = state.props.sourceLong, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin" }
+                    _ -> pure unit
+                else pure unit
+                if state.props.openChatScreen && state.props.currentStage == RideAccepted then push OpenChatScreen
+                else pure unit
+                case state.props.currentStage of
+                  HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
+                  _ -> pure unit
+                pure unit
+            )
+            (const MapReadyAction)
+          ])[]
+    --  , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][] -- TODO :: Mercy Once rentals is enabled.
+     , Tuple "Recenter" $ linearLayout 
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , alignParentBottom "true,-1"

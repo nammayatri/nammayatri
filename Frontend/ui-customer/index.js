@@ -35,13 +35,14 @@ if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){
         if (fnName === "callAPI") {
           params = arguments[1].split("/").splice(6).join("/");
         }
-        let shouldLog = true;
-        if (window.appConfig) {
-        shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
-        }
-        if (shouldLog) {
-        window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
-        }
+        // let shouldLog = true;
+        // if (window.appConfig) {
+        // shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
+        // }
+        // if (shouldLog) {
+        // window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
+        // }
+        console.log("Calling JBridge Function: ", fnName, " with params: ", params);
         const result = window.JBridgeProxy[fnName](...arguments);
         return result;
       };

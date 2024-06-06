@@ -124,6 +124,8 @@ getTripDetails state color =
     , backgroundColor: color
     , enablePaddingBottom : false
     , fareProductType : ride.fareProductType
+    , enableEditDestination : false
+    , editingDestinationLoc : NoAction
     }
 
 getCurrentFollower :: Maybe Followers -> Followers

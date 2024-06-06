@@ -155,6 +155,7 @@ type SearchLocationConfig = {
   lottieWidth :: Int,
   primaryButtonHeight :: Int
 , backArrow :: String
+, crossIcon :: String
 , editTextBackground :: String
 , editTextDefaultColor :: String
 , hintColor :: String
@@ -262,7 +263,8 @@ type Features = {
   enableCustomerSupportForSafety :: Boolean,
   enableSpecialPickup :: Boolean,
   enableAcPopup :: Boolean,
-  enableRentalReallocation :: Boolean
+  enableRentalReallocation :: Boolean,
+  enableEditDestination :: Boolean
   }
 
 type RideCompletedCardConfig = {

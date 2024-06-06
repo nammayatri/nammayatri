@@ -54,6 +54,7 @@ data Action = NoAction
             | AddStop 
             | RentalInfo
             | ShowEndOTP
+            | EditingDestination
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
