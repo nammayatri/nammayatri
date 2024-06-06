@@ -272,7 +272,7 @@ verify authId mbFleet fleetOwnerId req = do
         }
   when mbFleet $ do
     checkAssoc <- runInReplica $ QFDV.findByDriverIdAndFleetOwnerId res.person.id fleetOwnerId
-    whenJust checkAssoc $ \assoc -> when (assoc.isActive) $ throwError (InvalidRequest "Driver already associated with fleet")
+    when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
     assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFDV.create assoc
   pure Success
