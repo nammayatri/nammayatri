@@ -109,6 +109,8 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData isValueAdd
           driverMinExtraFeeWithCurrency = Just $ mkDummyPrice 0,
           driverMaxExtraFee = Just (Money 20),
           driverMaxExtraFeeWithCurrency = Just $ mkDummyPrice 20,
+          driverDefaultStepFeeWithCurrency = Just $ mkDummyPrice 10,
+          driverStepFeeWithCurrency = Just $ mkDummyPrice 10,
           rideRequestPopupDelayDuration = Seconds 0,
           keepHiddenForSeconds = Seconds 0,
           requestedVehicleVariant = driverVehicle,
