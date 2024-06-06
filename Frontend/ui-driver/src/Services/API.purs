@@ -1112,7 +1112,35 @@ newtype DriverRegistrationStatusResp = DriverRegistrationStatusResp
     , driverDocuments :: Array DocumentStatusItem
     , vehicleDocuments :: Array VehicleDocumentItem
     , enabled :: Maybe Boolean
+    , vehicleRegistrationCertificateDetails :: Maybe (Array RCDetails)
+    , driverLicenseDetails :: Maybe (Array DLDetails)
     }
+
+newtype RCDetails = RCDetails {
+  airConditioned :: Maybe Boolean,
+  createdAt :: String,
+  dateOfRegistration :: Maybe String,
+  imageId :: String,
+  operatingCity :: String,
+  vehicleCategory :: Maybe String,
+  vehicleColor :: Maybe String,
+  vehicleDoors :: Maybe Int,
+  vehicleManufacturer :: Maybe String,
+  vehicleModel :: Maybe String,
+  vehicleModelYear :: Maybe Int,
+  vehicleRegistrationCertNumber :: String,
+  vehicleSeatBelts :: Maybe Int
+}
+
+newtype DLDetails = DLDetails {
+  classOfVehicles :: Array Boolean,
+  createdAt :: String,
+  driverDateOfBirth :: Maybe String,
+  imageId1 :: String,
+  operatingCity :: String,
+  driverLicenseNumber :: String,
+  dateOfIssue :: Maybe String
+}
 
 newtype VehicleDocumentItem = VehicleDocumentItem
   { registrationNo :: String,
@@ -1140,6 +1168,18 @@ instance standardEncodeVehicleDocumentItem :: StandardEncode VehicleDocumentItem
 instance showVehicleDocumentItem :: Show VehicleDocumentItem where show = genericShow
 instance decodeVehicleDocumentItem :: Decode VehicleDocumentItem where decode = defaultDecode
 instance encodeVehicleDocumentItem  :: Encode VehicleDocumentItem where encode = defaultEncode
+
+derive instance genericRCDetails :: Generic RCDetails _
+instance standardEncodeRCDetails :: StandardEncode RCDetails where standardEncode (RCDetails res) = standardEncode res
+instance showRCDetails :: Show RCDetails where show = genericShow
+instance decodeRCDetails :: Decode RCDetails where decode = defaultDecode
+instance encodeRCDetails  :: Encode RCDetails where encode = defaultEncode
+
+derive instance genericDLDetails :: Generic DLDetails _
+instance standardEncodeDLDetails :: StandardEncode DLDetails where standardEncode (DLDetails res) = standardEncode res
+instance showDLDetails :: Show DLDetails where show = genericShow
+instance decodeDLDetails :: Decode DLDetails where decode = defaultDecode
+instance encodeDLDetails  :: Encode DLDetails where encode = defaultEncode
 
 derive instance genericDocumentStatusItem :: Generic DocumentStatusItem _
 instance standardEncodeDocumentStatusItem :: StandardEncode DocumentStatusItem where standardEncode (DocumentStatusItem res) = standardEncode res
