@@ -169,6 +169,7 @@ DriverLicense:
     consent: Bool
     consentTimestamp: UTCTime
     dateOfIssue: Maybe UTCTime
+    rejectReason: Maybe Text
   excludedFields: [merchantOperatingCityId]
 
   constraints:
@@ -230,6 +231,7 @@ VehicleRegistrationCertificate:
     userPassedVehicleCategory: Maybe Category
     vehicleModelYear: Maybe Int
     dateOfRegistration: Maybe UTCTime
+    rejectReason: Maybe Text
   constraints:
     id: PrimaryKey
     certificateNumberHash: SecondaryKey
@@ -458,6 +460,7 @@ VehicleInsurance:
     issueDate: Maybe UTCTime
     limitsOfLiability: Maybe Text
     verificationStatus: VerificationStatus
+    rejectReason: Maybe Text
   constraints:
     id: PrimaryKey
     documentImageId: SecondaryKey
@@ -473,6 +476,8 @@ VehicleInsurance:
     findByImageId:
       kvFunction: findOneWithKV
       where: documentImageId
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 VehicleFitnessCertificate:
   tableName: vehicle_fitness_certificate

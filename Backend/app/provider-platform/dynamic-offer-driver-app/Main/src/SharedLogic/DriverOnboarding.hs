@@ -367,6 +367,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNu
       failedRules = [],
       dateOfRegistration = input.dateOfRegistration,
       vehicleModelYear = input.vehicleModelYear,
+      rejectReason = Nothing,
       createdAt = now,
       updatedAt = now
     }

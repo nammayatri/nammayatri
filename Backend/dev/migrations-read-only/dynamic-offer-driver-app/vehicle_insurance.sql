@@ -21,3 +21,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_insurance ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_insurance ADD COLUMN driver_id character varying(36) NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_insurance ADD COLUMN reject_reason text ;
