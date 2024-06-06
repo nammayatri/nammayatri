@@ -117,10 +117,8 @@ getConfigFromCACCommon ::
     FromJSON b,
     ToJSON b,
     MonadFlow m,
-    Show
-      a
-      HasSchemaName
-      BeamSC.SystemConfigsT
+    Show b,
+    HasSchemaName BeamSC.SystemConfigsT
   ) =>
   [(CacContext, Value)] ->
   Maybe CacKey ->
@@ -161,7 +159,8 @@ getConfigFromCacOrDB ::
     FromJSON b,
     ToJSON b,
     HasSchemaName BeamSC.SystemConfigsT,
-    Show a
+    Show a,
+    Show b
   ) =>
   Maybe a ->
   [(CacContext, Value)] ->
