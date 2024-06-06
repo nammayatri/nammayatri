@@ -1,19 +1,13 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.MerchantServiceUsageConfigExtra where
 
-import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantServiceUsageConfig as BeamMSUC
-import Storage.Queries.OrphanInstances.MerchantServiceUsageConfig
+import Storage.Queries.OrphanInstances.MerchantServiceUsageConfig ()
 
 -- Extra code goes here --
 

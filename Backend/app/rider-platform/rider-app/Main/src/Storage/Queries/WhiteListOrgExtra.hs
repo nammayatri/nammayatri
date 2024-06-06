@@ -1,9 +1,5 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.WhiteListOrgExtra where
 
-import Domain.Types.Merchant
 import Domain.Types.WhiteListOrg
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -13,7 +9,7 @@ import Kernel.Types.Registry.Subscriber (Subscriber)
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.WhiteListOrg as BeamBLO
-import Storage.Queries.OrphanInstances.WhiteListOrg
+import Storage.Queries.OrphanInstances.WhiteListOrg ()
 
 -- Extra code goes here --
 

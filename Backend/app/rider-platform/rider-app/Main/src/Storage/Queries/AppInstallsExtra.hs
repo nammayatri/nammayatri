@@ -1,22 +1,15 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.AppInstallsExtra where
 
 import Domain.Types.AppInstalls as AppInstalls
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.AppInstalls as BeamAI
-import Storage.Queries.OrphanInstances.AppInstalls
+import Storage.Queries.OrphanInstances.AppInstalls ()
 
 -- Extra code goes here --
 

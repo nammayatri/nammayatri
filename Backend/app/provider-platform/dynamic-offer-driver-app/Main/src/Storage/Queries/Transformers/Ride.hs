@@ -1,9 +1,5 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.Transformers.Ride where
 
-import Domain.Types.Booking as Booking
 import qualified Domain.Types.Common as Common
 import Domain.Types.Location
 import qualified Domain.Types.LocationMapping as DLM
@@ -11,7 +7,6 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.Ride (OdometerReading (..))
 import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Common (Centesimal)
 import Kernel.Types.Error
 import Kernel.Types.Id

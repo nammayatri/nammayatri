@@ -1,25 +1,17 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.ExophoneExtra where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Exophone
-import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import qualified Kernel.External.Call.Types
-import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
-import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as Beam
-import Storage.Queries.OrphanInstances.Exophone
+import Storage.Queries.OrphanInstances.Exophone ()
 
 -- Extra code goes here --
 

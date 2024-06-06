@@ -1,21 +1,15 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.PersonStatsExtra where
 
 import Domain.Types.Person
 import qualified Domain.Types.PersonStats as Domain
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import Storage.Beam.PersonStats as BeamPS
-import Storage.Queries.OrphanInstances.PersonStats
+import Storage.Queries.OrphanInstances.PersonStats ()
 
 -- Extra code goes here --
 

@@ -1,9 +1,5 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.SearchRequestExtra where
 
-import Data.Text (strip)
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.MerchantPaymentMethod (MerchantPaymentMethod)
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
@@ -15,15 +11,12 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.SearchRequest as BeamSR
-import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
-import Storage.Queries.OrphanInstances.SearchRequest
-import Tools.Error
+import Storage.Queries.OrphanInstances.SearchRequest ()
 
 createDSReq' :: (MonadFlow m, EsqDBFlow m r) => SearchRequest -> m ()
 createDSReq' = createWithKV
