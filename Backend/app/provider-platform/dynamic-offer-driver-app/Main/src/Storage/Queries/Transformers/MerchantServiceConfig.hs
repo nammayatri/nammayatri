@@ -111,7 +111,7 @@ getServiceName = \case
   Domain.TokenizationServiceConfig tokenizationConfig -> case tokenizationConfig of
     Tokenize.HyperVergeTokenizationServiceConfig _ -> Domain.TokenizationService Tokenize.HyperVerge
 
-mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON: " <> err)) return $ case serviceName of
+mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON: " <> show configJSON <> " Error:" <> err)) return $ case serviceName of
   Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> eitherValue configJSON
   Domain.MapsService Maps.OSRM -> Domain.MapsServiceConfig . Maps.OSRMConfig <$> eitherValue configJSON
   Domain.MapsService Maps.MMI -> Domain.MapsServiceConfig . Maps.MMIConfig <$> eitherValue configJSON
