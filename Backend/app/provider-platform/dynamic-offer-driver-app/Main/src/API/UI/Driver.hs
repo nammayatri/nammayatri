@@ -121,6 +121,7 @@ type API =
                     :> QueryParam "toss" Int
                     :> Get '[JSON] DDriver.DriverInformationRes
                     :<|> TokenAuth
+                      :> "info"
                       :> QueryParam "toss" Int
                       :> ReqBody '[JSON] DDriver.UpdateProfileInfoPoints
                       :> Post '[JSON] DDriver.DriverInformationRes
