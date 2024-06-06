@@ -81,6 +81,7 @@ screen initialState =
     else pure unit
     void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $
               if initialState.props.validateProfilePicturePopUp  then  lift $ lift $ doAff do liftEffect $ push $ AfterRender  else pure unit 
+    if initialState.props.setDefault then do pure $ EHC.setText (EHC.getNewIDWithTag "EnterDrivingLicenseEditText") (initialState.data.driver_license_number) else pure unit
     pure $ pure unit)]
   , eval : \action state -> do
       let _ = spy  "UploadDrivingLicenseScreen state -----" state

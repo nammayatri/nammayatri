@@ -69,5 +69,6 @@ initData = {
       , menuOptions : false
       , confirmChangeVehicle : false
       , contactSupportModal : ST.HIDE
+      , setDefault : false
       }
     }

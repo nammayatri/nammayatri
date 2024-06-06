@@ -32,9 +32,9 @@ registration = do
   action <- lift $ lift $ runScreen $ RegistrationScreen.screen state.registrationScreen
   case action of
     GoBack -> App.BackT $ pure App.GoBack
-    GoToUploadDriverLicense updatedState -> do
+    GoToUploadDriverLicense updatedState step -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ UPLOAD_DRIVER_LICENSE updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ UPLOAD_DRIVER_LICENSE updatedState step)
     GoToUploadVehicleRegistration updatedState rcNumberPrefixList -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ UPLOAD_VEHICLE_DETAILS updatedState rcNumberPrefixList)

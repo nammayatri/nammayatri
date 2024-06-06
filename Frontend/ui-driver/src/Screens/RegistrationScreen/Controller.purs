@@ -88,7 +88,7 @@ instance loggableAction :: Loggable Action where
 
     
 data ScreenOutput = GoBack 
-                  | GoToUploadDriverLicense RegistrationScreenState 
+                  | GoToUploadDriverLicense RegistrationScreenState ST.StepProgress
                   | GoToUploadVehicleRegistration RegistrationScreenState (Array String)
                   | GoToPermissionScreen RegistrationScreenState
                   | LogoutAccount
@@ -147,7 +147,7 @@ eval BackPressed state = do
 eval (RegistrationAction step ) state = do
        let item = step.stage
        case item of 
-          DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state
+          DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state step
           VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state step.rcNumberPrefixList
           GRANT_PERMISSION -> exit $ GoToPermissionScreen state
           SUBSCRIPTION_PLAN -> exit GoToOnboardSubscription

@@ -194,6 +194,7 @@ type UploadDrivingLicenseStateProps = {
   , menuOptions :: Boolean
   , confirmChangeVehicle :: Boolean
   , contactSupportModal :: AnimType
+  , setDefault :: Boolean
 }
 
  -- ############################################################# RegistrationScreen ################################################################################

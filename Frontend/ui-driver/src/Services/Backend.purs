@@ -774,8 +774,9 @@ makeValidateImageReq image imageType rcNumber category = ValidateImageReq
 
 driverRegistrationStatusBT :: DriverRegistrationStatusReq -> FlowBT String DriverRegistrationStatusResp
 driverRegistrationStatusBT payload = do
+     let (DriverRegistrationStatusReq req) = payload
      headers <- getHeaders' "" false
-     withAPIResultBT ((EP.driverRegistrationStatus "" )) identity errorHandler (lift $ lift $ callAPI headers payload)
+     withAPIResultBT ((EP.driverRegistrationStatus req)) identity errorHandler (lift $ lift $ callAPI headers payload)
     where
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack

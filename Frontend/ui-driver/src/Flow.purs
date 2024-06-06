@@ -74,7 +74,7 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, 
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.API (callApiBT, callApi)
-import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus)
+import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus, sortListBasedOnCreatedAt)
 import Helpers.Utils as HU
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
 import JBridge as JB
@@ -122,7 +122,7 @@ import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, UpdateRouteSrcDestConfig(..), KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..))
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
-import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), UploadOdometerImageResp(UploadOdometerImageResp), UpdateSSNReq(..), SocialLoginRes(..))
+import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), UploadOdometerImageResp(UploadOdometerImageResp), UpdateSSNReq(..), SocialLoginRes(..), DLDetails(..))
 import Services.API as API
 import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
@@ -709,13 +709,17 @@ onBoardingFlow = do
   void $ lift $ lift $ toggleLoader false
   flow <- UI.registration
   case flow of
-    UPLOAD_DRIVER_LICENSE state -> do
+    UPLOAD_DRIVER_LICENSE state step -> do
       modifyScreenState $ UploadDrivingLicenseScreenStateType $ \_ -> UploadDrivingLicenseScreenData.initData { data {
         mobileNumber = state.data.phoneNumber,
         cityConfig = state.data.cityConfig,
         vehicleCategory = state.data.vehicleCategory,
         variantList = state.data.variantList
         }}
+      let mbStatus = DA.head $ filter (\item -> item.docType == step.stage) state.data.documentStatusList
+      case mbStatus of
+        Nothing -> pure unit
+        Just statusItem -> when (statusItem.status == ST.FAILED) $ updateStateWithPrefillDLDatata
       uploadDrivingLicenseFlow
     UPLOAD_VEHICLE_DETAILS state rcNumberPrefixList -> do
       modifyScreenState $ AddVehicleDetailsScreenStateType $ \_ -> AddVehicleDetailsScreenData.initData { data {
@@ -770,6 +774,25 @@ onBoardingFlow = do
           vehicleDoc' = DA.foldl (\acc (API.VehicleDocumentItem vDoc) -> acc <> transfromDocumentStatusItem vDoc.documents vDoc.userSelectedVehicleCategory vDoc.verifiedVehicleCategory (Just vDoc.registrationNo) getDriverInfoResp) [] vehicleDoc
           driversDocument' = transfromDocumentStatusItem driversDocument "" Nothing Nothing getDriverInfoResp
       in driversDocument' <> vehicleDoc'
+    updateStateWithPrefillDLDatata :: FlowBT String Unit
+    updateStateWithPrefillDLDatata = do
+      DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq "true"
+      let dlDetailsList = driverRegistrationResp.driverLicenseDetails
+          sortedListForDLDetails = DA.reverse $ sortListBasedOnCreatedAt $ fromMaybe [] dlDetailsList
+          dummyDLDetails = DLDetails {classOfVehicles : [], createdAt :"", driverDateOfBirth : Nothing, imageId1 : "", operatingCity : "",driverLicenseNumber : "", dateOfIssue : Nothing}
+          (DLDetails latestDLDetails) = if DA.length sortedListForDLDetails > 0 
+                                          then fromMaybe dummyDLDetails (sortedListForDLDetails DA.!! 0) 
+                                          else dummyDLDetails
+          setDefault = latestDLDetails.driverLicenseNumber /= ""
+          dob = fromMaybe "" latestDLDetails.driverDateOfBirth
+      modifyScreenState $ UploadDrivingLicenseScreenStateType $ \dlState -> dlState { data {
+        driver_license_number = latestDLDetails.driverLicenseNumber,
+        dob = dob,
+        dobView = if dob /= "" then convertUTCtoISC dob "DD/MM/YYYY" else ""
+        },
+        props {
+          setDefault = setDefault
+        }}
       
     mkRegSteps :: Array API.OnboardingDoc -> Array ST.StepProgress
     mkRegSteps onBoardingDocsArr = 

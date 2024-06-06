@@ -1177,6 +1177,7 @@ instance encodeRCDetails  :: Encode RCDetails where encode = defaultEncode
 
 derive instance genericDLDetails :: Generic DLDetails _
 instance standardEncodeDLDetails :: StandardEncode DLDetails where standardEncode (DLDetails res) = standardEncode res
+derive instance newtypeDLDetails:: Newtype DLDetails _
 instance showDLDetails :: Show DLDetails where show = genericShow
 instance decodeDLDetails :: Decode DLDetails where decode = defaultDecode
 instance encodeDLDetails  :: Encode DLDetails where encode = defaultEncode

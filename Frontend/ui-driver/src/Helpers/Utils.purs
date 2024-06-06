@@ -26,6 +26,7 @@ import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null) 
 import Data.String (Pattern(..), split) as DS
 import Data.Array as DA
 import Data.String as DS
+import Data.Newtype (class Newtype, unwrap)
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.String.Common as DSC
 import MerchantConfig.Utils
@@ -59,7 +60,7 @@ import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<), not, (=<<))
-import Prelude (class Eq, class Show, (<<<))
+import Prelude (class Eq, class Show, (<<<), compare)
 import Prelude (map, (*), (-), (/), (==), div, mod, not)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3, Fn2, runFn1, runFn2)
@@ -848,3 +849,6 @@ getChargesOb cityConfig driverVehicle =
   case driverVehicle of
     "AUTO_RICKSHAW" -> cityConfig.waitingChargesConfig.auto
     _ -> cityConfig.waitingChargesConfig.cab
+
+sortListBasedOnCreatedAt :: forall a t. Newtype t (Record (createdAt:: String | a)) => Array t -> Array t
+sortListBasedOnCreatedAt = DA.sortBy (\a b -> compare ((unwrap a).createdAt) ((unwrap b).createdAt))

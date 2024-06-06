@@ -93,7 +93,7 @@ callDriverToDriver :: String -> String
 callDriverToDriver rcNo = (getBaseUrl "") <> "/driver/register/call/driver?RC=" <> rcNo 
 
 driverRegistrationStatus :: String -> String
-driverRegistrationStatus isPrefill = (getBaseUrl "") <> "/driver/register/status" <> if isPrefill == "" then "" else "?providePrefillDetails" <>  isPrefill
+driverRegistrationStatus isPrefill = (getBaseUrl "") <> "/driver/register/status" <> if isPrefill == "" then "" else "?providePrefillDetails=" <>  isPrefill
 
 validateImage :: String -> String
 validateImage dummyString = (getBaseUrl "") <> "/driver/register/validateImage"

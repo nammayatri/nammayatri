@@ -340,7 +340,7 @@ data HELP_AND_SUPPORT_SCREEN_OUTPUT = WRITE_TO_US_SCREEN
 
 
 data WRITE_TO_US_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FLOW
-data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState
+data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState StepProgress
                                 | UPLOAD_VEHICLE_DETAILS RegistrationScreenState (Array String)
                                 | PERMISSION_SCREEN RegistrationScreenState
                                 | LOGOUT_FROM_REGISTERATION_SCREEN
