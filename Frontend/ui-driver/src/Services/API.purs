@@ -4690,3 +4690,62 @@ instance standardEncodeUpdateAirConditionUpdateResponse :: StandardEncode Update
 instance showUpdateAirConditionUpdateResponse :: Show UpdateAirConditionUpdateResponse where show = genericShow
 instance decodeUpdateAirConditionUpdateResponse :: Decode UpdateAirConditionUpdateResponse where decode = defaultDecode
 instance encodeUpdateAirConditionUpdateResponse  :: Encode UpdateAirConditionUpdateResponse where encode = defaultEncode
+
+--------------------------------------------------------- Get Driver Rate Card --------------------------------------------------------------------------
+
+data GetDriverRateCardReq = GetDriverRateCardReq (Maybe String)
+
+newtype GetDriverRateCardRes = GetDriverRateCardRes (Array RateCardRespItem)
+
+newtype RateCardRespItem = RateCardRespItem {
+    perKmRate :: CTA.Price,
+    perMinuteRate :: Maybe CTA.Price,
+    rateCardItems :: Array CTA.EstimateFares,
+    serviceTierType :: ServiceTierType,
+    totalFare :: CTA.Price,
+    farePolicyHour :: FarePolicyHour
+  }
+
+instance makeGetDriverRateCardReq :: RestEndpoint GetDriverRateCardReq GetDriverRateCardRes where
+  makeRequest reqBody@(GetDriverRateCardReq vehicleServiceTier) headers = defaultMakeRequest GET (EP.getDriverRateCard vehicleServiceTier) headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericGetDriverRateCardReq :: Generic GetDriverRateCardReq _
+instance standardEncodeGetDriverRateCardReq :: StandardEncode GetDriverRateCardReq where standardEncode (GetDriverRateCardReq _) = standardEncode {}
+instance showGetDriverRateCardReq :: Show GetDriverRateCardReq where show = genericShow
+instance decodeGetDriverRateCardReq :: Decode GetDriverRateCardReq where decode = defaultDecode
+instance encodeGetDriverRateCardReq  :: Encode GetDriverRateCardReq where encode = defaultEncode
+
+derive instance genericRateCardRespItem :: Generic RateCardRespItem _
+instance standardEncodeRateCardRespItem :: StandardEncode RateCardRespItem where standardEncode (RateCardRespItem _) = standardEncode {}
+instance showRateCardRespItem :: Show RateCardRespItem where show = genericShow
+instance decodeRateCardRespItem :: Decode RateCardRespItem where decode = defaultDecode
+instance encodeRateCardRespItem  :: Encode RateCardRespItem where encode = defaultEncode
+
+derive instance genericGetDriverRateCardRes :: Generic GetDriverRateCardRes _
+instance standardEncodeGetDriverRateCardRes :: StandardEncode GetDriverRateCardRes where standardEncode (GetDriverRateCardRes res) = standardEncode res
+instance showGetDriverRateCardRes :: Show GetDriverRateCardRes where show = genericShow
+instance decodeGetDriverRateCardRes :: Decode GetDriverRateCardRes where decode = defaultDecode
+instance encodeGetDriverRateCardRes  :: Encode GetDriverRateCardRes where encode = defaultEncode
+
+data FarePolicyHour
+  = Peak
+  | NonPeak
+  | Night
+
+derive instance genericFarePolicyHour :: Generic FarePolicyHour _
+instance showFarePolicyHour :: Show FarePolicyHour where show = genericShow
+instance decodeFarePolicyHour :: Decode FarePolicyHour
+  where decode body = case unsafeFromForeign body of
+                  "Peak"       -> except $ Right Peak
+                  "NonPeak"    -> except $ Right NonPeak
+                  "Night"      -> except $ Right Night
+                  _            -> except $ Right NonPeak
+instance encodeFarePolicyHour :: Encode FarePolicyHour where encode = defaultEnumEncode
+instance eqFarePolicyHour :: Eq FarePolicyHour where eq = genericEq
+instance standardEncodeFarePolicyHour :: StandardEncode FarePolicyHour
+  where
+    standardEncode Peak = standardEncode "Peak"
+    standardEncode NonPeak = standardEncode "NonPeak"
+    standardEncode Night = standardEncode "Night"

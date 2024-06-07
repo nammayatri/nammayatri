@@ -73,6 +73,7 @@ import Common.Types.App (CategoryListType)
 import Services.API
 import Screens.DocumentCaptureScreen.ScreenData as DocumentCaptureScreenData
 import Screens.DocumentDetailsScreen.ScreenData as DocumentDetailsScreenData
+import Screens.RateCardScreen.ScreenData as RateCardScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -125,6 +126,7 @@ newtype GlobalState = GlobalState {
   , lmsVideoScreen :: LmsVideoScreenState
   , lmsQuizScreen :: LmsQuizScreenState
   , documentDetailsScreen :: DocumentDetailsScreenState
+  , rateCardScreen :: RateCardScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -177,6 +179,7 @@ defaultGlobalState = GlobalState {
 , lmsVideoScreen : LmsVideoScreenData.initData
 , lmsQuizScreen : LmsQuizScreenData.initData
 , documentDetailsScreen : DocumentDetailsScreenData.initData
+, rateCardScreen : RateCardScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -239,6 +242,7 @@ data ScreenType =
   | LmsQuizScreenStateType (LmsQuizScreenState -> LmsQuizScreenState)
   | DocumentCaptureScreenStateType (DocumentCaptureScreenState -> DocumentCaptureScreenState)
   | DocumentDetailsScreenStateType (DocumentDetailsScreenState -> DocumentDetailsScreenState)
+  | RateCardScreenStateType (RateCardScreenState -> RateCardScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -441,7 +445,14 @@ data NOTIFICATIONS_SCREEN_OUTPUT = REFRESH_SCREEN NotificationsScreenState
                                     | CHECK_RIDE_FLOW_STATUS
                                     | NOTIFICATION_SCREEN_NAV NAVIGATION_ACTIONS
 
-data BOOKING_OPTIONS_SCREEN_OUTPUT = SELECT_CAB BookingOptionsScreenState Boolean | ENABLE_RENTAL_INTERCITY_RIDE BookingOptionsScreenState | GO_TO_PROFILE | CHANGE_RIDE_PREFERENCE BookingOptionsScreenState RidePreference | UPDATE_AC_AVAILABILITY BookingOptionsScreenState Boolean | HOME_SCREEN_FROM_BOOKING_PREFS
+data BOOKING_OPTIONS_SCREEN_OUTPUT = 
+  SELECT_CAB BookingOptionsScreenState Boolean 
+  | ENABLE_RENTAL_INTERCITY_RIDE BookingOptionsScreenState 
+  | GO_TO_PROFILE 
+  | CHANGE_RIDE_PREFERENCE BookingOptionsScreenState RidePreference 
+  | UPDATE_AC_AVAILABILITY BookingOptionsScreenState Boolean 
+  | HOME_SCREEN_FROM_BOOKING_PREFS 
+  | EXIT_TO_RATE_CARD_SCREEN BookingOptionsScreenState
 
 data ACKNOWLEDGEMENT_SCREEN_OUTPUT = EXIT_TO_HOME_SCREEN | RETRY_PAYMENT
 
@@ -519,3 +530,5 @@ data DOCUMENT_CAPTURE_SCREEN_OUTPUT = UPLOAD_DOC_API DocumentCaptureScreenState 
                                       | LOGOUT_FROM_DOC_CAPTURE 
                                       | CHANGE_LANG_FROM_DOCUMENT_CAPTURE
                                       | CHANGE_VEHICLE_FROM_DOCUMENT_CAPTURE
+
+data RATE_CARD_SCREEN_OUTPUT = REFRESH_RATE_CARD RateCardScreenState

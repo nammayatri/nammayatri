@@ -12,8 +12,8 @@ import Helpers.Utils (getVehicleType, fetchImage, FetchImageFrom(..), getVariant
 import Language.Strings (getString)
 import Engineering.Helpers.Utils as EHU
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (<>), (&&), (||), (&&))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine, imageUrl, rippleColor, scrollView, scrollBarY, fillViewport)
+import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (<>), (&&), (||), (-), bind, void, pure, unit, discard, negate) 
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Gradient(..) ,Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine, imageUrl, rippleColor, scrollView, scrollBarY, fillViewport, relativeLayout, shimmerFrameLayout, gradient)
 import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval, getVehicleCapacity)
 import Screens.BookingOptionsScreen.ScreenData (defaultRidePreferenceOption)
 import Screens.Types as ST
@@ -26,17 +26,39 @@ import Mobility.Prelude as MP
 import Services.API as API
 import Data.Maybe as MB
 import Components.PopUpModal as PopUpModal
-import Screens.BookingOptionsScreen.ComponentConfig (topAcDriverPopUpConfig)
 import Resource.Constants as RC
-import Mobility.Prelude (boolToVisibility)
 import Storage (KeyStore(..), getValueToLocalStore)
+import Screens.BookingOptionsScreen.ComponentConfig (topAcDriverPopUpConfig, rateCardConfig)
+import Effect.Aff (launchAff)
+import Engineering.Helpers.Commons as EHC
+import Types.App (defaultGlobalState)
+import Helpers.API as HelperAPI
+import Presto.Core.Types.API (ErrorResponse(..))
+import Data.Either (Either(..))
+import Components.RateCard as RateCard
+import PrestoDOM.Animation as PrestoAnim
+import Common.Styles.Colors as Colors
+import ConfigProvider as CP
+import Constants as CS
+import Helpers.Utils as HU
 
 screen :: ST.BookingOptionsScreenState -> Screen Action ST.BookingOptionsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name: "BookingDetailsScreen"
-  , globalEvents: []
+  , globalEvents: 
+        [( \push -> do
+            _ <-
+              void $ launchAff $ EHC.flowRunner defaultGlobalState
+                $ do
+                    response <- HelperAPI.callApi $ API.GetDriverRateCardReq MB.Nothing
+                    case response of
+                      Left _ -> pure unit
+                      Right resp -> EHC.liftFlow $ push $ UpdateRateCard resp
+                    pure unit
+            pure $ pure unit
+        )]
   , eval:
       ( \state action -> do
           let
@@ -76,6 +98,7 @@ view push state =
                     , orientation VERTICAL
                     ]
                     [ defaultVehicleView push state
+                    , rateCardBannerView push state
                     , acCheckForDriversView push state
                     , downgradeVehicleView push state
                     ]
@@ -83,6 +106,8 @@ view push state =
             ]
       ]
     <> if state.props.acExplanationPopup then [ PopUpModal.view (push <<< TopAcDriverAction) (topAcDriverPopUpConfig state) ] else []
+    <> if state.props.showRateCard then [ rateCardView push state ] else []
+
 
 acCheckForDriversView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 acCheckForDriversView push state =
@@ -260,18 +285,20 @@ downgradeVehicleView push state =
 
 ridePreferencesView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> Array ST.RidePreference -> Array ( PrestoDOM (Effect Unit) w )
 ridePreferencesView push state ridePreferences =
-  map
-    ( \item ->
+  DA.mapWithIndex
+    ( \index item ->
         linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           ]
-          [ serviceTierItem push item state.props.downgraded false ]
+          [ serviceTierItem push item state.props.downgraded false $ getActualIndex index]
     ) ridePreferences
+  where
+    getActualIndex index = DA.length ridePreferences - index - 1
   
 
-serviceTierItem :: forall w. (Action -> Effect Unit) -> ST.RidePreference -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
-serviceTierItem push service enabled opacity =
+serviceTierItem :: forall w. (Action -> Effect Unit) -> ST.RidePreference -> Boolean -> Boolean -> Int -> PrestoDOM (Effect Unit) w
+serviceTierItem push service enabled opacity index =
   frameLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -288,7 +315,7 @@ serviceTierItem push service enabled opacity =
         , gravity CENTER_VERTICAL
         ]
         [ imageView
-            [ imageWithFallback $ getVehicleVariantImage getVehicleMapping
+            [ imageWithFallback $ getVehicleVariantImage $ HU.getVehicleMapping service.serviceTierType
             , width $ V 35
             , height $ V 35
             ]
@@ -296,13 +323,25 @@ serviceTierItem push service enabled opacity =
         [ weight 1.0
         , height WRAP_CONTENT
         , orientation VERTICAL
-        ][ textView
-            [ height WRAP_CONTENT
-            , text service.name
-            , margin (MarginHorizontal 12 2)
-            , color Color.black800
-            , singleLine true
-            ]
+        ][ linearLayout
+           [ width MATCH_PARENT
+           , height WRAP_CONTENT
+           , gravity CENTER_VERTICAL
+           , onClick push $ const $ ShowRateCard index
+           ][ textView
+              [ height WRAP_CONTENT
+              , text service.name
+              , margin (MarginHorizontal 12 2)
+              , color Color.black800
+              , singleLine true
+              ]
+            , imageView
+              [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_grey"
+              , width $ V 12
+              , height $ V 12
+              , visibility $ MP.boolToVisibility $ MB.isJust service.rateCardData
+              ]
+           ]
           , textView $
             [ height WRAP_CONTENT
             , text $ fromMaybe "" service.shortDescription
@@ -322,27 +361,13 @@ serviceTierItem push service enabled opacity =
             [ toggleView push service.isSelected service.isDefault service ]
         ]
     ]
-  where
-  getVehicleMapping :: String
-  getVehicleMapping = case service.serviceTierType of
-    API.COMFY -> "SEDAN"
-    API.ECO -> "HATCHBACK"
-    API.PREMIUM -> "SUV"
-    API.SUV_TIER -> "SUV"
-    API.AUTO_RICKSHAW -> "AUTO_RICKSHAW"
-    API.HATCHBACK_TIER -> "HATCHBACK"
-    API.SEDAN_TIER -> "SEDAN"
-    API.TAXI -> "TAXI"
-    API.TAXI_PLUS -> "TAXI_PLUS"
-    API.RENTALS -> "RENTALS"
-    API.INTERCITY -> "INTERCITY"
 
 rentalPreferenceView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 rentalPreferenceView push state = 
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    ][serviceTierItem push item state.props.canSwitchToRental false]
+    ][serviceTierItem push item state.props.canSwitchToRental false (-1)]
   where 
     item :: ST.RidePreference
     item = defaultRidePreferenceOption {name = "Rentals", isSelected = state.props.canSwitchToRental,  serviceTierType = API.RENTALS}
@@ -352,8 +377,8 @@ intercityPreferenceView push state = do
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , visibility $ boolToVisibility $ (RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.CarCategory && isJust state.props.canSwitchToIntercity
-    ][serviceTierItem push item (fromMaybe false state.props.canSwitchToIntercity) false]
+    , visibility $ MP.boolToVisibility $ (RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.CarCategory && isJust state.props.canSwitchToIntercity
+    ][serviceTierItem push item (fromMaybe false state.props.canSwitchToIntercity) false (-1)]
   where 
     item :: ST.RidePreference
     item = defaultRidePreferenceOption {name = "Intercity", isSelected = fromMaybe false state.props.canSwitchToIntercity, serviceTierType = API.INTERCITY}
@@ -542,3 +567,75 @@ customTV text' textSize' fontStyle' color' =
       , color color'
       ]
     <> fontStyle' TypoGraphy
+
+rateCardView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
+rateCardView push state =
+  PrestoAnim.animationSet [ Anim.fadeIn true ]
+    $ linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        ]
+        [ RateCard.view (push <<< RateCardAction) (rateCardConfig state.data.rateCard) ]
+
+rateCardBannerView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
+rateCardBannerView push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , margin $ Margin 16 0 16 16
+  , padding $ Padding 16 16 16 16
+  , stroke $ "1," <> Color.grey900
+  , gravity CENTER
+  , cornerRadius 8.0
+  , rippleColor Color.rippleShade
+  , gradient (Linear 90.0 [Colors.darkGradientBlue, Color.lightGradientBlue])
+  , onClick push $ const $ RateCardBannerClick
+  , visibility $ MP.boolToVisibility rateCardLoaded
+  ][  relativeLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      ][  textView $
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , color Color.white900
+          , background bgColor
+          , padding $ Padding 8 1 8 2
+          , gravity CENTER
+          , cornerRadius cornerRad
+          , text txt
+          ] <> FontStyle.body1 TypoGraphy
+        , shimmerFrameLayout
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , background Color.white900
+          , visibility $ MP.boolToVisibility $ peakTime
+          , alpha 0.3
+          ][  textView $
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , padding $ Padding 8 1 8 2
+              , gravity CENTER
+              , cornerRadius 8.0
+              , text "↑ Peak"
+              ] <> FontStyle.body1 TypoGraphy
+          ]
+      ]
+  , textView $
+    [ height WRAP_CONTENT
+    , weight 1.0
+    , color Color.black800
+    , margin $ Margin 6 0 0 1
+    , text $ (HU.appName true) <> " " <> getString RATE_CARD
+    ]
+    <> FontStyle.subHeading1 TypoGraphy
+  , imageView
+    [ width $ V 18
+    , height $ V 18
+    , imageWithFallback $ fetchImage FF_ASSET "ny_ic_arrow_right"
+    ]
+  ]
+  where peakTime = MB.isJust $ DA.find (\item -> item.farePolicyHour == Just API.Peak) state.data.ridePreferences
+        bgColor = if peakTime then Color.green900 else Color.blue800
+        cornerRad = if peakTime then 8.0 else 24.0
+        txt = if peakTime then "↑  Peak" else CP.getCurrency CS.appConfig
+        rateCardLoaded = MB.isJust $ DA.find (\item -> MB.isJust item.rateCardData) state.data.ridePreferences
