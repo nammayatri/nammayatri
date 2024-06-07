@@ -55,6 +55,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     mode :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverMode,
+    notificationSource :: Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource,
     parallelSearchRequestCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pickupZone :: Kernel.Prelude.Bool,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
@@ -74,8 +75,12 @@ data SearchRequestForDriver = SearchRequestForDriver
 
 data DriverSearchRequestStatus = Active | Inactive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data NotificationSource = FCM | GRPC deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data SearchRequestForDriverResponse = Accept | Reject | Pulled deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverSearchRequestStatus)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''NotificationSource)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchRequestForDriverResponse)

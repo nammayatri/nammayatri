@@ -59,6 +59,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     mode :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverMode),
+    notificationSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource),
     parallelSearchRequestCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     pickupZone :: B.C f Kernel.Prelude.Bool,
     requestId :: B.C f Kernel.Prelude.Text,
