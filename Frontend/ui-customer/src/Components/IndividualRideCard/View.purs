@@ -132,7 +132,7 @@ rideDetails push state =
       , height $ V 32
       , width $ V 32
       , PrestoList.visibilityHolder "vehicleImgVisibility"
-      , margin $ MarginRight 2
+      , margin $ MarginRight 1
       , PrestoList.visibilityHolder "showVariantImage"
       ]
     , textView
@@ -146,7 +146,7 @@ rideDetails push state =
       , width $ V 5
       , cornerRadius 2.5
       , background Color.black600
-      , margin (Margin 8 3 8 0)
+      , margin (Margin 3 3 3 0)
       ][]
     , textView
       ([ PrestoList.textHolder "time"
