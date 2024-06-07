@@ -604,7 +604,7 @@ type HomeScreenStateData =
   , destinationAddress :: Address
   , route :: Maybe Route
   , startedAtUTC :: String
-  , rateCard :: RateCard
+  , rateCard :: CTA.RateCard
   , speed :: Int
   , selectedLocationListItem :: Maybe LocationListItemState
   , saveFavouriteCard :: SaveFavouriteCardState
@@ -654,7 +654,7 @@ type HomeScreenStateData =
   , iopState :: InteroperabilityState
   , currentCityConfig :: MRC.CityConfig
   , otherSelectedEstimates :: Array String
-  , rateCardCache :: Maybe RateCard
+  , rateCardCache :: Maybe CTA.RateCard
   , maxEstimatedDuration :: Int
   , invalidBookingPopUpConfig :: Maybe InvalidBookingPopUpConfig
   , rideCompletedData :: RideCompletedData -- put necesssary data which is required in ride completed screen

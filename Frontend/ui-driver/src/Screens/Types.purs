@@ -1888,7 +1888,8 @@ type BookingOptionsScreenData = {
   canSwitchToInterCity :: Boolean,
   canSwitchToRental :: Boolean,
   airConditioned :: Maybe API.AirConditionedTier,
-  config :: AppConfig
+  config :: AppConfig,
+  rateCard :: Common.RateCard
 }
 
 type RidePreference = {
@@ -1904,7 +1905,10 @@ type RidePreference = {
   shortDescription :: Maybe String,
   vehicleRating :: Maybe Number,
   isUsageRestricted :: Boolean,
-  priority :: Int
+  priority :: Int,
+  rateCardData :: Maybe Common.BreakupList,
+  perKmRate :: Maybe Number,
+  farePolicyHour :: Maybe API.FarePolicyHour
 }
 
 type BookingOptionsScreenProps = {
@@ -1913,7 +1917,8 @@ type BookingOptionsScreenProps = {
   canSwitchToRental :: Boolean,
   acExplanationPopup :: Boolean,
   fromDeepLink :: Boolean,
-  canSwitchToIntercity :: Maybe Boolean
+  canSwitchToIntercity :: Maybe Boolean,
+  showRateCard :: Boolean
 }
 
 data LeaderBoardType = Daily | Weekly
@@ -2757,4 +2762,23 @@ type CoinEarnedPopupTypeShown = {
   eightRideCompleted :: String,
   referAndEarnCoin :: String,
   convertCoinsToCash :: String
+}
+
+type RateCardScreenState = {
+  data :: RateCardScreenData,
+  props :: RateCardScreenProps
+}
+
+type RateCardScreenData = {
+  ridePreferences :: Array RidePreference,
+  rateCard :: Common.RateCard
+}
+
+type RateCardScreenProps = {
+  sliderVal :: Int,
+  showRateCard :: Boolean,
+  sliderDefVal :: Int,
+  incrementUnit :: Int,
+  sliderMinValue :: Int,
+  sliderMaxValue :: Int
 }

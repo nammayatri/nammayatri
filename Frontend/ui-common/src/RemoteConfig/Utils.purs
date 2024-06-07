@@ -14,14 +14,16 @@
 -}
 module Common.RemoteConfig.Utils where
 
-import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), defaultForwardBatchConfigData)
-import DecodeUtil (decodeForeignObject, parseJSON)
+import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData)
+import DecodeUtil (decodeForeignObject, parseJSON, setAnyInWindow)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
 import Prelude (not, ($), (==), (||))
 import Data.Maybe (fromMaybe)
 import Data.Array (elem, filter, uncons)
 import Data.Array as DA
+import Data.Function.Uncurried (runFn3, runFn2)
+import DecodeUtil (getAnyFromWindow)
 
 foreign import fetchRemoteConfigString :: String -> String
 
@@ -126,3 +128,44 @@ getCityBasedConfig config city = case city of
   "pune" -> config.pune
   "tamilnaducities" -> config.tamilnaducities
   _ -> config.default
+
+tipConfigData :: String -> String -> Array Int
+tipConfigData city variant = do
+  let
+    tipsConfig = runFn3 getAnyFromWindow "tips_config" Nothing Just
+    decodedConfig = case tipsConfig of
+          Just (config :: (RemoteConfig TipsConfig)) -> config
+          Nothing -> do
+            let remoteConfig = fetchRemoteConfigString "tips_config"
+                decodedConfg = decodeForeignObject (parseJSON remoteConfig) $ defaultRemoteConfig defaultTipsConfig
+                _ = runFn2 setAnyInWindow "tips_config" decodedConfg
+            decodedConfg
+  getTipForVariant variant $ getCityBasedConfig decodedConfig $ toLower city
+  where
+    -- if a variant tip is not provided for a particular city we will check for default variant config for that city. If default is not there then tip wont be there.
+    getTipForVariant variant config = case getTip config variant of
+      Nothing -> fromMaybe [] $ getTip config "default"
+      Just tips -> tips
+
+    getTip config variant = 
+      case variant of 
+        "SEDAN" -> config.sedan
+        "SUV" -> config.suv
+        "HATCHBACK" -> config.hatchback
+        "AUTO_RICKSHAW" -> config.autoRickshaw
+        "TAXI" -> config.taxi
+        "TAXI_PLUS" -> config.taxiPlus
+        "BOOK_ANY" -> config.bookAny
+        _ -> config.default
+
+defaultTipsConfig :: TipsConfig
+defaultTipsConfig = 
+  { sedan: Nothing
+  , suv: Nothing
+  , hatchback: Nothing
+  , autoRickshaw: Nothing
+  , taxi: Nothing
+  , taxiPlus: Nothing
+  , bookAny: Nothing
+  , default: Nothing
+  }

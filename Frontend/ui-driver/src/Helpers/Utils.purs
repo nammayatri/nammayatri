@@ -108,6 +108,8 @@ import Common.Types.Config as CTC
 import Common.Resources.Constants (assetDomain)
 import Common.RemoteConfig.Utils (forwardBatchConfigData)
 import Common.RemoteConfig.Types (ForwardBatchConfigData(..))
+import DecodeUtil (getAnyFromWindow)
+import Data.Foldable (foldl)
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -919,3 +921,26 @@ transformBapName bapName =
       removedUnderScore = DS.replaceAll (DS.Pattern "_") (DS.Replacement " ") lowerCase
       firstLetterUpperCase = (DS.toUpper (DS.take 1 removedUnderScore)) <> DS.drop 1 removedUnderScore
   in firstLetterUpperCase
+
+
+appName :: Boolean -> String
+appName removeDriver = do
+  let config = getAppConfig appConfig 
+      driverAppName = fromMaybe config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+  if removeDriver then
+      foldl (\acc word -> DS.replaceAll (DS.Pattern word) (DS.Replacement "") acc) driverAppName ["Driver", "Partner"]
+  else driverAppName
+
+getVehicleMapping :: SA.ServiceTierType -> String
+getVehicleMapping serviceTierType = case serviceTierType of
+  SA.COMFY -> "SEDAN"
+  SA.ECO -> "HATCHBACK"
+  SA.PREMIUM -> "SUV"
+  SA.SUV_TIER -> "SUV"
+  SA.AUTO_RICKSHAW -> "AUTO_RICKSHAW"
+  SA.HATCHBACK_TIER -> "HATCHBACK"
+  SA.SEDAN_TIER -> "SEDAN"
+  SA.TAXI -> "TAXI"
+  SA.TAXI_PLUS -> "TAXI_PLUS"
+  SA.RENTALS -> "RENTALS"
+  SA.INTERCITY -> "INTERCITY"

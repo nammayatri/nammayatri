@@ -90,3 +90,14 @@ defaultForwardBatchConfigData = ForwardBatchConfigData
     advancedRidePopUpYoutubeLink: "",
     callDriverInfoPost: false
   }
+
+type TipsConfig
+  = { autoRickshaw :: Maybe (Array Int),
+      suv :: Maybe (Array Int),
+      sedan :: Maybe (Array Int),
+      hatchback :: Maybe (Array Int),
+      bookAny :: Maybe (Array Int),
+      taxi :: Maybe (Array Int),
+      taxiPlus :: Maybe (Array Int),
+      default :: Maybe (Array Int)
+    }

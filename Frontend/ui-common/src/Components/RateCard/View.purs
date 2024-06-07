@@ -364,37 +364,6 @@ driverAdditionView push config =
                                 then [cornerRadii $ Corners 8.0 false true true false]
                               else []
 
-fareUpdateView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
-fareUpdateView push config =
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  , padding $ Padding 20 0 20 160
-  ][  commonTV push (getStringByKey config "FARE_UPDATE_POLICY") Color.black800 FontStyle.subHeading1 LEFT 8 NoAction
-    , commonTV push (getStringByKey config "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS") Color.black650 FontStyle.body3 LEFT 12 NoAction
-    , textView
-      [ width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , textSize FontSize.a_14
-      , lineHeight "16"
-      , fontStyle $ FontStyle.regular LanguageStyle
-      , color Color.black650
-      , textFromHtml $ getStringByKey config "REASON_CHANGE_IN_ROUTE"
-      , margin $ MarginTop 20
-      ]
-    , textView
-      [ width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , textSize FontSize.a_14
-      , lineHeight "16"
-      , fontStyle $ FontStyle.regular LanguageStyle
-      , color Color.black650
-      , textFromHtml $ getStringByKey config "WAITING_CHARGES_APPLICABLE"
-      , margin $ MarginTop 12
-      ]
-  ]
-
 tollOrParkingView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 tollOrParkingView push config = 
   linearLayout

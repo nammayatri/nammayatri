@@ -94,6 +94,7 @@ import Screens as ScreenNames
 import Screens.AddVehicleDetailsScreen.ScreenData (initData) as AddVehicleDetailsScreenData
 import Screens.BookingOptionsScreen.Controller (downgradeOptionsConfig)
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
+import Screens.RateCardScreen.ScreenData as RateCardScreenData
 import Screens.DriverDetailsScreen.Controller (getGenderValue, genders, getGenderState)
 import Screens.DriverProfileScreen.Controller (getDowngradeOptionsSelected)
 import Screens.DriverProfileScreen.ScreenData (dummyDriverInfo)
@@ -1677,6 +1678,9 @@ bookingOptionsFlow = do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ props{ canSwitchToRental = updateDriverResp.canSwitchToRental, canSwitchToIntercity = updateDriverResp.canSwitchToIntercity} })
       bookingOptionsFlow
     GO_TO_PROFILE -> driverProfileFlow
+    EXIT_TO_RATE_CARD_SCREEN bopState -> do
+      modifyScreenState $ RateCardScreenStateType $ \_ -> RateCardScreenData.initData{data{ ridePreferences = bopState.data.ridePreferences, rateCard = bopState.data.rateCard}}
+      rateCardScreenFlow
   where 
     transfromRidePreferences :: Array API.DriverVehicleServiceTier -> Array ST.RidePreference
     transfromRidePreferences = 
@@ -1693,9 +1697,18 @@ bookingOptionsFlow = do
           shortDescription : item.shortDescription,
           vehicleRating : item.vehicleRating,
           isUsageRestricted : fromMaybe false item.isUsageRestricted,
-          priority : fromMaybe 0 item.priority
+          priority : fromMaybe 0 item.priority,
+          rateCardData : Nothing,
+          perKmRate : Nothing,
+          farePolicyHour : Nothing
         }
       )
+
+rateCardScreenFlow :: FlowBT String Unit
+rateCardScreenFlow = do
+  action <- UI.rateCardScreen
+  case action of
+    _ -> rateCardScreenFlow
 
 helpAndSupportFlow :: FlowBT String Unit
 helpAndSupportFlow = do

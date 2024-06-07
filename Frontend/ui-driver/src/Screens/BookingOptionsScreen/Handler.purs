@@ -29,3 +29,6 @@ bookingOptions = do
       if state.props.fromDeepLink
         then App.BackT $ App.NoBack <$> pure HOME_SCREEN_FROM_BOOKING_PREFS
         else App.BackT $ pure App.GoBack
+    ExitToRateCardScreen updatedState -> do
+      modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ EXIT_TO_RATE_CARD_SCREEN updatedState)
