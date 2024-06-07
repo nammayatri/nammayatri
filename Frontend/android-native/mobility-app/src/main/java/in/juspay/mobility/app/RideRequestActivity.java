@@ -107,7 +107,7 @@ public class RideRequestActivity extends AppCompatActivity {
                 startTimer();
             }
             SharedPreferences sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-            int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
+            int negotiationUnit = rideRequestBundle.getInt("driverStepFeeWithCurrency", Integer.parseInt(sharedPref.getString( "NEGOTIATION_UNIT", "10")));
   
             double srcLat = rideRequestBundle.getDouble("srcLat");
             double srcLng = rideRequestBundle.getDouble("srcLng");
@@ -121,6 +121,7 @@ public class RideRequestActivity extends AppCompatActivity {
             String rideDuration = String.format("%02d:%02d Hr", rideRequestBundle.getInt("rideDuration") / 3600 ,( rideRequestBundle.getInt("rideDuration") % 3600 ) / 60);
             String rideDistance = String.format("%d km", rideRequestBundle.getInt("rideDistance") / 1000);
             String notificationSource= rideRequestBundle.getString("notificationSource");
+            int offeredPrice = rideRequestBundle.getInt("driverDefaultStepFeeWithCurrency", 0);
                     
             SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                     distanceTobeCovered,
@@ -163,9 +164,9 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideStartTime,
                     rideStartDate,
                     notificationSource,
-                    rideRequestBundle.getBoolean("isThirdPartyBooking")
-            );
-
+                    rideRequestBundle.getBoolean("isThirdPartyBooking"),
+                    offeredPrice
+                    );
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);
             sheetAdapter.notifyItemInserted(sheetArrayList.indexOf(sheetModel));
@@ -294,6 +295,7 @@ public class RideRequestActivity extends AppCompatActivity {
             }
 
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer));
+            RideRequestUtils.updateStepFeeAndButtonAlpha(holder, model, mainLooper);
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
             RideRequestUtils.updateTierAndAC(holder, model, RideRequestActivity.this);

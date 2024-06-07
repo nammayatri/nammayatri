@@ -249,6 +249,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             String useMLKit = sharedPref.getString("USE_ML_TRANSLATE", "false");
             if (useMLKit.equals("false") && !model.isTranslated()) RideRequestUtils.updateViewFromMlTranslation(holder, model, sharedPref, OverlaySheetService.this);
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer));
+            RideRequestUtils.updateStepFeeAndButtonAlpha(holder, model, mainLooper);
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
             RideRequestUtils.updateRateView(holder, model);
@@ -643,7 +644,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     int calculatedTime = RideRequestUtils.calculateExpireTimer(searchRequestValidTill, getCurrTime);
                     if (sharedPref == null)
                         sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                    int negotiationUnit = Integer.parseInt(sharedPref.getString( "NEGOTIATION_UNIT", "10"));
+                    int negotiationUnit = rideRequestBundle.getInt("driverStepFeeWithCurrency", Integer.parseInt(sharedPref.getString( "NEGOTIATION_UNIT", "10")));
                     int rideRequestedBuffer = Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
                     int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
                     boolean gotoTag = rideRequestBundle.getBoolean("gotoTag");
@@ -661,6 +662,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String rideStartDate= rideRequestBundle.getString("rideStartDate");
                     String notificationSource= rideRequestBundle.getString("notificationSource");
                     boolean isThirdPartyBooking = rideRequestBundle.getBoolean("isThirdPartyBooking");
+                    int offeredPrice = rideRequestBundle.getInt("driverDefaultStepFeeWithCurrency", 0);
+                   
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
                     }
@@ -705,7 +708,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             rideStartTime,
                             rideStartDate,
                             notificationSource,
-                            isThirdPartyBooking);
+                            isThirdPartyBooking,
+                            offeredPrice
+                    );
 
                     if (floatyView == null) {
                         startTimer();
