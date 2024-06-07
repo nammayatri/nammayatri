@@ -2679,7 +2679,8 @@ type DocumentCaptureScreenProps = {
   isValidEmail :: Boolean,
   isValidFirstName :: Boolean,
   isValidMobileNumber :: Boolean,
-  setDefault :: Boolean
+  setDefault :: Boolean,
+  shouldGoBack :: Boolean
 } 
 
 
@@ -2705,4 +2706,20 @@ type CoinEarnedPopupTypeShown = {
   eightRideCompleted :: String,
   referAndEarnCoin :: String,
   convertCoinsToCash :: String
+}
+
+---------------------------------------- CameraScreen ---------------------------------------
+
+type CameraScreenState = {
+  data :: CameraScreenData,
+  props :: CameraScreenProps
+}
+
+type CameraScreenData = {
+  clickedImageUrl :: String,
+  imageUri :: String 
+}
+
+type CameraScreenProps = {
+  imageClicked :: Boolean
 }
