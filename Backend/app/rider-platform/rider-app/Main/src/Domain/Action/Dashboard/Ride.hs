@@ -37,14 +37,12 @@ import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Booking as DTB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import Domain.Types.CancellationReason
-import Domain.Types.Estimate
 import Domain.Types.Location (Location (..))
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.SearchRequest as DSearch
 import qualified Domain.Types.Sos as DSos
 import qualified Domain.Types.VehicleVariant as VehVar
 import Environment
@@ -67,11 +65,8 @@ import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Clickhouse.EstimateBreakup as CH
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
-import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.SearchRequest as QSearch
 
 data BookingCancelledReq = BookingCancelledReq
   { bookingId :: Id DTB.Booking,
@@ -325,22 +320,9 @@ rideInfo merchantId reqRideId = do
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  mbSearchReq :: Maybe DSearch.SearchRequest <- case booking.quoteId of
-    Just quoteId -> do
-      mbQuote <- B.runInReplica $ QQuote.findById quoteId
-      case mbQuote of
-        Just quote -> B.runInReplica $ QSearch.findById quote.requestId
-        Nothing -> pure Nothing
-    Nothing -> pure Nothing
-  let estimatedDuration :: Maybe Seconds = (.estimatedRideDuration) =<< mbSearchReq
-  estBreakup <- case mbSearchReq of
-    Just searchreq -> do
-      mbEstimate <- B.runInReplica $ QEst.findBySRIdAndStatus COMPLETED searchreq.id
-      case mbEstimate of
-        Just estimate -> do
-          breakup <- CH.findAllByEstimateIdT estimate.id
-          pure $ Just breakup
-        Nothing -> pure Nothing
+  let estimatedDuration :: Maybe Seconds = (booking.estimatedDuration)
+  estBreakup <- case booking.estimateId of
+    Just estimateId -> Just <$> CH.findAllByEstimateIdT estimateId
     Nothing -> pure Nothing
   unless (merchantId == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
   person <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)

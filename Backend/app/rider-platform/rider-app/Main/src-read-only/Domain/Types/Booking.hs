@@ -8,6 +8,7 @@ module Domain.Types.Booking (module Domain.Types.Booking, module ReExport) where
 import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
 import qualified Domain.Types.Client
+import qualified Domain.Types.Estimate
 import Domain.Types.Extra.Booking as ReExport
 import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.Location
@@ -38,6 +39,7 @@ data Booking = Booking
     createdAt :: Kernel.Prelude.UTCTime,
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
+    estimateId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate),
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedFare :: Kernel.Types.Common.Price,
