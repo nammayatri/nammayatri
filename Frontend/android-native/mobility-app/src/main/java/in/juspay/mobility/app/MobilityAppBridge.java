@@ -102,7 +102,6 @@ import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.carousel.VPAdapter;
 import in.juspay.mobility.app.carousel.ViewPagerItem;
 import in.juspay.mobility.app.reels.ReelController;
-
 public class MobilityAppBridge extends HyperBridge {
     // Clever Tap
     HashMap<String, Object> clevertapProfileData = new HashMap<>();
@@ -153,6 +152,7 @@ public class MobilityAppBridge extends HyperBridge {
     private CallBack callBack;
 
     private HashMap<String, SliderComponent> sliderComponentHashMap = new HashMap<>();
+
     public MobilityAppBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(bridgeComponents.getContext());
@@ -1215,6 +1215,18 @@ public class MobilityAppBridge extends HyperBridge {
     public void recordVideo(final String callback) {
         if(cameraUtils != null)
             cameraUtils.recordVideo(bridgeComponents.getActivity(), bridgeComponents.getContext(), callback, bridgeComponents);
+    }
+
+    @JavascriptInterface
+    public void takePhoto (final String callback) {
+        if(cameraUtils != null)
+            cameraUtils.takePhoto(bridgeComponents.getActivity(), bridgeComponents.getContext(), callback, bridgeComponents);
+    }
+
+    @JavascriptInterface
+    public void stopCamera () {
+        if(cameraUtils != null)
+            cameraUtils.stopCamera(bridgeComponents.getActivity());
     }
 
     @JavascriptInterface

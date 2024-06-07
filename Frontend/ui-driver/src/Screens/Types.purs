@@ -2684,7 +2684,8 @@ type DocumentCaptureScreenProps = {
   isValidEmail :: Boolean,
   isValidFirstName :: Boolean,
   isValidMobileNumber :: Boolean,
-  setDefault :: Boolean
+  setDefault :: Boolean,
+  shouldGoBack :: Boolean
 } 
 
 
@@ -2733,4 +2734,19 @@ type RateCardScreenProps = {
   sliderMinValue :: Int,
   sliderMaxValue :: Int,
   sliderLoading :: Boolean
+}
+---------------------------------------- CameraScreen ---------------------------------------
+
+type CameraScreenState = {
+  data :: CameraScreenData,
+  props :: CameraScreenProps
+}
+
+type CameraScreenData = {
+  clickedImageUrl :: String,
+  imageUri :: String 
+}
+
+type CameraScreenProps = {
+  imageClicked :: Boolean
 }

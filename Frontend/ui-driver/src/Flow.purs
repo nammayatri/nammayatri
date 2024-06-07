@@ -4104,6 +4104,17 @@ documentcaptureScreenFlow = do
         Left error -> do
           modifyScreenState $ DocumentCaptureScreenStateType $ \docCapScreenState -> docCapScreenState { props {validating = false}, data {errorMessage = Just $ Remote.getCorrespondingErrorMessage error}}
           documentcaptureScreenFlow
+    TA.OPEN_CAMERA_FOR_PROFILE_PIC state -> openCameraScreenFlow
+  documentcaptureScreenFlow
+
+openCameraScreenFlow :: FlowBT String Unit
+openCameraScreenFlow = do
+  (GlobalState state) <- getState
+  modifyScreenState $ CameraScreenStateType (\cameraScreen -> cameraScreen{data{clickedImageUrl = ""}, props{imageClicked = false}})
+  void $ lift $ lift $ fork $ UI.cameraScreen
+
+
+
 getSrcDestConfig :: HomeScreenState -> UpdateRouteSrcDestConfig
 getSrcDestConfig state = 
   if state.props.currentStage == RideAccepted then

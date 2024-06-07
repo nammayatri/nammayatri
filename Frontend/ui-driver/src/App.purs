@@ -75,6 +75,7 @@ import Screens.DocumentCaptureScreen.ScreenData as DocumentCaptureScreenData
 import Screens.DocumentDetailsScreen.ScreenData as DocumentDetailsScreenData
 import Screens.RateCardScreen.ScreenData as RateCardScreenData
 import Screens.DeleteAccountScreen.ScreenData as DeleteAccountScreenData
+import Screens.CameraScreen.ScreenData as CameraScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -129,6 +130,7 @@ newtype GlobalState = GlobalState {
   , documentDetailsScreen :: DocumentDetailsScreenState
   , rateCardScreen :: RateCardScreenState
   , deleteAccountScreen :: DeleteAccountScreenData.State
+  , cameraScreen :: CameraScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -183,6 +185,7 @@ defaultGlobalState = GlobalState {
 , documentDetailsScreen : DocumentDetailsScreenData.initData
 , rateCardScreen : RateCardScreenData.initData
 , deleteAccountScreen : DeleteAccountScreenData.initData
+, cameraScreen : CameraScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -246,6 +249,7 @@ data ScreenType =
   | DocumentCaptureScreenStateType (DocumentCaptureScreenState -> DocumentCaptureScreenState)
   | DocumentDetailsScreenStateType (DocumentDetailsScreenState -> DocumentDetailsScreenState)
   | RateCardScreenStateType (RateCardScreenState -> RateCardScreenState)
+  | CameraScreenStateType (CameraScreenState -> CameraScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -542,5 +546,7 @@ data DOCUMENT_CAPTURE_SCREEN_OUTPUT = UPLOAD_DOC_API DocumentCaptureScreenState 
                                       | CHANGE_VEHICLE_FROM_DOCUMENT_CAPTURE
                                       | UPDATE_SSN DocumentCaptureScreenState
                                       | UPDATE_SOCIAL_PROFILE DocumentCaptureScreenState
+                                      | OPEN_CAMERA_FOR_PROFILE_PIC DocumentCaptureScreenState
 
 data RATE_CARD_SCREEN_OUTPUT = REFRESH_RATE_CARD RateCardScreenState | RATE_CARD_API RateCardScreenState Int
+data CAMERA_SCREEN_OUTPUT = OPEN_CAMERA
