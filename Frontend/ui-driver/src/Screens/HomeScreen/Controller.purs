@@ -1422,7 +1422,7 @@ eval (GoToEarningsScreen showCoinsView) state = do
   exit $ EarningsScreen state showCoinsView 
 
 eval (DriverStats driverStats) state = do
-  exit $ DriverStatsUpdate driverStats state
+  exit $ DriverStatsUpdate driverStats state{props{routeVisible = false, mapRendered = true}}
 
 eval AccessibilityHeaderAction state = 
   if state.data.activeRide.bookingFromOtherPlatform then
