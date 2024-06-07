@@ -16,7 +16,7 @@
 module Screens.DocumentCaptureScreen.Handler where
 
 import Engineering.Helpers.BackTrack (getState)
-import Prelude (bind, pure, discard, ($), (<$>))
+import Prelude (bind, pure, discard, ($), (<$>), void)
 import Screens.DocumentCaptureScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
@@ -26,6 +26,7 @@ import Types.App (FlowBT, GlobalState(..), DOCUMENT_CAPTURE_SCREEN_OUTPUT(..),Sc
 import Types.ModifyScreenState (modifyScreenState)
 import Screens.Types as ST
 import Resource.Constants as Const
+import Debug
 
 documentCaptureScreen :: FlowBT String DOCUMENT_CAPTURE_SCREEN_OUTPUT
 documentCaptureScreen = do
@@ -49,3 +50,6 @@ documentCaptureScreen = do
     ChangeVehicle updatedState -> do
       modifyScreenState $ DocumentCaptureScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CHANGE_VEHICLE_FROM_DOCUMENT_CAPTURE)
+    OpenCamera updatedState -> do
+      modifyScreenState $ DocumentCaptureScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ OPEN_CAMERA_FOR_PROFILE_PIC updatedState)

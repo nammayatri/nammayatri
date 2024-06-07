@@ -47,6 +47,7 @@ initData =
         isValidEmail : true,
         isValidFirstName : true,
         isValidMobileNumber: true,
-        setDefault : false
+        setDefault : false,
+        shouldGoBack : true
       }
   }
