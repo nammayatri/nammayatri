@@ -33,7 +33,7 @@ view push config =
     isActiveIndex = config.index == config.activeIndex
     stroke' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then "2," <> Color.blue800 else "1," <> Color.white900
     background' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then Color.blue600 else Color.white900
-    padding' = Padding 8 12 8 12
+    padding' = PaddingVertical 12 12
     isBookAny = config.vehicleVariant == "BOOK_ANY" && config.activeIndex == config.index
     selectedEstimateHeight = if config.selectedEstimateHeight == 0 then 72 else config.selectedEstimateHeight
     currentEstimateHeight = if config.currentEstimateHeight < 80 then 176 else config.currentEstimateHeight
@@ -295,7 +295,7 @@ priceDetailsView push config =
                           true  -> const $ ShowRateCard config
     ][linearLayout
       ([ height MATCH_PARENT
-      , width $ if (isBookAny && os == "IOS") then V (((EHC.screenWidth unit) * 7) / 20) else WRAP_CONTENT
+      , width $ if (isBookAny && os == "IOS") then V (((EHC.screenWidth unit) * 33) / 100) else WRAP_CONTENT
       , orientation VERTICAL
       ] <> if isBookAny then [gravity RIGHT] else [])
       [ linearLayout
