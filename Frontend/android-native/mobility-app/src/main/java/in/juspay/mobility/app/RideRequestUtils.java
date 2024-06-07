@@ -732,4 +732,20 @@ public class RideRequestUtils {
         }
         return new JSONObject();
     }
+
+    public static void updateStepFeeAndButtonAlpha(SheetAdapter.SheetViewHolder holder, SheetModel model, Handler mainLooper) {
+        mainLooper.post(() -> {
+            if (model.getOfferedPrice() <= 0) {
+                model.setButtonDecreasePriceAlpha(0.5f);
+                model.setButtonDecreasePriceClickable(false);
+                model.setButtonIncreasePriceAlpha(1.0f);
+                model.setButtonIncreasePriceClickable(true);
+            } else if (model.getOfferedPrice() >= model.getDriverMaxExtraFee()) {
+                model.setButtonIncreasePriceAlpha(0.5f);
+                model.setButtonIncreasePriceClickable(false);
+                model.setButtonDecreasePriceAlpha(1.0f);
+                model.setButtonDecreasePriceClickable(true);
+            }
+        });
+    }
 }

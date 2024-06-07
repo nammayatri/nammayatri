@@ -75,7 +75,9 @@ public class SheetModel {
                       String rideStartTime,
                       String rideStartDate,
                       String notificationSource,
-                      Boolean isThirdPartyBooking){
+                      Boolean isThirdPartyBooking,
+                      int offeredPrice
+                      ){
 
         this.srcLat = srcLat;
         this.srcLng = srcLng;
@@ -91,7 +93,7 @@ public class SheetModel {
         this.updatedAmount = 0;
         this.reqExpiryTime = reqExpiryTime;
         this.searchRequestId = searchRequestId;
-        this.offeredPrice = 0;
+        this.offeredPrice = offeredPrice;
         this.baseFare = baseFare;
         this.startTime = startTime;
         this.driverMinExtraFee = driverMinExtraFee;

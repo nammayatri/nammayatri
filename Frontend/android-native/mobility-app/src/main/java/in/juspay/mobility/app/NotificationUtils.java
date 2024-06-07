@@ -219,6 +219,9 @@ public class NotificationUtils {
                 try {
                     JSONObject addressPickUp = new JSONObject(entity_payload.get("fromLocation").toString());
                     JSONObject addressDrop = new JSONObject(entity_payload.has("toLocation") && !entity_payload.isNull("toLocation") ? entity_payload.get("toLocation").toString() : "{}");
+                    JSONObject driverDefaultStepFeeWithCurrency = new JSONObject(entity_payload.has("driverDefaultStepFeeWithCurrency") && !entity_payload.isNull("driverDefaultStepFeeWithCurrency") ? entity_payload.get("driverDefaultStepFeeWithCurrency").toString() : "{}");
+                    JSONObject driverStepFeeWithCurrency = new JSONObject(entity_payload.has("driverStepFeeWithCurrency") && !entity_payload.isNull("driverStepFeeWithCurrency") ? entity_payload.get("driverStepFeeWithCurrency").toString() : "{}");
+                    int negotiationUnit = Integer.parseInt(sharedPref.getString( "NEGOTIATION_UNIT", "10"));
                     String[] specialZoneSplit = entity_payload.optString("specialLocationTag", "None").split("_");
                     boolean isPickupZone = entity_payload.optBoolean("pickupZone", false);
                     boolean isSpecialPickupZone = false;
@@ -266,6 +269,8 @@ public class NotificationUtils {
                     sheetData.putString("rideStartDate", rideStartDate);
                     sheetData.putString("notificationSource", source);
                     sheetData.putBoolean("isThirdPartyBooking", entity_payload.has("isValueAddNP") && !entity_payload.optBoolean("isValueAddNP", true));
+                    sheetData.putInt("driverDefaultStepFeeWithCurrency", driverDefaultStepFeeWithCurrency.optInt("amount", 0));
+                    sheetData.putInt("driverStepFeeWithCurrency", driverStepFeeWithCurrency.optInt("amount", negotiationUnit));
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
 
