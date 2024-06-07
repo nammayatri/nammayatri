@@ -26,6 +26,8 @@ SearchRequestForDriver:
      enum: "Active, Inactive"
     SearchRequestForDriverResponse:
       enum: "Accept, Reject, Pulled"
+    NotificationSource:
+      enum: "FCM, GRPC"
 
 
   fields:
@@ -52,6 +54,7 @@ SearchRequestForDriver:
     lon : Maybe Double
     createdAt : UTCTime
     response : Maybe SearchRequestForDriverResponse
+    notificationSource: Maybe NotificationSource
     driverMinExtraFee : Maybe HighPrecMoney
     driverMaxExtraFee : Maybe HighPrecMoney
     driverStepFee: Maybe HighPrecMoney
@@ -185,7 +188,7 @@ SearchRequestForDriver:
 
     updateDriverResponse:
       kvFunction: updateOneWithKV
-      params: [response, status]
+      params: [response, status, notificationSource]
       where: id
 
   sqlType:

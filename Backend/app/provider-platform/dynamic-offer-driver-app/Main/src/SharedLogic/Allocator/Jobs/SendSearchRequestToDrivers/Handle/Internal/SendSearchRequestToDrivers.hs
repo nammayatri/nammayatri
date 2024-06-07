@@ -184,6 +184,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 backendConfigVersion = dpwRes.driverPoolResult.backendConfigVersion,
                 backendAppVersion = Just deploymentVersion.getDeploymentVersion,
                 isForwardRequest = dpwRes.isForwardRequest,
+                notificationSource = Nothing,
                 ..
               }
       pure searchRequestForDriver
