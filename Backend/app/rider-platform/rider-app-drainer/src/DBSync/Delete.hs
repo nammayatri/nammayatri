@@ -39,7 +39,7 @@ runDeleteQuery deleteEntries dbDeleteObject = do
       result <- EL.runIO $ try $ executeQueryUsingConnectionPool _connectionPool (Query $ TE.encodeUtf8 query)
       case result of
         Left (QueryError errorMsg) -> do
-          EL.logError ("QUERY DELETE FAILED" :: Text) (errorMsg <> " for query :: " <> query)
+          EL.logError ("QUERY DELETE FAILED" :: Text) ("(ENTRY ID :: " <> show entryId <> ") => " <> errorMsg <> " for query :: " <> query)
           EL.logError ("QUERY DELETE FAILED : BYTE STRING" :: Text) (TE.decodeUtf8 byteString)
           EL.logError ("QUERY DELETE FAILED : DB OBJECT" :: Text) (show dbDeleteObject)
           void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Delete" dbModel.getDBModel
