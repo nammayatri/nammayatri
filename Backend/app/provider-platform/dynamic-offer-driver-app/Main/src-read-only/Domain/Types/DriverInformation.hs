@@ -37,6 +37,7 @@ data DriverInformation = DriverInformation
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     enabled :: Kernel.Prelude.Bool,
     enabledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    forwardBatchingEnabled :: Kernel.Prelude.Bool,
     hasAdvanceBooking :: Kernel.Prelude.Bool,
     lastACStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     lastEnabledOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

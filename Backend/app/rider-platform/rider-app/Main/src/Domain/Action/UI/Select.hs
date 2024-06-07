@@ -75,7 +75,8 @@ data DSelectReq = DSelectReq
     autoAssignEnabled :: Bool,
     autoAssignEnabledV2 :: Maybe Bool,
     paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
-    otherSelectedEstimates :: Maybe [Id DEstimate.Estimate]
+    otherSelectedEstimates :: Maybe [Id DEstimate.Estimate],
+    isAdvancedBookingEnabled :: Maybe Bool
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -102,7 +103,8 @@ data DSelectRes = DSelectRes
     city :: Context.City,
     autoAssignEnabled :: Bool,
     phoneNumber :: Maybe Text,
-    isValueAddNP :: Bool
+    isValueAddNP :: Bool,
+    isAdvancedBookingEnabled :: Bool
   }
 
 newtype DSelectResultRes = DSelectResultRes
@@ -169,6 +171,7 @@ select2 personId estimateId req@DSelectReq {..} = do
   _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill}
   _ <- QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
   _ <- QDOffer.updateStatus DDO.INACTIVE estimateId
+  QSearchRequest.updateAdvancedBookingEnabled isAdvancedBookingEnabled searchRequestId
   let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.customerExtraFee)
   Kernel.Prelude.whenJust req.customerExtraFeeWithCurrency $ \reqWithCurrency -> do
     unless (estimate.estimatedFare.currency == reqWithCurrency.currency) $
@@ -184,6 +187,7 @@ select2 personId estimateId req@DSelectReq {..} = do
       { providerId = estimate.providerId,
         providerUrl = estimate.providerUrl,
         variant = DVST.castServiceTierToVariant estimate.vehicleServiceTierType, -- TODO: fix later
+        isAdvancedBookingEnabled = fromMaybe False isAdvancedBookingEnabled,
         ..
       }
   where

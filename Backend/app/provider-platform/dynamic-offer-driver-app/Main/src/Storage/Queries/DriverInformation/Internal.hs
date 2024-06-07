@@ -53,6 +53,7 @@ getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide isRental isInterCity 
           ]
             <> ([Se.Is BeamDI.onRide $ Se.Eq (not onlyNotOnRide) | not (onlyNotOnRide && onlyOnRide)])
             <> ([Se.Is BeamDI.hasAdvanceBooking $ Se.Eq (Just (not onlyOnRide)) | onlyOnRide])
+            <> ([Se.Is BeamDI.forwardBatchingEnabled $ Se.Eq (Just True) | onlyOnRide])
             <> ([Se.Is BeamDI.canSwitchToRental $ Se.Eq (Just True) | isRental])
             <> ([Se.Is BeamDI.canSwitchToInterCity $ Se.Eq (Just True) | isInterCity])
         )

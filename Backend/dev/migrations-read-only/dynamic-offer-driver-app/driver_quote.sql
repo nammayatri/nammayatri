@@ -34,3 +34,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN valid_till timestamp 
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN vehicle_service_tier text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN vehicle_variant character varying(255) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN vehicle_service_tier_name text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN merchant_operating_city_id character varying(36) ;

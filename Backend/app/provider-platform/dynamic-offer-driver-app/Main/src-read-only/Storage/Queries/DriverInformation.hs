@@ -118,6 +118,11 @@ updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngrade
     ]
     [Se.Is Beam.driverId $ Se.Eq driverId]
 
+updateForwardBatchingEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateForwardBatchingEnabled forwardBatchingEnabled (Kernel.Types.Id.Id driverId) = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.forwardBatchingEnabled (Kernel.Prelude.Just forwardBatchingEnabled), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
+
 updateLastACStatusCheckedAt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateLastACStatusCheckedAt lastACStatusCheckedAt (Kernel.Types.Id.Id driverId) = do
   _now <- getCurrentTime
@@ -179,6 +184,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.driverDob driverDob,
       Se.Set Beam.enabled enabled,
       Se.Set Beam.enabledAt enabledAt,
+      Se.Set Beam.forwardBatchingEnabled (Kernel.Prelude.Just forwardBatchingEnabled),
       Se.Set Beam.hasAdvanceBooking (Kernel.Prelude.Just hasAdvanceBooking),
       Se.Set Beam.lastACStatusCheckedAt lastACStatusCheckedAt,
       Se.Set Beam.lastEnabledOn lastEnabledOn,

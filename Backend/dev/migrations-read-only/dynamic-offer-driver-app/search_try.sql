@@ -24,3 +24,18 @@ ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN valid_till timestamp wi
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN vehicle_variant character varying (255) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN vehicle_service_tier_name text ;
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN is_advanced_booking_enabled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN service_tier_array text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_try ALTER COLUMN service_tier_array TYPE text[];

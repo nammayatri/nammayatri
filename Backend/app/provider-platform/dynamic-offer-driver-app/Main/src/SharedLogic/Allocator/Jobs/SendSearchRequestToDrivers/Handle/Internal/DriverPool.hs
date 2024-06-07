@@ -278,7 +278,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
                   pure (normalDriverPoolBatch, [], Just radiusStep)
 
         getDriverPoolOnRide mOCityId transporterConfig intelligentPoolConfig radiusStep blockListedDrivers poolType = do
-          if poolType == NormalPool && driverPoolCfg.enableForwardBatching
+          if poolType == NormalPool && driverPoolCfg.enableForwardBatching && searchTry.isAdvancedBookingEnabled
             then do
               previousDriverOnRide <- getPreviousBatchesDrivers (Just True)
               allNearbyDriversCurrentlyOnRide <- calcDriverCurrentlyOnRidePool poolType radiusStep transporterConfig merchantOpCityId_ batchNum

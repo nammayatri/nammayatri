@@ -37,7 +37,9 @@ SearchTry:
     searchRepeatCounter : Int
     searchRepeatType : SearchRepeatType
     tripCategory : TripCategory
+    isAdvancedBookingEnabled : Bool
     isScheduled : Bool
+    serviceTierArray : "[Text]"
     createdAt : UTCTime
     updatedAt : UTCTime
 
@@ -48,6 +50,8 @@ SearchTry:
     isScheduled: Maybe Bool
     vehicleServiceTierName: Maybe Text
     currency: Maybe Currency
+    isAdvancedBookingEnabled: Maybe Bool
+    serviceTierArray : "Maybe [Text]"
 
 
   beamFields:
@@ -77,6 +81,8 @@ SearchTry:
     baseFare: Kernel.Types.Common.mkAmountWithDefault baseFareAmount baseFare|E
     customerExtraFee: Kernel.Types.Common.mkAmountWithDefault customerExtraFeeAmount <$> customerExtraFee|E
     currency: fromMaybe Kernel.Types.Common.INR currency|E
+    isAdvancedBookingEnabled: fromMaybe False isAdvancedBookingEnabled|E
+    serviceTierArray :  fromMaybe (catMaybes [vehicleServiceTierName]) serviceTierArray|E
 
   toTType:
     estimateIds: Kernel.Prelude.Just|I
@@ -90,6 +96,8 @@ SearchTry:
     currency: Kernel.Prelude.Just|I
     customerExtraFee: Kernel.Prelude.roundToIntegral <$> customerExtraFee|E
     customerExtraFeeAmount: customerExtraFee|E
+    isAdvancedBookingEnabled: Kernel.Prelude.Just|I
+    serviceTierArray : Kernel.Prelude.Just|I
   constraints:
     id: PrimaryKey
     requestId: SecondaryKey

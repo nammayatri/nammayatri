@@ -60,6 +60,8 @@ DriverQuote:
     clientDevice : Maybe Device
     backendConfigVersion : Maybe Version
     backendAppVersion : Maybe Text
+    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
+    vehicleServiceTierName : Maybe Text
     createdAt : UTCTime
     updatedAt : UTCTime
 

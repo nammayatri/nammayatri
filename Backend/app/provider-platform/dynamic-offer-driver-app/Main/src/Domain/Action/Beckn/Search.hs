@@ -382,6 +382,7 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverEx
         customerCancellationDues = Nothing,
         currency,
         roundTrip = Just roundTrip,
+        isAdvanceBookingEnabled = False,
         ..
       }
 

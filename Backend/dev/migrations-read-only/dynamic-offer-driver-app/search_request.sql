@@ -41,3 +41,4 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN round_trip boolean ;
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN return_time timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN is_advance_booking_enabled boolean ;

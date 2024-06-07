@@ -54,6 +54,7 @@ SearchRequest:
     clientDevice: Maybe Device
     backendConfigVersion: Maybe Version
     backendAppVersion: Maybe Text
+    isAdvanceBookingEnabled: Maybe Bool
 
   types:
     SearchRequestStatus:
@@ -143,6 +144,12 @@ SearchRequest:
     - createMany
     - updateByPrimaryKey
     - findByPrimaryKey
+
+  queries:
+    updateAdvancedBookingEnabled:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [isAdvanceBookingEnabled]
 
   constraints:
     id: PrimaryKey
