@@ -11,6 +11,7 @@ import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.FareParameters
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequestForDriver
@@ -44,6 +45,7 @@ data DriverQuote = DriverQuote
     fareParams :: Domain.Types.FareParameters.FareParameters,
     goHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest.DriverGoHomeRequest),
     id :: Kernel.Types.Id.Id Domain.Types.DriverQuote.DriverQuote,
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     searchRequestForDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver),
@@ -54,6 +56,7 @@ data DriverQuote = DriverQuote
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
+    vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.Vehicle.Variant
   }
   deriving (Generic, Show)

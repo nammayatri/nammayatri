@@ -100,3 +100,9 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN trip_category text ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN previous_ride_trip_end_lon double precision ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN previous_ride_trip_end_lat double precision ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN is_advance_booking boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN vehicle_variant text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN vehicle_service_tier_name text ;

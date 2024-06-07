@@ -50,6 +50,7 @@ instance FromTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
             fareParams = fareParams',
             goHomeRequestId = Kernel.Types.Id.Id <$> goHomeRequestId,
             id = Kernel.Types.Id.Id id,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             providerId = Kernel.Types.Id.Id providerId,
             requestId = Kernel.Types.Id.Id requestId,
             searchRequestForDriverId = Kernel.Types.Id.Id <$> searchRequestForDriverId,
@@ -60,6 +61,7 @@ instance FromTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
             updatedAt = Data.Time.localTimeToUTC Data.Time.utc updatedAt,
             validTill = Data.Time.localTimeToUTC Data.Time.utc validTill,
             vehicleServiceTier = fromMaybe (SharedLogic.DriverPool.Types.castVariantToServiceTier vehicleVariant) vehicleServiceTier,
+            vehicleServiceTierName = vehicleServiceTierName,
             vehicleVariant = vehicleVariant
           }
 
@@ -88,6 +90,7 @@ instance ToTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
         Beam.fareParametersId = Kernel.Types.Id.getId ((.id) fareParams),
         Beam.goHomeRequestId = Kernel.Types.Id.getId <$> goHomeRequestId,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.providerId = Kernel.Types.Id.getId providerId,
         Beam.requestId = Kernel.Types.Id.getId requestId,
         Beam.searchRequestForDriverId = Kernel.Types.Id.getId <$> searchRequestForDriverId,
@@ -98,5 +101,6 @@ instance ToTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
         Beam.updatedAt = Data.Time.utcToLocalTime Data.Time.utc updatedAt,
         Beam.validTill = Data.Time.utcToLocalTime Data.Time.utc validTill,
         Beam.vehicleServiceTier = Kernel.Prelude.Just vehicleServiceTier,
+        Beam.vehicleServiceTierName = vehicleServiceTierName,
         Beam.vehicleVariant = vehicleVariant
       }

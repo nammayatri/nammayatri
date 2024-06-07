@@ -62,6 +62,7 @@ buildSelectReqV2 subscriber req = do
     _ -> throwError $ InvalidRequest "There should be only one item"
   let customerExtraFee = getCustomerExtraFeeV2 item.itemTags
       autoAssignEnabled = getAutoAssignEnabledV2 item.itemTags
+      isAdvancedBoookingEnabled = getAdvancedBookingEnabled item.itemTags
       bookAnyEstimates = getBookAnyEstimates item.itemTags
   fulfillment <- case order.orderFulfillments of
     Just [fulfillment] -> pure $ Just fulfillment
@@ -78,7 +79,8 @@ buildSelectReqV2 subscriber req = do
         autoAssignEnabled = autoAssignEnabled,
         customerExtraFee = customerExtraFee,
         estimateIds = [Id estimateIdText] <> (maybe [] (map Id) bookAnyEstimates),
-        customerPhoneNum = customerPhoneNum
+        customerPhoneNum = customerPhoneNum,
+        isAdvancedBookingEnabled = isAdvancedBoookingEnabled
       }
 
 getBookAnyEstimates :: Maybe [Spec.TagGroup] -> Maybe [Text]
@@ -94,6 +96,14 @@ getCustomerExtraFeeV2 tagGroups = do
 getAutoAssignEnabledV2 :: Maybe [Spec.TagGroup] -> Bool
 getAutoAssignEnabledV2 tagGroups =
   let tagValue = Utils.getTagV2 Tag.AUTO_ASSIGN_ENABLED Tag.IS_AUTO_ASSIGN_ENABLED tagGroups
+   in case tagValue of
+        Just "True" -> True
+        Just "False" -> False
+        _ -> False
+
+getAdvancedBookingEnabled :: Maybe [Spec.TagGroup] -> Bool
+getAdvancedBookingEnabled tagGroups =
+  let tagValue = Utils.getTagV2 Tag.FORWARD_BATCHING_REQUEST_INFO Tag.IS_FORWARD_BATCH_ENABLED tagGroups
    in case tagValue of
         Just "True" -> True
         Just "False" -> False
