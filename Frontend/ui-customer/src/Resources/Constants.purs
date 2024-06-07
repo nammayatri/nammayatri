@@ -213,7 +213,7 @@ getFaresList fares chargeableRideDistance =
             (show $ case item.description of 
               "BASE_FARE" -> price.amount + getMerchSpecBaseFare fares
               "SGST" -> (price.amount * 2.0) + getFareFromArray fares "FIXED_GOVERNMENT_RATE"
-              "WAITING_OR_PICKUP_CHARGES" -> price.amount + getFareFromArray fares "PLATFORM_FEE"
+              "WAITING_OR_PICKUP_CHARGES" -> price.amount + getPlatformFeeIfIncluded fares
               _ -> price.amount)
           , title : case item.description of
                       "BASE_FARE" -> (getEN BASE_FARES) -- <> if chargeableRideDistance == "0 m" then "" else " (" <> chargeableRideDistance <> ")"
@@ -243,7 +243,7 @@ getFaresList fares chargeableRideDistance =
 getMerchSpecBaseFare :: Array FareBreakupAPIEntity -> Number
 getMerchSpecBaseFare fares =
   case getMerchant FunctionCall of
-    YATRISATHI -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE"]
+    YATRISATHI -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "PICKUP_CHARGES", "DEAD_KILOMETER_FARE", "SERVICE_CHARGE", "PLATFORM_FEE"]
     _ -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE"]
 
 
@@ -274,8 +274,14 @@ dummyPrice = {amount: 0.0, currency: ""}
 getMerchantSpecificFilteredFares :: Merchant -> Array String
 getMerchantSpecificFilteredFares merchant = 
   case merchant of
-    YATRISATHI -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "CGST", "PLATFORM_FEE", "FIXED_GOVERNMENT_RATE"]
+    YATRISATHI -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "CGST", "PLATFORM_FEE", "FIXED_GOVERNMENT_RATE", "SERVICE_CHARGE", "PICKUP_CHARGES", "DEAD_KILOMETER_FARE", "PLATFORM_FEE"]
     _ -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE"]
+
+getPlatformFeeIfIncluded :: Array FareBreakupAPIEntity -> Number
+getPlatformFeeIfIncluded fares = 
+  case getMerchant FunctionCall of
+    YATRISATHI -> 0.0
+    _ -> getFareFromArray fares "PLATFORM_FEE" 
 
 getFilteredFares :: Array FareBreakupAPIEntity -> Array FareBreakupAPIEntity
 getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.description) (getMerchantSpecificFilteredFares (getMerchant FunctionCall))))--["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE"]) )
