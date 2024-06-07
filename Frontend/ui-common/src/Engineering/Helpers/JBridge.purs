@@ -102,9 +102,10 @@ foreign import removeMarker :: String -> Unit
 foreign import removeAllMarkers :: String -> Unit
 -- foreign import parseAddress      :: String -> Address
 foreign import disableActionEditText :: String -> Unit
-foreign import uploadFile :: Boolean -> Effect Unit
+foreign import uploadFileImpl :: EffectFn1 Boolean Unit
 foreign import previewImage :: String -> Effect Unit
 foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
+foreign import storeCallBackOpenCamera :: forall action. (action -> Effect Unit) -> (action) -> Effect Unit
 foreign import renderBase64Image :: String -> String -> Boolean -> String -> Effect Unit
 foreign import storeCallBackUploadMultiPartData :: forall action. EffectFn2 (action -> Effect Unit)  (String -> String -> action) Unit
 foreign import setScaleType :: String -> String -> String -> Effect Unit
@@ -275,7 +276,10 @@ foreign import askRequestedPermissions :: Array String -> Unit
 foreign import askRequestedPermissionsWithCallback :: forall action. Array String -> (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import setupCamera :: String -> Boolean -> Unit
 foreign import startRecord :: forall action. (action -> Effect Unit)  -> (String -> String -> action) -> Effect Unit
+foreign import takePhoto :: forall action. (action -> Effect Unit)  -> (String -> String -> action) -> Effect Unit
+foreign import stopCamera :: String -> Unit
 foreign import stopRecord :: Unit -> Effect Unit
+foreign import cropImage :: Fn2 String Boolean Unit
 
 foreign import clearAudioPlayer :: String -> Unit
 foreign import pauseAudioPlayer :: String -> Unit
@@ -922,9 +926,11 @@ type UpdateSliderConfig = {
   id :: String
 }
 
-
 data RouteKeysType  = DEFAULT | RENTAL | ADVANCED
 
 derive instance genericRouteKeysType :: Generic RouteKeysType _
 instance showRouteKeysType :: Show RouteKeysType where show = genericShow
 instance eqRouteKeysType :: Eq RouteKeysType where eq = genericEq
+
+uploadFile :: Boolean -> Effect Unit
+uploadFile = runEffectFn1 uploadFileImpl

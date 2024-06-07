@@ -1749,6 +1749,22 @@ export const storeCallBackImageUpload = function (cb) {
   }
 }
 
+export const storeCallBackOpenCamera = function (cb) {
+  return function (action) {
+    return function () {
+      try {
+        if(JBridge.storeCallBackOpenCamera){
+          const callback = callbackMapper.map(function () {
+            cb(action)();
+          });
+          return window.JBridge.storeCallBackOpenCamera(callback);}
+      } catch (error) {
+        console.log("Error occurred in storeCallBackOpenCamera ------", error);
+      }
+    }
+  }
+}
+
 export const storeCallBackUploadMultiPartData = function (cb, action) {
   try {
     const callback = callbackMapper.map(function (fileType, fileId) {
@@ -1877,11 +1893,17 @@ export const factoryResetApp = function (str) {
   }
 }
 
-export const uploadFile = function (unit) {
-  return function () {
-    return JBridge.uploadFile();
-  };
-};
+export const uploadFileImpl = function(showCircularFrame) {
+  try {
+    if (JBridge.uploadFile) {
+      return JBridge.uploadFile(showCircularFrame);
+    }
+  } catch (err1) {
+    if (JBridge.uploadFile) {
+      return JBridge.uploadFile();
+    }
+  }
+}
 
 export const previewImage = function (base64Image) {
   return function () {
@@ -2645,7 +2667,35 @@ export const startRecord = function (cb){
     }
   }
 }
+
+
+export const takePhoto = function (cb){
+  return function (action){
+    return function () {
+      const callback = callbackMapper.map(function (imageUri, encodedImage) {
+        cb(action(imageUri)(encodedImage))();
+      });
+      if (window.__OS == "IOS" && window.JBridge.takePhoto) {
+        return window.JBridge.takePhoto(callback);
+      }
+      else if(window.JBridge.takePhoto){
+        return window.JBridge.takePhoto(callback);
+      }
+    }
+  }
+}
   
+export const stopCamera = function () {
+  if(window.JBridge.stopCamera){
+    return window.JBridge.stopCamera();
+  }
+}
+
+export const cropImage = function (imageUri, isCircularCrop) {
+  if(window.JBridge.cropImage) {
+    return window.JBridge.cropImage(imageUri, isCircularCrop);
+  }
+}
 
 export const stopRecord = function(){
   if(window.JBridge.stopRecord){

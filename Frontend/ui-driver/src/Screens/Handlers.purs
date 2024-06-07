@@ -63,3 +63,4 @@ import Screens.DocumentCaptureScreen.Handler (documentCaptureScreen) as UI
 import Screens.DocumentDetailsScreen.Handler (documentDetailsScreen) as UI
 import Screens.RateCardScreen.Handler (rateCardScreen) as UI
 import Screens.DeleteAccountScreen.Handler (deleteAccountScreen) as UI
+import Screens.CameraScreen.Handler (cameraScreen) as UI
