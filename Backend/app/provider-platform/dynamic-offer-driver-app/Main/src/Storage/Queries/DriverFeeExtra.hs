@@ -3,6 +3,8 @@
 
 module Storage.Queries.DriverFeeExtra where
 
+import Data.List (maximumBy)
+import Data.Ord (comparing)
 import Data.Time (Day, UTCTime (UTCTime, utctDay), addDays, fromGregorian, toGregorian)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Common as DTC
@@ -70,19 +72,19 @@ findFeeByDriverIdAndServiceNameInRange (Id driverId) serviceName from to =
     ]
 
 findLatestFeeByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> ServiceNames -> m (Maybe DriverFee)
-findLatestFeeByDriverIdAndServiceName (Id driverId) serviceName =
-  findAllWithOptionsKV
-    [ Se.And
-        [ Se.Is BeamDF.driverId (Se.Eq driverId),
-          Se.Is BeamDF.feeType $ Se.Not (Se.Eq MANDATE_REGISTRATION),
-          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-          Se.Is BeamDF.status (Se.Eq ONGOING)
-        ]
-    ]
-    (Se.Desc BeamDF.createdAt)
-    (Just 1)
-    Nothing
-    <&> listToMaybe
+findLatestFeeByDriverIdAndServiceName (Id driverId) serviceName = do
+  driverFees <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamDF.driverId (Se.Eq driverId),
+            Se.Is BeamDF.feeType $ Se.Not (Se.Eq MANDATE_REGISTRATION),
+            Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+            Se.Is BeamDF.status (Se.Eq ONGOING)
+          ]
+      ]
+  case driverFees of
+    [] -> pure Nothing
+    _ -> pure $ Just $ maximumBy (comparing Domain.createdAt) driverFees
 
 findLatestRegisterationFeeByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> ServiceNames -> m (Maybe DriverFee)
 findLatestRegisterationFeeByDriverIdAndServiceName (Id driverId) serviceName =
