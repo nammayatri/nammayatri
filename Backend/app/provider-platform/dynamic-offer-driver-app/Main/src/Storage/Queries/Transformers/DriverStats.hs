@@ -3,6 +3,7 @@
 
 module Storage.Queries.Transformers.DriverStats where
 
+import GHC.Float (int2Double)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -12,4 +13,4 @@ import Kernel.Types.Error
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 
 getTotalDistance :: (Kernel.Types.Common.Meters -> Kernel.Prelude.Double)
-getTotalDistance = error "TODO"
+getTotalDistance totalDistance = (\(Kernel.Types.Common.Meters m) -> int2Double m) totalDistance
