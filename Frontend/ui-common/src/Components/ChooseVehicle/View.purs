@@ -295,7 +295,7 @@ priceDetailsView push config =
                           true  -> const $ ShowRateCard config
     ][linearLayout
       ([ height MATCH_PARENT
-      , width $ if (isBookAny && os == "IOS") then V (((EHC.screenWidth unit) * 7) / 20) else WRAP_CONTENT
+      , width $ if (isBookAny && os == "IOS") then V (((EHC.screenWidth unit) * 33) / 100) else WRAP_CONTENT
       , orientation VERTICAL
       ] <> if isBookAny then [gravity RIGHT] else [])
       [ linearLayout
