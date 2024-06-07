@@ -20,7 +20,7 @@ import Data.String
 import Language.Strings
 import Prelude
 import PrestoDOM
-
+import Animation.Config
 import Common.Types.App as Common
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
@@ -42,6 +42,9 @@ import ConfigProvider
 import Mobility.Prelude
 import Components.OptionsMenu as OptionsMenuConfig
 import Data.Array as DA
+import Components.RequestInfoCard as RequestInfoCard
+import PrestoDOM.Animation as PrestoAnim
+import Debug(spy)
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -206,3 +209,113 @@ optionsMenuConfig state = OptionsMenuConfig.config {
   cornerRadius = 4.0,
   enableAnim = true
 }
+
+ambulanceModalConfig :: ST.AddVehicleDetailsScreenState -> RequestInfoCard.Config
+ambulanceModalConfig state =
+  RequestInfoCard.config
+    { title
+      { text = "Ambulance Facilities"
+      }
+    , primaryText
+      { text = "Select what facilities your Ambulance have to get rides based on that.<br/> <br/> Note: Ventilator includes AC and Oxygen<br/>"
+      , padding = Padding 16 16 0 0
+      }
+    , subTitle
+      { 
+        text = "Terms and Conditions"
+       , visibility = VISIBLE
+      , padding = Padding 16 5 0 0
+      }
+    , imageConfig
+      { imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_ambu_info"
+      , height = V 130
+      , width = V 130
+      , padding = Padding 0 4 1 0
+      , visibility = VISIBLE
+      }
+    , bulletPoints = ["At all times, ambulances must have a stretcher and a first-aid kit available." , "The driver acknowledges and assumes full responsibility for selecting and ensuring fully operational facilities as per the chosen Booking Preference.","Drivers can change the variant/facilities to align with their Booking Preference and the status of the facilities.","Ambulance providers must make their ambulances available for random Health Department inspections at any time. Any discrepancies found during inspections will result in immediate legal action."]
+    , buttonConfig
+      { text = getString GOT_IT
+      , padding = PaddingVertical 16 20
+      }
+    }
+agreeTermsModalConfig :: ST.AddVehicleDetailsScreenState -> PopUpModal.Config
+agreeTermsModalConfig state = let
+    config = PopUpModal.config
+    popUpConf' = config {
+      cornerRadius = Corners 15.0 true true true true,
+      margin = Margin 16 16 16 16 ,
+      gravity = CENTER,
+      optionButtonOrientation = "VERTICAL",
+      padding = Padding 16 0 16 16,
+      buttonLayoutMargin = Margin 0 0 0 0,
+
+     primaryText {
+         text = "By proceeding, you accept full responsibility for ambulance facilities and agree to random Health Department inspections, with legal action for any discrepancies."
+        , margin = Margin 16 0 16 0
+        , visibility = VISIBLE
+        , gravity = CENTER
+      },
+      secondaryText {
+        visibility = GONE
+      },
+      option1 {
+        text = "Agree & Continue"
+      , color = Color.yellow900
+      , strokeColor = Color.white900
+      , padding = Padding 15 10 15 10
+      , visibility = true
+      , margin = MarginTop 12
+      , background = Color.black900
+      , width = MATCH_PARENT
+      , gravity = CENTER
+      },
+      option2 {
+        text = "Cancel"
+      , color = Color.black900
+      , strokeColor = Color.white900
+      , padding = Padding 15 10 15 10
+      , margin = MarginTop 0
+      , width = MATCH_PARENT
+      , background = Color.white900
+      , gravity = CENTER
+      },
+      coverImageConfig {
+           imageUrl = spy "image"( HU.fetchImage HU.FF_ASSET "ny_ic_ambu_agree")
+          , visibility = VISIBLE
+          , height = V 250
+          , width = MATCH_PARENT -- V 250
+          -- , padding = Padding 0 5 0 5
+      }
+
+    }
+  in popUpConf'
+
+listExpandingAnimationConfig :: Boolean -> AnimConfig
+listExpandingAnimationConfig isExpanded = let 
+  config = getConfig isExpanded 
+  animConfig' = animConfig 
+          { fromScaleY = config.fromScaleY
+          , toScaleY = config.toScaleY
+          , fromY = config.fromY
+          , toY = config.toY
+          , repeatCount = PrestoAnim.Repeat 0
+          , ifAnim = isExpanded
+          , duration = 150
+          } 
+  in animConfig'
+
+getConfig :: Boolean -> {fromScaleY :: Number , toScaleY :: Number, fromY :: Int, toY :: Int}
+getConfig  isExpanded = 
+  if isExpanded then 
+    { fromScaleY : 0.0
+    , toScaleY : 1.0
+    , fromY : -100
+    , toY : 0
+    } 
+  else  
+    { fromScaleY : 1.0
+    , toScaleY : 0.0
+    , fromY : 0
+    , toY : -100
+    }

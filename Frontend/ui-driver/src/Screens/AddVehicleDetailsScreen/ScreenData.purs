@@ -75,5 +75,14 @@ initData = {
       multipleRCstatus : NOT_STARTED,
       menuOptions : false,
       confirmChangeVehicle : false
+      -- confirmChangeVehicle : false,
+      -- contactSupportModal : ST.HIDE,
+      -- buttonIndex : Nothing,
+      -- acModal : false,
+      facilities : false,
+      showIssueOptions : true,
+      isvariant : "",
+      ambulanceModal : false,
+      agreeTermsModal : false
     }
 }

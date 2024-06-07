@@ -30,7 +30,13 @@ type Config = {
     primaryText :: TextConfig,
     secondaryText :: TextConfig,
     imageConfig :: ImageConfig,
-    buttonConfig :: ButtonConfig
+    buttonConfig :: ButtonConfig,
+    bulletPoints :: Array String,
+    backgroundColor :: String,
+    padding :: Padding,
+    gravity :: Gravity,
+    infoImageConfig :: ImageConfig,
+    subTitle :: TextConfig
 }
 
 type ImageConfig = {
@@ -118,4 +124,26 @@ config = {
       gravity : CENTER,
       accessibilityHint : ""
     }
+  , infoImageConfig : dummyImageConfig
+  , subTitle  : {
+      text : "",
+      color : Color.black700,
+      padding : Padding 16 16 0 0,
+      margin : Margin 0 0 0 0,
+      visibility : GONE,
+      textStyle : FontStyle.SubHeading1,
+      height : WRAP_CONTENT,
+      width : WRAP_CONTENT,
+      accessibilityHint : ""
+    }
+}
+
+dummyImageConfig :: ImageConfig
+dummyImageConfig = { 
+  visibility : GONE,
+  imageUrl : "",
+  height : V 122,
+  width : V 116,
+  margin : Margin 0 0 0 0,
+  padding : Padding 0 0 0 0
 }

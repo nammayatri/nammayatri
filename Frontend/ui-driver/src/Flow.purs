@@ -567,8 +567,9 @@ onBoardingFlow = do
       registerationStepsCabs = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.cabs) updatedGs.globalProps.onBoardingDocs
       registerationStepsAutos = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.autos) updatedGs.globalProps.onBoardingDocs
       registerationStepsBike = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.bikes) updatedGs.globalProps.onBoardingDocs
+      registerationStepsAmbulance_ = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.ambulances) updatedGs.globalProps.onBoardingDocs
       checkAvailability field = maybe false (\(API.OnboardingDocsRes mbDoc) -> isJust (field mbDoc)) updatedGs.globalProps.onBoardingDocs
-      variantList = (if checkAvailability _.bikes then [ST.BikeCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else [])
+      variantList = (if checkAvailability _.autos then [ST.AutoCategory] else []) <> (if checkAvailability _.bikes then [ST.BikeCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else []) <> (if checkAvailability _.ambulances then [ST.AmbulanceCategory] else []) 
       mismatchLogic vehicleDocument = (uiCurrentCategory == (RC.transformVehicleType $ Just vehicleDocument.userSelectedVehicleCategory)) && isJust vehicleDocument.verifiedVehicleCategory && (Just vehicleDocument.userSelectedVehicleCategory /= vehicleDocument.verifiedVehicleCategory)
       vehicleTypeMismatch = any (\(API.VehicleDocumentItem item) -> mismatchLogic item) driverRegistrationResp.vehicleDocuments
       documentStatusList = mkStatusList (DriverRegistrationStatusResp driverRegistrationResp)
@@ -587,6 +588,7 @@ onBoardingFlow = do
                       registerationStepsCabs = registerationStepsCabs,
                       registerationStepsAuto = registerationStepsAutos,
                       registerationStepsBike = registerationStepsBike,
+                      registerationStepsAmbulance = registerationStepsAmbulance_,
                       documentStatusList = documentStatusList,
                       variantList = variantList,
                       linkedRc = linkedRC,
@@ -681,6 +683,190 @@ onBoardingFlow = do
       case resp of
         Right docs -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Just docs }
         Left err -> pure unit -- handle error
+        
+    registerationStepsAmbulance :: Array API.OnboardingDoc
+    registerationStepsAmbulance = 
+  
+     [
+        (API.OnboardingDoc {
+          dependencyDocumentType: [],
+          description: Nothing,
+          disableWarning: Nothing,
+          documentType: "DriverLicense",
+          isDisabled: false,
+          isHidden: false,
+          isMandatory: true,
+          rcNumberPrefixList: ["WB"],
+          title: "Driving License"
+        })
+        ,
+        (API.OnboardingDoc {
+          dependencyDocumentType: [],
+          description: Nothing,
+          disableWarning: Nothing,
+          documentType: "VehicleRegistrationCertificate",
+          isDisabled: false,
+          isHidden: false,
+          isMandatory: true,
+          rcNumberPrefixList: ["WB"],
+          title: "Vehicle Registration Certificate"
+        })
+        ,
+        (API.OnboardingDoc {
+          dependencyDocumentType: [],
+          description: Nothing,
+          disableWarning: Nothing,
+          documentType: "AadhaarCard",
+          isDisabled: false,
+          isHidden: false,
+          isMandatory: false,
+          rcNumberPrefixList: ["WB"],
+          title: "Aadhaar Card"
+        })
+        ,
+        (API.OnboardingDoc {
+          dependencyDocumentType: [],
+          description: Nothing,
+          disableWarning: Just "RC is Mandatory",
+          documentType: "VehiclePermit",
+          isDisabled: false,
+          isHidden: false,
+          isMandatory: true,
+          rcNumberPrefixList: ["WB"],
+          title: "Vehicle Permit"
+        })
+        ,
+        (API.OnboardingDoc {
+          dependencyDocumentType: [],
+          description: Nothing,
+          disableWarning: Nothing,
+          documentType: "PanCard",
+          isDisabled: false,
+          isHidden: false,
+          isMandatory: false,
+          rcNumberPrefixList: ["WB"],
+          title: "PAN Card"
+        })
+        ,
+        (API.OnboardingDoc {
+          dependencyDocumentType: ["VehicleRegistrationCertificate"],
+          description: Nothing,
+          disableWarning: Just "RC is Mandatory",
+          documentType: "VehiclePUC",
+          isDisabled: false,
+          isHidden: false,
+          isMandatory: false,
+          rcNumberPrefixList: ["WB","JH","BR","OR"],
+          title: "Vehicle PUC Certificate"
+        })
+        ,
+        (API.OnboardingDoc {
+          dependencyDocumentType: [],
+          description: Nothing,
+          disableWarning: Nothing,
+          documentType: "DriverLicense",
+          isDisabled: false,
+          isHidden: false,
+          isMandatory: true,
+          rcNumberPrefixList: ["WB"],
+          title: "Driving License"
+        })
+        ,
+        (API.OnboardingDoc {
+          dependencyDocumentType: [],
+          description: Nothing,
+          disableWarning: Nothing,
+          documentType: "AadhaarCard",
+          isDisabled: false,
+          isHidden: false,
+          isMandatory: false,
+          rcNumberPrefixList: ["WB"],
+          title: "Aadhaar Card"
+        })
+        ,
+        (API.OnboardingDoc {
+          dependencyDocumentType: ["VehicleRegistrationCertificate"],
+          description: Nothing,
+          disableWarning: Just "RC is Mandatory",
+          documentType: "VehiclePermit",
+          isDisabled: false,
+          isHidden: false,
+          isMandatory: false,
+          rcNumberPrefixList: ["WB"],
+          title: "Vehicle Permit"
+        })
+        ,
+        (API.OnboardingDoc {
+          dependencyDocumentType: [],
+          description: Nothing,
+          disableWarning: Nothing,
+          documentType: "PanCard",
+          isDisabled: false,
+          isHidden: false,
+          isMandatory: false,
+          rcNumberPrefixList: ["WB"],
+          title: "PAN Card"
+        })
+        ,
+        (API.OnboardingDoc {
+          dependencyDocumentType: ["VehicleRegistrationCertificate"],
+          description: Nothing,
+          disableWarning: Just "RC is Mandatory",
+          documentType: "VehiclePUC",
+          isDisabled: false,
+          isHidden: false,
+          isMandatory: false,
+          rcNumberPrefixList: ["WB"],
+          title: "Vehicle PUC Certificate"
+        }),
+        (API.OnboardingDoc {
+          dependencyDocumentType: ["VehicleRegistrationCertificate"],
+          description: Nothing,
+          disableWarning: Just "RC is Mandatory",
+          documentType: "VehicleFitnessCertificate",
+          isDisabled: false,
+          isHidden: false,
+          isMandatory: false,
+          rcNumberPrefixList: ["WB"],
+          title: "Fitness Certificate (FC)"
+        })
+        ,
+        (API.OnboardingDoc {
+          dependencyDocumentType:  ["VehicleRegistrationCertificate"],
+          description: Nothing,
+          disableWarning: Just "RC is Mandatory",
+          documentType: "VehicleInsurance",
+          isDisabled: false,
+          isHidden: false,
+          isMandatory: false,
+          rcNumberPrefixList: ["WB"],
+          title: "Vehicle Insurance"
+        })
+        ,
+        (API.OnboardingDoc {
+          dependencyDocumentType: [],
+          description: Nothing,
+          disableWarning: Nothing,
+          documentType: "ProfilePhoto",
+          isDisabled: false,
+          isHidden: false,
+          isMandatory: false,
+          rcNumberPrefixList: ["WB"],
+          title: "Profile Photo"
+        })
+        ,
+        (API.OnboardingDoc {
+          dependencyDocumentType: [],
+          description: Nothing,
+          disableWarning: Nothing,
+          documentType: "Permissions",
+          isDisabled: false,
+          isHidden: false,
+          isMandatory: true,
+          rcNumberPrefixList: ["WB"],
+          title: "Grant Permissions"
+        })
+    ]
 
 updateDriverVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
 updateDriverVersion dbClientVersion dbBundleVersion = do

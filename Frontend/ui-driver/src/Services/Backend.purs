@@ -685,11 +685,13 @@ mkCategory category =
     case category of 
         Just ST.AutoCategory -> Just "AUTO_CATEGORY"
         Just ST.CarCategory -> Just "CAR"
+        Just (ST.AmbulanceCategory) -> Just "AMBULANCE" 
         Just ST.BikeCategory -> Just "MOTORCYCLE"
         _ -> case (getValueToLocalStore VEHICLE_CATEGORY) of
                 "CarCategory" -> Just "CAR"
                 "AutoCategory" -> Just "AUTO_CATEGORY"
                 "BikeCategory" -> Just "MOTORCYCLE"
+                "AmbulanceCategory" -> Just "AMBULANCE"
                 _ -> Nothing
 
 registerDriverDLBT :: DriverDLReq -> FlowBT String  DriverDLResp

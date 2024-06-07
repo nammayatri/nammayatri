@@ -84,6 +84,7 @@ view push state =
         Just ST.CarCategory -> state.data.registerationStepsCabs
         Just ST.AutoCategory -> state.data.registerationStepsAuto
         Just ST.BikeCategory -> state.data.registerationStepsBike
+        Just ST.AmbulanceCategory -> state.data.registerationStepsAmbulance 
         Nothing -> state.data.registerationStepsCabs
       completedStatusCount = length $ filter (\doc -> (getStatus doc.stage state) == ST.COMPLETED) documentList
       progressPercent = floor $ (toNumber completedStatusCount) / toNumber (length documentList) * 100.0
@@ -91,6 +92,7 @@ view push state =
         Just ST.CarCategory -> "ny_ic_sedan_side"
         Just ST.AutoCategory -> "ny_ic_auto_side"
         Just ST.BikeCategory -> "ny_ic_bike_side"
+        Just ST.AmbulanceCategory -> "ny_ic_ambulance_side"
         Nothing -> ""
   in
     Anim.screenAnimation
@@ -364,12 +366,11 @@ cardsListView push state =
         , height WRAP_CONTENT
         , orientation VERTICAL
         , weight 1.0
-        ][ if state.data.vehicleCategory == Just ST.CarCategory then
-            vehicleSpecificList push state state.data.registerationStepsCabs
-          else if state.data.vehicleCategory == Just ST.BikeCategory then
-            vehicleSpecificList push state state.data.registerationStepsBike
-          else
-            vehicleSpecificList push state state.data.registerationStepsAuto
+        ][ case state.data.vehicleCategory of
+            Just ST.CarCategory -> vehicleSpecificList push state state.data.registerationStepsCabs
+            Just ST.BikeCategory -> vehicleSpecificList push state state.data.registerationStepsBike
+            Just ST.AmbulanceCategory -> vehicleSpecificList push state state.data.registerationStepsAmbulance -- Bind the AmbulanceVariant to a variable here
+            _ -> vehicleSpecificList push state state.data.registerationStepsAuto
         ]
     ]
 
@@ -569,6 +570,7 @@ refreshView push state =
                       Just ST.CarCategory -> state.data.registerationStepsCabs
                       Just ST.AutoCategory -> state.data.registerationStepsAuto
                       Just ST.BikeCategory -> state.data.registerationStepsBike
+                      Just ST.AmbulanceCategory -> state.data.registerationStepsAmbulance
                       Nothing -> state.data.registerationStepsCabs
       showRefresh = any (_ == IN_PROGRESS) $ map (\item -> getStatus item.stage state) documentList
   in 
@@ -742,6 +744,7 @@ variantListView push state =
                     ST.AutoCategory -> "ny_ic_auto_side_view"
                     ST.CarCategory -> "ny_ic_sedan_side"
                     ST.BikeCategory -> "ny_ic_bike_side"
+                    ST.AmbulanceCategory -> "ny_ic_ambulance_side"
               ]
             , textView $
               [ width WRAP_CONTENT
@@ -750,6 +753,7 @@ variantListView push state =
                         ST.AutoCategory -> getString AUTO_RICKSHAW
                         ST.CarCategory -> getString CAR
                         ST.BikeCategory -> getString BIKE_TAXI
+                        ST.AmbulanceCategory -> "Ambulance"
               , color Color.black800
               , margin $ MarginLeft 20
               ] <> FontStyle.subHeading1 TypoGraphy

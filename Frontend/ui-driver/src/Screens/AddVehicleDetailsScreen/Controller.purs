@@ -16,7 +16,7 @@
 module Screens.AddVehicleDetailsScreen.Controller where
 
 import Data.Maybe
-
+import Data.Array (null)
 import Common.Types.App (LazyCheck(..))
 import Components.GenericMessageModal.Controller as GenericMessageModalController
 import Components.OnboardingHeader.Controller as OnboardingHeaderController
@@ -52,7 +52,10 @@ import Effect.Unsafe (unsafePerformEffect)
 import ConfigProvider
 import Effect.Uncurried (runEffectFn4)
 import Components.OptionsMenu as OptionsMenu
-
+import Screens.Types as ST
+import Storage (KeyStore(..), getValueToLocalStore)
+import JBridge as JB
+import Components.RequestInfoCard as RequestInfoCard
 instance showAction :: Show Action where
   show _ = ""
 
@@ -154,6 +157,7 @@ instance loggableAction :: Loggable Action where
       AppOnboardingNavBar.Logout -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "onboarding_nav_bar_logout"
       AppOnboardingNavBar.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "app_onboarding_nav_bar_prefix_img_on_click"
     SkipButton -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "skip_button_click"
+    ListExpandAinmationEnd -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "list_expand_animation_end"
     _ -> pure unit
 
 data ScreenOutput = ValidateDetails AddVehicleDetailsScreenState
@@ -167,7 +171,6 @@ data ScreenOutput = ValidateDetails AddVehicleDetailsScreenState
                     | ActivateRC AddVehicleDetailsScreenState
                     | ChangeVehicle AddVehicleDetailsScreenState
                     | SelectLang AddVehicleDetailsScreenState
-
 
 data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction PrimarySelectItem.Action | NoAction
   | VehicleRegistrationNumber String
@@ -204,7 +207,18 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | SkipButton
   | OptionsMenuAction OptionsMenu.Action
   | ChangeVehicleAC PopUpModal.Action
-
+  -- | BottomDrawerListAC BottomDrawerList.Action
+  -- | WhatsAppClick
+  -- | SelectButton Int
+  -- | OpenAcModal
+  | RequestInfoCardAction RequestInfoCard.Action
+  | SelectAmbulanceFacility
+  | ListExpandAinmationEnd
+  | SelectAmbulanceVarient String
+  | OpenAmbulanceFacilityModal
+  | RequestAmbulanceFacility RequestInfoCard.Action
+  | AgreePopUp PopUpModal.Action
+  | ButtonClick
 
 eval :: Action -> AddVehicleDetailsScreenState -> Eval Action ScreenOutput AddVehicleDetailsScreenState
 eval AfterRender state = 
@@ -216,6 +230,14 @@ eval (RenderProfileImage image id) state = do
   continueWithCmd state [do 
     void $ liftEffect $ runEffectFn4 renderBase64ImageFile image id true "CENTER_CROP"
     pure NoAction]
+
+-- eval Facility state = do
+--   let updatedState = state {props { facilities = not state.props.facilities , showIssueOptions = true} }
+--   if null state.data.categories then exit $ GetFacilityList updatedState else continue updatedState
+-- eval (GetFacilityList updatedState) _ = do
+--   let dummyFacilities = ["Ventilator", "AC-Oxygen", "AC No-Oxygen"]
+--   let updatedStateWithFacilities = updatedState { data { categories = dummyFacilities } }
+--   continue updatedStateWithFacilities
 
 eval (BackPressed flag) state = do
     _ <- pure $ hideKeyboardOnNavigation true
@@ -300,6 +322,7 @@ eval (SelectVehicleTypeModalAction (SelectVehicleTypeModal.OnSelect item)) state
                         Hatchback -> "Hatchback"
                         Auto      -> "Auto"
                         Bike      -> "Bike")
+                        Ambulance -> "Ambulance")
       }
     }
 
@@ -339,13 +362,25 @@ eval (ReferralMobileNumberAction (ReferralMobileNumberController.PrimaryEditText
                                         , data = state.data { referral_mobile_number = if length newVal <= 10 then newVal else state.data.referral_mobile_number}}
 eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
-  if isJust state.data.dateOfRegistration then exit $ ValidateDataAPICall state
+  let agreeTermsModalValue = case state.data.vehicleCategory of
+        Just (ST.AmbulanceCategory) -> true
+        _ -> false
+  if agreeTermsModalValue then continue state { props { agreeTermsModal = agreeTermsModalValue }}  --ambulance
+  else if isJust state.data.dateOfRegistration then exit $ ValidateDataAPICall state
   else if (state.props.openHowToUploadManual == false) then 
     continue state {props {openHowToUploadManual = true}}
   else  continueWithCmd state {props { fileCameraPopupModal = false, fileCameraOption = false}} [do
      _ <- liftEffect $ uploadFile false
      pure NoAction]
 eval (GenericMessageModalAction (GenericMessageModalController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = exit ApplicationSubmittedScreen
+
+eval ButtonClick state = do
+  if isJust state.data.dateOfRegistration then exit $ ValidateDataAPICall state
+  else if (state.props.openHowToUploadManual == false) then 
+    continue state {props {openHowToUploadManual = true}}
+  else  continueWithCmd state {props { fileCameraPopupModal = false, fileCameraOption = false}} [do
+     _ <- liftEffect $ uploadFile false
+     pure NoAction]
 
 eval SkipButton state = exit $ ValidateDataAPICall state
 
@@ -362,6 +397,10 @@ eval PreviewImageAction state = continue state
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
+
+eval (AgreePopUp (PopUpModal.OnButton2Click)) state = continue $ (state {props {agreeTermsModal= false}})
+
+eval (AgreePopUp (PopUpModal.OnButton1Click)) state = continueWithCmd state{props{ agreeTermsModal = false}} [pure $ ButtonClick]
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
@@ -428,6 +467,55 @@ eval (ChangeVehicleAC (PopUpModal.OnButton2Click)) state = continue state {props
 eval (ChangeVehicleAC (PopUpModal.OnButton1Click)) state = exit $ ChangeVehicle state
 
 eval (ChangeVehicleAC (PopUpModal.DismissPopup)) state = continue state {props {confirmChangeVehicle= false}}
+
+-- eval (BottomDrawerListAC BottomDrawerList.Dismiss) state = continue state { props { contactSupportModal = ST.ANIMATING}}
+
+-- eval (BottomDrawerListAC BottomDrawerList.OnAnimationEnd) state = continue state { props { contactSupportModal = if state.props.contactSupportModal == ST.ANIMATING then ST.HIDE else state.props.contactSupportModal}}
+
+-- eval (BottomDrawerListAC (BottomDrawerList.OnItemClick item)) state = do
+--   case item.identifier of
+--     "whatsapp" -> continueWithCmd state [pure WhatsAppClick]
+--     "call" -> do 
+--                 void $ pure $ showDialer (getSupportNumber "") false 
+--                 continue state
+--     _ -> continue state
+
+-- eval WhatsAppClick state = continueWithCmd state [do
+--   let supportPhone = state.data.cityConfig.registration.supportWAN
+--       phone = "%0APhone%20Number%3A%20"<> getValueToLocalStore MOBILE_NUMBER_KEY
+--       dlNumber = getValueToLocalStore ENTERED_DL
+--       rcNumber = getValueToLocalStore ENTERED_RC
+--       dl = if (dlNumber /= "__failed") then ("%0ADL%20Number%3A%20"<> dlNumber) else ""
+--       rc = if (rcNumber /= "__failed") then ("%0ARC%20Number%3A%20"<> rcNumber) else ""
+--   void $ JB.openUrlInApp $ "https://wa.me/" <> supportPhone <> "?text=Hi%20Team%2C%0AI%20would%20require%20help%20in%20onboarding%20%0A%E0%A4%AE%E0%A5%81%E0%A4%9D%E0%A5%87%20%E0%A4%AA%E0%A4%82%E0%A4%9C%E0%A5%80%E0%A4%95%E0%A4%B0%E0%A4%A3%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B8%E0%A4%B9%E0%A4%BE%E0%A4%AF%E0%A4%A4%E0%A4%BE%20%E0%A4%95%E0%A5%80%20%E0%A4%86%E0%A4%B5%E0%A4%B6%E0%A5%8D%E0%A4%AF%E0%A4%95%E0%A4%A4%E0%A4%BE%20%E0%A4%B9%E0%A5%8B%E0%A4%97%E0%A5%80" <> phone <> dl <> rc
+--   pure NoAction
+--   ]
+
+-- eval (SelectButton index) state = continue state { props { buttonIndex = Just index}}
+
+-- eval OpenAcModal state = continue state { props { acModal = true}}
+
+eval OpenAmbulanceFacilityModal state = continue state {props {ambulanceModal = true}}
+
+eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { acModal = false}}
+
+eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { acModal = false}}
+
+eval (RequestAmbulanceFacility RequestInfoCard.Close) state = continue state { props { ambulanceModal = false}}
+
+eval (RequestAmbulanceFacility RequestInfoCard.BackPressed) state = continue state { props { ambulanceModal = false}}
+
+eval (SelectAmbulanceVarient str) state = do
+  let newState = str 
+  continue state{props{isvariant = newState , facilities = not state.props.facilities , showIssueOptions = true}}
+
+eval SelectAmbulanceFacility state = do
+  let old = state.props.facilities
+      _ = spy "old::" old
+  continue state{props{facilities = not old , showIssueOptions = true}}
+
+
+eval ListExpandAinmationEnd state = continue state {props {showIssueOptions = false }}
 
 eval _ state = continue state
 

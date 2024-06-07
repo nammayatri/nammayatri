@@ -57,6 +57,13 @@ view push state =
             ][
               genericTextView push state.title
             , genericTextView push state.primaryText
+            ,linearLayout
+            [ 
+              height $ V 1
+             , width MATCH_PARENT
+              , background Color.grey700
+            ][]
+            , genericTextView push state.subTitle
             ]
             , linearLayout
               [ height WRAP_CONTENT
@@ -71,6 +78,8 @@ view push state =
               , padding state.imageConfig.padding
               ]
         ]
+        , bulletPoints push state
+        , genericImageView state.infoImageConfig
         , genericTextView push state.secondaryText
         , textView $
           [ width MATCH_PARENT
@@ -99,3 +108,46 @@ genericTextView push config =
   , accessibility $ if DS.null config.accessibilityHint then DISABLE else ENABLE
   , accessibilityHint $ config.accessibilityHint
   ] <> (FontStyle.getFontStyle config.textStyle LanguageStyle)
+
+bulletPoints :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+bulletPoints push config = 
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , margin $ Margin 20 12 0 0
+  , padding $ Padding 0 0 15 0
+  , visibility $ boolToVisibility $ DA.length config.bulletPoints > 0
+  ](map (\item -> bulletPoint push item) config.bulletPoints) 
+
+bulletPoint :: forall w. (Action -> Effect Unit) -> String -> PrestoDOM (Effect Unit) w
+bulletPoint push point = 
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , margin $ MarginTop 5
+  ][ linearLayout
+      [ width $ V 7
+      , height $ V 7
+      , cornerRadius 16.0
+      , background Color.black700
+      , margin $ MarginTop 8
+      ][]
+    , textView $
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , margin $ MarginLeft 8
+      , text point
+      ] <> FontStyle.paragraphText TypoGraphy
+  ]
+
+genericImageView :: forall w. ImageConfig -> PrestoDOM (Effect Unit) w
+genericImageView imageConfig=
+  imageView
+  [ width imageConfig.width
+  , height imageConfig.height
+  , imageWithFallback imageConfig.imageUrl
+  , visibility imageConfig.visibility
+  , margin imageConfig.margin
+  , padding imageConfig.padding
+  ]

@@ -62,6 +62,7 @@ appOnboardingNavBarConfig state =
               Just ST.CarCategory -> getString REGISTER_YOUR_CAR
               Just ST.AutoCategory -> getString REGISTER_YOUR_AUTO
               Just ST.BikeCategory -> getString REGISTER_YOUR_BIKE
+              Just ST.AmbulanceCategory -> "Register your Ambulance"
               Nothing -> getString REGISTRATION
       },
     rightButton = AppOnboardingNavBar.config.rightButton{

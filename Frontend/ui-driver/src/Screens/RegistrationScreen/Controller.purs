@@ -284,6 +284,7 @@ getCategoryFromVariant variant = case variant of
   "AUTO_RICKSHAW" -> Mb.Just ST.AutoCategory
   "CAR" -> Mb.Just ST.CarCategory
   "BIKE" -> Mb.Just ST.BikeCategory
+  "AMBULANCE" -> Mb.Just ST.AmbulanceCategory
   _ -> Mb.Just ST.CarCategory
 
 getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus
@@ -307,4 +308,5 @@ decodeVehicleType value = case value of
   "AutoCategory" -> Mb.Just ST.AutoCategory
   "CarCategory" -> Mb.Just ST.CarCategory
   "BikeCategory" -> Mb.Just ST.BikeCategory
+  "AmbulanceCategory" -> Mb.Just ST.AmbulanceCategory
   _ -> Mb.Nothing

@@ -111,6 +111,7 @@ imageSection item =
           Hatchback -> "ic_hatchback"
           Auto      -> "ic_auto"
           Bike      -> "ic_bike"
+          Ambulance -> "ic_ambulance"
       ]
   ]
 
@@ -137,6 +138,7 @@ textList item =
               Hatchback -> "Hatchback"
               Auto      -> "Auto"
               Bike      -> "Bike"
+              Ambulance -> "Ambulance"
           ] <> FontStyle.paragraphText TypoGraphy
       ]
     , linearLayout

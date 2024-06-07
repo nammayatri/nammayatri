@@ -33,7 +33,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Data.Array as DA
 import Common.Types.App as Common
-
+import Services.API(OnboardingDoc)
 initData :: RegistrationScreenState
 initData = {
       data: {
@@ -41,6 +41,7 @@ initData = {
         registerationStepsCabs : [],
         registerationStepsAuto : [],
         registerationStepsBike : [],
+        registerationStepsAmbulance : [],
         drivingLicenseStatus : NOT_STARTED,
         vehicleDetailsStatus : NOT_STARTED,
         permissionsStatus : NOT_STARTED,

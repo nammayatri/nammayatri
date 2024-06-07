@@ -237,6 +237,167 @@ renderQRView state push =
       -- , PrimaryButton.view (push <<< ShareQR) (shareOptionButtonConfig state)
     ]
   ]
+--     [ GenericHeader.view (push <<< ManageVehicleHeaderAC) (genericHeaderConfigManageVehicle state)
+--     , linearLayout
+--         [ height $ V 1
+--         , width MATCH_PARENT
+--         , background Color.grey900
+--         ]
+--         []
+--     , scrollView
+--         [ height WRAP_CONTENT
+--         , width MATCH_PARENT
+--         , orientation VERTICAL
+--         , weight 1.0
+--         , padding $ Padding 16 22 16 18
+--         , scrollBarY false
+--         ]
+--         [ linearLayout
+--             [ height WRAP_CONTENT
+--             , width MATCH_PARENT
+--             , orientation VERTICAL
+--             ]
+--             (map (\vehicleDetail -> manageVehicleItem state vehicleDetail push) (state.data.vehicleDetails))
+--         -- [  manageVehicleItem state push
+--         --   ]
+--         ]
+--     ]
+
+-- ------------------------------------------ manageVehicleItem -----------------------------------------------------------
+-- manageVehicleItem :: forall w. ST.DriverProfileScreenState -> ST.DriverVehicleDetails -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+-- manageVehicleItem state vehicle push =
+--   linearLayout
+--     [ height WRAP_CONTENT
+--     , width MATCH_PARENT
+--     , orientation VERTICAL
+--     , background Color.blue600
+--     , cornerRadius 12.0
+--     , margin $ MarginBottom 18
+--     ]
+--     [ linearLayout
+--         [ height WRAP_CONTENT
+--         , width MATCH_PARENT
+--         , orientation HORIZONTAL
+--         , gravity CENTER_VERTICAL
+--         ]
+--         [ imageView
+--             [ width $ V 36
+--             , height $ V 36
+--             , margin $ Margin 16 0 16 0
+--             , imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage vehicle.userSelectedVehicleCategory
+--             ]
+--         , linearLayout
+--             [ width WRAP_CONTENT
+--             , height WRAP_CONTENT
+--             , orientation VERTICAL
+--             , weight 1.0
+--             ]
+--             [ textView
+--                 [ width WRAP_CONTENT
+--                 , height WRAP_CONTENT
+--                 , text vehicle.registrationNo
+--                 , margin $ MarginTop 16
+--                 , color Color.black900
+--                 , textSize FontSize.a_16
+--                 , fontStyle $ FontStyle.semiBold LanguageStyle
+--                 ]
+--             , textView
+--                 ( [ width WRAP_CONTENT
+--                   , height WRAP_CONTENT
+--                   , text $ fromMaybe "" vehicle.vehicleModel
+--                   , textSize FontSize.a_14
+--                   , margin $ MarginBottom 16
+--                   , color Color.black700
+--                   ]
+--                     <> FontStyle.body3 TypoGraphy
+--                 )
+--             ]
+--         ]
+--     , linearLayout
+--         [ height $ V 2
+--         , width MATCH_PARENT
+--         , background Color.white900
+--         , cornerRadius 15.0
+--         , margin $ MarginHorizontal 16 16
+--         ]
+--         []
+--     , linearLayout
+--         [ height WRAP_CONTENT
+--         , width MATCH_PARENT
+--         , orientation HORIZONTAL
+--         , padding $ PaddingVertical 12 12
+--         , visibility $ MP.boolToVisibility vehicle.isActive
+--         , gravity CENTER_HORIZONTAL
+--         ]
+--         [ textView
+--             [ width WRAP_CONTENT
+--             , height WRAP_CONTENT
+--             , onClick push $ const $ DeactivateRc ST.DELETING_RC vehicle.registrationNo
+--             , weight 1.0
+--             , color Color.red900
+--             , text $ getString DELETE
+--             , gravity CENTER
+--             , textSize FontSize.a_16
+--             , fontStyle $ FontStyle.semiBold LanguageStyle
+--             ]
+--         , linearLayout
+--             [ height MATCH_PARENT
+--             , width $ V 2
+--             , cornerRadius 15.0
+--             , background Color.white900
+--             ]
+--             []
+--         , textView
+--             [ width WRAP_CONTENT
+--             , height WRAP_CONTENT
+--             , onClick push $ const $ DeactivateRc ST.DEACTIVATING_RC vehicle.registrationNo
+--             , weight 1.0
+--             , color Color.blue900
+--             , text $ getString DEACTIVATE
+--             , gravity CENTER
+--             , textSize FontSize.a_16
+--             , fontStyle $ FontStyle.semiBold LanguageStyle
+--             ]
+--         ]
+--     , linearLayout
+--         [ height WRAP_CONTENT
+--         , width MATCH_PARENT
+--         , orientation HORIZONTAL
+--         , padding $ PaddingVertical 12 12
+--         , gravity CENTER_HORIZONTAL
+--         , visibility $ MP.boolToVisibility $ not vehicle.isActive
+--         , onClick push $ const $ DeactivateRc ST.DELETING_RC vehicle.registrationNo
+--         ]
+--         [ textView
+--             [ width WRAP_CONTENT
+--             , height WRAP_CONTENT
+--             , weight 1.0
+--             , color Color.red900
+--             , text $ getString DELETE
+--             , gravity CENTER
+--             , textSize FontSize.a_16
+--             , fontStyle $ FontStyle.semiBold LanguageStyle
+--             ]
+--         ]
+--     ]
+--   where
+--   getVehicleImage :: ST.VehicleCategory -> String
+--   getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+
+-- mkAsset :: ST.VehicleCategory -> CityConfig -> String
+-- mkAsset category cityConfig =
+--   case category of
+--     ST.AutoCategory -> getAutoImage cityConfig
+--     ST.CarCategory -> "ny_ic_sedan"
+--     ST.AmbulanceCategory-> "ny_ic_ambulance_side" 
+--     _ -> "ny_ic_silhouette"
+ 
+-- getAutoImage :: CityConfig -> String
+-- getAutoImage cityConfig =
+--   if cityConfig.cityCode == "std:040" then
+--     "ny_ic_black_yellow_auto_side_view"
+--   else
+--     "ny_ic_auto_side_view"
 
 ---------------------------------------- PROFILE VIEW -----------------------------------------------------------
 
@@ -454,10 +615,16 @@ tabImageView state push =
 
     mkAsset :: CityConfig -> String
     mkAsset cityConfig = 
-      if state.data.driverVehicleType == "AUTO_RICKSHAW" 
-        then (getAutoImage cityConfig)
-        else if state.data.driverVehicleType == "BIKE" then "ny_ic_bike_side"
-        else "ny_ic_silhouette"
+      case state.data.driverVehicleType of
+        "AUTO_RICKSHAW" -> getAutoImage cityConfig
+        "BIKE" -> "ny_ic_bike_side"
+        "AMBULANCE" -> "Ambulance" <> " · " <> "1 " <> getString PEOPLE
+        _ -> "ny_ic_silhouette"
+      -- if state.data.driverVehicleType == "AUTO_RICKSHAW" 
+      --   then (getAutoImage cityConfig)
+      --   else if state.data.driverVehicleType == "BIKE" then "ny_ic_bike_side"
+        
+      --   else "ny_ic_silhouette"
     
     getAutoImage :: CityConfig -> String
     getAutoImage cityConfig = 

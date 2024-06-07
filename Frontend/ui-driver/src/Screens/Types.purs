@@ -189,7 +189,16 @@ type AddVehicleDetailsScreenProps =  {
   successfulValidation :: Boolean,
   multipleRCstatus :: StageStatus,
   menuOptions :: Boolean,
-  confirmChangeVehicle :: Boolean
+  confirmChangeVehicle :: Boolean,
+  -- confirmChangeVehicle :: Boolean,
+  -- contactSupportModal :: AnimType,
+  -- buttonIndex :: Maybe Int,
+  -- acModal :: Boolean,
+  facilities :: Boolean,
+  showIssueOptions :: Boolean,
+  isvariant :: String,
+  ambulanceModal :: Boolean,
+  agreeTermsModal :: Boolean
  }
 
 data ValidationStatus  =  Success | Failure | InProgress | None
@@ -199,7 +208,7 @@ instance showValidationStatus :: Show ValidationStatus where show = genericShow
 instance eqValidationStatus :: Eq ValidationStatus where eq = genericEq
 
 
-data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike
+data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance
 
  -- ############################################################# UploadingDrivingLicenseScreen ################################################################################
 type UploadDrivingLicenseState = {
@@ -262,6 +271,7 @@ type RegistrationScreenData = {
   registerationStepsAuto :: Array StepProgress,
   registerationStepsCabs :: Array StepProgress,
   registerationStepsBike :: Array StepProgress,
+  registerationStepsAmbulance :: Array StepProgress,
   phoneNumber :: String,
   drivingLicenseStatus :: StageStatus,
   vehicleDetailsStatus :: StageStatus,
@@ -350,8 +360,7 @@ data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED
 derive instance genericStageStatus :: Generic StageStatus _
 instance eqStageStatus :: Eq StageStatus where eq = genericEq
 
-data VehicleCategory = AutoCategory | CarCategory | BikeCategory
-
+data VehicleCategory = AutoCategory | CarCategory | BikeCategory | AmbulanceCategory
 derive instance genericVehicleCategory :: Generic VehicleCategory _
 instance eqVehicleCategory :: Eq VehicleCategory where eq = genericEq
 instance showVehicleCategory :: Show VehicleCategory where show = genericShow
@@ -2495,3 +2504,8 @@ type DocumentCaptureScreenProps = {
   menuOptions :: Boolean,
   confirmChangeVehicle :: Boolean
 } 
+
+data AmbulanceVariant = AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR
+derive instance genericAmbulanceVariant :: Generic AmbulanceVariant _
+instance eqAmbulanceVariant :: Eq AmbulanceVariant where eq = genericEq
+instance showAmbulanceVariant :: Show AmbulanceVariant where show = genericShow

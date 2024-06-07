@@ -35,7 +35,7 @@ import Data.Maybe (Maybe(..))
 
 type FlowBT e st a = BackT (ExceptT e (Free (FlowWrapper st))) a
 
-data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike
+data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance
 data LazyCheck = LanguageStyle | EndPoint | BaseUrl | TypoGraphy | WithoutOffers | FunctionCall | Config | Language
 
 newtype Place = Place {
@@ -65,7 +65,7 @@ instance showVehicalTypes :: Show VehicalTypes where
     show (SUV ) = "SUV"
     show (Auto ) = "Auto"
     show (Bike ) = "Bike"
-
+    show (Ambulance ) = "Ambulance"
 
 
 data NotificationType = REGISTRATION_APPROVED | SEARCH_CALLBACK | CONFIRM_CALLBACK

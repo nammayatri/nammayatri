@@ -58,6 +58,11 @@
       "ic_chevrons_right_white" : true,
       "ic_close" : true,
       "ic_creative_zero" : true,
+<<<<<<< HEAD
+=======
+      "ic_document" : true,
+      "ic_driver_avatar_cab" : true,
+>>>>>>> 8df8b0f4b7 (Frontend/Enhancement/Onboarding/Ambulance)
       "ic_driver_status_demo" : true,
       "ic_driver_status_offline" : true,
       "ic_driver_status_online" : true,
@@ -173,6 +178,9 @@
       "ny_ic_alerts_active" : true,
       "ny_ic_alerts_inactive" : true,
       "ny_ic_amazonpay" : true,
+      "ny_ic_ambu_agree" : true,
+      "ny_ic_ambu_info" : true,
+      "ny_ic_ambulance_side" : true,
       "ny_ic_anonymous_call" : true,
       "ny_ic_api_failed" : true,
       "ny_ic_api_failure_popup" : true,
@@ -316,6 +324,7 @@
       "ny_ic_dl_blue" : true,
       "ny_ic_dl_demo" : true,
       "ny_ic_dotted_line" : true,
+      "ny_ic_down_arrow_white" : true,
       "ny_ic_download_button" : true,
       "ny_ic_driver_avatar" : true,
       "ny_ic_driver_gender_banner" : true,
@@ -569,6 +578,11 @@
       "ny_ic_toggle_on" : true,
       "ny_ic_transaction_pending" : true,
       "ny_ic_tumakuru_map" : true,
+<<<<<<< HEAD
+=======
+      "ny_ic_two_more_rides" : true,
+      "ny_ic_up_arrow_white" : true,
+>>>>>>> 8df8b0f4b7 (Frontend/Enhancement/Onboarding/Ambulance)
       "ny_ic_upi_autopay" : true,
       "ny_ic_upi_logo" : true,
       "ny_ic_upload" : true,
@@ -598,6 +612,14 @@
       "ny_ic_whatsapp_logo" : true,
       "ny_ic_wheelchair" : true,
       "ny_ic_white_blur_map" : true,
+<<<<<<< HEAD
+=======
+      "ny_ic_white_play_button_with_grey" : true,
+      "ny_ic_white_play_circle" : true,
+      "ny_ic_white_taxi_quote_list" : true,
+      "ny_ic_white_tick" : true,
+      "ny_ic_white_transparent_play_circle" : true,
+>>>>>>> 8df8b0f4b7 (Frontend/Enhancement/Onboarding/Ambulance)
       "ny_ic_yatri_coin" : true,
       "ny_ic_yellow_clock" : true,
       "ny_ic_youtube" : true,
