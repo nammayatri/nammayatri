@@ -354,7 +354,8 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime=
                                                                "lon" : slong
                                                    },"address" : (LocationAddress srcAdd)
                                                   },
-                                                  "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
+                                                  "isReallocationEnabled" : Just appConfig.feature.enableReAllocation,
+                                                  "quotesUnifiedFlow" : Just true
                                                  }),
                     "fareProductType" : "ONE_WAY"
                    }
@@ -1215,7 +1216,8 @@ mkRentalSearchReq slat slong dlat dlong srcAdd desAdd startTime estimatedRentalD
                                                   },
                                                   "startTime" : startTime,
                                                   "estimatedRentalDistance" : estimatedRentalDistance,
-                                                  "estimatedRentalDuration" : estimatedRentalDuration
+                                                  "estimatedRentalDuration" : estimatedRentalDuration,
+                                                  "quotesUnifiedFlow" : Just true
                                                  }),
                     "fareProductType" : "RENTAL"
                    }

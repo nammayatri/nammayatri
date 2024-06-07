@@ -2329,7 +2329,7 @@ eval (GetEstimates (GetQuotesRes quotesRes) ) state = do
   let 
     alreadyGotEstimates = not $ null $ state.data.specialZoneQuoteList 
     estimates = getEstimateList quotesRes.estimates state.data.config.estimateAndQuoteConfig state.data.selectedEstimatesObject.activeIndex
-    quotes = getSpecialZoneQuotes quotesRes.quotes state.data.config.estimateAndQuoteConfig
+    quotes = filter filterNonAcAsPerGates $ getSpecialZoneQuotes quotesRes.quotes state.data.config.estimateAndQuoteConfig
     quoteList = spy "debug quotes allQuoteListWithUpdatedIndex" (mapWithIndex (\index item -> item{ index = index }) (estimates <> quotes))
     isRepeatRide = state.props.isRepeatRide -- if repeat ride is enabled and the variant is not available in the estimates then disable repeat ride
     fareProductType = case head quotesRes.quotes of 
@@ -2377,11 +2377,13 @@ eval (GetEstimates (GetQuotesRes quotesRes) ) state = do
 
   where 
     isEstimateFareBreakupHastitle fareBreakUpList title = any (\item -> item ^. _title == title) fareBreakUpList
+    
     getSelectedEstimates :: ChooseVehicleController.Config -> Array ChooseVehicleController.Config -> Tuple String (Array String) 
     getSelectedEstimates quote quotes = 
       let filteredEstimates = foldl(\acc item -> if elem (fromMaybe "" item.serviceTierName) quote.selectedServices then acc <> [item.id] else acc) [] quotes
       in (Tuple (fromMaybe "" $ head filteredEstimates) (fromMaybe [] $ tail filteredEstimates))
-
+    
+    filterNonAcAsPerGates quote = not $ quote.serviceTierName == Just "Non-AC" && (STR.contains (STR.Pattern "(AC only)") state.props.defaultPickUpPoint)
 
 eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
   case (getMerchant FunctionCall) of

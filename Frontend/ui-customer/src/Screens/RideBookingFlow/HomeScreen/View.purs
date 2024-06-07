@@ -3369,7 +3369,7 @@ currentLocationView push state =
 nearByPickUpPointsView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 nearByPickUpPointsView state push =
   scrollView
-  [ height $ V 130
+  [ height $ V $ if Arr.length state.data.nearByPickUpPoints > 2 then 160 else 130
   , width MATCH_PARENT
   , orientation VERTICAL
   , padding $ Padding 5 20 0 5
