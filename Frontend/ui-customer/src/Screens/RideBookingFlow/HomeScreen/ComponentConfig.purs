@@ -177,11 +177,7 @@ cancelAppConfig state =
           }
         , cornerRadius = Corners 15.0 true true false false
         , coverImageConfig
-          { imageUrl =
-            fetchImage FF_ASSET
-              $ if state.data.driverInfoCardState.distance <= 500 then
-                  if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then "ny_ic_driver_near_auto" else "ny_ic_driver_near"
-                else if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then "ny_ic_driver_started_auto" else "ny_ic_driver_started"
+          { imageUrl = fetchImage FF_ASSET $ HU.getCancellationImage state.data.driverInfoCardState.vehicleVariant state.data.driverInfoCardState.distance
           , visibility = VISIBLE
           , margin = Margin 16 20 16 24
           , width = MATCH_PARENT
@@ -192,7 +188,7 @@ cancelAppConfig state =
     popUpConfig'
   where
   distanceString = getDistanceString state.data.driverInfoCardState.distance (fromMaybe 0 state.data.driverInfoCardState.initDistance) state.props.zoneType.priorityTag
-
+  
 confirmRequestEditConfig :: ST.HomeScreenState -> PopUpModal.Config
 confirmRequestEditConfig state =
   let

@@ -752,7 +752,37 @@ quoteModalVariantImage variant =
         Chennai -> "ny_ic_no_quotes_auto_che_hyd"
         _ -> "ny_ic_no_quotes_auto"
       else  "ny_ic_no_quotes_color"
-                
+
+getCancellationImage :: String -> Int -> String
+getCancellationImage vehicleVariant distance = 
+  let 
+    city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  in
+    if distance <= 500 
+      then if vehicleVariant == "AUTO_RICKSHAW" then getAutoRickshawNearImage  else "ny_ic_driver_near"
+      else if vehicleVariant == "AUTO_RICKSHAW" then getAutoRickshawStartedImage else "ny_ic_driver_started"
+
+getAutoRickshawNearImage :: String
+getAutoRickshawNearImage  = 
+  let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  in
+    case city of 
+    Kochi -> "ny_ic_driver_near_auto_yellow.png"
+    Hyderabad -> "ny_ic_driver_near_auto_black"
+    Chennai -> "ny_ic_driver_near_auto_black"
+    _ -> "ny_ic_driver_near_auto_green"
+
+getAutoRickshawStartedImage :: String
+getAutoRickshawStartedImage  = 
+  let
+   city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  in
+      case city of 
+       Kochi -> "ny_ic_driver_started_auto_yellow.png"
+       Hyderabad -> "ny_ic_driver_started_auto_black"
+       Chennai -> "ny_ic_driver_started_auto_black"
+       _ -> "ny_ic_driver_started_auto_green"
+ 
 getCityFromString :: String -> City
 getCityFromString cityString =
   case cityString of 

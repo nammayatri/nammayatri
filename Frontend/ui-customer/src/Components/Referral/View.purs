@@ -65,7 +65,13 @@ enterReferralCodeView push state =
   , background Color.blackLessTrans
   , visibility $ boolToVisibility $ state.stage == ENTER_REFERRAL_CODE && state.stage /= NO_REFERRAL_STAGE
   , clickable true
-  ][  linearLayout
+  , adjustViewWithKeyboard "true"
+  ]
+  [ scrollView
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    ]
+  [  linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , cornerRadius 16.0
@@ -121,7 +127,7 @@ enterReferralCodeView push state =
           , cornerRadius 8.0
           , hint $ getString ENTER_REFERRAL_CODE_
           , hintColor Color.black600
-          , pattern "[a-zA-Z0-9.]*,6"
+          , pattern "[a-zA-Z0-9]*,6"
           , id $ EHC.getNewIDWithTag "RefferalCode"
           , stroke $ "1," <> (if state.isInvalidCode then Color.red900 else Color.grey900)
           , afterRender (\_ -> 
@@ -142,6 +148,7 @@ enterReferralCodeView push state =
         , PrimaryButton.view (push <<< SkipAction) (skipButtonConfig state)
       ]
    ]
+  ]
 
 dummyView :: forall w. PrestoDOM (Effect Unit) w
 dummyView = linearLayout [ visibility GONE ] []
