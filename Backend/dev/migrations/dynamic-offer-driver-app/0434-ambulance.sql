@@ -49,7 +49,7 @@ WHERE
     vehicle_category = 'CAR' AND rc_number_prefix_list = '{WB}' AND document_type != 'SubscriptionPlan';
 
 update atlas_driver_offer_bpp.document_verification_config set supported_vehicle_classes_json =
-    json_build_array(json_build_object('vehicleClass', 'AMBULANCE', 'vehicleVariant', 'AMBULANCE_TAXI')) where document_type = 'VehicleRegistrationCertificate' and vehicle_category = 'AMBULANCE';
+    json_build_array(json_build_object('vehicleClass', 'AMBULANCE', 'vehicleVariant', 'AMBULANCE_TAXI', 'priority', 5), json_build_object('vehicleClass', 'LPV','bodyType', 'AMBULANCE', 'vehicleVariant', 'AMBULANCE_TAXI', 'priority', 5), json_build_object('vehicleClass', 'LPV','manufactureModel', 'AMBULANCE', 'vehicleVariant', 'AMBULANCE_TAXI', 'priority', 5), json_build_object('vehicleClass', 'AMBULANCE', 'vehicleVariant', 'AMBULANCE_TAXI_OXY', 'priority', 5), json_build_object('vehicleClass', 'LPV','bodyType', 'AMBULANCE_TAXI_OXY', 'vehicleVariant', 'AMBULANCE_TAXI_OXY', 'priority', 5), json_build_object('vehicleClass', 'LPV','manufactureModel', 'AMBULANCE', 'vehicleVariant', 'AMBULANCE_TAXI_OXY', 'priority', 5), json_build_object('vehicleClass', 'AMBULANCE', 'vehicleVariant', 'AMBULANCE_AC', 'priority', 5), json_build_object('vehicleClass', 'LPV','bodyType', 'AMBULANCE', 'vehicleVariant', 'AMBULANCE_AC', 'priority', 5), json_build_object('vehicleClass', 'LPV','manufactureModel', 'AMBULANCE', 'vehicleVariant', 'AMBULANCE_AC', 'priority', 5),json_build_object('vehicleClass', 'AMBULANCE', 'vehicleVariant', 'AMBULANCE_VENTILATOR', 'priority', 5), json_build_object('vehicleClass', 'LPV','bodyType', 'AMBULANCE', 'vehicleVariant', 'AMBULANCE_VENTILATOR', 'priority', 5), json_build_object('vehicleClass', 'LPV','manufactureModel', 'AMBULANCE', 'vehicleVariant', 'AMBULANCE_VENTILATOR', 'priority', 5), json_build_object('vehicleClass', 'AMBULANCE', 'vehicleVariant', 'AMBULANCE_AC_OXY', 'priority', 5), json_build_object('vehicleClass', 'LPV','bodyType', 'AMBULANCE_AC_OXY', 'vehicleVariant', 'AMBULANCE_AC_OXY', 'priority', 5), json_build_object('vehicleClass', 'LPV','manufactureModel', 'AMBULANCE', 'vehicleVariant', 'AMBULANCE_AC_OXY', 'priority', 5)) where document_type = 'VehicleRegistrationCertificate' and vehicle_category = 'AMBULANCE';
 
 insert into atlas_driver_offer_bpp.vehicle_service_tier (id, name, merchant_id, merchant_operating_city_id, seating_capacity, air_conditioned, driver_rating, vehicle_rating, luggage_capacity, short_description, long_description, allowed_vehicle_variant, default_for_vehicle_variant, service_tier_type, created_at, updated_at, auto_selected_vehicle_variant, oxygen, ventilator)
 (select
@@ -64,8 +64,8 @@ insert into atlas_driver_offer_bpp.vehicle_service_tier (id, name, merchant_id, 
     null,
     'Ambulance Taxi', -- change this to eco?
     null,
-    '{AMBULANCE_TAXI}',
     '{AMBULANCE_TAXI, AMBULANCE_TAXI_OXY, AMBULANCE_AC, AMBULANCE_AC_OXY, AMBULANCE_VENTILATOR}',
+    '{AMBULANCE_TAXI}',
     'AMBULANCE_TAXI',
     now(),
     now(),
@@ -165,3 +165,5 @@ insert into atlas_driver_offer_bpp.vehicle_service_tier (id, name, merchant_id, 
     1,
     1
     from atlas_driver_offer_bpp.merchant_operating_city as m where city = 'Kolkata');
+
+UPDATE atlas_driver_offer_bpp.document_verification_config set is_disabled = true where document_type not in ('Permissions', 'DriverLicense', 'VehicleRegistrationCertificate') and vehicle_category = 'AMBULANCE';

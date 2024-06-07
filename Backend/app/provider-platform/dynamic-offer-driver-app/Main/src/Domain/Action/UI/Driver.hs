@@ -1939,6 +1939,8 @@ acceptScheduledBooking ::
 acceptScheduledBooking (personId, merchantId, _) clientId bookingId = do
   booking <- runInReplica $ QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   driver <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  driverInfo <- QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
+  when driverInfo.onRide $ throwError DriverOnRide
   mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
   void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchantId clientId -- handle driver blocked
   pure Success
