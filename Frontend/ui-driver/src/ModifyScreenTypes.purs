@@ -75,6 +75,7 @@ modifyScreenState st =
     LmsVideoScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {lmsVideoScreen = a state.lmsVideoScreen})
     LmsQuizScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {lmsQuizScreen = a state.lmsQuizScreen})
     DocumentDetailsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {documentDetailsScreen = a state.documentDetailsScreen})
+    CameraScreenStateType a ->  modifyState (\(GlobalState state) -> GlobalState $ state { cameraScreen = a state.cameraScreen})
 
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do

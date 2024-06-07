@@ -27,7 +27,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Components.MobileNumberEditor as MobileNumberEditor
 import Engineering.Helpers.Commons as EHC
-import Prelude (Unit, const, ($), (<<<), (<>), bind, discard, unit, pure, map, (==), (/=), (-), (&&))
+import Prelude (Unit, const, ($), (<<<), (<>), bind, discard, unit, pure, map, (==), (/=), (-), (&&), void)
 import Screens.DocumentCaptureScreen.Controller (Action(..), eval, ScreenOutput(..))
 import Screens.DocumentCaptureScreen.ComponentConfig
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
@@ -62,6 +62,7 @@ screen initialState =
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
     _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
     _ <- runEffectFn1 consumeBP unit
+    _ <- JB.storeCallBackOpenCamera push CallBackOpenCamera
     if initialState.props.setDefault then do
       let _ = EHC.setText (EHC.getNewIDWithTag "FirstNameEditText") (fromMaybe "" initialState.data.firstName)
           _ = EHC.setText (EHC.getNewIDWithTag "LastNameEditText") (fromMaybe "" initialState.data.lastName)
@@ -70,10 +71,10 @@ screen initialState =
     pure $ pure unit
   )]
   , eval :
-      ( \state action -> do
+      ( \action state -> do
           let _ = spy "DocumentCaptureScreen ----- state" state
           let _ = spy "DocumentCaptureScreen --------action" action
-          eval state action
+          eval action state
         ) 
   }
 

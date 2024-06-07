@@ -21,6 +21,7 @@ import static in.juspay.mobility.common.Utils.captureImage;
 import static in.juspay.mobility.common.Utils.drawableToBitmap;
 import static in.juspay.mobility.common.Utils.encodeImageToBase64;
 import static in.juspay.mobility.common.Utils.getCircleOptionsFromJSON;
+import static in.juspay.mobility.common.Utils.startCropImageActivity;
 import static android.graphics.Color.GREEN;
 import static android.graphics.Color.green;
 import static android.graphics.Color.rgb;
@@ -297,13 +298,14 @@ public class MobilityCommonBridge extends HyperBridge {
     protected HashMap<String, GroundOverlay> groundOverlays = new HashMap<>();
 
 
-    private  MediaPlayer mediaPlayer = null;
+    private MediaPlayer mediaPlayer = null;
     private android.media.MediaPlayer audioPlayer;
     protected AppType app;
     protected MapUpdate mapUpdate = new MapUpdate();
     private MapRemoteConfig mapRemoteConfig;
     protected LocateOnMapManager locateOnMapManager = null;
     private Timer polylineAnimationTimer = null;
+    private String storeCallBackOpenCamera = null;
 
     protected enum AppType {
         CONSUMER, PROVIDER
@@ -501,6 +503,7 @@ public class MobilityCommonBridge extends HyperBridge {
         storeDashboardCallBack = null;
         userPositionMarker = null;
         storeImageUploadCallBack = null;
+        storeCallBackOpenCamera = null;
         if(mediaPlayer != null) mediaPlayer.audioPlayers = new ArrayList<>();
         Utils.deRegisterCallback(callBack);
     }
@@ -558,7 +561,10 @@ public class MobilityCommonBridge extends HyperBridge {
             ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, BACKGROUND_LOCATION_REQ_CODE);
         }
     }
-
+    @JavascriptInterface
+    public void storeCallBackOpenCamera (String callback){
+        storeCallBackOpenCamera = callback;
+    }
     @JavascriptInterface
     public void requestLocation() {
         if (!isLocationPermissionEnabled()) {
@@ -4526,7 +4532,10 @@ System.out.println("printing marker ids" + sourceIconId + "--- " + destIconId + 
         }
 
     }
-
+    @JavascriptInterface
+    public void cropImage(String imageUri, boolean isCircularCrop) {
+        startCropImageActivity(Uri.parse(imageUri), bridgeComponents.getActivity(), isCircularCrop);
+    }
     //region Audio Recorder
 
     // Deprecated on 16-Feb-24
@@ -4580,9 +4589,9 @@ System.out.println("printing marker ids" + sourceIconId + "--- " + destIconId + 
     }
 
     @JavascriptInterface
-    public void uploadFile() {
+    public void uploadFile(boolean showCircularFrame) {
         if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
-        mediaPlayer.uploadFile();
+        mediaPlayer.uploadFile(storeCallBackOpenCamera, showCircularFrame);
     }
 
     @JavascriptInterface
@@ -4645,6 +4654,7 @@ System.out.println("printing marker ids" + sourceIconId + "--- " + destIconId + 
                 }
                 break;
             case CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE:
+                if(mediaPlayer != null) mediaPlayer.isUploadPopupOpen = false;
                 if (resultCode == RESULT_OK) {
                     new Thread(() -> encodeImageToBase64(data, bridgeComponents.getContext(), null)).start();
                 } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {

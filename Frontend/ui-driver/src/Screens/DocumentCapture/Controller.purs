@@ -72,6 +72,8 @@ data Action = PrimaryButtonAC PrimaryButtonController.Action
             | MobileEditText PrimaryEditText.Action
             | KeyboardCallback String
             | MobileNumberEditText MobileNumberEditor.Action
+            | CallBackOpenCamera
+            | UpdateShouldGoBack
 
 data ScreenOutput = GoBack 
                   | UploadAPI DocumentCaptureScreenState
@@ -80,8 +82,11 @@ data ScreenOutput = GoBack
                   | ChangeVehicle DocumentCaptureScreenState
                   | UpdateSSN DocumentCaptureScreenState
                   | UpdateProfile DocumentCaptureScreenState
+                  | OpenCamera DocumentCaptureScreenState
 
 eval :: Action -> DocumentCaptureScreenState -> Eval Action ScreenOutput DocumentCaptureScreenState
+
+eval CallBackOpenCamera state = updateAndExit state $ OpenCamera state
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = 
   if state.props.isSSNView 
@@ -100,8 +105,10 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state =
             if isValid then updateAndExit state $ UpdateProfile newState else continue newState
       else
         continueWithCmd state [do
-          _ <- liftEffect $ JB.uploadFile false
-          pure NoAction]
+          JB.uploadFile (state.data.docType == ST.PROFILE_PHOTO)
+          pure $ UpdateShouldGoBack ]
+
+eval UpdateShouldGoBack state = continue state {props { shouldGoBack = state.data.docType /= ST.PROFILE_PHOTO }}
 
 eval (PrimaryButtonAC PrimaryButtonController.NoAction) state = continue state
 
@@ -139,6 +146,7 @@ eval BackPressed state =
   else if state.props.confirmChangeVehicle then continue state{props{confirmChangeVehicle = false}}
   else if state.props.menuOptions then continue state{props{menuOptions = false}} 
   else if state.props.contactSupportModal == ST.SHOW then continue state { props { contactSupportModal = ST.ANIMATING}}
+  else if not state.props.shouldGoBack then continue state {props { shouldGoBack = true}}
   else exit $ GoBack
 
 eval (OptionsMenuAction OptionsMenu.BackgroundClick) state = continue state{props{menuOptions = false}}
