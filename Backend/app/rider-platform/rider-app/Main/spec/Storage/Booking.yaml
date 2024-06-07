@@ -29,6 +29,7 @@ imports:
   VehicleServiceTier: Domain.Types.VehicleServiceTier
   VehicleServiceTierType: Domain.Types.VehicleServiceTier
   HighPrecMoney: Kernel.Types.Common
+  Estimate: Domain.Types.Estimate
 
 BookingLocation:
   tableName: booking_location
@@ -152,6 +153,7 @@ Booking:
     providerId: Text
     providerUrl: BaseUrl
     bppEstimateId: Text
+    estimateId: Maybe (Id Estimate)
     primaryExophone: Text
     startTime: UTCTime
     returnTime: Maybe UTCTime
