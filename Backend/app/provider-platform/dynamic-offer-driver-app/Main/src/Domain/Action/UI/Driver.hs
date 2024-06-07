@@ -729,6 +729,16 @@ buildDriverEntityRes (person, driverInfo) = do
                     && maybe True (\lastCheckedAt -> fromInteger (diffDays (utctDay now) (utctDay lastCheckedAt)) >= transporterConfig.acStatusCheckGap) driverInfo.lastACStatusCheckedAt
         return (checIfACWorking', (.serviceTierType) <$> mbDefaultServiceTierItem)
   let isVehicleSupported = maybe False (\d -> d `elem` supportedServiceTiers) mbDefaultServiceTier
+  onRideFlag <-
+    if driverInfo.onRide
+      then
+        Ride.notOnRide person.id >>= \veryMuchNotOnRide ->
+          if veryMuchNotOnRide
+            then do
+              fork "Update Wrongly Set OnRide" $ updateOnRideStatusWithAdvancedRideCheck person.id Nothing
+              return False
+            else return driverInfo.onRide
+      else return driverInfo.onRide
   return $
     DriverEntityRes
       { id = person.id,
@@ -739,7 +749,7 @@ buildDriverEntityRes (person, driverInfo) = do
         rating,
         linkedVehicle = makeVehicleAPIEntity mbDefaultServiceTier <$> vehicleMB,
         active = driverInfo.active,
-        onRide = driverInfo.onRide,
+        onRide = onRideFlag,
         enabled = driverInfo.enabled,
         blocked = driverInfo.blocked,
         verified = driverInfo.verified,
