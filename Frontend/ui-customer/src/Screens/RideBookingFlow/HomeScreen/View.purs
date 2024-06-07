@@ -96,7 +96,7 @@ import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn9)
+import Effect.Uncurried (runEffectFn1, runEffectFn2,runEffectFn3, runEffectFn9)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate, getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, compareUTCDate, getCurrentUTC)
@@ -210,6 +210,8 @@ screen initialState =
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
               _ <- storeCallBackCustomer push NotificationListener "HomeScreen"
               _ <- pure $ runFn2 storeOnResumeCallback push OnResumeCallback
+              _ <- runEffectFn3 JB.storeCallBackInternetAction push InternetCallBackCustomer "HomeScreen"
+              _ <- runEffectFn2 JB.storeNoInternetAction push UpdateNoInternet
               _ <- runEffectFn2 storeKeyBoardCallback push KeyboardCallback
               push HandleCallback
             else do

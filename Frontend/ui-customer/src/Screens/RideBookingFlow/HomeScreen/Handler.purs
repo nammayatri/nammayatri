@@ -245,3 +245,6 @@ homeScreen = do
     GoToIssueReportChatScreenWithIssue updatedState issueType-> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_ISSUE_REPORT_CHAT_SCREEN_WITH_ISSUE updatedState issueType)
+    ReloadFlowStatus updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CHECK_FLOW_STATUS)

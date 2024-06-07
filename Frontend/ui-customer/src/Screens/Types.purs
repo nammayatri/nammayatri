@@ -916,6 +916,7 @@ type HomeScreenStateProps =
   , scheduledRidePollingDelay :: Number
   , startScheduledRidePolling :: Boolean
   , showScheduledRideExistsPopUp :: Boolean
+  , isOffline :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
