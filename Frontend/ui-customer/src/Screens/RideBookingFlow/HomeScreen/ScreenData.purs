@@ -361,6 +361,7 @@ initData = {
     , zoneOtpExpired : false
     , isBannerDataComputed : false
     , showScheduledRideExistsPopUp : false
+    , isOffline : false
   }
 }
 

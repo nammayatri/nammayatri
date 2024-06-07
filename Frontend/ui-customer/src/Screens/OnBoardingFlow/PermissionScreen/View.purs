@@ -37,6 +37,7 @@ import Screens.PermissionScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
+import Effect.Uncurried (runEffectFn3)
 
 screen :: ST.PermissionScreenState -> Screen Action ST.PermissionScreenState ScreenOutput
 screen initialState  = 
@@ -49,7 +50,7 @@ screen initialState  =
       pure $ pure unit
     else do 
       _ <- JB.storeCallBackDriverLocationPermission push LocationPermissionCallBackCustomer
-      _ <- JB.storeCallBackInternetAction push InternetCallBackCustomer
+      _ <- runEffectFn3 JB.storeCallBackInternetAction push InternetCallBackCustomer "PermissionScreen"
       pure $ pure unit
   )]
   , eval

@@ -216,6 +216,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | SUBMIT_RATING HomeScreenState
                         | GO_TO_FIND_ESTIMATES HomeScreenState
                         | OPEN_GOOGLE_MAPS HomeScreenState
+                        | RELOAD_FLOW_STATUS
                         | IN_APP_TRACK_STATUS HomeScreenState
                         | UPDATE_SAVED_LOCATION
                         | CHECK_SERVICEABILITY HomeScreenState Number Number

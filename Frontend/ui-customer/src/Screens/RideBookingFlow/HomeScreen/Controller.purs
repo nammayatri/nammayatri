@@ -740,6 +740,7 @@ data ScreenOutput = LogoutUser
                   | ConfirmRentalRideSO HomeScreenState
                   | StayInHomeScreenSO HomeScreenState
                   | GoToIssueReportChatScreenWithIssue HomeScreenState CTP.CustomerIssueTypes
+                  | ReloadFlowStatus HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -930,11 +931,19 @@ data Action = NoAction
             | UpdateNextIssueBannerPage Int
             | UpdateNextIssueBanneerSwipe Int 
             | TollChargeAmbigousPopUpAction PopUpModal.Action
+            | UpdateNoInternet
+            | InternetCallBackCustomer String
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
 eval GoToConfirmingLocationStage state = 
   exit $ ExitToConfirmingLocationStage state
+eval UpdateNoInternet state = continue state { props { isOffline = true } }
+eval (InternetCallBackCustomer internetAvailable) state =
+  if (internetAvailable == "true") then do
+    updateAndExit state { props { isOffline = false } } $ ReloadFlowStatus state { props { isOffline = false } }
+  else
+    continue state
 
 eval (IntercitySpecialZone PopUpModal.DismissPopup) state = continue state
 
@@ -2009,7 +2018,11 @@ eval WhereToClick state = do
 eval OpenSettings state = do
   _ <- pure $ hideKeyboardOnNavigation true
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_burger_menu"
-  continue state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+  if state.props.isOffline then do
+    void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
+    continue state
+  else
+    continue state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
 eval (SearchExpireCountDown seconds status timerID) state = do
   if status == "EXPIRED" then do
@@ -2116,7 +2129,11 @@ eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)
 eval OpenEmergencyHelp state = do
   void $ pure $ performHapticFeedback unit
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_ic_safety_center_clicked"
-  exit $ GoToNammaSafety state true false
+  if state.props.isOffline then do
+    void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
+    continue state
+  else do
+    exit $ GoToNammaSafety state true false
 
 eval OpenOffUsSOS state = do
   void $ pure $ performHapticFeedback unit
@@ -2126,7 +2143,11 @@ eval OpenOffUsSOS state = do
 eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{currentSheetState = if state.props.currentSheetState == EXPANDED then COLLAPSED else EXPANDED}}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = 
-  if state.data.config.feature.shareWithEmergencyContacts 
+  if state.props.isOffline then do
+    void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
+    continue state
+  else do
+    if state.data.config.feature.shareWithEmergencyContacts 
     then exit $ GoToShareRide state
     else continueWithCmd state [pure ShareRide]
 
@@ -2154,6 +2175,10 @@ eval (CancelRidePopUpAction (CancelRidePopUp.ClearOptions)) state = do
   continue state { props { cancelDescription = "", cancelReasonCode = "", cancelRideActiveIndex = Nothing } }
 
 eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnClick)) state = do
+  if state.props.isOffline then do
+    void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
+    continue state
+  else do
     let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".CancelRide") "true"
     void $ pure $ performHapticFeedback unit
     case state.props.cancelRideActiveIndex of
@@ -2735,7 +2760,12 @@ eval (DisabilityPopUpAC PopUpModal.OnButton1Click) state = do
   _ <- pure $ pauseYoutubeVideo unit
   continue state{props{showDisabilityPopUp = false}}
 
-eval (SafetyBannerAction Banner.OnClick) state = exit $ GoToNammaSafety state false $ state.props.sosBannerType == Just MOCK_DRILL_BANNER
+eval (SafetyBannerAction Banner.OnClick) state = do 
+  if state.props.isOffline then do  
+    void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
+    continue state
+  else do 
+    exit $ GoToNammaSafety state false $ state.props.sosBannerType == Just MOCK_DRILL_BANNER
 
 eval ShowRateCard state = do
   continue state { props { showRateCard = true } }

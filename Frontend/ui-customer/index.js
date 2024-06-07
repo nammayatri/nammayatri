@@ -164,6 +164,7 @@ function shouldRefresh() {
   return ((diff > refreshThreshold) && 
       (token != "__failed") && 
       (token != "(null)") &&
+      checkInternet() &&
       ((currentState == "RideStarted") || currentState == "RideAccepted"))
 }
 
@@ -272,9 +273,13 @@ window.callUICallback = function () {
 }
 
 window.onResumeListeners = [];
+window.internetListeners = {};
 
 window.onPause = function () {
   console.error("onEvent onPause");
+}
+function checkInternet() {
+  return window.__OS === "IOS" ? JBridge.isNetworkAvailable() === "1" : JBridge.isInternetAvailable();
 }
 
 window.onResume = function () {
@@ -340,7 +345,8 @@ window["onEvent'"] = function (_event, args) {
   } else if (_event == "onLocationChanged" && !(window.receiverFlag)) {
     purescript.onConnectivityEvent("LOCATION_DISABLED")();
   } else if (_event == "onInternetChanged") {
-    purescript.onConnectivityEvent("INTERNET_ACTION")();
+    if(window.noInternetAction) window.noInternetAction();
+    else purescript.onConnectivityEvent("INTERNET_ACTION")();
   }else if(_event == "onBundleUpdated"){
     purescript.onBundleUpdatedEvent(JSON.parse(args))();
   } else if ((_event == "onKeyboardOpen" || _event == "onKeyboardClose") && window.keyBoardCallback) {
