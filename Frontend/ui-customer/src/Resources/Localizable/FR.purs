@@ -1276,3 +1276,5 @@ getFR stringKey =
         METRO_BANNER_TITLE appName -> "Réservez des billets de métro avec \n" <> appName <> " maintenant !"
         VIEW_ON_GOOGLE_MAPS -> "Voir sur Google Maps"
         WALKING_DIRECTIONS_TO_PICKUP -> "Directions pour marcher jusqu'au lieu de prise en charge"
+        EXPLORE_CITY_WITH_US city -> "Explorez " <> city <> " avec nous"
+        GO_TO_DESTINATION destination -> "visitez " <> destination

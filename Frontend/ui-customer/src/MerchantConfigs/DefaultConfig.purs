@@ -391,7 +391,8 @@ config =
                 strictBounds = true
               },
             featureConfig {
-              enableCabBanner = true
+              enableCabBanner = true,
+              showExploreCity = true
             }
             , enableAcViews = true
             , enableCabs = false
@@ -547,7 +548,8 @@ defaultCityConfig =
       },
     enableCabs : false,
     featureConfig : {
-      enableCabBanner : false
+      enableCabBanner : false,
+      showExploreCity : false
     },
     referral : {
       domain : "https://nammayatri.in",

@@ -174,6 +174,7 @@ initData = {
     , rideCompletedData : initialRideCompletedData
     , routeCacheForAdvancedBooking : Nothing
     , previousRideDrop : false
+    , famousDestinations : []
     },
     props: {
       rideRequestFlow : false

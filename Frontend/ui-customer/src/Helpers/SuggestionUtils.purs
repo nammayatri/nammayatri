@@ -49,6 +49,8 @@ import Engineering.Helpers.GeoHash (encodeGeohash, geohashNeighbours)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Accessor (_vehicleVariant)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
+import RemoteConfig (FamousDestination(..), getFamousDestinations)
+import Screens.HomeScreen.ScreenData (dummyAddress)
 
 foreign import setSuggestionsMapInJson :: Json -> Json
 foreign import getSuggestedDestinationsJsonFromLocal :: String -> Json
@@ -464,3 +466,39 @@ getVariant serviceTier variant =
     Just "XL Cab" -> Just "SUV"
     Just "Non-AC Mini" -> Just "TAXI"
     _ -> variant
+
+fetchFamousDestinations :: LazyCheck -> Array LocationListItemState
+fetchFamousDestinations _ = do
+  let destinations = getFamousDestinations $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+  map getFamousCityDestination destinations
+
+getFamousCityDestination :: FamousDestination -> LocationListItemState
+getFamousCityDestination (FamousDestination destnData)  = 
+  { prefixImageUrl : ""
+    , postfixImageUrl : destnData.imageUrl
+    , postfixImageVisibility : false
+    , title : destnData.name
+    , subTitle : destnData.subTitle
+    , placeId : Nothing
+    , lat : Just destnData.lat
+    , lon : Just destnData.lon
+    , description : destnData.description
+    , tag : ""
+    , tagType : Nothing
+    , cardType : Nothing
+    , address : ""
+    , tagName : ""
+    , isEditEnabled : true
+    , savedLocation : ""
+    , placeName : ""
+    , isClickable : true
+    , alpha : 1.0
+    , fullAddress : dummyAddress
+    , locationItemType : Just SUGGESTED_DESTINATIONS
+    , distance : Nothing
+    , showDistance : Nothing
+    , actualDistance : Nothing
+    , frequencyCount : Nothing
+    , recencyDate : Nothing
+    , locationScore : Nothing
+    }

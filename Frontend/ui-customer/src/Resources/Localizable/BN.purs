@@ -1274,3 +1274,5 @@ getBN stringKey =
         METRO_BANNER_TITLE appName -> "এখন কোচি মেট্রো টিকিট বুক করুন " <> appName <> " এর সাথে"
         VIEW_ON_GOOGLE_MAPS -> "গুগল ম্যাপে দেখুন"
         WALKING_DIRECTIONS_TO_PICKUP -> "পিকআপের জন্য হেঁটে যাওয়ার নির্দেশ"
+        EXPLORE_CITY_WITH_US city -> "আমাদের সাথে " <> city <> " এক্সপ্লোর করুন"
+        GO_TO_DESTINATION destination -> destination <> " এ যান"

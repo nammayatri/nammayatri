@@ -704,12 +704,14 @@ homeScreenFlow = do
     currTime = (getCurrentUTC "")
 
     diffInSeconds = (INT.toNumber $ fromMaybe 0 $ head $ filter (\item -> item >= 0) $ sort $ map (\date -> EHC.compareUTCDate date.rideStartTime currTime) bookingTimeList)
+
+    famousDestinations = fetchFamousDestinations FunctionCall
   modifyScreenState
     $ HomeScreenStateType
         ( \homeScreen ->
             homeScreen
               { props { scheduledRidePollingDelay = diffInSeconds, hasTakenRide = (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE"), isReferred = (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") }
-              , data { currentCityConfig = currentCityConfig }
+              , data { currentCityConfig = currentCityConfig, famousDestinations = famousDestinations }
               }
         )
   liftFlowBT $ handleUpdatedTerms $ getString STR.TERMS_AND_CONDITIONS_UPDATED
@@ -906,6 +908,7 @@ homeScreenFlow = do
                         else
                           Nothing
                       }
+                    , showShimmer = false
                     }
                   }
             )
@@ -1368,6 +1371,7 @@ homeScreenFlow = do
                           , showlocUnserviceablePopUp = false
                           , city = cityName
                           , locateOnMapProps { sourceLocationName = Just srcSpecialLocation.locationName }
+                          , showShimmer = false
                           }
                         }
                   )
@@ -1379,9 +1383,9 @@ homeScreenFlow = do
             let
               isWhitelisted = any (_ == getValueFromWindow (show MOBILE_NUMBER)) (getNumbersToWhiteList "")
             void $ pure $ firebaseLogEvent "ny_loc_unserviceable"
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { isSrcServiceable = isWhitelisted, showlocUnserviceablePopUp = (not isWhitelisted) } })
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { isSrcServiceable = isWhitelisted, showlocUnserviceablePopUp = (not isWhitelisted), showShimmer = false } })
         else do
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { isSrcServiceable = true, showlocUnserviceablePopUp = false } })
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { isSrcServiceable = true, showlocUnserviceablePopUp = false, showShimmer = false } })
       homeScreenFlow
     RETRY -> homeScreenFlow
     REALLOCATE_RIDE state -> do
@@ -1424,6 +1428,7 @@ homeScreenFlow = do
                     , isSrcServiceable = srcServiceability
                     , showlocUnserviceablePopUp = not srcServiceability
                     , city = cityName
+                    , showShimmer = false
                     }
                   }
             )

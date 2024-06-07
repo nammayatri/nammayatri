@@ -1275,3 +1275,5 @@ getKN stringKey =
         METRO_BANNER_TITLE appName -> "ಈಗ " <> appName <> " ನೊಂದಿಗೆ ಮೆಟ್ರೋ ಟಿಕೆಟ್ಗಳನ್ನು ಬುಕ್ ಮಾಡಿ!"
         VIEW_ON_GOOGLE_MAPS -> "ಗೂಗಲ್ ನಕ್ಷೆಯಲ್ಲಿ ವೀಕ್ಷಿಸಿ"
         WALKING_DIRECTIONS_TO_PICKUP -> "ಪಿಕಪ್ ಸ್ಥಳಕ್ಕೆ ನಡೆಯುವ ಮಾರ್ಗದರ್ಶನ"
+        EXPLORE_CITY_WITH_US city -> "ನಮ್ಮೊಂದಿಗೆ " <> city <> " ಅನ್ವೇಷಿಸಿ"
+        GO_TO_DESTINATION destination -> "ಗುರಿಯಿಂದ ಹೋಗಿ " <> destination

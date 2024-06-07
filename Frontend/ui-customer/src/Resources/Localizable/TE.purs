@@ -1289,3 +1289,5 @@ getTE stringKey =
     METRO_BANNER_TITLE appName -> "మీరు ఇప్పుడు మెట్రో టికెట్లను బుక్ చేయవచ్చు \n" <> appName <> " తో!"
     VIEW_ON_GOOGLE_MAPS -> "గూగుల్ మాప్స్‌లో చూడండి"
     WALKING_DIRECTIONS_TO_PICKUP -> "పికప్ కు వాకింగ్ దిక్కులు"
+    EXPLORE_CITY_WITH_US city -> "మాతో కలిసి " <> city <> " అన్వేషించండి"
+    GO_TO_DESTINATION destination -> "గంతవ్యం " <> destination <> " కు వెళ్ళండి"
