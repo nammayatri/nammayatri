@@ -555,3 +555,17 @@ export const renderSlider = function (cb) {
     }
   }
 }
+
+export const setActivityResultListener = function (requestCode, cb) {
+  if (JBridge.storeHvCallback) {
+    const callback = callbackMapper.map(function (reqCode, bundle) {
+      cb(reqCode)(bundle)();
+    });
+    JBridge.storeHvCallback(callback);
+  }
+
+  // This can be used in future for activityResultListeners
+  // window.activityResultListeners[requestCode] = function (reqCode, bundle) {
+  //   cb(reqCode)(bundle)(); 
+  // };
+}

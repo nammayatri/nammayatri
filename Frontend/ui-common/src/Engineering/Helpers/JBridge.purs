@@ -321,6 +321,11 @@ sliderConfig = {
   bgAlpha : 50
 }
 
+foreign import initHVSdk :: EffectFn6 String String String Boolean String String (Effect Unit)
+foreign import decodeAndStoreImage :: Fn1 String String
+foreign import encodeToBase64 :: forall action. String -> (action -> Effect Unit)  -> Effect String
+foreign import isSdkTokenExpired :: Fn1 String Boolean
+foreign import makeSdkTokenExpiry :: Fn1 Int String
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
 setMapPadding = runEffectFn4 setMapPaddingImpl
 
@@ -877,3 +882,6 @@ data RouteKeysType  = DEFAULT | RENTAL | ADVANCED
 derive instance genericRouteKeysType :: Generic RouteKeysType _
 instance showRouteKeysType :: Show RouteKeysType where show = genericShow
 instance eqRouteKeysType :: Eq RouteKeysType where eq = genericEq
+
+encodeToBase64Type :: String -> Aff String
+encodeToBase64Type url = makeAff \cb -> encodeToBase64 url (cb <<< Right) $> nonCanceler
