@@ -33,8 +33,14 @@ findAllActiveBySTId (Kernel.Types.Id.Id searchTryId) status = do findAllWithKV [
 
 updateDriverResponse ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriverResponse -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())
-updateDriverResponse response status (Kernel.Types.Id.Id id) = do updateOneWithKV [Se.Set Beam.response response, Se.Set Beam.status status] [Se.Is Beam.id $ Se.Eq id]
+  (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriverResponse -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource -> Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())
+updateDriverResponse response status notificationSource (Kernel.Types.Id.Id id) = do
+  updateOneWithKV
+    [ Se.Set Beam.response response,
+      Se.Set Beam.status status,
+      Se.Set Beam.notificationSource notificationSource
+    ]
+    [Se.Is Beam.id $ Se.Eq id]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -84,6 +90,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Just $ Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.mode mode,
+      Se.Set Beam.notificationSource notificationSource,
       Se.Set Beam.parallelSearchRequestCount parallelSearchRequestCount,
       Se.Set Beam.pickupZone pickupZone,
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),

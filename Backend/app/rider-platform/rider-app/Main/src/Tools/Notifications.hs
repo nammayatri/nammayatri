@@ -238,12 +238,6 @@ notifyOnRideStarted booking ride = do
           ]
   notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
 
-data FirstRideEventParam = FirstRideEventParam
-  { vehicleCategory :: BecknConfig.VehicleCategory,
-    hasTakenFirstValidRide :: Bool
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
 data RideCompleteParam = RideCompleteParam
   { driverName :: Text,
     fare :: Text
@@ -937,6 +931,12 @@ notifyTicketCancelled ticketBookingId ticketBookingCategoryName person = do
           ]
   notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData
 
+data FirstRideEvent = FirstRideEvent
+  { vehicleCategory :: BecknConfig.VehicleCategory,
+    hasTakenFirstValidRide :: Bool
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 notifyFirstRideEvent :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person -> BecknConfig.VehicleCategory -> m ()
 notifyFirstRideEvent personId vehicleCategory = do
   person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -947,10 +947,10 @@ notifyFirstRideEvent personId vehicleCategory = do
             subCategory = Nothing,
             showNotification = Notification.DO_NOT_SHOW,
             messagePriority = Nothing,
-            entity = Notification.Entity Notification.Product person.id.getId (),
+            entity = Notification.Entity Notification.Product person.id.getId (FirstRideEvent vehicleCategory True),
             body = body,
             title = title,
-            dynamicParams = FirstRideEventParam vehicleCategory True,
+            dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
             ttl = Nothing,
             sound = Nothing

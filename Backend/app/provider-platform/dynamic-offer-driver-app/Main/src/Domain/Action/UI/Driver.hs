@@ -412,7 +412,8 @@ data DriverRespondReq = DriverRespondReq
     offeredFareWithCurrency :: Maybe PriceAPIEntity,
     searchRequestId :: Maybe (Id DST.SearchTry), -- TODO: Deprecated, to be removed
     searchTryId :: Maybe (Id DST.SearchTry),
-    response :: SearchRequestForDriverResponse
+    response :: SearchRequestForDriverResponse,
+    notificationSource :: Maybe NotificationSource
   }
   deriving stock (Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
@@ -976,7 +977,7 @@ offerQuoteLockKey driverId = "Driver:OfferQuote:DriverId-" <> driverId.getId
 offerQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe (Id DC.Client) -> DriverOfferReq -> Flow APISuccess
 offerQuote (driverId, merchantId, merchantOpCityId) clientId DriverOfferReq {..} = do
   let response = Accept
-  respondQuote (driverId, merchantId, merchantOpCityId) clientId Nothing Nothing Nothing Nothing DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, ..}
+  respondQuote (driverId, merchantId, merchantOpCityId) clientId Nothing Nothing Nothing Nothing DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, notificationSource = Nothing, ..}
 
 respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe (Id DC.Client) -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> DriverRespondReq -> Flow APISuccess
 respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbDevice req = do
@@ -1004,7 +1005,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
     driverFCMPulledList <-
       case req.response of
         Pulled -> do
-          QSRD.updateDriverResponse (Just Pulled) Inactive sReqFD.id
+          QSRD.updateDriverResponse (Just Pulled) Inactive req.notificationSource sReqFD.id
           throwError UnexpectedResponseValue
         Accept -> do
           whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
@@ -1014,10 +1015,10 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               DTC.CrossCity DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
               DTC.InterCity DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
               _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchantId clientId
-          QSRD.updateDriverResponse (Just Accept) Inactive sReqFD.id
+          QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource sReqFD.id
           return pullList
         Reject -> do
-          QSRD.updateDriverResponse (Just Reject) Inactive sReqFD.id
+          QSRD.updateDriverResponse (Just Reject) Inactive req.notificationSource sReqFD.id
           pure []
     DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id driverFCMPulledList
   pure Success

@@ -64,3 +64,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN is_forwa
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN distance_unit character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN notification_source text ;
