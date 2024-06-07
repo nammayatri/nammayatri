@@ -136,6 +136,10 @@ config = {
       width : WRAP_CONTENT,
       accessibilityHint : ""
     }
+  , bulletPoints : []
+  , backgroundColor : Color.black9000
+  , padding : Padding 16 0 16 0
+  , gravity : CENTER
 }
 
 dummyImageConfig :: ImageConfig

@@ -64,6 +64,8 @@ import Mobility.Prelude
 import Components.OptionsMenu as OptionsMenu
 import Screens.RegistrationScreen.ComponentConfig (changeVehicleConfig)
 import Data.Array as DA
+import Screens.Types as ST
+import Components.RequestInfoCard as RequestInfoCard
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -479,7 +481,7 @@ vehicleRegistrationNumber state push =
                     ]
                   , facilityListView state push
           ]
-        , checkACView state push
+        -- , checkACView state push
         ]
       ]
       where 

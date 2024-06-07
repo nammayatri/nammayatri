@@ -15,10 +15,10 @@
 
 module Components.RequestInfoCard.View where
 
-import Components.RequestInfoCard.Controller (Action(..) , Config, TextConfig)
-import Prelude ((*), Unit, ($), const, (/), unit, (-), (<>), (/=))
+import Components.RequestInfoCard.Controller (Action(..) , Config, TextConfig, ImageConfig, dummyImageConfig)
+import Prelude ((*), Unit, ($), const, (/), unit, (-), (<>), (/=), map, (>))
 import Effect (Effect)
-import PrestoDOM (PrestoDOM, Accessiblity(..),Orientation(..), Gravity(..), Padding(..), Margin(..), Length(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, onClick, color, background, cornerRadius, weight, imageWithFallback , visibility, accessibility, accessibilityHint)
+import PrestoDOM (PrestoDOM, Accessiblity(..),Orientation(..), Gravity(..), Padding(..), Margin(..), Length(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, onClick, color, background, cornerRadius, weight, imageWithFallback , visibility, accessibility, accessibilityHint, textFromHtml)
 import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -27,6 +27,9 @@ import Language.Types (STR(..))
 import Engineering.Helpers.Commons (screenWidth)
 import Common.Types.App (LazyCheck(..))
 import Data.String as DS
+import Data.Array as DA
+import Mobility.Prelude (boolToVisibility)
+import Data.Maybe (isJust, Maybe(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push state = 

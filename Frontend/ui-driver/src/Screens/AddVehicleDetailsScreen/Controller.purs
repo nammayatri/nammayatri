@@ -321,7 +321,7 @@ eval (SelectVehicleTypeModalAction (SelectVehicleTypeModal.OnSelect item)) state
                         SUV       -> "SUV"
                         Hatchback -> "Hatchback"
                         Auto      -> "Auto"
-                        Bike      -> "Bike")
+                        Bike      -> "Bike"
                         Ambulance -> "Ambulance")
       }
     }
@@ -497,9 +497,9 @@ eval (ChangeVehicleAC (PopUpModal.DismissPopup)) state = continue state {props {
 
 eval OpenAmbulanceFacilityModal state = continue state {props {ambulanceModal = true}}
 
-eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { acModal = false}}
+-- eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { acModal = false}}
 
-eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { acModal = false}}
+-- eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { acModal = false}}
 
 eval (RequestAmbulanceFacility RequestInfoCard.Close) state = continue state { props { ambulanceModal = false}}
 

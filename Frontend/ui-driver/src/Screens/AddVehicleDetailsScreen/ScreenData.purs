@@ -74,7 +74,7 @@ initData = {
       successfulValidation : false,
       multipleRCstatus : NOT_STARTED,
       menuOptions : false,
-      confirmChangeVehicle : false
+      confirmChangeVehicle : false,
       -- confirmChangeVehicle : false,
       -- contactSupportModal : ST.HIDE,
       -- buttonIndex : Nothing,
