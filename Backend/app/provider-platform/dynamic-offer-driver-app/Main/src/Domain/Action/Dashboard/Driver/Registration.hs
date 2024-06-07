@@ -400,7 +400,8 @@ approveAndUpdateDL req = do
         dl
           { DDL.licenseNumber = fromMaybe dl.licenseNumber licenseNumber,
             DDL.driverDob = req.driverDateOfBirth <|> dl.driverDob,
-            DDL.licenseExpiry = fromMaybe dl.licenseExpiry req.dateOfExpiry
+            DDL.licenseExpiry = fromMaybe dl.licenseExpiry req.dateOfExpiry,
+            DDL.verificationStatus = VALID
           }
   QDL.updateByPrimaryKey updatedDL
   QImage.updateVerificationStatusByIdAndType VALID imageId Domain.DriverLicense
