@@ -322,7 +322,11 @@ eval (SelectVehicleTypeModalAction (SelectVehicleTypeModal.OnSelect item)) state
                         Hatchback -> "Hatchback"
                         Auto      -> "Auto"
                         Bike      -> "Bike"
-                        Ambulance -> "Ambulance")
+                        Ambulance_Taxi -> "Ambulance_Taxi"
+                        Ambulance_Taxi_Oxy -> "Ambulance_Taxi_Oxy"
+                        Ambulance_AC -> "Ambulance_AC"
+                        Ambulance_AC_Oxy -> "Ambulance_AC_Oxy"
+                        Ambulance_Ventilator -> "Ambulance_Ventilator")
       }
     }
 
@@ -511,7 +515,6 @@ eval (SelectAmbulanceVarient str) state = do
 
 eval SelectAmbulanceFacility state = do
   let old = state.props.facilities
-      _ = spy "old::" old
   continue state{props{facilities = not old , showIssueOptions = true}}
 
 

@@ -327,7 +327,11 @@ getVehicleType vehicleType =
     "TAXI" -> (getString TAXI)
     "TAXI_PLUS" -> (getString TAXI_PLUS)
     "BIKE" -> "Bike"
-    "Ambulance" -> "Ambulance"
+    "AMBULANCE_TAXI" -> "Ambulance_Taxi"
+    "AMBULANCE_TAXI_OXY" -> "Ambulance_Taxi_Oxy"
+    "AMBULANCE_AC" -> "Ambulance_AC" 
+    "AMBULANCE_AC_OXY" -> "Ambulance_AC_Oxy"
+    "AMBULANCE_VENTILATOR" -> "Ambulance_Ventilator"
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig
@@ -504,7 +508,11 @@ getCategorizedVariant variant = case variant of
       "TAXI_PLUS"  -> "AC Taxi"
       "SUV" -> "AC Taxi"
       "BIKE" -> "Bike"
-      "AMBULANCE" -> "Ambulance"
+      "AMBULANCE_TAXI" -> "Ambulance_Taxi"
+      "AMBULANCE_TAXI_OXY" -> "Ambulance_Taxi_Oxy"
+      "AMBULANCE_AC" -> "Ambulance_AC" 
+      "AMBULANCE_AC_OXY" -> "Ambulance_AC_Oxy"
+      "AMBULANCE_VENTILATOR" -> "Ambulance_Ventilator"
       _ -> "Non AC"
     _ -> case var of
       "SEDAN"  -> "Sedan"
@@ -513,7 +521,11 @@ getCategorizedVariant variant = case variant of
       "SUV" -> "Suv"
       "AUTO_RICKSHAW" -> "Auto Rickshaw"
       "BIKE" -> "Bike"
-      "AMBULANCE" -> "Ambulance"
+      "AMBULANCE_TAXI" -> "Ambulance_Taxi"
+      "AMBULANCE_TAXI_OXY" -> "Ambulance_Taxi_Oxy"
+      "AMBULANCE_AC" -> "Ambulance_AC" 
+      "AMBULANCE_AC_OXY" -> "Ambulance_AC_Oxy"
+      "AMBULANCE_VENTILATOR" -> "Ambulance_Ventilator"
       _ -> var
   Nothing -> ""
 
@@ -552,7 +564,11 @@ getVehicleVariantImage variant =
                         "TAXI" -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"
                         "SUV"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
                         "BIKE" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
-                        "AMBULANCE" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        "AMBULANCE_TAXI" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        "AMBULANCE_AC" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
                         _      -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
         _          -> case variant of
                         "SEDAN"     -> "ny_ic_sedan_car_side," <> url <> "ny_ic_sedan_car_side.png"
