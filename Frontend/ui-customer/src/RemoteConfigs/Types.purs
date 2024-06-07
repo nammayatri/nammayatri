@@ -46,3 +46,15 @@ type PickupInstructions =
   { image :: String
   , title :: String
   }
+  
+newtype FamousDestination = FamousDestination {
+  name :: String,
+  subTitle :: String,
+  imageUrl :: String,
+  lat :: Number,
+  lon :: Number,
+  description :: String
+}
+
+derive instance genericFamousDestination :: Generic FamousDestination _
+instance decodeFamousDestination :: Decode FamousDestination where decode = defaultDecode

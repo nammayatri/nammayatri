@@ -17,7 +17,6 @@ import Common.Types.App
 import RemoteConfig.Types
 import Data.Array as DA
 
-
 safetyVideoConfigData :: String -> String -> Array SafetyVideoConfig
 safetyVideoConfigData city language = do
     let config = fetchRemoteConfigString ("safety_videos_" <> language)
@@ -50,3 +49,9 @@ defPlaces :: SpecialLocationsOb
 defPlaces = {
     locations : []
 }
+
+getFamousDestinations :: String -> Array FamousDestination
+getFamousDestinations city = do
+    let config = fetchRemoteConfigString "famous_destinations"
+        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
+    getCityBasedConfig value city

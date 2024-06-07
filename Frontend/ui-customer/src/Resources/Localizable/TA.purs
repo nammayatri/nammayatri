@@ -1294,3 +1294,5 @@ getTA stringKey =
     METRO_BANNER_TITLE appName -> "மெட்ரோ டிக்கெட்டுகளை இப்போது புதுப்பிக்கவும் " <> appName <> " ஆப் மூலம்!"
     VIEW_ON_GOOGLE_MAPS -> "கூகுள் மேப்ஸில் பார்க்க"
     WALKING_DIRECTIONS_TO_PICKUP -> "பிக்அப் க்கு நடந்து செல்ல வழிகாட்டி"
+    EXPLORE_CITY_WITH_US city -> "எங்களுடன் " <> city <> " ஐ கண்டறியுங்கள்"
+    GO_TO_DESTINATION destination -> "பெங்களூரை வருக " <> destination

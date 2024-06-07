@@ -1278,3 +1278,5 @@ getEN stringKey =
         METRO_BANNER_TITLE appName -> "Book metro tickets with \n" <> appName <> " Now!"
         VIEW_ON_GOOGLE_MAPS -> "View on Google Maps"
         WALKING_DIRECTIONS_TO_PICKUP -> "Walking Directions to Pickup"
+        EXPLORE_CITY_WITH_US city -> "Explore "<> city <>" with us"
+        GO_TO_DESTINATION destination -> "Go to "<> destination

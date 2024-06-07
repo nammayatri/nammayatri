@@ -660,6 +660,7 @@ type HomeScreenStateData =
   , rideCompletedData :: RideCompletedData -- put necesssary data which is required in ride completed screen
   , routeCacheForAdvancedBooking :: Maybe Route
   , previousRideDrop :: Boolean
+  , famousDestinations :: Array LocationListItemState
   }
 
 type InteroperabilityState = {

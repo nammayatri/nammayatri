@@ -1652,6 +1652,8 @@ eval BackPressed state = do
                   , hasCompletedSafetySetup = state.data.settingSideBar.hasCompletedSafetySetup
                   }
                   , followers = state.data.followers
+                , currentCityConfig = state.data.currentCityConfig
+                , famousDestinations = state.data.famousDestinations
                 }
               , props { 
                   isBanner = state.props.isBanner
