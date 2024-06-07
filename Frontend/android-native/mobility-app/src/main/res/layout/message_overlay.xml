@@ -178,6 +178,7 @@
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
                                             android:text=" ₹ "
+                                            android:textSize="16dp"
                                             android:fontFamily="@font/plus_jakarta_sans_bold"
                                             android:id="@+id/new_fare_val"/>
 
@@ -185,7 +186,7 @@
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
                                             android:theme="@style/Theme.MaterialComponents.Light"
-                                            app:cardCornerRadius="10dp"
+                                            app:cardCornerRadius="20dp"
                                             app:cardElevation="0dp"
                                             app:contentPadding="5dp"
                                             app:contentPaddingLeft="5dp"
@@ -210,7 +211,7 @@
                                                     android:layout_height="match_parent"
                                                     android:textColor="@color/white"
                                                     android:id="@+id/fare_diff_indicator_val"
-                                                    android:textSize="15dp"
+                                                    android:textSize="16dp"
                                                     android:fontFamily="@font/dmsans_bold"
                                                     android:text=" ₹ "/>
 
@@ -243,6 +244,7 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:text=" km"
+                                        android:textSize="16dp"
                                         android:fontFamily="@font/plus_jakarta_sans_bold"
                                         android:id="@+id/new_dist_val"/>
 
@@ -250,7 +252,7 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:theme="@style/Theme.MaterialComponents.Light"
-                                        app:cardCornerRadius="10dp"
+                                        app:cardCornerRadius="20dp"
                                         app:cardElevation="0dp"
                                         app:contentPadding="5dp"
                                         app:contentPaddingLeft="5dp"
@@ -275,7 +277,7 @@
                                                 android:layout_height="match_parent"
                                                 android:textColor="@color/white"
                                                 android:id="@+id/dist_diff_indicator_val"
-                                                android:textSize="15dp"
+                                                android:textSize="16dp"
                                                 android:fontFamily="@font/dmsans_bold"
                                                 android:text="No change"/>
 
