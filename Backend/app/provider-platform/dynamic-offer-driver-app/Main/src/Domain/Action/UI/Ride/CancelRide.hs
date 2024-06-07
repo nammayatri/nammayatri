@@ -28,7 +28,6 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
-import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -59,7 +58,7 @@ data ServiceHandle m = ServiceHandle
     findById :: Id DP.Person -> m (Maybe DP.Person),
     cancelRide :: Id DRide.Ride -> DRide.RideEndedBy -> DBCR.BookingCancellationReason -> m (),
     findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
-    pickUpDistance :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> LatLong -> m Meters
+    pickUpDistance :: SRB.Booking -> LatLong -> LatLong -> m Meters
   }
 
 cancelRideHandle :: ServiceHandle Flow
@@ -168,7 +167,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
             driverLocations <- LF.driversLocation [driverId]
             return $ listToMaybe driverLocations
           disToPickup <- forM mbLocation $ \location -> do
-            pickUpDistance booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation)
+            pickUpDistance booking (getCoordinates location) (getCoordinates booking.fromLocation)
           -- Temporary for debug issue with huge values
           let disToPickupThreshold = 1000000 --1000km can be max valid distance
           updatedDisToPickup :: Maybe Meters <- case disToPickup of
@@ -212,18 +211,17 @@ driverDistanceToPickup ::
     Maps.HasCoordinates tripStartPos,
     Maps.HasCoordinates tripEndPos
   ) =>
-  Id Merchant ->
-  Id DMOC.MerchantOperatingCity ->
+  SRB.Booking ->
   tripStartPos ->
   tripEndPos ->
   m Meters
-driverDistanceToPickup merchantId merchantOpCityId tripStartPos tripEndPos = do
+driverDistanceToPickup booking tripStartPos tripEndPos = do
   distRes <-
-    Maps.getDistanceForCancelRide merchantId merchantOpCityId $
+    Maps.getDistanceForCancelRide booking.providerId booking.merchantOperatingCityId $
       Maps.GetDistanceReq
         { origin = tripStartPos,
           destination = tripEndPos,
           travelMode = Just Maps.CAR,
-          distanceUnit = Meter
+          distanceUnit = booking.distanceUnit
         }
   return $ distRes.distance
