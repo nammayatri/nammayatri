@@ -61,7 +61,7 @@ runUpdateQuery updateDataEntries dbUpdateObject = do
           result <- EL.runIO $ try $ executeQueryUsingConnectionPool _connectionPool (Query $ TE.encodeUtf8 query)
           case result of
             Left (QueryError errorMsg) -> do
-              EL.logError ("QUERY UPDATE FAILED" :: Text) (errorMsg <> " for query :: " <> query)
+              EL.logError ("QUERY UPDATE FAILED" :: Text) ("(ENTRY ID :: " <> show entryId <> ") => " <> errorMsg <> " for query :: " <> query)
               EL.logError ("QUERY UPDATE FAILED : BYTE STRING" :: Text) (TE.decodeUtf8 byteString)
               EL.logError ("QUERY UPDATE FAILED : DB OBJECT" :: Text) (show dbUpdateObject)
               void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Update" dbModel.getDBModel
