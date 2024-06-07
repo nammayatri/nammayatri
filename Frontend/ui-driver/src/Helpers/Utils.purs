@@ -283,10 +283,12 @@ getDowngradeOptions variant = case (getMerchant FunctionCall) of
                                                 "TAXI"  -> []
                                                 "SUV"   -> ["SEDAN", "HATCHBACK"]
                                                 "SEDAN" -> ["TAXI", "HATCHBACK"] 
+                                                "AMBULANCE" -> []
                                                 _       -> ["TAXI"]
                                 _ -> case variant of
                                         "SUV"   -> ["SEDAN", "HATCHBACK"]
                                         "SEDAN" -> ["HATCHBACK"]
+                                        "AMBULANCE" -> []
                                         _       -> []
 
 
@@ -312,10 +314,12 @@ getUIDowngradeOptions variant = case (getMerchant FunctionCall) of
                                                 "TAXI"  -> []
                                                 "SUV"   -> ["SEDAN"]
                                                 "SEDAN" -> ["TAXI"] 
+                                                "AMBULANCE" -> []
                                                 _       -> ["TAXI"]
                                 _ -> case variant of
                                         "SUV"   -> ["SEDAN", "HATCHBACK"]
                                         "SEDAN" -> ["HATCHBACK"]
+                                        "AMBULANCE" -> []
                                         _       -> []
   
 getVehicleType :: String -> String
@@ -327,6 +331,7 @@ getVehicleType vehicleType =
     "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
     "TAXI" -> (getString TAXI)
     "TAXI_PLUS" -> (getString TAXI_PLUS)
+    "Ambulance" -> "Ambulance"
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig
@@ -513,6 +518,7 @@ getCategorizedVariant variant = case variant of
       "HATCHBACK"  -> "AC Taxi"
       "TAXI_PLUS"  -> "AC Taxi"
       "SUV" -> "AC Taxi"
+      "AMBULANCE" -> "Ambulance"
       _ -> "Non AC"
     _ -> case var of
       "SEDAN"  -> "Sedan"
@@ -520,6 +526,7 @@ getCategorizedVariant variant = case variant of
       "TAXI_PLUS"  -> "AC Taxi"
       "SUV" -> "Suv"
       "AUTO_RICKSHAW" -> "Auto Rickshaw"
+      "AMBULANCE" -> "Ambulance"
       _ -> var
   Nothing -> ""
 
@@ -560,6 +567,7 @@ getVehicleVariantImage variant =
                         "SUV_TIER"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
                         "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
                         "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
+                        "AMBULANCE" -> "ic_ambulance," <> commonUrl <> "ic_ambulance.png"
                         _           -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
         NAMMAYATRI -> case variant of
                         "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"

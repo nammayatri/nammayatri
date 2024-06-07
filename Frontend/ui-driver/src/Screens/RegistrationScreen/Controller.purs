@@ -291,6 +291,13 @@ getStatusValue value = case value of
   "MANUAL_VERIFICATION_REQUIRED" -> COMPLETED
   _ -> NOT_STARTED
 
+getCategoryFromVariant :: String -> Mb.Maybe ST.VehicleCategory
+getCategoryFromVariant variant = case variant of
+  "AUTO_RICKSHAW" -> Mb.Just ST.AutoCategory
+  "CAR" -> Mb.Just ST.CarCategory
+  "AMBULANCE" -> Mb.Just (ST.AmbulanceCategory)
+  _ -> Mb.Nothing
+
 getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus
 getStatus step state = 
   case step of
@@ -306,3 +313,10 @@ getStatus step state =
             Mb.Nothing -> ST.NOT_STARTED
             Mb.Just docStatus -> docStatus.status
   where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) || (Mb.isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
+
+decodeVehicleType :: String -> Mb.Maybe ST.VehicleCategory
+decodeVehicleType value = case value of
+  "AutoCategory" -> Mb.Just ST.AutoCategory
+  "CarCategory" -> Mb.Just ST.CarCategory
+  "AmbulanceCategory" -> Mb.Just (ST.AmbulanceCategory)
+  _ -> Mb.Nothing

@@ -85,6 +85,11 @@ view push state =
   let showSubscriptionsOption = (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true") && state.data.config.bottomNavConfig.subscription.isVisible
       completedStatusCount = length $ filter (\doc -> (getStatus doc.stage state) == ST.COMPLETED) documentList
       progressPercent = floor $ (toNumber completedStatusCount) / toNumber (length documentList) * 100.0
+      variantImage = case state.data.vehicleCategory of
+        Just ST.CarCategory -> "ny_ic_sedan_side"
+        Just ST.AutoCategory -> "ny_ic_auto_side"
+        Just( ST.AmbulanceCategory) -> "ny_ic_ambulance_side"
+        Nothing -> ""
   in
     Anim.screenAnimation
       $ relativeLayout
@@ -223,7 +228,9 @@ view push state =
       <> if state.props.menuOptions then [menuOptionModal push state] else []
       where 
         callSupportVisibility = (state.data.drivingLicenseStatus == ST.FAILED && state.data.enteredDL /= "__failed") || (state.data.vehicleDetailsStatus == ST.FAILED && state.data.enteredRC /= "__failed")
-        documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs else state.data.registerationStepsAuto
+        documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs 
+                       else if state.data.vehicleCategory == Just (ST.AmbulanceCategory) then state.data.registerationStepsAmbulance 
+                       else state.data.registerationStepsAuto
         buttonVisibility = if state.props.manageVehicle then all (\docType -> (getStatus docType.stage state) == ST.COMPLETED) $ filter(\elem -> elem.isMandatory) documentList
                             else state.props.driverEnabled
 
@@ -300,10 +307,10 @@ cardsListView push state =
         , height WRAP_CONTENT
         , orientation VERTICAL
         , weight 1.0
-        ][ if state.data.vehicleCategory == Just ST.CarCategory then
-            vehicleSpecificList push state state.data.registerationStepsCabs
-          else
-            vehicleSpecificList push state state.data.registerationStepsAuto
+        ][ case state.data.vehicleCategory of
+            Just ST.CarCategory -> vehicleSpecificList push state state.data.registerationStepsCabs
+            Just (ST.AmbulanceCategory) -> vehicleSpecificList push state state.data.registerationStepsAmbulance -- Bind the AmbulanceVariant to a variable here
+            _ -> vehicleSpecificList push state state.data.registerationStepsAuto
         ]
     ]
 
@@ -497,8 +504,12 @@ popupModal push state =
 
 refreshView :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
 refreshView push state =
-  let documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs else state.data.registerationStepsAuto
-      showRefresh = any (_ == IN_PROGRESS) $ map (\item -> getStatus item.stage state) documentList
+   let documentList = case state.data.vehicleCategory of
+                      Just ST.CarCategory -> state.data.registerationStepsCabs
+                      Just ST.AutoCategory -> state.data.registerationStepsAuto
+                      Just (ST.AmbulanceCategory) -> state.data.registerationStepsAmbulance
+                      Nothing -> state.data.registerationStepsCabs
+       showRefresh = any (_ == IN_PROGRESS) $ map (\item -> getStatus item.stage state) documentList
   in 
     linearLayout
       [ width MATCH_PARENT
@@ -646,7 +657,8 @@ variantListView push state =
                   case item of
                     ST.AutoCategory -> "ny_ic_auto_side"
                     ST.CarCategory -> "ny_ic_sedan_side"
-                    ST.UnKnown -> "ny_ic_silhouette"
+                    (ST.AmbulanceCategory ) -> "ny_ic_ambulance_side"
+                    
               ]
             , textView $
               [ width WRAP_CONTENT
@@ -654,7 +666,7 @@ variantListView push state =
               , text case item of
                         ST.AutoCategory -> getString AUTO_RICKSHAW
                         ST.CarCategory -> getString CAR
-                        ST.UnKnown -> "Unknown"
+                        (ST.AmbulanceCategory) -> "Ambulance"
               , color Color.black800
               , margin $ MarginLeft 20
               ] <> FontStyle.subHeading1 TypoGraphy

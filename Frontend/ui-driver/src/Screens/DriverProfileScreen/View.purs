@@ -412,21 +412,20 @@ manageVehicleItem state vehicle push =
   getVehicleImage :: ST.VehicleCategory -> String
   getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
 
-  mkAsset :: ST.VehicleCategory -> CityConfig -> String
-  mkAsset category cityConfig =
-    if category == ST.AutoCategory then
-      (getAutoImage cityConfig)
-    else if category == ST.CarCategory then
-      "ny_ic_sedan"
-    else
-      "ny_ic_silhouette"
-
-  getAutoImage :: CityConfig -> String
-  getAutoImage cityConfig =
-    if cityConfig.cityCode == "std:040" then
-      "ny_ic_black_yellow_auto_side_view"
-    else
-      "ny_ic_auto_side_view"
+mkAsset :: ST.VehicleCategory -> CityConfig -> String
+mkAsset category cityConfig =
+  case category of
+    ST.AutoCategory -> getAutoImage cityConfig
+    ST.CarCategory -> "ny_ic_sedan"
+    ST.AmbulanceCategory-> "ny_ic_ambulance_side" 
+    _ -> "ny_ic_silhouette"
+ 
+getAutoImage :: CityConfig -> String
+getAutoImage cityConfig =
+  if cityConfig.cityCode == "std:040" then
+    "ny_ic_black_yellow_auto_side_view"
+  else
+    "ny_ic_auto_side_view"
 
 ---------------------------------------- PROFILE VIEW -----------------------------------------------------------
 profileView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w

@@ -715,7 +715,7 @@ instance showRidesInfo :: Show RidesInfo where show = genericShow
 instance decodeRidesInfo :: Decode RidesInfo where decode = defaultDecode
 instance encodeRidesInfo :: Encode RidesInfo where encode = defaultEncode
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | AMBULANCE
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance showVehicleVariant :: Show VehicleVariant where show = genericShow
@@ -727,7 +727,7 @@ instance standardEncodeVehicleVariant :: StandardEncode VehicleVariant
  standardEncode SUV = standardEncode {}
  standardEncode HATCHBACK = standardEncode {}
  standardEncode AUTO_VARIANT = standardEncode {}
-
+ standardEncode AMBULANCE = standardEncode {}
 data Status = NEW | INPROGRESS | COMPLETED | CANCELLED | NOTHING
 
 instance eqStatus :: Eq Status where eq = genericEq
@@ -4414,7 +4414,8 @@ data OnboardingDocsReq = OnboardingDocsReq String
 newtype OnboardingDocsRes = OnboardingDocsRes {
   autos :: Maybe (Array OnboardingDoc),
   cabs :: Maybe (Array OnboardingDoc),
-  bikes :: Maybe (Array OnboardingDoc)
+  bikes :: Maybe (Array OnboardingDoc),
+  ambulances :: Maybe (Array OnboardingDoc)
 }
 
 newtype OnboardingDoc = OnboardingDoc {

@@ -78,6 +78,11 @@ initData = {
       confirmChangeVehicle : false,
       contactSupportModal : ST.HIDE,
       buttonIndex : Nothing,
-      acModal : false
+      acModal : false,
+      facilities : false,
+      showIssueOptions : true,
+      isvariant : "",
+      ambulanceModal : false,
+      agreeTermsModal : false
     }
 }
