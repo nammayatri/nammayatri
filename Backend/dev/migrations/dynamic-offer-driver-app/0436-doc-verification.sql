@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ALTER COLUMN verification_status TYPE character varying(36);
