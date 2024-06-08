@@ -81,6 +81,16 @@ data PaymentStatusResp
         responseMessage :: Maybe Text,
         notificationId :: Text
       }
+  | PayoutPaymentStatus
+      { status :: Payment.TransactionStatus, -- domain status
+        bankErrorMessage :: Maybe Text,
+        bankErrorCode :: Maybe Text,
+        isRetried :: Maybe Bool,
+        responseCode :: Maybe Text,
+        responseMessage :: Maybe Text
+        -- isRetargeted :: Maybe Bool,
+        -- retargetLink :: Maybe Text,
+      }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 -- create order -----------------------------------------------------
@@ -289,6 +299,36 @@ orderStatusService personId orderId orderStatusCall = do
         transactionUUID
       mapM_ updateRefundStatus refunds
       return $ PaymentStatus {status = transactionStatus, bankErrorCode = orderTxn.bankErrorCode, bankErrorMessage = orderTxn.bankErrorMessage, isRetried = isRetriedOrder, isRetargeted = isRetargetedOrder, retargetLink = retargetPaymentLink, refunds = refunds}
+    Payment.PayoutOrderStatusResp {..} -> do
+      let orderTxn =
+            OrderTxn
+              { mandateStartDate = Nothing,
+                mandateEndDate = Nothing,
+                mandateId = Nothing,
+                mandateFrequency = Nothing,
+                mandateMaxAmount = Nothing,
+                mandateStatus = Nothing,
+                isRetried = Nothing,
+                isRetargeted = Nothing,
+                retargetLink = Nothing,
+                ..
+              }
+      maybe
+        (updateOrderTransaction order orderTxn Nothing)
+        ( \transactionUUID' ->
+            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn Nothing
+        )
+        transactionUUID
+      return $
+        PayoutPaymentStatus
+          { status = orderStatusResp.transactionStatus,
+            bankErrorMessage = Nothing,
+            bankErrorCode = Nothing,
+            isRetried = Nothing,
+            responseCode = Nothing,
+            responseMessage = Nothing,
+            ..
+          }
     _ -> throwError $ InternalError "Unexpected Order Status Response."
 
 data OrderTxn = OrderTxn
@@ -553,3 +593,41 @@ txnProccessingKey txnUUid = "Txn:Processing:TxnUuid" <> txnUUid
 
 refundProccessingKey :: Text -> Text
 refundProccessingKey refundId = "Refund:Processing:RefundId" <> refundId
+
+-- payout APIs ---
+
+createPayoutService ::
+  ( EncFlow m r,
+    BeamFlow m r
+  ) =>
+  Id Merchant ->
+  Id Person ->
+  Payment.CreatePayoutOrderReq ->
+  (Payment.CreatePayoutOrderReq -> m Payment.CreatePayoutOrderResp) ->
+  m (Maybe Payment.CreatePayoutOrderResp)
+createPayoutService merchantId personId createPayoutOrderReq createPayoutOrderCall = do
+  mbExistingPayoutOrder <- QPayoutOrder.findById (Id createPayoutOrderReq.infoId)
+  case mbExistingPayoutOrder of
+    Nothing -> do
+      createPayoutOrderResp <- createPayoutOrderCall createPayoutOrderReq -- api call
+      payoutOrder <- buildPayoutOrder merchantId personId createPayoutOrderReq createPayoutOrderResp
+      QOrder.create payoutOrder
+      return $ Just createPayoutOrderResp
+    Just existingPayoutOrder -> do
+      isOrderExpired <- maybe (pure True) checkIfExpired existingPayoutOrder.clientAuthTokenExpiry
+      if isOrderExpired
+        then do
+          QOrder.updateStatusToExpired existingPayoutOrder.id
+          return Nothing
+        else return Nothing
+
+-- case sdkPayload of
+--   Just sdk_payload -> do
+--     return $
+--       Just $
+--         Payment.createPayoutOrderResp
+--           { status = existingOrder.status,
+--             id = existingOrder.paymentServiceOrderId
+
+--           }
+--   Nothing -> return Nothing

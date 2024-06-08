@@ -1,0 +1,66 @@
+# imports:
+#   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+#   Merchant: Domain.Types.Merchant
+#   Person: Domain.Types.Person
+#   Text: Data.Text
+#   Money: Kernel.Types.Common
+#   # PayoutStatus: Domain.Types.PayoutStatus
+
+# module: ReferalPayout
+
+# types:
+#   ReferralEarningsReq:
+#     personId: Id Person
+#     fromDate: Day
+#     toDate: Day
+
+
+#   ReferalEarningRes:
+#     totalReferralCount: Int
+#     dailyEarnings : [DailyEarning]
+#     vpaId: Maybe Text
+#     orderId: Maybe Text # for express checkout
+#     orderStatus: Maybe OrderStatus
+
+#   DailyEarning:
+#     earnings: HighPrecMoney
+#     activatedItems: Int
+#     earningDate: Day
+#     referrals: Int
+#     status: PayoutStatus
+
+#   PayoutStatus:
+#     enum: "Verifying,Processing,Success,Failed"
+
+#   OrderStatus:
+#     enum: "SuccessFul,Failed,Pending"
+
+# apis:
+#   # get API for graphs and vpa data
+#   - GET:
+#       endpoint: /referral/earnings
+#       auth: TokenAuth PROVIDER_TYPE
+#       mandatoryQuery:
+#         personId: Id Person
+#       request:
+#         type: API.Types.UI.ReferalPayout.ReferralEarningsReq
+#       response:
+#         type: API.Types.UI.ReferalPayout.ReferralEarningsRes
+
+#   # post API to delete the existing vpa
+#   - POST:
+#       endpoint: /delete/vpa
+#       mandatoryQuery:
+#         personId: Id Person
+#       auth: TokenAuth PROVIDER_TYPE
+#       response:
+#         type: Kernel.Types.APISuccess.APISuccess
+
+#   # get Status APi for payout Status
+#   - GET:
+#      endpoint: /payout/order/status
+#      auth: TokenAuth PROVIDER_TYPE
+#      mandatoryQuery:
+#        orderId: Text
+#      response:
+#        type: API.Types.UI.ReferalPayout.PayoutStatus # related to ui level or payment level

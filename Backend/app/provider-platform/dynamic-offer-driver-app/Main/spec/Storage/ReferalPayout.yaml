@@ -1,0 +1,43 @@
+# imports:
+#   Merchant: Domain.Types.Merchant
+#   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+#   Person: Domain.Types.Person
+# DayWiseDriverReferralEarnings:
+#   tableName: day_wise_driver_referral_earnings
+#   derives: "Generic,Show,ToJSON,FromJSON"
+#   types:
+#     PayoutStatus:
+#     enum: "Verifying,Processing,Success,Failed"
+#   fields:
+#     id: Id DayWiseDriverReferralEarnings
+#     driverId: Id Person
+#     ActivatedValidRides: Int
+#     earnings: HighPrecMoney
+#     referralCounts: Int
+#     payoutStatus: PayoutStatus
+#     earningDate: Text
+#   constraints:
+#     id: PrimaryKey
+#   queries:
+#     findByDriverId:
+#       kvFunction: findAllWithKV
+#       where: driverId
+#     findByDriverIdAndDate:
+#       kvFunction: findAllWithKV
+#       where:
+#         and: [driverId,earningDate]
+
+# ActivatedRidesOfReferral:
+#   tableName: activated_rides_of_referral
+#   derives: "Generic,Show,ToJSON,FromJSON"
+#   fields:
+#     bapRideId: Text
+#     driverId: Id Person
+#     isValid: Bool
+#     customerPhoneNumber: Text
+#     reasonForInvalid: Text
+#     isFlagged: Bool
+#     flaggedDates: [Text]
+#     reasonForFlag: Text
+#   constraints:
+#     driverId: PrimaryKey

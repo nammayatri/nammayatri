@@ -19,6 +19,9 @@ DailyStats:
     totalDistance : Meters
     distanceUnit : DistanceUnit
     merchantLocalDate : Day
+    # totalPayoutEarnings: HighPrecMoney
+    # totalValidActivatedRides: Int
+    # totalReferralCounts: Int
 
   beamType:
     distanceUnit: Maybe DistanceUnit
@@ -27,17 +30,23 @@ DailyStats:
     totalEarnings:
       totalEarnings: Money
       totalEarningsAmount: Maybe HighPrecMoney
+    # totalPayoutEarnings:
+    #   totalPayoutEarnings: Money
+    #   totalPayoutEarningsAmount: Maybe HighPrecMoney
     currency:
       currency: Maybe Currency
 
   fromTType:
     totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
+    # totalPayoutEarnings: Kernel.Types.Common.mkAmountWithDefault totalPayoutEarningsAmount totalPayoutEarnings|E
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
 
   toTType:
     totalEarnings: Kernel.Prelude.roundToIntegral|I
     totalEarningsAmount:  Kernel.Prelude.Just|I
+    # totalPayoutEarnings: Kernel.Prelude.roundToIntegral|I
+    # totalPayoutEarningsAmount:  Kernel.Prelude.Just|I
     currency: Kernel.Prelude.Just|I
     distanceUnit: Kernel.Prelude.Just|I
 
@@ -58,6 +67,17 @@ DailyStats:
       params: [totalEarnings, numRides, totalDistance]
       where:
         and: [driverId, merchantLocalDate]
+
+    # updatePayoutEarningsByDriverId:
+    #   kvFunction: updateOneWithKV
+    #   params: [totalPayoutEarnings, totalValidActivatedRides]
+    #   where: driverId
+
+    # updateTotalReferralCounts:
+    #   kvFunction: updateOneWithKV
+    #   params: [totalReferralCounts]
+    #   where: driverId
+
 
   extraOperations:
     - EXTRA_QUERY_FILE
