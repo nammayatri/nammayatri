@@ -57,6 +57,7 @@ import Types.ModifyScreenState (modifyScreenState)
 import Locale.Utils
 import Screens.Types as ST
 import Resource.Constants as RC
+import Mobility.Prelude as MP
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
@@ -200,7 +201,7 @@ makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
     where 
         mkOperatingCity :: String -> Maybe String
         mkOperatingCity operatingCity = 
-            if DA.any (_ == operatingCity) [ "__failed", "--"] then Nothing
+            if DA.any (_ == operatingCity) [ "__failed", "--", ""] then Nothing
             else if operatingCity == "Puducherry" then Just "Pondicherry"
             else Just operatingCity
         mkLatLon :: String -> Maybe Number
@@ -667,14 +668,17 @@ callDriverToDriverBT rcNo = do
     errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
 
 makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> Maybe ST.VehicleCategory -> DriverRCReq
-makeDriverRCReq regNo imageId dateOfRegistration multipleRc category = DriverRCReq
-    {
-      "vehicleRegistrationCertNumber" : regNo,
-      "operatingCity" : "KOLKATA",
-      "imageId" : imageId,
-      "dateOfRegistration" : dateOfRegistration,
-      "vehicleCategory" : mkCategory category
-    }
+makeDriverRCReq regNo imageId dateOfRegistration multipleRc category = 
+    let _ = spy "checkingOperatingCity:" <> MP.capitalize $ getValueToLocalStore DRIVER_LOCATION
+    in
+        DriverRCReq
+        {
+        "vehicleRegistrationCertNumber" : regNo,
+        "operatingCity" : DS.toUpper $ getValueToLocalStore DRIVER_LOCATION,
+        "imageId" : imageId,
+        "dateOfRegistration" : dateOfRegistration,
+        "vehicleCategory" : mkCategory category
+        }
 
 mkCategory :: Maybe ST.VehicleCategory -> Maybe String
 mkCategory category =
