@@ -609,3 +609,15 @@ findTotalRidesInDay (Id driverId) time = do
           Se.Is BeamR.driverId $ Se.Eq driverId
         ]
     ]
+
+-- NOTE : This query shouldn't be modified with status as parameter as it has partial index
+notOnRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m Bool
+notOnRide (Id driverId) = do
+  findAllWithKVAndConditionalDB
+    [ Se.And
+        [ Se.Is BeamR.driverId $ Se.Eq driverId,
+          Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]
+        ]
+    ]
+    Nothing
+    <&> null
