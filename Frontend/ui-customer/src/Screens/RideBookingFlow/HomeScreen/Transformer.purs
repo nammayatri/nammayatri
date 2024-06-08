@@ -193,7 +193,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , initDistance : Nothing
       , config : getAppConfig appConfig
       , providerName : resp.agencyName
-      , providerType : maybe CT.ONUS (\valueAdd -> if valueAdd then CT.ONUS else CT.OFFUS) resp.isValueAddNP -- get from API
+      , providerType : maybe CT.ONUS (\valueAdd -> if valueAdd then CT.ONUS else CT.OFFUS) resp.isValueAddNP
       , vehicleVariant : if rideList.vehicleVariant /= "" 
                             then rideList.vehicleVariant 
                          else
@@ -442,7 +442,7 @@ getFilteredEstimate estimates estimateAndQuoteConfig =
             ( \(EstimateAPIEntity estimate) ->
                 let
                   orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex estimate.vehicleVariant orderList)
-                  isNY = if estimate.isValueAddNP == Just true then 0 else 1
+                  isNY = if estimate.isValueAddNP /= Just false then 0 else 1
                 in
                   { item: (EstimateAPIEntity estimate), order: orderNumber * 10 + isNY }
             )
@@ -574,7 +574,7 @@ getEstimates (EstimateAPIEntity estimate) estimates index isFareRange count acti
       , additionalFare = additionalFare
       , providerName = fromMaybe "" estimate.providerName
       , providerId = fromMaybe "" estimate.providerId
-      , providerType = maybe CT.OFFUS (\valueAdd -> if valueAdd then CT.ONUS else CT.OFFUS) estimate.isValueAddNP
+      , providerType = maybe CT.ONUS (\valueAdd -> if valueAdd then CT.ONUS else CT.OFFUS) estimate.isValueAddNP
       , maxPrice = extractFare _.maxFare
       , minPrice = extractFare _.minFare
       , priceShimmer = count /= 1
@@ -592,24 +592,25 @@ getEstimates (EstimateAPIEntity estimate) estimates index isFareRange count acti
 mapServiceTierName :: String -> Maybe Boolean -> Maybe String -> Maybe String
 mapServiceTierName vehicleVariant isValueAddNP serviceTierName = 
   case isValueAddNP of
-    Just true -> serviceTierName -- NY Service Tier Name
-    _ -> case vehicleVariant of
+    Just false  -> case vehicleVariant of
       "HATCHBACK" -> Just "Non - AC Mini"
       "SEDAN" -> Just "Sedan"
       "SUV" -> Just "XL Cab"
       "AUTO_RICKSHAW" -> Just "Auto"
       _ -> serviceTierName
+    _ -> serviceTierName -- NY Service Tier Name
+    
 
 mapServiceTierShortDesc :: String -> Maybe Boolean -> Maybe String -> Maybe String
 mapServiceTierShortDesc vehicleVariant isValueAddNP serviceTierShortDesc = 
   case isValueAddNP of
-    Just true -> serviceTierShortDesc -- NY Service Tier Short Desc
-    _ -> case vehicleVariant of
+    Just false -> case vehicleVariant of
       "HATCHBACK" -> Just "Budget friendly"
       "SEDAN" -> Just "AC, Premium Comfort"
       "SUV" -> Just "AC, Extra Spacious"
       "AUTO_RICKSHAW" -> Just "Easy Commute"
       _ -> serviceTierShortDesc
+    _ -> -- NY Service Tier Short Desc
 
 dummyFareRange :: FareRange
 dummyFareRange = FareRange{
@@ -765,7 +766,7 @@ estimatesWithBookAny estimates =
         , isValueAddNP: Just true
         , validTill : ""
         }
-    filteredEstimates = filter (\(EstimateAPIEntity item) -> ((DA.elem (fromMaybe "" item.serviceTierName) selectedServices) && (fromMaybe false item.isValueAddNP))) estimates
+    filteredEstimates = filter (\(EstimateAPIEntity item) -> ((DA.elem (fromMaybe "" item.serviceTierName) selectedServices) && (fromMaybe true item.isValueAddNP))) estimates
   in
     if (not $ DA.null filteredEstimates) && config.enableBookAny then [ bookAny ] <> estimates else estimates
 
