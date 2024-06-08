@@ -1429,3 +1429,4 @@ getHI stringKey =
         SOME_FEATURES_ARE_NOT_AVAILABLE_FOR_THIRD_PARTY_RIDES -> "तीसरे पक्ष की सवारी के लिए कुछ सुविधाएँ उपलब्ध नहीं हैं।"
         BOOKING_FROM bapName -> bapName <> " से बुकिंग"
         YOU_ARE_ON_A_INTERCITY_RIDE -> "आप एक इंटरसिटी सवारी पर हैं"
+        PICK_UP -> "उठाना"

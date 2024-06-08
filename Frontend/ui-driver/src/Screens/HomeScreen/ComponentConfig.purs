@@ -138,7 +138,10 @@ rideActionModalConfig state =
     acRide = state.data.activeRide.acRide,
     isAdvanced = (state.props.bookingStage == ADVANCED),
     bookingFromOtherPlatform = state.data.activeRide.bookingFromOtherPlatform,
-    bapName = state.data.activeRide.bapName
+    bapName = state.data.activeRide.bapName,
+    distance = case state.data.route DA.!! 0 of
+                  Just (SA.Route obj) ->  obj.distance
+                  Nothing -> 0
     }
     in rideActionModalConfig'
 

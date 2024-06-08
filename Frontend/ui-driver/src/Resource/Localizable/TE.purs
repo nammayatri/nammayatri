@@ -1431,3 +1431,4 @@ getTE stringKey =
         SOME_FEATURES_ARE_NOT_AVAILABLE_FOR_THIRD_PARTY_RIDES -> "కొన్ని లక్షణాలు మూడవ పార్టీ రైడ్స్ కోసం అందుబాటులో లేవు."
         BOOKING_FROM bapName -> bapName <> " నుండి బుకింగ్"
         YOU_ARE_ON_A_INTERCITY_RIDE -> "మీరు ఇంటర్‌సిటీ రైడ్‌లో ఉన్నారు"
+        PICK_UP -> "తీసుకోవడం"

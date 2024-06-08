@@ -1431,3 +1431,4 @@ getBN stringKey =
         BOOKING_FROM bapName -> bapName <> " থেকে বুকিং"
 
         YOU_ARE_ON_A_INTERCITY_RIDE -> "আপনি ইন্টারসিটি রাইডে আছেন |"
+        PICK_UP -> "পিকআপ"
