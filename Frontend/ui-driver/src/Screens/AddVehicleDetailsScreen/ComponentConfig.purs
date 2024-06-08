@@ -217,7 +217,11 @@ ambulanceModalConfig state =
       { text = "Ambulance Facilities"
       }
     , primaryText
-      { text = "Select what facilities your Ambulance have to get rides based on that.<br/> <br/> Note: Ventilator includes AC and Oxygen<br/>"
+      { text = "Select what facilities your Ambulance have to get rides based on that."
+      , padding = Padding 16 16 0 0
+      }
+    , secondaryText
+      { text = "Note: Ventilator includes AC and Oxygen"
       , padding = Padding 16 16 0 0
       }
     , subTitle
@@ -249,7 +253,8 @@ agreeTermsModalConfig state = let
       optionButtonOrientation = "VERTICAL",
       padding = Padding 16 0 16 16,
       buttonLayoutMargin = Margin 0 0 0 0,
-
+      dismissPopup = true,
+      backgroundClickable = true,
      primaryText {
          text = "By proceeding, you accept full responsibility for ambulance facilities and agree to random Health Department inspections, with legal action for any discrepancies."
         , margin = Margin 16 0 16 0

@@ -59,11 +59,8 @@
       "ic_chevrons_right_white" : true,
       "ic_close" : true,
       "ic_creative_zero" : true,
-<<<<<<< HEAD
-=======
       "ic_document" : true,
       "ic_driver_avatar_cab" : true,
->>>>>>> 8df8b0f4b7 (Frontend/Enhancement/Onboarding/Ambulance)
       "ic_driver_status_offline" : true,
       "ic_driver_status_online" : true,
       "ic_driver_status_silent" : true,
@@ -166,12 +163,9 @@
       "ny_ic_aadhaar" : true,
       "ny_ic_aadhaar_lg" : true,
       "ny_ic_about" : true,
-<<<<<<< HEAD
-=======
       "ny_ic_ac" : true,
       "ny_ic_ac_white" : true,
       "ny_ic_ac_working_popup" : true,
->>>>>>> 8df8b0f4b7 (Frontend/Enhancement/Onboarding/Ambulance)
       "ny_ic_account_active" : true,
       "ny_ic_account_inactive" : true,
       "ny_ic_account_related" : true,
@@ -186,7 +180,6 @@
       "ny_ic_amazonpay" : true,
       "ny_ic_ambu_agree" : true,
       "ny_ic_ambu_info" : true,
-      "ny_ic_ambulance_side" : true,
       "ny_ic_anonymous_call" : true,
       "ny_ic_api_failure_popup" : true,
       "ny_ic_app_date_and_time" : true,
@@ -559,13 +552,10 @@
       "ny_ic_whatsapp_logo" : true,
       "ny_ic_wheelchair" : true,
       "ny_ic_white_blur_map" : true,
-<<<<<<< HEAD
-=======
       "ny_ic_white_play_button_with_grey" : true,
       "ny_ic_white_play_circle" : true,
       "ny_ic_white_taxi_quote_list" : true,
       "ny_ic_white_transparent_play_circle" : true,
->>>>>>> 8df8b0f4b7 (Frontend/Enhancement/Onboarding/Ambulance)
       "ny_ic_yatri_coin" : true,
       "ny_ic_yatri_logo_dark" : true,
       "ny_ic_yellow_clock" : true,

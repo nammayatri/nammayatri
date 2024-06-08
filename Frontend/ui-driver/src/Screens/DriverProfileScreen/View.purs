@@ -618,7 +618,11 @@ tabImageView state push =
       case state.data.driverVehicleType of
         "AUTO_RICKSHAW" -> getAutoImage cityConfig
         "BIKE" -> "ny_ic_bike_side"
-        "AMBULANCE" -> "Ambulance" <> " · " <> "1 " <> getString PEOPLE
+        "AMBULANCE_TAXI" -> "ny_ic_ambulance_side" 
+        "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_side"
+        "AMBULANCE_AC" -> "ny_ic_ambulance_side"
+        "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_side"
+        "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_side"
         _ -> "ny_ic_silhouette"
       -- if state.data.driverVehicleType == "AUTO_RICKSHAW" 
       --   then (getAutoImage cityConfig)

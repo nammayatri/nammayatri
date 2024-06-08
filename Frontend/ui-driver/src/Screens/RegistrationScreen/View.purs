@@ -769,12 +769,13 @@ getStatus step state =
           let documentStatusArr = state.data.documentStatusList
               vehicleDoc = [ ST.VEHICLE_PERMIT, ST.FITNESS_CERTIFICATE, ST.VEHICLE_INSURANCE, ST.VEHICLE_PUC, ST.VEHICLE_DETAILS_OPTION]
               findStatus = if step `elem` vehicleDoc 
-                          then find (\docStatus -> docStatus.docType == step && filterCondition docStatus) documentStatusArr
-                          else find (\docStatus -> docStatus.docType == step) documentStatusArr
+                          then find (\docItem -> docItem.docType == step && filterCondition docItem) documentStatusArr
+                          else find (\docItem -> docItem.docType == step) documentStatusArr
           case findStatus of
             Nothing -> ST.NOT_STARTED
-            Just docStatus -> docStatus.status
-  where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) ||  (isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
+            Just docItem -> docItem.status
+  where 
+    filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) ||  (isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
 
 dependentDocAvailable :: ST.StepProgress -> ST.RegistrationScreenState -> Boolean
 dependentDocAvailable item state = all (\docType -> (getStatus docType state) == ST.COMPLETED) item.dependencyDocumentType

@@ -211,7 +211,7 @@ transformVehicleType vehicletype =
      Just "CAR" -> Just ST.CarCategory
      Just "AUTO_CATEGORY" -> Just ST.AutoCategory
      Just "MOTORCYCLE" -> Just ST.BikeCategory
-     Just "AMBULANCE_CATEGOR" -> Just (ST.AmbulanceCategory)
+     Just "AMBULANCE" -> Just ST.AmbulanceCategory
      _ -> Nothing
 
 decodeVehicleType :: String -> Maybe ST.VehicleCategory
@@ -219,5 +219,5 @@ decodeVehicleType value = case value of
   "AutoCategory" -> Just ST.AutoCategory
   "CarCategory" -> Just ST.CarCategory
   "BikeCategory" -> Just ST.BikeCategory
-  "AMBULANCE_CATEGOR" -> Just (ST.AmbulanceCategory)
+  "AmbulanceCategory" -> Just ST.AmbulanceCategory
   _ -> Nothing

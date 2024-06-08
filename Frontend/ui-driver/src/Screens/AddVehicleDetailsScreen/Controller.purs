@@ -366,12 +366,10 @@ eval (ReferralMobileNumberAction (ReferralMobileNumberController.PrimaryEditText
                                         , data = state.data { referral_mobile_number = if length newVal <= 10 then newVal else state.data.referral_mobile_number}}
 eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
-  let agreeTermsModalValue = case state.data.vehicleCategory of
-        Just (ST.AmbulanceCategory) -> true
-        _ -> false
-  if agreeTermsModalValue then continue state { props { agreeTermsModal = agreeTermsModalValue }}  --ambulance
+  let agreeTermsModalValue = state.data.vehicleCategory ==  Just (ST.AmbulanceCategory)
+  if agreeTermsModalValue && not state.props.openHowToUploadManual then continue state { props { agreeTermsModal = agreeTermsModalValue }}  --ambulance
   else if isJust state.data.dateOfRegistration then exit $ ValidateDataAPICall state
-  else if (state.props.openHowToUploadManual == false) then 
+  else if (state.props.openHowToUploadManual == false ) then 
     continue state {props {openHowToUploadManual = true}}
   else  continueWithCmd state {props { fileCameraPopupModal = false, fileCameraOption = false}} [do
      _ <- liftEffect $ uploadFile false

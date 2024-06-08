@@ -211,7 +211,7 @@ getKioskLocations _ = (getBaseUrl "") <> "/kioskLocation/list"
 getUiPlans :: String -> String 
 getUiPlans vehicleVariant = case vehicleVariant of
   "null" -> (getBaseUrl "") <> "/plan/list"
-  _ -> (getBaseUrl "") <> "/plan/list" <> "?vehicleVariant=" <> show vehicleVariant
+  _ -> (getBaseUrl "") <> "/plan/list" <> "?vehicleVariant=" <> show vehicleVariant 
 
 getCurrentPlan :: String -> String 
 getCurrentPlan driverId = (getBaseUrl "") <> "/plan/currentPlan"

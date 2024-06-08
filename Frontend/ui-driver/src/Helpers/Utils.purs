@@ -275,13 +275,21 @@ getDowngradeOptions variant = case (getMerchant FunctionCall) of
                                                 "SUV"   -> ["SEDAN", "HATCHBACK"]
                                                 "SEDAN" -> ["TAXI", "HATCHBACK"] 
                                                 "BIKE"  -> []
-                                                "AMBULANCE" -> []
+                                                "AMBULANCE_TAXI" -> []
+                                                "AMBULANCE_TAXI_OXY" -> []
+                                                "AMBULANCE_AC" -> []
+                                                "AMBULANCE_AC_OXY" -> []
+                                                "AMBULANCE_VENTILATOR" -> []
                                                 _       -> ["TAXI"]
                                 _ -> case variant of
                                         "SUV"   -> ["SEDAN", "HATCHBACK"]
                                         "SEDAN" -> ["HATCHBACK"]
                                         "BIKE"  -> []
-                                        "AMBULANCE" -> []
+                                        "AMBULANCE_TAXI" -> []
+                                        "AMBULANCE_TAXI_OXY" -> []
+                                        "AMBULANCE_AC" -> []
+                                        "AMBULANCE_AC_OXY" -> []
+                                        "AMBULANCE_VENTILATOR" -> []
                                         _       -> []
 
 
@@ -308,13 +316,22 @@ getUIDowngradeOptions variant = case (getMerchant FunctionCall) of
                                                 "BIKE"  -> []
                                                 "SUV"   -> ["SEDAN"]
                                                 "SEDAN" -> ["TAXI"] 
-                                                "AMBULANCE" -> []
+                                                "AMBULANCE_TAXI" -> []
+                                                "AMBULANCE_TAXI_OXY" -> []
+                                                "AMBULANCE_AC" -> []
+                                                "AMBULANCE_AC_OXY" -> []
+                                                "AMBULANCE_VENTILATOR" -> []
                                                 _       -> ["TAXI"]
                                 _ -> case variant of
                                         "SUV"   -> ["SEDAN", "HATCHBACK"]
                                         "SEDAN" -> ["HATCHBACK"]
                                         "BIKE"  -> []
                                         "AMBULANCE" -> []
+                                        "AMBULANCE_TAXI" -> []
+                                        "AMBULANCE_TAXI_OXY" -> []
+                                        "AMBULANCE_AC" -> []
+                                        "AMBULANCE_AC_OXY" -> []
+                                        "AMBULANCE_VENTILATOR" -> []
                                         _       -> []
   
 getVehicleType :: String -> String
@@ -327,11 +344,11 @@ getVehicleType vehicleType =
     "TAXI" -> (getString TAXI)
     "TAXI_PLUS" -> (getString TAXI_PLUS)
     "BIKE" -> "Bike"
-    "AMBULANCE_TAXI" -> "Ambulance_Taxi"
-    "AMBULANCE_TAXI_OXY" -> "Ambulance_Taxi_Oxy"
-    "AMBULANCE_AC" -> "Ambulance_AC" 
-    "AMBULANCE_AC_OXY" -> "Ambulance_AC_Oxy"
-    "AMBULANCE_VENTILATOR" -> "Ambulance_Ventilator"
+    "AMBULANCE_TAXI" -> "Non AC " <> "\x00B7" <> " No Oxygen"
+    "AMBULANCE_TAXI_OXY" -> "Non AC " <> "\x00B7" <> " Oxygen"
+    "AMBULANCE_AC" -> "AC " <> "\x00B7" <> " No Oxygen"
+    "AMBULANCE_AC_OXY" -> "AC " <> "\x00B7" <> " Oxygen"
+    "AMBULANCE_VENTILATOR" -> "Ventilator"
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig
