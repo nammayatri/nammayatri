@@ -1428,3 +1428,4 @@ getKN stringKey =
         SOME_FEATURES_ARE_NOT_AVAILABLE_FOR_THIRD_PARTY_RIDES -> "ಕೆಲವು ವೈಶಿಷ್ಟ್ಯಗಳು ಮೂರನೇ ಪಕ್ಷದ ಪ್ರಯಾಣಗಳಿಗೆ ಲಭ್ಯವಿಲ್ಲ."
         BOOKING_FROM bapName -> bapName <> " ನಿಂದ ಬುಕಿಂಗ್"
         YOU_ARE_ON_A_INTERCITY_RIDE -> "ನೀವು ಇಂಟರ್‌ಸಿಟಿ ರೈಡ್‌ನಲ್ಲಿ ಇದ್ದೀರಿ"
+        PICK_UP -> "ಪಿಕಪ್"

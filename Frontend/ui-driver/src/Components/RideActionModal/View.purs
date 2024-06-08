@@ -18,7 +18,7 @@ module Components.RideActionModal.View where
 import Common.Types.App
 import ConfigProvider
 import Locale.Utils
-
+import Prelude (class Eq, class Show, ($))
 import Animation (scaleYAnimWithDelay)
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
@@ -64,6 +64,7 @@ import Resource.Constants as RC
 import Debug
 import PrestoDOM.Elements.Keyed as Keyed
 import Data.String as DS
+import JBridge (fromMetersToKm)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = do
@@ -400,6 +401,46 @@ totalDistanceView push config =
         ] <> FontStyle.body11 TypoGraphy
     ]
 
+pickUpDistance :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+pickUpDistance push config =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , visibility $ boolToVisibility $ config.distance /= 0
+    ]
+    [ separator true
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , gravity RIGHT
+        , orientation VERTICAL
+        , weight 1.0
+        , padding $ PaddingLeft 4
+        ]
+        [ textView
+            $ [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , text $ getString PICK_UP
+              , color Color.black650
+              , ellipsize true
+              , singleLine true
+              ,margin $ MarginLeft 20
+              ]
+            <> FontStyle.body1 TypoGraphy
+        , textView
+            $ [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , text $ pickupDistanceText
+              , color Color.black900
+              , ellipsize true
+              , singleLine true
+              ,margin $ MarginLeft 20
+              ]
+            <> FontStyle.body11 TypoGraphy
+        ]
+    ]
+  where
+  pickupDistanceText =  fromMetersToKm config.distance
 
 rentalDurationView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 rentalDurationView push config =
@@ -891,8 +932,14 @@ normalRideInfoView push config =
           [ estimatedFareView push config
           , separator true
           , totalDistanceView push config
-          , separator $ config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
-          , waitTimeView push config
+    
+          
+          , if isWaitingTimeStarted config then  
+                linearLayout
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                ,margin $ MarginHorizontal 5 5
+                ][separator true , waitTimeView push config] else pickUpDistance push config 
           , linearLayout
               [ weight 1.0
               , height MATCH_PARENT
@@ -920,7 +967,7 @@ normalRideInfoView push config =
         ]
       ] 
   ]
-
+  
 separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w
 separator visibility' =
   linearLayout
@@ -1229,3 +1276,5 @@ stopImageView  config push =
             ],
             SeparatorView.view separatorConfig]
     ]
+isWaitingTimeStarted :: Config -> Boolean
+isWaitingTimeStarted config =  config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered

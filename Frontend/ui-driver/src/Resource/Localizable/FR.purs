@@ -1024,4 +1024,5 @@ getFR stringKey =
         SOME_FEATURES_ARE_NOT_AVAILABLE_FOR_THIRD_PARTY_RIDES -> "Certaines fonctionnalités ne sont pas disponibles pour les trajets tiers."
         BOOKING_FROM bapName -> "Réservation depuis: " <> bapName
         YOU_ARE_ON_A_INTERCITY_RIDE -> "Vous êtes sur un trajet interurbain"
+        PICK_UP -> "Ramasser"
         _ -> ""

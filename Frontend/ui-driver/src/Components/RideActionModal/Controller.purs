@@ -78,7 +78,8 @@ type Config = {
   isAdvanced :: Boolean,
   bookingFromOtherPlatform :: Boolean,
   bapName :: String,
-  isOdometerReadingsRequired :: Boolean
+  isOdometerReadingsRequired :: Boolean,
+  distance ::  Int
   }
 
 type AddressConfig = {
@@ -131,5 +132,6 @@ config = {
   isAdvanced : false,
   bookingFromOtherPlatform : false,
   bapName : "",
-  isOdometerReadingsRequired : false
+  isOdometerReadingsRequired : false,
+  distance : 0
 }
