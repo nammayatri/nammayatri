@@ -903,7 +903,7 @@ cityFallback version "1984f6b4-95eb-4683-b6b5-251b1b008566" = getNewMerchantOpCi
 cityFallback _ currentMerchantCityId = currentMerchantCityId
 
 data NotifReq = NotifReq
-  { bookingId :: Id Booking,
+  { entityId :: Text,
     title :: Text,
     message :: Text
   }
@@ -928,7 +928,7 @@ notifyDriverOnEvents merchantOpCityId personId mbDeviceToken entityData notifTyp
         { fcmNotificationType = notifType,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Person,
-          fcmEntityIds = entityData.bookingId.getId,
+          fcmEntityIds = entityData.entityId,
           fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body notifType Nothing,
           fcmOverlayNotificationJSON = Nothing,

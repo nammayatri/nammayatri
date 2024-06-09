@@ -436,7 +436,6 @@ RideRelatedNotificationConfig:
     onBookingStatus: BookingStatus
     notificationType: NotificationType
     notificationKey: Text
-    onlyIfOffline: Bool
     onScheduledBooking: Bool
     eventTime: EventTime
     merchantId: Id Merchant
@@ -472,6 +471,7 @@ MerchantPushNotification:
     merchantOperatingCityId: Id MerchantOperatingCity
   constraints:
     key: PrimaryKey
+    merchantOperatingCityId: PrimaryKey
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV

@@ -38,8 +38,10 @@ findByMerchantOpCityIdAndMessageKey (Kernel.Types.Id.Id merchantOperatingCityId)
         ]
     ]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.MerchantPushNotification.MerchantPushNotification))
-findByPrimaryKey key = do findOneWithKV [Se.And [Se.Is Beam.key $ Se.Eq key]]
+findByPrimaryKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.MerchantPushNotification.MerchantPushNotification))
+findByPrimaryKey key (Kernel.Types.Id.Id merchantOperatingCityId) = do findOneWithKV [Se.And [Se.Is Beam.key $ Se.Eq key, Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantPushNotification.MerchantPushNotification -> m ())
 updateByPrimaryKey (Domain.Types.MerchantPushNotification.MerchantPushNotification {..}) = do
@@ -49,12 +51,11 @@ updateByPrimaryKey (Domain.Types.MerchantPushNotification.MerchantPushNotificati
       Se.Set Beam.fcmNotificationType fcmNotificationType,
       Se.Set Beam.language language,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.title title,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.key $ Se.Eq key]]
+    [Se.And [Se.Is Beam.key $ Se.Eq key, Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]
 
 instance FromTType' Beam.MerchantPushNotification Domain.Types.MerchantPushNotification.MerchantPushNotification where
   fromTType' (Beam.MerchantPushNotificationT {..}) = do

@@ -27,11 +27,11 @@ data MerchantPushNotificationT f = MerchantPushNotificationT
   deriving (Generic, B.Beamable)
 
 instance B.Table MerchantPushNotificationT where
-  data PrimaryKey MerchantPushNotificationT f = MerchantPushNotificationId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = MerchantPushNotificationId . key
+  data PrimaryKey MerchantPushNotificationT f = MerchantPushNotificationId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+  primaryKey = MerchantPushNotificationId <$> key <*> merchantOperatingCityId
 
 type MerchantPushNotification = MerchantPushNotificationT Identity
 
-$(enableKVPG ''MerchantPushNotificationT ['key] [])
+$(enableKVPG ''MerchantPushNotificationT ['key, 'merchantOperatingCityId] [])
 
 $(mkTableInstances ''MerchantPushNotificationT "merchant_push_notification")

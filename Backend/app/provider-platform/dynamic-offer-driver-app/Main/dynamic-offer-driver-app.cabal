@@ -646,9 +646,9 @@ library
       Domain.Types.RegistrationToken
       Domain.Types.RegistryMapFallback
       Domain.Types.Ride
-      Domain.Types.RideRelatedNotificationConfig
       Domain.Types.RideDetails
       Domain.Types.RiderDetails
+      Domain.Types.RideRelatedNotificationConfig
       Domain.Types.SearchReqLocation
       Domain.Types.SearchRequest
       Domain.Types.SearchRequestForDriver
@@ -753,9 +753,9 @@ library
       Storage.Beam.RegistrationToken
       Storage.Beam.RegistryMapFallback
       Storage.Beam.Ride
-      Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.RideDetails
       Storage.Beam.RiderDetails
+      Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.SearchReqLocation
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequestForDriver
@@ -913,9 +913,9 @@ library
       Storage.Queries.RegistrationToken
       Storage.Queries.RegistryMapFallback
       Storage.Queries.Ride
-      Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.RideDetails
       Storage.Queries.RiderDetails
+      Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.SearchReqLocation
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
