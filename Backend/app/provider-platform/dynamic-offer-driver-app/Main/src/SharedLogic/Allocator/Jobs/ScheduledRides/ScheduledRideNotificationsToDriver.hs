@@ -109,7 +109,7 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
       NotifReq
         { title = title,
           message = message,
-          bookingId = booking.id
+          entityId = booking.id.getId
         }
 
     formatMessageTransformer title body booking = do

@@ -34,7 +34,7 @@ pushReminderUpdatesInScheduler booking ride now driverId DRN.RideRelatedNotifica
         DRN.END_TIME -> fromMaybe now ride.tripEndTime
   let currentTimeDiffFromEventTime = diffUTCTime eventAt now
       toSchedule = if onScheduledBooking then booking.isScheduled else True
-  when (toSchedule && currentTimeDiffFromEventTime >= timeDiff) do
+  when (toSchedule && (eventTime /= DRN.PreEvent || currentTimeDiffFromEventTime >= timeDiff)) do
     let scheduleAfter = if eventTime == DRN.PostEvent then (currentTimeDiffFromEventTime + timeDiff) else (currentTimeDiffFromEventTime - timeDiff)
         dfCalculationJobTs = max 2 scheduleAfter -- Buffer of 2 seconds in case of <=0 timeDiff
     maxShards <- asks (.maxShards)

@@ -109,7 +109,7 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
       let formattedTitle = T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity title
           rideStartOtp = ride.otp
           rideEndOtp = fromMaybe "" ride.endOtp
-          formattedBody = T.replace "{#rideStartOtp#}" rideStartOtp $ T.replace "{#rideEndOtp#}" rideEndOtp $ T.replace "{#rideStartTime#}" (show booking.startTime) body
+          formattedBody = T.replace "{#rideStartOtp#}" rideStartOtp $ T.replace "{#rideEndOtp#}" rideEndOtp $ T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity $ T.replace "{#rideStartTime#}" (show booking.startTime) body
       (formattedTitle, formattedBody)
 
     buildCallStatus callStatusId exotelResponse booking ride = do

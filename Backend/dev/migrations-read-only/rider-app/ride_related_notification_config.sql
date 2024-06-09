@@ -26,3 +26,8 @@ ALTER TABLE atlas_app.ride_related_notification_config ADD COLUMN on_scheduled_b
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride_related_notification_config ADD COLUMN event_time text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride_related_notification_config DROP COLUMN only_if_offline;

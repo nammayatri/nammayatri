@@ -1146,6 +1146,7 @@ MerchantPushNotification:
     merchantOperatingCityId: Id MerchantOperatingCity
   constraints:
     key: PrimaryKey
+    merchantOperatingCityId: PrimaryKey
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
