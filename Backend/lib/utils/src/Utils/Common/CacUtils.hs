@@ -72,12 +72,14 @@ pushCacDataToKafka stickeyKey context toss getVariants tenant key' = do
 getConfigListFromCac :: (CacheFlow m r, EsqDBFlow m r, FromJSON a, ToJSON a) => [(CacContext, Value)] -> String -> Int -> CacPrefix -> String -> m (Maybe [a])
 getConfigListFromCac context' tenant toss prefix id = do
   let context = fmap (DBF.first KP.show) context'
-  liftIO $ CM.getConfigListFromCAC context tenant toss (KP.show prefix) id
+  config <- liftIO $ CM.getConfigListFromCAC context tenant toss (KP.show prefix) id
+  fromJSONHelper config (getTableName prefix)
 
 getConfigFromCac :: (CacheFlow m r, EsqDBFlow m r, FromJSON a, ToJSON a) => [(CacContext, Value)] -> String -> Int -> CacPrefix -> m (Maybe a)
 getConfigFromCac context' tenant toss prefix = do
   let context = fmap (DBF.first KP.show) context'
-  liftIO $ CM.getConfigFromCAC context tenant toss (KP.show prefix)
+  config <- liftIO $ CM.getConfigFromCAC context tenant toss (KP.show prefix)
+  fromJSONHelper config (getTableName prefix)
 
 ---------------------------------------------------- Common Cac Application Usage functions ------------------------------------------------------------
 
