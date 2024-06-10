@@ -20,6 +20,7 @@ import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.Common.Vehicle as Common
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import qualified BecknV2.OnDemand.Types as Spec
 import Data.Maybe
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Common as DCT
@@ -190,3 +191,10 @@ mkFulfillmentType = \case
   DCT.Rental _ -> "RENTAL"
   DCT.InterCity _ -> "INTER_CITY"
   _ -> "DELIVERY"
+
+tfContact :: Maybe Text -> Maybe Spec.Contact
+tfContact phoneNum =
+  Just
+    Spec.Contact
+      { contactPhone = phoneNum
+      }

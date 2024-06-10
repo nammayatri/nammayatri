@@ -218,7 +218,7 @@ tfOrder (DStatus.NewBookingBuildReq DNewBookingBuildReq {bookingId}) _ becknConf
         orderFulfillments = Nothing,
         orderBilling = Nothing,
         orderCancellation = Nothing,
-        orderCancellationTerms = Just $ Utils.tfCancellationTerms becknConfig,
+        orderCancellationTerms = Just $ Utils.tfCancellationTerms becknConfig Nothing,
         orderItems = Nothing,
         orderPayments = Nothing,
         orderProvider = Utils.tfProvider becknConfig,
@@ -247,7 +247,7 @@ tfOrder (DStatus.BookingReallocationBuildReq DBookingReallocationBuildReq {booki
               { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource
               },
         orderBilling = Nothing,
-        orderCancellationTerms = Just $ Utils.tfCancellationTerms becknConfig,
+        orderCancellationTerms = Just $ Utils.tfCancellationTerms becknConfig Nothing,
         orderItems = Nothing,
         orderPayments = Utils.tfPayments booking bookingDetails.merchant becknConfig,
         orderProvider = Utils.tfProvider becknConfig,

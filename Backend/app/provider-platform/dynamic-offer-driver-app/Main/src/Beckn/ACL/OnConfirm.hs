@@ -46,7 +46,7 @@ tfOrder res pricing bppConfig mbFarePolicy = do
   Spec.Order
     { orderBilling = Nothing,
       orderCancellation = Nothing,
-      orderCancellationTerms = Just $ tfCancellationTerms bppConfig,
+      orderCancellationTerms = Just $ tfCancellationTerms bppConfig res,
       orderFulfillments = tfFulfillments res,
       orderId = Just res.booking.id.getId,
       orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId pricing.estimatedDistance farePolicy res.paymentId,
@@ -65,24 +65,13 @@ tfFulfillments res =
         { fulfillmentAgent = tfAgent res,
           fulfillmentCustomer = tfCustomer res,
           fulfillmentId = Just res.booking.quoteId,
-          fulfillmentState = mkFulfillmentState <$> bookingStatusCode res.quoteType,
+          fulfillmentState = Utils.mkFulfillmentState <$> bookingStatusCode res.quoteType,
           fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.specialZoneOtpCode,
           fulfillmentTags = Nothing,
           fulfillmentType = Just $ Common.mkFulfillmentType res.booking.tripCategory,
           fulfillmentVehicle = tfVehicle res
         }
     ]
-  where
-    mkFulfillmentState stateCode =
-      Spec.FulfillmentState
-        { fulfillmentStateDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show stateCode,
-                  descriptorShortDesc = Nothing,
-                  descriptorName = Nothing
-                }
-        }
 
 -- TODO: Discuss payment info transmission with ONDC
 tfPayments :: DConfirm.DConfirmResp -> DBC.BecknConfig -> Maybe [Spec.Payment]
@@ -125,12 +114,12 @@ tfCustomer res =
               }
       }
 
-tfCancellationTerms :: DBC.BecknConfig -> [Spec.CancellationTerm]
-tfCancellationTerms becknConfig =
+tfCancellationTerms :: DBC.BecknConfig -> DConfirm.DConfirmResp -> [Spec.CancellationTerm]
+tfCancellationTerms becknConfig res =
   L.singleton
     Spec.CancellationTerm
       { cancellationTermCancellationFee = Utils.tfCancellationFee becknConfig.cancellationFeeAmount,
-        cancellationTermFulfillmentState = Nothing,
+        cancellationTermFulfillmentState = Utils.mkFulfillmentState <$> bookingStatusCode res.quoteType,
         cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
       }
 
