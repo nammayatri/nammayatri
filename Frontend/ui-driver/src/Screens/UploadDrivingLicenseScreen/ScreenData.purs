@@ -47,6 +47,7 @@ initData = {
       , vehicleCategory : Nothing
       , cityConfig : defaultCityConfig
       , config : getAppConfig appConfig
+      , variantList : []
       },
       props: {
         openRegistrationModal : false
@@ -68,5 +69,8 @@ initData = {
       , menuOptions : false
       , confirmChangeVehicle : false
       , contactSupportModal : ST.HIDE
+      , setDefault : false
+      , previewSampleImage : false
+      , previewImgUrl : ""
       }
     }

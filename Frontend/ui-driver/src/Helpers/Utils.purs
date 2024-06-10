@@ -22,14 +22,16 @@ module Helpers.Utils
 import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
+import Data.Newtype (class Newtype, unwrap)
 import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null) as DA
 import Data.String (Pattern(..), split) as DS
 import Data.Array as DA
 import Data.String as DS
+import Data.Newtype (class Newtype, unwrap)
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.String.Common as DSC
 import MerchantConfig.Utils
-import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek)
+import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, Price(..), CategoryListType(..))
 import Domain.Payments (PaymentStatus(..))
 import Common.Types.Config (GeoJson, GeoJsonFeature, GeoJsonGeometry)
 import Common.DefaultConfig as CC
@@ -59,14 +61,14 @@ import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<), not, (=<<))
-import Prelude (class Eq, class Show, (<<<))
+import Prelude (class Eq, class Show, (<<<), compare)
 import Prelude (map, (*), (-), (/), (==), div, mod, not)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3, Fn2, runFn1, runFn2)
 import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5, EffectFn2(..))
 import Common.Types.App (OptionButtonList)
 import Engineering.Helpers.Commons (parseFloat, setText, convertUTCtoISC, getCurrentUTC) as ReExport
-import Engineering.Helpers.Commons (flowRunner)
+import Engineering.Helpers.Commons (flowRunner, getCurrencyTypeFromSymbol)
 import PaymentPage(PaymentPagePayload, UpiApps(..))
 import Presto.Core.Types.Language.Flow (Flow, doAff, loadS)
 import Control.Monad.Except.Trans (lift)
@@ -159,6 +161,7 @@ foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
 foreign import getDateAfterNDays :: Int -> String
 foreign import downloadQR  :: String -> Effect Unit
+foreign import startRideRequestMApp :: EffectFn1 String Unit
 
 decodeGeoJson :: String -> Maybe GeoJson
 decodeGeoJson stringGeoJson = 
@@ -454,36 +457,43 @@ getGenderIndex req arr = do
   reqIndex
 
 getMerchantVehicleSize :: Unit -> Int
-getMerchantVehicleSize unit = 
-  case getMerchant FunctionCall of 
-    _ -> 90
+getMerchantVehicleSize unit = 90
 
 getAssetLink :: LazyCheck -> String
-getAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/images/"
-  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/driver/images/"
-  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/driver/images/"
-  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/driver/"
-  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
-  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
+getAssetLink lazy = getValueFromCache "getAssetLink" (\_ -> getAssetLinkByMerchant)
+  where
+    getAssetLinkByMerchant = 
+      case (getMerchant lazy) of
+        YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/driver/images/"
+        YATRI -> "https://" <> assetDomain <> "/beckn/yatri/driver/images/"
+        MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/driver/"
+        PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
+        MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
+        _ -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/images/"
 
 getAssetsBaseUrl :: LazyCheck -> String
-getAssetsBaseUrl lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/"
-  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/driver/"
-  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/driver/"
-  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/"
-  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver"
-  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver"
+getAssetsBaseUrl lazy = getValueFromCache "getAssetsBaseUrl" (\_ -> getAssetsBaseUrlByMerchant)
+  where 
+    getAssetsBaseUrlByMerchant = 
+      case (getMerchant lazy) of
+      YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/driver/"
+      YATRI -> "https://" <> assetDomain <> "/beckn/yatri/driver/"
+      MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/"
+      PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver"
+      MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver"
+      _ -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/"
 
 getCommonAssetLink :: LazyCheck -> String
-getCommonAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/nammayatricommon/images/"
-  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/jatrisaathicommon/images/"
-  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/yatricommon/images/"
-  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/mobilitypaytmcommon/"
-  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
-  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
+getCommonAssetLink lazy = getValueFromCache "getCommonAssetLink" (\_ -> getCommonAssetLinkByMerchant)
+  where 
+    getCommonAssetLinkByMerchant = 
+      case (getMerchant lazy) of
+        YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/jatrisaathicommon/images/"
+        YATRI -> "https://" <> assetDomain <> "/beckn/yatri/yatricommon/images/"
+        MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/mobilitypaytmcommon/"
+        PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
+        MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
+        _ -> "https://" <> assetDomain <> "/beckn/nammayatri/nammayatricommon/images/"
 
 fetchImage :: FetchImageFrom -> String -> String
 fetchImage fetchImageFrom imageName =   
@@ -578,13 +588,6 @@ fetchFiles = do
   DA.fold $ map (\item -> launchAff_ $ do 
     result <- download item.filePath item.location
     if result then pure unit else liftEffect $ firebaseLogEventWithParams "download_failed" "file_name" item.filePath) files
-
-getDayOfWeek :: String -> Int
-getDayOfWeek dayName =
-  let
-    weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-  in
-    fromMaybe 0 $ DA.elemIndex (DS.take 3 dayName) weekDays
 
 download :: String -> String -> Aff Boolean
 download filepath location = makeAff \cb -> runEffectFn3 renewFile filepath location (cb <<< Right) $> nonCanceler
@@ -686,12 +689,10 @@ setForwardBatchingData cityConf =
 
 getCityConfig :: Array MCT.CityConfig -> String -> MCT.CityConfig
 getCityConfig cityConfig cityName = do
-  maybe defaultCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig
+  getValueFromCache cityName (\cityName -> maybe defaultCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig)
     
 getCityConfigFromCityCode :: Array MCT.CityConfig -> String -> MCT.CityConfig
-getCityConfigFromCityCode cityConfigArr cityCode =
-  let cityConfig = fromMaybe defaultCityConfig $ DA.find (\item -> item.cityCode == cityCode) cityConfigArr
-  in setForwardBatchingData cityConfig
+getCityConfigFromCityCode cityConfigArr cityCode = getValueFromCache cityCode (\cityCode -> maybe defaultCityConfig setForwardBatchingData $ DA.find (\item -> item.cityCode == cityCode) cityConfigArr)
 
 formatSecIntoMinSecs :: Int -> String
 formatSecIntoMinSecs seconds = 
@@ -933,7 +934,7 @@ setPerKmRate :: SA.GetDriverRateCardRes -> ST.RidePreference -> ST.RidePreferenc
 setPerKmRate (SA.GetDriverRateCardRes rateCardResp) prefOb = 
   let rateCardRespItem = DA.find (\(SA.RateCardRespItem item) -> item.serviceTierType == prefOb.serviceTierType) rateCardResp
   in case rateCardRespItem of
-    Just (SA.RateCardRespItem rateCardRespItem) -> prefOb { perKmRate = Just $ rateCardRespItem.perKmRate.amount}
+    Just (SA.RateCardRespItem rateCardRespItem) -> prefOb { perKmRate = Just $ rateCardRespItem.perKmRate}
     Nothing -> prefOb
 
 getVehicleMapping :: SA.ServiceTierType -> String
@@ -961,6 +962,7 @@ getLatestAndroidVersion merchant =
     MOBILITY_PM -> 1
     MOBILITY_RS -> 1
     PASSCULTURE -> 1
+    BRIDGE -> 129
 
 shouldShowPurpleVideos :: ST.HomeScreenState -> Boolean
 shouldShowPurpleVideos state = do
@@ -980,3 +982,31 @@ getPurpleRideConfigForVehicle linkedVehicleVariant purpleRideConfigForCity =
     "AUTO_RICKSHAW" -> purpleRideConfigForCity.purpleRideConfigForAuto
     "BIKE" -> purpleRideConfigForCity.purpleRideConfigForBikes
     _ -> purpleRideConfigForCity.purpleRideConfigForCabs
+  
+sortListBasedOnCreatedAt :: forall a t. Newtype t (Record (createdAt:: String | a)) => Array t -> Array t
+sortListBasedOnCreatedAt = DA.sortBy (\a b -> compare ((unwrap b).createdAt) ((unwrap a).createdAt))
+
+sortListBasedOnDOUpload :: forall a t. Newtype t (Record (dateOfUpload:: String | a)) => Array t -> Array t
+sortListBasedOnDOUpload = DA.sortBy (\a b -> compare ((unwrap b).dateOfUpload) ((unwrap a).dateOfUpload))
+
+dummyPriceForCity :: String -> Price
+dummyPriceForCity cityName = do
+  let currencySymobol = getCurrencyForCity cityName
+  {amount: 0.0, currency: getCurrencyTypeFromSymbol currencySymobol}
+
+getCurrencyForCity :: String -> String
+getCurrencyForCity cityName = maybe "$" (\config -> config.currency) (DA.find (\item -> item.cityName == cityName) (getAppConfig "").cityConfig)
+
+getDistanceUnitForCity :: String -> String
+getDistanceUnitForCity cityName = maybe "mi" (\config -> config.distanceUnit) (DA.find (\item -> item.cityName == cityName) (getAppConfig "").cityConfig)
+
+categoryTransformer :: Array SA.Category -> String -> Array CategoryListType 
+categoryTransformer categories language = map (\(SA.Category catObj) ->
+                                          { categoryName :
+                                              if (language == "en")
+                                              then EHU.capitalizeFirstChar catObj.category
+                                              else catObj.category
+                                          , categoryId       : catObj.issueCategoryId
+                                          , categoryAction   : catObj.label
+                                          , categoryImageUrl : catObj.logoUrl
+                                          }) categories

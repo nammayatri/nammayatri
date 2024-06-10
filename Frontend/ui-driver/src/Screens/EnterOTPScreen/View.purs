@@ -15,9 +15,9 @@
 
 module Screens.EnterOTPScreen.View where
 import Data.Maybe (Maybe(..))
-import Prelude (Unit, const, bind, pure, unit, ($), (<<<), (<>), (==), (>), discard)
+import Prelude (Unit, const, bind, pure, unit, ($), (<<<), (<>), (==), (>), (+), discard)
 import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, weight, width, afterRender, visibility, imageWithFallback, textFromHtml)
-import Components.PrimaryEditText.Views as PrimaryEditText
+import Components.PrimaryEditText.View as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
 import Screens.EnterOTPScreen.Controller (Action(..), eval, ScreenOutput)
@@ -39,6 +39,7 @@ import Screens.EnterOTPScreen.ComponentConfig
 import Data.Ring ((-))
 import Storage (getValueToLocalStore, KeyStore(..))
 import Locale.Utils
+import Debug
 
 screen :: ST.EnterOTPScreenState -> Screen Action ST.EnterOTPScreenState ScreenOutput
 screen initialState =
@@ -49,7 +50,10 @@ screen initialState =
                       _ <- pure $ HU.clearTimer ""
                       _ <- HU.startTimer 10 true push TIMERACTION
                       pure (pure unit)) ] <> if (DS.length initialState.data.otp) > 0 then [] else [] --[ HU.startOtpReciever AutoFill ]
-  , eval
+  , eval : (\action state -> do
+      let _ = spy "EnterOTPScreen state -----" state
+      let _ = spy "EnterOTPScreen action -----" action
+      eval action state)
   }
 
 view
@@ -70,6 +74,7 @@ view push state =
         pure unit
         ) (const AfterRender)
   , onBackPressed push (const BackPressed)
+  , padding $ PaddingBottom EHC.safeMarginBottom
   ][    PrestoAnim.animationSet
           [ Anim.fadeIn true
           ] $ headerView state push 
@@ -79,6 +84,16 @@ view push state =
       , orientation VERTICAL
       ][  primaryEditTextView state push
       ]
+    , PrestoAnim.animationSet
+      [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
+      ] $ textView $
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , margin $ MarginBottom 30
+        , gravity CENTER
+        , textFromHtml $ if DS.null state.data.mobileNo then "<u>Login with phone number instead?</u>" else "<u>Login with email id instead?</u>"
+        , onClick push $ const $ ChangeLoginMethod $ DS.null state.data.mobileNo
+        ] <> FontStyle.body6 LanguageStyle
     , PrestoAnim.animationSet
       [ Anim.fadeIn true
       ] $ linearLayout
@@ -94,8 +109,8 @@ view push state =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , background state.data.config.primaryBackground
-      , padding $ Padding 16 16 16 16
+      , background state.data.config.enterMobileNumberScreen.headerBackground
+      , padding $ Padding 16 (EHC.safeMarginTop + 16) 16 16
       ][  imageView
           [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_left_white"
           , height $ V 25 
@@ -153,25 +168,11 @@ primaryEditTextView state push =
  linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , padding (Padding 18 18 20 0)
+  , padding $ PaddingHorizontal 18 20
   , orientation VERTICAL
   ][  PrestoAnim.animationSet
         [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
-        ] $ PrimaryEditText.view(push <<< PrimaryEditTextAction) ({
-        title: case (getLanguageLocale languageKey) of 
-                  "EN_US" -> (getString ENTER_OTP_SENT_TO) <> state.data.mobileNo
-                  _ -> state.data.mobileNo <> (getString ENTER_OTP_SENT_TO) ,
-        type: "number",
-        hint: (getString AUTO_READING_OTP),
-        text: state.data.capturedOtp,
-        isinValid: state.props.isValid,
-        error: Just (getString PLEASE_ENTER_VALID_OTP),
-        valueId: "EditTextOtp",
-        pattern : Just "[0-9]*,4",
-        fontSize : FontSize.a_18,
-        letterSpacing : PX if state.data.otp == "" then 0.0 else 5.0,
-        id : (EHC.getNewIDWithTag "EnterOTPScreenEditText")
-      })
+        ] $ PrimaryEditText.view(push <<< PrimaryEditTextAction) $ primaryEditTextConfig state
     , PrestoAnim.animationSet
       [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
       ] $ underlinedTextView state push

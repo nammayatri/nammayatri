@@ -29,7 +29,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, getNewIDWithTag, flowRunner, screenWidth, getCurrentUTC, getPastMonths)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import JBridge (openUrlInApp, toast)
+import JBridge (openUrlInApp, toast, getCurrentDate)
 import Language.Strings 
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, discard, show, (>), void, (/=), (/), (*), (+), not, (||), negate, (<=), (&&), (-), (<))
@@ -79,7 +79,7 @@ screen initialState =
                           case initialState.props.leaderBoardType of
                             ST.Daily  ->
                               let selectedDay =  if DS.null initialState.props.selectedDay.utcDate then
-                                                    fromMaybe initialState.props.selectedDay $ last $ getPastDays 1
+                                                    fromMaybe initialState.props.selectedDay $ last $ getPastDays getCurrentDate 1
                                                   else initialState.props.selectedDay
                               in DailyRequest $ convertUTCtoISC selectedDay.utcDate "YYYY-MM-DD"
                             ST.Weekly ->

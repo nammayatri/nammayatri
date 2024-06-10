@@ -525,7 +525,7 @@ public class MainActivity extends AppCompatActivity {
             }
             String merchantId = context.getResources().getString(R.string.merchant_id);
             JSONObject clevertapConfig = new JSONObject(remoteConfigs.getString("enable_city_based_splash_scn"));
-            boolean enableCityBasedSplash = clevertapConfig.getBoolean(merchantId);
+            boolean enableCityBasedSplash = clevertapConfig.optBoolean(merchantId, false);
             View splash = findViewById(R.id.splash);
             LottieAnimationView splashLottie = splash.findViewById(R.id.splash_lottie);
             if (splashLottie != null) {
@@ -1304,7 +1304,7 @@ public class MainActivity extends AppCompatActivity {
         payload.put("logLevel",1);
         payload.put("isBootable",true);
         payload.put(PaymentConstants.ENV, "prod");
-        int bundleTimeOut = Integer.parseInt(KeyValueStore.read(this,getString(in.juspay.mobility.app.R.string.preference_file_key),"BUNDLE_TIME_OUT","500"));
+        int bundleTimeOut = Integer.parseInt(KeyValueStore.read(this,getString(in.juspay.mobility.app.R.string.preference_file_key),"BUNDLE_TIME_OUT","1000"));
         payload.put("bundleTimeOut",bundleTimeOut);
         return payload;
     }

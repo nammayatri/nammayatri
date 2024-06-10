@@ -26,6 +26,7 @@ initData =  {
     tokenId : "",
     attemptCount : 3,
     mobileNo : "",
+    email : "",
     timer: "10s",
     capturedOtp : "",
     focusedIndex : 1,
@@ -36,6 +37,7 @@ initData =  {
     btnActive :false,
     isValid : false,
     resendEnabled : false,
-    otpTmp :false
+    otpTmp :false,
+    isMobileNumberOtp : false
     }
 }

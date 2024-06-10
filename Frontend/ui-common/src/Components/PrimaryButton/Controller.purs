@@ -88,6 +88,7 @@ type LottieConfig =
   , width :: Length
   , lottieURL :: String
   , autoDisableLoader :: Boolean
+  , forceToUseRemote :: Boolean
   }
 
 type UnderLineConfig = 
@@ -100,15 +101,16 @@ type UnderLineConfig =
 
 config :: Config
 config = 
-  let 
-    btnConfig = (getAppConfig appConfig).primaryButtonConfig
+  let
+    config = getAppConfig appConfig
+    btnConfig = config.primaryButtonConfig
   in {
     textConfig  :
     { text : ""
     , textStyle : SubHeading1
     , gravity : CENTER
     , visibility : VISIBLE
-    , color : Color.yellow900
+    , color : config.primaryTextColor
     , height : WRAP_CONTENT
     , width : WRAP_CONTENT
     , accessibilityHint : ""
@@ -126,7 +128,7 @@ config =
   , alpha: 1.0
   , isClickable: true
   , visibility: VISIBLE
-  , background : Color.black900
+  , background : config.primaryBackground
   , gravity : CENTER
   , isSuffixImage : false
   , weight : Nothing
@@ -161,6 +163,7 @@ config =
   , width : V 150
   , lottieURL : btnConfig.loaderUrl
   , autoDisableLoader : true
+  , forceToUseRemote: btnConfig.forceToUseRemote
   }
   , underlineConfig : {
     color : Color.grey900

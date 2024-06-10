@@ -17,6 +17,7 @@ module ConfigProvider (
   module ReExport) where
 
 import Prelude
+import Data.Array (find)
 import Constants as ReExport
 import Data.Function.Uncurried (Fn1)
 import Effect (Effect)
@@ -34,6 +35,7 @@ import Control.Monad.Except.Trans (lift)
 import Data.Maybe
 import Log
 import DecodeUtil
+import Debug
 
 foreign import mergeforegin :: Array Foreign -> Foreign
 
@@ -49,7 +51,7 @@ foreign import getAppConfigFromWindow :: Fn3 String (Maybe AppConfig) (AppConfig
 
 loadAppConfig :: String -> AppConfig
 loadAppConfig _ =
-  let defaultConfig = unsafeToForeign DefaultConfig.config
+  let defaultConfig = encode DefaultConfig.config
       merchantConfig = getConfigFromFile ReExport.configuration_file
       
       mergedConfig = mergeObjects $ [ defaultConfig] <> merchantConfig
@@ -103,3 +105,6 @@ getAppConfig _ = do
 
 getCurrency :: String -> String
 getCurrency key = (getAppConfig key).currency
+
+getDistanceUnit :: String -> String
+getDistanceUnit key = (getAppConfig key).distanceUnit

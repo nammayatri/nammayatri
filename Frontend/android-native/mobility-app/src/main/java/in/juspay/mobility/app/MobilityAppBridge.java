@@ -55,18 +55,29 @@ import com.facebook.appevents.AppEventsLogger;
 import com.google.android.gms.auth.api.credentials.Credential;
 import com.google.android.gms.auth.api.credentials.Credentials;
 import com.google.android.gms.auth.api.credentials.HintRequest;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.slider.Slider;
 import com.google.android.play.core.review.ReviewInfo;
 import com.google.android.play.core.review.ReviewManager;
 import com.google.android.play.core.review.ReviewManagerFactory;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.firebase.Firebase;
+import com.google.firebase.FirebaseApp;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthProvider;
+import com.google.firebase.auth.FirebaseAuthSettings;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.perf.FirebasePerformance;
 import com.google.firebase.perf.metrics.Trace;
 
+import com.google.firestore.v1.FirestoreGrpc;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener;
@@ -100,8 +111,8 @@ import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.carousel.VPAdapter;
 import in.juspay.mobility.app.carousel.ViewPagerItem;
 import in.juspay.mobility.app.reels.ReelController;
-
 public class MobilityAppBridge extends HyperBridge {
+    private BridgeComponents bridgeComponents;
     // Clever Tap
     HashMap<String, Object> clevertapProfileData = new HashMap<>();
 
@@ -129,10 +140,13 @@ public class MobilityAppBridge extends HyperBridge {
     private static String storeCustomerCallBack = null;
     private static String storeDriverCallBack = null;
     private String storeAddRideStopCallBack = null;
+    private String storeOauthProviderCallBack = null;
 
 
     // Permission request Code
     private static final int CREDENTIAL_PICKER_REQUEST = 74;
+
+    private static final int RC_SIGN_IN = 40;
 
 
     public static YouTubePlayerView youTubePlayerView;
@@ -149,8 +163,10 @@ public class MobilityAppBridge extends HyperBridge {
 
 
     private HashMap<String, SliderComponent> sliderComponentHashMap = new HashMap<>();
+
     public MobilityAppBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
+        this.bridgeComponents = bridgeComponents;
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(bridgeComponents.getContext());
         traceElements = new HashMap<>();
         clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
@@ -1140,6 +1156,42 @@ public class MobilityAppBridge extends HyperBridge {
     }
 
     @JavascriptInterface
+    public void oAuthSignIn(String providerId, String callback){
+        if (bridgeComponents.getActivity() != null){
+            storeOauthProviderCallBack = callback;
+            String clientId = "";
+            int resId = bridgeComponents.getContext().getResources().getIdentifier("oauth_client_id","string",bridgeComponents.getContext().getPackageName());
+            if (resId != 0) {
+                clientId =  bridgeComponents.getContext().getString(resId);
+            }
+            GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestEmail()
+                    .requestIdToken(clientId)
+                    .build();
+            GoogleSignInClient mGoogleSignInClient = GoogleSignIn.getClient(bridgeComponents.getContext(), gso);
+            mGoogleSignInClient.signOut();
+            Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+            bridgeComponents.getActivity().startActivityForResult(signInIntent, RC_SIGN_IN);
+        }
+    }
+
+
+    private void handleSignInResult(Task<GoogleSignInAccount> completedTask) {
+        if (storeOauthProviderCallBack != null && bridgeComponents.getJsCallback() != null){
+            try {
+                GoogleSignInAccount account = completedTask.getResult(ApiException.class);
+                String name = account.getGivenName() + " " + account.getFamilyName();
+                String jsCallback = String.format("window.callUICallback(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\");", storeOauthProviderCallBack, "SUCCESS", account.getIdToken(), name, account.getEmail());
+                bridgeComponents.getJsCallback().addJsToWebView(jsCallback);
+            } catch (ApiException e) {
+                String jsCallback = String.format("window.callUICallback(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\");", storeOauthProviderCallBack, "FAILED", e.getStatusCode(), "", "");
+                bridgeComponents.getJsCallback().addJsToWebView(jsCallback);
+            }
+        }
+    }
+
+
+    @JavascriptInterface
     public void askRequestedPermissions(String[] requests) {
         PermissionUtils.askRequestedPermissions(bridgeComponents.getActivity(), bridgeComponents.getContext(), requests, null);
     }
@@ -1175,6 +1227,18 @@ public class MobilityAppBridge extends HyperBridge {
     public void recordVideo(final String callback) {
         if(cameraUtils != null)
             cameraUtils.recordVideo(bridgeComponents.getActivity(), bridgeComponents.getContext(), callback, bridgeComponents);
+    }
+
+    @JavascriptInterface
+    public void takePhoto (final String callback) {
+        if(cameraUtils != null)
+            cameraUtils.takePhoto(bridgeComponents.getActivity(), bridgeComponents.getContext(), callback, bridgeComponents);
+    }
+
+    @JavascriptInterface
+    public void stopCamera () {
+        if(cameraUtils != null)
+            cameraUtils.stopCamera(bridgeComponents.getActivity());
     }
 
     @JavascriptInterface
@@ -1214,6 +1278,9 @@ public class MobilityAppBridge extends HyperBridge {
                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
                 }
                 break;
+            case RC_SIGN_IN:
+                Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+                handleSignInResult(task);
         }
         return super.onActivityResult(requestCode, resultCode, data);
     }
@@ -1264,5 +1331,16 @@ public class MobilityAppBridge extends HyperBridge {
             }
         });
 
+    }
+
+    @JavascriptInterface
+    public void initWebViewOnActivity(String webViewUrl) {
+        Activity activity = bridgeComponents.getActivity();
+        Context context = bridgeComponents.getContext();
+
+        Intent newIntent = new Intent (context, WebViewOnActivity.class);
+        newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        newIntent.putExtra("WebViewUrl", webViewUrl);
+        context.startActivity(newIntent);
     }
 }

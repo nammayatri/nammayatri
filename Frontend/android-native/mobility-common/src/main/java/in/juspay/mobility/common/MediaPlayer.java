@@ -16,6 +16,7 @@ import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.content.Context.MODE_PRIVATE;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -57,9 +58,14 @@ public class MediaPlayer {
     private static final int IMAGE_CAPTURE_REQ_CODE = 101;
     private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
     private BridgeComponents bridgeComponents = null;
+    private boolean showCircularFrame= false;
 
     public MediaPlayer (BridgeComponents bridgeComponents){
         this.bridgeComponents = bridgeComponents;
+    }
+
+    public boolean getShowCircularFrame() {
+        return this.showCircularFrame;
     }
 
     public String saveAudioFile(String source) throws IOException {
@@ -85,24 +91,59 @@ public class MediaPlayer {
         }
         return null;
     }
+    private void chooseFromGallery() {
+        if (bridgeComponents.getActivity() != null) {
+            Intent chooseFromFileIntent = new Intent(Intent.ACTION_GET_CONTENT);
+            chooseFromFileIntent.setType("image/*");
+            bridgeComponents.getActivity().startActivityForResult(chooseFromFileIntent, IMAGE_CAPTURE_REQ_CODE);
+        }
+    }
 
-    public void uploadFile() { 
+    private void takePhoto() {
+        Context context = bridgeComponents.getContext();
+        if (bridgeComponents.getActivity() != null) {
+            Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+            KeyValueStore.write(context, bridgeComponents.getSdkName(), context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
+            Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
+            takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
+            bridgeComponents.getActivity().startActivityForResult(takePicture, IMAGE_CAPTURE_REQ_CODE);
+        }
+    }
+
+    public void uploadFile(String storeCallBackOpenCamera, Boolean showCircularFrame) {
+        this.showCircularFrame = showCircularFrame;
         if (!isUploadPopupOpen) {
             ExecutorManager.runOnMainThread(() -> {
                 Context context = bridgeComponents.getContext();
-                if ((ActivityCompat.checkSelfPermission(context.getApplicationContext(), CAMERA) == PackageManager.PERMISSION_GRANTED)) {
+                if (ActivityCompat.checkSelfPermission(context.getApplicationContext(), CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                    isUploadPopupOpen = true;
                     if (bridgeComponents.getActivity() != null) {
-                        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                        KeyValueStore.write(context, bridgeComponents.getSdkName(), context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
-                        Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
-                        takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
-                        Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
-                        chooseFromFile.setType("image/*");
-                        Intent chooser = Intent.createChooser(takePicture, context.getString(R.string.upload_image));
-                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
-                        isUploadPopupOpen = true;
-                        bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
+                        AlertDialog.Builder builder = new AlertDialog.Builder(bridgeComponents.getActivity());
+                        builder.setTitle(context.getString(R.string.upload_image));
+                        builder.setItems(new CharSequence[]{
+                                context.getString(R.string.take_photo),
+                                context.getString(R.string.select_photo)
+                        }, (dialog, which) -> {
+                            switch (which) {
+                                case 0:
+                                    if (!this.showCircularFrame) {
+                                        takePhoto();
+                                    } else {
+                                        String javascript = String.format("window.callUICallback('%s');", storeCallBackOpenCamera);
+                                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                                    }
+                                    break;
+                                case 1:
+                                    chooseFromGallery();
+                                    break;
+                                default:
+                                    isUploadPopupOpen = false;
+                            }
+                        });
+                        AlertDialog dialog = builder.create();
+                        dialog.setOnDismissListener(d -> isUploadPopupOpen = false);
+                        dialog.show();
                     }
                 } else {
                     if (bridgeComponents.getActivity() != null) {

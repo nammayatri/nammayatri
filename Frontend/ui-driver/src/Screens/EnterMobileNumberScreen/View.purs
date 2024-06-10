@@ -16,11 +16,11 @@
 module Screens.EnterMobileNumberScreen.View where
 
 import Data.Maybe (Maybe(..))
-import Prelude (Unit, const, ($), (<<<), (<>), bind, pure , unit, (==))
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textView, visibility, weight, width, afterRender, imageWithFallback, singleLine, textFromHtml)
-import Components.PrimaryEditText.Views as PrimaryEditText
+import Prelude (Unit, const, ($), (<<<), (<>), bind, pure , unit, void, (==), (-), (+), discard, not, (||), (&&))
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textView, visibility, weight, width, afterRender, imageWithFallback, singleLine, textFromHtml, adjustViewWithKeyboard, scrollView, disableKeyboardAvoidance, scrollBarY, id)
 import Components.PrimaryButton as PrimaryButton
 import Components.MobileNumberEditor as MobileNumberEditor
+import Components.PrimaryEditText.View as PrimaryEditText
 import Effect (Effect)
 import Screens.EnterMobileNumberScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types as ST
@@ -41,13 +41,20 @@ import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Debug(spy)
 import ConfigProvider
+import Services.API (OAuthProvider(..))
+import Effect.Uncurried (runEffectFn2)
+import Mobility.Prelude
+import PrestoDOM.Elements.Keyed as Keyed
+import Data.Tuple (Tuple(..))
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "EnterMobileNumberScreen"
-  , globalEvents : []
+  , globalEvents : [(\push -> do 
+                              void $ runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
+                              pure $ pure unit)]
   , eval: (\action state -> do
       let _ = spy "EnterMobileNUmber state -----" state
       let _ = spy "EnterMobileNUmber--------action" action
@@ -66,15 +73,16 @@ view push state =
     , orientation VERTICAL
     , afterRender push (const AfterRender)
     , margin $ MarginBottom 24
-    , padding (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom)
+    , padding $ PaddingBottom EHC.safeMarginBottom
     , background Color.white900
     , onBackPressed push (const BackPressed)
     ][  headerView state push
-      , frameLayout
+      , Keyed.linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , padding (Padding 16 0 16 0)
-        ][enterMobileNumberView  state push]
+        ][ if state.props.loginWithMobileBtnClicked then (Tuple "enterMobileNumberView" $ enterMobileNumberView state push) else Tuple "oAuthProvidersView" $ oAuthProvidersView state push
+         ]
       ]
     ]
     where 
@@ -84,8 +92,8 @@ view push state =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , background state.data.config.primaryBackground
-        , padding $ Padding 16 16 16 16
+        , background state.data.config.enterMobileNumberScreen.headerBackground
+        , padding $ Padding 16 (EHC.safeMarginTop + 16) 16 16
         ][  imageView
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
             , height $ V 25 
@@ -180,14 +188,12 @@ enterMobileNumberView  state push =
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , visibility VISIBLE
     , alpha 1.0
     , orientation VERTICAL
     , margin $ MarginTop 37
     ][   PrestoAnim.animationSet
       [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
       ] $ MobileNumberEditor.view (push <<< PrimaryEditTextAction) (mobileNumberConfig state)  
-
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -206,3 +212,47 @@ enterMobileNumberView  state push =
         , width MATCH_PARENT
         ][PrimaryButton.view (push <<< PrimaryButtonActionController) (mobileNumberButtonConfig state)]
     ]
+
+
+oAuthProvidersView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
+oAuthProvidersView state push =
+  let isFunctionExists = EHC.jBridgeMethodExists "oAuthSignIn"
+  in
+  scrollView
+  [ width MATCH_PARENT
+  , height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - 150 - EHC.safeMarginBottom else WRAP_CONTENT
+  , disableKeyboardAvoidance true
+  , id $ EHC.getNewIDWithTag "OAuthScrollView"
+  , scrollBarY false
+  ][
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ MarginTop 37
+    , adjustViewWithKeyboard "true"
+    ][ textView $
+      [ text $ if isFunctionExists then "To signup or login, choose an option" else "Enter a email to signup or login"
+      , color Color.black800
+      ] <> FontStyle.subHeading2 TypoGraphy
+    , PrimaryButton.view (push <<< (OAuthPB Google)) (googleProvider state isFunctionExists)
+    , if EHC.os == "IOS" then PrimaryButton.view (push <<< (OAuthPB IOS)) (appleProvider state isFunctionExists) else linearLayout[][]
+    , PrimaryButton.view (push <<< PrimaryButtonLoginWithMobileAC) (primaryButtonLoginWithMobileConfig state)
+    , textView $
+        [ text "Or"
+        , gravity CENTER
+        , width MATCH_PARENT
+        , margin $ MarginTop 24
+        , color Color.black800
+        , visibility $ boolToVisibility isFunctionExists
+        ] <> FontStyle.body1 TypoGraphy
+    ,  PrimaryEditText.view (push <<< EmailPBAC) $ emailIdPrimaryEditTextConfig state
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , adjustViewWithKeyboard "true"
+      ][ PrimaryButton.view (push <<< PrimaryButtonEmailAC) (primaryButtonEmailConfig state)
+      ]
+    ]
+  ]

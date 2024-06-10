@@ -22,10 +22,11 @@ import Components.Calendar.Controller as CalendarController
 import Components.ErrorModal as ErrorModalController
 import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), Price(..), Currency(..), Distance(..), DistanceUnit(..))
 import Components.PrimaryButton as PrimaryButtonController
 import Components.RequestInfoCard as RequestInfoCard
 import Control.Monad.Except (runExcept)
+import Constants.Configs (dummyDistance)
 import Data.Array as DA
 import Data.Array (union, (!!), filter, length, (:), foldl, drop, take, replicate, updateAt, elemIndex, (..), last, find, catMaybes, sortBy, reverse)
 import Data.Either
@@ -35,11 +36,11 @@ import Data.Number (fromString) as NUM
 import Data.Show (show)
 import Data.String as DS
 import Data.String (Pattern(..), split, take, drop)
-import Engineering.Helpers.Commons (getCurrentUTC, getFutureDate, getDayName, convertUTCtoISC)
+import Engineering.Helpers.Commons (getCurrentUTC, getFutureDate, getDayName, convertUTCtoISC, getDayOfWeek)
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (initializeCalendar, saveObject, getCurrentDay)
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (checkSpecialPickupZone, isYesterday, getcurrentdate, getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag, transformBapName)
+import Helpers.Utils (checkSpecialPickupZone, isYesterday, getcurrentdate, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag, transformBapName, dummyPriceForCity)
 import JBridge (pauseYoutubeVideo)
 import Language.Strings (getString)
 import Language.Types
@@ -207,6 +208,7 @@ eval (CoinTransactionResponseAction (CoinTransactionRes resp)) state = do
             , coins: item.coins
             , cash: 0.0
             , earnings: Nothing
+            , earningsWithCurrency : Nothing
             , destination: Nothing
             , status: Nothing
             , tagImages: []
@@ -245,6 +247,7 @@ eval (CoinUsageResponseAction (CoinsUsageRes resp)) state = do
             , coins: item.numCoins
             , cash: item.cash
             , earnings: Nothing
+            , earningsWithCurrency : Nothing
             , destination: Nothing
             , status: Nothing
             , tagImages: []
@@ -360,6 +363,8 @@ eval (BarViewSelected index) state = do
       , totalEarnings: maybe 0 (\record -> record.earnings) mbSelectedBarData
       , totalRides: maybe 0 (\record -> record.noOfRides) mbSelectedBarData
       , totalDistanceTravelled: maybe 0 (\record -> record.rideDistance) mbSelectedBarData
+      , totalEarningsWithCurrency: maybe (dummyPriceForCity $ getValueToLocalStore DRIVER_LOCATION) (\record -> record.earningsWithCurrency) mbSelectedBarData
+      , totalDistanceTravelledWithUnit: maybe dummyDistance (\record -> record.rideDistanceWithUnit) mbSelectedBarData
       }
   continue state { props { selectedBarIndex = if state.props.selectedBarIndex == index then -1 else index, totalEarningsData = if state.props.selectedBarIndex == index then getTotalCurrentWeekData state.props.currWeekData else selectedBarData } }
 
@@ -441,7 +446,9 @@ mapSummaryListWithWeeklyEarnings ridesSummaryList =
   map
     ( \(RidesSummary rideSummary) ->
         { earnings: rideSummary.earnings
+        , earningsWithCurrency: rideSummary.earningsWithCurrency
         , rideDistance: rideSummary.rideDistance
+        , rideDistanceWithUnit: rideSummary.rideDistanceWithUnit
         , rideDate: rideSummary.rideDate
         , noOfRides: rideSummary.noOfRides
         , percentLength: 0.0
@@ -460,7 +467,7 @@ getEarningForDate earningLst date =
   let
     foundDate = DA.find (\e -> e.rideDate == date) earningLst
   in
-    maybe (Just { earnings: 0, rideDistance: 0, rideDate: date, noOfRides: 0, percentLength: 0.0 }) (\_ -> Nothing) foundDate
+    maybe (Just { earnings: 0, earningsWithCurrency: dummyPriceForCity (getValueToLocalStore DRIVER_LOCATION), rideDistance: 0, rideDate: date, rideDistanceWithUnit: dummyDistance, noOfRides: 0, percentLength: 0.0 }) (\_ -> Nothing) foundDate
 
 getEarningsToCache :: Array ST.WeeklyEarning -> Array ST.WeeklyEarning
 getEarningsToCache earningList = do
@@ -471,7 +478,7 @@ getEarningsToCache earningList = do
 getAllWeeksData :: Array ST.WeeklyEarning -> Array ST.WeeklyEarning -> Array String -> Array ST.WeeklyEarning
 getAllWeeksData cachedEarnings earningList dates = do
   let
-    objList = map (\x -> { earnings: 0, rideDistance: 0, rideDate: x, noOfRides: 0, percentLength: 0.0 }) dates
+    objList = map (\x -> { earnings: 0, earningsWithCurrency: dummyPriceForCity (getValueToLocalStore DRIVER_LOCATION), rideDistance: 0, rideDistanceWithUnit: dummyDistance, rideDate: x, noOfRides: 0, percentLength: 0.0 }) dates
 
     todaysData = maybe [] (\lastEle -> [ lastEle ]) $ DA.last earningList
   cachedEarnings <> todaysData <> objList
@@ -485,11 +492,15 @@ rideHistoryItemTransformer (RidesInfo ride) =
     total_amount : (case (ride.status) of
                     "CANCELLED" -> 0
                     _ -> fromMaybe ride.estimatedBaseFare ride.computedFare),
+    total_amount_with_currency : (case (ride.status) of
+                                  "CANCELLED" -> dummyPriceForCity (getValueToLocalStore DRIVER_LOCATION)
+                                  _ -> fromMaybe ride.estimatedBaseFareWithCurrency ride.computedFareWithCurrency),
     card_visibility : (case (ride.status) of
                         "CANCELLED" -> "gone"
                         _ -> "visible"),
     shimmer_visibility : "gone",
     rideDistance :  parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2,
+    rideDistanceWithUnit : fromMaybe dummyDistance ride.chargeableDistanceWithUnit,
     status :  (ride.status),
     vehicleModel : ride.vehicleModel ,
     shortRideId : ride.shortRideId  ,
@@ -513,6 +524,7 @@ rideHistoryItemTransformer (RidesInfo ride) =
     specialZoneText : specialLocationConfig.text,
     specialZonePickup : checkSpecialPickupZone ride.specialLocationTag,
     tollCharge : fromMaybe 0.0 ride.tollCharges,
+    tollChargeWithCurrency : fromMaybe (dummyPriceForCity (getValueToLocalStore DRIVER_LOCATION)) ride.tollChargesWithCurrency,
     rideType : ride.vehicleServiceTierName,
     tripStartTime : ride.tripStartTime,
     tripEndTime : ride.tripEndTime,
@@ -539,6 +551,10 @@ earningHistoryItemsListTransformer list =
               case ride.status of
                 "CANCELLED" -> Just 0
                 _ -> ride.computedFare
+          , earningsWithCurrency: 
+              case ride.status of
+                "CANCELLED" -> Just $ dummyPriceForCity (getValueToLocalStore DRIVER_LOCATION)
+                _ -> ride.computedFareWithCurrency
           , status: Just ride.status
           , coins: 0
           , event: ""
@@ -583,11 +599,18 @@ getTotalCurrentWeekData barGraphData = do
         )
         { totalEarnings: 0, totalDistance: 0, totalRides: 0 }
         barGraphData
+
+    currency = maybe INR (\x -> x.earningsWithCurrency.currency) firstElement
+
+    (Distance distance) = maybe dummyDistance (\x -> x.rideDistanceWithUnit) firstElement
+    
   { fromDate: maybe "" (\x -> x.rideDate) firstElement
   , toDate: maybe "" (\x -> x.rideDate) lastElement
   , totalEarnings: calculateTotals.totalEarnings
   , totalRides: calculateTotals.totalRides
   , totalDistanceTravelled: calculateTotals.totalDistance
+  , totalEarningsWithCurrency: {currency: currency, amount: toNumber calculateTotals.totalEarnings}
+  , totalDistanceTravelledWithUnit: Distance {unit: distance.unit, value: toNumber calculateTotals.totalDistance}
   }
 
 fetchWeekyEarningData :: KeyStore -> Maybe (Array ST.WeeklyEarning)
@@ -721,6 +744,7 @@ dummyRideHistoryItem :: RidesInfo
 dummyRideHistoryItem = RidesInfo {
       status : "",
       computedFare : Nothing,
+      computedFareWithCurrency : Nothing,
       vehicleModel : "",
       createdAt : "",
       driverNumber : Nothing,
@@ -728,10 +752,14 @@ dummyRideHistoryItem = RidesInfo {
       vehicleNumber : "",
       driverName : "",
       driverSelectedFare : 0,
+      driverSelectedFareWithCurrency : dummyPriceForCity (getValueToLocalStore DRIVER_LOCATION),
       chargeableDistance : Nothing,
+      chargeableDistanceWithUnit : Nothing,
       actualRideDistance : Nothing,
+      actualRideDistanceWithUnit : dummyDistance,
       vehicleVariant : "",
       estimatedBaseFare : 0,
+      estimatedBaseFareWithCurrency : dummyPriceForCity (getValueToLocalStore DRIVER_LOCATION),
       vehicleColor : "",
       id : "",
       updatedAt : "",
@@ -740,10 +768,12 @@ dummyRideHistoryItem = RidesInfo {
       fromLocation : dummyLocationInfo,
       toLocation : Just dummyLocationInfo,
       estimatedDistance : 0,
+      estimatedDistanceWithUnit : dummyDistance,
       exoPhone : "",
       specialLocationTag : Nothing,
       requestedVehicleVariant : Nothing,
       customerExtraFee : Nothing,
+      customerExtraFeeWithCurrency : Nothing,
       disabilityTag : Nothing,
       payerVpa : Nothing,
       autoPayStatus : Nothing,
@@ -762,7 +792,9 @@ dummyRideHistoryItem = RidesInfo {
       startOdometerReading : Nothing,
       endOdometerReading : Nothing,
       tollCharges : Nothing,
+      tollChargesWithCurrency : Nothing,
       estimatedTollCharges : Nothing,
+      estimatedTollChargesWithCurrency : Nothing,
       isOdometerReadingsRequired : Nothing,
       vehicleServiceTierName : "",
       vehicleServiceTier : "",
@@ -770,8 +802,11 @@ dummyRideHistoryItem = RidesInfo {
       vehicleCapacity : Nothing,
       tollConfidence : Nothing,
       bookingType : Nothing,
+      customerCancellationDues : Nothing,
+      customerCancellationDuesWithCurrency : Nothing,
       bapName : Nothing,
-      isValueAddNP : false
+      isValueAddNP : false,
+      enableOtpLessRide : Nothing
     , parkingCharge : Nothing
   }
 

@@ -180,7 +180,7 @@ bannerTransformer =
   actionText : toPropValue item.actionText,
   actionTextColor : toPropValue item.actionTextColor,
   bannerImageUrl : toPropValue $ (fromMaybe "" ((split (Pattern ",") item.imageUrl) !! 0)),
-  cornerRadiusMain : toPropValue $ if os == "IOS" then "20.0" else "32.0",
+  cornerRadiusMain : toPropValue $ if os == "IOS" then "15.0" else "32.0",
   actionIconUrl : toPropValue item.actionIconUrl,
   actionTextBackgroundColour : toPropValue item.actionTextBackgroundColour,
   actionTextCornerRadius : toPropValue $ if os == "IOS" then "15.0" else "50.0",

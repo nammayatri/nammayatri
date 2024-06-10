@@ -1,7 +1,8 @@
 module Components.RateCard.Utils where
 
 import Prelude
-import Common.Types.App (EstimateFares(..), FareList(..), Price(..), BreakupList)
+import Common.Types.App (EstimateFares(..), FareList(..), Price(..), BreakupList, Currency(..))
+import ConfigProvider
 import Data.Maybe (fromMaybe, isJust, Maybe(..), maybe)
 import Data.Array as DA
 import Mobility.Prelude as MP
@@ -18,6 +19,7 @@ import Language.Types (STR(..))
 import Data.Tuple as DT
 import Data.Number.Format (fixed, toStringWith)
 import Components.ChooseVehicle.Controller as CVC
+import Storage
 
 
 type StepFare
@@ -34,14 +36,7 @@ fetchSpecificFare fareBreakup fareType =
     maybe dummyPriceEntity getPriceEntity fare
   where
     getPriceEntity item = item ^. EHA._priceWithCurrency
-    dummyPriceEntity = { amount: 0.0, currency: "INR" }
-
-priceToBeDisplayed :: Price -> String
-priceToBeDisplayed price = case price.currency of
-  "INR" -> "₹" <> value
-  _ -> price.currency <> show value
-  where
-    value = EHU.getFixedTwoDecimals price.amount
+    dummyPriceEntity = { amount: 0.0, currency: INR }
 
 getFareBreakupList :: Array EstimateFares -> Int -> BreakupList
 getFareBreakupList fareBreakup maxTip =
@@ -54,7 +49,7 @@ getFareBreakupList fareBreakup maxTip =
     isNightShift : isNightShift,
     waitingTimeInfo : { 
       freeMinutes: EHU.formatNumber freeWaitingTime.amount Nothing, 
-      charge: priceToBeDisplayed waitingCharge <> "/min" 
+      charge: EHU.priceToBeDisplayed waitingCharge true <> "/min" 
     }
   }
   where
@@ -62,11 +57,11 @@ getFareBreakupList fareBreakup maxTip =
     [ { key: getString $ MIN_FARE_UPTO $ (EHU.formatNumber (baseDistance.amount / 1000.0) Nothing) <> " km", val: baseFare } ]
     <> (map constructExtraFareBreakup extraFareBreakup)
     <> (if congestionCharges.amount > 0.0 then [ { key: getString CONGESTION_CHARGES, val: (EHU.getFixedTwoDecimals congestionCharges.amount) <> "%"}]  else [])
-    <> (if tollCharge.amount > 0.0 then [ { key: getString TOLL_CHARGES_ESTIMATED, val: priceToBeDisplayed tollCharge } ] else [])
+    <> (if tollCharge.amount > 0.0 then [ { key: getString TOLL_CHARGES_ESTIMATED, val: EHU.priceToBeDisplayed tollCharge true} ] else [])
     <> [ { key: getString PICKUP_CHARGE, val: pickupCharges } ]
-    <> (if waitingCharge.amount  > 0.0 then [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.formatNumber freeWaitingTime.amount Nothing, val: priceToBeDisplayed waitingCharge <> "/min" }] else [{ key: getString ADDITIONAL_CHARGES_WILL_BE_APPLICABLE, val: "" } ] )
-    <> [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.formatNumber freeWaitingTime.amount Nothing, val: priceToBeDisplayed waitingCharge <> "/min" } ]
-    <> (if parkingCharge.amount > 0.0 then [{ key: getString PARKING_CHARGE <> "^", val: priceToBeDisplayed parkingCharge }] else [])
+    <> (if waitingCharge.amount  > 0.0 then [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.formatNumber freeWaitingTime.amount Nothing, val: EHU.priceToBeDisplayed waitingCharge true <> "/min" }] else [{ key: getString ADDITIONAL_CHARGES_WILL_BE_APPLICABLE, val: "" } ] )
+    <> [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.formatNumber freeWaitingTime.amount Nothing, val: EHU.priceToBeDisplayed waitingCharge true <> "/min" } ]
+    <> (if parkingCharge.amount > 0.0 then [{ key: getString PARKING_CHARGE <> "^", val: EHU.priceToBeDisplayed parkingCharge true }] else [])
 
 
   fareInfoDescription = 
@@ -78,7 +73,7 @@ getFareBreakupList fareBreakup maxTip =
 
   -- Base fare calculation
   baseDistance = fetchSpecificFare fareBreakup "BASE_DISTANCE"
-  baseFare = priceToBeDisplayed $ fetchSpecificFare fareBreakup "BASE_FARE"
+  baseFare = EHU.priceToBeDisplayed (fetchSpecificFare fareBreakup "BASE_FARE") true
 
   -- Step fare calculation
   extraFareBreakup =
@@ -115,7 +110,7 @@ getFareBreakupList fareBreakup maxTip =
                     else EHC.compareUTCDate nightShiftEnd (EHC.getCurrentUTC "") >= 0  || EHC.compareUTCDate (EHC.getCurrentUTC "") nightShiftStart >= 0
 
   -- Pickup charges
-  pickupCharges = priceToBeDisplayed $ fetchSpecificFare fareBreakup "DEAD_KILOMETER_FARE"
+  pickupCharges = EHU.priceToBeDisplayed (fetchSpecificFare fareBreakup "DEAD_KILOMETER_FARE") true
 
   --Congestion Charges
   congestionCharges = fetchSpecificFare fareBreakup "CONGESTION_CHARGE_PERCENTAGE"
@@ -150,7 +145,7 @@ getFareBreakupList fareBreakup maxTip =
         Just limit -> fromMaybe 0.0 $ DN.fromString limit
         Nothing -> 0.0
     in
-      { lLimit: lowerlimit, uLimit: upperlimit, price: priceToBeDisplayed price }
+      { lLimit: lowerlimit, uLimit: upperlimit, price: EHU.priceToBeDisplayed price true }
 
   constructExtraFareBreakup :: StepFare -> FareList
   constructExtraFareBreakup item =

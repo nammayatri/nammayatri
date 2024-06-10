@@ -241,6 +241,7 @@ window.getMerchantConfig = function () {
           , "driverAppId" : "in.juspay.nammayatripartner"
         },
         "waitingCharges" : 1.50,
+        "currency" : "₹",
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
           "onboarding_auto_image" : "ny_ic_auto_side",
@@ -304,6 +305,7 @@ window.getMerchantConfig = function () {
           , "driverAppId" : "in.mobility.manayatripartner"
         },
         "waitingCharges" : 2.00,
+        "currency" : "₹",
         "assets" :{
           "auto_image" :  "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -367,6 +369,7 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -430,6 +433,7 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 0.75,
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -493,6 +497,7 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.00,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -556,6 +561,7 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -619,6 +625,7 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -681,6 +688,7 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -744,6 +752,7 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -806,6 +815,7 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -869,6 +879,7 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -931,6 +942,7 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
+      "currency" : "$",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -991,6 +1003,7 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "net.openkochi.yatripartner"
       },
       "waitingCharges" : 1.50,
+      "currency" : "₹",
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : rentalWaitingChargesConfig,
       "assets" :{

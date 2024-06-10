@@ -38,7 +38,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, pure, show, unit, void, ($), (-), (<<<), (<>), (==), (>), (/), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hintColor, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, rippleColor)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hintColor, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, rippleColor, alignParentBottom)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.DriverSavedLocationScreen.ComponentConfig (confirmDeletePopupConfig, locationListItemConfig, primaryButtonConfig)
 import Screens.DriverSavedLocationScreen.Controller (Action(..), ScreenOutput, eval)
@@ -92,6 +92,7 @@ view push state =
         , onBackPressed push $ const BackPressed
         , afterRender push $ const AfterRender
         , background Color.white900
+        , padding $ PaddingBottom EHC.safeMarginBottom
         ]
         [ if (state.props.viewType == GoToList) then
             gotoLocationsList state push (state.props.viewType == GoToList)
@@ -123,6 +124,7 @@ gotoLocationsList state push visibility' =
         , onAnimationEnd push $ const OnAnimationEnd
         , visibility if visibility' then VISIBLE else GONE
         , margin $ MarginTop 10
+        , padding $ PaddingTop EHC.safeMarginTop
         ]
         [ header push
         , linearLayout
@@ -162,6 +164,7 @@ searchLocation state push visibility' =
         , visibility if visibility' then VISIBLE else GONE
         , onAnimationEnd push $ const OnAnimationEnd
         , orientation VERTICAL
+        , padding $ PaddingTop EHC.safeMarginTop
         ]
         [ linearLayout
             [ height WRAP_CONTENT
@@ -259,7 +262,7 @@ bottomButtons state push =
         , width MATCH_PARENT
         , orientation HORIZONTAL
         , background Color.white900
-        , padding $ Padding 20 20 20 20
+        , padding $ Padding 20 20 20 (if EHC.safeMarginBottom == 0 then 20 else 0)
         , gravity CENTER
         ]
         [ linearLayout
@@ -416,7 +419,7 @@ perdictionItem prediction push =
 locationAndMap :: forall w. DriverSavedLocationScreenState -> (Action -> Effect Unit) -> Boolean -> PrestoDOM (Effect Unit) w
 locationAndMap state push visibility' =
   PrestoAnim.animationSet [ Anim.fadeIn visibility' ]
-    $ frameLayout
+    $ relativeLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , orientation VERTICAL
@@ -440,7 +443,7 @@ locationAndMap state push visibility' =
 
 locateOnMap :: forall w. DriverSavedLocationScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 locateOnMap state push =
-  frameLayout
+  relativeLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
@@ -476,7 +479,7 @@ locateOnMap state push =
         , stroke $ "1," <> Color.grey900
         , background Color.white900
         , margin $ Margin 16 32 0 0
-        , cornerRadius 32.0
+        , cornerRadius 20.0
         ]
         [ imageView
             [ height $ V 24
@@ -488,14 +491,13 @@ locateOnMap state push =
     , linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
+        , alignParentBottom "true,-1"
         , gravity BOTTOM
-        , weight 1.0
         ]
         [ linearLayout
             [ width MATCH_PARENT
             , orientation VERTICAL
-            , gravity BOTTOM
-            , weight 1.0
+            , height WRAP_CONTENT
             , background Color.white900
             , cornerRadius 12.0
             , stroke $ "1," <> Color.grey900
@@ -585,6 +587,7 @@ confirmLocation state push visibility' =
         , height MATCH_PARENT
         , onAnimationEnd push $ const OnAnimationEnd
         , visibility if visibility' then VISIBLE else GONE
+        , padding $ PaddingTop EHC.safeMarginTop
         ]
         [ linearLayout
             [ height $ V 130
@@ -618,6 +621,7 @@ confirmLocation state push visibility' =
                 , padding $ Padding 5 0 15 0
                 , margin $ MarginTop 5
                 , cornerRadius 6.0
+                , gravity CENTER_VERTICAL
                 ]
                 [ textView
                     $ [ height WRAP_CONTENT
@@ -635,6 +639,7 @@ confirmLocation state push visibility' =
                     $ [ text $ getString EDIT
                       , color Color.blue900
                       , textSize FontSize.a_16
+                      , padding $ Padding 5 10 15 10
                       , onClick push $ const BackPressed
                       , visibility if state.props.fromEditButton == (Just FromEdit) then GONE else VISIBLE
                       ]

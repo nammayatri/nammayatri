@@ -16,7 +16,7 @@
 module Screens.EnterOTPScreen.Controller where
 
 import Components.PrimaryButton as PrimaryButton
-import Components.PrimaryEditText.Controllers as PrimaryEditText
+import Components.PrimaryEditText.Controller as PrimaryEditText
 import Data.String (length)
 import JBridge (hideKeyboardOnNavigation, firebaseLogEvent, toggleBtnLoader)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -39,9 +39,8 @@ instance loggableAction :: Loggable Action where
       trackAppEndScreen appId (getScreen ENTER_OTP_NUMBER_SCREEN)
     ResendOTP -> trackAppActionClick appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "resend_otp" 
     PrimaryEditTextAction act -> case act of
-      PrimaryEditText.OnClick -> trackAppActionClick appId (getScreen ENTER_OTP_NUMBER_SCREEN) "primary_edit_text" "on_click"
       PrimaryEditText.TextChanged valId newVal -> trackAppTextInput appId (getScreen ENTER_OTP_NUMBER_SCREEN) "otp_number_text_changed" "primary_edit_text"
-      PrimaryEditText.TextClicked -> trackAppActionClick appId (getScreen ENTER_OTP_NUMBER_SCREEN) "primary_edit_text" "text_field_click"
+      PrimaryEditText.FocusChanged bool -> trackAppActionClick appId (getScreen ENTER_OTP_NUMBER_SCREEN) "primary_edit_text" "text_field_focus_changed"
     PrimaryButtonActionController act -> case act of
       PrimaryButton.OnClick-> do
         trackAppActionClick appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "primary_button_register_on_click"
@@ -53,7 +52,7 @@ instance loggableAction :: Loggable Action where
     NoAction -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "no_action"
     _ -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "no_action"
     
-data ScreenOutput = GoBack  EnterOTPScreenState | GoToHome EnterOTPScreenState | Retry EnterOTPScreenState
+data ScreenOutput = GoBack  EnterOTPScreenState | GoToHome EnterOTPScreenState | Retry EnterOTPScreenState | LoginMethodChange EnterOTPScreenState
 data Action = BackPressed 
             | ResendOTP
             | PrimaryEditTextAction PrimaryEditText.Action
@@ -63,13 +62,13 @@ data Action = BackPressed
             | SetToken String
             | TIMERACTION String
             | AfterRender
+            | ChangeLoginMethod Boolean
 
 eval :: Action -> EnterOTPScreenState -> Eval Action ScreenOutput EnterOTPScreenState
 eval AfterRender state = continue state
 eval BackPressed state = do 
   _ <- pure $ toggleBtnLoader "" false
   exit $ GoBack state{props{isValid = false}} 
-eval (PrimaryEditTextAction PrimaryEditText.OnClick) state = continue state
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true 
   exit (GoToHome state)
@@ -96,5 +95,9 @@ eval (SetToken id )state = do
   _ <-  pure $ setValueToLocalNativeStore FCM_TOKEN  id
   _ <-  pure $ setValueToLocalStore FCM_TOKEN  id
   continue state
+
+eval (ChangeLoginMethod isPhoneNumber) state = do
+  pure $ hideKeyboardOnNavigation true
+  exit $ LoginMethodChange state { props {isMobileNumberOtp = isPhoneNumber}}
 
 eval _ state = update state

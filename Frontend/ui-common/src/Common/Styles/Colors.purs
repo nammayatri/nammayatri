@@ -67,6 +67,9 @@ red100 = "#FEF8F8"
 white900 :: Color
 white900 = "#FFFFFF"
 
+white50Alpha :: Color
+white50Alpha = "#80FFFFFF"
+
 white40Alpha :: Color
 white40Alpha = "#66FFFFFF"
 
@@ -75,6 +78,9 @@ white27 = "#45FCFCFC"
 
 white300 :: Color
 white300 = "#FDD56B"
+
+white160 :: Color
+white160 = "#29FFFFFF"
 
 white200 :: Color
 white200 = "#99FFFFFF"
@@ -162,7 +168,9 @@ frenchSkyBlue400 :: Color
 frenchSkyBlue400 = "#a9cbff"
 
 green700 :: Color
-green700 = "#268C6E"
+green700 = 
+  let config = getAppConfig appConfig
+  in config.colors.green700
 
 blackLessTrans :: Color
 blackLessTrans = "#99000000"
@@ -409,3 +417,17 @@ indianRed8 = "#14E55454"
 
 lightBlue80 :: Color
 lightBlue80 = "#CC80B2FF"
+blue500 :: Color
+blue500 = "#4285F4"
+
+bridgeGreen :: Color
+bridgeGreen = "#F0F5F2"
+
+purple900 :: Color
+purple900 = "#7435FC"
+
+purple500 :: Color
+purple500 = "#E0D1FF"
+
+purple700 :: Color
+purple700 = "#7D4BFF"

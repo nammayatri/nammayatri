@@ -140,3 +140,8 @@ getNumberWithSuffix n
       2 -> "nd"
       3 -> "rd"
       _ -> "th"
+strToMaybe :: String -> Maybe String
+strToMaybe str = 
+  case str of
+    "" -> Nothing
+    _ -> Just str

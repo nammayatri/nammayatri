@@ -23,7 +23,7 @@ import Control.Monad.Except (runExcept)
 import Data.Either (Either(..), hush)
 import Data.Function.Uncurried (Fn2(..), Fn3, runFn3, Fn1, Fn4, runFn2, Fn5)
 import Data.Generic.Rep (class Generic)
-import Data.Int (toNumber)
+import Data.Int (toNumber, ceil)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
@@ -71,6 +71,7 @@ foreign import showLoaderImpl      :: String -> Effect Unit
 -- foreign import showLoader'      :: String -> Effect Unit
 foreign import locateOnMap :: EffectFn1 LocateOnMapConfig Unit
 foreign import fetchPackageName :: Unit -> Effect String
+foreign import validateEmail :: String -> Boolean
 foreign import exitLocateOnMap :: String -> Unit
 foreign import shareTextMessage :: String -> String -> Unit
 foreign import shareImageMessage :: String -> ShareImageConfig -> Unit
@@ -87,7 +88,7 @@ foreign import getManufacturerName :: Unit -> String
 foreign import getAndroidVersion :: Effect Int
 -- foreign import showQrCodeImpl      :: String -> String -> Effect Unit
 -- foreign import scanQrCode       :: forall action. String MerchantConfig.Utils-> (action -> Effect Unit) ->  (String -> action) -> Effect Unit
-foreign import datePicker       :: forall action. String -> (action -> Effect Unit)  -> (String -> Int -> Int -> Int -> action) -> Effect Unit
+foreign import datePicker       :: forall action. String -> (action -> Effect Unit)  -> (String -> Int -> Int -> Int -> action) -> String -> Effect Unit
 foreign import setFCMToken :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
 foreign import setFCMTokenWithTimeOut :: EffectFn2 Int (String -> Effect Unit) Unit
 -- foreign import dateTimePicker :: forall action. (action -> Effect Unit) -> (Int -> action) -> Effect Unit
@@ -102,9 +103,10 @@ foreign import removeMarker :: String -> Unit
 foreign import removeAllMarkers :: String -> Unit
 -- foreign import parseAddress      :: String -> Address
 foreign import disableActionEditText :: String -> Unit
-foreign import uploadFile :: Boolean -> Effect Unit
+foreign import uploadFileImpl :: EffectFn1 Boolean Unit
 foreign import previewImage :: String -> Effect Unit
 foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
+foreign import storeCallBackOpenCamera :: forall action. (action -> Effect Unit) -> (action) -> Effect Unit
 foreign import renderBase64Image :: String -> String -> Boolean -> String -> Effect Unit
 foreign import storeCallBackUploadMultiPartData :: forall action. EffectFn2 (action -> Effect Unit)  (String -> String -> action) Unit
 foreign import setScaleType :: String -> String -> String -> Effect Unit
@@ -119,6 +121,9 @@ foreign import updateRoute :: EffectFn1 UpdateRouteConfig Unit
 foreign import isOverlayPermissionEnabled :: Unit -> Effect Boolean
 foreign import requestLocation  :: Unit -> Effect Unit
 foreign import requestBackgroundLocation  :: Unit -> Effect Unit
+
+foreign import getCurrentDate :: String
+foreign import getDateFromDate :: Fn2 String Int String
 
 foreign import initiateLocationServiceClient :: Effect Unit
 foreign import checkOverlayPermission  :: Unit -> Effect Unit
@@ -173,8 +178,8 @@ foreign import openNavigation  :: Number -> Number -> String -> Unit
 foreign import stopLocationPollingAPI :: Effect Unit
 foreign import startLocationPollingAPI :: Effect Unit
 foreign import startChatListenerService :: Effect Unit
-foreign import startService :: String -> Unit
-foreign import stopService :: String -> Unit
+foreign import startService :: EffectFn1 String Unit
+foreign import stopService :: EffectFn1 String Unit
 foreign import scrollOnResume :: forall action. (action -> Effect Unit) -> (action) -> Effect Unit
 foreign import stopChatListenerService :: Effect Unit
 foreign import storeCallBackMessageUpdated :: forall action. (action -> Effect Unit) -> String -> String  -> (String -> String -> String -> String -> action) -> action -> Effect Unit
@@ -251,10 +256,11 @@ foreign import methodArgumentCount :: String -> Int
 foreign import hideLoader :: Effect Unit
 foreign import emitJOSEvent :: Fn3 String String Foreign Unit
 foreign import getLayoutBounds :: Fn1 String LayoutBound
-foreign import horizontalScrollToPos :: EffectFn3 String String Int Unit
+foreign import horizontalScrollToPos :: EffectFn4 String String Int Int Unit
 foreign import withinTimeRange :: String -> String -> String -> Boolean
+foreign import isServiceRunning :: EffectFn1 String Boolean
 foreign import timeValidity :: String -> String -> Boolean
-foreign import isServiceRunning :: Fn1 String Boolean
+foreign import openLocationSettings :: EffectFn1 String Unit
 foreign import getChatMessages :: LazyCheck -> Array ChatComponent
 foreign import storeKeyBoardCallback :: forall action. EffectFn2 (action -> Effect Unit) (String -> action) Unit
 foreign import scrollViewFocus :: String -> Int -> Boolean
@@ -277,7 +283,10 @@ foreign import askRequestedPermissions :: Array String -> Unit
 foreign import askRequestedPermissionsWithCallback :: forall action. Array String -> (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import setupCamera :: String -> Boolean -> Unit
 foreign import startRecord :: forall action. (action -> Effect Unit)  -> (String -> String -> action) -> Effect Unit
+foreign import takePhoto :: forall action. (action -> Effect Unit)  -> (String -> String -> action) -> Effect Unit
+foreign import stopCamera :: String -> Unit
 foreign import stopRecord :: Unit -> Effect Unit
+foreign import cropImage :: Fn2 String Boolean Unit
 
 foreign import clearAudioPlayer :: String -> Unit
 foreign import pauseAudioPlayer :: String -> Unit
@@ -305,6 +314,9 @@ foreign import isPackageInstalled :: String -> Boolean
 foreign import requestUninstallPackage :: String -> Boolean
 
 
+foreign import focusChild :: EffectFn2 String Int Unit
+
+foreign import initWebViewOnActivity :: forall action. EffectFn3 String (action -> Effect Unit) (action) Unit
 type SliderConfig = { 
   id :: String,
   sliderConversionRate :: Number,
@@ -879,16 +891,25 @@ mapRouteConfig = {
 -- data SubTitle = SubTitle String
 
 -- data LoaderMessage = LoaderMessage Title SubTitle
+getHeightFromPercentWithOffset :: Int -> Int -> Int
+getHeightFromPercentWithOffset offset percent =
+  let scrHeight = (screenHeight unit) - offset
+    in ceil $ (((toNumber scrHeight) / 100.0) * (toNumber percent))
 
 getHeightFromPercent :: Int -> Int
 getHeightFromPercent percent =
   let scrHeight = (screenHeight unit)
-    in ((scrHeight / 100) * percent)
+    in ceil $ (((toNumber scrHeight) / 100.0) * (toNumber percent))
+
+getWidthFromPercentWithOffset :: Int -> Int -> Int
+getWidthFromPercentWithOffset offset percent =
+  let scrWidth = (screenWidth unit) - offset
+    in ceil $ (((toNumber scrWidth) / 100.0) * (toNumber percent))
 
 getWidthFromPercent :: Int -> Int
 getWidthFromPercent percent =
   let scrWidth = (screenWidth unit)
-    in ((scrWidth / 100) * percent)
+    in ceil $ (((toNumber scrWidth) / 100.0) * (toNumber percent))
 
 fromMetersToKm :: Int -> String
 fromMetersToKm distanceInMeters
@@ -1006,7 +1027,6 @@ type UpdateSliderConfig = {
   id :: String
 }
 
-
 data RouteKeysType  = DEFAULT | RENTAL | ADVANCED
 
 derive instance genericRouteKeysType :: Generic RouteKeysType _
@@ -1039,3 +1059,5 @@ handleLocateOnMapCallback screenName = (\push key lat lon -> do
     isActive <- isScreenActive "default" screenName
     when isActive $ do push key lat lon
     pure isActive
+uploadFile :: Boolean -> Effect Unit
+uploadFile = runEffectFn1 uploadFileImpl

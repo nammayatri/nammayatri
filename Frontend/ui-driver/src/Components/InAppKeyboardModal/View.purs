@@ -28,7 +28,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, unit, void, show, ($), (/), (<>), (==), (||), (>=), (&&), (<), (>), not, pure, (<$>), (/=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), InputType(..), LetterSpacing(..), LetterSpacing(..), imageUrl, imageView, linearLayout, onBackPressed, onClick, textView, alpha, editText, afterRender, onChange, inputType, relativeLayout, letterSpacing, onFocus)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), InputType(..), LetterSpacing(..), LetterSpacing(..), imageUrl, imageView, linearLayout, onBackPressed, onClick, textView, alpha, editText, afterRender, onChange, inputType, relativeLayout, letterSpacing, onFocus, adjustViewWithKeyboard, alignParentBottom)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (background, backgroundDrawable, clickable, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, margin, orientation, padding, stroke, text, textSize, weight, width, visibility, letterSpacing, imageWithFallback, lineHeight, id, pattern, textFromHtml, placeHolder)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -52,9 +52,6 @@ view push state =
     , background Color.black9000
     , gravity BOTTOM
     ][
-     PrestoAnim.animationSet [
-        translateYAnim translateYAnimConfig
-      ] $
         linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -103,6 +100,8 @@ view push state =
 
 editTextSingleBox :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
 editTextSingleBox push state =
+  let _ = showKeyboard (getNewIDWithTag "OtpKeyboard")
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -150,7 +149,7 @@ textBoxes push state =
       , gravity CENTER
       , cornerRadius 4.0
       , stroke ("1," <> if (state.otpIncorrect || state.otpAttemptsExceeded ) then Color.textDanger else if state.inputTextConfig.focusIndex == index then Color.highlightBorderColor else Color.borderColorLight )
-      , margin (Margin ((screenWidth unit)/30) 0 ((screenWidth unit)/30) 0)
+      , margin (Margin ((screenWidth unit)/32) 0 ((screenWidth unit)/30) 0)
       , onClick push (const (OnclickTextBox index))
       ]<> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle)) state.textBoxConfig.textBoxesArray)
 
@@ -195,6 +194,7 @@ otpView push state =
         , height WRAP_CONTENT
         , margin (Margin 20 0 20 0)
         , orientation VERTICAL
+        , adjustViewWithKeyboard "true"
         , gravity if(state.modalType == KeyboardModalType.OTP || state.modalType == KeyboardModalType.ODOMETER) then CENTER else LEFT
        ]
         (

@@ -18,6 +18,9 @@ module Components.RideActionModal.Controller where
 import ConfigProvider
 
 import MerchantConfig.Types (CityConfig)
+import Constants.Configs (dummyPrice, dummyDistance)
+import Common.Types.Config as CTC
+import Common.Types.App (Price(..), Distance(..))
 import Data.Maybe as Mb
 import MerchantConfig.Types (AppConfig)
 import Screens.Types as ST
@@ -44,13 +47,13 @@ data Action = StartRide
 type Config = { 
   startRideActive :: Boolean,
   arrivedStopActive :: Boolean,
-  totalDistance :: String,
+  totalDistanceWithUnit :: Distance,
   customerName :: String,
   sourceAddress :: AddressConfig,
   destinationAddress :: Mb.Maybe AddressConfig,
   stopAddress :: Mb.Maybe AddressConfig,
   lastStopAddress :: Mb.Maybe AddressConfig,
-  estimatedRideFare :: Int,
+  estimatedRideFareWithCurrency :: Price,
   notifiedCustomer :: Boolean,
   id :: String,
   buttonTimeOut :: Int,
@@ -95,7 +98,7 @@ config = {
   arrivedStopActive : false,
   cityConfig : HU.getCityConfig (getAppConfig appConfig).cityConfig (getValueToLocalStore DRIVER_LOCATION),
   driverVehicle : "",
-  totalDistance : "",
+  totalDistanceWithUnit : dummyDistance,
   customerName : "",
   sourceAddress : {
     titleText : "",
@@ -107,7 +110,7 @@ config = {
   }),
   stopAddress : Mb.Nothing,
   lastStopAddress : Mb.Nothing,
-  estimatedRideFare : 0,
+  estimatedRideFareWithCurrency : dummyPrice,
   notifiedCustomer : true,
   buttonTimeOut : 10,
   id : "buttonTimer",

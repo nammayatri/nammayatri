@@ -596,7 +596,7 @@ chooseTicketsView state push =
             , padding $ Padding 20 15 20 15
             , onClick (\action -> do
                       _ <- push action
-                      JB.datePicker (if isSameDayBookingAllowed state.data.placeInfo then "" else "MINIMUM_NEXT_DATE") push $ DatePicker "DATE_OF_VISIT"
+                      JB.datePicker (if isSameDayBookingAllowed state.data.placeInfo then "" else "MINIMUM_NEXT_DATE") push (DatePicker "DATE_OF_VISIT") ""
                 ) (const NoAction)
             ][  imageView
                 [ height $ V 22 

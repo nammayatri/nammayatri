@@ -24,6 +24,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.GenericHeader as GenericHeader
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Data.Maybe (Maybe(..), isJust)
+import Data.Array as DA
 import Font.Style as FontStyle
 import Language.Types (STR(..))
 import Resource.Constants as Constant
@@ -32,7 +33,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Storage ( getValueToLocalStore , KeyStore(..))
 import Components.InAppKeyboardModal as InAppKeyboardModal
-import Prelude ((<), not, ($), (&&))
+import Prelude ((<), not, ($), (&&), (>))
 import Data.String as DS
 import Mobility.Prelude
 import Prelude ((==))
@@ -46,7 +47,6 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig { text = getString if state.props.manageVehicle then ADD_VEHICLE else COMPLETE_REGISTRATION }
       , width = MATCH_PARENT
-      , background = Color.black900
       , height = V 48
       , id = "RegistrationScreenButton"
       }
@@ -55,10 +55,10 @@ primaryButtonConfig state = let
 appOnboardingNavBarConfig :: ST.RegistrationScreenState -> AppOnboardingNavBar.Config
 appOnboardingNavBarConfig state = 
   AppOnboardingNavBar.config
-  { prefixImageConfig = AppOnboardingNavBar.config.prefixImageConfig{visibility = GONE},
+  { prefixImageConfig {visibility = if state.props.manageVehicle then VISIBLE else GONE},
     genericHeaderConfig = genericHeaderConfig state,
     appConfig = state.data.config,
-    headerTextConfig = AppOnboardingNavBar.config.headerTextConfig{
+    headerTextConfig {
       text = case state.data.vehicleCategory of
               _ | state.props.manageVehicle -> getString ADD_VEHICLE
               Just ST.CarCategory -> getString REGISTER_YOUR_CAR
@@ -197,15 +197,17 @@ genericHeaderConfig state = let
   genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
-    , background = state.data.config.primaryBackground
+    , background = state.data.config.secondaryBackground
     , prefixImageConfig {
        visibility = VISIBLE
       , imageUrl = HU.fetchImage HU.FF_ASSET "ic_new_avatar"
-      , height = (V 25)
-      , width = (V 25)
-      , margin = (Margin 0 5 5 5)
+      , height = V 25
+      , width = V 25
+      , margin = MarginTop 0
+      , padding = PaddingTop 0
+      , cornerRadius = 0.0
       }
-    , padding = (PaddingVertical 5 5)
+    , padding = PaddingVertical 5 5
     , textConfig {
         text = (getValueToLocalStore MOBILE_NUMBER_KEY)
       , color = Color.white900
@@ -215,6 +217,7 @@ genericHeaderConfig state = let
     , suffixImageConfig {
         visibility = GONE
       }
+    , width = WRAP_CONTENT
     }
   in genericHeaderConfig'
 
@@ -263,7 +266,7 @@ optionsMenuConfig state = OptionsMenuConfig.config {
   menuItems = [
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : not state.props.manageVehicle, color : Color.black800},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : (isJust state.data.vehicleCategory) && not state.props.manageVehicle, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : (DA.length state.data.variantList > 1) && (isJust state.data.vehicleCategory) && not state.props.manageVehicle, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_logout_grey", textdata : getString LOGOUT, action : "logout", isVisible :  not state.props.manageVehicle, color : Color.black800}
   ],
   backgroundColor = Color.blackLessTrans,
@@ -284,6 +287,7 @@ bottomDrawerListConfig state = BottomDrawerList.config {
   titleText = getString CONTACT_SUPPORT_VIA,
   itemList = [
     {prefixImg : "ny_ic_whatsapp_black", title : "Whatsapp", desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.whatsappSupport, identifier : "whatsapp"},
-    {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.callSupport, identifier : "call"}
+    {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.callSupport, identifier : "call"},
+    {prefixImg : "ny_ic_mail", title : "Mail", desc : "Write an email for any help in uploading the documents" , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.emailSupport, identifier : "email"}
   ]
 }

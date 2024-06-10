@@ -15,11 +15,12 @@
 module Screens.DriverEarningsScreen.ScreenData where
 
 import Prelude
-import Screens.Types (AnimationState(..), DriverEarningsScreenState, DriverEarningsSubView(..), DriverEarningsPopupType(..),TripType(..))
+import Screens.Types (AnimationState(..), DriverEarningsScreenState, DriverEarningsSubView(..), DriverEarningsPopupType(..),TripType(..), IndividualRideCardState)
 import Engineering.Helpers.Commons (getCurrentUTC)
 import Data.Maybe (Maybe(..))
 import MerchantConfig.DefaultConfig as DC
 import Foreign.Object (empty)
+import Constants.Configs (dummyPrice, dummyDistance)
 
 initData :: DriverEarningsScreenState
 initData =
@@ -46,43 +47,7 @@ initData =
       , weeklyEarningData: []
       , anyRidesAssignedEver: false
       , rideHistoryItems: []
-      , selectedRideHistoryItem: {
-            date : "",
-            time : "",
-            total_amount : 0,
-            card_visibility : "",
-            shimmer_visibility : "",
-            rideDistance : "",
-            status : "",
-            vehicleModel : "",
-            shortRideId : "",
-            vehicleNumber : "",
-            driverName : "",
-            driverSelectedFare : 0,
-            vehicleColor : "",
-            id : "",
-            updatedAt : "",
-            source : "",
-            destination : "",
-            vehicleType : "",
-            riderName : "",
-            customerExtraFee : Nothing,
-            purpleTagVisibility : false,
-            gotoTagVisibility : false,
-            spLocTagVisibility : false,
-            specialZoneLayoutBackground : "",
-            specialZoneImage : "",
-            specialZoneText : "",
-            specialZonePickup : false,
-            tripType : OneWay,
-            tollCharge : 0.0,
-            rideType : "",
-            tripStartTime : Nothing,
-            tripEndTime : Nothing,
-            acRide : Nothing,
-            vehicleServiceTier : ""
-        , parkingCharge : 0.0
-        }
+      , selectedRideHistoryItem: dummyIndividualRideCard
       , logField : empty
       }
   , props:
@@ -105,8 +70,10 @@ initData =
           { fromDate: ""
           , toDate: ""
           , totalEarnings: 0
+          , totalEarningsWithCurrency: dummyPrice
           , totalRides: 0
           , totalDistanceTravelled: 0
+          , totalDistanceTravelledWithUnit: dummyDistance
           }
       , currWeekData: []
       , startDate: ""
@@ -129,3 +96,45 @@ initData =
   }
 
 dummyDateItem = { date: 0, isInRange: false, isStart: false, isEnd: false, utcDate: "", shortMonth: "", year: 0, intMonth: 0 }
+
+dummyIndividualRideCard :: IndividualRideCardState
+dummyIndividualRideCard = {
+    date : "",
+    time : "",
+    total_amount : 0,
+    total_amount_with_currency : dummyPrice,
+    card_visibility : "",
+    shimmer_visibility : "",
+    rideDistance : "",
+    rideDistanceWithUnit : dummyDistance,
+    status : "",
+    vehicleModel : "",
+    shortRideId : "",
+    vehicleNumber : "",
+    driverName : "",
+    driverSelectedFare : 0,
+    vehicleColor : "",
+    id : "",
+    updatedAt : "",
+    source : "",
+    destination : "",
+    vehicleType : "",
+    riderName : "",
+    customerExtraFee : Nothing,
+    purpleTagVisibility : false,
+    gotoTagVisibility : false,
+    spLocTagVisibility : false,
+    specialZoneLayoutBackground : "",
+    specialZoneImage : "",
+    specialZoneText : "",
+    specialZonePickup : false,
+    tripType : OneWay,
+    tollCharge : 0.0,
+    tollChargeWithCurrency : dummyPrice,
+    rideType : "",
+    tripStartTime : Nothing,
+    tripEndTime : Nothing,
+    acRide : Nothing,
+    vehicleServiceTier : "",
+    parkingCharge: 0.0
+}

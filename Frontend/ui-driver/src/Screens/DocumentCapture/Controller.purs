@@ -17,7 +17,9 @@ module Screens.DocumentCaptureScreen.Controller where
 
 import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import Prelude (class Show, pure, unit, bind, discard, ($), (/=), (==), void, (<>))
+import Components.PrimaryEditText as PrimaryEditText
+import Components.MobileNumberEditor as MobileNumberEditor
+import Prelude
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -31,7 +33,7 @@ import Effect.Uncurried (runEffectFn4)
 import Engineering.Helpers.Commons as EHC
 import Components.PopUpModal.Controller as PopUpModal
 import Data.String as DS
-import Data.Maybe (Maybe(..), isNothing)
+import Data.Maybe (Maybe(..), isNothing, fromMaybe)
 import Components.OptionsMenu as OptionsMenu
 import Services.Config as SC
 import Components.BottomDrawerList as BottomDrawerList
@@ -39,6 +41,11 @@ import Screens.Types as ST
 import Helpers.Utils as HU
 import Effect.Unsafe (unsafePerformEffect)
 import Storage (KeyStore(..), getValueToLocalStore)
+import Mobility.Prelude
+import Common.Types.App (MobileNumberValidatorResp(..)) as MVR
+import ConfigProvider
+import Engineering.Helpers.Utils (mobileNumberValidator, mobileNumberMaxLength)
+import Debug
 
 instance showAction :: Show Action where
   show _ = ""
@@ -58,19 +65,70 @@ data Action = PrimaryButtonAC PrimaryButtonController.Action
             | NoAction
             | ChangeVehicleAC PopUpModal.Action
             | BottomDrawerListAC BottomDrawerList.Action
-            | WhatsAppClick
+            | WhatsAppClick Boolean
+            | SSNPEAC PrimaryEditText.Action
+            | FirstNameEditText PrimaryEditText.Action
+            | LastNameEditText PrimaryEditText.Action
+            | MobileEditText PrimaryEditText.Action
+            | KeyboardCallback String
+            | MobileNumberEditText MobileNumberEditor.Action
+            | CallBackOpenCamera
+            | UpdateShouldGoBack
+            | PreviewSampleImage String
+            | EmailEditText PrimaryEditText.Action
 
 data ScreenOutput = GoBack 
                   | UploadAPI DocumentCaptureScreenState
                   | LogoutAccount
                   | SelectLang DocumentCaptureScreenState
                   | ChangeVehicle DocumentCaptureScreenState
+                  | UpdateSSN DocumentCaptureScreenState
+                  | UpdateProfile DocumentCaptureScreenState
+                  | OpenCamera DocumentCaptureScreenState
 
 eval :: Action -> DocumentCaptureScreenState -> Eval Action ScreenOutput DocumentCaptureScreenState
 
-eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = continueWithCmd state [do
-  _ <- liftEffect $ JB.uploadFile false
-  pure NoAction]
+eval CallBackOpenCamera state = updateAndExit state $ OpenCamera state
+
+eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = 
+  if state.props.isSSNView 
+    then updateAndExit state $ UpdateSSN state
+    else if state.props.isProfileView
+      then
+        case state.data.firstName, state.data.mobileNumber, state.data.email of
+          Nothing, _, _ -> do
+            _ <- pure $ JB.toggleBtnLoader "" false
+            continue state{props{isValidFirstName = false}}
+          Just name, Nothing, Just email -> do
+            let isValidFirstName = (DS.length name) > 2 
+                isValidEmail = JB.validateEmail email
+                isValid = isValidFirstName && isValidEmail
+                newState = state{props{isValidEmail = isValidEmail, isValidFirstName = isValidFirstName}}
+            if isValid
+              then updateAndExit state $ UpdateProfile newState 
+              else do
+                _ <- pure $ JB.toggleBtnLoader "" false
+                continue newState
+          Just name, Just mobileNumber, Nothing -> do 
+            let config = getAppConfig appConfig
+                validatorResp = mobileNumberValidator config.defaultCountryCodeConfig.countryCode config.defaultCountryCodeConfig.countryShortCode mobileNumber
+                isValidFirstName = (DS.length name) > 2 
+                isValid = isValidFirstName && (validatorResp == MVR.Valid)
+            let newState = state{props{isValidMobileNumber = validatorResp == MVR.Valid, isValidFirstName = isValidFirstName}}
+            if isValid 
+              then updateAndExit state $ UpdateProfile newState 
+              else do
+                _ <- pure $ JB.toggleBtnLoader "" false
+                continue newState
+          _, _, _ -> continue state
+      else
+        continueWithCmd state [do
+          JB.uploadFile (state.data.docType == ST.PROFILE_PHOTO)
+          pure $ UpdateShouldGoBack ]
+
+eval UpdateShouldGoBack state = continue state {props { shouldGoBack = state.data.docType /= ST.PROFILE_PHOTO }}
+
+eval (PrimaryButtonAC PrimaryButtonController.NoAction) state = continue state
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue state {props { menuOptions = true }}
 
@@ -92,6 +150,8 @@ eval (ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionCont
     void $ liftEffect $ JB.uploadFile false
     pure NoAction]
 
+eval (ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionController (PrimaryButtonController.NoAction))) state = continue state
+
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
@@ -104,6 +164,8 @@ eval BackPressed state =
   else if state.props.confirmChangeVehicle then continue state{props{confirmChangeVehicle = false}}
   else if state.props.menuOptions then continue state{props{menuOptions = false}} 
   else if state.props.contactSupportModal == ST.SHOW then continue state { props { contactSupportModal = ST.ANIMATING}}
+  else if state.props.previewSampleImage then continue state { props {previewSampleImage = false}}
+  else if not state.props.shouldGoBack then continue state {props { shouldGoBack = true}}
   else exit $ GoBack
 
 eval (OptionsMenuAction OptionsMenu.BackgroundClick) state = continue state{props{menuOptions = false}}
@@ -129,21 +191,76 @@ eval (BottomDrawerListAC BottomDrawerList.OnAnimationEnd) state = continue state
 
 eval (BottomDrawerListAC (BottomDrawerList.OnItemClick item)) state = do
   case item.identifier of
-    "whatsapp" -> continueWithCmd state [pure WhatsAppClick]
+    "whatsapp" -> continueWithCmd state [pure $ WhatsAppClick false]
+    "email" -> continueWithCmd state [pure $ WhatsAppClick true]
     "call" -> do
                 void $ pure $ unsafePerformEffect $ HU.contactSupportNumber ""
                 continue state
     _ -> continue state
 
-eval WhatsAppClick state = continueWithCmd state [do
+eval (PreviewSampleImage imgUrl) state = continue state {props {previewSampleImage = true, previewImgUrl = imgUrl}}
+
+eval (WhatsAppClick isMail) state = continueWithCmd state [do
   let supportPhone = state.data.cityConfig.registration.supportWAN
       phone = "%0APhone%20Number%3A%20"<> getValueToLocalStore MOBILE_NUMBER_KEY
       dlNumber = getValueToLocalStore ENTERED_DL
       rcNumber = getValueToLocalStore ENTERED_RC
       dl = if (dlNumber /= "__failed") then ("%0ADL%20Number%3A%20"<> dlNumber) else ""
       rc = if (rcNumber /= "__failed") then ("%0ARC%20Number%3A%20"<> rcNumber) else ""
-  void $ JB.openUrlInApp $ "https://wa.me/" <> supportPhone <> "?text=Hi%20Team%2C%0AI%20would%20require%20help%20in%20onboarding%20%0A%E0%A4%AE%E0%A5%81%E0%A4%9D%E0%A5%87%20%E0%A4%AA%E0%A4%82%E0%A4%9C%E0%A5%80%E0%A4%95%E0%A4%B0%E0%A4%A3%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B8%E0%A4%B9%E0%A4%BE%E0%A4%AF%E0%A4%A4%E0%A4%BE%20%E0%A4%95%E0%A5%80%20%E0%A4%86%E0%A4%B5%E0%A4%B6%E0%A5%8D%E0%A4%AF%E0%A4%95%E0%A4%A4%E0%A4%BE%20%E0%A4%B9%E0%A5%8B%E0%A4%97%E0%A5%80" <> phone <> dl <> rc
+      url = if isMail then "mailto:" <> state.data.cityConfig.supportMail else "https://wa.me/" <> supportPhone <> "?text=Hi%20Team%2C%0AI%20would%20require%20help%20in%20onboarding%20%0A%E0%A4%AE%E0%A5%81%E0%A4%9D%E0%A5%87%20%E0%A4%AA%E0%A4%82%E0%A4%9C%E0%A5%80%E0%A4%95%E0%A4%B0%E0%A4%A3%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B8%E0%A4%B9%E0%A4%BE%E0%A4%AF%E0%A4%A4%E0%A4%BE%20%E0%A4%95%E0%A5%80%20%E0%A4%86%E0%A4%B5%E0%A4%B6%E0%A5%8D%E0%A4%AF%E0%A4%95%E0%A4%A4%E0%A4%BE%20%E0%A4%B9%E0%A5%8B%E0%A4%97%E0%A5%80" <> phone <> dl <> rc
+  void $ if isMail then JB.openUrlInMailApp url else JB.openUrlInApp $ url
   pure NoAction
   ]
 
+eval (SSNPEAC (PrimaryEditText.TextChanged id val)) state = do
+  if (DS.length val) == 9 then 
+      void $ pure $ JB.hideKeyboardOnNavigation true 
+      else pure unit
+  continue state {data{ssn = DS.trim val}}
+eval (FirstNameEditText (PrimaryEditText.TextChanged id val)) state = do
+  continue state{data{firstName = strToMaybe (DS.trim val)}, props{isValidFirstName = true, setDefault = false}}
+
+eval (LastNameEditText (PrimaryEditText.TextChanged id val)) state = do
+  continue state{data{lastName = strToMaybe (DS.trim val)}, props{setDefault = false}}
+
+eval (MobileEditText (PrimaryEditText.TextChanged id newVal)) state = do
+  let config = getAppConfig appConfig
+  _ <- if DS.length newVal ==  mobileNumberMaxLength config.defaultCountryCodeConfig.countryShortCode then do
+            pure $ JB.hideKeyboardOnNavigation true
+            else pure unit
+  let validatorResp = mobileNumberValidator config.defaultCountryCodeConfig.countryCode config.defaultCountryCodeConfig.countryShortCode newVal
+  continue  state { props = state.props { isValidMobileNumber = isValidMobileNumber validatorResp }
+                                        , data = state.data { mobileNumber = if validatorResp == MVR.MaxLengthExceeded then state.data.mobileNumber else strToMaybe newVal}}
+
+eval (EmailEditText (PrimaryEditText.TextChanged id newVal)) state = do
+  let config = getAppConfig appConfig
+      validatorResp = mobileNumberValidator config.defaultCountryCodeConfig.countryCode config.defaultCountryCodeConfig.countryShortCode newVal
+      email = strToMaybe (DS.trim newVal)
+  continue  state { data { email = email}, props {isValidEmail = JB.validateEmail $ fromMaybe "" email}}
+
+eval (KeyboardCallback event) state
+  | event == "onKeyboardOpen" && (EHC.os == "IOS") =
+    if state.props.isProfileView then do
+      continueWithCmd state
+        [ do 
+          void $ JB.scrollToEnd (EHC.getNewIDWithTag "DocumentCaptureScrollView") true
+          pure NoAction
+        ]
+    else
+      update state
+  | otherwise = update state
+
+eval (MobileNumberEditText (MobileNumberEditor.TextChanged valId newVal)) state = do
+  let config = getAppConfig appConfig
+  _ <- if DS.length newVal ==  mobileNumberMaxLength config.defaultCountryCodeConfig.countryShortCode then do
+            pure $ JB.hideKeyboardOnNavigation true
+            else pure unit
+  let validatorResp = mobileNumberValidator config.defaultCountryCodeConfig.countryCode config.defaultCountryCodeConfig.countryShortCode newVal
+  continue  state { props = state.props { isValidMobileNumber = not (isValidMobileNumber validatorResp) }
+                                        , data = state.data { mobileNumber = if validatorResp == MVR.MaxLengthExceeded then state.data.mobileNumber else strToMaybe newVal}}
+
 eval _ state = update state
+
+
+isValidMobileNumber :: MVR.MobileNumberValidatorResp -> Boolean 
+isValidMobileNumber resp = (resp == MVR.ValidPrefix || resp == MVR.Valid)

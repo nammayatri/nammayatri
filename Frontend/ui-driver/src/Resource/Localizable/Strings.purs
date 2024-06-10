@@ -56,16 +56,7 @@ getStringFromConfigOrLocal language key =
     Nothing    -> getStringFromLocal language key
 
 getStringFromLocal :: String -> STR -> String
-getStringFromLocal language key = 
-  case language of
-    "BN_IN" -> getBN key
-    "HI_IN" -> getHI key
-    "KN_IN" -> getKN key
-    "ML_IN" -> getML key
-    "TA_IN" -> getTA key
-    "TE_IN" -> getTE key
-    "FR_FR" -> getFR key
-    _       -> getEN key
+getStringFromLocal language key = getEN key -- Temporary need to refactor strings
 
 getVarString :: STR -> Array String -> String
 getVarString key vals = getStringWithVar (getString key) vals

@@ -15,11 +15,12 @@
 module Engineering.Helpers.Utils where
 
 import Prelude
-import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, GlobalPayload(..), MobileNumberValidatorResp(..), ModifiedCalendarObject, Payload(..), LazyCheck(..))
+import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, GlobalPayload(..), MobileNumberValidatorResp(..), ModifiedCalendarObject, Payload(..), LazyCheck(..), Currency(..), Price, Distance(..), DistanceUnit(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Data.Either (Either(..), hush)
 import Data.Function.Uncurried (Fn2, runFn2, Fn3, Fn1)
+import Data.Int (floor)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.String (length, trim, toLower)
 import Data.Maybe (Maybe(..))
@@ -34,7 +35,7 @@ import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (EffectFn1, mkEffectFn1, runEffectFn1)
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Engineering.Helpers.Commons (flowRunner, liftFlow, os)
+import Engineering.Helpers.Commons (flowRunner, liftFlow, os, formatCurrencyWithCommas)
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (Foreign, decode, decodeJSON, encodeJSON)
@@ -61,9 +62,9 @@ import Data.Int as DI
 import Data.Number.Format (fixed, toStringWith)
 
 -- Common Utils
-foreign import reboot :: Effect Unit
+foreign import reboot :: EffectFn1 String Unit
 
-foreign import showSplash :: Effect Unit
+foreign import showSplash :: EffectFn1 String Unit
 
 ifelse :: forall a. Boolean -> a -> a -> a
 ifelse p a b = if p then a else b
@@ -168,9 +169,12 @@ saveObject objName obj =
 foreign import getWeeksInMonth :: Int -> Int -> Array CalendarModalWeekObject
 
 initializeCalendar :: Boolean -> ModifiedCalendarObject
-initializeCalendar selectTodaysDate =
-  let currentDay = getCurrentDay true
-      weeks = getWeeksInMonth currentDay.year currentDay.intMonth
+initializeCalendar selectTodaysDate = initializeCalendarWithDay (getCurrentDay true) selectTodaysDate
+
+
+initializeCalendarWithDay ::  CalendarModalDateObject -> Boolean -> ModifiedCalendarObject
+initializeCalendarWithDay currentDay selectTodaysDate = 
+  let weeks = getWeeksInMonth currentDay.year currentDay.intMonth
   in if selectTodaysDate 
        then selectSingleCalendarDate currentDay Nothing Nothing weeks
        else 
@@ -181,6 +185,7 @@ initializeCalendar selectTodaysDate =
          }
 
 foreign import getCurrentDay :: Boolean -> CalendarModalDateObject
+foreign import getCurrentDayFromDate :: String -> Boolean -> CalendarModalDateObject
 
 foreign import decrementMonth :: Int -> Int -> CalendarModalDateObject
 
@@ -341,6 +346,7 @@ cityCodeMap =
   , Tuple "std:0824" "mangalore"
   , Tuple "std:08472" "gulbarga"
   , Tuple "std:08200" "udupi"
+  , Tuple "std:0820" "minneapolis"
   ]
 
 getCityFromCode :: String -> String
@@ -453,11 +459,47 @@ formatNumber amount decimalPlaces = case (DI.fromNumber amount),decimalPlaces  o
                                       Nothing, Just decimalPlace -> toStringWith (fixed decimalPlace) amount
                                       _,_ -> show amount
                                       
-                                
-        
+                                   
 formatMinIntoHoursMins :: Int -> String
 formatMinIntoHoursMins mins = 
   let 
     hours = mins / 60
     minutes = mins `mod` 60
   in (if hours < 10 then "0" else "") <> show hours <> " : " <> (if minutes < 10 then "0" else "") <> show minutes <> " hr"
+
+intPriceToBeDisplayed :: Price -> Boolean -> String
+intPriceToBeDisplayed price formatCurrency = case price.currency of
+  INR -> "₹" <> value
+  USD -> "$" <> value
+  EUR -> "€" <> value
+  _ -> show price.currency <> show value
+  where
+    value = if formatCurrency then formatCurrencyWithCommas (show $ floor price.amount) else show $ floor price.amount
+
+priceToBeDisplayed :: Price -> Boolean -> String
+priceToBeDisplayed price formatCurrency = case price.currency of
+  INR -> "₹" <> value
+  USD -> "$" <> value
+  EUR -> "€" <> value
+  _ -> show price.currency <> show value
+  where
+    value = if formatCurrency then formatCurrencyWithCommas (getFixedTwoDecimals price.amount) else getFixedTwoDecimals price.amount 
+
+distanceTobeDisplayed :: Distance -> Boolean -> Boolean -> String
+distanceTobeDisplayed (Distance distance) transformToKm formatDistance = case distance.unit of
+  Meter -> if transformToKm then if distance.value < 1000.0 then getFixedTwoDecimals distance.value <> " m" else formatCurrencyWithCommas (getFixedTwoDecimals $ distance.value / 1000.0) <> " km" else formatCurrencyWithCommas (getFixedTwoDecimals $ distance.value) <> " m"
+  Mile -> value <> " mi"
+  Kilometer -> value <> " km"
+  Yard -> value <> " ya"
+  _ -> value <> " " <> show distance.unit
+  where value = if formatDistance then formatCurrencyWithCommas (getFixedTwoDecimals distance.value) else getFixedTwoDecimals distance.value 
+
+intDistanceTobeDisplayed :: Distance -> Boolean -> Boolean -> String
+intDistanceTobeDisplayed (Distance distance) transformToKm formatDistance = case distance.unit of
+  Meter -> if transformToKm then if distance.value < 1000.0 then show (floor distance.value) <> " m" else formatCurrencyWithCommas (show $ floor $ distance.value / 1000.0) <> " km" else formatCurrencyWithCommas (show $ floor distance.value) <> " m"
+  Mile -> value <> " mi"
+  Kilometer -> value <> " km"
+  Yard -> value <> " ya"
+  _ -> value <> " " <> show distance.unit
+  where value = if formatDistance then formatCurrencyWithCommas (show $ floor distance.value) else show $ floor distance.value 
+  

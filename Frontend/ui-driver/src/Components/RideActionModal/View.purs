@@ -33,7 +33,8 @@ import Data.Tuple
 import Debug (spy)
 import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag, convertUTCtoISC)
+import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag, safeMarginBottomWithDefault, os, convertUTCtoISC)
+import Engineering.Helpers.Utils (intPriceToBeDisplayed, distanceTobeDisplayed)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getRideLabelData, getRequiredTag, getCurrentUTC, fetchImage, FetchImageFrom(..), dummyLabelConfig)
@@ -74,6 +75,7 @@ view push config = do
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
+    , padding $ PaddingBottom $ if os == "IOS" then safeMarginBottomWithDefault 24 else 0
     ][linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -112,7 +114,7 @@ messageButton push config =
   , margin $ MarginLeft 16
   , background if config.bookingFromOtherPlatform then Color.grey700 else Color.white900
   , stroke if config.bookingFromOtherPlatform then "1,"<> Color.grey900 else "1,"<> Color.black500
-  , cornerRadius 30.0
+  , cornerRadius 26.0
   , afterRender push $ const $ LoadMessages
   , onClick (\action -> if config.bookingFromOtherPlatform
                           then void $ pure $ JB.toast $ getString SOME_FEATURES_ARE_NOT_AVAILABLE_FOR_THIRD_PARTY_RIDES
@@ -126,20 +128,8 @@ messageButton push config =
       ]
   ]
   where 
-    visibility' = boolToVisibility $ (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer || config.rideType == ST.Rental ) && checkVersionForChat (getCurrentAndroidVersion (getMerchant FunctionCall))
+    visibility' = boolToVisibility $ (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer || config.rideType == ST.Rental )
 
-getCurrentAndroidVersion :: Merchant -> Int
-getCurrentAndroidVersion merchant =
-  case merchant of
-    NAMMAYATRI -> 54
-    YATRI -> 47
-    YATRISATHI -> 1
-    _ -> 1
-
-checkVersionForChat :: Int -> Boolean
-checkVersionForChat reqVersion =
-  let currVersion = unsafePerformEffect getVersionCode
-    in currVersion > reqVersion
 
 callButton :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 callButton push config =
@@ -152,7 +142,7 @@ callButton push config =
   , margin $ MarginLeft 8
   , background Color.white900
   , stroke $ "1,"<> Color.black500
-  , cornerRadius 30.0
+  , cornerRadius 26.0
   , alpha if config.accessibilityTag == Maybe.Just HEAR_IMPAIRMENT then 0.5 else 1.0
   , visibility $ boolToVisibility $ config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer || config.rideType == ST.Rental
   , onClick push (const $ CallCustomer)
@@ -319,10 +309,10 @@ openGoogleMap push config =
   ][  linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , background Color.blue900
+      , background config.appConfig.rideActionModelConfig.mapBackground
       , padding $ Padding 24 16 24 16
       , margin $ MarginRight 16
-      , cornerRadius 30.0
+      , cornerRadius 26.0
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const OnNavigate)
@@ -355,7 +345,7 @@ rideActionDataView push config =
     ][  linearLayout
           [ width (V 34)
           , height (V 4)
-          , cornerRadius 4.0
+          , cornerRadius 2.0
           , background Color.black500
           ][]
       , customerNameView push config
@@ -381,10 +371,9 @@ totalDistanceView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (
 totalDistanceView push config =
   linearLayout
     [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , gravity LEFT
     , orientation VERTICAL
-    , weight 1.0
+    , width WRAP_CONTENT
+    , padding $ PaddingHorizontal 10 10
     ][ textView $
        [ height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -396,51 +385,43 @@ totalDistanceView push config =
       , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text config.totalDistance
+        , text $ distanceTobeDisplayed config.totalDistanceWithUnit true false
         , color Color.black900
         , ellipsize true
         , singleLine true
         ] <> FontStyle.body11 TypoGraphy
     ]
 
-pickUpDistance :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-pickUpDistance push config =
+pickUpDistance :: forall w. (Action -> Effect Unit) -> Config -> Boolean -> PrestoDOM (Effect Unit) w
+pickUpDistance push config vis =
   linearLayout
     [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , visibility $ boolToVisibility $ ( config.distance /= 0 && not (config.currentStage == RideStarted) )
+    , weight 1.0
+    , orientation VERTICAL
+    , padding $ PaddingLeft 4
+    , visibility $ boolToVisibility vis
     ]
-    [ separator true
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , gravity RIGHT
-        , orientation VERTICAL
-        , weight 1.0
-        , padding $ PaddingLeft 4
-        ]
-        [ textView
-            $ [ height WRAP_CONTENT
-              , width WRAP_CONTENT
-              , text $ getString PICK_UP
-              , color Color.black650
-              , ellipsize true
-              , singleLine true
-              , margin $ MarginLeft 10
-              
-              ]
-            <> FontStyle.body1 TypoGraphy
-        , textView
-            $ [ height WRAP_CONTENT
-              , width WRAP_CONTENT
-              , text $ pickupDistanceText
-              , color Color.black900
-              , ellipsize true
-              , singleLine true
-              ,margin $ MarginLeft 20
-              ]
-            <> FontStyle.body11 TypoGraphy
-        ]
+    [ textView
+        $ [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $ getString PICK_UP
+          , color Color.black650
+          , ellipsize true
+          , singleLine true
+          , margin $ MarginLeft 10
+          
+          ]
+        <> FontStyle.body1 TypoGraphy
+    , textView
+        $ [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $ pickupDistanceText
+          , color Color.black900
+          , ellipsize true
+          , singleLine true
+          ,margin $ MarginLeft 20
+          ]
+        <> FontStyle.body11 TypoGraphy
     ]
   where
   pickupDistanceText =  fromMetersToKm config.distance
@@ -643,19 +624,25 @@ endRide push config =
 cancelRide :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 cancelRide push config =
   linearLayout
-  [ width MATCH_PARENT
+  [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , gravity CENTER
   , background Color.white900
   , visibility if config.startRideActive then VISIBLE else GONE
-  , padding $ PaddingBottom 16
-  ][  textView (
+  , onClick push (const CancelRide)
+  , padding $ Padding 16 8 16 24
+  ][  imageView 
+      [ width $ V 20
+      , height $ V 20
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close_grey" 
+      , visibility $ boolToVisibility config.appConfig.rideActionModelConfig.enablePrefixImage
+      ]
+  , textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , padding $ Padding 16 8 16 8
       , text (getString CANCEL_RIDE)
-      , color Color.red
-      , onClick push (const CancelRide)
+      , color config.appConfig.rideActionModelConfig.cancelRideColor
+      , padding $ PaddingLeft 4
       ] <> FontStyle.body1 TypoGraphy
       )
   ]
@@ -688,10 +675,9 @@ estimatedFareView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (
 estimatedFareView push config =
   linearLayout
     [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , gravity LEFT
     , orientation VERTICAL
-    , weight 1.0
+    , width WRAP_CONTENT
+    , padding $ PaddingHorizontal 10 10
     ][ textView $
        [ height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -707,7 +693,7 @@ estimatedFareView push config =
         ][  textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , text $ currency <> (show config.estimatedRideFare)
+            , text $ intPriceToBeDisplayed config.estimatedRideFareWithCurrency true
             , color Color.black900
             , ellipsize true
             , singleLine true
@@ -715,7 +701,7 @@ estimatedFareView push config =
           , if config.waitTimeSeconds > (chargesOb.freeSeconds + 60) then yellowPill push pillText (not config.startRideActive) else linearLayout[visibility GONE][]
         ]
     ]
-    where currency = getCurrency appConfig
+    where currency = HU.getCurrencyForCity (getValueToLocalStore DRIVER_LOCATION)
           pillText = "+" <> currency <> " " <> show (calculateCharges (config.waitTimeSeconds - chargesOb.freeSeconds))
           chargesOb = HU.getChargesOb config.rideType config.cityConfig config.driverVehicle
 
@@ -725,32 +711,34 @@ estimatedFareView push config =
                 waitingCharges = chargesOb.perMinCharges
             in waitingCharges * Int.toNumber min
 
-waitTimeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-waitTimeView push config =
+waitTimeView :: forall w . (Action -> Effect Unit) -> Config -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
+waitTimeView push config considerPickup isWaitTime =
+  let isPickup = considerPickup && config.distance /= 0 && not (config.currentStage == RideStarted)
+  in
    linearLayout
-     [ height WRAP_CONTENT
-     , gravity START
-     , orientation VERTICAL
-     , weight 1.0
-     , visibility if config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered then VISIBLE else GONE
+    [ height WRAP_CONTENT
+      , orientation VERTICAL
+      , visibility $ boolToVisibility $ isPickup || isWaitTime
+      , width WRAP_CONTENT
+      , padding $ PaddingHorizontal 10 10
      ]
      [ linearLayout
          [
           orientation HORIZONTAL
-         ]
+         ]$
          [textView $
         [ height WRAP_CONTENT
          , width $ V 65
-         , text (getString WAIT_TIME) 
-         ,margin $ Margin 20 0 0 0 
+         , text $ getString if isPickup then PICK_UP else WAIT_TIME
+        --  ,margin $ Margin 20 0 0 0 
          , color Color.black650
          , textSize FontSize.a_14
          , ellipsize true
          , singleLine true
          ] <> FontStyle.body1 TypoGraphy
-        ,
-        imageView
-          [ height $ V 18 
+         ] <> if isPickup then [] else [
+          imageView
+            [ height $ V 18 
             , width  $ V 18
             , visibility if config.notifiedCustomer then VISIBLE else GONE
             , onClick push (const WaitingInfo)
@@ -765,25 +753,23 @@ waitTimeView push config =
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , gravity CENTER_VERTICAL
-        ][ textView $
+        ]$[ textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , text if config.waitTimeSeconds > chargesOb.freeSeconds then HU.formatSecIntoMinSecs chargesOb.freeSeconds else HU.formatSecIntoMinSecs config.waitTimeSeconds
+            , text $ secText isPickup
             , color Color.black900
             , ellipsize true
             , textSize FontSize.a_20
             -- ,padding $ Padding 4 0 0 0 
-            ,margin $ Margin 28 0 0 0  
+            -- ,margin $ Margin 28 0 0 0  
             ,singleLine true
             ,fontStyle $ FontStyle.semiBold TypoGraphy
             ]
-            , if config.waitTimeSeconds > chargesOb.freeSeconds then 
-                yellowPill push ("+ " <> HU.formatSecIntoMinSecs (config.waitTimeSeconds - chargesOb.freeSeconds)) false 
-              else linearLayout[visibility GONE][]
-        ]
+        ] <> if isPickup then [] else if config.waitTimeSeconds > chargesOb.freeSeconds then [yellowPill push ("+ " <> HU.formatSecIntoMinSecs (config.waitTimeSeconds - chargesOb.freeSeconds)) false] else []
      ]
      where 
       chargesOb = HU.getChargesOb config.rideType config.cityConfig config.driverVehicle
+      secText isPickup = if isPickup then fromMetersToKm config.distance else if config.waitTimeSeconds > chargesOb.freeSeconds then HU.formatSecIntoMinSecs chargesOb.freeSeconds else HU.formatSecIntoMinSecs config.waitTimeSeconds
 
 yellowPill :: forall w. (Action -> Effect Unit) -> String -> Boolean -> PrestoDOM (Effect Unit) w
 yellowPill push text' showInfo = 
@@ -846,6 +832,8 @@ rideInfoView push config =
 
 rentalRideInfoView :: (Action -> Effect Unit) -> Config -> forall w. Array (PrestoDOM (Effect Unit) w)
 rentalRideInfoView push config = 
+  let isWaitTime = isWaitingTimeStarted config
+  in
   [ linearLayout[
     height WRAP_CONTENT
     , width WRAP_CONTENT
@@ -860,9 +848,8 @@ rentalRideInfoView push config =
     , rentalDurationView push config
   ] 
   <> if config.startRideActive then (
-  if (config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered) then 
-  [  separator true , waitTimeView push config ] else [ 
-     separator true , totalDistanceView push config ]
+      [ separator true
+      , if isWaitTime then waitTimeView push config false isWaitTime else totalDistanceView push config] 
   ) else []
 
 rideTierAndCapacity :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -938,8 +925,11 @@ rideTierAndCapacity push config =
 
 normalRideInfoView :: (Action -> Effect Unit) -> Config -> forall w. Array (PrestoDOM (Effect Unit) w)
 normalRideInfoView push config =
+  let isPickup = config.distance /= 0 && not (config.currentStage == RideStarted)
+      isWaitTime = isWaitingTimeStarted config
+  in
   [ linearLayout
-      [ width MATCH_PARENT
+      [ width $ V $ (screenWidth unit) - 52
       , height WRAP_CONTENT
       , orientation VERTICAL
       ]
@@ -947,20 +937,12 @@ normalRideInfoView push config =
       , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
+          , orientation HORIZONTAL
+          , gravity CENTER_VERTICAL
           ]
           [ estimatedFareView push config
-          
-          , if isWaitingTimeStarted config then  
-                linearLayout
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                ,margin $ MarginHorizontal 5 5
-                ][separator true , waitTimeView push config] else pickUpDistance push config 
-          , linearLayout
-              [ weight 1.0
-              , height MATCH_PARENT
-              ]
-              []
+          , separator $ isPickup || isWaitTime
+          , waitTimeView push config true isWaitTime
           , separator true
           , totalDistanceView push config
           ]
@@ -996,13 +978,15 @@ extraChargesView img txt =
 separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w
 separator visibility' =
   linearLayout
-    [ weight 1.0
-    , height MATCH_PARENT
-    , margin $ MarginHorizontal 5 5
+    [ height MATCH_PARENT
     , visibility if visibility' then VISIBLE else GONE
+    , margin $ MarginHorizontal 5 5
+    -- , weight 1.0
+    , gravity CENTER
     ][ linearLayout
       [ width $ V 1
       , background Color.lightGrey
+      , height $ V $ JB.getHeightFromPercent 5
       , height MATCH_PARENT
       ][]
     ]
@@ -1296,4 +1280,4 @@ stopImageView  config push =
             SeparatorView.view separatorConfig]
     ]
 isWaitingTimeStarted :: Config -> Boolean
-isWaitingTimeStarted config =  config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
+isWaitingTimeStarted config = config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered

@@ -76,7 +76,7 @@ hvConfigs appName = case appName of
 subscriptionConfig :: String -> RCSubscription
 subscriptionConfig key = do
     let conf = getSubsRemoteConfig $ fetchRemoteConfigString key
-    decodeForeignObject conf subscriptionRemoteConfig
+    decodeForeignAny conf subscriptionRemoteConfig
 
 reelsData :: String -> Array ReelItem
 reelsData key = 

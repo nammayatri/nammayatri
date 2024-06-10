@@ -19,4 +19,7 @@
     <string name="please_allow_permission_to_capture_the_image">कृपया छवि को कैप्चर करने के लिए अनुमति दें</string>
     <string name="unable_to_upload_media">मीडिया अपलोड करने में असमर्थ</string>
     <string name="location_is_too_far">स्थान बहुत दूर है!</string>
+    <string name="unable_to_upload_image">छवि अपलोड करने में असमर्थ</string>
+    <string name="take_photo">फोटो खींचे</string>
+    <string name="select_photo">फोटो चुनें</string>
 </resources>

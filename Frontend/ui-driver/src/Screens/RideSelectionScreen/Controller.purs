@@ -16,15 +16,16 @@
 module Screens.RideSelectionScreen.Controller where
 
 import Log
+import Constants.Configs (dummyDistance)
 import Data.Array (length, union, filter, (!!))
 import Data.Int (fromString, toNumber)
 import Data.Maybe (Maybe(..), fromMaybe, isJust,maybe)
 import Data.String (Pattern(..), split)
-import Engineering.Helpers.Commons (strToBool, convertUTCtoISC)
-import Helpers.Utils (parseFloat, setEnabled, setRefreshing)
+import Engineering.Helpers.Commons (strToBool, convertUTCtoISC, getNewIDWithTag)
+import Helpers.Utils (parseFloat, setEnabled, setRefreshing, dummyPriceForCity)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (class Show, bind, discard, map, not, pure, unit, ($), (&&), (+), (/), (/=), (<>), (==), (||))
+import Prelude (class Show, bind, discard, map, not, pure, unit, show, ($), (&&), (+), (/), (/=), (<>), (==), (||))
 import PrestoDOM (Eval, update, ScrollState(..), continue, exit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resource.Constants (decodeAddress, rideTypeConstructor)
@@ -37,6 +38,8 @@ import Components.ErrorModal as ErrorModalController
 import Components.IndividualRideCard.Controller as IndividualRideCardController
 import Components.PrimaryButton as PrimaryButton
 import Helpers.Utils as HU
+import ConfigProvider
+import Storage
 
 instance showAction :: Show Action where
   show _ = ""
@@ -115,7 +118,7 @@ eval (DontKnowRide (PrimaryButton.OnClick)) state = do
 eval (ScrollStateChanged scrollState) state = do
   _ <- case scrollState of
            SCROLL_STATE_FLING ->
-               pure $ setEnabled "2000030" false
+               pure $ setEnabled (getNewIDWithTag "RideSelectionScreenSwipeRefreshLayout") false
            _ ->
                pure unit
   continue state
@@ -131,7 +134,7 @@ eval Loader state = do
 eval (RideHistoryAPIResponseAction rideList) state = do
   let bufferCardDataPrestoList = (rideHistoryListTransformer rideList state.selectedCategory.categoryAction)
   let filteredRideList         = (rideListResponseTransformer rideList state.selectedCategory.categoryAction)
-  _ <- pure $ setRefreshing "2000030" false
+  _ <- pure $ setRefreshing (getNewIDWithTag "RideSelectionScreenSwipeRefreshLayout") false
   let loadBtnDisabled          = length rideList == 0
   continue state {
     shimmerLoader = AnimatedOut
@@ -147,9 +150,7 @@ eval (Scroll value) state = do
   let totalItems     = fromMaybe 0    (fromString (fromMaybe "0"    ((split (Pattern ",")(value))!!2)))
   let canScrollUp    = fromMaybe true (strToBool  (fromMaybe "true" ((split (Pattern ",")(value))!!3)))
   let loadMoreButton = totalItems == (firstIndex + visibleItems) && totalItems /= 0 && totalItems /= visibleItems
-  _ <- if canScrollUp
-       then (pure $ setEnabled "2000030" false)
-       else (pure $ setEnabled "2000030" true)
+  _ <- pure $ setEnabled (getNewIDWithTag "RideSelectionScreenSwipeRefreshLayout") (not canScrollUp)
   continue state { loaderButtonVisibility = loadMoreButton}
 
 eval _ state =
@@ -179,7 +180,7 @@ rideHistoryListTransformer list categoryAction =
                                     "CANCELLED" -> Color.red
                                     _ -> Color.black800
                                  )
-    , total_amount : toPropValue (case (ride.status) of
+    , total_amount : toPropValue $ getCurrency appConfig <> show (case (ride.status) of
                                     "CANCELLED" -> 0
                                     _           -> fromMaybe ride.estimatedBaseFare ride.computedFare
                                  )
@@ -214,11 +215,16 @@ rideListResponseTransformer list categoryAction =
     , shortRideId : ride.shortRideId
     , vehicleColor : ride.vehicleColor
     , rideDistance : parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2
+    , rideDistanceWithUnit : fromMaybe dummyDistance ride.chargeableDistanceWithUnit
     , vehicleModel : ride.vehicleModel
     , total_amount : (case (ride.status) of
                         "CANCELLED" -> 0
                         _ -> fromMaybe ride.estimatedBaseFare ride.computedFare
                      )
+    , total_amount_with_currency : (case (ride.status) of
+                                    "CANCELLED" -> dummyPriceForCity (getValueToLocalStore DRIVER_LOCATION)
+                                    _ -> fromMaybe ride.estimatedBaseFareWithCurrency ride.computedFareWithCurrency
+                                  )
     , vehicleNumber   :  ride.vehicleNumber
     , card_visibility : (case (ride.status) of
                            "CANCELLED" -> "gone"
@@ -238,6 +244,7 @@ rideListResponseTransformer list categoryAction =
     , specialZonePickup : false
     , tripType : rideTypeConstructor ride.tripCategory
     , tollCharge : fromMaybe 0.0 ride.tollCharges
+    , tollChargeWithCurrency : fromMaybe (dummyPriceForCity $ getValueToLocalStore DRIVER_LOCATION) ride.tollChargesWithCurrency
     , rideType : ride.vehicleServiceTierName
     , tripStartTime : ride.tripStartTime
     , tripEndTime : ride.tripEndTime

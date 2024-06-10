@@ -127,6 +127,8 @@ import Timers as TF
 import Data.Ord (abs)
 import DecodeUtil
 import LocalStorage.Cache (getValueFromCache, setValueToCache)
+import Services.API
+
 
 instance showAction :: Show Action where
   show _ = ""
@@ -455,7 +457,11 @@ eval BgLocationAC state = continue state { props { bgLocationPopup = true}}
 
 eval (BgLocationPopupAC PopUpModal.OnButton1Click) state = 
   continueWithCmd state { props { bgLocationPopup = false}} [do
-    void $ JB.requestBackgroundLocation unit
+    if EHC.os == "IOS" then do
+      enabled <- isLocationPermissionEnabled unit
+      if enabled then pure unit
+        else runEffectFn1 JB.openLocationSettings ""
+      else void $ JB.requestBackgroundLocation unit
     pure NoAction
   ]
 
@@ -640,10 +646,10 @@ eval (KeyboardCallback keyBoardState) state = do
   if state.props.currentStage == ST.ChatWithCustomer && isOpen then do
     void $ pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
     continue state
-  else if state.props.enterOtpModal && not isOpen then
+  else if state.props.enterOtpModal && EHC.os /= "IOS" && not isOpen then
     continue state{ props{ rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false } }
   else
-    continue state
+    update state
 
 eval (Notification notificationType) state = do
   _ <- pure $ printLog "notificationType" notificationType
@@ -864,12 +870,12 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone otp)) state = do
           }
         }
       in if state.props.currentStage == ST.RideStarted then
-        updateAndExit newState $ EndRide newState
+        exit $ EndRide newState
       else 
         if state.props.zoneRideBooking then
-          updateAndExit newState $ StartZoneRide newState 
+          exit $ StartZoneRide newState 
         else
-          updateAndExit newState $ StartRide newState
+          exit $ StartRide newState
 
 eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.BackPressed)) state = do
   continue $ state { props = state.props { enterOtpModal = state.props.enterOdometerReadingModal, enterOdometerReadingModal = false,endRideOtpModal = state.props.endRideOdometerReadingModal,endRideOdometerReadingModal = false} }
@@ -919,8 +925,12 @@ eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnSelection key index
   continue state { props = state.props { odometerValue = odometerValue} }
 
 eval (RideActionModalAction (RideActionModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
-eval (RideActionModalAction (RideActionModal.StartRide)) state = do
-  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, enterOdometerFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false, arrivedAtStop = isNothing state.data.activeRide.nextStopAddress } }
+eval (RideActionModalAction (RideActionModal.StartRide)) state = 
+  case state.data.activeRide.enableOtpLessRide of
+    Just true -> continueWithCmd state{props{ enterOtpModal = false, rideOtp = "",enterOtpFocusIndex = 0, enterOdometerFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false, arrivedAtStop = isNothing state.data.activeRide.nextStopAddress}} [ do
+      pure $ InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone "0000")
+    ]
+    _ -> continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, enterOdometerFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false, arrivedAtStop = isNothing state.data.activeRide.nextStopAddress } }
 eval (RideActionModalAction (RideActionModal.EndRide)) state = do
   if state.data.activeRide.tripType == ST.Rental then continue state{props{endRideOtpModal = true,enterOtpFocusIndex = 0, enterOdometerFocusIndex = 0, otpIncorrect = false, rideOtp="",odometerValue=""}, data{route = []}}
   else if state.data.activeRide.tripType == ST.Intercity then continue state { props{ endRideOtpModal = true, enterOtpFocusIndex = 0, otpIncorrect = false, rideOtp = "" } }
@@ -1264,7 +1274,7 @@ eval (SwitchDriverStatus status) state =
           lowDue = state.data.paymentState.totalPendingManualDues >= state.data.subsRemoteConfig.max_dues_limit
           showPopup = state.data.config.subscriptionConfig.enableSubscriptionPopups && (maxDue || lowDue)
           popup = if maxDue then ST.GO_ONLINE_BLOCKER else ST.SOFT_NUDGE_POPUP
-          checkIfLastWasSilent = state.props.driverStatusSet == ST.Silent
+          checkIfLastWasSilent = (getMerchant Common.FunctionCall) == BRIDGE || state.props.driverStatusSet == ST.Silent
       case status of
         ST.Offline -> continue state { props { goOfflineModal = checkIfLastWasSilent, silentPopUpView = not checkIfLastWasSilent }}
         _ -> if showPopup then continue state { props{ subscriptionPopupType = popup }} else exit (DriverAvailabilityStatus state status)
@@ -1593,11 +1603,12 @@ activeRideDetail state (RidesInfo ride) =
               "CANCELLED" -> CANCELLED
               _ -> COMPLETED,
   distance : (toNumber ride.estimatedDistance),
+  distanceWithUnit : ride.estimatedDistanceWithUnit,
   duration : state.data.activeRide.duration,
   tripDuration : ride.estimatedDuration,
   actualRideDuration : ride.actualDuration,
   riderName : fromMaybe "" ride.riderName,
-  estimatedFare : ride.driverSelectedFare + ride.estimatedBaseFare,
+  estimatedFareWithCurrency : {amount : ride.driverSelectedFareWithCurrency.amount + ride.estimatedBaseFareWithCurrency.amount, currency : ride.estimatedBaseFareWithCurrency.currency},
   notifiedCustomer : Array.any (_ == getValueToLocalStore WAITING_TIME_STATUS) [(show ST.PostTriggered), (show ST.Triggered), (show ST.Scheduled)],
   exoPhone : ride.exoPhone,
   waitTimeSeconds :if ride.status == "INPROGRESS" && isTimerValid then waitTime else -1,
@@ -1644,6 +1655,7 @@ activeRideDetail state (RidesInfo ride) =
   acRide : ride.isVehicleAirConditioned,
   bapName : transformBapName $ fromMaybe "" ride.bapName,
   bookingFromOtherPlatform : not ride.isValueAddNP
+, enableOtpLessRide : ride.enableOtpLessRide
 , parkingCharge : fromMaybe 0.0 ride.parkingCharge
 }
   where 
@@ -1733,7 +1745,7 @@ getPeekHeight state =
       density = (runFn1 HU.getDeviceDefaultDensity "")/  defaultDensity
       currentPeekHeight = headerLayout.height  + contentLayout.height + (if RideActionModal.showTag (rideActionModalConfig state) then (labelLayout.height + 6) else 0)
       requiredPeekHeight = ceil (((toNumber currentPeekHeight) /pixels) * density)
-    in if requiredPeekHeight == 0 then 470 else requiredPeekHeight
+    in if EHC.os == "IOS" then currentPeekHeight else if requiredPeekHeight == 0 then 470 else requiredPeekHeight
   
 getDriverSuggestions :: ST.HomeScreenState -> Array String-> Array String
 getDriverSuggestions state suggestions = case (Array.length suggestions == 0) of
@@ -1746,6 +1758,7 @@ getPreviousVersion merchant =
     NAMMAYATRI -> "1.4.8"
     YATRI -> "2.3.0"
     YATRISATHI -> "0.1.8"
+    BRIDGE -> "0.0.0"
     _ -> "100.100.100"
 
 

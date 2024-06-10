@@ -31,6 +31,7 @@ tripDetailsScreen = do
     case act of
         OnSubmit -> App.BackT $ App.BackPoint <$> (pure $ ON_SUBMIT)
         GoToEarning  -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_EARINING)
+        GoToMyRides  -> App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDE_HISTORY_SCREEN)
         GoToHome -> App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME_SCREEN)
         GoToHelpAndSupport -> App.BackT $ App.BackPoint <$> (pure $ OPEN_HELP_AND_SUPPORT)
-        
+        GoToRideCompletedScreen -> App.BackT $ pure App.GoBack

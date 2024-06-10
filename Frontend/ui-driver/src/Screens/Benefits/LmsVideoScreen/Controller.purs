@@ -28,7 +28,7 @@ import JBridge as JB
 import RemoteConfig as RC
 import Components.GenericHeader as GenericHeader
 import Screens.Benefits.LmsVideoScreen.Transformer (transformReelsPurescriptDataToNativeData, buildLmsVideoeRes)
-import Engineering.Helpers.Commons (getNewIDWithTag, flowRunner)
+import Engineering.Helpers.Commons (getNewIDWithTag, flowRunner, jBridgeMethodExists)
 import Debug (spy)
 import Foreign.Generic (encodeJSON)
 import Foreign (Foreign)
@@ -56,11 +56,12 @@ data Action = NoAction
             | GenericHeaderActionController GenericHeader.Action
             | BackPressed
             | TakeQuiz
-            | OpenReelsView Int String
+            | OpenReelsView Int String API.LmsVideoRes
             | GetCurrentPosition String String Foreign Foreign
             | UpdateVideoList API.LmsGetVideosRes
             | ErrorOccuredAction
             | SelectLanguage 
+            | YoutubeVideoStatus String
 
 data ScreenOutput = GoBack ST.LmsVideoScreenState
                   | GoToTakeQuiz ST.LmsVideoScreenState
@@ -72,17 +73,22 @@ eval :: Action -> ST.LmsVideoScreenState -> Eval Action ScreenOutput ST.LmsVideo
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = exit $ GoToBenefitsScreen state
 
-eval BackPressed state = exit $ GoToBenefitsScreen state
+eval BackPressed state = if state.data.ytVideo.enable then do
+  void $ pure $ JB.releaseYoutubeView unit
+  continue state{data{ytVideo {enable = false}}} 
+  else exit $ GoToBenefitsScreen state
 
 eval TakeQuiz state = exit $ GoToTakeQuiz state {props {isFetchingQuiz = true}}
 
-eval (OpenReelsView index videoStatus) state = do
-  void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "true"
-  continueWithCmd state{props{showShimmer = true}} [ do
-    push <-  getPushFn Nothing "LmsVideoScreen"
-    void $ runEffectFn5 JB.addReels (encodeJSON (transformReelsPurescriptDataToNativeData $ if videoStatus == "PENDING" then state.data.videosScreenData.pending else state.data.videosScreenData.completed)) index (getNewIDWithTag "") push $ GetCurrentPosition
-    pure NoAction
-  ]
+eval (OpenReelsView index videoStatus (API.LmsVideoRes video)) state = do
+  if jBridgeMethodExists "addReels" then do
+    void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "true"
+    continueWithCmd state{props{showShimmer = true}} [ do
+      push <-  getPushFn Nothing "LmsVideoScreen"
+      void $ runEffectFn5 JB.addReels (encodeJSON (transformReelsPurescriptDataToNativeData $ if videoStatus == "PENDING" then state.data.videosScreenData.pending else state.data.videosScreenData.completed)) index (getNewIDWithTag "LmsYoutubeView") push $ GetCurrentPosition
+      pure NoAction
+    ]
+  else continue state{data{ytVideo {videoId = "w8rH5IjJvg0", enable = true}}}
 
 eval (UpdateVideoList res) state = let generatedData = buildLmsVideoeRes res in continue state {props {showShimmer = false, showError = null generatedData.pending && null generatedData.completed}, data {videosScreenData = buildLmsVideoeRes res}}
 

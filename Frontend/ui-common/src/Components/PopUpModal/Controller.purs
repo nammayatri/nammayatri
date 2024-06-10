@@ -28,6 +28,7 @@ import Data.Maybe as Mb
 import Components.TipsView as TipsView
 import JBridge
 import Effect (Effect)
+import ConfigProvider
 
 data Action = OnButton1Click
             | OnButton2Click
@@ -248,7 +249,9 @@ type PopUpHeaderConfig = {
   }
 
 config :: Config
-config = {
+config = 
+  let config = getAppConfig appConfig
+  in {
   optionButtonOrientation: "HORIZONTAL"
   , showRetry : true
   , activeIndex : 1
@@ -384,10 +387,10 @@ config = {
     , rippleColor : Color.rippleShade
     }
   , option2 : {
-      background : Color.black900
+      background : config.primaryBackground
     , text : "Button2"
-    , strokeColor : Color.black900
-    , color : Color.yellow900
+    , strokeColor : config.primaryBackground
+    , color : config.primaryTextColor
     , visibility : true
     , margin : (Margin 12 0 0 16)
     , gravity : CENTER

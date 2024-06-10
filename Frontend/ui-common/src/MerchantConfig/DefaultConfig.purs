@@ -1,13 +1,22 @@
 module Common.DefaultConfig where
 
 import Common.Types.Config
+import Common.Types.App
 
 defaultColors :: Colors
 defaultColors = {
     black800 : "#454545"
   , black900 : "#2C2F3A"
+  , green700 : "#268C6E"
   , red : "#E55454"
   }
+
+countryCode ::  CountryCodeObj
+countryCode = {
+        countryName : "India" 
+      , countryCode  : "+91" 
+      , countryShortCode : "IN"
+      }
 
 defaultAppData :: AppDatas
 defaultAppData =  {
@@ -23,6 +32,7 @@ defaultPrimaryButtonConfig =  {
     isGradient : false
   , gradient : []
   , loaderUrl : "primary_button_loader.json"
+  , forceToUseRemote : false
   }
 
 defaultFontConfig :: FontConfig
@@ -49,12 +59,14 @@ defaultNavigationAppConfig = {
       , packageName : "com.google.android.apps.maps"
       , walkQuery : "google.navigation:q=%f,%f&mode=w"
       , directionQuery : "http://maps.google.com?saddr=&daddr=%f,%f&dirflg=d"
+      , fallbackQuery : "google.navigation:q=%f,%f"
       }
     , ios : {
-        query : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=d"
-      , walkQuery : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=w"
-      , directionQuery : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=d"
-      , packageName : ""
+        query : "comgooglemaps://?saddr=&daddr=%@,%@"
+      , walkQuery : "comgooglemaps://?saddr=&daddr=%@,%@&directionsmode=walking"
+      , directionQuery : "comgooglemaps://?saddr=&daddr=%@,%@&directionsmode=walking"
+      , packageName : "comgooglemaps://"
+      , fallbackQuery : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=d"
       }
     }
 

@@ -22,31 +22,33 @@ if (!window.__OS) {
   window.__OS = getOS();
 }
 
-const blackListFunctions = ["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "addToLogList", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds"]
 
-if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){  
-  Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
-    return blackListFunctions.indexOf(fnName) == -1
-  }).forEach(fnName => {
-      window.JBridgeProxy = window.JBridgeProxy || {};
-      window.JBridgeProxy[fnName] = window.JBridge[fnName];
-      window.JBridge[fnName] = function () {
-        let params = Object.values(arguments).join(", ");
-        if (fnName === "callAPI") {
-          params = arguments[1].split("/").splice(6).join("/");
-        }
-        let shouldLog = true;
-        if (window.appConfig) {
-        shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
-        }
-        if (shouldLog) {
-        window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
-        }
-        const result = window.JBridgeProxy[fnName](...arguments);
-        return result;
-      };
-    });
-}
+// Will enable to debug anrs
+// const blackListFunctions = ["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "addToLogList", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds"]
+
+// if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){  
+//   Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
+//     return blackListFunctions.indexOf(fnName) == -1
+//   }).forEach(fnName => {
+//       window.JBridgeProxy = window.JBridgeProxy || {};
+//       window.JBridgeProxy[fnName] = window.JBridge[fnName];
+//       window.JBridge[fnName] = function () {
+//         let params = Object.values(arguments).join(", ");
+//         if (fnName === "callAPI") {
+//           params = arguments[1].split("/").splice(6).join("/");
+//         }
+//         let shouldLog = true;
+//         if (window.appConfig) {
+//         shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
+//         }
+//         if (shouldLog) {
+//         window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
+//         }
+//         const result = window.JBridgeProxy[fnName](...arguments);
+//         return result;
+//       };
+//     });
+// }
 
 function guid() {
   function s4() {
@@ -141,6 +143,26 @@ window.setManualEvents = setManualEvents;
 window.__FN_INDEX = 0;
 window.__PROXY_FN = top.__PROXY_FN || {};
 
+window.storeMerchantId = function (payload) {
+  const clientPaylod = payload ? payload.payload : window.__payload.payload;
+  let clientId = clientPaylod.clientId;
+  if (clientId.includes("_ios")) {
+    clientId = clientId.replace("_ios", "");
+  }
+  if (!clientId.startsWith("mobility") && clientId.includes("consumer")) {
+    let merchant = clientId.replace("mobility", "")
+    merchant = merchant.replace("consumer", "")
+    window.merchantID = merchant.toUpperCase();
+  } else {
+    let merchant = clientId.replace("mobility", "")
+    merchant = merchant.replace("consumer", "")
+    merchant = merchant.toUpperCase();
+    window.merchantID = "MOBILITY_" + merchant.charAt(0) + merchant.charAt(merchant.length - 1);
+  }
+  if (window.merchantID == "YATRI") {
+    window.merchantID = "NAMMAYATRI";
+  }
+}
 const purescript = require("./output/Main");
 // if (window.__OS == "WEB") {
 //   purescript.main();
@@ -177,6 +199,7 @@ function shouldRefresh() {
     )
 }
 
+
 window.onMerchantEvent = function (_event, globalPayload) {
   console.log(globalPayload);
   window.__payload = JSON.parse(globalPayload);
@@ -188,24 +211,7 @@ window.onMerchantEvent = function (_event, globalPayload) {
       "APP_PERF INDEX_BUNDLE_INITIATE_START : ",
       new Date().getTime()
     );
-    let clientId = clientPaylod.clientId;
-    if (clientId.includes("_ios"))
-    {
-      clientId = clientId.replace("_ios","");
-    }
-    if (!clientId.startsWith("mobility") && clientId.includes("consumer")) {
-      let merchant = clientId.replace("mobility","")
-      merchant = merchant.replace("consumer","")
-      window.merchantID = merchant.toUpperCase();
-    } else {
-      let merchant = clientId.replace("mobility","")
-      merchant = merchant.replace("consumer","")
-      merchant = merchant.toUpperCase();
-      window.merchantID = "MOBILITY_" + merchant.charAt(0) + merchant.charAt(merchant.length - 1);
-    }
-    if (window.merchantID == "YATRI") {
-      window.merchantID = "NAMMAYATRI";
-    }
+    window.storeMerchantId(window.__payload)
     console.log("MID",window.merchantID);
     try {
       if (
@@ -400,7 +406,7 @@ if (typeof window.JOS != "undefined") {
   console.error("Calling action DUI_READY");
   if (window.JBridge.emptyCallbackQueue)
     window.JBridge.emptyCallbackQueue()
-  JOS.emitEvent("java")("onEvent")(JSON.stringify({ action: "DUI_READY", service : JOS.self }))()();
+  JOS.emitEvent(JOS.parent)("onEvent")(JSON.stringify({ action: "DUI_READY", service : JOS.self }))()();
 } else {
   console.error("JOS not present")
 }

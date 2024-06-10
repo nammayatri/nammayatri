@@ -16,14 +16,14 @@
 module Screens.DriverProfileScreen.ScreenData where
 
 import Data.Maybe
-
 import Common.Types.App (CheckBoxOptions, LazyCheck(..))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Foreign.Object (empty)
 import Language.Types (STR(..)) as STR
 import ConfigProvider
-import Prelude (class Eq, unit, (<>), (==), (||), (/=))
+import Prelude (class Eq, map, unit, (<>), (==), (||), (/=))
+import Constants.Configs (dummyPrice, dummyDistance)
 import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..))
 import Services.API (GetDriverInfoResp(..), OrganizationInfo(..), DriverGoHomeInfo(..))
 import Screens.Types as ST
@@ -79,6 +79,8 @@ initData =
     autoPayStatus : NO_AUTOPAY,
     analyticsData : {
         totalEarnings : ""
+      , totalEarningsWithCurrency : dummyPrice
+      , bonusEarnedWithCurrency : dummyPrice
       , bonusEarned : ""
       , totalCompletedTrips : 0
       , totalUsersRated : 0
@@ -87,10 +89,12 @@ initData =
       , lastRegistered : ""
       , badges : []
       , missedEarnings : 0
+      , missedEarningsWithCurrency : dummyPrice
       , ridesCancelled : 0
       , cancellationRate : 0
       , totalRidesAssigned : 0
       , totalDistanceTravelled : ""
+      , totalDistanceTravelledWithUnit : dummyDistance
       },
     config
     },
@@ -131,7 +135,9 @@ initData =
     enableGoto : false,
     isRideActive : false,
     canSwitchToRental : Nothing,
-    canSwitchToInterCity : Nothing
+    canSwitchToInterCity : Nothing,
+    startAnim : false,
+    resetAnim : false
    }
 }
 
@@ -141,39 +147,12 @@ initData =
 languagesChoices :: Array CheckBoxOptions
 languagesChoices =
   let config = getAppConfig appConfig
-  in
-  [ { value : "EN_US"
-    , text : "English"
-    , subText : config.engilshInNative
+  in map (\item -> { value : item.value
+    , text : item.name
+    , subText : item.subtitle
     , isSelected : false
-    }
-  , { value: "KN_IN"
-    , text: "ಕನ್ನಡ"
-    , subText : "Kannada"
-    , isSelected : false
-    }
-  , { value: "HI_IN"
-    , text: "हिंदी"
-    , subText : "Hindi"
-    , isSelected : false
-    }
-  , { value: "TA_IN"
-    , text: "தமிழ்"
-    , subText : "Tamil"
-    , isSelected : false
-    }
-  , { value: "TE_IN"
-    , text: "తెలుగు"
-    , subText : "Telugu"
-    , isSelected : false
-    }
-  , { value: "BN_IN"
-    , text: "বাংলা"
-    , subText : "Bangla"
-    , isSelected : false
-    }
-  ]
-
+    }) config.languageList
+ 
 dummyDriverInfo :: GetDriverInfoResp
 dummyDriverInfo = GetDriverInfoResp {
       id                    :  ""
@@ -182,6 +161,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , lastName              :  Nothing 
     , firstName             :  ""
     , mobileNumber          :  Nothing 
+    , email                 :  Nothing
     , active                :  false
     , mode                  :  Nothing
     , onRide                :  false

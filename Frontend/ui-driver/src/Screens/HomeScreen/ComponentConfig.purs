@@ -83,6 +83,7 @@ import DecodeUtil (getAnyFromWindow)
 import Resource.Constants as RC
 import ConfigProvider 
 import Data.Int 
+import Foreign.Object (lookup)
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -95,7 +96,7 @@ rideActionModalConfig state =
   rideActionModalConfig' = config {
     startRideActive = (state.props.currentStage == ST.RideAccepted || (state.props.currentStage == ST.ChatWithCustomer && (Const.getHomeStageFromString $ getValueToLocalStore PREVIOUS_LOCAL_STAGE) /= ST.RideStarted ) ),
     arrivedStopActive = state.props.arrivedAtStop,
-    totalDistance = if state.data.activeRide.distance <= 0.0 then "0.0" else if(state.data.activeRide.distance < 1000.0) then HU.parseFloat (state.data.activeRide.distance) 2 <> " m" else HU.parseFloat((state.data.activeRide.distance / 1000.0)) 2 <> " km",
+    totalDistanceWithUnit = state.data.activeRide.distanceWithUnit,
     customerName = if DS.length (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) < 4
                       then (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) <> " " <> (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 1))
                       else
@@ -116,7 +117,7 @@ rideActionModalConfig state =
       titleText : fromMaybe "" ((DS.split (DS.Pattern ",") stop) DA.!! 0),
       detailText : stop
     }) <$> state.data.activeRide.lastStopAddress,
-    estimatedRideFare = state.data.activeRide.estimatedFare,
+    estimatedRideFareWithCurrency = state.data.activeRide.estimatedFareWithCurrency,
     notifiedCustomer = state.data.activeRide.notifiedCustomer,
     currentStage = state.props.currentStage,
     unReadMessages = state.props.unReadMessages,
@@ -157,7 +158,7 @@ endRidePopUp state = let
     primaryText {text = (getString END_RIDE)},
     secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_END_THE_RIDE)},
     option1 {text = (getString GO_BACK), enableRipple = true},
-    option2 {text = (getString END_RIDE), enableRipple = true}
+    option2 {text = (getString END_RIDE), enableRipple = true, background = state.data.config.primaryBackground, color = state.data.config.primaryTextColor }
   }
 in popUpConfig'
 
@@ -608,9 +609,9 @@ cancelConfirmationConfig state = let
       text = (getString GO_BACK)
     , margin = MarginLeft 12
     , width = V $ (((EHC.screenWidth unit)-92)/2)
-    , color = Color.yellow900
-    , strokeColor = Color.black900
-    , background = Color.black900
+    , color = state.data.config.primaryTextColor
+    , strokeColor = state.data.config.primaryBackground
+    , background = state.data.config.primaryBackground
     , enableRipple = true
     },
     backgroundClickable = false,
@@ -822,27 +823,85 @@ enterOdometerReadingConfig state = let
       }
       in inAppModalConfig'
 
-driverStatusIndicators :: Array ST.PillButtonState
-driverStatusIndicators = [
-    {
-      status : ST.Offline,
-      background : Color.red,
-      imageUrl : fetchImage FF_ASSET "ic_driver_status_offline",
-      textColor : Color.white900
-    },
-    {
-        status : ST.Silent,
-        background : Color.blue800,
-        imageUrl : fetchImage FF_ASSET "ic_driver_status_silent",
-        textColor : Color.white900
-    },
-    {
-      status : ST.Online,
-        background : Color.darkMint,
-        imageUrl : fetchImage FF_ASSET "ic_driver_status_online",
-        textColor : Color.white900
-    }
-]
+driverStatusIndicators :: ST.HomeScreenState -> Array ST.PillButtonState
+driverStatusIndicators state =
+  map
+    ( \item ->
+        let
+          config =
+            fromMaybe
+              { background: item.background
+              , imageUrl: item.imageUrl
+              , textColor: item.textColor
+              }
+              $ lookup (show item.status) state.data.config.homeScreen.statusPills
+        in
+          { status: item.status
+          , background: config.background
+          , imageUrl: config.imageUrl
+          , textColor: config.textColor
+          }
+    )
+    [ { status: ST.Offline
+      , background: Color.red
+      , imageUrl: fetchImage FF_ASSET "ic_driver_status_offline"
+      , textColor: Color.white900
+      }
+    -- , { status: ST.Silent
+    --   , background: Color.blue800
+    --   , imageUrl: fetchImage FF_ASSET "ic_driver_status_silent"
+    --   , textColor: Color.white900
+    --   }
+    , { status: ST.Online
+      , background: Color.darkMint
+      , imageUrl: fetchImage FF_ASSET "ic_driver_status_online"
+      , textColor: Color.white900
+      }
+    ]
+
+getStrokeColor :: ST.HomeScreenState -> Array ST.PillButtonState -> String
+getStrokeColor state config =
+  let
+    offline =
+      fromMaybe
+        { status: ST.Offline
+        , background: Color.red
+        , imageUrl: fetchImage FF_ASSET "ic_driver_status_offline"
+        , textColor: Color.white900
+        }
+        $ DA.head
+        $ DA.filter (\item -> item.status == ST.Offline) config
+
+    silent =
+      fromMaybe
+        { status: ST.Silent
+        , background: Color.blue800
+        , imageUrl: fetchImage FF_ASSET "ic_driver_status_silent"
+        , textColor: Color.white900
+        }
+        $ DA.head
+        $ DA.filter (\item -> item.status == ST.Silent) config
+
+    online =
+      fromMaybe
+        { status: ST.Online
+        , background: Color.darkMint
+        , imageUrl: fetchImage FF_ASSET "ic_driver_status_online"
+        , textColor: Color.white900
+        }
+        $ DA.head
+        $ DA.filter (\item -> item.status == ST.Online) config
+  in
+    if state.props.driverStatusSet == ST.Offline then
+      ("2," <> offline.background)
+    else if (((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") && ((state.props.driverStatusSet == ST.Online) || state.props.driverStatusSet == ST.Silent)) then
+      ("2," <> Color.yellow900)
+    else if state.props.driverStatusSet == ST.Online then
+      ("2," <> online.background)
+    else
+      ("2," <> silent.background)
+
+
 getCancelAlertText :: String -> STR
 getCancelAlertText key = case key of
   "ZONE_CANCEL_TEXT_PICKUP" -> ZONE_CANCEL_TEXT_PICKUP
@@ -1285,9 +1344,9 @@ chatBlockerPopUpConfig state = let
     secondaryText {text = (getString PLEASE_CONSIDER_CALLING_THEM )},
     option1{ text = (getString GOT_IT),
       width = MATCH_PARENT,
-      background = Color.black900,
-      strokeColor = Color.black900,
-      color = Color.yellow900,
+      background = state.data.config.primaryBackground,
+      strokeColor = state.data.config.primaryBackground,
+      color = state.data.config.primaryTextColor,
       margin = MarginHorizontal 16 16
       },
     option2{text = (getString PROCEED_TO_CHAT),
@@ -1475,9 +1534,11 @@ getRideCompletedConfig state = let
     topCard {
       title = getString COLLECT_VIA_UPI_QR_OR_CASH,
       finalAmount = state.data.endRideData.finalAmount,
+      finalAmountWithCurrency = state.data.endRideData.finalAmountWithCurrency,
       initialAmount = state.data.endRideData.finalAmount,
+      initialAmountWithCurrency = state.data.endRideData.finalAmountWithCurrency,
       fareUpdatedVisiblity = state.props.isFreeRide,
-      gradient =  ["#F5F8FF","#E2EAFF"],
+      gradient =  state.data.config.rideCompletedCardConfig.topCardGradient,
       infoPill {
         text = getString COLLECT_VIA_CASE_UPI,
         color = Color.white900,
@@ -1564,6 +1625,7 @@ getRideCompletedConfig state = let
       url = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/end_ride_qr_anim.json"
     }
   , additionalCharges = additionalCharges
+  , bottomBackground = state.data.config.rideCompletedCardConfig.bottomBackground
   }
   in config'
 
@@ -1934,12 +1996,12 @@ gotoButtonConfig state = PrimaryButton.config
     }
   , height = WRAP_CONTENT
   , gravity = CENTER
-  , cornerRadius = 22.0
+  , cornerRadius = 18.0
   , width = WRAP_CONTENT
   , padding = if (state.data.driverGotoState.isGotoEnabled) then Padding 16 11 16 11 else Padding 24 11 24 11
   , margin = MarginLeft 0
   , isPrefixImage = true
-  , stroke = "0," <> Color.black900
+  , stroke = "1,"<> Color.grey900
   , background = gotoTimer.bgColor
   , prefixImageConfig
     { imageUrl = gotoTimer.imageString
@@ -2094,9 +2156,9 @@ bgLocPopup state =
       , textStyle = Body5
       , margin = Margin 16 0 16 15 },
       option1 {
-        text = getString ENABLE_PERMISSION_STR
-      , color = Color.yellow900
-      , background = Color.black900
+        text = getString $ if EHC.os == "IOS" then CONTINUE else ENABLE_PERMISSION_STR
+      , color = state.data.config.primaryTextColor
+      , background = state.data.config.primaryBackground
       , strokeColor = Color.transparent
       , textStyle = FontStyle.SubHeading1
       , width = MATCH_PARENT
@@ -2118,7 +2180,7 @@ bgLocPopup state =
       , height =V 300
       , width = V 300
       , config{
-          rawJson = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/" <>  (if state.data.config.appData.name =="Mana Yatri" then "enable_locatio_permission_lottie_manayatri" else "enable_locatio_permission_lottie") <> ".json"
+          rawJson = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/" <>  (if state.data.config.appData.name =="Mana Yatri" then "enable_locatio_permission_lottie_manayatri" else "enable_locatio_permission_lottie" <> if EHC.os == "IOS" then "_ios" else "") <> ".json"
         , lottieId = EHC.getNewIDWithTag "bgLocLottie"
         }
       }

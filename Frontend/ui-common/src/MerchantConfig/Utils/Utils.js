@@ -45,8 +45,12 @@ export const getStringFromConfig = function (constructors) {
 }
 
 
-export const getMerchantId = function(id) {
-  return window.merchantID;
+export const getMerchantId = function() {
+  if (window.merchantID) return window.merchantID;
+  if (window.storeMerchantId) {
+    window.storeMerchantId();
+  }
+  return window.merchantID
 }
 
 export const getMerchantConfig = function (just) {

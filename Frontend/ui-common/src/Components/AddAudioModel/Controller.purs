@@ -20,6 +20,7 @@ import Components.PrimaryButton.Controller as PrimaryButton
 import Common.Styles.Colors (black900, primaryButtonColor) as Color
 import PrestoDOM.Types.DomAttributes (Length(..), Margin(..))
 import Data.Maybe (Maybe(..))
+import ConfigProvider 
 
 data Action = OnClickDone PrimaryButton.Action
             | OnClickCross
@@ -54,13 +55,14 @@ config = {
 donePrimaryButtonConfig :: AddAudioModelState -> PrimaryButton.Config
 donePrimaryButtonConfig state = let
     config = PrimaryButton.config
+    currnetConfig = getAppConfig appConfig
     primaryButtonConfig' = config
       { textConfig { 
           text = state.doneButtonText
-        , color = Color.primaryButtonColor
+        , color = currnetConfig.primaryTextColor
         }
       , cornerRadius = 8.0
-      , background = Color.black900
+      , background = currnetConfig.primaryBackground
       , height = V 48
       , alpha = 1.0 -- if state.stateChanged then 1.0 else 0.5
       , isClickable = true --state.stateChanged

@@ -1,21 +1,27 @@
-let cacheMap = window.cacheMap || {};
-
+const JBridge = window.JBridge;
 export const getFromCache = function (key, nothing, just) {
-  if (typeof cacheMap[key] !== "undefined") {
-    return just(cacheMap[key]);
+  window.cacheMap = window.cacheMap || {}
+  if (typeof window.cacheMap[key] !== "undefined") {
+    return just(window.cacheMap[key]);
   } else {
     return nothing;
   }
 }
 
 export const setInCache = function (key, value) {
-  cacheMap[key] = value;
+  window.cacheMap = window.cacheMap || {}
+  window.cacheMap[key] = value;
   return value;
 }
 export const clearCache = function (key) {
+  window.cacheMap = window.cacheMap || {}
   if (key != "") {
-    delete cacheMap[key];
+    delete window.cacheMap[key];
   } else {
-    cacheMap = {};
+    window.cacheMap = {};
   }
 }
+
+export const setKeyInSharedPref = function (key, value) {
+  return JBridge.setInSharedPrefs(key, value);
+};

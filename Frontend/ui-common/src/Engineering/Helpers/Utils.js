@@ -23,9 +23,13 @@ export const fetchFromLocalStoreImpl = function(key) {
     };
   };
 }
-export const reboot = window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"reboot"}))()
+export const reboot = function () {
+  window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"reboot"}))()
+}
 
-export const showSplash = window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"show_splash"}))()
+export const showSplash = function () {
+  window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"show_splash"}))()
+}
 
 
 export const decrementMonth = function (month) {
@@ -102,4 +106,13 @@ export const getCurrentDay = function (useMidnightTime) {
     date.setHours(0,0,0,0);
   return { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString("default", { month: "short" }), year: date.getFullYear(), intMonth : date.getMonth(),
     isInRange : false, isStart: false , isEnd: false }
+}
+export const getCurrentDayFromDate = function (date) {
+  return function (useMidnightTime){
+    date = new Date(date);
+    if(useMidnightTime)
+      date.setHours(0,0,0,0);
+    return { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString("default", { month: "short" }), year: date.getFullYear(), intMonth : date.getMonth(),
+      isInRange : false, isStart: false , isEnd: false }
+  }
 }

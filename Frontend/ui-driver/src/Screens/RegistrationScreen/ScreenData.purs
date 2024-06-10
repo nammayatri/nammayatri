@@ -60,7 +60,8 @@ initData = {
         enteredRC : "",
         vehicleCategory : Nothing,
         linkedRc : Nothing,
-        accessToken : ""
+        accessToken : "",
+        bgvUrl : Nothing
       },
       props: {
         limitReachedFor : Nothing,
@@ -78,7 +79,12 @@ initData = {
         driverEnabled : false,
         menuOptions : false,
         manageVehicle : false,
+        isApplicationInVerification: false,
+        isProfileDetailsCompleted: false,
         manageVehicleCategory : Nothing,
-        dontAllowHvRelaunch : false
+        showCheckrWebView: false,
+        dontAllowHvRelaunch : false,
+        bgvInfo: ST.DoNothing,
+        otherMandetoryDocsDone: false
       }
   }

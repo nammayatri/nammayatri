@@ -30,7 +30,7 @@ import Debug (spy)
 import DecodeUtil as DU
 import Data.Function.Uncurried (runFn3)
 import Effect (Effect)
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons (getNewIDWithTag, safeMarginTop, safeMarginBottom)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -94,6 +94,7 @@ view push state =
       pure unit
       )(const AfterRender)
   , gradient $ Linear 0.0 ["#F5F8FF", "#E2EAFF"]
+  , padding $ PaddingVertical safeMarginTop safeMarginBottom
   ][ if state.props.isMockLocation && state.data.config.enableMockLocation  && not cugUser
       then mockLocationEnabledView push state
       else
@@ -201,18 +202,20 @@ currentLanguageView state push =
   , stroke $ "1," <> Color.grey900
   ][ linearLayout
       [ height WRAP_CONTENT
-      , width MATCH_PARENT
+      , width WRAP_CONTENT
       , gravity CENTER
       ][  textView $ 
           [ text $ getString LANGUAGE_DETECTED <> ": "
           , gravity CENTER
           , color Color.black800
           , margin $ MarginTop 2
+          , width WRAP_CONTENT
           ] <> FontStyle.body3 TypoGraphy
         , textView $ 
           [ text $ getLangFromVal state.props.selectedLanguage
           , gravity CENTER
           , color Color.black900
+          , width WRAP_CONTENT
           ] <> FontStyle.subHeading1 TypoGraphy
         ]
     , textView $ 

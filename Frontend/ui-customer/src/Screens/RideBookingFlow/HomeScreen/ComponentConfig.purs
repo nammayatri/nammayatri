@@ -82,7 +82,7 @@ import LocalStorage.Cache (getValueFromCache)
 import MerchantConfig.Utils as MU
 import PrestoDOM (Accessiblity(..), Orientation(..), Visibility(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Resources.Constants (dummyPrice)
+import Constants.Configs (dummyPrice)
 import Resources.Constants (getKmMeter, emergencyContactInitialChatSuggestionId)
 import Resources.Localizable.EN (getEN)
 import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig)
