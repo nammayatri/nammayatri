@@ -48,7 +48,7 @@ handler = rating
 
 rating :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackReq -> App.FlowHandler APISuccess
 rating (personId, merchantId) request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  dFeedbackRes <- DFeedback.feedback request
+  dFeedbackRes <- DFeedback.feedback request personId
   becknReq <- ACL.buildRatingReqV2 dFeedbackRes
   fork "call bpp rating api" $ do
     isValueAddNP <- CQVAN.isValueAddNP dFeedbackRes.providerId

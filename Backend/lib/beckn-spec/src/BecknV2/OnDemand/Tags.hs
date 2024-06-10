@@ -46,6 +46,7 @@ data TagGroup
   | DRIVER_NEW_MESSAGE
   | PREVIOUS_CANCELLATION_REASONS
   | UPDATE_DETAILS
+  | RATING_TAGS
   | FORWARD_BATCHING_REQUEST_INFO
   | VEHICLE_INFO
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -213,4 +214,7 @@ data Tag
   | -- Vehicle Air Conditioned info tag
     IS_AIR_CONDITIONED
   | IS_FORWARD_BATCH_ENABLED
+  | -- rating tags
+    RIDER_PHONE_NUMBER
+  | SHOULD_FAVOURITE_DRIVER
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

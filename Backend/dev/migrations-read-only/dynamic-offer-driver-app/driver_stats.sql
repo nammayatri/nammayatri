@@ -19,3 +19,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_rides integer N
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_rides_assigned integer ;
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD PRIMARY KEY ( driver_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN fav_rider_count integer NOT NULL default 0;

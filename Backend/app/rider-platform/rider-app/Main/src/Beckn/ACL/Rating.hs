@@ -13,10 +13,10 @@
 -}
 {-# LANGUAGE OverloadedLabels #-}
 
-module Beckn.ACL.Rating (buildRatingReq, buildRatingReqV2) where
+module Beckn.ACL.Rating (buildRatingReqV2) where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
-import qualified Beckn.Types.Core.Taxi.Rating as Rating
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -25,44 +25,10 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.Feedback as DFeedback
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import Tools.Error
-
-buildRatingReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
-  DFeedback.FeedbackRes ->
-  m (BecknReq Rating.RatingMessage)
-buildRatingReq DFeedback.FeedbackRes {..} = do
-  msgId <- generateGUID
-  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
-  -- TODO :: Add request city, after multiple city support on gateway.
-  context <- buildTaxiContext Context.RATING msgId (Just transactionId) merchant.bapId bapUrl (Just providerId) (Just providerUrl) city merchant.country False
-  let message =
-        Rating.RatingMessage
-          { id = bppBookingId.getId,
-            value = ratingValue,
-            feedback_form =
-              [ Rating.FeedbackForm
-                  { question = "Evaluate your ride experience.",
-                    answer = feedbackDetails
-                  },
-                Rating.FeedbackForm
-                  { question = "Was Assistance Offered?",
-                    answer = case wasOfferedAssistance of
-                      Just True -> Just "True"
-                      Just False -> Just "False"
-                      _ -> Nothing
-                  },
-                Rating.FeedbackForm
-                  { question = "Get IssueId.",
-                    answer = issueId
-                  }
-              ]
-          }
-  pure $ BecknReq context message
 
 buildRatingReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
@@ -94,7 +60,8 @@ tfRating res@DFeedback.FeedbackRes {..} = do
     { ratingId = Just $ bppBookingId.getId,
       ratingValue = Just $ show ratingValue,
       ratingRatingCategory = Nothing,
-      ratingFeedbackForm = Just $ tfFeedbackForm res
+      ratingFeedbackForm = Just $ tfFeedbackForm res,
+      ratingTag = guard isValueAddNP >> mkRatingTags res.shouldFavDriver res.riderPhoneNum
     }
 
 tfFeedbackForm :: DFeedback.FeedbackRes -> [Spec.FeedbackForm]
@@ -114,4 +81,52 @@ tfFeedbackForm DFeedback.FeedbackRes {..} = do
       { feedbackFormQuestion = "Get IssueId.",
         feedbackFormAnswer = issueId
       }
+    ]
+
+mkRatingTags :: Maybe Bool -> Maybe Text -> Maybe [Spec.TagGroup]
+mkRatingTags mbShouldFavDriver mbPhoneNum =
+  Just
+    [ Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.RATING_TAGS,
+                  descriptorName = Just "Rating Information",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList = mkPersonTag mbShouldFavDriver <> mkPersonNumberTag mbPhoneNum
+        }
+    ]
+
+mkPersonTag :: Maybe Bool -> Maybe [Spec.Tag]
+mkPersonTag mbShouldFavDriver =
+  mbShouldFavDriver <&> \shouldFavDriver ->
+    [ Spec.Tag
+        { tagDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.SHOULD_FAVOURITE_DRIVER,
+                  descriptorName = Just "Should Favourite Driver",
+                  descriptorShortDesc = Nothing
+                },
+          tagDisplay = Just False,
+          tagValue = Just $ show shouldFavDriver
+        }
+    ]
+
+mkPersonNumberTag :: Maybe Text -> Maybe [Spec.Tag]
+mkPersonNumberTag mbPhoneNum =
+  mbPhoneNum <&> \phoneNum ->
+    [ Spec.Tag
+        { tagDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.RIDER_PHONE_NUMBER,
+                  descriptorName = Just "Rider Phone Number",
+                  descriptorShortDesc = Nothing
+                },
+          tagDisplay = Just False,
+          tagValue = Just phoneNum
+        }
     ]

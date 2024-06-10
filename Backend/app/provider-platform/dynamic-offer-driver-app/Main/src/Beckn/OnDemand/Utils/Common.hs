@@ -22,6 +22,7 @@ import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import BecknV2.OnDemand.Utils.Payment
+import qualified BecknV2.Utils as Utils
 import Control.Lens
 import Data.Aeson
 import qualified Data.Aeson as A
@@ -1428,3 +1429,15 @@ mkForwardBatchTagGroupV2 previousRideDropLocation' =
               ]
         }
     ]
+
+getShouldFavouriteDriver :: Spec.Rating -> Maybe Bool
+getShouldFavouriteDriver req = do
+  let tagGroups = req.ratingTag
+      tagValue = Utils.getTagV2 Tags.RATING_TAGS Tags.SHOULD_FAVOURITE_DRIVER tagGroups
+   in readMaybe . T.unpack =<< tagValue
+
+getRiderPhoneNumber :: Spec.Rating -> Maybe Text
+getRiderPhoneNumber req = do
+  let tagGroups = req.ratingTag
+      tagValue = Utils.getTagV2 Tags.RATING_TAGS Tags.RIDER_PHONE_NUMBER tagGroups
+   in tagValue

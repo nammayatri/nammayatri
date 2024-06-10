@@ -18,6 +18,7 @@ data DriverStats = DriverStats
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Driver,
     earningsMissed :: Kernel.Types.Common.HighPrecMoney,
+    favRiderCount :: Kernel.Prelude.Int,
     idleSince :: Kernel.Prelude.UTCTime,
     lateNightTrips :: Kernel.Prelude.Int,
     ridesCancelled :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

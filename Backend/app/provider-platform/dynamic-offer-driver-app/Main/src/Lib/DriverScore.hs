@@ -191,7 +191,8 @@ createDriverStat currency distanceUnit driverId = do
             totalCoinsConvertedCash = 0.0,
             currency,
             distanceUnit,
-            updatedAt = now
+            updatedAt = now,
+            favRiderCount = 0
           }
   _ <- DSQ.create driverStat
   pure driverStat

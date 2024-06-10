@@ -70,6 +70,7 @@ library
       API.Internal.DriverInactiveFCM
       API.Internal.DriverMode
       API.Internal.DriverReferee
+      API.Internal.FavouriteDrivers
       API.Internal.FeedbackForm
       API.Internal.ReportACIssue
       API.Internal.ReportIssue
@@ -163,6 +164,7 @@ library
       Domain.Action.Internal.DriverInactiveFCM
       Domain.Action.Internal.DriverMode
       Domain.Action.Internal.DriverReferee
+      Domain.Action.Internal.FavouriteDrivers
       Domain.Action.Internal.FeedbackForm
       Domain.Action.Internal.ReportACIssue
       Domain.Action.Internal.ReportIssue
@@ -488,6 +490,7 @@ library
       Storage.Queries.RegistrationTokenExtra
       Storage.Queries.RideExtra
       Storage.Queries.RiderDetailsExtra
+      Storage.Queries.RiderDriverCorrelationExtra
       Storage.Queries.SearchRequestExtra
       Storage.Queries.SearchRequestForDriverExtra
       Storage.Queries.SearchTryExtra
@@ -648,6 +651,7 @@ library
       Domain.Types.Ride
       Domain.Types.RideDetails
       Domain.Types.RiderDetails
+      Domain.Types.RiderDriverCorrelation
       Domain.Types.RideRelatedNotificationConfig
       Domain.Types.SearchReqLocation
       Domain.Types.SearchRequest
@@ -755,6 +759,7 @@ library
       Storage.Beam.Ride
       Storage.Beam.RideDetails
       Storage.Beam.RiderDetails
+      Storage.Beam.RiderDriverCorrelation
       Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.SearchReqLocation
       Storage.Beam.SearchRequest
@@ -890,6 +895,7 @@ library
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.RiderDetails
+      Storage.Queries.OrphanInstances.RiderDriverCorrelation
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.SearchRequestForDriver
       Storage.Queries.OrphanInstances.SearchTry
@@ -915,6 +921,7 @@ library
       Storage.Queries.Ride
       Storage.Queries.RideDetails
       Storage.Queries.RiderDetails
+      Storage.Queries.RiderDriverCorrelation
       Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.SearchReqLocation
       Storage.Queries.SearchRequest

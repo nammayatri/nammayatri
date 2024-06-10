@@ -20,6 +20,7 @@ Rating:
     updatedAt : UTCTime
     isSafe : Maybe Bool
     issueId : Maybe Text
+    isFavourite: Maybe Bool
 
   constraints:
     id: PrimaryKey
@@ -38,10 +39,9 @@ Rating:
 
     updateRating:
       kvFunction: updateOneWithKV
-      params: [ratingValue, feedbackDetails , updatedAt, isSafe, issueId, wasOfferedAssistance]
+      params: [ratingValue, feedbackDetails , updatedAt, isSafe, issueId, wasOfferedAssistance, isFavourite]
       where:
         and: [id, driverId]
-
 
   excludedFields: [merchantOperatingCityId, merchantId]
 

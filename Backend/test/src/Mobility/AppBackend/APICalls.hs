@@ -69,7 +69,8 @@ callAppFeedback ratingValue rideId =
             rating = ratingValue,
             feedbackDetails = Just "driver was well behaved!",
             nightSafety = Nothing,
-            wasOfferedAssistance = Nothing
+            wasOfferedAssistance = Nothing,
+            shouldFavDriver = Nothing
           }
    in appFeedback appRegistrationToken request
 

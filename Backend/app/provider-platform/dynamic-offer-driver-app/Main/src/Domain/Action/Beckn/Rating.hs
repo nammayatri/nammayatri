@@ -15,16 +15,18 @@
 module Domain.Action.Beckn.Rating where
 
 import Data.List.Extra ((!?))
-import Data.Maybe (listToMaybe)
+import Data.Maybe
 import qualified Domain.Types.Booking as DBooking
 import Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RiderDriverCorrelation as RDCD
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
+import Kernel.External.Encryption (encrypt)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -32,15 +34,19 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.DriverStats as SQD
 import qualified Storage.Queries.PersonExtra as QP
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RiderDriverCorrelation as RDC
 import Tools.Error
 
 data DRatingReq = DRatingReq
   { bookingId :: Id DBooking.Booking,
     ratingValue :: Int,
-    feedbackDetails :: [Maybe Text]
+    feedbackDetails :: [Maybe Text],
+    shouldFavDriver :: Maybe Bool,
+    riderPhoneNum :: Maybe Text
   }
 
 handler :: Id Merchant -> DRatingReq -> DRide.Ride -> Flow ()
@@ -56,18 +62,47 @@ handler merchantId req ride = do
         _ -> Nothing
       issueId = fromMaybe Nothing (req.feedbackDetails !? 2)
       isSafe = Just $ isNothing issueId
+  mbBooking <- QRB.findById req.bookingId
+  case mbBooking of
+    Just booking -> do
+      whenJust (liftA3 (,,) req.shouldFavDriver (getId <$> booking.riderId) req.riderPhoneNum) $ \(shouldFavDriver', riderId, riderPhoneNum) -> do
+        when shouldFavDriver' $ do
+          correlationRes <- RDC.findByRiderIdAndDriverId (Id riderId) ride.driverId
+          case correlationRes of
+            Just _ -> do
+              RDC.updateFavouriteDriverForRider True (Id riderId) ride.driverId
+            Nothing -> do
+              now <- getCurrentTime
+              encPhoneNumber <- encrypt riderPhoneNum
+              let riderDriverCorr =
+                    RDCD.RiderDriverCorrelation
+                      { riderDetailId = Id riderId,
+                        driverId = ride.driverId,
+                        merchantId = merchantId,
+                        merchantOperatingCityId = booking.merchantOperatingCityId,
+                        createdAt = now,
+                        updatedAt = now,
+                        favourite = True,
+                        mobileNumber = encPhoneNumber
+                      }
+              RDC.create riderDriverCorr
+          SQD.incFavouriteRiderCount ride.driverId
+    Nothing -> do
+      logError $ "Booking not found for bookingId : " <> req.bookingId.getId
+      pure ()
+
   _ <- case rating of
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- buildRating ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance
+      newRating <- buildRating ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance req.shouldFavDriver
       QRating.create newRating
       logDebug "Driver Rating Coin Event"
       fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride.chargeableDistance)
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      QRating.updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance rideRating.id driverId
+      QRating.updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver rideRating.id driverId
       logDebug "Driver Rating Coin Event"
       fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride.chargeableDistance)
   calculateAverageRating driverId merchant.minimumDriverRatesCount
@@ -89,8 +124,8 @@ calculateAverageRating personId minimumDriverRatesCount = do
     logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
     void $ QP.updateAverageRating personId newAverage
 
-buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> m DRating.Rating
-buildRating rideId driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance = do
+buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> m DRating.Rating
+buildRating rideId driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance isFavourite = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
   let createdAt = now
