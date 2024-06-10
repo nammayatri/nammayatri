@@ -23,7 +23,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Monad.State as S
 import Common.Types.App (Version(..), DateObj, CalendarDate, CalendarWeek, YoutubeData, CarouselHolderData)
 import Data.Either (Either(..))
-import Data.Function.Uncurried (Fn2)
+import Data.Function.Uncurried (Fn2, Fn3)
 import Data.Int as INT
 import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String (Pattern(..),split)
@@ -104,6 +104,8 @@ foreign import updatePushInIdMap :: Fn2 String Boolean Unit
 foreign import getValueFromIdMap :: EffectFn1 String CarouselHolderData
 foreign import getRandomID :: Int -> String
 foreign import toStringJSON :: forall a. a -> String
+foreign import getMarkerCallback :: forall action. Fn2 (action -> Effect Unit) (String -> action) String
+foreign import splitString :: Fn3 String String Int String
 
 foreign import isTrue :: forall a. a -> Boolean
 

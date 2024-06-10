@@ -649,7 +649,12 @@ const drawRoute = function (data, style, trackColor, isActual, sourceMarkerConfi
 
 export const updateMarker = function (markerConfig) {
   return function () {
-    if (window.JBridge.updateMarker) {
+    if(window.JBridge.updateMarkerV2) {
+      return window.JBridge.updateMarkerV2(JSON.stringify(markerConfig));
+    }
+    else if (window.JBridge.updateMarker) {
+      markerConfig.labelImage = markerConfig.labelImage.image;
+      markerConfig.labelActionImage = markerConfig.labelActionImage.image;
       return window.JBridge.updateMarker(JSON.stringify(markerConfig));
     }
   }

@@ -279,6 +279,7 @@ config =
       , labelTextSize : 30
       , animationDuration : 500
       , vehicleMarkerSize: 150
+      , labelTheme : "LIGHT"
       }
   , metroTicketingConfig : [
     { 
@@ -386,7 +387,7 @@ config =
           { cityName = "Bangalore",
             cityCode = "std:080",
             geoCodeConfig
-              { radius = 700000,
+              { radius = 170000,
                 strictBounds = true
               },
             featureConfig {
@@ -404,6 +405,10 @@ config =
             featureConfig {
               enableCabBanner = true
             },
+            geoCodeConfig
+              { radius = 170000
+              , strictBounds = true
+              },
             enableAcViews = true
           },
         defaultCityConfig 
@@ -412,13 +417,17 @@ config =
             featureConfig {
               enableCabBanner = true
             },
+            geoCodeConfig
+              { radius = 170000
+              , strictBounds = true
+              },
             enableAcViews = true
           },
         defaultCityConfig 
           {   cityName = "Chennai"
             , cityCode = "std:044"
             , geoCodeConfig
-                { radius = 700000
+                { radius = 170000
                 , strictBounds = true
                 }
             , enableCabs = true

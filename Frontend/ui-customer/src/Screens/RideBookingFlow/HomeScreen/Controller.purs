@@ -934,6 +934,7 @@ data Action = NoAction
             | TollChargeAmbigousPopUpAction PopUpModal.Action
             | UpdateNoInternet
             | InternetCallBackCustomer String
+            | MarkerLabelOnClick String 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -1076,6 +1077,14 @@ eval (UpdateRepeatTrips rideList) state = do
 
         
 eval UpdatePeekHeight state = continue state{data{peekHeight = getPeekHeight state}}
+
+eval (MarkerLabelOnClick markerName) state = 
+  if state.props.currentStage == SettingPrice then do
+    void $ pure $ updateLocalStage SearchLocationModel
+    let isSource = Just (markerName == "ny_ic_src_marker")
+    let updatedState = state{props{isSource = isSource, hasEstimateBackpoint = true, currentStage = SearchLocationModel}}
+    continue updatedState
+  else continue state
 
 eval (Scroll item) state = do
   let sheetState = if item == state.props.currSlideIndex then state.props.isHomescreenExpanded
@@ -1612,7 +1621,10 @@ eval BackPressed state = do
   let _ = runFn2 updatePushInIdMap "EstimatePolling" true
   case state.props.currentStage of
     SearchLocationModel -> do
-      if state.props.isSaveFavourite then 
+      if state.props.hasEstimateBackpoint then do
+        void $ pure $ updateLocalStage SettingPrice
+        continue state{props{currentStage = SettingPrice, hasEstimateBackpoint = false}}
+      else if state.props.isSaveFavourite then 
         continueWithCmd state{props{isSearchCancelled = false}} [pure $ (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose))]
       else do
         if state.props.isSearchLocation == LocateOnMap then do
@@ -1702,6 +1714,7 @@ eval BackPressed state = do
           , isRepeatRide = false
           , customerTip = HomeScreenData.initData.props.customerTip
           , tipViewProps = HomeScreenData.initData.props.tipViewProps
+          , hasEstimateBackpoint = false
           }
         }
     ConfirmingLocation -> do

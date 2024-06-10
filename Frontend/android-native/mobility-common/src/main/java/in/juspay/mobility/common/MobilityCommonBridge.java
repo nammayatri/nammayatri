@@ -324,15 +324,28 @@ public class MobilityCommonBridge extends HyperBridge {
         String pointerIcon = "";
         String primaryText = "";
         String secondaryText = "";
-        String labelImage = "";
-        String labelActionImage = "";
-        Theme theme = Theme.DARK;
+        MarkerImageConfig labelImage = new MarkerImageConfig("", 28, 28);
+        MarkerImageConfig labelActionImage = new MarkerImageConfig("", 28, 28);
+        Theme theme = Theme.LIGHT;
+        String markerCallback = "";
+        String shortTitle = "";
+        int labelMaxWidth = 300;
+        int labelMaxLines = 1;
+        int labelTextSize = 11;        
         float rotation = 0;
         AnimationType animationType = AnimationType.NONE;
         int animationDuration = 0;
         public void locationName(String primaryText, String secondaryText) {
             this.primaryText = primaryText;
             this.secondaryText = secondaryText;
+        }
+        public void setShortTitle(String shortTitle) { this.shortTitle = shortTitle; }
+        public void setLabelMaxWidth(int labelMaxWidth){this.labelMaxWidth = labelMaxWidth;};
+        public void setLabelMaxLines(int labelMaxLines){this.labelMaxLines = labelMaxLines;};
+        public void setLabelTextSize(int labelTextSize){
+            if(labelTextSize != 0){
+                this.labelTextSize = labelTextSize;
+            }
         }
         public void locationName(String primaryText) {
             this.primaryText = primaryText;
@@ -342,13 +355,51 @@ public class MobilityCommonBridge extends HyperBridge {
                 this.showPointer = false;
             this.pointerIcon = pointerIcon;
         }
-        public void setLabelImage(String labelImage) { this.labelImage = labelImage; }
-        public void setLabelActionImage(String imageName) { this.labelActionImage = imageName; }
+        public void setLabelImage(String labelImage) {
+            this.labelImage.image = labelImage;
+        }
+        public void setLabelActionImage(String labelActionImage) {
+            this.labelActionImage.image = labelActionImage;
+        }
         public void setRotation(float rotation) { this.rotation = rotation; }
         public void setMarkerId(String markerId) { this.markerId = markerId; }
         public void setMarkerAnimation(AnimationType animationType, int animationDuration) {
             this.animationType = animationType;
             this.animationDuration = animationDuration;
+        }
+        public void setLabelImageConfig(JSONObject labelImage) {
+            if(labelImage != null){
+                this.labelImage.image = labelImage.optString("image", "");
+                this.labelImage.height = labelImage.optInt("height", 28);
+                this.labelImage.width = labelImage.optInt("width", 28);
+            }
+        }
+        public void setLabelActionImageConfig(JSONObject actionImage) {
+            if(actionImage != null) {
+                this.labelActionImage.image = actionImage.optString("image", "");
+                this.labelActionImage.height = actionImage.optInt("height", 28);
+                this.labelActionImage.width = actionImage.optInt("width", 28);
+            }
+        }
+        public void setTheme(String theme) {
+            try{
+                this.theme = Theme.valueOf(theme);
+            }catch (Exception e) {
+                this.theme = Theme.LIGHT;
+            }
+        }
+        public void setMarkerCallback(String callback) { this.markerCallback = callback; }
+    }
+
+    public static class MarkerImageConfig {
+        String image;
+        int height;
+        int width;
+
+        MarkerImageConfig(String image, int height, int width){
+            this.image = image;
+            this.height = height;
+            this.width = width;
         }
     }
     public Polyline getPolyLine(Boolean isOverPolyLine, PolylineDataPoints polylineData)
@@ -815,6 +866,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 String spotIcon = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("spotIcon", "ny_ic_zone_pickup_marker_yellow") : "ny_ic_zone_pickup_marker_yellow";
                 String selectedSpotIcon = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("selectedSpotIcon", "ny_ic_selected_zone_pickup_marker_yellow") : "ny_ic_selected_zone_pickup_marker_yellow";
                 String labelImage = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("labelImage", "") : "";
+                String theme = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("theme", "LIGHT") : "LIGHT";
                 boolean showZoneLabel = specialZoneMarkerConfig != null && specialZoneMarkerConfig.optBoolean("showZoneLabel", false);
                 String labelActionImage = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("labelActionImage", "") : "";
 
@@ -897,7 +949,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                 } else if (mapMode.equals(MapMode.HOTSPOT) && SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(nearestPoint.getDouble("lat"), nearestPoint.getDouble("long"))) < goToNearestPointWithinRadius) {
                                     animateCamera(nearestPoint.getDouble("lat"), nearestPoint.getDouble("long"), 20.0f, ZoomType.NO_ZOOM);
                                 } else if (!lat.equals("0.0") && !lon.equals("0.0")) {
-                                    animateCamera(Double.parseDouble(lat), Double.parseDouble(lon), 20.0f, ZoomType.ZOOM);
+                                    animateCamera(Double.parseDouble(lat), Double.parseDouble(lon), zoomLevel, ZoomType.ZOOM);
                                 }
                             }catch (Exception e) {
                                 e.printStackTrace();
@@ -958,6 +1010,8 @@ public class MobilityCommonBridge extends HyperBridge {
                                         MarkerConfig markerConfig = new MarkerConfig();
                                         markerConfig.locationName(zoneName, locationName);
                                         markerConfig.setLabelImage(labelImage);
+                                        markerConfig.setLabelMaxWidth(specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optInt("labelMaxWidth", 300) : 300);
+                                        markerConfig.setTheme(theme);
                                         Bitmap bitmap = getMarkerBitmapFromView(null, true, null, MarkerType.SPECIAL_ZONE_MARKER, markerConfig);
                                         labelView.setImageBitmap(bitmap);
                                         labelView.setVisibility(View.VISIBLE);
@@ -2373,7 +2427,6 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void drawRouteV2 (final String drawRouteConfig) {
         onMapUpdate(null,null);
-        System.out.println("INside drawRoute");
         ExecutorManager.runOnMainThread(() -> {
             try{
                 JSONObject drawRouteConfigObject = new JSONObject(drawRouteConfig);
@@ -2403,7 +2456,15 @@ public class MobilityCommonBridge extends HyperBridge {
                     String sourceIconId = startMarkerConfig.optString("markerId", "");
                     String destIconId = endMarkerConfig.optString("markerId", "");
                     String stopIconId = stopMarkerConfig.optString("markerId", "");
-System.out.println("printing marker ids" + sourceIconId + "--- " + destIconId + " --- " + stopIconId);
+
+                    JSONObject startLabelImageConfig = startMarkerConfig.optJSONObject("labelImage");
+                    JSONObject endLabelImageConfig = endMarkerConfig.optJSONObject("labelImage");
+                    JSONObject startActionImageConfig = startMarkerConfig.optJSONObject("labelActionImage");
+                    JSONObject endActionImageConfig = endMarkerConfig.optJSONObject("labelActionImage");
+                    String startShortTitle = startMarkerConfig.optString("shortTitle", "");
+                    String endShortTitle = endMarkerConfig.optString("shortTitle", "");
+                    String startTheme = startMarkerConfig.optString("theme", "LIGHT");
+                    String endTheme = endMarkerConfig.optString("theme", "LIGHT");
 
                     int polylineWidth = drawRouteEntity.optInt("routeWidth", 8);
 
@@ -2423,7 +2484,7 @@ System.out.println("printing marker ids" + sourceIconId + "--- " + destIconId + 
                     PolylineOptions polylineOptions = new PolylineOptions();
                     int color = Color.parseColor(trackColor);
 
-                    
+    
                     try {
                         if (coordinates.length() <= 1) {
                             JSONObject coordinate = (JSONObject) coordinates.get(0);
@@ -2464,8 +2525,6 @@ System.out.println("printing marker ids" + sourceIconId + "--- " + destIconId + 
                             double destinationLong = destLong;
                             moveCameraV2(sourceLat, sourceLong, destinationLat, destinationLong, coordinates, purescriptId);
                         }
-                        String sourceSpecialTagIcon = startMarkerConfig.getString("labelImage");//mapRouteConfigObject != null ? mapRouteConfigObject.optString("sourceSpecialTagIcon", "") : "";
-                        String destinationSpecialTagIcon = endMarkerConfig.getString("labelImage");//mapRouteConfigObject != null ? mapRouteConfigObject.optString("destSpecialTagIcon", "") : "";
                         MarkerConfig markerConfig = new MarkerConfig();
                         checkAndAnimatePolyline(key,color, style, polylineWidth, polylineOptions, mapRouteConfigObject, gMap, purescriptId);
                         // Destination Marker
@@ -2473,7 +2532,13 @@ System.out.println("printing marker ids" + sourceIconId + "--- " + destIconId + 
                             List<LatLng> points = polylineOptions.getPoints();
                         LatLng dest = points.get(0);
                             markerConfig.locationName(endMarkerConfig.optString("primaryText", ""), endMarkerConfig.optString("secondaryText", ""));
-                            markerConfig.setLabelImage(destinationSpecialTagIcon);
+                            markerConfig.setLabelImageConfig(endLabelImageConfig);
+                            markerConfig.setLabelActionImageConfig(endActionImageConfig);
+                            markerConfig.setTheme(endTheme);
+                            markerConfig.setLabelMaxWidth(endMarkerConfig.optInt("labelMaxWidth",300));
+                            markerConfig.setLabelMaxLines(endMarkerConfig.optInt("labelMaxLines", 1));
+                            markerConfig.setLabelTextSize(endMarkerConfig.optInt("labelTextSize", 11));
+                            markerConfig.setShortTitle(endShortTitle);
                             MarkerOptions markerObj = new MarkerOptions()
                                     .title("")
                                     .position(dest)
@@ -2504,7 +2569,13 @@ System.out.println("printing marker ids" + sourceIconId + "--- " + destIconId + 
                                 markers.put(sourceIconId, currMarker);
                             } else {
                                 markerConfig.locationName(startMarkerConfig.optString("primaryText", ""), startMarkerConfig.optString("secondaryText", ""));
-                                markerConfig.setLabelImage(sourceSpecialTagIcon);
+                                markerConfig.setLabelImageConfig(startLabelImageConfig);
+                                markerConfig.setTheme(startTheme);
+                                markerConfig.setLabelActionImageConfig(startActionImageConfig);
+                                markerConfig.setLabelMaxWidth(startMarkerConfig.optInt("labelMaxWidth",300));
+                                markerConfig.setLabelMaxLines(startMarkerConfig.optInt("labelMaxLines", 0));
+                                markerConfig.setLabelTextSize(startMarkerConfig.optInt("labelTextSize", 11));
+                                markerConfig.setShortTitle(startShortTitle);
                                 MarkerOptions markerObj = new MarkerOptions()
                                         .title("")
                                         .position(source)
@@ -2665,6 +2736,56 @@ System.out.println("printing marker ids" + sourceIconId + "--- " + destIconId + 
         });
     }
 
+
+    @JavascriptInterface
+    public void updateMarkerV2(final String markerConfigString) {
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                if (googleMap != null) {
+                    JSONObject markerObject = new JSONObject(markerConfigString);
+                    JSONObject position = markerObject.optJSONObject("position");
+                    if (position != null && !(position.optDouble("lat", 0.0) == 0.0) && !(position.optDouble("lat", 0.0) == 0.0) && !markerObject.optString("pointerIcon").equals("") ) {
+                        removeMarker(markerObject.optString("pointerIcon", ""));
+                        LatLng latLng = new LatLng(position.optDouble("lat", 0.0), position.optDouble("lng", 0.0));
+
+                        MarkerConfig markerConfig = new MarkerConfig();
+                        markerConfig.locationName(markerObject.optString("primaryText", ""), markerObject.optString("secondaryText", ""));
+                        markerConfig.setLabelImageConfig(markerObject.optJSONObject("labelImage"));
+                        markerConfig.setLabelActionImageConfig(markerObject.optJSONObject("labelActionImage"));
+                        markerConfig.setTheme(markerObject.optString("theme", "LIGHT"));
+                        markerConfig.setMarkerCallback(markerObject.optString("markerCallback", ""));
+                        markerConfig.setLabelMaxWidth(markerObject.optInt("labelMaxWidth", 300));
+                        markerConfig.setLabelMaxLines(markerObject.optInt("labelMaxLines",1));
+                        markerConfig.setLabelTextSize(markerObject.optInt("labelTextSize",11));
+                        markerConfig.setShortTitle(markerObject.optString("shortTitle", ""));
+                        String markerTitle = markerObject.optString("pointerIcon", "");
+                        MarkerOptions markerObj = new MarkerOptions()
+                                .title(markerTitle)
+                                .position(latLng)
+                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(markerObject.optString("pointerIcon"), !markerObject.optBoolean("showPointer", false),null, MarkerType.NORMAL_MARKER, markerConfig)));
+                        Marker marker = googleMap.addMarker(markerObj);
+                        markers.put(markerTitle, marker);
+                        if(marker != null && !markerConfig.markerCallback.equals("")){
+                            marker.setTag(markerConfig.markerCallback);
+                            googleMap.setOnMarkerClickListener(m -> {
+                                if(m.getTag() != null){
+                                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');", m.getTag(), m.getTitle());
+                                    JsCallback jsCallback = bridgeComponents.getJsCallback();
+                                    if(jsCallback != null){
+                                        jsCallback.addJsToWebView(javascript);
+                                    }
+                                }
+                                return true;
+                            });
+                        }
+                    }
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
     @SuppressLint({"UseCompatLoadingForDrawables", "SetTextI18n", "LongLogTag"})
     protected Bitmap getMarkerBitmapFromView(String pointerImage, boolean isInvisiblePointer, String actionImage, MarkerType markerType, MarkerConfig markerConfig) {
         Context context = bridgeComponents.getContext();
@@ -2684,6 +2805,8 @@ System.out.println("printing marker ids" + sourceIconId + "--- " + destIconId + 
         } catch (Exception e) {
             Log.e("getMarkerBitmapFromView", "Exception in rendering Image" + e);
         }
+        LinearLayout main_label_layout = customMarkerView.findViewById(R.id.main_label_layout);
+        if(main_label_layout != null && !markerConfig.labelActionImage.image.equals("")) main_label_layout.setPadding(main_label_layout.getPaddingLeft(), main_label_layout.getPaddingTop(), 2, main_label_layout.getPaddingBottom());
         customMarkerView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         customMarkerView.layout(0, 0, customMarkerView.getMeasuredWidth(), customMarkerView.getMeasuredHeight());
         customMarkerView.buildDrawingCache();
@@ -2706,11 +2829,12 @@ System.out.println("printing marker ids" + sourceIconId + "--- " + destIconId + 
                 if (app == AppType.CONSUMER) {
                     ExecutorManager.runOnMainThread(() -> {
                         try {
+                            JsCallback jsCallback = bridgeComponents.getJsCallback();
                             if (!mapUpdate.isIdleListenerActive) {
                                 googleMap.setOnCameraIdleListener(() -> {
-                                    if (isIdleCallback != null) {
-                                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s';", isIdleCallback);
-                                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                                    if (isIdleCallback != null && jsCallback != null) {
+                                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s');", isIdleCallback);
+                                        jsCallback.addJsToWebView(javascript);
                                     }
                                     mapUpdate.mapRecenterHandler.removeCallbacksAndMessages(null);
                                     mapUpdate.mapRecenterHandler.postDelayed(() -> {
@@ -2722,9 +2846,9 @@ System.out.println("printing marker ids" + sourceIconId + "--- " + destIconId + 
                             }
                             if (!mapUpdate.isMoveListenerActive) {
                                 googleMap.setOnCameraMoveStartedListener(reason -> {
-                                    if(isMovedCallback != null){
-                                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%d';", isIdleCallback, reason);
-                                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                                    if(isMovedCallback != null && jsCallback != null){
+                                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s',%d);", isMovedCallback, reason);
+                                        jsCallback.addJsToWebView(javascript);
                                     }
                                     if (reason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE) {
                                         mapUpdate.isGestureMovement = true;
@@ -2770,12 +2894,22 @@ System.out.println("printing marker ids" + sourceIconId + "--- " + destIconId + 
         }
     }
 
-    private void setLabelImageAction(View customMarkerView, String labelActionImage) {
-        if (!labelActionImage.equals("")) {
-            Context context = bridgeComponents.getContext();
-            ImageView imageView = customMarkerView.findViewById(R.id.label_image_action);
-            imageView.setVisibility(View.VISIBLE);
-            imageView.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(labelActionImage, "drawable", context.getPackageName())));
+    private void setLabelImageAction(View customMarkerView, MarkerImageConfig labelActionImage) {
+        try {
+            if (labelActionImage != null && !labelActionImage.image.equals("")) {
+                Context context = bridgeComponents.getContext();
+                ImageView imageView = customMarkerView.findViewById(R.id.label_image_action);
+                if(imageView != null) {
+                    imageView.setVisibility(View.VISIBLE);
+                    imageView.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(labelActionImage.image, "drawable", context.getPackageName())));
+                    int height = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, labelActionImage.height, context.getResources().getDisplayMetrics());
+                    int width = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, labelActionImage.width, context.getResources().getDisplayMetrics());
+                    LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(width, height);
+                    imageView.setLayoutParams(layoutParams);
+                }
+            }
+        }catch (Exception e){
+            Log.e(LOG_TAG, "Error in setLabelImageAction ", e);
         }
     }
 
@@ -2818,15 +2952,21 @@ System.out.println("printing marker ids" + sourceIconId + "--- " + destIconId + 
         }
     }
 
-    private void setMarkerlabelImage(String labelImageName, View customMarkerView) {
+    private void setMarkerlabelImage(MarkerImageConfig labelImageConfig, View customMarkerView) {
         try {
             Context context = bridgeComponents.getContext();
-            if (labelImageName != null && !labelImageName.equals("")) {
+            if (labelImageConfig != null && !labelImageConfig.image.equals("")) {
                 ImageView labelImage = customMarkerView.findViewById(R.id.zone_image);
-                labelImage.setVisibility(View.VISIBLE);
-                int imageID = context.getResources().getIdentifier(labelImageName, "drawable", bridgeComponents.getContext().getPackageName());
-                BitmapDrawable bitmap = (BitmapDrawable) context.getResources().getDrawable(imageID);
-                labelImage.setImageDrawable(bitmap);
+                if(labelImage != null) {
+                    labelImage.setVisibility(View.VISIBLE);
+                    int imageID = context.getResources().getIdentifier(labelImageConfig.image, "drawable", bridgeComponents.getContext().getPackageName());
+                    BitmapDrawable bitmap = (BitmapDrawable) context.getResources().getDrawable(imageID);
+                    labelImage.setImageDrawable(bitmap);
+                    int height = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, labelImageConfig.height, context.getResources().getDisplayMetrics());
+                    int width = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, labelImageConfig.width, context.getResources().getDisplayMetrics());
+                    LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(width, height);
+                    labelImage.setLayoutParams(layoutParams);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -2838,31 +2978,39 @@ System.out.println("printing marker ids" + sourceIconId + "--- " + destIconId + 
             View ImageAndTextView = customMarkerView.findViewById(R.id.zone_image_and_text);
             View labelTextViews = ImageAndTextView.findViewById(R.id.label_texts);
             String primaryText = markerConfig.primaryText;
+            String shortTitle = markerConfig.shortTitle;
             String secondaryText = markerConfig.secondaryText;
-            TextView primaryTextView = labelTextViews.findViewById(R.id.primary_marker_text);
-            TextView secondaryTextView = labelTextViews.findViewById(R.id.secondary_marker_text);
+            CustomTextView primaryTextView = labelTextViews.findViewById(R.id.primary_marker_text);
+            CustomTextView secondaryTextView = labelTextViews.findViewById(R.id.secondary_marker_text);
             if (primaryText.equals("")) {
                 ImageAndTextView.setVisibility(View.GONE);
             } else {
-                String labelText = primaryText.length() > labelTextSize ? primaryText.substring(0, labelTextSize - 3) + "..." : primaryText;
+                String labelText = shortTitle != null && !shortTitle.equals("") ? shortTitle : primaryText;
                 primaryTextView.setText(labelText);
+                if(markerConfig.labelMaxWidth != 0) primaryTextView.setMaxWidth(markerConfig.labelMaxWidth);
+                if(secondaryText.equals("") && markerConfig.labelMaxLines != 1 && !markerConfig.labelActionImage.image.equals("")) {
+                    primaryTextView.setMaxLines(2);
+                }
+                primaryTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, markerConfig.labelTextSize);
                 primaryTextView.setImportantForAccessibility(TextView.IMPORTANT_FOR_ACCESSIBILITY_YES);
-                primaryTextView.setContentDescription(labelText);
+                primaryTextView.setContentDescription(primaryText);
                 primaryTextView.setTextColor(Color.parseColor(textColor));
             }
             if (!secondaryText.equals("")) {
-                String secondaryLabelText = secondaryText.length() > labelTextSize ? secondaryText.substring(0, labelTextSize - 3) + "..." : secondaryText;
-                secondaryTextView.setText(secondaryLabelText);
+                secondaryTextView.setText(secondaryText);
                 secondaryTextView.setImportantForAccessibility(TextView.IMPORTANT_FOR_ACCESSIBILITY_YES);
-                secondaryTextView.setContentDescription(secondaryLabelText);
+                secondaryTextView.setContentDescription(secondaryText);
                 secondaryTextView.setVisibility(View.VISIBLE);
+                if(markerConfig.labelMaxWidth != 0) secondaryTextView.setMaxWidth(markerConfig.labelMaxWidth);
                 secondaryTextView.setTextColor(Color.parseColor(textColor));
             } else {
                 ViewGroup.LayoutParams labelTextsViewLayoutParams = labelTextViews.getLayoutParams();
                 labelTextsViewLayoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT;
+                labelTextsViewLayoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT;
                 labelTextViews.setLayoutParams(labelTextsViewLayoutParams);
                 ViewGroup.LayoutParams primaryTextViewLayoutParams = primaryTextView.getLayoutParams();
                 primaryTextViewLayoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT;
+                primaryTextViewLayoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT;
                 primaryTextView.setLayoutParams(primaryTextViewLayoutParams);
             }
         }catch (Exception e) {

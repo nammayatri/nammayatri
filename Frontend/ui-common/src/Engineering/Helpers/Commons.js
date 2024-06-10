@@ -67,6 +67,31 @@ export const atobImpl = function (value) {
   }
 }
 
+export const getMarkerCallback = function(cb, action) {
+  try {
+    return PrestoCallbackMapper.map(function(markerName) {
+      cb(action(markerName))();
+    })
+  } catch (error) {
+    console.error("Error in getMarkerCallback ", error);
+    return "";
+  }
+}
+
+export const splitString = function(word, pattern, len) {
+  try {
+    
+    const wordArr = word.split(pattern);
+    if (wordArr.length === 0 || wordArr.length === 1) return word;
+
+    const limit = Math.min(len, wordArr.length);
+    return wordArr.slice(0, limit).join(", ");
+
+  } catch (e) {
+    return word;
+  }
+}
+
 export const getWindowVariable = function(key) {
   return function(just) {
     return function(nothing) {
