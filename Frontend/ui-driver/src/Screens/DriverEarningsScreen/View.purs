@@ -692,6 +692,7 @@ balanceView push state =
           , cornerRadius 6.0
           , background Color.blue600
           , rippleColor Color.rippleShade
+          , visibility $ boolToVisibility state.data.config.coinsConfig.enableUseCoins
           ]
           [ textView
               $ [ text $ getString USE_COINS <> "  →"

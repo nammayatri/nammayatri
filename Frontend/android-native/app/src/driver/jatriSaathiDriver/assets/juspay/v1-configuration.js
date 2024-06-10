@@ -335,6 +335,7 @@ window.getMerchantConfig = function () {
     "bookingCancelCoinEvent" : true,
     "fiveStarCoinEvent" : true,
     "oneTwoStarCoinEvent" : true,
+    "enableUseCoins" : false
   }
   , "cityConfig" : [
     {

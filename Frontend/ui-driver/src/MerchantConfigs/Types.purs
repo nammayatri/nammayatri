@@ -242,7 +242,8 @@ type CoinsConfig = {
   driverToCustomerRefCoinEvent :: Boolean,
   coinConversionPopupLottie :: String,
   driverToCustomerRefPopupEndDate :: String,
-  coinsValidTill :: Int
+  coinsValidTill :: Int,
+  enableUseCoins :: Boolean
 }
 
 type InAppKeyboardModalConfig = {

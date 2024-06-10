@@ -563,7 +563,8 @@ config =
       driverToCustomerRefCoinEvent : false,
       coinConversionPopupLottie : "",
       driverToCustomerRefPopupEndDate : "",
-      coinsValidTill : 150
+      coinsValidTill : 150,
+      enableUseCoins : true
   }
   , inAppKeyboardModalConfig : {
       enableDeviceKeyboard : true
