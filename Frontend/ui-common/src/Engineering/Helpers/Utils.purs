@@ -324,11 +324,11 @@ cityCodeMap =
   , Tuple "std:0124" "gurugram"
   ]
 
-getCityFromCode :: String -> String
+getCityFromCode :: String -> Maybe String
 getCityFromCode code = 
   let 
     cityCodeTuple = DA.find (\ tuple -> (fst tuple) == code) cityCodeMap
-  in maybe "" (\tuple -> snd tuple) cityCodeTuple
+  in snd <$> cityCodeTuple
 
 getCodeFromCity :: String -> String
 getCodeFromCity city = 

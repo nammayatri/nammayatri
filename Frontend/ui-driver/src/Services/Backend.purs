@@ -207,7 +207,7 @@ makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
     where 
         mkOperatingCity :: String -> Maybe String
         mkOperatingCity operatingCity
-            | operatingCity `DA.elem` ["__failed", "--"] = Nothing
+            | operatingCity `DA.elem` ["__failed", "--", ""] = Nothing
             | operatingCity == "Puducherry"          = Just "Pondicherry"
             | operatingCity == "Tamil Nadu"          = Just "TamilNaduCities"
             | otherwise                              = Just operatingCity
