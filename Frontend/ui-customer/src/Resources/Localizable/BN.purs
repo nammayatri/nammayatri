@@ -1276,3 +1276,4 @@ getBN stringKey =
         WALKING_DIRECTIONS_TO_PICKUP -> "পিকআপের জন্য হেঁটে যাওয়ার নির্দেশ"
         EXPLORE_CITY_WITH_US city -> "আমাদের সাথে " <> city <> " এক্সপ্লোর করুন"
         GO_TO_DESTINATION destination -> destination <> " এ যান"
+        WALK_TO address -> address <> " এ হাঁটুন"

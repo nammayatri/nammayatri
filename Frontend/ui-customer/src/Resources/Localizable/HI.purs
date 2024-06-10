@@ -1276,3 +1276,4 @@ getHI stringKey =
         WALKING_DIRECTIONS_TO_PICKUP -> "पिकअप के लिए पैदल दिशानिर्देश"
         EXPLORE_CITY_WITH_US city -> city <> " में हमारे साथ यात्रा करें"
         GO_TO_DESTINATION destination -> destination <> " पर जाएं"
+        WALK_TO address -> address <> " पर चलें"

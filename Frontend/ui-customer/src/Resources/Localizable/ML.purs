@@ -1278,3 +1278,4 @@ getML stringKey =
         WALKING_DIRECTIONS_TO_PICKUP -> "പിക്കപ്പിനേയ്ക്ക് നടപടികൾ"
         EXPLORE_CITY_WITH_US city -> "ഞങ്ങളോടൊപ്പം " <> city <> " അന്വേഷിക്കുക"
         GO_TO_DESTINATION destination -> "ഗോ ടു " <> destination
+        WALK_TO address -> address <> " ലേക്ക് നടക്കുക"

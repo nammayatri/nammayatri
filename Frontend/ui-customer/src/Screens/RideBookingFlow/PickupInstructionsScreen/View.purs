@@ -109,10 +109,10 @@ instructionItem push item =
     relativeLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
-    , margin $ Margin 16 16 16 16
+    , margin $ Margin 16 20 16 0
     ][ linearLayout
-        [ width $ V $ (EHC.screenWidth unit) - 50
-        , height $ V $ (EHC.screenHeight unit)/5
+        [ width $ V $ (EHC.screenWidth unit)
+        , height $ V $ (EHC.screenHeight unit)/4
         , gravity CENTER
         ][  progressBar
             [ width WRAP_CONTENT
@@ -125,8 +125,8 @@ instructionItem push item =
         , height WRAP_CONTENT
         , gravity CENTER
         ][  imageView
-            [ width $ V $ (EHC.screenWidth unit) - 50
-            , height $ V $ (EHC.screenHeight unit)/5
+            [ width $ V $ (EHC.screenWidth unit)
+            , height $ V $ (EHC.screenHeight unit)/4
             , imageUrl item.image
             ]
         ],

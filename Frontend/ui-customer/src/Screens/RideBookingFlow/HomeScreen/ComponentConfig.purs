@@ -1126,6 +1126,7 @@ driverInfoTransformer state =
     , rentalData : cardState.rentalData
     , fareProductType : cardState.fareProductType
     , spLocationName : cardState.spLocationName
+    , addressWard : cardState.addressWard
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState

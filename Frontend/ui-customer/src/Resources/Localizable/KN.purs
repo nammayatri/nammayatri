@@ -1277,3 +1277,4 @@ getKN stringKey =
         WALKING_DIRECTIONS_TO_PICKUP -> "ಪಿಕಪ್ ಸ್ಥಳಕ್ಕೆ ನಡೆಯುವ ಮಾರ್ಗದರ್ಶನ"
         EXPLORE_CITY_WITH_US city -> "ನಮ್ಮೊಂದಿಗೆ " <> city <> " ಅನ್ವೇಷಿಸಿ"
         GO_TO_DESTINATION destination -> "ಗುರಿಯಿಂದ ಹೋಗಿ " <> destination
+        WALK_TO address -> address <> " ಕ್ಕೆ ನಡೆಯಿರಿ"

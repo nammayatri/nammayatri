@@ -53,7 +53,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Types (DriverInfoConfig)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Mobility.Prelude (boolToVisibility, capitalize)
-import PrestoDOM (BottomSheetState(..), Accessiblity(..), Gradient(..), Shadow(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, alignParentLeft, alignParentRight, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, shimmerFrameLayout, rippleColor, clipChildren, shadow, clipToPadding, rotation, horizontalScrollView, disableKeyboardAvoidance, scrollBarX, layoutGravity, nestedScrollView)
+import PrestoDOM (BottomSheetState(..), Accessiblity(..), Gradient(..), Shadow(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, alignParentLeft, alignParentRight, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, shimmerFrameLayout, rippleColor, clipChildren, shadow, clipToPadding, rotation, horizontalScrollView, disableKeyboardAvoidance, scrollBarX, layoutGravity, nestedScrollView, lottieAnimationView)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, negate, (>), (<), (-), (*), bind, pure, discard, not, (&&), (||), (/=),(+), (+), void)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM.Animation as PrestoAnim
@@ -87,6 +87,8 @@ import Data.Int (floor, toNumber)
 import Effect.Unsafe (unsafePerformEffect)
 import Screens.Types (FareProductType(..)) as FPT
 import Data.String as STR
+import JBridge as JB
+import Animation as Anim
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -913,14 +915,7 @@ contactView push state =
                 , color Color.black900
                 ] <> FontStyle.body7 TypoGraphy
               ]
-          , textView $
-            [ width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , color Color.blue900
-            , text $ getString SHOW_WALKING_DIRECTION
-            , visibility $ boolToVisibility $ Array.any (_ == state.props.zoneType.sourceTag) [ AIRPORT, SPECIAL_PICKUP ]
-            , onClick push $ const $ ShowDirections state.data.sourceLat state.data.sourceLng
-            ] <> FontStyle.body6 TypoGraphy
+          , walkToDirectionView
          ]
       , textView [weight 1.0, visibility $ boolToVisibility $ state.props.zoneType.priorityTag /= SPECIAL_PICKUP]
       , chatButtonView push state
@@ -936,6 +931,52 @@ contactView push state =
                       then state.data.driverName <> " is waiting for you."
                       else state.data.driverName <> " is " <> distance <> "away"
           else state.data.driverName <> " is waiting for you."
+      walkToDirectionView = 
+        case state.props.zoneType.sourceTag, state.data.addressWard of
+          AIRPORT , Just ward ->  airportPickupView push state $ getString $ WALK_TO ward
+          _ , _ ->  textView $
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , color Color.blue900
+                    , text $ getString SHOW_WALKING_DIRECTION
+                    , accessibilityHint "Show walking direction : Button"
+                    , onClick push $ const $ ShowDirections state.data.sourceLat state.data.sourceLng
+                    ] <> FontStyle.body6 TypoGraphy
+                  
+
+airportPickupView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> String -> PrestoDOM (Effect Unit) w
+airportPickupView push state directionText = 
+  linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , onClick push $ const $ ShowDirections state.data.sourceLat state.data.sourceLng
+    , accessibilityHint "Show walking direction : Button"
+    , gravity CENTER_VERTICAL
+    ][  PrestoAnim.animationSet[ Anim.triggerOnAnimationEnd true] $ 
+        lottieAnimationView
+        [ height $ V 24
+        , width $ V 24
+        , gravity CENTER
+        , id $ getNewIDWithTag "WalkingLottie"
+        , margin $ MarginRight 4
+        , onAnimationEnd (\action -> do
+          void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/walk_anim.json", lottieId = getNewIDWithTag "WalkingLottie", repeat = true}
+          push action
+          ) (const NoAction)
+        ]
+      , textView $
+        [ width (V (((screenWidth unit)/3)+27))
+        , height WRAP_CONTENT
+        , color Color.blue900
+        , text directionText
+        ] <> FontStyle.body6 TypoGraphy
+      , imageView
+        [ width $ V 14
+        , height $ V 14
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_right_arrow_blue"
+        ]
+    ]
+
 
 chatButtonView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 chatButtonView push state = 
