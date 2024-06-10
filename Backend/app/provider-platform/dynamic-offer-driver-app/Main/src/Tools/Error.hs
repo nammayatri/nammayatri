@@ -35,6 +35,20 @@ instance IsAPIError RatingError
 
 instanceExceptionWithParent 'HTTPException ''RatingError
 
+data LocationServiceabilityError
+  = LocationUnserviceable
+  deriving (Eq, Show, IsBecknAPIError)
+
+instance IsBaseError LocationServiceabilityError
+
+instance IsHTTPError LocationServiceabilityError where
+  toErrorCode LocationUnserviceable = "LOCATION_UNSERVICEABLE"
+  toHttpCode LocationUnserviceable = E400
+
+instance IsAPIError LocationServiceabilityError
+
+instanceExceptionWithParent 'HTTPException ''LocationServiceabilityError
+
 data FarePolicyError
   = NoFarePolicy
   | NoPerExtraKmRate
