@@ -463,13 +463,16 @@ export const scanQrCode = function (requestCode) {
 export const timePicker = function (cb) {
   return function (action) {
     return function () {
-      const callback = callbackMapper.map(function (hour, min, resp) {
-        cb(action(hour)(min)(resp))();
-      });
-      if (window.__OS == "IOS" )
-        return window.JBridge.timePicker(callback, "" ,"TimePicker");
-      else 
-        return window.JBridge.timePicker(callback);
+      if (window.__OS == "IOS" ){
+        const callback = callbackMapper.map(function (resp, year, month, date, hour, min) {
+          cb(action(hour)(min)(resp))();
+        });
+        return window.JBridge.timePicker(callback, "" ,"TimePicker");}
+      else {
+        const callback = callbackMapper.map(function (hour, min, resp) {
+          cb(action(hour)(min)(resp))();
+        });
+        return window.JBridge.timePicker(callback);}
     };
   };
 };
@@ -2621,13 +2624,17 @@ export const datePickerImpl = function (cb , action, delay){
 }
 
 export const timePickerImpl = function (cb , action, delay){
-  const callback = callbackMapper.map(function (hour, min, str) {
-    cb(action(hour)(min)(str))();
-  })
-  if (window.__OS == "IOS")
-    window.JBridge.datePicker(callback, "", "TimePicker");
-  else 
-    window.JBridge.timePicker(callback);
+  
+  if (window.__OS == "IOS"){
+    const callback = callbackMapper.map(function (resp, year, month, date, hour, min) {
+      cb(action(hour)(min)(resp))();
+    })
+    window.JBridge.datePicker(callback, "", "TimePicker");}
+  else {
+    const callback = callbackMapper.map(function (hour, min, resp) {
+      cb(action(hour)(min)(resp))();
+    })
+    window.JBridge.timePicker(callback);}
 }
 
 export const renderSliderImpl = (cb, action, config) => {
