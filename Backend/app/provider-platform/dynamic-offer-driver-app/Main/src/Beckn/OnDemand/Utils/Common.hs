@@ -1248,12 +1248,12 @@ buildRateCardTags RateCardBreakupItem {..} =
       tagValue = Just value
     }
 
-tfCancellationTerms :: DBC.BecknConfig -> [Spec.CancellationTerm]
-tfCancellationTerms becknConfig =
+tfCancellationTerms :: DBC.BecknConfig -> Maybe Enums.FulfillmentState -> [Spec.CancellationTerm]
+tfCancellationTerms becknConfig state =
   List.singleton
     Spec.CancellationTerm
       { cancellationTermCancellationFee = tfCancellationFee becknConfig.cancellationFeeAmount,
-        cancellationTermFulfillmentState = Nothing,
+        cancellationTermFulfillmentState = mkFulfillmentState <$> state,
         cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
       }
 
@@ -1442,3 +1442,15 @@ getRiderPhoneNumber req = do
   let tagGroups = req.ratingTag
       tagValue = Utils.getTagV2 Tags.RATING_TAGS Tags.RIDER_PHONE_NUMBER tagGroups
    in tagValue
+
+mkFulfillmentState :: Enums.FulfillmentState -> Spec.FulfillmentState
+mkFulfillmentState stateCode =
+  Spec.FulfillmentState
+    { fulfillmentStateDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just $ show stateCode,
+              descriptorShortDesc = Nothing,
+              descriptorName = Nothing
+            }
+    }
