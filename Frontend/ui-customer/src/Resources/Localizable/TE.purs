@@ -1291,3 +1291,4 @@ getTE stringKey =
     WALKING_DIRECTIONS_TO_PICKUP -> "పికప్ కు వాకింగ్ దిక్కులు"
     EXPLORE_CITY_WITH_US city -> "మాతో కలిసి " <> city <> " అన్వేషించండి"
     GO_TO_DESTINATION destination -> "గంతవ్యం " <> destination <> " కు వెళ్ళండి"
+    WALK_TO address -> address <> " க்கு நடக்கவும்"

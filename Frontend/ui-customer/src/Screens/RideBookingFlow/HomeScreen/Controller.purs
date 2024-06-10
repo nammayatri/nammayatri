@@ -741,7 +741,7 @@ data ScreenOutput = LogoutUser
                   | StayInHomeScreenSO HomeScreenState
                   | GoToIssueReportChatScreenWithIssue HomeScreenState CTP.CustomerIssueTypes
                   | ReloadFlowStatus HomeScreenState
-                  | ExitToPickupInstructions HomeScreenState Number Number
+                  | ExitToPickupInstructions HomeScreenState Number Number String String
 
 data Action = NoAction
             | BackPressed
@@ -2113,7 +2113,10 @@ eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigate mode l
   void $ pure $ openNavigation lat lon (show mode)
   continue state 
 
-eval (DriverInfoCardActionController (DriverInfoCardController.ShowDirections lat lon)) state = exit $ ExitToPickupInstructions state lat lon
+eval (DriverInfoCardActionController (DriverInfoCardController.ShowDirections lat lon)) state = 
+  case state.props.zoneType.sourceTag , state.data.driverInfoCardState.addressWard, state.data.driverInfoCardState.spLocationName of 
+        ST.AIRPORT, Just ward, Just spLocationName -> exit $ ExitToPickupInstructions state lat lon ward spLocationName
+        _ , _, _ -> continueWithCmd state [pure $ DriverInfoCardActionController (DriverInfoCardController.OnNavigate ST.WALK lat lon)]
   
 eval (ZoneTimerExpired (PopUpModal.OnButton2Click)) state = continue state{props{zoneOtpExpired = false}}
 

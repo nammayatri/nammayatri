@@ -1294,3 +1294,4 @@ getTA stringKey =
     WALKING_DIRECTIONS_TO_PICKUP -> "பிக்அப் க்கு நடந்து செல்ல வழிகாட்டி"
     EXPLORE_CITY_WITH_US city -> "எங்களுடன் " <> city <> " ஐ கண்டறியுங்கள்"
     GO_TO_DESTINATION destination -> "பெங்களூரை வருக " <> destination
+    WALK_TO address -> address <> " க்கு நடக்கவும்"

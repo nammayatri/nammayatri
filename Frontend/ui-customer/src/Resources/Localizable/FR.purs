@@ -1278,3 +1278,4 @@ getFR stringKey =
         WALKING_DIRECTIONS_TO_PICKUP -> "Directions pour marcher jusqu'au lieu de prise en charge"
         EXPLORE_CITY_WITH_US city -> "Explorez " <> city <> " avec nous"
         GO_TO_DESTINATION destination -> "visitez " <> destination
+        WALK_TO address -> "Marcher jusqu'à " <> address

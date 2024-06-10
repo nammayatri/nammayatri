@@ -127,4 +127,5 @@ type DriverInfoCardData =
   , rentalData :: RentalBookingConfig
   , fareProductType :: FareProductType
   , spLocationName :: Maybe String
+  , addressWard :: Maybe String
   }
