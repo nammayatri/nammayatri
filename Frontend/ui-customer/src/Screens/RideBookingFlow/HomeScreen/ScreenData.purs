@@ -360,6 +360,7 @@ initData = {
     , isBannerDataComputed : false
     , showScheduledRideExistsPopUp : false
     , isOffline : false
+    , hasEstimateBackpoint : false
   }
 }
 

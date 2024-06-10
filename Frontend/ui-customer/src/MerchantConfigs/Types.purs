@@ -289,7 +289,8 @@ type MapConfig = {
   locateOnMapConfig :: LocateOnMapConfigs,
   labelTextSize :: Int,
   animationDuration :: Int,
-  vehicleMarkerSize :: Int
+  vehicleMarkerSize :: Int,
+  labelTheme :: String
 }
 
 type MetroConfig = {

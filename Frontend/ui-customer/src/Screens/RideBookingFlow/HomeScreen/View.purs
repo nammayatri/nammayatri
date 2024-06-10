@@ -1606,7 +1606,7 @@ topLeftIconView state push =
                 , background Color.white900
                 , gravity CENTER
                 , cornerRadius 24.0
-                , visibility $ boolToVisibility $ not (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain, RideCompleted, RideRating, ReAllocated ])
+                , visibility $ boolToVisibility $ not (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain, RideCompleted, RideRating, ReAllocated, SearchLocationModel ])
                 , clickable true
                 , onClick push $ if isBackPress then const BackPressed else const OpenSettings
                 , accessibilityHint if isBackPress then "Back : Button" else "Menu : Button"

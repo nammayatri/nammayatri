@@ -160,7 +160,7 @@ specialZoneTagConfig zoneType =
 zoneLabelIcon :: ZoneType -> String
 zoneLabelIcon zoneType =
   case zoneType of
-    METRO -> "ny_ic_metro_white"
+    METRO -> "ny_ic_metro_black"
     _ -> ""
 
 findSpecialPickupZone :: Maybe String -> Maybe (Array Location) -> Number -> Number -> Maybe SpecialLocationList

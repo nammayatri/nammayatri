@@ -399,3 +399,12 @@ dummyCancelReason =
   , textBoxRequired: false
   , subtext: Nothing
   }
+  
+markerArrowSize :: Int
+markerArrowSize = if (os == "IOS") then 12 else 18
+
+estimateLabelMaxWidth :: Int
+estimateLabelMaxWidth = if (os == "IOS") then 80 else 300
+
+locateOnMapLabelMaxWidth :: Int
+locateOnMapLabelMaxWidth = if (os == "IOS") then 140 else 400

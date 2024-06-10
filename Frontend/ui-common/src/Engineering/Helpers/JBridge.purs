@@ -518,6 +518,7 @@ locateOnMapConfig = {
         showLabel : false
       , showLabelActionImage : false
       , labelImage : ""
+      , labelMaxWidth : if os == "IOS" then 140 else 400 
       , labelActionImage : ""
       , theme : "LIGHT"
       , spotIcon : "ny_ic_zone_pickup_marker_green"
@@ -564,6 +565,7 @@ type LocateOnMapPadding = {
 type SpecialZoneMarkerConfig = {
     showLabelActionImage :: Boolean
   , labelActionImage :: String
+  , labelMaxWidth :: Int
   , theme :: String
   , spotIcon :: String
   , selectedSpotIcon :: String
@@ -572,13 +574,31 @@ type SpecialZoneMarkerConfig = {
   , showZoneLabel :: Boolean
 }
 
+type MarkerImageConfig = {
+  image :: String, 
+  height :: Int,
+  width :: Int
+}
+
+defaultMarkerImageConfig :: MarkerImageConfig
+defaultMarkerImageConfig = {
+  image : "",
+  height : 28,
+  width : 28
+}
+
 type MarkerConfig = {
     showPointer :: Boolean
   , pointerIcon :: String
   , primaryText :: String
+  , shortTitle :: String
   , secondaryText :: String
-  , labelImage :: String
-  , labelActionImage :: String
+  , labelImage :: MarkerImageConfig
+  , labelActionImage :: MarkerImageConfig
+  , labelMaxWidth :: Int
+  , labelMaxLines :: Int
+  , labelTextSize :: Int
+  , labelHeight :: Int
   , markerCallback :: String
   , markerCallbackForTags :: Array String
   , theme :: String
@@ -595,12 +615,17 @@ defaultMarkerConfig = {
     showPointer : true
   , pointerIcon : ""
   , primaryText : ""
+  , shortTitle : ""
   , secondaryText : ""
-  , labelImage : ""
-  , labelActionImage : ""
+  , labelImage : defaultMarkerImageConfig
+  , labelActionImage : defaultMarkerImageConfig
   , markerCallback : ""
+  , labelMaxWidth : if os == "IOS" then 100 else 300
+  , labelMaxLines : 1
+  , labelTextSize : 11
+  , labelHeight : 16
   , markerCallbackForTags : []
-  , theme : "DARK"
+  , theme : "LIGHT"
   , position : { lat : 0.0, lng : 0.0 }
   , rotation : 0.0
   , markerId : ""
