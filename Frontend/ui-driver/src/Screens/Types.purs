@@ -2593,6 +2593,7 @@ type BenefitsScreenData = {
   , rank :: Maybe Int
   , totalEligibleDrivers :: Maybe Int
   , moduleList :: LmsModuleList
+  , bannerData :: BannerCarousalData
 }
 
 type BenefitsScreenProps = {

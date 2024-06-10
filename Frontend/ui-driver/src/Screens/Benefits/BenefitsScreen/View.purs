@@ -6,7 +6,7 @@ import Prelude
 import PrestoDOM
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Benefits.BenefitsScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.Benefits.BenefitsScreen.Controller (Action(..), ScreenOutput, eval, getRemoteBannerConfigs)
 import Screens.Types
 import Screens.Benefits.BenefitsScreen.ComponentConfig
 import Styles.Colors as Color
@@ -23,7 +23,7 @@ import Language.Types (STR(..))
 import Components.PrimaryButton as PrimaryButton
 import Engineering.Helpers.Commons
 import Effect.Aff (launchAff)
-import Types.App (defaultGlobalState)
+import Types.App (defaultGlobalState, GlobalState)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Services.Backend as Remote
@@ -35,7 +35,7 @@ import Debug (spy)
 import Mobility.Prelude
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Storage (KeyStore(..), getValueToLocalStore)
-import Data.Maybe (isJust, fromMaybe, Maybe(..))
+import Data.Maybe (isJust, fromMaybe, Maybe(..), maybe)
 import Effect.Uncurried (runEffectFn4)
 import ConfigProvider
 import Data.Int(fromNumber, toNumber, ceil)
@@ -45,6 +45,11 @@ import Data.Array (length)
 import Data.Either (Either(..))
 import Locale.Utils
 import PrestoDOM.Animation as PrestoAnim
+import CarouselHolder as CarouselHolder
+import Components.BannerCarousel as BannerCarousel
+import PrestoDOM.List (ListItem, preComputeListItem)
+import Engineering.Helpers.Commons as EHC
+import Presto.Core.Flow (Flow)
 
 screen :: BenefitsScreenState -> Screen Action BenefitsScreenState ScreenOutput
 screen initialState =
@@ -65,6 +70,7 @@ screen initialState =
                 case moduleResp of
                   Right modules -> liftFlow $ push $ UpdateModuleList modules
                   Left err -> liftFlow $ push $ UpdateModuleListErrorOccurred
+            void $ launchAff $ EHC.flowRunner defaultGlobalState $ computeListItem push
             pure $ pure unit
         )
       ]
@@ -129,6 +135,7 @@ referralScreenInnerBody push state =
   , height $ WRAP_CONTENT
   , orientation VERTICAL
   ]([ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+    , getCarouselView
    ,  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -140,6 +147,8 @@ referralScreenInnerBody push state =
       ]
    ,  learnAndEarnShimmerView push state
   ] <> if not (null state.data.moduleList.completed) || not (null state.data.moduleList.remaining) then [learnAndEarnView push state] else [])
+  where
+    getCarouselView = maybe (linearLayout[][]) (\item -> bannersCarousal item state push) state.data.bannerData.bannerItem
 
 tabView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 tabView push state =
@@ -871,3 +880,35 @@ statusPillView push state status pillMargin =
 --       , margin $ MarginLeft 6
 --       ]
 --   ]
+
+computeListItem :: (Action -> Effect Unit) -> Flow GlobalState Unit
+computeListItem push = do
+  bannerItem <- preComputeListItem $ BannerCarousel.view push (BannerCarousel.config BannerCarousal)
+  void $ EHC.liftFlow $ push (SetBannerItem bannerItem)
+
+bannersCarousal :: forall w. ListItem -> BenefitsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+bannersCarousal view state push =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , margin $ MarginBottom 16
+  ][CarouselHolder.carouselView push $ getCarouselConfig view state]
+
+getCarouselConfig ∷ forall a. ListItem → BenefitsScreenState → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
+getCarouselConfig view state = {
+    view
+  , items : BannerCarousel.bannerTransformer $ getRemoteBannerConfigs BannerCarousal
+  , orientation : VERTICAL
+  , currentPage : state.data.bannerData.currentPage
+  , autoScroll : true
+  , autoScrollDelay : 5000.0
+  , id : "referralBannerCarousel"
+  , autoScrollAction : Just UpdateBanner
+  , onPageSelected : Just BannerChanged
+  , onPageScrollStateChanged : Just BannerStateChanged
+  , onPageScrolled : Nothing
+  , currentIndex : state.data.bannerData.currentBanner
+  , showScrollIndicator : true
+  , layoutHeight : V 100
+  , overlayScrollIndicator : true
+}
