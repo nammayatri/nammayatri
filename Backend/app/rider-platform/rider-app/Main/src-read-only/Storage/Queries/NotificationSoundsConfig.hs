@@ -25,21 +25,21 @@ createMany = traverse_ create
 findByNotificationType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.External.Notification.Interface.Types.Category -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig))
-findByNotificationType notificationType (Kernel.Types.Id.Id merchantOperatingCityId) = do
+findByNotificationType notificationType merchantOperatingCityId = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.notificationType $ Se.Eq notificationType,
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
         ]
     ]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Notification.Interface.Types.Category -> m (Maybe Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig))
-findByPrimaryKey (Kernel.Types.Id.Id merchantOperatingCityId) notificationType = do
+findByPrimaryKey merchantOperatingCityId notificationType = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.notificationType $ Se.Eq notificationType
         ]
     ]

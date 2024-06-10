@@ -53,12 +53,12 @@ findSpecialOccasionByEntityIdAndDayOfWeek entityId dayOfWeek = do findOneWithKV 
 updateBusinessHoursById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   ([Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour] -> Kernel.Types.Id.Id Domain.Types.SpecialOccasion.SpecialOccasion -> m ())
-updateBusinessHoursById businessHours (Kernel.Types.Id.Id id) = do
+updateBusinessHoursById businessHours id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateOneWithKV [Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SpecialOccasion.SpecialOccasion -> m (Maybe Domain.Types.SpecialOccasion.SpecialOccasion))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SpecialOccasion.SpecialOccasion -> m ())
 updateByPrimaryKey (Domain.Types.SpecialOccasion.SpecialOccasion {..}) = do

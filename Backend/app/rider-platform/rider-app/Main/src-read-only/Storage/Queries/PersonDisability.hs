@@ -23,20 +23,26 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Pers
 createMany = traverse_ create
 
 deleteByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-deleteByPersonId (Kernel.Types.Id.Id personId) = do deleteWithKV [Se.Is Beam.personId $ Se.Eq personId]
+deleteByPersonId personId = do deleteWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
 findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.PersonDisability.PersonDisability))
-findByPersonId (Kernel.Types.Id.Id personId) = do findOneWithKV [Se.Is Beam.personId $ Se.Eq personId]
+findByPersonId personId = do findOneWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
 updateDisabilityByPersonId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateDisabilityByPersonId disabilityId tag description (Kernel.Types.Id.Id personId) = do
+updateDisabilityByPersonId disabilityId tag description personId = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.disabilityId disabilityId, Se.Set Beam.tag tag, Se.Set Beam.description description, Se.Set Beam.updatedAt _now] [Se.Is Beam.personId $ Se.Eq personId]
+  updateWithKV
+    [ Se.Set Beam.disabilityId disabilityId,
+      Se.Set Beam.tag tag,
+      Se.Set Beam.description description,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.PersonDisability.PersonDisability))
-findByPrimaryKey (Kernel.Types.Id.Id personId) = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq personId]]
+findByPrimaryKey personId = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PersonDisability.PersonDisability -> m ())
 updateByPrimaryKey (Domain.Types.PersonDisability.PersonDisability {..}) = do

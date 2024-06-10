@@ -25,7 +25,7 @@ createMany = traverse_ create
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod -> m (Maybe Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod -> m ())
 updateByPrimaryKey (Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod {..}) = do

@@ -21,29 +21,29 @@ import Storage.Queries.EstimateExtra as ReExport
 import Storage.Queries.Transformers.Estimate
 
 findAllBySRId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Estimate.Estimate])
-findAllBySRId (Kernel.Types.Id.Id requestId) = do findAllWithKV [Se.Is Beam.requestId $ Se.Eq requestId]
+findAllBySRId requestId = do findAllWithKV [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)]
 
 findByBPPEstimateId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.BPPEstimate -> m (Maybe Domain.Types.Estimate.Estimate))
-findByBPPEstimateId (Kernel.Types.Id.Id bppEstimateId) = do findOneWithKV [Se.Is Beam.bppEstimateId $ Se.Eq bppEstimateId]
+findByBPPEstimateId bppEstimateId = do findOneWithKV [Se.Is Beam.bppEstimateId $ Se.Eq (Kernel.Types.Id.getId bppEstimateId)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findBySRIdAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.Estimate.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m (Maybe Domain.Types.Estimate.Estimate))
-findBySRIdAndStatus status (Kernel.Types.Id.Id requestId) = do findOneWithKV [Se.And [Se.Is Beam.status $ Se.Eq status, Se.Is Beam.requestId $ Se.Eq requestId]]
+findBySRIdAndStatus status requestId = do findOneWithKV [Se.And [Se.Is Beam.status $ Se.Eq status, Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)]]
 
 updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Estimate.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
-updateStatus status (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.updatedAt _now, Se.Set Beam.status status] [Se.Is Beam.id $ Se.Eq id]
+updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.updatedAt _now, Se.Set Beam.status status] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatusByRequestId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Estimate.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
-updateStatusByRequestId status (Kernel.Types.Id.Id requestId) = do
+updateStatusByRequestId status requestId = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.updatedAt _now, Se.Set Beam.status status] [Se.Is Beam.requestId $ Se.Eq requestId]
+  updateWithKV [Se.Set Beam.updatedAt _now, Se.Set Beam.status status] [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Estimate.Estimate -> m ())
 updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do

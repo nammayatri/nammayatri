@@ -23,17 +23,17 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.LmsM
 createMany = traverse_ create
 
 getAllTranslationsByModuleId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m [Domain.Types.LmsModuleTranslation.LmsModuleTranslation])
-getAllTranslationsByModuleId (Kernel.Types.Id.Id moduleId) = do findAllWithKV [Se.Is Beam.moduleId $ Se.Eq moduleId]
+getAllTranslationsByModuleId moduleId = do findAllWithKV [Se.Is Beam.moduleId $ Se.Eq (Kernel.Types.Id.getId moduleId)]
 
 getByModuleIdAndLanguage ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.External.Types.Language -> m (Maybe Domain.Types.LmsModuleTranslation.LmsModuleTranslation))
-getByModuleIdAndLanguage (Kernel.Types.Id.Id moduleId) language = do findOneWithKV [Se.And [Se.Is Beam.moduleId $ Se.Eq moduleId, Se.Is Beam.language $ Se.Eq language]]
+getByModuleIdAndLanguage moduleId language = do findOneWithKV [Se.And [Se.Is Beam.moduleId $ Se.Eq (Kernel.Types.Id.getId moduleId), Se.Is Beam.language $ Se.Eq language]]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe Domain.Types.LmsModuleTranslation.LmsModuleTranslation))
-findByPrimaryKey language (Kernel.Types.Id.Id moduleId) = do findOneWithKV [Se.And [Se.Is Beam.language $ Se.Eq language, Se.Is Beam.moduleId $ Se.Eq moduleId]]
+findByPrimaryKey language moduleId = do findOneWithKV [Se.And [Se.Is Beam.language $ Se.Eq language, Se.Is Beam.moduleId $ Se.Eq (Kernel.Types.Id.getId moduleId)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LmsModuleTranslation.LmsModuleTranslation -> m ())
 updateByPrimaryKey (Domain.Types.LmsModuleTranslation.LmsModuleTranslation {..}) = do

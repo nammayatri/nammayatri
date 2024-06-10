@@ -20,13 +20,13 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RegistryMapFallback.RegistryMapFallback] -> m ())
 createMany = traverse_ create
 
-findBySubscriberId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.RegistryMapFallback.RegistryMapFallback]))
+findBySubscriberId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RegistryMapFallback.RegistryMapFallback])
 findBySubscriberId subscriberId = do findAllWithKV [Se.Is Beam.subscriberId $ Se.Eq subscriberId]
 
 findBySubscriberIdAndUniqueId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.RegistryMapFallback.RegistryMapFallback))
 findBySubscriberIdAndUniqueId subscriberId uniqueId = do findOneWithKV [Se.And [Se.Is Beam.subscriberId $ Se.Eq subscriberId, Se.Is Beam.uniqueId $ Se.Eq uniqueId]]
 
-findByUniqueId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.RegistryMapFallback.RegistryMapFallback]))
+findByUniqueId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RegistryMapFallback.RegistryMapFallback])
 findByUniqueId uniqueId = do findAllWithKV [Se.Is Beam.uniqueId $ Se.Eq uniqueId]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.RegistryMapFallback.RegistryMapFallback))

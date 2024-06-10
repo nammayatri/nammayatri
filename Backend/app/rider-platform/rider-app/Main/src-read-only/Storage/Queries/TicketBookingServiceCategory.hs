@@ -41,17 +41,17 @@ findAllByServiceCategoryIdDateAndBtype serviceCategoryId visitDate btype = do
 findAllByTicketBookingServiceId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m [Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory])
-findAllByTicketBookingServiceId (Kernel.Types.Id.Id ticketBookingServiceId) = do findAllWithKV [Se.Is Beam.ticketBookingServiceId $ Se.Eq ticketBookingServiceId]
+findAllByTicketBookingServiceId ticketBookingServiceId = do findAllWithKV [Se.Is Beam.ticketBookingServiceId $ Se.Eq (Kernel.Types.Id.getId ticketBookingServiceId)]
 
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m (Maybe Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateCancellationDetailsById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Domain.Types.TicketBookingServiceCategory.CancelledBy -> Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m ())
-updateCancellationDetailsById cancelledSeats amountToRefund eventCancelledBy (Kernel.Types.Id.Id id) = do
+updateCancellationDetailsById cancelledSeats amountToRefund eventCancelledBy id = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.cancelledSeats cancelledSeats,
@@ -59,12 +59,12 @@ updateCancellationDetailsById cancelledSeats amountToRefund eventCancelledBy (Ke
       Se.Set Beam.eventCancelledBy eventCancelledBy,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.Is Beam.id $ Se.Eq id]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m (Maybe Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m ())
 updateByPrimaryKey (Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory {..}) = do

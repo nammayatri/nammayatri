@@ -26,7 +26,7 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Aadh
 createMany = traverse_ create
 
 deleteByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-deleteByPersonId (Kernel.Types.Id.Id driverId) = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq driverId]
+deleteByPersonId driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findByAadhaarNumberHash :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash -> m (Maybe Domain.Types.AadhaarCard.AadhaarCard))
 findByAadhaarNumberHash aadhaarNumberHash = do findOneWithKV [Se.Is Beam.aadhaarNumberHash $ Se.Eq aadhaarNumberHash]
@@ -34,7 +34,7 @@ findByAadhaarNumberHash aadhaarNumberHash = do findOneWithKV [Se.Is Beam.aadhaar
 findByPhoneNumberAndUpdate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash -> Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-findByPhoneNumberAndUpdate nameOnCard driverGender dateOfBirth aadhaarNumberHash verificationStatus (Kernel.Types.Id.Id driverId) = do
+findByPhoneNumberAndUpdate nameOnCard driverGender dateOfBirth aadhaarNumberHash verificationStatus driverId = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.nameOnCard nameOnCard,
@@ -44,20 +44,20 @@ findByPhoneNumberAndUpdate nameOnCard driverGender dateOfBirth aadhaarNumberHash
       Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.Is Beam.driverId $ Se.Eq driverId]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateDriverImagePath :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateDriverImagePath driverImagePath (Kernel.Types.Id.Id driverId) = do
+updateDriverImagePath driverImagePath driverId = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.driverImagePath driverImagePath, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
+  updateOneWithKV [Se.Set Beam.driverImagePath driverImagePath, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateVerificationStatus verificationStatus (Kernel.Types.Id.Id driverId) = do
+updateVerificationStatus verificationStatus driverId = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq driverId]
+  updateWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.AadhaarCard.AadhaarCard))
-findByPrimaryKey (Kernel.Types.Id.Id driverId) = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId]]
+findByPrimaryKey driverId = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.AadhaarCard.AadhaarCard -> m ())
 updateByPrimaryKey (Domain.Types.AadhaarCard.AadhaarCard {..}) = do

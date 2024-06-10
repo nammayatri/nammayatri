@@ -26,7 +26,7 @@ createMany = traverse_ create
 updateMetaData ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateMetaData device deviceOS deviceDateTime appPermissions (Kernel.Types.Id.Id driverId) = do
+updateMetaData device deviceOS deviceDateTime appPermissions driverId = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.device device,
@@ -35,10 +35,10 @@ updateMetaData device deviceOS deviceDateTime appPermissions (Kernel.Types.Id.Id
       Se.Set Beam.appPermissions appPermissions,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.Is Beam.driverId $ Se.Eq driverId]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.MetaData.MetaData))
-findByPrimaryKey (Kernel.Types.Id.Id driverId) = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId]]
+findByPrimaryKey driverId = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MetaData.MetaData -> m ())
 updateByPrimaryKey (Domain.Types.MetaData.MetaData {..}) = do

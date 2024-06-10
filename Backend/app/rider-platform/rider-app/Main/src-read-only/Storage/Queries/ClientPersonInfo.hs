@@ -24,22 +24,28 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Clie
 createMany = traverse_ create
 
 findAllByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.ClientPersonInfo.ClientPersonInfo])
-findAllByPersonId (Kernel.Types.Id.Id personId) = do findAllWithKV [Se.Is Beam.personId $ Se.Eq personId]
+findAllByPersonId personId = do findAllWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
 findByPersonIdAndVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Domain.Types.BecknConfig.VehicleCategory -> m (Maybe Domain.Types.ClientPersonInfo.ClientPersonInfo))
-findByPersonIdAndVehicleCategory (Kernel.Types.Id.Id personId) vehicleCategory = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq personId, Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory]]
+findByPersonIdAndVehicleCategory personId vehicleCategory = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId), Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory]]
 
 updateHasTakenValidRideCount ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Domain.Types.BecknConfig.VehicleCategory -> m ())
-updateHasTakenValidRideCount rideCount (Kernel.Types.Id.Id personId) vehicleCategory = do
+updateHasTakenValidRideCount rideCount personId vehicleCategory = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.rideCount rideCount, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.personId $ Se.Eq personId, Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory]]
+  updateOneWithKV
+    [Se.Set Beam.rideCount rideCount, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId),
+          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
+        ]
+    ]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.ClientPersonInfo.ClientPersonInfo -> m (Maybe Domain.Types.ClientPersonInfo.ClientPersonInfo))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ClientPersonInfo.ClientPersonInfo -> m ())
 updateByPrimaryKey (Domain.Types.ClientPersonInfo.ClientPersonInfo {..}) = do

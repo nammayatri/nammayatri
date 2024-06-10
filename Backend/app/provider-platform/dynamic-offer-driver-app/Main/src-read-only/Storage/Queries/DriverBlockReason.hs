@@ -22,7 +22,7 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Driv
 createMany = traverse_ create
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverBlockReason.DriverBlockReason -> m (Maybe Domain.Types.DriverBlockReason.DriverBlockReason))
-findByPrimaryKey (Kernel.Types.Id.Id reasonCode) = do findOneWithKV [Se.And [Se.Is Beam.reasonCode $ Se.Eq reasonCode]]
+findByPrimaryKey reasonCode = do findOneWithKV [Se.And [Se.Is Beam.reasonCode $ Se.Eq (Kernel.Types.Id.getId reasonCode)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverBlockReason.DriverBlockReason -> m ())
 updateByPrimaryKey (Domain.Types.DriverBlockReason.DriverBlockReason {..}) = do

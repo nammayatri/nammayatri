@@ -29,12 +29,18 @@ findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq shortId]
 updateNotificationStatusAndResponseInfoById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.Extra.Notification.NotificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Notification.Notification -> m ())
-updateNotificationStatusAndResponseInfoById status responseCode responseMessage (Kernel.Types.Id.Id id) = do
+updateNotificationStatusAndResponseInfoById status responseCode responseMessage id = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.status status, Se.Set Beam.responseCode responseCode, Se.Set Beam.responseMessage responseMessage, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateWithKV
+    [ Se.Set Beam.status status,
+      Se.Set Beam.responseCode responseCode,
+      Se.Set Beam.responseMessage responseMessage,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Notification.Notification -> m (Maybe Domain.Types.Notification.Notification))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Notification.Notification -> m ())
 updateByPrimaryKey (Domain.Types.Notification.Notification {..}) = do

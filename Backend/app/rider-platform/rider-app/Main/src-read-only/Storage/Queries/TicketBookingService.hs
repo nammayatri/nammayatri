@@ -24,41 +24,41 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Tick
 createMany = traverse_ create
 
 findAllByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m [Domain.Types.TicketBookingService.TicketBookingService])
-findAllByBookingId (Kernel.Types.Id.Id ticketBookingId) = do findAllWithKV [Se.Is Beam.ticketBookingId $ Se.Eq ticketBookingId]
+findAllByBookingId ticketBookingId = do findAllWithKV [Se.Is Beam.ticketBookingId $ Se.Eq (Kernel.Types.Id.getId ticketBookingId)]
 
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m (Maybe Domain.Types.TicketBookingService.TicketBookingService))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByShortId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> m (Maybe Domain.Types.TicketBookingService.TicketBookingService))
-findByShortId (Kernel.Types.Id.ShortId shortId) = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq shortId]
+findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Types.Id.getShortId shortId)]
 
 updateAllStatusByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TicketBookingService.ServiceStatus -> Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m ())
-updateAllStatusByBookingId status (Kernel.Types.Id.Id ticketBookingId) = do
+updateAllStatusByBookingId status ticketBookingId = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.ticketBookingId $ Se.Eq ticketBookingId]
+  updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.ticketBookingId $ Se.Eq (Kernel.Types.Id.getId ticketBookingId)]
 
 updateStatusAndCancelledSeatsById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.TicketBookingService.ServiceStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m ())
-updateStatusAndCancelledSeatsById status cancelledSeats (Kernel.Types.Id.Id id) = do
+updateStatusAndCancelledSeatsById status cancelledSeats id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.cancelledSeats cancelledSeats, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.cancelledSeats cancelledSeats, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateVerificationById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.TicketBookingService.ServiceStatus -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m ())
-updateVerificationById status verificationCount (Kernel.Types.Id.Id id) = do
+updateVerificationById status verificationCount id = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.status status, Se.Set Beam.verificationCount verificationCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateWithKV [Se.Set Beam.status status, Se.Set Beam.verificationCount verificationCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m (Maybe Domain.Types.TicketBookingService.TicketBookingService))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TicketBookingService.TicketBookingService -> m ())
 updateByPrimaryKey (Domain.Types.TicketBookingService.TicketBookingService {..}) = do

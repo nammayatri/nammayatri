@@ -25,15 +25,15 @@ createMany = traverse_ create
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.MerchantPushNotification.MerchantPushNotification])
-findAllByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
+findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByMerchantOpCityIdAndMessageKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> m (Maybe Domain.Types.MerchantPushNotification.MerchantPushNotification))
-findByMerchantOpCityIdAndMessageKey (Kernel.Types.Id.Id merchantOperatingCityId) key = do
+findByMerchantOpCityIdAndMessageKey merchantOperatingCityId key = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.key $ Se.Eq key
         ]
     ]
@@ -41,7 +41,7 @@ findByMerchantOpCityIdAndMessageKey (Kernel.Types.Id.Id merchantOperatingCityId)
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.MerchantPushNotification.MerchantPushNotification))
-findByPrimaryKey key (Kernel.Types.Id.Id merchantOperatingCityId) = do findOneWithKV [Se.And [Se.Is Beam.key $ Se.Eq key, Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]]
+findByPrimaryKey key merchantOperatingCityId = do findOneWithKV [Se.And [Se.Is Beam.key $ Se.Eq key, Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantPushNotification.MerchantPushNotification -> m ())
 updateByPrimaryKey (Domain.Types.MerchantPushNotification.MerchantPushNotification {..}) = do

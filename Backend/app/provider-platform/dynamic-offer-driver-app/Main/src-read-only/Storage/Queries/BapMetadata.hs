@@ -23,15 +23,15 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BapM
 createMany = traverse_ create
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata -> m (Maybe Domain.Types.BapMetadata.BapMetadata))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findBySubscriberIdAndDomain ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata -> Kernel.Prelude.Maybe Data.Text.Text -> m (Maybe Domain.Types.BapMetadata.BapMetadata))
-findBySubscriberIdAndDomain (Kernel.Types.Id.Id id) domain = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id, Se.Is Beam.domain $ Se.Eq domain]]
+findBySubscriberIdAndDomain id domain = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.domain $ Se.Eq domain]]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata -> m (Maybe Domain.Types.BapMetadata.BapMetadata))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BapMetadata.BapMetadata -> m ())
 updateByPrimaryKey (Domain.Types.BapMetadata.BapMetadata {..}) = do

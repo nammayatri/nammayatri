@@ -27,12 +27,12 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Dail
 createMany = traverse_ create
 
 findByDriverIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m (Maybe Domain.Types.DailyStats.DailyStats))
-findByDriverIdAndDate (Kernel.Types.Id.Id driverId) merchantLocalDate = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
+findByDriverIdAndDate driverId merchantLocalDate = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
 
 updateByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Int -> Kernel.Types.Common.Meters -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m ())
-updateByDriverId totalEarnings numRides totalDistance (Kernel.Types.Id.Id driverId) merchantLocalDate = do
+updateByDriverId totalEarnings numRides totalDistance driverId merchantLocalDate = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.totalEarnings (Kernel.Prelude.roundToIntegral totalEarnings),
@@ -41,7 +41,7 @@ updateByDriverId totalEarnings numRides totalDistance (Kernel.Types.Id.Id driver
       Se.Set Beam.totalDistance totalDistance,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
+    [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m (Maybe Domain.Types.DailyStats.DailyStats))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]

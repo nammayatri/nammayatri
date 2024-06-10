@@ -24,7 +24,7 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Book
 createMany = traverse_ create
 
 findAllByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m [Domain.Types.BookingUpdateRequest.BookingUpdateRequest])
-findAllByBookingId (Kernel.Types.Id.Id bookingId) = do findAllWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq bookingId]]
+findAllByBookingId bookingId = do findAllWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)]]
 
 findByBAPBUReqId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest))
 findByBAPBUReqId bapBookingUpdateRequestId = do findOneWithKV [Se.And [Se.Is Beam.bapBookingUpdateRequestId $ Se.Eq bapBookingUpdateRequestId]]
@@ -32,12 +32,12 @@ findByBAPBUReqId bapBookingUpdateRequestId = do findOneWithKV [Se.And [Se.Is Bea
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findById id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateMultipleById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters -> Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m ())
-updateMultipleById travelledDistance estimatedFare totalDistance currentPointLat currentPointLon (Kernel.Types.Id.Id id) = do
+updateMultipleById travelledDistance estimatedFare totalDistance currentPointLat currentPointLon id = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.travelledDistance travelledDistance,
@@ -47,7 +47,7 @@ updateMultipleById travelledDistance estimatedFare totalDistance currentPointLat
       Se.Set Beam.currentPointLon currentPointLon,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.Is Beam.id $ Se.Eq id]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatusByBAPBookingUpdateRequestId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingUpdateRequest.BookingUpdateRequestStatus -> Kernel.Prelude.Text -> m ())
 updateStatusByBAPBookingUpdateRequestId status bapBookingUpdateRequestId = do
@@ -57,19 +57,19 @@ updateStatusByBAPBookingUpdateRequestId status bapBookingUpdateRequestId = do
 updateStatusById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.BookingUpdateRequest.BookingUpdateRequestStatus -> Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m ())
-updateStatusById status (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+updateStatusById status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateTravelledDistanceById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters -> Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m ())
-updateTravelledDistanceById travelledDistance (Kernel.Types.Id.Id id) = do
+updateTravelledDistanceById travelledDistance id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.travelledDistance travelledDistance, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateOneWithKV [Se.Set Beam.travelledDistance travelledDistance, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m ())
 updateByPrimaryKey (Domain.Types.BookingUpdateRequest.BookingUpdateRequest {..}) = do

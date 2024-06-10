@@ -25,15 +25,15 @@ createMany = traverse_ create
 findAllByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig])
-findAllByMerchantOperatingCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
+findAllByMerchantOperatingCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findAllByMerchantOperatingCityIdAndTimeDiffEvent ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.RideRelatedNotificationConfig.TimeDiffEvent -> m [Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig])
-findAllByMerchantOperatingCityIdAndTimeDiffEvent (Kernel.Types.Id.Id merchantOperatingCityId) timeDiffEvent = do
+findAllByMerchantOperatingCityIdAndTimeDiffEvent merchantOperatingCityId timeDiffEvent = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.timeDiffEvent $ Se.Eq timeDiffEvent
         ]
     ]
@@ -41,11 +41,11 @@ findAllByMerchantOperatingCityIdAndTimeDiffEvent (Kernel.Types.Id.Id merchantOpe
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig))
-findByPrimaryKey (Kernel.Types.Id.Id id) (Kernel.Types.Id.Id merchantOperatingCityId) = do
+findByPrimaryKey id merchantOperatingCityId = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id,
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
         ]
     ]
 

@@ -24,15 +24,15 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Rati
 createMany = traverse_ create
 
 findAllRatingsForPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.Rating.Rating])
-findAllRatingsForPerson (Kernel.Types.Id.Id riderId) = do findAllWithDb [Se.Is Beam.riderId $ Se.Eq riderId]
+findAllRatingsForPerson riderId = do findAllWithDb [Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId)]
 
 findRatingForRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe Domain.Types.Rating.Rating))
-findRatingForRide (Kernel.Types.Id.Id rideId) = do findOneWithKV [Se.Is Beam.rideId $ Se.Eq rideId]
+findRatingForRide rideId = do findOneWithKV [Se.Is Beam.rideId $ Se.Eq (Kernel.Types.Id.getId rideId)]
 
 updateRating ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Rating.Rating -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateRating ratingValue feedbackDetails wasOfferedAssistance (Kernel.Types.Id.Id id) (Kernel.Types.Id.Id riderId) = do
+updateRating ratingValue feedbackDetails wasOfferedAssistance id riderId = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.ratingValue ratingValue,
@@ -40,10 +40,10 @@ updateRating ratingValue feedbackDetails wasOfferedAssistance (Kernel.Types.Id.I
       Se.Set Beam.wasOfferedAssistance wasOfferedAssistance,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.id $ Se.Eq id, Se.Is Beam.riderId $ Se.Eq riderId]]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId)]]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Rating.Rating -> m (Maybe Domain.Types.Rating.Rating))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Rating.Rating -> m ())
 updateByPrimaryKey (Domain.Types.Rating.Rating {..}) = do

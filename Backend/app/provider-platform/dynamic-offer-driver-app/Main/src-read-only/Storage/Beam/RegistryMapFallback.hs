@@ -11,7 +11,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
-data RegistryMapFallbackT f = RegistryMapFallbackT {registryUrl :: (B.C f Kernel.Prelude.Text), subscriberId :: (B.C f Kernel.Prelude.Text), uniqueId :: (B.C f Kernel.Prelude.Text)}
+data RegistryMapFallbackT f = RegistryMapFallbackT {registryUrl :: B.C f Kernel.Prelude.Text, subscriberId :: B.C f Kernel.Prelude.Text, uniqueId :: B.C f Kernel.Prelude.Text}
   deriving (Generic, B.Beamable)
 
 instance B.Table RegistryMapFallbackT where
@@ -20,6 +20,6 @@ instance B.Table RegistryMapFallbackT where
 
 type RegistryMapFallback = RegistryMapFallbackT Identity
 
-$(enableKVPG (''RegistryMapFallbackT) [('subscriberId), ('uniqueId)] [])
+$(enableKVPG ''RegistryMapFallbackT ['subscriberId, 'uniqueId] [])
 
-$(mkTableInstances (''RegistryMapFallbackT) "registry_map_fallback")
+$(mkTableInstances ''RegistryMapFallbackT "registry_map_fallback")

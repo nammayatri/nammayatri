@@ -26,4 +26,4 @@ findAllByEntityIdAndEntityType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
 findAllByEntityIdAndEntityType entityId entityType = do findAllWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq entityId, Se.Is Beam.entityType $ Se.Eq entityType]]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FareBreakup.FareBreakup -> m (Maybe Domain.Types.FareBreakup.FareBreakup))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findById id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
