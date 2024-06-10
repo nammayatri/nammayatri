@@ -156,7 +156,10 @@ type AddVehicleDetailsScreenData =  {
   cityConfig :: CityConfig,
   vehicleCategory :: Maybe VehicleCategory,
   config :: AppConfig,
-  rcNumberPrefixList :: Array String
+  rcNumberPrefixList :: Array String,
+  ventilator :: Maybe Boolean,
+  airConditioned :: Maybe Boolean,
+  oxygen :: Maybe Boolean
  }
 
 type AddVehicleDetailsScreenProps =  {

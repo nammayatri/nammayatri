@@ -506,10 +506,16 @@ eval OpenAmbulanceFacilityModal state = continue state {props {ambulanceModal = 
 eval (RequestAmbulanceFacility RequestInfoCard.Close) state = continue state { props { ambulanceModal = false}}
 
 eval (RequestAmbulanceFacility RequestInfoCard.BackPressed) state = continue state { props { ambulanceModal = false}}
-
-eval (SelectAmbulanceVarient str) state = do
-  let newState = str 
-  continue state{props{isvariant = newState , facilities = not state.props.facilities , showIssueOptions = true}}
+ 
+eval (SelectAmbulanceVarient varient) state = do
+  let {airConditioned , ventilator , oxygen} = case varient of
+                                                "AMBULANCE_TAXI" -> { airConditioned: Just false , ventilator: Just false , oxygen: Just false}
+                                                "AMBULANCE_TAXI_OXY" -> {airConditioned: Just false , ventilator: Just false , oxygen: Just true}
+                                                "AMBULANCE_AC" -> {airConditioned: Just true , ventilator: Just false , oxygen: Just false}
+                                                "AMBULANCE_AC_OXY" ->{ airConditioned: Just true , ventilator: Just false , oxygen: Just true}
+                                                "AMBULANCE_VENTILATOR" -> {airConditioned: Just true , ventilator: Just true , oxygen: Just true}
+                                                _ -> {airConditioned: Nothing , ventilator: Nothing , oxygen: Nothing}
+  continue state{data{airConditioned =  airConditioned  , ventilator = ventilator , oxygen = oxygen} , props{isvariant = varient , facilities = not state.props.facilities , showIssueOptions = true}}
 
 eval SelectAmbulanceFacility state = do
   let old = state.props.facilities

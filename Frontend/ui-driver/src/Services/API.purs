@@ -982,6 +982,9 @@ newtype DriverRCReq = DriverRCReq {
   operatingCity :: String,
   imageId :: String,
   dateOfRegistration :: Maybe String,
+  ventilator :: Maybe Boolean,
+  airConditioned :: Maybe Boolean,
+  oxygen :: Maybe Boolean,
   vehicleCategory :: Maybe String
 }
 

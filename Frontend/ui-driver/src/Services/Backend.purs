@@ -667,8 +667,8 @@ callDriverToDriverBT rcNo = do
   where
     errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
 
-makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> Maybe ST.VehicleCategory -> DriverRCReq
-makeDriverRCReq regNo imageId dateOfRegistration multipleRc category = 
+makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> Maybe ST.VehicleCategory -> Maybe Boolean -> Maybe Boolean -> Maybe Boolean -> DriverRCReq
+makeDriverRCReq regNo imageId dateOfRegistration multipleRc category airConditioned oxygen ventilator = 
     let _ = spy "checkingOperatingCity:" <> MP.capitalize $ getValueToLocalStore DRIVER_LOCATION
     in
         DriverRCReq
@@ -677,7 +677,10 @@ makeDriverRCReq regNo imageId dateOfRegistration multipleRc category =
         "operatingCity" : DS.toUpper $ getValueToLocalStore DRIVER_LOCATION,
         "imageId" : imageId,
         "dateOfRegistration" : dateOfRegistration,
-        "vehicleCategory" : mkCategory category
+        "vehicleCategory" : mkCategory category,
+        "airConditioned" : airConditioned,
+        "oxygen" : oxygen,
+        "ventilator" : ventilator
         }
 
 mkCategory :: Maybe ST.VehicleCategory -> Maybe String

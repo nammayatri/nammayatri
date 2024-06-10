@@ -42,7 +42,10 @@ initData = {
       cityConfig : dummyCityConfig,
       vehicleCategory : Nothing,
       rcNumberPrefixList : [],
-      config : getAppConfig appConfig
+      config : getAppConfig appConfig,
+      airConditioned : Nothing,
+      ventilator : Nothing,
+      oxygen : Nothing
     },
     props: {
       rcAvailable : false,
