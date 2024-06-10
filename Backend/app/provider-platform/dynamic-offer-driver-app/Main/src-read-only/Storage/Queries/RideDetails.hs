@@ -22,10 +22,10 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Ride
 createMany = traverse_ create
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe Domain.Types.RideDetails.RideDetails))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe Domain.Types.RideDetails.RideDetails))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RideDetails.RideDetails -> m ())
 updateByPrimaryKey (Domain.Types.RideDetails.RideDetails {..}) = do
@@ -34,7 +34,7 @@ updateByPrimaryKey (Domain.Types.RideDetails.RideDetails {..}) = do
       Se.Set Beam.defaultServiceTierName defaultServiceTierName,
       Se.Set Beam.driverCountryCode driverCountryCode,
       Se.Set Beam.driverName driverName,
-      Se.Set Beam.driverNumberEncrypted ((driverNumber <&> unEncrypted . (.encrypted))),
+      Se.Set Beam.driverNumberEncrypted (driverNumber <&> unEncrypted . (.encrypted)),
       Se.Set Beam.driverNumberHash (driverNumber <&> (.hash)),
       Se.Set Beam.fleetOwnerId fleetOwnerId,
       Se.Set Beam.vehicleClass vehicleClass,
@@ -71,7 +71,7 @@ instance ToTType' Beam.RideDetails Domain.Types.RideDetails.RideDetails where
         Beam.defaultServiceTierName = defaultServiceTierName,
         Beam.driverCountryCode = driverCountryCode,
         Beam.driverName = driverName,
-        Beam.driverNumberEncrypted = (driverNumber <&> unEncrypted . (.encrypted)),
+        Beam.driverNumberEncrypted = driverNumber <&> unEncrypted . (.encrypted),
         Beam.driverNumberHash = driverNumber <&> (.hash),
         Beam.fleetOwnerId = fleetOwnerId,
         Beam.id = Kernel.Types.Id.getId id,

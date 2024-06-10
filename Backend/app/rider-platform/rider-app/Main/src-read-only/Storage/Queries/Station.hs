@@ -23,7 +23,7 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Stat
 createMany = traverse_ create
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByStationCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Station.Station))
 findByStationCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
@@ -31,10 +31,10 @@ findByStationCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
 getTicketPlacesByMerchantOperatingCityIdAndVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Station.FRFSVehicleType -> m [Domain.Types.Station.Station])
-getTicketPlacesByMerchantOperatingCityIdAndVehicleType (Kernel.Types.Id.Id merchantOperatingCityId) vehicleType = do
+getTicketPlacesByMerchantOperatingCityIdAndVehicleType merchantOperatingCityId vehicleType = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.vehicleType $ Se.Eq vehicleType
         ]
     ]
@@ -43,7 +43,7 @@ getTicketPlacesByVehicleType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (
 getTicketPlacesByVehicleType vehicleType = do findAllWithKV [Se.Is Beam.vehicleType $ Se.Eq vehicleType]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Station.Station -> m ())
 updateByPrimaryKey (Domain.Types.Station.Station {..}) = do

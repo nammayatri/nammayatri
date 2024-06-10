@@ -23,10 +23,10 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Aadh
 createMany = traverse_ create
 
 deleteByPersonIdForGenerate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-deleteByPersonIdForGenerate (Kernel.Types.Id.Id personId) = do deleteWithKV [Se.Is Beam.personId $ Se.Eq personId]
+deleteByPersonIdForGenerate personId = do deleteWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.AadhaarOtpReq.AadhaarOtpReq -> m (Maybe Domain.Types.AadhaarOtpReq.AadhaarOtpReq))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.AadhaarOtpReq.AadhaarOtpReq -> m ())
 updateByPrimaryKey (Domain.Types.AadhaarOtpReq.AadhaarOtpReq {..}) = do

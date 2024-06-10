@@ -22,16 +22,16 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Plac
 createMany = traverse_ create
 
 deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PlaceNameCache.PlaceNameCache -> m ())
-deleteById (Kernel.Types.Id.Id id) = do deleteWithKV [Se.Is Beam.id $ Se.Eq id]
+deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findPlaceByGeoHash :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Domain.Types.PlaceNameCache.PlaceNameCache]))
+findPlaceByGeoHash :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.PlaceNameCache.PlaceNameCache])
 findPlaceByGeoHash geoHash = do findAllWithKV [Se.Is Beam.geoHash $ Se.Eq geoHash]
 
-findPlaceByPlaceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Domain.Types.PlaceNameCache.PlaceNameCache]))
+findPlaceByPlaceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.PlaceNameCache.PlaceNameCache])
 findPlaceByPlaceId placeId = do findAllWithKV [Se.Is Beam.placeId $ Se.Eq placeId]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PlaceNameCache.PlaceNameCache -> m (Maybe Domain.Types.PlaceNameCache.PlaceNameCache))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PlaceNameCache.PlaceNameCache -> m ())
 updateByPrimaryKey (Domain.Types.PlaceNameCache.PlaceNameCache {..}) = do

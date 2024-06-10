@@ -20,24 +20,24 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverGoH
 create = createWithKV
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest -> m (Maybe Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 finishWithStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.DriverGoHomeRequest.DriverGoHomeRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest -> m ())
-finishWithStatus status mbReachedHome (Kernel.Types.Id.Id id) = do
+finishWithStatus status mbReachedHome id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.reachedHome (mbReachedHome), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.reachedHome mbReachedHome, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateCancellationCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest -> m ())
-updateCancellationCount numCancellation (Kernel.Types.Id.Id id) = do
+updateCancellationCount numCancellation id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.numCancellation numCancellation, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateOneWithKV [Se.Set Beam.numCancellation numCancellation, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest -> m (Maybe Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest -> m ())
 updateByPrimaryKey (Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest {..}) = do
@@ -45,9 +45,9 @@ updateByPrimaryKey (Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest {..}) =
   updateWithKV
     [ Se.Set Beam.createdAt createdAt,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
-      Se.Set Beam.lat (lat),
-      Se.Set Beam.lon (lon),
-      Se.Set Beam.reachedHome (mbReachedHome),
+      Se.Set Beam.lat lat,
+      Se.Set Beam.lon lon,
+      Se.Set Beam.reachedHome mbReachedHome,
       Se.Set Beam.numCancellation numCancellation,
       Se.Set Beam.status status,
       Se.Set Beam.updatedAt _now

@@ -15,15 +15,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MessageReportT f = MessageReportT
-  { createdAt :: (B.C f Data.Time.LocalTime),
-    deliveryStatus :: (B.C f Domain.Types.MessageReport.DeliveryStatus),
-    driverId :: (B.C f Kernel.Prelude.Text),
-    likeStatus :: (B.C f Kernel.Prelude.Bool),
-    messageDynamicFields :: (B.C f Data.Aeson.Value),
-    messageId :: (B.C f Kernel.Prelude.Text),
-    readStatus :: (B.C f Kernel.Prelude.Bool),
-    reply :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    updatedAt :: (B.C f Data.Time.LocalTime)
+  { createdAt :: B.C f Data.Time.LocalTime,
+    deliveryStatus :: B.C f Domain.Types.MessageReport.DeliveryStatus,
+    driverId :: B.C f Kernel.Prelude.Text,
+    likeStatus :: B.C f Kernel.Prelude.Bool,
+    messageDynamicFields :: B.C f Data.Aeson.Value,
+    messageId :: B.C f Kernel.Prelude.Text,
+    readStatus :: B.C f Kernel.Prelude.Bool,
+    reply :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    updatedAt :: B.C f Data.Time.LocalTime
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +33,6 @@ instance B.Table MessageReportT where
 
 type MessageReport = MessageReportT Identity
 
-$(enableKVPG (''MessageReportT) [('driverId), ('messageId)] [])
+$(enableKVPG ''MessageReportT ['driverId, 'messageId] [])
 
-$(mkTableInstances (''MessageReportT) "message_report")
+$(mkTableInstances ''MessageReportT "message_report")

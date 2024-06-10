@@ -18,12 +18,12 @@ import qualified Storage.Beam.Message as Beam
 import Storage.Queries.MessageExtra as ReExport
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Message.Message -> m (Maybe Domain.Types.Message.Message))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Message.Message -> m ())
 updateByPrimaryKey (Domain.Types.Message.Message {..}) = do
   updateWithKV
-    [ Se.Set Beam.messageType (_type),
+    [ Se.Set Beam.messageType _type,
       Se.Set Beam.alwaysTriggerOnOnboarding (Kernel.Prelude.Just alwaysTriggerOnOnboarding),
       Se.Set Beam.createdAt (Data.Time.utcToLocalTime Data.Time.utc createdAt),
       Se.Set Beam.description description,

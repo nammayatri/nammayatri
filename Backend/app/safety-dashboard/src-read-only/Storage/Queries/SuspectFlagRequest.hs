@@ -85,14 +85,14 @@ findBydl dl = do findOneWithKV [Se.Is Beam.dl $ Se.Eq dl]
 updateAdminApprovalById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.SuspectFlagRequest.AdminApproval -> Kernel.Types.Id.Id Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> m ())
-updateAdminApprovalById adminApproval (Kernel.Types.Id.Id id) = do
+updateAdminApprovalById adminApproval id = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.adminApproval adminApproval, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateWithKV [Se.Set Beam.adminApproval adminApproval, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> m (Maybe Domain.Types.SuspectFlagRequest.SuspectFlagRequest))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> m ())
 updateByPrimaryKey (Domain.Types.SuspectFlagRequest.SuspectFlagRequest {..}) = do

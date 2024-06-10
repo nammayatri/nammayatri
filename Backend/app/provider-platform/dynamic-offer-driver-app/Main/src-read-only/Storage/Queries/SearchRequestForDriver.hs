@@ -24,28 +24,28 @@ import Storage.Queries.Transformers.SearchRequestForDriver
 findAllActiveBySRId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> m [Domain.Types.SearchRequestForDriver.SearchRequestForDriver])
-findAllActiveBySRId (Kernel.Types.Id.Id requestId) status = do findAllWithKV [Se.And [Se.Is Beam.requestId $ Se.Eq requestId, Se.Is Beam.status $ Se.Eq status]]
+findAllActiveBySRId requestId status = do findAllWithKV [Se.And [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId), Se.Is Beam.status $ Se.Eq status]]
 
 findAllActiveBySTId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> m [Domain.Types.SearchRequestForDriver.SearchRequestForDriver])
-findAllActiveBySTId (Kernel.Types.Id.Id searchTryId) status = do findAllWithKV [Se.And [Se.Is Beam.searchTryId $ Se.Eq searchTryId, Se.Is Beam.status $ Se.Eq status]]
+findAllActiveBySTId searchTryId status = do findAllWithKV [Se.And [Se.Is Beam.searchTryId $ Se.Eq (Kernel.Types.Id.getId searchTryId), Se.Is Beam.status $ Se.Eq status]]
 
 updateDriverResponse ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriverResponse -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource -> Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())
-updateDriverResponse response status notificationSource (Kernel.Types.Id.Id id) = do
+updateDriverResponse response status notificationSource id = do
   updateOneWithKV
     [ Se.Set Beam.response response,
       Se.Set Beam.status status,
       Se.Set Beam.notificationSource notificationSource
     ]
-    [Se.Is Beam.id $ Se.Eq id]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m (Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriver))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())
 updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {..}) = do

@@ -25,11 +25,11 @@ createMany = traverse_ create
 
 findActiveMandateSetupInvoiceByFeeId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> Domain.Types.Invoice.InvoicePaymentMode -> Domain.Types.Invoice.InvoiceStatus -> m ([Domain.Types.Invoice.Invoice]))
-findActiveMandateSetupInvoiceByFeeId (Kernel.Types.Id.Id driverFeeId) paymentMode invoiceStatus = do
+  (Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> Domain.Types.Invoice.InvoicePaymentMode -> Domain.Types.Invoice.InvoiceStatus -> m [Domain.Types.Invoice.Invoice])
+findActiveMandateSetupInvoiceByFeeId driverFeeId paymentMode invoiceStatus = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.driverFeeId $ Se.Eq driverFeeId,
+        [ Se.Is Beam.driverFeeId $ Se.Eq (Kernel.Types.Id.getId driverFeeId),
           Se.Is Beam.paymentMode $ Se.Eq paymentMode,
           Se.Is Beam.invoiceStatus $ Se.Eq invoiceStatus
         ]
@@ -37,32 +37,32 @@ findActiveMandateSetupInvoiceByFeeId (Kernel.Types.Id.Id driverFeeId) paymentMod
 
 findActiveManualInvoiceByFeeId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> Domain.Types.Invoice.InvoicePaymentMode -> Domain.Types.Invoice.InvoiceStatus -> m ([Domain.Types.Invoice.Invoice]))
-findActiveManualInvoiceByFeeId (Kernel.Types.Id.Id driverFeeId) paymentMode invoiceStatus = do
+  (Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> Domain.Types.Invoice.InvoicePaymentMode -> Domain.Types.Invoice.InvoiceStatus -> m [Domain.Types.Invoice.Invoice])
+findActiveManualInvoiceByFeeId driverFeeId paymentMode invoiceStatus = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.driverFeeId $ Se.Eq driverFeeId,
+        [ Se.Is Beam.driverFeeId $ Se.Eq (Kernel.Types.Id.getId driverFeeId),
           Se.Is Beam.paymentMode $ Se.Eq paymentMode,
           Se.Is Beam.invoiceStatus $ Se.Eq invoiceStatus
         ]
     ]
 
-findAllByInvoiceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> m ([Domain.Types.Invoice.Invoice]))
-findAllByInvoiceId (Kernel.Types.Id.Id id) = do findAllWithKV [Se.Is Beam.id $ Se.Eq id]
+findAllByInvoiceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> m [Domain.Types.Invoice.Invoice])
+findAllByInvoiceId id = do findAllWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findAllByInvoiceShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.Invoice.Invoice]))
+findAllByInvoiceShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.Invoice.Invoice])
 findAllByInvoiceShortId invoiceShortId = do findAllWithKV [Se.Is Beam.invoiceShortId $ Se.Eq invoiceShortId]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> m ([Domain.Types.Invoice.Invoice]))
-findById (Kernel.Types.Id.Id id) = do findAllWithKV [Se.Is Beam.id $ Se.Eq id]
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> m [Domain.Types.Invoice.Invoice])
+findById id = do findAllWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByIdWithPaymenModeAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> Domain.Types.Invoice.InvoicePaymentMode -> Domain.Types.Invoice.InvoiceStatus -> m (Maybe Domain.Types.Invoice.Invoice))
-findByIdWithPaymenModeAndStatus (Kernel.Types.Id.Id id) paymentMode invoiceStatus = do
+findByIdWithPaymenModeAndStatus id paymentMode invoiceStatus = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id,
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id),
           Se.Is Beam.paymentMode $ Se.Eq paymentMode,
           Se.Is Beam.invoiceStatus $ Se.Eq invoiceStatus
         ]
@@ -71,7 +71,7 @@ findByIdWithPaymenModeAndStatus (Kernel.Types.Id.Id id) paymentMode invoiceStatu
 updateBankErrorsByInvoiceId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> m ())
-updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode bankErrorUpdatedAt (Kernel.Types.Id.Id id) = do
+updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode bankErrorUpdatedAt id = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bankErrorMessage bankErrorMessage,
@@ -79,10 +79,10 @@ updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode bankErrorUpdatedAt (K
       Se.Set Beam.bankErrorUpdatedAt bankErrorUpdatedAt,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.Is Beam.id $ Se.Eq id]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> m (Maybe Domain.Types.Invoice.Invoice))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Invoice.Invoice -> m ())
 updateByPrimaryKey (Domain.Types.Invoice.Invoice {..}) = do
@@ -98,9 +98,9 @@ updateByPrimaryKey (Domain.Types.Invoice.Invoice {..}) = do
       Se.Set Beam.invoiceStatus invoiceStatus,
       Se.Set Beam.lastStatusCheckedAt lastStatusCheckedAt,
       Se.Set Beam.maxMandateAmount maxMandateAmount,
-      Se.Set Beam.merchantOperatingCityId ((Just (Kernel.Types.Id.getId merchantOperatingCityId))),
+      Se.Set Beam.merchantOperatingCityId (Just (Kernel.Types.Id.getId merchantOperatingCityId)),
       Se.Set Beam.paymentMode paymentMode,
-      Se.Set Beam.serviceName ((Just serviceName)),
+      Se.Set Beam.serviceName (Just serviceName),
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

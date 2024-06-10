@@ -20,7 +20,7 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RentalDet
 create = createWithKV
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RentalDetails.RentalDetails -> m (Maybe Domain.Types.RentalDetails.RentalDetails))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 instance FromTType' Beam.RentalDetails Domain.Types.RentalDetails.RentalDetails where
   fromTType' (Beam.RentalDetailsT {..}) = do

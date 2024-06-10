@@ -51,8 +51,8 @@ instance ToTType' Beam.Invoice Domain.Types.Invoice.Invoice where
         Beam.invoiceStatus = invoiceStatus,
         Beam.lastStatusCheckedAt = lastStatusCheckedAt,
         Beam.maxMandateAmount = maxMandateAmount,
-        Beam.merchantOperatingCityId = (Just (Kernel.Types.Id.getId merchantOperatingCityId)),
+        Beam.merchantOperatingCityId = Just (Kernel.Types.Id.getId merchantOperatingCityId),
         Beam.paymentMode = paymentMode,
-        Beam.serviceName = (Just serviceName),
+        Beam.serviceName = Just serviceName,
         Beam.updatedAt = updatedAt
       }

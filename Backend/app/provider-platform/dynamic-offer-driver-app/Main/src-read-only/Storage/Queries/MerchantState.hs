@@ -25,12 +25,12 @@ createMany = traverse_ create
 findByMerchantIdAndState ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m (Maybe Domain.Types.MerchantState.MerchantState))
-findByMerchantIdAndState (Kernel.Types.Id.Id merchantId) state = do findOneWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq merchantId, Se.Is Beam.state $ Se.Eq state]]
+findByMerchantIdAndState merchantId state = do findOneWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId), Se.Is Beam.state $ Se.Eq state]]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m (Maybe Domain.Types.MerchantState.MerchantState))
-findByPrimaryKey (Kernel.Types.Id.Id merchantId) state = do findOneWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq merchantId, Se.Is Beam.state $ Se.Eq state]]
+findByPrimaryKey merchantId state = do findOneWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId), Se.Is Beam.state $ Se.Eq state]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantState.MerchantState -> m ())
 updateByPrimaryKey (Domain.Types.MerchantState.MerchantState {..}) = do

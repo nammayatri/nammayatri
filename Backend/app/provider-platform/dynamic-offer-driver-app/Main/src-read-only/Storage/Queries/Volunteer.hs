@@ -25,10 +25,10 @@ findAllByPlace :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text
 findAllByPlace place = do findAllWithKV [Se.Is Beam.place $ Se.Eq place]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer -> m (Maybe Domain.Types.Volunteer.Volunteer))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer -> m (Maybe Domain.Types.Volunteer.Volunteer))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Volunteer.Volunteer -> m ())
 updateByPrimaryKey (Domain.Types.Volunteer.Volunteer {..}) = do

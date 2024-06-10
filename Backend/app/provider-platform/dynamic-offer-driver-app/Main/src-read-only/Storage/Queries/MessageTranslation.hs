@@ -23,16 +23,16 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MessageTranslation.MessageTranslation] -> m ())
 createMany = traverse_ create
 
-findByMessageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Message.Message -> m ([Domain.Types.MessageTranslation.MessageTranslation]))
-findByMessageId (Kernel.Types.Id.Id messageId) = do findAllWithKV [Se.Is Beam.messageId $ Se.Eq messageId]
+findByMessageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Message.Message -> m [Domain.Types.MessageTranslation.MessageTranslation])
+findByMessageId messageId = do findAllWithKV [Se.Is Beam.messageId $ Se.Eq (Kernel.Types.Id.getId messageId)]
 
 findByMessageIdAndLanguage ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Message.Message -> Kernel.External.Types.Language -> m (Maybe Domain.Types.MessageTranslation.MessageTranslation))
-findByMessageIdAndLanguage (Kernel.Types.Id.Id messageId) language = do findOneWithKV [Se.And [Se.Is Beam.messageId $ Se.Eq messageId, Se.Is Beam.language $ Se.Eq language]]
+findByMessageIdAndLanguage messageId language = do findOneWithKV [Se.And [Se.Is Beam.messageId $ Se.Eq (Kernel.Types.Id.getId messageId), Se.Is Beam.language $ Se.Eq language]]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Message.Message -> m (Maybe Domain.Types.MessageTranslation.MessageTranslation))
-findByPrimaryKey (Kernel.Types.Id.Id messageId) = do findOneWithKV [Se.And [Se.Is Beam.messageId $ Se.Eq messageId]]
+findByPrimaryKey messageId = do findOneWithKV [Se.And [Se.Is Beam.messageId $ Se.Eq (Kernel.Types.Id.getId messageId)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MessageTranslation.MessageTranslation -> m ())
 updateByPrimaryKey (Domain.Types.MessageTranslation.MessageTranslation {..}) = do

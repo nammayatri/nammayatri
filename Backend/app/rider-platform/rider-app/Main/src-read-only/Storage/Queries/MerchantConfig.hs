@@ -25,16 +25,16 @@ createMany = traverse_ create
 findAllByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m [Domain.Types.MerchantConfig.MerchantConfig])
-findAllByMerchantOperatingCityId (Kernel.Types.Id.Id merchantOperatingCityId) enabled = do
+findAllByMerchantOperatingCityId merchantOperatingCityId enabled = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.enabled $ Se.Eq enabled
         ]
     ]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantConfig.MerchantConfig -> m (Maybe Domain.Types.MerchantConfig.MerchantConfig))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantConfig.MerchantConfig -> m ())
 updateByPrimaryKey (Domain.Types.MerchantConfig.MerchantConfig {..}) = do

@@ -21,10 +21,10 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.HotS
 createMany = traverse_ create
 
 findConfigByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.HotSpotConfig.HotSpotConfig -> m (Maybe Domain.Types.HotSpotConfig.HotSpotConfig))
-findConfigByMerchantId (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findConfigByMerchantId id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.HotSpotConfig.HotSpotConfig -> m (Maybe Domain.Types.HotSpotConfig.HotSpotConfig))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.HotSpotConfig.HotSpotConfig -> m ())
 updateByPrimaryKey (Domain.Types.HotSpotConfig.HotSpotConfig {..}) = do

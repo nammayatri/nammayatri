@@ -22,12 +22,12 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Ques
 createMany = traverse_ create
 
 findAllWithModuleId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m [Domain.Types.QuestionModuleMapping.QuestionModuleMapping])
-findAllWithModuleId (Kernel.Types.Id.Id moduleId) = do findAllWithKV [Se.Is Beam.moduleId $ Se.Eq moduleId]
+findAllWithModuleId moduleId = do findAllWithKV [Se.Is Beam.moduleId $ Se.Eq (Kernel.Types.Id.getId moduleId)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m (Maybe Domain.Types.QuestionModuleMapping.QuestionModuleMapping))
-findByPrimaryKey (Kernel.Types.Id.Id moduleId) (Kernel.Types.Id.Id questionId) = do findOneWithKV [Se.And [Se.Is Beam.moduleId $ Se.Eq moduleId, Se.Is Beam.questionId $ Se.Eq questionId]]
+findByPrimaryKey moduleId questionId = do findOneWithKV [Se.And [Se.Is Beam.moduleId $ Se.Eq (Kernel.Types.Id.getId moduleId), Se.Is Beam.questionId $ Se.Eq (Kernel.Types.Id.getId questionId)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m ())
 updateByPrimaryKey (Domain.Types.QuestionModuleMapping.QuestionModuleMapping {..}) = do

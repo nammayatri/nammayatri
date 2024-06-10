@@ -24,46 +24,46 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RiderDetails.RiderDetails] -> m ())
 createMany = traverse_ create
 
-findAllReferredByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m ([Domain.Types.RiderDetails.RiderDetails]))
+findAllReferredByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m [Domain.Types.RiderDetails.RiderDetails])
 findAllReferredByDriverId referredByDriver = do findAllWithDb [Se.Is Beam.referredByDriver $ Se.Eq (Kernel.Types.Id.getId <$> referredByDriver)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m (Maybe Domain.Types.RiderDetails.RiderDetails))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateCancellationDues :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
-updateCancellationDues cancellationDues (Kernel.Types.Id.Id id) = do
+updateCancellationDues cancellationDues id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.cancellationDues cancellationDues, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateOneWithKV [Se.Set Beam.cancellationDues cancellationDues, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateDisputeChancesUsed :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
-updateDisputeChancesUsed disputeChancesUsed (Kernel.Types.Id.Id id) = do
+updateDisputeChancesUsed disputeChancesUsed id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.disputeChancesUsed disputeChancesUsed, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateOneWithKV [Se.Set Beam.disputeChancesUsed disputeChancesUsed, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateDisputeChancesUsedAndCancellationDues ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Int -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
-updateDisputeChancesUsedAndCancellationDues disputeChancesUsed cancellationDues (Kernel.Types.Id.Id id) = do
+updateDisputeChancesUsedAndCancellationDues disputeChancesUsed cancellationDues id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.disputeChancesUsed disputeChancesUsed, Se.Set Beam.cancellationDues cancellationDues, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateOneWithKV [Se.Set Beam.disputeChancesUsed disputeChancesUsed, Se.Set Beam.cancellationDues cancellationDues, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateHasTakenValidRide ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
-updateHasTakenValidRide hasTakenValidRide hasTakenValidRideAt (Kernel.Types.Id.Id id) = do
+updateHasTakenValidRide hasTakenValidRide hasTakenValidRideAt id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.hasTakenValidRide hasTakenValidRide, Se.Set Beam.hasTakenValidRideAt hasTakenValidRideAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateOneWithKV [Se.Set Beam.hasTakenValidRide hasTakenValidRide, Se.Set Beam.hasTakenValidRideAt hasTakenValidRideAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateNightSafetyChecks :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
-updateNightSafetyChecks nightSafetyChecks (Kernel.Types.Id.Id id) = do
+updateNightSafetyChecks nightSafetyChecks id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.nightSafetyChecks nightSafetyChecks, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateOneWithKV [Se.Set Beam.nightSafetyChecks nightSafetyChecks, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateOtpCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
-updateOtpCode otpCode (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.otpCode otpCode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+updateOtpCode otpCode id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.otpCode otpCode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m (Maybe Domain.Types.RiderDetails.RiderDetails))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RiderDetails.RiderDetails -> m ())
 updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
@@ -77,8 +77,8 @@ updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
       Se.Set Beam.hasTakenValidRideAt hasTakenValidRideAt,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.mobileCountryCode mobileCountryCode,
-      Se.Set Beam.mobileNumberEncrypted (((mobileNumber & unEncrypted . encrypted))),
-      Se.Set Beam.mobileNumberHash ((mobileNumber & hash)),
+      Se.Set Beam.mobileNumberEncrypted (mobileNumber & unEncrypted . encrypted),
+      Se.Set Beam.mobileNumberHash (mobileNumber & hash),
       Se.Set Beam.nightSafetyChecks nightSafetyChecks,
       Se.Set Beam.otpCode otpCode,
       Se.Set Beam.referralCode (Kernel.Types.Id.getId <$> referralCode),

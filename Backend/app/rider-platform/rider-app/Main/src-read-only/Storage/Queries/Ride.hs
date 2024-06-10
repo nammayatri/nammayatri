@@ -17,13 +17,13 @@ import qualified Storage.Beam.Ride as Beam
 import Storage.Queries.RideExtra as ReExport
 
 findByBPPRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Ride.BPPRide -> m (Maybe Domain.Types.Ride.Ride))
-findByBPPRideId (Kernel.Types.Id.Id bppRideId) = do findOneWithKV [Se.Is Beam.bppRideId $ Se.Eq bppRideId]
+findByBPPRideId bppRideId = do findOneWithKV [Se.Is Beam.bppRideId $ Se.Eq (Kernel.Types.Id.getId bppRideId)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe Domain.Types.Ride.Ride))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByRBId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe Domain.Types.Ride.Ride))
-findByRBId (Kernel.Types.Id.Id bookingId) = do findOneWithKV [Se.Is Beam.bookingId $ Se.Eq bookingId]
+findByRBId bookingId = do findOneWithKV [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)]
 
 findRideByRideShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.ShortId Domain.Types.Ride.Ride -> m (Maybe Domain.Types.Ride.Ride))
-findRideByRideShortId (Kernel.Types.Id.ShortId shortId) = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq shortId]
+findRideByRideShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Types.Id.getShortId shortId)]

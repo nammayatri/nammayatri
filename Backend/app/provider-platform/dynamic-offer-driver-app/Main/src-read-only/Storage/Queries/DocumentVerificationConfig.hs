@@ -27,16 +27,16 @@ createMany = traverse_ create
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig])
-findAllByMerchantOpCityId limit offset (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId] (Se.Asc Beam.order) limit offset
+findAllByMerchantOpCityId limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Asc Beam.order) limit offset
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Vehicle.Category -> m (Maybe Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig))
-findByPrimaryKey documentType (Kernel.Types.Id.Id merchantOperatingCityId) vehicleCategory = do
+findByPrimaryKey documentType merchantOperatingCityId vehicleCategory = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.documentType $ Se.Eq documentType,
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
         ]
     ]

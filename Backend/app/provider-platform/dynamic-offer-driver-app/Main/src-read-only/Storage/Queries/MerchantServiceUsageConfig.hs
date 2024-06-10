@@ -24,7 +24,7 @@ createMany = traverse_ create
 findByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig))
-findByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do findOneWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
+findByMerchantOpCityId merchantOperatingCityId = do findOneWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 updateMerchantServiceUsageConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig -> m ())
 updateMerchantServiceUsageConfig (Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig {..}) = do

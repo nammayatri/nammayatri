@@ -13,15 +13,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RiderDriverCorrelationT f = RiderDriverCorrelationT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    driverId :: (B.C f Kernel.Prelude.Text),
-    favourite :: (B.C f Kernel.Prelude.Bool),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    mobileNumberEncrypted :: (B.C f Kernel.Prelude.Text),
-    mobileNumberHash :: (B.C f Kernel.External.Encryption.DbHash),
-    riderDetailId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    driverId :: B.C f Kernel.Prelude.Text,
+    favourite :: B.C f Kernel.Prelude.Bool,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    mobileNumberEncrypted :: B.C f Kernel.Prelude.Text,
+    mobileNumberHash :: B.C f Kernel.External.Encryption.DbHash,
+    riderDetailId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +31,6 @@ instance B.Table RiderDriverCorrelationT where
 
 type RiderDriverCorrelation = RiderDriverCorrelationT Identity
 
-$(enableKVPG (''RiderDriverCorrelationT) [('driverId), ('riderDetailId)] [])
+$(enableKVPG ''RiderDriverCorrelationT ['driverId, 'riderDetailId] [])
 
-$(mkTableInstances (''RiderDriverCorrelationT) "rider_driver_correlation")
+$(mkTableInstances ''RiderDriverCorrelationT "rider_driver_correlation")

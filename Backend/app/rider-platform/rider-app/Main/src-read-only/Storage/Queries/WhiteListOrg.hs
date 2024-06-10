@@ -29,17 +29,17 @@ createMany = traverse_ create
 findBySubscriberIdAndDomainAndMerchantId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber -> Kernel.Types.Beckn.Domain.Domain -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.WhiteListOrg.WhiteListOrg))
-findBySubscriberIdAndDomainAndMerchantId (Kernel.Types.Id.ShortId subscriberId) domain (Kernel.Types.Id.Id merchantId) = do
+findBySubscriberIdAndDomainAndMerchantId subscriberId domain merchantId = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.subscriberId $ Se.Eq subscriberId,
+        [ Se.Is Beam.subscriberId $ Se.Eq (Kernel.Types.Id.getShortId subscriberId),
           Se.Is Beam.domain $ Se.Eq domain,
-          Se.Is Beam.merchantId $ Se.Eq merchantId
+          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)
         ]
     ]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.WhiteListOrg.WhiteListOrg -> m (Maybe Domain.Types.WhiteListOrg.WhiteListOrg))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.WhiteListOrg.WhiteListOrg -> m ())
 updateByPrimaryKey (Domain.Types.WhiteListOrg.WhiteListOrg {..}) = do

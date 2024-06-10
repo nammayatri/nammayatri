@@ -32,47 +32,47 @@ findAllByFleetOwnerId limit offset fleetOwnerId = do findAllWithOptionsKV [Se.Is
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m (Maybe Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate))
-findByImageId (Kernel.Types.Id.Id documentImageId) = do findOneWithKV [Se.Is Beam.documentImageId $ Se.Eq documentImageId]
+findByImageId documentImageId = do findOneWithKV [Se.Is Beam.documentImageId $ Se.Eq (Kernel.Types.Id.getId documentImageId)]
 
 findByRCIdAndFleetOwnerId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate))
-findByRCIdAndFleetOwnerId (Kernel.Types.Id.Id id) fleetOwnerId = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id, Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]]
+findByRCIdAndFleetOwnerId id fleetOwnerId = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]]
 
 updateAirConditioned ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
-updateAirConditioned airConditioned (Kernel.Types.Id.Id id) = do
+updateAirConditioned airConditioned id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.airConditioned airConditioned, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateOneWithKV [Se.Set Beam.airConditioned airConditioned, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateFleetOwnerId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
-updateFleetOwnerId fleetOwnerId (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.fleetOwnerId fleetOwnerId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+updateFleetOwnerId fleetOwnerId id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.fleetOwnerId fleetOwnerId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateOxygen ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
-updateOxygen oxygen (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.oxygen oxygen, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+updateOxygen oxygen id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.oxygen oxygen, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateVentilator ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
-updateVentilator ventilator (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.ventilator ventilator, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+updateVentilator ventilator id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.ventilator ventilator, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
-updateVerificationStatus verificationStatus (Kernel.Types.Id.Id documentImageId) = do
+updateVerificationStatus verificationStatus documentImageId = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.documentImageId $ Se.Eq documentImageId]
+  updateOneWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.documentImageId $ Se.Eq (Kernel.Types.Id.getId documentImageId)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m (Maybe Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
 updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate {..}) = do

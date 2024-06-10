@@ -24,25 +24,25 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Exop
 createMany = traverse_ create
 
 deleteByMerchantOpCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
-deleteByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do deleteWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
+deleteByMerchantOpCityId merchantOperatingCityId = do deleteWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findAllByMerchantOpCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.Exophone.Exophone])
-findAllByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
+findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByMerchantOpCityIdServiceAndExophoneType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Call.Types.CallService -> Domain.Types.Exophone.ExophoneType -> m [Domain.Types.Exophone.Exophone])
-findByMerchantOpCityIdServiceAndExophoneType (Kernel.Types.Id.Id merchantOperatingCityId) callService exophoneType = do
+findByMerchantOpCityIdServiceAndExophoneType merchantOperatingCityId callService exophoneType = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.callService $ Se.Eq callService,
           Se.Is Beam.exophoneType $ Se.Eq exophoneType
         ]
     ]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Exophone.Exophone -> m (Maybe Domain.Types.Exophone.Exophone))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Exophone.Exophone -> m ())
 updateByPrimaryKey (Domain.Types.Exophone.Exophone {..}) = do

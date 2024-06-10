@@ -37,4 +37,4 @@ data Notification = Notification
     txnDate :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Eq), (Show), (FromJSON), (ToJSON), (ToSchema))
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)

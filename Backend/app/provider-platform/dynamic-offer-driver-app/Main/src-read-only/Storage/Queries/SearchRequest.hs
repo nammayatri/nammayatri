@@ -18,12 +18,12 @@ import qualified Storage.Beam.SearchRequest as Beam
 import Storage.Queries.SearchRequestExtra as ReExport
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m (Maybe Domain.Types.SearchRequest.SearchRequest))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByTransactionIdAndMerchantId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.SearchRequest.SearchRequest))
-findByTransactionIdAndMerchantId transactionId (Kernel.Types.Id.Id providerId) = do findOneWithKV [Se.And [Se.Is Beam.transactionId $ Se.Eq transactionId, Se.Is Beam.providerId $ Se.Eq providerId]]
+findByTransactionIdAndMerchantId transactionId providerId = do findOneWithKV [Se.And [Se.Is Beam.transactionId $ Se.Eq transactionId, Se.Is Beam.providerId $ Se.Eq (Kernel.Types.Id.getId providerId)]]
 
 updateIsAdvancedBookingEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
-updateIsAdvancedBookingEnabled isAdvanceBookingEnabled (Kernel.Types.Id.Id id) = do updateWithKV [Se.Set Beam.isAdvanceBookingEnabled (Just isAdvanceBookingEnabled)] [Se.Is Beam.id $ Se.Eq id]
+updateIsAdvancedBookingEnabled isAdvanceBookingEnabled id = do updateWithKV [Se.Set Beam.isAdvanceBookingEnabled (Just isAdvanceBookingEnabled)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

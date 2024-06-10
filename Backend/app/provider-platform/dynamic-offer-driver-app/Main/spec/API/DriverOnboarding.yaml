@@ -70,6 +70,7 @@ types:
     title: Text
     price: Money
     priceWithCurrency: PriceAPIEntity
+    derive: Show
   SSNReq:
     ssn: Text
   FarePolicyHour:

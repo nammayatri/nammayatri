@@ -27,30 +27,36 @@ createMany = traverse_ create
 deactivateRCForDriver ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
-deactivateRCForDriver isRcActive (Kernel.Types.Id.Id driverId) (Kernel.Types.Id.Id rcId) = do
+deactivateRCForDriver isRcActive driverId rcId = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.isRcActive isRcActive, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.rcId $ Se.Eq rcId]]
+  updateWithKV
+    [Se.Set Beam.isRcActive isRcActive, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
+          Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId)
+        ]
+    ]
 
 deleteByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-deleteByDriverId (Kernel.Types.Id.Id driverId) = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq driverId]
+deleteByDriverId driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findActiveAssociationByDriver ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.DriverRCAssociation.DriverRCAssociation))
-findActiveAssociationByDriver (Kernel.Types.Id.Id driverId) isRcActive = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.isRcActive $ Se.Eq isRcActive]]
+findActiveAssociationByDriver driverId isRcActive = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.isRcActive $ Se.Eq isRcActive]]
 
 findActiveAssociationByRC ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.DriverRCAssociation.DriverRCAssociation))
-findActiveAssociationByRC (Kernel.Types.Id.Id rcId) isRcActive = do findOneWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.isRcActive $ Se.Eq isRcActive]]
+findActiveAssociationByRC rcId isRcActive = do findOneWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId), Se.Is Beam.isRcActive $ Se.Eq isRcActive]]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverRCAssociation.DriverRCAssociation -> m (Maybe Domain.Types.DriverRCAssociation.DriverRCAssociation))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.DriverRCAssociation.DriverRCAssociation -> m (Maybe Domain.Types.DriverRCAssociation.DriverRCAssociation))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverRCAssociation.DriverRCAssociation -> m ())
 updateByPrimaryKey (Domain.Types.DriverRCAssociation.DriverRCAssociation {..}) = do

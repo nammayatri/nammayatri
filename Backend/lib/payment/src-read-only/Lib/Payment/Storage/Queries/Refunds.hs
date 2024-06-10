@@ -22,10 +22,10 @@ create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domai
 create = createWithKV
 
 findAllByOrderId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m [Lib.Payment.Domain.Types.Refunds.Refunds])
-findAllByOrderId (Kernel.Types.Id.Id orderId) = do findAllWithKV [Se.Is Beam.orderId $ Se.Eq orderId]
+findAllByOrderId orderId = do findAllWithKV [Se.Is Beam.orderId $ Se.Eq (Kernel.Types.Id.getId orderId)]
 
 findById :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds -> m (Maybe Lib.Payment.Domain.Types.Refunds.Refunds))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByShortId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m (Maybe Lib.Payment.Domain.Types.Refunds.Refunds))
 findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq shortId]
@@ -33,7 +33,7 @@ findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq shortId]
 updateRefundsEntryByResponse ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.External.Payment.Interface.RefundStatus -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds -> m ())
-updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessage errorCode status (Kernel.Types.Id.Id id) = do
+updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessage errorCode status id = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.initiatedBy initiatedBy,
@@ -43,7 +43,7 @@ updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessag
       Se.Set Beam.status status,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.Is Beam.id $ Se.Eq id]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 instance FromTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
   fromTType' (Beam.RefundsT {..}) = do

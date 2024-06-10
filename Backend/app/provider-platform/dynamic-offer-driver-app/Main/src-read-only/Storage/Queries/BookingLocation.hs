@@ -19,10 +19,10 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingLo
 create = createWithKV
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BookingLocation.BookingLocation -> m (Maybe Domain.Types.BookingLocation.BookingLocation))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateAddress :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingLocation.LocationAddress -> Kernel.Types.Id.Id Domain.Types.BookingLocation.BookingLocation -> m ())
-updateAddress address (Kernel.Types.Id.Id id) = do
+updateAddress address id = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.area ((.area) address),
@@ -35,7 +35,7 @@ updateAddress address (Kernel.Types.Id.Id id) = do
       Se.Set Beam.street ((.street) address),
       Se.Set Beam.updatedAt _now
     ]
-    [Se.Is Beam.id $ Se.Eq id]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 instance FromTType' Beam.BookingLocation Domain.Types.BookingLocation.BookingLocation where
   fromTType' (Beam.BookingLocationT {..}) = do

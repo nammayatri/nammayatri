@@ -23,4 +23,4 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Save
 createMany = traverse_ create
 
 deleteAllByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-deleteAllByRiderId (Kernel.Types.Id.Id riderId) = do deleteWithKV [Se.Is Beam.riderId $ Se.Eq riderId]
+deleteAllByRiderId riderId = do deleteWithKV [Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId)]

@@ -27,17 +27,17 @@ createMany = traverse_ create
 findAllByMerchantOpCityIdLanguageAndKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Types.Language -> Kernel.Prelude.Text -> m [Domain.Types.ReelsData.ReelsData])
-findAllByMerchantOpCityIdLanguageAndKey (Kernel.Types.Id.Id merchantOperatingCityId) language reelKey = do
+findAllByMerchantOpCityIdLanguageAndKey merchantOperatingCityId language reelKey = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.language $ Se.Eq language,
           Se.Is Beam.reelKey $ Se.Eq reelKey
         ]
     ]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.ReelsData.ReelsData -> m (Maybe Domain.Types.ReelsData.ReelsData))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ReelsData.ReelsData -> m ())
 updateByPrimaryKey (Domain.Types.ReelsData.ReelsData {..}) = do

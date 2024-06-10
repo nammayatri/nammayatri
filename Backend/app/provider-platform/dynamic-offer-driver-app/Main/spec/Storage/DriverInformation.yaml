@@ -189,6 +189,7 @@ DriverInformation:
     updateTollRelatedIssueCount:
       kvFunction: updateOneWithKV
       params : [tollRelatedIssueCount]
+      where: driverId
     updateForwardBatchingEnabled:
       kvFunction: updateOneWithKV
       params: [forwardBatchingEnabled]

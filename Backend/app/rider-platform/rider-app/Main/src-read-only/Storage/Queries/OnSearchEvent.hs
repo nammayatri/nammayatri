@@ -21,7 +21,7 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.OnSe
 createMany = traverse_ create
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.OnSearchEvent.OnSearchEvent -> m (Maybe Domain.Types.OnSearchEvent.OnSearchEvent))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.OnSearchEvent.OnSearchEvent -> m ())
 updateByPrimaryKey (Domain.Types.OnSearchEvent.OnSearchEvent {..}) = do
