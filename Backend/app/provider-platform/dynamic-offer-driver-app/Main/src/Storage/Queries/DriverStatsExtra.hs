@@ -42,7 +42,8 @@ createInitialDriverStats currency distanceUnit driverId = do
             totalCoinsConvertedCash = 0.0,
             currency,
             distanceUnit,
-            updatedAt = now
+            updatedAt = now,
+            favRiderCount = 0
           }
   createWithKV dStats
 
@@ -174,3 +175,17 @@ setMissedEarnings (Id driverId') missedEarnings = do
       Se.Set BeamDS.earningsMissed $ roundToIntegral missedEarnings
     ]
     [Se.Is BeamDS.driverId (Se.Eq driverId')]
+
+decFavouriteRiderCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m ()
+decFavouriteRiderCount driverId = do
+  mbDriverDetail <- findById driverId
+  case mbDriverDetail of
+    Just driverDetail -> updateOneWithKV [Se.Set BeamDS.favRiderCount (driverDetail.favRiderCount - 1)] [Se.Is BeamDS.driverId (Se.Eq driverId.getId)]
+    Nothing -> pure ()
+
+incFavouriteRiderCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m ()
+incFavouriteRiderCount driverId = do
+  mbDriverDetail <- findById driverId
+  case mbDriverDetail of
+    Just driverDetail -> updateOneWithKV [Se.Set BeamDS.favRiderCount (driverDetail.favRiderCount + 1)] [Se.Is BeamDS.driverId (Se.Eq driverId.getId)]
+    Nothing -> pure ()

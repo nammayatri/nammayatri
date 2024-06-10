@@ -21,6 +21,7 @@ data DriverStatsT f = DriverStatsT
     driverId :: (B.C f Kernel.Prelude.Text),
     earningsMissed :: (B.C f Kernel.Types.Common.Money),
     earningsMissedAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    favRiderCount :: (B.C f Kernel.Prelude.Int),
     idleSince :: (B.C f Kernel.Prelude.UTCTime),
     lateNightTrips :: (B.C f Kernel.Prelude.Int),
     ridesCancelled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),

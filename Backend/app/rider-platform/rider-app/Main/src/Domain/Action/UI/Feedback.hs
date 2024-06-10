@@ -22,6 +22,7 @@ where
 import qualified Domain.Action.Internal.Rating as DRating
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -34,8 +35,10 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Issue as QIssue
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -45,6 +48,7 @@ data FeedbackReq = FeedbackReq
     rating :: Int,
     feedbackDetails :: Maybe Text,
     nightSafety :: Maybe Bool,
+    shouldFavDriver :: Maybe Bool,
     wasOfferedAssistance :: Maybe Bool
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
@@ -61,11 +65,14 @@ data FeedbackRes = FeedbackRes
     city :: Context.City,
     issueId :: Maybe Text,
     vehicleVariant :: DVeh.VehicleVariant,
-    vehicleServiceTierType :: DVST.VehicleServiceTierType
+    vehicleServiceTierType :: DVST.VehicleServiceTierType,
+    shouldFavDriver :: Maybe Bool,
+    riderPhoneNum :: Maybe Text,
+    isValueAddNP :: Bool
   }
 
-feedback :: FeedbackReq -> App.Flow FeedbackRes
-feedback request = do
+feedback :: FeedbackReq -> Id Person.Person -> App.Flow FeedbackRes
+feedback request personId = do
   let ratingValue = request.rating
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
   let rideId = request.rideId
@@ -88,6 +95,8 @@ feedback request = do
       QRating.updateRating ratingValue feedbackDetails request.wasOfferedAssistance rideRating.id booking.riderId
   let merchantOperatingCityId = booking.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   pure
     FeedbackRes
       { wasOfferedAssistance = request.wasOfferedAssistance,
@@ -97,6 +106,8 @@ feedback request = do
         issueId = issueId',
         vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType,
         vehicleServiceTierType = booking.vehicleServiceTierType,
+        shouldFavDriver = request.shouldFavDriver,
+        riderPhoneNum = person.unencryptedMobileNumber,
         ..
       }
   where

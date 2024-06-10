@@ -25,6 +25,7 @@ DriverStats:
     currency : Currency
     distanceUnit: DistanceUnit
     updatedAt : UTCTime
+    favRiderCount : Int
 
   beamFields:
     totalEarnings:
@@ -101,10 +102,9 @@ DriverStats:
     earningsMissed: "0"
     coinCovertedToCashLeft: "0"
     totalCoinsConvertedCash: "0"
-
+    favRiderCount: "0"
 
   extraOperations:
     - EXTRA_QUERY_FILE
-
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
