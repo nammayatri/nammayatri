@@ -32,12 +32,12 @@ registration = do
   action <- lift $ lift $ runScreen $ RegistrationScreen.screen state.registrationScreen
   case action of
     GoBack -> App.BackT $ pure App.GoBack
-    GoToUploadDriverLicense updatedState -> do
+    GoToUploadDriverLicense updatedState step -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ UPLOAD_DRIVER_LICENSE updatedState)
-    GoToUploadVehicleRegistration updatedState rcNumberPrefixList -> do
+      App.BackT $ App.BackPoint <$> (pure $ UPLOAD_DRIVER_LICENSE updatedState step)
+    GoToUploadVehicleRegistration updatedState step -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ UPLOAD_VEHICLE_DETAILS updatedState rcNumberPrefixList)
+      App.BackT $ App.BackPoint <$> (pure $ UPLOAD_VEHICLE_DETAILS updatedState step)
     GoToPermissionScreen updatedState -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ PERMISSION_SCREEN updatedState)
@@ -60,7 +60,14 @@ registration = do
     GoToAppUpdatePopUpScreen updatedState -> do
       modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_APP_UPDATE_POPUP_SCREEN updatedState)
-    
-    
-    
-    
+    SSN updatedState -> do
+      modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ SSN_FROM_REGISTRATION updatedState)
+    ProfileDetailsExit updatedState -> do
+      modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ PROFILE_DETAILS_FROM_REGISTRATION updatedState)
+    HandleCheckrWebviewExitScreen -> do
+      App.BackT $ App.BackPoint <$> (pure $ HANDLE_CHECKR_WEBVIEW_EXIT)
+    GetBGVUrl updatedState -> do
+      modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GET_BGV_URL updatedState)

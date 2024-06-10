@@ -28,6 +28,12 @@ initData =
       , docId : ""
       , linkedRc : Nothing
       , cityConfig : defaultCityConfig
+      , ssn : ""
+      , firstName : Nothing
+      , lastName : Nothing
+      , mobileNumber : Nothing
+      , email: Nothing
+      , variantList: []
       }
   , props:
       { validateDocModal : false,
@@ -35,6 +41,16 @@ initData =
         validating : false,
         menuOptions : false,
         confirmChangeVehicle : false,
-        contactSupportModal : ST.HIDE
+        contactSupportModal : ST.HIDE, 
+        isSSNView : false,
+        isProfileView: false,
+        isValidEmail : false,
+        isValidFirstName : true,
+        isValidMobileNumber: false,
+        setDefault : false,
+        shouldGoBack : true,
+        previewSampleImage : false,
+        previewImgUrl : "",
+        isloggedInViaMobileNumber : false
       }
   }

@@ -19,4 +19,7 @@
     <string name="please_allow_permission_to_capture_the_image">ಚಿತ್ರವನ್ನು ಸೆರೆಹಿಡಿಯಲು ದಯವಿಟ್ಟು ಅನುಮತಿಯನ್ನು ಅನುಮತಿಸಿ -> "ಚಿತ್ರವನ್ನು ಅಪ್ಲೋಡ್ ಮಾಡಿ</string>
     <string name="unable_to_upload_media">ಮೀಡಿಯಾವನ್ನು ಅಪ್ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ</string>
     <string name="location_is_too_far">ಸ್ಥಳ ತುಂಬಾ ದೂರದಲ್ಲಿದೆ!</string>
+    <string name="unable_to_upload_image">ಚಿತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ</string>
+    <string name="take_photo">फोटो खींचे</string>
+    <string name="select_photo">ಫೋಟೋ ಆಯ್ಕೆಮಾಡಿ</string>
 </resources>

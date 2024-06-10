@@ -228,6 +228,12 @@ const JOS = window.JOS;
 //   }
 // }
 
+
+export const validateEmail = function (email) {
+  const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  return re.test(String(email).toLowerCase());
+}
+
 export const requestLocationPermissionDriver = function (cb) {
   return function (action) {
     return function () {
@@ -318,6 +324,12 @@ export const isLocationPermissionEnabled = function (unit) {
     return window.JBridge.isLocationPermissionEnabled();
 
   };
+};
+
+export const openLocationSettings = function () {
+  if (window.JBridge.openLocationSettings) {
+    return window.JBridge.openLocationSettings();
+  }
 };
 
 export const isBackgroundLocationEnabled = function(unit) {
@@ -479,14 +491,14 @@ export const timePicker = function (cb) {
 export const datePicker = function (label) {
   return function (cb) {
     return function (action) {
-      return function () {
-        const callback = callbackMapper.map(function (resp, year, month, date) {
-          cb(action(resp)(year)(month)(date))();
-        });
-        if (window.__OS == "IOS") 
-          return window.JBridge.datePicker(callback, label, "DatePicker");
-        else
-          return window.JBridge.datePicker(callback, label);
+      return function (defaultDate) {
+        return function () {
+          const callback = callbackMapper.map(function (resp, year, month, date) {
+            cb(action(resp)(year)(month)(date))();
+          });
+          if (window.__OS == "IOS") window.JBridge.datePicker(callback, label, "DatePicker", defaultDate);
+          else window.JBridge.datePicker(callback, label);
+        };
       };
     };
   };
@@ -532,7 +544,9 @@ export const dateTimePicker = function (cb) {
 };
 
 export const disableActionEditText = function (str) {
-  return window.JBridge.disableActionEditText(str);
+  if (window.JBridge.disableActionEditText) {
+    window.JBridge.disableActionEditText(str);
+  }
 };
 
 export const getNearbyPlaces = function (cb) {
@@ -578,7 +592,11 @@ export const isNetworkAvailable = function (unit) {
 export const openUrlInApp = function (str) {
   return function (unit) {
     if(str !== ""){
-      return window.JBridge.openUrlInApp(str);
+      try {
+        return window.JBridge.openUrlInApp(str, null);
+      }catch (e){
+        return window.JBridge.openUrlInApp(str);
+      }
     }else{
       console.error("openUrlInApp: URL is empty");
     }
@@ -593,7 +611,11 @@ export const openUrlInMailApp = function (str) {
         JBridge.openApp(payload)
       }
     } else {
-      openUrlInApp(str)();
+      try {
+        return window.JBridge.openUrlInApp(str, null);
+      }catch (e){
+        return window.JBridge.openUrlInApp(str);
+      }
     }
   };
 };
@@ -1346,7 +1368,7 @@ export const openNavigation = function (dlat) {
             query = platformConfig.query;
         }
         if (isIOS) {
-          return window.JBridge.openNavigationWithQuery(dlat, dlong, query);
+          window.JBridge.openNavigationWithQuery(dlat, dlong, JBridge.canOpenApp(btoa(platformConfig.packageName)) == "1" ? query : platformConfig.fallbackQuery)
         } else {
           const packageName = platformConfig.packageName;
           return window.JBridge.openNavigationWithQuery(dlat, dlong, query, packageName);
@@ -1581,11 +1603,15 @@ export const showDialer = function (str) {
 };
 
 export const startLocationPollingAPI = function () {
-  if (locationPollingTimer) {
-    clearTimeout(locationPollingTimer);
-    locationPollingTimer = undefined;
+  if (window.__OS == "IOS") {
+    window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"start_location_updates"}))()()
+  } else {
+    if (locationPollingTimer) {
+      clearTimeout(locationPollingTimer);
+      locationPollingTimer = undefined;
+    }
+    return window.JBridge.startLocationPollingAPI();
   }
-  return window.JBridge.startLocationPollingAPI();
 }
 
 export const generatePDF = function (state) {
@@ -1605,13 +1631,17 @@ function stopLocationService() {
 
 
 export const stopLocationPollingAPI = function () {
-  if (locationPollingTimer) return;
-  if (JBridge.isServiceRunning) {
-    if (JBridge.isServiceRunning(locationUpdateServiceName)) {
+  if (window.__OS == "IOS") {
+    window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"stop_location_updates"}))()()
+  } else {
+    if (locationPollingTimer) return;
+    if (JBridge.isServiceRunning) {
+      if (JBridge.isServiceRunning(locationUpdateServiceName)) {
+        stopLocationService();
+      }
+    } else {
       stopLocationService();
     }
-  } else {
-    stopLocationService();
   }
 }
 
@@ -1762,6 +1792,22 @@ export const storeCallBackImageUpload = function (cb) {
   }
 }
 
+export const storeCallBackOpenCamera = function (cb) {
+  return function (action) {
+    return function () {
+      try {
+        if(JBridge.storeCallBackOpenCamera){
+          const callback = callbackMapper.map(function () {
+            cb(action)();
+          });
+          return window.JBridge.storeCallBackOpenCamera(callback);}
+      } catch (error) {
+        console.log("Error occurred in storeCallBackOpenCamera ------", error);
+      }
+    }
+  }
+}
+
 export const storeCallBackUploadMultiPartData = function (cb, action) {
   try {
     const callback = callbackMapper.map(function (fileType, fileId) {
@@ -1841,7 +1887,7 @@ export const storeCallBackBatteryUsagePermission = function (cb) {
 
 export const isBatteryPermissionEnabled = function (unit) {
   return function () {
-    return window.JBridge.isBatteryPermissionEnabled();
+    return window.__OS == "IOS" ? true : window.JBridge.isBatteryPermissionEnabled();
   };
 };
 
@@ -1889,11 +1935,17 @@ export const factoryResetApp = function (str) {
   }
 }
 
-export const uploadFile = function (unit) {
-  return function () {
-    return JBridge.uploadFile();
-  };
-};
+export const uploadFileImpl = function(showCircularFrame) {
+  try {
+    if (JBridge.uploadFile) {
+      return JBridge.uploadFile(showCircularFrame);
+    }
+  } catch (err1) {
+    if (JBridge.uploadFile) {
+      return JBridge.uploadFile();
+    }
+  }
+}
 
 export const previewImage = function (base64Image) {
   return function () {
@@ -1932,7 +1984,7 @@ export const renderBase64Image = function (image) {
 
 export const isOverlayPermissionEnabled = function (unit) {
   return function () {
-    return JBridge.isOverlayPermissionEnabled();
+    return window.__OS == "IOS" ? true : JBridge.isOverlayPermissionEnabled();
   };
 };
 
@@ -2187,11 +2239,13 @@ export const initialWebViewSetUp = function (cb) {
     return function (action) {
       return function () {
         try {
-          const callback = callbackMapper.map(function (val) {
-            cb(action(val))();
-          });
+          if (JBridge.initialWebViewSetUp) {
+            const callback = callbackMapper.map(function (val) {
+              cb(action(val))();
+            });
 
-          return JBridge.initialWebViewSetUp(callback, id);
+            JBridge.initialWebViewSetUp(callback, id);
+          }
         } catch (err) {
           console.log("initialWebViewSetUp error " + err);
         }
@@ -2380,12 +2434,6 @@ export const listDownloadedTranslationModels = function (cb) {
   }
 }
 
-export const horizontalScrollToPos = function (id, childId, scrollFocus) {
-  if (window.JBridge.horizontalScrollToPos) {
-    window.JBridge.horizontalScrollToPos(id, childId, scrollFocus);
-  }
-}
-
 // focus values --
 // left - 17
 // right - 66
@@ -2448,6 +2496,22 @@ export const scrollViewFocus = function (parentID) {
       console.log("error in scrollViewFocus : " + err);
     }
     return false;
+  }
+}
+
+export const horizontalScrollToPos = function (id, childId, idx, scrollFocus) {
+  if (window.JBridge.horizontalScrollToPos) {
+    window.JBridge.horizontalScrollToPos(id, childId, scrollFocus);
+  } else if (window.JBridge.focusChild) {
+    window.JBridge.focusChild(id, idx)
+  }
+}
+
+export const focusChild = function(id,idx) {
+  if (window.JBridge.focusChild) {
+    window.JBridge.focusChild(id, idx)
+  } else {
+    scrollViewFocus(id)(idx);
   }
 }
 
@@ -2608,11 +2672,7 @@ export const renderCameraProfilePicture = function (id) {
 
 export const isNotificationPermissionEnabled = function () {
   return function() {
-    if (window.JBridge.isNotificationPermissionEnabled) {
-      return window.JBridge.isNotificationPermissionEnabled();
-    } else {
-      return false;
-    }
+    return window.JBridge.isNotificationPermissionEnabled ? window.JBridge.isNotificationPermissionEnabled() : true;
   }
 }
 
@@ -2677,7 +2737,35 @@ export const startRecord = function (cb){
     }
   }
 }
+
+
+export const takePhoto = function (cb){
+  return function (action){
+    return function () {
+      const callback = callbackMapper.map(function (imageUri, encodedImage) {
+        cb(action(imageUri)(encodedImage))();
+      });
+      if (window.__OS == "IOS" && window.JBridge.takePhoto) {
+        return window.JBridge.takePhoto(callback);
+      }
+      else if(window.JBridge.takePhoto){
+        return window.JBridge.takePhoto(callback);
+      }
+    }
+  }
+}
   
+export const stopCamera = function () {
+  if(window.JBridge.stopCamera){
+    return window.JBridge.stopCamera();
+  }
+}
+
+export const cropImage = function (imageUri, isCircularCrop) {
+  if(window.JBridge.cropImage) {
+    return window.JBridge.cropImage(imageUri, isCircularCrop);
+  }
+}
 
 export const stopRecord = function(){
   if(window.JBridge.stopRecord){
@@ -2874,3 +2962,39 @@ export const requestUninstallPackage = function (packageName) {
   }
   return false;
 }
+export const getCurrentDate = function() {
+  let today = new Date();
+  const dd = String(today.getDate()).padStart(2, "0");
+  const mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
+  const yyyy = today.getFullYear();
+
+  today = yyyy + "/" + mm + "/" + dd;
+  return today;
+}()
+
+export const getDateFromDate = function(date, count) {
+  let givenDate = new Date(date);
+  givenDate.setDate(givenDate.getDate() + count)
+  const dd = String(givenDate.getDate()).padStart(2, "0");
+  const mm = String(givenDate.getMonth() + 1).padStart(2, "0"); //January is 0!
+  const yyyy = givenDate.getFullYear();
+
+  givenDate = yyyy + "/" + mm + "/" + dd;
+  return givenDate;
+}
+export const initWebViewOnActivity = function (webViewUrl, cb, action) {
+    const callback = callbackMapper.map(function () {
+      cb(action)();
+    });
+    if (window.__OS == "ANDROID") {
+      if (JBridge.initWebViewOnActivity) return JBridge.initWebViewOnActivity(webViewUrl);
+    }
+    else {
+      try {
+        return window.JBridge.openUrlInApp(webViewUrl, callback);
+      }catch (e){
+        return window.JBridge.openUrlInApp(webViewUrl);
+      }
+    }
+  }
+    

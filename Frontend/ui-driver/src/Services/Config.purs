@@ -77,11 +77,11 @@ getEndpoint dummy = do
 getBaseUrl :: String -> String
 getBaseUrl dummy = do
   let a = printLog "dummy" dummy
-  if ((getKeyInSharedPrefKeysConfig "MOBILE_NUMBER_KEY") == "" || (getKeyInSharedPrefKeysConfig "MOBILE_NUMBER_KEY") == "") then
-    ""
-    else
-      let Config config = getConfig
-      in (config.baseUrl)
+  -- if ((getKeyInSharedPrefKeysConfig "MOBILE_NUMBER_KEY") == "" || (getKeyInSharedPrefKeysConfig "MOBILE_NUMBER_KEY") == "") then
+  --   ""
+    -- else
+  let Config config = getConfig
+  (config.baseUrl)
 
 getSpecialZoneBaseUrl :: String -> String
 getSpecialZoneBaseUrl dummy = ""

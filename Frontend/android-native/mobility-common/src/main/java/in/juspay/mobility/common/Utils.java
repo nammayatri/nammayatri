@@ -161,16 +161,26 @@ public class Utils {
             } else { // storage
                 imageUri = data.getData();
             }
-            startCropImageActivity(imageUri, activity);
+            startCropImageActivity(imageUri, activity, false);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public static void startCropImageActivity(Uri imageUri, Activity activity) {
-        CropImage.activity(imageUri)
-                .setAllowFlipping(false)
-                .start(activity);
+    public static void startCropImageActivity(Uri imageUri, Activity activity, boolean isCircularCrop) {
+        if (isCircularCrop) {
+            CropImage.activity(imageUri)
+                    .setCropShape(CropImageView.CropShape.OVAL)
+                    .setAspectRatio(1, 1)
+                    .setAllowFlipping(false)
+                    .setCropMenuCropButtonTitle("Done")
+                    .start(activity);
+        } else {
+            CropImage.activity(imageUri)
+                    .setAllowFlipping(false)
+                    .setCropMenuCropButtonTitle("Done")
+                    .start(activity);
+        }
     }
 
     public static void encodeImageToBase64(@Nullable Intent data, Context context, @Nullable Uri imageData) {

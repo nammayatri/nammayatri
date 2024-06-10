@@ -6,11 +6,15 @@ import Common.Types.Config as CTC
 import Engineering.Helpers.Commons as EHC
 import MerchantConfig.Utils as MU
 import Common.Types.App as CTA
+import Common.Types.App as CTA
+import Foreign.Object (fromHomogeneous)
+import Prelude (($),negate)
 
 config :: AppConfig
 config =
   { primaryTextColor: "#FCC32C"
   , primaryBackground: "#2C2F3A"
+  , primaryGradientColor: ["#E2EAFF", "#F5F8FF"]
   , languageList:
       [ { name: "English", value: "EN_US", subtitle: "" }
       , { name: "ಕನ್ನಡ", value: "KN_IN", subtitle: "Kannada" }
@@ -21,11 +25,14 @@ config =
   , popupBackground : "#FFFFFF"
   , defaultLanguage : "EN_US"
   , leaderBoard :{
-    isMaskedName : true
+    isMaskedName : true,
+    enable : true
   }
   , rideCompletedCardConfig : {
       showSavedCommission : false,
       lottieQRAnim : false
+    , topCardGradient : ["#F5F8FF","#E2EAFF"]
+    , bottomBackground : "#F4F4F6"
     }
    , rateCardScreen : {
       showYoutubeVideo : true,
@@ -55,7 +62,7 @@ config =
     whatsappSupportLink : "",
     myPlanYoutubeLink : "",
     overlayYoutubeLink : "",
-    enableIntroductoryView : false,
+    enableIntroductoryView : true,
     optionsMenuItems : {
       managePlan : false,
       paymentHistory : false,
@@ -70,13 +77,22 @@ config =
     earnAmountInADay : 2500,
     showFeeBreakup : true,
     noChargesTillDate : "Oct 1st 2024-*$*-ಅಕ್ಟೋಬರ್ 01, ರವರೆಗೆ-*$*-1 अक्टूबर 2024-*$*-১লা অক্টোবর, ২০২৪-*$*-ഒക്ടോബര്‍ 1, 2024-*$*-1 அக்டோபர் 2024-*$*-1 అక్టోబర్ 2024",
-    lowestFeesFromDate : "Oct 2nd 2024-*$*-ಅಕ್ಟೋಬರ್ 2, 2024-*$*-2 अक्टूबर 2024-*$*-২য় অক্টোবর, ২০২৪-*$*-രണ്ടാം ഒക്ടോബര്‍, 2024-*$*-அக்டோபர் 2, 2024-*$*-అక్టోబరు 2, 2024"
+    lowestFeesFromDate : "Oct 2nd 2024-*$*-ಅಕ್ಟೋಬರ್ 2, 2024-*$*-2 अक्टूबर 2024-*$*-২য় অক্টোবর, ২০২৪-*$*-രണ്ടാം ഒക്ടോബര്‍, 2024-*$*-அக்டோபர் 2, 2024-*$*-అక్టోబరు 2, 2024",
+    showLottieSubscriptionScreen : true,
+    backgroundGradient : ["#E2EAFF", "#F5F8FF"],
+    showUPIAutopay : true,
+    promoTextColor : "#0066FF",
+    showHowThisWorks : false,
+    benefitsBgColor : "#f4F7FF"
   },
   showPaymentDetails : true,
   enableDriverReferral : false,
   enableCustomerReferral : false,
   rideActionModelConfig : {
-    showVehicleVariant : true
+    showVehicleVariant : true,
+    mapBackground : "#0066FF",
+    cancelRideColor : "#E55454",
+    enablePrefixImage : false
   }
   , profileVerification : {
       aadharVerificationRequired : false
@@ -92,9 +108,13 @@ config =
       genericAccessibilityVideo : ""
   }
   , profile : { 
-    bookingOptionMenuForTaxi : false,
-    showBookingOption : true
-  , checkRCStatusForBookingOption : true 
+    bookingOptionMenuForTaxi : false
+  , showBookingOption : true
+  , checkRCStatusForBookingOption : true
+  , enableMultipleRC : true
+  , backgroundGradient :["#f4F7FF"]
+  , settingsBtnColor: "#0066FF"
+  , background :"#f4F7FF"
   }
   , waitTimeConfig : {
     enableWaitTime : true,
@@ -129,6 +149,7 @@ config =
         { isVisible : true,
           showNew : false
         }
+      , activeColor : "#000000"
     }
   , mapConfig : 
       { animationDuration : 500
@@ -146,11 +167,13 @@ config =
               cityLat : 12.971599,
               cityLong : 77.594566,
               supportNumber : "",
+              supportMail: "",
               languageKey : "KN_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : false,
               uploadRCandDL : true,
-              enableYatriCoins : true,
+              enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig,
               variantSubscriptionConfig : {
@@ -169,6 +192,8 @@ config =
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               gstPercentage : "18",
+              currency : "₹",
+              distanceUnit : "km",
               rateCardConfig : { showLearnMore : true, learnMoreVideoLink : "https://www.youtube.com/shorts/NUTNKPzslpw" },
               assets :{
                 auto_image : "ny_ic_auto_side_view",
@@ -176,7 +201,7 @@ config =
                 empty_referral_auto : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
               },
-              enableHvSdk : true
+              enableHvSdk : false
             },
             {
               cityName : "Hyderabad",
@@ -189,8 +214,10 @@ config =
               cityLat : 17.387140,
               cityLong : 78.491684,
               supportNumber : "+918069724900",
+              supportMail : "",
               languageKey : "TE_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
@@ -213,6 +240,8 @@ config =
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow" ,
@@ -232,8 +261,10 @@ config =
               cityLat : 12.295810,
               cityLong : 76.639381,
               supportNumber : "",
+              supportMail: "",
               languageKey : "KN_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
@@ -256,6 +287,8 @@ config =
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               gstPercentage : "18",
               rateCardConfig : { showLearnMore : true, learnMoreVideoLink : "https://www.youtube.com/shorts/NUTNKPzslpw" },
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image : "ny_ic_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side",
@@ -275,8 +308,10 @@ config =
               cityLat : 28.644800,
               cityLong : 77.216721,
               supportNumber : "+918069724848",
+              supportMail : "",
               languageKey : "HI_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
@@ -299,6 +334,8 @@ config =
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image : "ny_ic_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side",
@@ -318,8 +355,10 @@ config =
               cityLat : 13.067439,
               cityLong : 80.237617,
               supportNumber : "08069724899",
+              supportMail : "",
               languageKey : "TA_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : false,
               uploadRCandDL : false,
               enableYatriCoins : false,
@@ -342,6 +381,8 @@ config =
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow",
@@ -361,8 +402,10 @@ config =
               cityLat : 11.004556,
               cityLong : 76.961632,
               supportNumber : "",
+              supportMail: "",
               languageKey : "TA_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
@@ -385,6 +428,8 @@ config =
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow",
@@ -404,8 +449,10 @@ config =
               cityLat : 11.943852,
               cityLong : 79.808292,
               supportNumber : "08069724899",
+              supportMail : "",
               languageKey : "TA_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
@@ -428,6 +475,8 @@ config =
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow",
@@ -447,8 +496,10 @@ config =
               cityLat : 28.457523,
               cityLong : 77.026344,
               supportNumber : "",
+              supportMail: "",
               languageKey : "HI_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : true,
               uploadRCandDL : true,
               enableYatriCoins : false,
@@ -471,6 +522,8 @@ config =
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image : "ny_ic_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side",
@@ -490,8 +543,10 @@ config =
               cityLat : 28.535517,
               cityLong : 77.391029,
               supportNumber : "",
+              supportMail: "",
               languageKey : "HI_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : true,
               uploadRCandDL : true,
               enableYatriCoins : false,
@@ -514,6 +569,8 @@ config =
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image : "ny_ic_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side",
@@ -533,8 +590,10 @@ config =
               cityLat : 11.1271,
               cityLong : 78.6569,
               supportNumber : "08069724899",
+              supportMail : "",
               languageKey : "TA_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral : false,
               showCustomerReferral : true,
               uploadRCandDL : false,
               enableYatriCoins : false,
@@ -557,6 +616,8 @@ config =
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow",
@@ -576,8 +637,10 @@ config =
               cityLat : 22.5354064,
               cityLong : 88.2649516,
               supportNumber : "",
+              supportMail: "",
               languageKey : "BN_IN",
               showDriverReferral : true,
+              mandatoryDriverReferral: false,
               showCustomerReferral : true,
               uploadRCandDL : true, 
               enableYatriCoins : false,
@@ -585,7 +648,11 @@ config =
               registration : {
                   supportWAN : "",
                   callSupport : false,
-                  whatsappSupport : false
+                  whatsappSupport : false,
+                  emailSupport: false,
+                  enableDataOfIssue: true,
+                  enableAc :true,
+                  defVariantList : []
               },
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
@@ -613,14 +680,63 @@ config =
               },
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image : "ny_ic_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side",
                 empty_referral_auto : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-              },
-              enableHvSdk : false
-            }, 
+              }
+              , enableHvSdk : false
+            },
+            { 
+              cityName: "Minneapolis"
+            , mapImage: "ny_ic_minneapolis_map"
+            , cityCode: "std:0820"
+            , showSubscriptions: false
+            , advancedRidePopUpYoutubeLink : ""
+            , callDriverInfoPost: false
+            , enableAdvancedBooking : false
+            , cityLat: 44.977753
+            , cityLong: - 93.2650108
+            , supportNumber: "+19522390127"
+            , supportMail : "drivers@bridge.cab"
+            , languageKey: "EN_US"
+            , showDriverReferral: true
+            , mandatoryDriverReferral: true
+            , showCustomerReferral: false
+            , uploadRCandDL: true
+            , enableYatriCoins: false
+            , vehicleNSImg : ""
+            , registration: registrationConfig{defVariantList = [CTA.CarCategory], enableAc = false, enableDataOfIssue = false, emailSupport = true}
+            , variantSubscriptionConfig:
+                { enableVariantBasedSubscription: true
+                , variantList: []
+                , enableCabsSubscriptionView: true
+                , staticViewPlans: getBridgePlans 
+                }
+            , showEarningSection: true
+            , gstPercentage : "18"
+            , referral:
+                { domain: "https//nammayatri.in"
+                , customerAppId: "in.juspay.nammayatri"
+                , driverAppId: "in.juspay.nammayatripartner"
+                }
+            , waitingCharges : 1.50
+            , waitingChargesConfig : defWaitingChargesConfig
+            , rentalWaitingChargesConfig : defRentalWaitingChargesConfig
+            , rateCardConfig : defRateCardConfig
+            , currency : "$"
+            , distanceUnit : "mi"
+            , enableHvSdk : false
+            , assets :{
+              auto_image : "ic_auto_rickshaw",
+              onboarding_auto_image : "ny_ic_auto_right_side_black",
+              empty_referral_auto : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+              empty_referral_cab : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+            }
+          },
             {
               cityName : "Kochi",
               mapImage : "ny_ic_kochi_map",
@@ -637,11 +753,13 @@ config =
               showCustomerReferral : true,
               uploadRCandDL : true,
               enableYatriCoins : true,
+              supportMail : "",
+              mandatoryDriverReferral: false,
               vehicleNSImg : "ny_ic_auto_image",
-              registration : {
-                  supportWAN : "918618963188",
-                  callSupport : true,
-                  whatsappSupport : true
+              registration : registrationConfig {
+                  supportWAN = "918618963188",
+                  callSupport = true,
+                  whatsappSupport = true
               },
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : true,
@@ -655,11 +773,13 @@ config =
               , customerAppId : "in.juspay.nammayatri"
               , driverAppId : "in.juspay.nammayatripartner"
             },
-            waitingCharges : 1.00,
+            waitingCharges : 1.50,
             waitingChargesConfig : defWaitingChargesConfig,
             rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
             gstPercentage : "18",
             rateCardConfig : defRateCardConfig,
+            currency : "₹",
+            distanceUnit : "km",
             assets :{
               auto_image : "ic_auto_rickshaw",
               onboarding_auto_image : "ny_ic_auto_right_side_black",
@@ -677,6 +797,7 @@ config =
             --   cityLat : 9.93069,
             --   cityLong : 78.11956,
             --   supportNumber : "",
+            -- supportMail: "",
             --   languageKey : "TA_IN",
             --   enableYatriCoins : false
             -- }
@@ -689,13 +810,34 @@ config =
   , flowConfig : {
       chooseCity : {
         runFlow : true,
-        defCity : "Bangalore"
+        defCity : "Bangalore",
+        directAuth : false,
+        useDefault : false
       }
   }
-  , homeScreen : {
-    specialRideOtpView : false,
-    showGenderBanner : true
-  }
+  , homeScreen:
+      { specialRideOtpView: false
+      , showGenderBanner: true
+      , offlineBtnColor: "#53BB6F"
+      , statsBackground :"#f4F7FF"
+      , statusPills: fromHomogeneous $
+          { "Offline":
+              { background: defaultColors.red
+              , imageUrl: "ic_driver_status_offline,https://assets.juspay.in/beckn/nammayatri/user/images/ic_driver_status_offline.png"
+              , textColor: "#FFFFFF"
+              }
+          , "Silent":
+              { background: "#2194FF"
+              , imageUrl: "ic_driver_status_silent,https://assets.juspay.in/beckn/nammayatri/user/images/ic_driver_status_silent.png"
+              , textColor: "#FFFFFF"
+              }
+          , "Online":
+              { background: "#53BB6F"
+              , imageUrl: "ic_driver_status_online,https://assets.juspay.in/beckn/nammayatri/user/images/ic_driver_status_online.png"
+              , textColor: "#FFFFFF"
+              }
+          }
+      }
   , colors : defaultColors
   , primaryButtonConfig : defaultPrimaryButtonConfig
   , fontConfig : defaultFontConfig
@@ -707,6 +849,7 @@ config =
   , navigationAppConfig : defaultNavigationAppConfig
   , genericHeaderConfig : defaultGenericHeader
   , currency: "₹"
+  , distanceUnit : "km"
   , internationalNumberEnabled : false
   , countryCodeConfig : []
   , feature : {
@@ -799,13 +942,48 @@ config =
   , clientName : ""
   , appUpdatePopupUrl : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner&pcampaignid=web_share"
   , showProfileAadhaarPan : true -- Only for backward compatibility and testing in PROD environment
+  , welcomeScreen : {
+    background :"#FFFAED"
+  }
+  , enterMobileNumberScreen : {
+    headerBackground: "#2C2F3A"
+  , emailAuth : false
+  }
+  , defaultCountryCodeConfig : countryCode
+  , secondaryBackground : "#2C2F3A"
+  , vehicleRegisterationScreen : {
+      collectVehicleDetails : false
+  }
+  , bookingPreferencesConfig : {
+      primaryToggleBackground : "#2194FF"
+    , vehicleNumberBackground : "#E9BE4D"
+    , vehicleNumberRadius : 6.0
+    , rateCardGradient : ["#E2EAFF", "#F5F8FF"]
+  }
+  , benefitsScreen:
+      { learnAndEarnItem:
+          { statusBackground: "#2194FF"
+          }
+      , referralCardBackground:
+          { customer: "#80B2FFCC"
+          , driver: "#FCC32C"
+          }
+      }
+  , lmsVideoScreen: {
+    titleBackground : "#f4F7FF",
+    enableQuiz : true
+  }
 }
 
 registrationConfig :: CTC.RegistrationConfig
 registrationConfig = {
   supportWAN : "919625724848",
   callSupport : true,
-  whatsappSupport : false
+  whatsappSupport : false,
+  emailSupport : false,
+  defVariantList : [],
+  enableAc : true,
+  enableDataOfIssue: true
 }
 
 getStaticViewPlans :: Array CTC.StaticViewPlans
@@ -813,6 +991,12 @@ getStaticViewPlans = [
   {price : 45.0, frequency : "PER_DAY", variantCategory : "CarCategory", name : "DAILY_UNLIMITED", introductoryOffer : "FREE_RIDE_OFFER", showSelected : false, planDesc : "CAB_DAILY_UNLIMITED_OFFER"},
   {price : 9.0, frequency : "PER_RIDE", variantCategory : "CarCategory", name : "DAILY_PER_RIDE", introductoryOffer : "", showSelected : false, planDesc : "CAB_DAILY_PER_RIDE_OFFER"},
   {price : 25.0, frequency : "PER_DAY", variantCategory : "AutoCategory", name : "DAILY_UNLIMITED", introductoryOffer : "NO_CHARGES_TILL", showSelected : true, planDesc : ""}
+]
+
+getBridgePlans :: Array CTC.StaticViewPlans
+getBridgePlans = [
+  {price : 3.90, frequency : "PER_DAY", variantCategory : "CarCategory", name : "DAILY_UNLIMITED", introductoryOffer : "FREE_RIDE_OFFER", showSelected : false, planDesc : "CAB_DAILY_UNLIMITED_OFFER"},
+  {price : 0.90, frequency : "PER_RIDE", variantCategory : "CarCategory", name : "DAILY_PER_RIDE", introductoryOffer : "", showSelected : false, planDesc : "CAB_DAILY_PER_RIDE_OFFER"}
 ]
 
 defWaitingChargesConfig :: CTC.WaitingChargesConfig
@@ -872,16 +1056,22 @@ allCitiesDefaultCityConfig = {
   cityLat : 0.0,
   cityLong : 0.0,
   supportNumber : "",
+  supportMail: "",
   languageKey : "",
   enableYatriCoins : false,
   showDriverReferral : false,
   showCustomerReferral : false,
+  mandatoryDriverReferral : false,
   uploadRCandDL : true,
   vehicleNSImg : "",
   registration : { 
     callSupport : false,
     supportWAN : "", 
-    whatsappSupport : false
+    whatsappSupport : false,
+    emailSupport : false,
+    enableAc: true,
+    enableDataOfIssue: true,
+    defVariantList : []
   },
   variantSubscriptionConfig : {
     enableVariantBasedSubscription : true,
@@ -932,6 +1122,8 @@ allCitiesDefaultCityConfig = {
     empty_referral_cab : ""
   },
   gstPercentage : "18",
+  currency : "₹" ,
+  distanceUnit : "km",
   enableHvSdk : false
 }
 
@@ -991,4 +1183,6 @@ ysDefaultCityConfig =
         }
       }
     , enableHvSdk = true -- Hyperverge Integration Activation at launch
+    , currency = "₹"
+    , distanceUnit = "km"
   }

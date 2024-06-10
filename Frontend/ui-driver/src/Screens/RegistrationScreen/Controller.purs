@@ -21,6 +21,9 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.GenericHeader as GenericHeader
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Helpers.Utils (getStatus, contactSupportNumber, getLatestAndroidVersion)
+import Data.Maybe (Maybe (..), isJust, fromJust)
+import Debug (spy)
+import Helpers.Utils (getStatus, contactSupportNumber)
 import JBridge as JB
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
@@ -47,7 +50,7 @@ import Data.Array as DA
 import Screens.RegistrationScreen.ScreenData as SD
 import Components.OptionsMenu as OptionsMenu
 import Components.BottomDrawerList as BottomDrawerList
-import Effect.Uncurried (runEffectFn8)
+import Effect.Uncurried (runEffectFn8, runEffectFn3)
 import Effect.Class (liftEffect)
 import Foreign.Generic (decodeJSON)
 import Services.Backend as Remote
@@ -111,18 +114,22 @@ instance loggableAction :: Loggable Action where
 
     
 data ScreenOutput = GoBack 
-                  | GoToUploadDriverLicense RegistrationScreenState 
-                  | GoToUploadVehicleRegistration RegistrationScreenState (Array String)
+                  | GoToUploadDriverLicense RegistrationScreenState ST.StepProgress
+                  | GoToUploadVehicleRegistration RegistrationScreenState ST.StepProgress
                   | GoToPermissionScreen RegistrationScreenState
                   | LogoutAccount
                   | GoToOnboardSubscription RegistrationScreenState
                   | GoToHomeScreen RegistrationScreenState
+                  | HandleCheckrWebviewExitScreen
                   | RefreshPage
                   | ReferralCode RegistrationScreenState
+                  | SSN RegistrationScreenState
+                  | ProfileDetailsExit RegistrationScreenState
                   | DocCapture RegistrationScreenState RegisterationStep
                   | SelectLang RegistrationScreenState
                   | GoToAadhaarPANSelfieUpload RegistrationScreenState ST.HyperVergeKycResult
                   | GoToAppUpdatePopUpScreen RegistrationScreenState
+                  | GetBGVUrl RegistrationScreenState
 
 data Action = BackPressed 
             | NoAction
@@ -134,13 +141,14 @@ data Action = BackPressed
             | PrimaryButtonAction PrimaryButtonController.Action
             | Refresh
             | ContactSupport
+            | HandleCheckrWebviewExit String
             | AppOnboardingNavBarAC AppOnboardingNavBar.Action
             | PrimaryEditTextActionController PrimaryEditText.Action 
             | ReferralCodeTextChanged String
             | EnterReferralCode Boolean
             | InAppKeyboardModalAction InAppKeyboardModal.Action
             | SupportClick Boolean
-            | WhatsAppClick
+            | WhatsAppClick Boolean
             | CallButtonClick
             | ChooseVehicleCategory Int
             | ContinueButtonAction PrimaryButtonController.Action
@@ -151,6 +159,7 @@ data Action = BackPressed
             | OnActivityResult String
             | CallWorkFlow String
             | UpdateApkAction 
+            | OnResumeCallback
             
 derive instance genericAction :: Generic Action _
 instance eqAction :: Eq Action where
@@ -176,8 +185,8 @@ eval (RegistrationAction step ) state = do
        let item = step.stage
        let hvFlowIds = decodeForeignObject (getHVRemoteConfig $ fetchRemoteConfigString "app_configs") (hvConfigs JB.getAppName)
        case item of 
-          DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state
-          VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state step.rcNumberPrefixList
+          DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state step
+          VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state step
           GRANT_PERMISSION -> exit $ GoToPermissionScreen state
           SUBSCRIPTION_PLAN -> exit $ GoToOnboardSubscription state
           PROFILE_PHOTO -> if state.data.cityConfig.enableHvSdk then continueWithCmd state [ pure $ CallHV hvFlowIds.selfie_flow_id ""] else exit $ DocCapture state item
@@ -187,6 +196,18 @@ eval (RegistrationAction step ) state = do
           FITNESS_CERTIFICATE  -> exit $ DocCapture state item
           VEHICLE_INSURANCE -> exit $ DocCapture state item
           VEHICLE_PUC -> exit $ DocCapture state item
+          ProfileDetails -> exit $ ProfileDetailsExit state
+          SocialSecurityNumber -> exit $ SSN state
+          VehicleInspectionForm -> exit $ DocCapture state item
+          BackgroundVerification -> 
+            if isJust state.data.bgvUrl 
+            then continueWithCmd state [ do
+              push <- getPushFn Nothing "RegistrationScreen"
+              void $ runEffectFn3 JB.initWebViewOnActivity (Mb.fromMaybe "" state.data.bgvUrl) push OnResumeCallback
+              pure NoAction
+            ]
+            else exit $ GetBGVUrl state
+           
           _ -> continue state
 
 eval (CallHV workFLowId inputJson) state = 
@@ -250,16 +271,20 @@ eval (BottomDrawerListAC BottomDrawerList.OnAnimationEnd) state = continue state
 
 eval (BottomDrawerListAC (BottomDrawerList.OnItemClick item)) state = do
   case item.identifier of
-    "whatsapp" -> continueWithCmd state [pure WhatsAppClick]
+    "whatsapp" -> continueWithCmd state [pure $ WhatsAppClick false]
+    "email" -> continueWithCmd state [pure $ WhatsAppClick true]
     "call" -> continueWithCmd state [pure CallButtonClick]
     _ -> continue state
 
-eval WhatsAppClick state = continueWithCmd state [do
+eval (WhatsAppClick isMail) state = continueWithCmd state [do
   let supportPhone = state.data.cityConfig.registration.supportWAN
-      phone = "%0APhone%20Number%3A%20"<> state.data.phoneNumber
-      dl = if (state.data.drivingLicenseStatus == ST.FAILED && state.data.enteredDL /= "__failed") then ("%0ADL%20Number%3A%20"<> state.data.enteredDL) else ""
-      rc = if (state.data.vehicleDetailsStatus == ST.FAILED && state.data.enteredRC /= "__failed") then ("%0ARC%20Number%3A%20"<> state.data.enteredRC) else ""
-  void $ JB.openUrlInApp $ "https://wa.me/" <> supportPhone <> "?text=Hi%20Team%2C%0AI%20would%20require%20help%20in%20onboarding%20%0A%E0%A4%AE%E0%A5%81%E0%A4%9D%E0%A5%87%20%E0%A4%AA%E0%A4%82%E0%A4%9C%E0%A5%80%E0%A4%95%E0%A4%B0%E0%A4%A3%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B8%E0%A4%B9%E0%A4%BE%E0%A4%AF%E0%A4%A4%E0%A4%BE%20%E0%A4%95%E0%A5%80%20%E0%A4%86%E0%A4%B5%E0%A4%B6%E0%A5%8D%E0%A4%AF%E0%A4%95%E0%A4%A4%E0%A4%BE%20%E0%A4%B9%E0%A5%8B%E0%A4%97%E0%A5%80" <> phone <> dl <> rc
+      phone = "%0APhone%20Number%3A%20"<> getValueToLocalStore MOBILE_NUMBER_KEY
+      dlNumber = getValueToLocalStore ENTERED_DL
+      rcNumber = getValueToLocalStore ENTERED_RC
+      dl = if (dlNumber /= "__failed") then ("%0ADL%20Number%3A%20"<> dlNumber) else ""
+      rc = if (rcNumber /= "__failed") then ("%0ARC%20Number%3A%20"<> rcNumber) else ""
+      url = if isMail then "mailto:" <> state.data.cityConfig.supportMail else "https://wa.me/" <> supportPhone <> "?text=Hi%20Team%2C%0AI%20would%20require%20help%20in%20onboarding%20%0A%E0%A4%AE%E0%A5%81%E0%A4%9D%E0%A5%87%20%E0%A4%AA%E0%A4%82%E0%A4%9C%E0%A5%80%E0%A4%95%E0%A4%B0%E0%A4%A3%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B8%E0%A4%B9%E0%A4%BE%E0%A4%AF%E0%A4%A4%E0%A4%BE%20%E0%A4%95%E0%A5%80%20%E0%A4%86%E0%A4%B5%E0%A4%B6%E0%A5%8D%E0%A4%AF%E0%A4%95%E0%A4%A4%E0%A4%BE%20%E0%A4%B9%E0%A5%8B%E0%A4%97%E0%A5%80" <> phone <> dl <> rc
+  void $ if isMail then JB.openUrlInMailApp url else JB.openUrlInApp $ url
   pure NoAction
   ]
 
@@ -277,6 +302,8 @@ eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
 eval Refresh state = updateAndExit state { props { refreshAnimation = true}} RefreshPage
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue state {props{menuOptions = not state.props.menuOptions}}
+
+eval (AppOnboardingNavBarAC (AppOnboardingNavBar.PrefixImgOnClick)) state = continueWithCmd state [pure BackPressed]
 
 eval (OptionsMenuAction OptionsMenu.BackgroundClick) state = continue state{props{menuOptions = false}}
 
@@ -366,8 +393,10 @@ eval (OnActivityResult bundle) state = do
     _ -> continue state {props {dontAllowHvRelaunch = false}}
 
 eval UpdateApkAction state = exit $ GoToAppUpdatePopUpScreen state {props {dontAllowHvRelaunch = false}}
+eval OnResumeCallback state = exit $ HandleCheckrWebviewExitScreen
 
 eval _ state = update state
+
 
 getStatusValue :: String -> StageStatus
 getStatusValue value = case value of
@@ -377,7 +406,8 @@ getStatusValue value = case value of
   "NO_DOC_AVAILABLE" -> NOT_STARTED
   "INVALID" -> FAILED
   "LIMIT_EXCEED" -> FAILED
-  "MANUAL_VERIFICATION_REQUIRED" -> MANUAL_VERIFICATION_REQUIRED
+  "MANUAL_VERIFICATION_REQUIRED" -> COMPLETED
+  "UNAUTHORIZED" -> ST.UNAUTHORIZED
   _ -> NOT_STARTED
 
 

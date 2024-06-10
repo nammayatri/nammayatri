@@ -35,18 +35,26 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (BottomNavBarState)
 import Storage (getValueToLocalNativeStore, KeyStore(..))
 import Styles.Colors as Color
+import ConfigProvider
 
 view :: forall w . (Action -> Effect Unit) -> BottomNavBarState -> PrestoDOM (Effect Unit) w
 view push state =
-    linearLayout
+  let config = getAppConfig appConfig
+  in 
+  linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , alignParentBottom "true,-1"
     , gravity CENTER
+    , orientation VERTICAL
     ][ linearLayout
+        [ height $ V 1
+        , width MATCH_PARENT
+        , background Color.grey900
+        ][] 
+    , linearLayout
        [ width MATCH_PARENT
        , height MATCH_PARENT
-       , stroke ("1,"<> Color.grey900)
        , background Color.white900
        ](mapWithIndex
          (\index item ->
@@ -88,7 +96,7 @@ view push state =
                     , height WRAP_CONTENT
                     , gravity CENTER_HORIZONTAL
                     , maxLines 1
-                    , color if index == state.activeIndex then Color.black else Color.black600
+                    , color if index == state.activeIndex then config.bottomNavConfig.activeColor else Color.black600
                     , text case item.text of
                               "Home"          -> getString HOME
                               "Rides"         -> getString RIDES

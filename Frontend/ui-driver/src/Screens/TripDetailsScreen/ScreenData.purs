@@ -15,6 +15,7 @@
 
 module Screens.TripDetailsScreen.ScreenData where
 
+import Constants.Configs (dummyPrice, dummyDistance)
 import Data.Maybe (Maybe(..))
 import Screens.Types as ST
 import MerchantConfig.DefaultConfig as DC
@@ -24,6 +25,7 @@ initData = {
   data: {
       tripId : "",
       distance: "",
+      distanceWithUnit : dummyDistance,
       message : "",
       timeTaken : "",
       rider : "",
@@ -32,6 +34,7 @@ initData = {
       source : "" ,
       destination : "",
       totalAmount : 0,
+      totalAmountWithCurrency : dummyPrice,
       paymentMode : ST.CASH,
       status : "",
       vehicleType : "",
@@ -46,6 +49,7 @@ initData = {
       config : DC.config,
       specialZonePickup : false ,
       tollCharge : 0.0,
+      tollChargeWithCurrency : dummyPrice,
       rideType : "",
       tripStartTime : Nothing,
       tripEndTime : Nothing,

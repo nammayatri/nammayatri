@@ -9,6 +9,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Benefits.BenefitsScreen.Controller (Action(..), ScreenOutput, eval, getRemoteBannerConfigs)
 import Screens.Types
 import Screens.Benefits.BenefitsScreen.ComponentConfig
+import Screens.Benefits.BenefitsScreen.ScreenData
 import Styles.Colors as Color
 import Components.GenericHeader as GenericHeader
 import Font.Size as FontSize
@@ -29,13 +30,13 @@ import Control.Transformers.Back.Trans (runBackT)
 import Services.Backend as Remote
 import Services.API
 import Control.Monad.Trans.Class (lift)
-import Presto.Core.Types.Language.Flow (doAff)
+import Presto.Core.Types.Language.Flow (Flow,doAff)
 import Effect.Class (liftEffect)
 import Debug (spy)
 import Mobility.Prelude
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Storage (KeyStore(..), getValueToLocalStore)
-import Data.Maybe (isJust, fromMaybe, Maybe(..), maybe)
+import Data.Maybe (isJust, fromMaybe, Maybe(..), maybe, isNothing)
 import Effect.Uncurried (runEffectFn4)
 import ConfigProvider
 import Data.Int(fromNumber, toNumber, ceil)
@@ -47,7 +48,7 @@ import Locale.Utils
 import PrestoDOM.Animation as PrestoAnim
 import CarouselHolder as CarouselHolder
 import Components.BannerCarousel as BannerCarousel
-import PrestoDOM.List (ListItem, preComputeListItem)
+import PrestoDOM.List
 import Engineering.Helpers.Commons as EHC
 import Presto.Core.Flow (Flow)
 
@@ -70,7 +71,8 @@ screen initialState =
                 case moduleResp of
                   Right modules -> liftFlow $ push $ UpdateModuleList modules
                   Left err -> liftFlow $ push $ UpdateModuleListErrorOccurred
-            void $ launchAff $ EHC.flowRunner defaultGlobalState $ computeListItem push
+            when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ computeListItem push
+            when (isNothing initialState.data.carouselItem) $ void $ launchAff $ flowRunner defaultGlobalState $ computeReferralListItem push initialState
             pure $ pure unit
         )
       ]
@@ -92,14 +94,13 @@ view push state =
   , onBackPressed push $ const BackPressed
   , afterRender push $ const AfterRender
   , background Color.white900
-  ][ PrestoAnim.animationSet [Anim.fadeIn true] $ 
+  ]$[ PrestoAnim.animationSet [Anim.fadeIn true] $ 
      linearLayout
      [ width $ MATCH_PARENT
      , height $ MATCH_PARENT
      ][ referralScreenBody push state ]
-  , if state.props.showDriverReferralQRCode then appQRCodeView push state else dummyView
-  , if state.props.referralInfoPopType /= NO_REFERRAL_POPUP then referralInfoPop push state else dummyView
-  ]
+  ] <> if state.props.showDriverReferralQRCode then [appQRCodeView push state] else []
+    <> if state.props.referralInfoPopType /= NO_REFERRAL_POPUP then [referralInfoPop push state] else []
 
 referralScreenBody :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 referralScreenBody push state =
@@ -107,12 +108,14 @@ referralScreenBody push state =
   [ width $ MATCH_PARENT
   , height $ MATCH_PARENT
   , orientation VERTICAL
+  , padding $ PaddingBottom safeMarginBottom
   ][   linearLayout
        [ width $ MATCH_PARENT
        , weight 1.0
        , orientation VERTICAL
-       ][ scrollView
-          [ height $ MATCH_PARENT
+       ][ headerLayout state push
+        , scrollView
+          [ height $ WRAP_CONTENT
           , width MATCH_PARENT
           , scrollBarY false 
           ][referralScreenInnerBody push state]
@@ -139,15 +142,48 @@ referralScreenInnerBody push state =
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , margin $ Margin 16 0 16 12
       , orientation VERTICAL
-      ][ if shouldShowReferral state then driverReferralCode push state else dummyView
-      , rideLeaderBoardView push state
+      ][ case state.data.carouselItem of 
+          Just item -> if shouldShowReferral state then driverReferralCode push state item else dummyView
+          Nothing -> dummyView
+      , if state.data.config.leaderBoard.enable then rideLeaderBoardView push state else dummyView
       ]
     , learnAndEarnShimmerView push state
   ] <> if not (null state.data.moduleList.completed) || not (null state.data.moduleList.remaining) then [learnAndEarnView push state] else [])
   where
     getCarouselView = maybe (linearLayout[][]) (\item -> bannersCarousal item state push) state.data.bannerData.bannerItem
+
+-------------------------------------------------- headerLayout --------------------------
+headerLayout :: BenefitsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+headerLayout state push =
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    ]
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation HORIZONTAL
+        , gravity CENTER_VERTICAL
+        , padding $ Padding 10 (safeMarginTopWithDefault 13) 10 13
+        ]
+        [ textView
+            $ [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , text (case bothReferralNotEnabled of
+                        true -> getString RIDE_LEADERBOARD
+                        false -> getString REFERRAL)
+              , margin $ MarginLeft 10
+              , padding $ PaddingBottom 2
+              , color Color.black900
+              ]
+            <> FontStyle.h3 TypoGraphy
+        ]
+    ]
+  where
+    cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION) 
+    bothReferralNotEnabled = not (cityConfig.showDriverReferral || state.data.config.enableDriverReferral || cityConfig.showCustomerReferral || state.data.config.enableCustomerReferral)
 
 tabView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 tabView push state =
@@ -217,192 +253,321 @@ shouldShowReferral state =
   in
     driverReferral || customerReferral
 
-driverReferralCode :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
-driverReferralCode push state =
+driverReferralCode :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> ListItem -> PrestoDOM (Effect Unit) w
+driverReferralCode push state item =
+  let
+    isCustomer = state.props.driverReferralType == CUSTOMER
+  in
+    linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      ]
+      [ CarouselHolder.carouselView push $ getReferralCarouselConfig item state
+      , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER
+          ]
+          [ indicatorDot (if isCustomer then Color.black900 else Color.grey900) isCustomer
+          , indicatorDot (if isCustomer then Color.grey900 else Color.black900) isCustomer
+          ]
+      ]
+  where indicatorDot color isCustomer = linearLayout
+              [ height $ V 4
+              , width $ V 4
+              , margin $ (if isCustomer then MarginLeft else MarginRight) 2
+              , cornerRadius 2.0
+              , background color 
+              ]
+              []
+
+getReferralCarouselConfig ∷ forall a. ListItem → BenefitsScreenState → CarouselHolder.CarouselHolderConfig CarouselProps Action
+getReferralCarouselConfig view state = {
+    view
+  , items : referralCardArray state
+  , orientation : VERTICAL
+  , currentPage : 0
+  , autoScroll : false
+  , autoScrollDelay : 5000.0
+  , id : "referralCarousel"
+  , autoScrollAction : Nothing
+  , onPageSelected : Just BannerChanged
+  , onPageScrollStateChanged : Just ReferrlBannerChanged
+  , onPageScrolled : Nothing
+  , currentIndex : 0
+  , showScrollIndicator : false
+  , layoutHeight : V 300
+  , overlayScrollIndicator : true
+}
+
+referralCardArray :: BenefitsScreenState -> Array (Record CarouselProps)
+referralCardArray state = 
+  let 
+    titleCornerRadius = if os == "IOS" then "19.0" else "40.0"
+    cornerRadius = if os == "IOS" then "10.0" else "20.0"
+  in 
+  [{
+  title : toPropValue $ getString REFER_CUSTOMER,
+  qrCode : toPropValue $ renderQrHolder $ Qr ((generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode CUSTOMER)) 500 0,
+  titleBackground : toPropValue "#142C2F3A",
+  background : toPropValue "#F1F2F7",
+  titleImage : toPropValue "ny_ic_new_avatar_profile_customer",
+  titleCornerRadius: toPropValue titleCornerRadius,
+  cornerRadius: toPropValue cornerRadius,
+  referralCode: toPropValue state.data.referralCode,
+  bodyText : toPropValue $ getString CUSTOMER_REFERRAL_CODE,
+  isDriver : toPropValue "gone",
+  isCustomer : toPropValue "visible",
+  referredCustomer : toPropValue $ show state.data.totalReferredDrivers,
+  activatedCustomers : toPropValue $ show state.data.totalActivatedCustomers,
+  referredDrivers : toPropValue $ show state.data.totalReferredDrivers
+},{
+  title : toPropValue $ getString REFER_DRIVER,
+  qrCode : toPropValue $ renderQrHolder $ Qr ((generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode DRIVER)) 500 0,
+  background : toPropValue "#E0D1FF",
+  titleBackground : toPropValue "#142C2F3A",
+  titleImage : toPropValue "ny_ic_new_avatar_profile",
+  titleCornerRadius: toPropValue titleCornerRadius,
+  cornerRadius: toPropValue cornerRadius,
+  referralCode: toPropValue state.data.referralCode,
+  bodyText : toPropValue $ getString DRIVER_REFERRAL_CODE,
+  isCustomer : toPropValue "gone",
+  isDriver : toPropValue "visible",
+  referredCustomer : toPropValue $ show state.data.totalReferredDrivers,
+  activatedCustomers : toPropValue $ show state.data.totalActivatedCustomers,
+  referredDrivers : toPropValue $ show state.data.totalReferredDrivers
+}]
+
+referralCardHolder :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
+referralCardHolder push state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , orientation VERTICAL
-    , padding $ Padding 20 16 20 16
-    , background config.backgroundColor
-    , margin $ MarginBottom 32
-    , cornerRadius 12.0
-    , gravity CENTER
     ]
-    [ tabView push state
-    , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , padding $ Padding 20 16 20 16
+        , cornerRadiusHolder "cornerRadius"
+        , backgroundHolder "background"
+        , margin $ Margin 16 0 16 5
+        , gravity CENTER
         ]
         [ linearLayout
             [ height WRAP_CONTENT
-            , width $ V 148
-            , background Color.white900
-            , orientation VERTICAL
+            , padding $ PaddingVertical 6 8
+            , width MATCH_PARENT
+            , cornerRadiusHolder "titleCornerRadius"
+            , backgroundHolder "titleBackground"
             , gravity CENTER
-            , cornerRadius 10.0
-            , onClick push $ const ShowQRCode
             ]
             [ imageView
-                [ width $ V 148
-                , height $ V 148
-                , id (getNewIDWithTag "ReferralQRCode")
-                , gravity CENTER
-                , padding (Padding 5 5 5 5)
-                , afterRender (\action -> do
-                                runEffectFn4 generateQR (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType) (getNewIDWithTag "ReferralQRCode") 500 0
-                              ) (const RenderQRCode)
+                [ imageUrlHolder "titleImage"
+                , height $ V 24
+                , width $ V 24
+                , margin $ MarginRight 12
                 ]
             , textView
-                $ [ width MATCH_PARENT
-                  , gravity CENTER
-                  , text $ getString CLICK_TO_EXPAND
-                  , color Color.black800
-                  , background Color.blue600
-                  , padding $ PaddingBottom 2
-                  , cornerRadii $ Corners 6.0 false false true true
+                $ [ height WRAP_CONTENT
+                  , textHolder "title"
+                  , color Color.black900
+                  , padding $ PaddingBottom 3
                   ]
-                <> FontStyle.body3 TypoGraphy
+                <> FontStyle.tags TypoGraphy
             ]
         , linearLayout
-            [ height MATCH_PARENT
-            , weight 1.0
-            , gravity CENTER
-            , orientation VERTICAL
-            , padding $ PaddingLeft 16
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , margin $ MarginTop 16
             ]
-            [ textView
-                $ [ width WRAP_CONTENT
-                  , height WRAP_CONTENT
-                  , text $ getString config.referralText
-                  , color Color.black900
-                  , gravity CENTER
-                  ]
-                <> FontStyle.paragraphText TypoGraphy
-            , textView
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , gravity CENTER
-                , text state.data.referralCode
-                , color Color.black900
-                , fontStyle $ FontStyle.feFont LanguageStyle
-                , textSize FontSize.a_30
-                , margin $ MarginTop 10
-                ]
-            , linearLayout
+            [ linearLayout
                 [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , cornerRadius 24.0
+                , width $ V 164
                 , background Color.white900
-                , orientation HORIZONTAL
-                , margin $ MarginTop 12
-                , onClick push $ const $ ShareQRLink
+                , orientation VERTICAL
+                , gravity CENTER
+                , cornerRadius 10.0
+                , onClickHolder push $ ShowQRCode
+                , padding $ PaddingTop 8
                 ]
                 [ imageView
-                  [ height $ V 30
-                  , width $ V 30
-                  , padding $ PaddingHorizontal 10 5
-                  , imageWithFallback $ fetchImage FF_ASSET "ny_ic_share_grey"
-                  ]
-                , textView
-                  $ [ height MATCH_PARENT
-                    , width MATCH_PARENT
-                    , color Color.black900
-                    , padding $ Padding 0 4 10 0
-                    , text $ getString SHARE 
+                    [ width $ V 148
+                    , height $ V 148
+                    , gravity CENTER
+                    , qrHolder "qrCode"
                     ]
-                  <> FontStyle.body1 TypoGraphy
+                , textView
+                    $ [ width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , gravity CENTER
+                      , text $ getString CLICK_TO_EXPAND
+                      , color Color.black800
+                      , background Color.blue600
+                      , cornerRadii $ Corners 6.0 false false true true
+                      ]
+                    <> FontStyle.body3 TypoGraphy
+                ]
+            , linearLayout
+                [ height MATCH_PARENT
+                , weight 1.0
+                , gravity CENTER
+                , orientation VERTICAL
+                , padding $ PaddingLeft 16
+                ]
+                [ imageView
+                    [ width $ V 40
+                    , height $ V 40
+                    , gravity CENTER
+                    , padding (Padding 5 5 5 5)
+                    , imageUrlHolder "titleImage"
+                    ]
+                , textView
+                    $ [ width WRAP_CONTENT
+                      , height WRAP_CONTENT
+                      , textHolder "bodyText"
+                      , color Color.black900
+                      , gravity CENTER
+                      ]
+                    <> FontStyle.paragraphText TypoGraphy
+                , textView
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , gravity CENTER
+                    , textHolder "referralCode"
+                    , color Color.black900
+                    , fontStyle $ FontStyle.feFont LanguageStyle
+                    , textSize FontSize.a_30
+                    , margin $ MarginTop 10
+                    ]
+                , linearLayout
+                    [ height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , gravity CENTER_VERTICAL
+                    , cornerRadius 12.0
+                    , background Color.white900
+                    , orientation HORIZONTAL
+                    , margin $ MarginTop 12
+                    , padding $ Padding 8 4 8 4
+                    , onClickHolder push ShareQRLink
+                    ]
+                    [ imageView
+                        [ height $ V 16
+                        , width $ V 16
+                        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_share_grey"
+                        ]
+                    , textView
+                        $ [ height WRAP_CONTENT
+                          , width MATCH_PARENT
+                          , color Color.black900
+                          , margin $ Margin 8 0 0 1
+                          , gravity CENTER_VERTICAL
+                          , text $ getString SHARE
+                          ]
+                        <> FontStyle.body1 TypoGraphy
+                    ]
                 ]
             ]
-        ]
-    , linearLayout
-      [ width MATCH_PARENT
-      , height $ V 1
-      , background config.separatorColor
-      , margin $ MarginTop 10
-      , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false || state.props.driverReferralType == DRIVER
-      ][]
-    , linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , margin $ MarginTop 10
-      , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false || state.props.driverReferralType == DRIVER
-      ][ referralCountView false (getString REFERRED) (show state.data.totalReferredCustomers) (state.props.driverReferralType == CUSTOMER) push REFERRED_CUSTOMERS_POPUP
-       , referralCountView true config.infoText (show activatedCount) true push config.popupType
-       ] 
-     , linearLayout
-       [ height WRAP_CONTENT
-       , width MATCH_PARENT
-       , margin $ MarginTop 16
-       , cornerRadius 8.0
-       , background Color.lightBlue80
-       , gravity CENTER_VERTICAL
-       , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just true && state.props.driverReferralType == CUSTOMER
-       , onClick push $ const $ GoToCustomerReferralTracker
-       ][ relativeLayout
-          [ height MATCH_PARENT
-          , width MATCH_PARENT
-          ][ linearLayout
-             [ height MATCH_PARENT
-             , width MATCH_PARENT
-             , padding $ PaddingHorizontal 8 8
-             , gravity CENTER_VERTICAL
-             ][imageView
-               [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_star_black"
-               , height $ V 15
-               , width $ V 12
-               , margin $ MarginRight 4
-               ]
-             , textView $ 
-               [ height WRAP_CONTENT 
-               , text $ getString REFERRAL_BONUS_TRACKER 
-               , color Color.black900
-               , gravity CENTER_VERTICAL
-               , padding $ PaddingVertical 12 12
-               , lineHeight "18"
-               ] <> FontStyle.body6 TypoGraphy
-             , linearLayout [weight 1.0, height MATCH_PARENT][]
-             , linearLayout
-               [ height MATCH_PARENT
-               , width WRAP_CONTENT
-               , gravity CENTER_VERTICAL
-               ][ imageView
-                   [ height $ V 16
-                   , width $ V 16
-                   , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_chevron_right_black_900"
-                   ]
-                ]
-              ]
-            , shineAnimation state
-          ]
+        , linearLayout
+            [ width MATCH_PARENT
+            , height $ V 1
+            , background Color.white160
+            , margin $ MarginTop 10
+            ]
+            []
+        , linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , margin $ MarginTop 10
+            ]
+            [ customerReferredView push state
+            , driverReferredView push state
+            ]
         ]
     ]
-  where
-  activatedCount = if state.props.driverReferralType == DRIVER then state.data.totalReferredDrivers else state.data.totalActivatedCustomers
 
-  config = if state.props.driverReferralType == DRIVER then driverReferralConfig else customerReferralConfig
 
-  driverReferralConfig =
-    let appConfigs = getAppConfig appConfig
-    in  {backgroundColor: Color.yellow900
-        , qr_img: "ny_driver_app_qr_code"
-        , infoText: getString REFERRED_DRIVERS
-        , separatorColor: Color.white300
-        , popupType: REFERRED_DRIVERS_POPUP
-        , referralText: DRIVER_REFERRAL_CODE
-        , referralDomain : appConfigs.appData.website
-        }
+customerReferredView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
+customerReferredView push state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER_VERTICAL
+    , visibilityHolder "isCustomer"
+    ]
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , weight 1.0
+        , gravity CENTER_VERTICAL
+        ]
+        [ textView
+            $ [ height WRAP_CONTENT
+              , text $ getString REFERRED
+              , color Color.black800
+              ]
+            <> FontStyle.tags TypoGraphy
+        , imageView
+            $ [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_black"
+              , height $ V 14
+              , width $ V 14
+              , margin $ Margin 4 2 0 0
+              , onClickHolder push $ ShowReferedInfo REFERRED_CUSTOMERS_POPUP
+              , padding $ PaddingBottom 2
+              ]
+        , linearLayout [weight 1.0][]
+        , textView
+            $ [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , textHolder "referredCustomer"
+              , color Color.black800
+              , weight 1.0
+              ]
+            <> FontStyle.body6 TypoGraphy
+        ]
+      ,   linearLayout
+            [ height WRAP_CONTENT
+            , gravity CENTER_VERTICAL
+            , weight 1.0
+            ]
+            [ linearLayout
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , gravity CENTER_VERTICAL
+                ]
+                [ imageView
+                    $ [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_star_black"
+                      , height $ V 13
+                      , width $ V 13
+                      , margin $ MarginRight 4
+                      ]
+                , textView
+                    $ [ height WRAP_CONTENT
+                      , text $ getString ACTIVATED
+                      , color Color.black800
+                      ]
+                    <> FontStyle.tags TypoGraphy
+                , imageView
+                    $ [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_black"
+                      , height $ V 14
+                      , width $ V 14
+                      , margin $ Margin 4 2 0 0
+                      , onClickHolder push $ ShowReferedInfo ACTIVATED_CUSTOMERS_POPUP
+                      , padding $ PaddingBottom 2
+                      ]
+                ]
+            , textView
+                $ [ height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , textHolder "activatedCustomers"
+                  , color Color.black800
+                  , weight 1.0
+                  , gravity RIGHT
+                  ]
+                <> FontStyle.body6 TypoGraphy
+            ]
+    ]
 
-  customerReferralConfig =
-    let appConfigs = getAppConfig appConfig
-    in  { backgroundColor: Color.frenchSkyBlue800
-        , qr_img: "ny_customer_app_qr_code"
-        , infoText: getString ACTIVATED
-        , separatorColor: Color.frenchSkyBlue400
-        , popupType: ACTIVATED_CUSTOMERS_POPUP
-        , referralText: CUSTOMER_REFERRAL_CODE
-        , referralDomain : appConfigs.appData.website
-        }
 
 shineAnimation :: forall w . BenefitsScreenState -> PrestoDOM (Effect Unit) w
 shineAnimation state =
@@ -436,14 +601,16 @@ shineAnimation state =
      ]
   ]
 
-referralCountView :: forall w. Boolean -> String -> String -> Boolean -> (Action -> Effect Unit) -> ReferralInfoPopType -> PrestoDOM (Effect Unit) w
-referralCountView showStar text' count visibility' push popupType =
+-- referralCountView :: forall w. Boolean -> String -> String -> Boolean -> (Action -> Effect Unit) -> ReferralInfoPopType -> PrestoDOM (Effect Unit) w
+-- referralCountView showStar text' count visibility' push popupType =
+driverReferredView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
+driverReferredView push state = 
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , gravity CENTER_VERTICAL
     , weight 1.0
-    , visibility $ boolToVisibility visibility'
+    , visibilityHolder "isDriver"
     ]
     [ linearLayout
         [ height WRAP_CONTENT
@@ -455,11 +622,10 @@ referralCountView showStar text' count visibility' push popupType =
               , height $ V 13
               , width $ V 13
               , margin $ MarginRight 4
-              , visibility $ boolToVisibility showStar
               ]
         , textView
             $ [ height WRAP_CONTENT
-              , text text'
+              , text $ getString REFERRED_DRIVERS
               , color Color.black800
               ]
             <> FontStyle.tags TypoGraphy
@@ -468,22 +634,20 @@ referralCountView showStar text' count visibility' push popupType =
               , height $ V 14
               , width $ V 14
               , margin $ Margin 4 2 0 0
-              , onClick push $ const $ ShowReferedInfo popupType
+              , onClickHolder push $ ShowReferedInfo REFERRED_DRIVERS_POPUP
               , padding $ PaddingBottom 2
               ]
         ]
     , textView
         $ [ height WRAP_CONTENT
           , width WRAP_CONTENT
-          , text count
+          , textHolder "referredDrivers"
           , color Color.black800
           , weight 1.0
-          , gravity countGravity
+          , gravity RIGHT
           ]
         <> FontStyle.body6 TypoGraphy
     ]
-  where
-  countGravity = if showStar then RIGHT else CENTER
 
 appQRCodeView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 appQRCodeView push state =
@@ -499,7 +663,7 @@ appQRCodeView push state =
         , height WRAP_CONTENT
         , orientation VERTICAL
         , gravity CENTER
-        , cornerRadius 16.0
+        , cornerRadius 16.0  
         , background state.data.config.popupBackground
         , margin $ MarginHorizontal 10 10
         , padding $ Padding 24 12 24 12
@@ -514,20 +678,15 @@ appQRCodeView push state =
               ]
             <> FontStyle.h2 TypoGraphy
         , imageView
-            [ width MATCH_PARENT
+            [ width $ V 280
             , height $ V 280
             , gravity CENTER
-            , id (getNewIDWithTag "ExpandedReferralQRCode")
             , padding (Padding 5 5 5 5)
-            , afterRender (\action -> do
-                            runEffectFn4 generateQR (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType) (getNewIDWithTag "ExpandedReferralQRCode") 280 0
-                          ) (const RenderQRCode)
+            , qr $ Qr (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType) 280 0
             ]
         , PrimaryButton.view (push <<< PrimaryButtonActionController state) (primaryButtonConfig state)
         ]
     ]
-  where
-  qr_img = if state.props.driverReferralType == DRIVER then "ny_driver_app_qr_code" else "ny_customer_app_qr_code"
 
 referralInfoPop :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 referralInfoPop push state =
@@ -536,7 +695,8 @@ referralInfoPop push state =
     , height MATCH_PARENT
     , gravity CENTER
     , background Color.blackLessTrans
-    , onClick push $ const $ ShowReferedInfo NO_REFERRAL_POPUP
+    , onClick push $ const $ ShowReferedInfo NO_REFERRAL_POPUP 0
+    , visibility $ boolToVisibility $ state.props.referralInfoPopType /= NO_REFERRAL_POPUP
     ]
     [ linearLayout
         [ width MATCH_PARENT
@@ -571,7 +731,7 @@ referralInfoPop push state =
               , height WRAP_CONTENT
               , gravity CENTER
               , text $ getString GOT_IT
-              , onClick push $ const $ ShowReferedInfo NO_REFERRAL_POPUP
+              , onClick push $ const $ ShowReferedInfo NO_REFERRAL_POPUP 0
               , margin $ MarginVertical 10 7
               , color Color.blue800
               ]
@@ -593,6 +753,7 @@ rideLeaderBoardView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
+    , margin $ Margin 16 0 16 12
     ]
     [ textView
         $ [ text $ getStringEnToHi RIDE_LEADERBOARD
@@ -865,3 +1026,9 @@ getCarouselConfig view state = {
   , layoutHeight : V 100
   , overlayScrollIndicator : true
 }
+
+
+computeReferralListItem :: (Action -> Effect Unit) -> BenefitsScreenState -> Flow GlobalState Unit
+computeReferralListItem push state = do
+  carouselItem <- preComputeListItem $ referralCardHolder push state
+  void $ liftFlow $ push (SetCarouselItem carouselItem)

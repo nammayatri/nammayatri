@@ -31,7 +31,7 @@ import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, map, pure, unit, ($), (/=), (<>))
+import Prelude (Unit, bind, const, map, pure, unit, ($), (/=), (<>), (==), (>), (+))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types as ST
@@ -39,10 +39,13 @@ import Styles.Colors as Color
 import Common.Animation.Config as AnimConfig
 import PrestoDOM.Animation as PrestoAnim
 import Mobility.Prelude (boolToVisibility)
+import Data.Array as DA
+import ConfigProvider
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-view push config = 
-  linearLayout[
+view push config =
+  let uiConfig = getAppConfig appConfig
+  in linearLayout[
     width MATCH_PARENT
     , height MATCH_PARENT
     , background Color.transparent
@@ -54,6 +57,7 @@ view push config =
       , width MATCH_PARENT
       , gravity config.gravity
       , onClick push $ const BackgroundClick
+      , padding $ PaddingTop (EHC.safeMarginTop + 55)  
     ][PrestoAnim.animationSet [Anim.listExpandingAnimation $  AnimConfig.listExpandingAnimationConfig config.enableAnim] $ 
       linearLayout[
         background config.menuBackgroundColor
@@ -96,6 +100,6 @@ view push config =
                       , visibility $ boolToVisibility config.showStroke
                       , margin $ MarginHorizontal 16 16
                     ][]
-                ]) config.menuItems)
+                ]) $ (DA.filter (\item -> if item.action == "change_language" then (DA.length uiConfig.languageList) > 1 else item.isVisible )) config.menuItems)
     ]
   ]

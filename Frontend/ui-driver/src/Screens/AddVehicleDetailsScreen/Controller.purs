@@ -23,6 +23,7 @@ import Components.OnboardingHeader.Controller as OnboardingHeaderController
 import Components.PopUpModal.Controller as PopUpModal
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
+import Components.PrimaryEditText as PrimaryEditText
 import Components.PrimarySelectItem.Controller as PrimarySelectItem
 import Components.ReferralMobileNumber.Controller as ReferralMobileNumberController
 import Components.RegistrationModal.Controller as RegistrationModalController
@@ -31,22 +32,22 @@ import Components.GenericHeader as GenericHeader
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Components.TutorialModal.Controller as TutorialModalController
 import Components.ValidateDocumentModal.Controller as ValidateDocumentModal
-import Data.Array (elem)
+import Data.Array
 import Data.String (length, split, Pattern(..), toUpper)
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons
 import Helpers.Utils (contactSupportNumber)
-import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderCameraProfilePicture, showDialer, uploadFile, renderBase64ImageFile)
+import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderCameraProfilePicture, showDialer, uploadFile, renderBase64ImageFile, openUrlInApp)
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+), void)
+import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+), void, map)
 import PrestoDOM (Eval, update, Props, continue, continueWithCmd, exit, updateAndExit, toast)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (AddVehicleDetailsScreenState, VehicalTypes(..), StageStatus(..))
+import Screens.Types (VehicalTypes(..), StageStatus(..))
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Effect.Unsafe (unsafePerformEffect)
 import ConfigProvider
@@ -57,6 +58,15 @@ import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge as JB
 import Components.RequestInfoCard as RequestInfoCard
+import Services.API 
+import Screens.AddVehicleDetailsScreen.ScreenData (AddVehicleDetailsScreenState, DropDownList, VehicleDetails(..), VehicleDetailsEntity(..))
+import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
+import Effect.Aff (Milliseconds(..), launchAff, launchAff_, error, killFiber)
+import Engineering.Helpers.Commons (flowRunner)
+import Types.App (GlobalState(..), defaultGlobalState)
+import PrestoDOM.Core (getPushFn)
+import Helpers.API (callApi)
+import Data.Either
 
 instance showAction :: Show Action where
   show _ = ""
@@ -198,6 +208,7 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | GenericMessageModalAction GenericMessageModalController.Action
   | ReferralMobileNumber
   | DatePicker String Int Int Int
+  | DatePicker2 String Int Int Int
   | PreviewImageAction
   | DatePickerAction
   | PopUpModalLogoutAction PopUpModal.Action
@@ -213,7 +224,7 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | OptionsMenuAction OptionsMenu.Action
   | ChangeVehicleAC PopUpModal.Action
   | BottomDrawerListAC BottomDrawerList.Action
-  | WhatsAppClick
+  | WhatsAppClick Boolean 
   | SelectButton Int
   | OpenAcModal
   | RequestInfoCardAction RequestInfoCard.Action
@@ -224,6 +235,12 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | RequestAmbulanceFacility RequestInfoCard.Action
   | AgreePopUp PopUpModal.Action
   | ButtonClick
+  | ShowOptions DropDownList
+  | UpdateDropDownList VehicleDetails (Array String)
+  | UpdateVehicleDetailsEntity VehicleDetailsEntity
+  | OptionSelcted VehicleDetails String
+  | ModelEditText VehicleDetails PrimaryEditText.Action
+  | PreviewSampleImage String
 
 
 eval :: Action -> AddVehicleDetailsScreenState -> Eval Action ScreenOutput AddVehicleDetailsScreenState
@@ -246,6 +263,7 @@ eval (BackPressed flag) state = do
             continueWithCmd state {props { validateProfilePicturePopUp = false, fileCameraPopupModal = false, fileCameraOption = false, imageCaptureLayoutView = false}} [do
                 _ <- liftEffect $ uploadFile false
                 pure NoAction]
+    else if state.props.previewSampleImage then continue state { props {previewSampleImage = false}}
     else if(state.props.imageCaptureLayoutView) then continue state{props{imageCaptureLayoutView = false,openHowToUploadManual = true}} 
     else if(state.props.fileCameraPopupModal) then continue state{props{fileCameraPopupModal = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} 
     else if(state.props.openHowToUploadManual) then continue state{props{openHowToUploadManual = false}} 
@@ -272,10 +290,10 @@ eval RemoveUploadedFile state = do
   let newState = state { props = state.props { rcAvailable = false, rc_name = "", isValidState = false }, data = state.data { rc_base64 = "" }}
   continue newState
 eval (VehicleRegistrationNumber val) state = do
-  let newState = state {data = state.data { vehicle_registration_number = toUpper val }, props = state.props{isValidState = (checkRegNum (toUpper val) && state.props.rcAvailable) }}
+  let newState = state {data = state.data { vehicle_registration_number = toUpper val , preFillData = Nothing}, props = state.props{isValidState = (checkRegNum (toUpper val) && state.props.rcAvailable) }}
   continue newState
 eval (ReEnterVehicleRegistrationNumber val) state = do
-  let newState = state {data = state.data { reEnterVehicleRegistrationNumber = toUpper val }, props = state.props{isValidState = (checkRegNum (toUpper val) && state.props.rcAvailable) }}
+  let newState = state {data { reEnterVehicleRegistrationNumber = toUpper val , preFillData = Nothing}, props{isValidState = (checkRegNum (toUpper val) && state.props.rcAvailable) }}
   continue newState
 eval (VehicleModelName val) state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "VehicleModelName")
@@ -302,6 +320,8 @@ eval (VehicleRCNumber val) state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "VehicleRCNumber")
   let newState = state {data = state.data { vehicle_rc_number = val }}
   continue newState
+
+eval (PreviewSampleImage imgUrl) state = continue state {props {previewSampleImage = true, previewImgUrl = imgUrl}}
 
 eval (SelectVehicleTypeModalAction (SelectVehicleTypeModal.OnCloseClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
@@ -393,6 +413,12 @@ eval (DatePicker resp year month date) state = do
                                   , props {isDateClickable = true}} -- rcImageID made null to handle fallback
     _ -> continue state {props {isDateClickable = true}}
 
+eval (DatePicker2 resp year month date) state = do
+  case resp of 
+    "SELECTED" -> continue state {data = state.data { registrationDate = Just $ (dateFormat year) <> "-" <> (dateFormat (month+1)) <> "-" <> (dateFormat date) <> " 00:00:00.233691+00" , registrationDateActual = (show date) <> "/" <> (show (month+1)) <> "/" <> (show year)}
+                                  , props {isDateClickable = true}} -- rcImageID made null to handle fallback
+    _ -> continue state {props {isDateClickable = true}}
+
 eval DatePickerAction state = continue state {props {isDateClickable = false}}
 
 eval PreviewImageAction state = continue state
@@ -476,22 +502,28 @@ eval (BottomDrawerListAC BottomDrawerList.OnAnimationEnd) state = continue state
 
 eval (BottomDrawerListAC (BottomDrawerList.OnItemClick item)) state = do
   case item.identifier of
-    "whatsapp" -> continueWithCmd state [pure WhatsAppClick]
+    "whatsapp" -> continueWithCmd state [pure $ WhatsAppClick false]
+    "email" -> continueWithCmd state [pure $ WhatsAppClick true]
     "call" -> do 
                 void $ pure $ showDialer (getSupportNumber "") false 
                 continue state
     _ -> continue state
 
-eval WhatsAppClick state = continueWithCmd state [do
+eval (WhatsAppClick isMail) state = continueWithCmd state [do
   let supportPhone = state.data.cityConfig.registration.supportWAN
       phone = "%0APhone%20Number%3A%20"<> getValueToLocalStore MOBILE_NUMBER_KEY
       dlNumber = getValueToLocalStore ENTERED_DL
       rcNumber = getValueToLocalStore ENTERED_RC
       dl = if (dlNumber /= "__failed") then ("%0ADL%20Number%3A%20"<> dlNumber) else ""
       rc = if (rcNumber /= "__failed") then ("%0ARC%20Number%3A%20"<> rcNumber) else ""
-  void $ JB.openUrlInApp $ "https://wa.me/" <> supportPhone <> "?text=Hi%20Team%2C%0AI%20would%20require%20help%20in%20onboarding%20%0A%E0%A4%AE%E0%A5%81%E0%A4%9D%E0%A5%87%20%E0%A4%AA%E0%A4%82%E0%A4%9C%E0%A5%80%E0%A4%95%E0%A4%B0%E0%A4%A3%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B8%E0%A4%B9%E0%A4%BE%E0%A4%AF%E0%A4%A4%E0%A4%BE%20%E0%A4%95%E0%A5%80%20%E0%A4%86%E0%A4%B5%E0%A4%B6%E0%A5%8D%E0%A4%AF%E0%A4%95%E0%A4%A4%E0%A4%BE%20%E0%A4%B9%E0%A5%8B%E0%A4%97%E0%A5%80" <> phone <> dl <> rc
+      url = if isMail then "mailto:" <> state.data.cityConfig.supportMail else "https://wa.me/" <> supportPhone <> "?text=Hi%20Team%2C%0AI%20would%20require%20help%20in%20onboarding%20%0A%E0%A4%AE%E0%A5%81%E0%A4%9D%E0%A5%87%20%E0%A4%AA%E0%A4%82%E0%A4%9C%E0%A5%80%E0%A4%95%E0%A4%B0%E0%A4%A3%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B8%E0%A4%B9%E0%A4%BE%E0%A4%AF%E0%A4%A4%E0%A4%BE%20%E0%A4%95%E0%A5%80%20%E0%A4%86%E0%A4%B5%E0%A4%B6%E0%A5%8D%E0%A4%AF%E0%A4%95%E0%A4%A4%E0%A4%BE%20%E0%A4%B9%E0%A5%8B%E0%A4%97%E0%A5%80" <> phone <> dl <> rc
+  void $ if isMail then JB.openUrlInMailApp url else JB.openUrlInApp $ url
   pure NoAction
   ]
+
+eval (ModelEditText vehicleType (PrimaryEditText.TextChanged id val)) state = do
+  let newList = map (\item -> if item.type == vehicleType then item{selected = val} else item) state.data.dropDownList
+  continue state{data{dropDownList = newList}}
 
 eval (SelectButton index) state = continue state { props { buttonIndex = Just index}}
 
@@ -528,6 +560,38 @@ eval SelectAmbulanceFacility state = do
 
 
 eval ListExpandAinmationEnd state = continue state {props {showIssueOptions = false }}
+eval (ShowOptions selectedItem) state = do
+  let newList = map (\item -> if selectedItem.type == item.type then item{isExpanded = not item.isExpanded} else item{isExpanded = false} ) state.data.dropDownList
+  continue state{data{dropDownList = newList}}
+
+eval (UpdateDropDownList vehicleType list) state = do
+  let newList = map (\item -> if item.type == vehicleType then item{options = list} else item) state.data.dropDownList
+  continue state{data{dropDownList = newList}}
+
+eval (OptionSelcted vehicleType selectedVal) state = do
+  let newList = map (\item -> if item.type == vehicleType then item{selected = selectedVal, showEditText = selectedVal == "Others", isExpanded = false} else item) state.data.dropDownList
+      newState = state{data{dropDownList = newList}}
+  case vehicleType of
+    MAKE -> continueWithCmd newState [do
+        push <- getPushFn Nothing "AddVehicleDetailsScreen"
+        _ <- launchAff $ flowRunner defaultGlobalState $ getModelList push selectedVal
+        pure NoAction
+      ]
+    -- MODEL -> do 
+    --   let mbMake = getMake newList
+    --   case mbMake of
+    --     Nothing -> continue newState
+    --     Just make -> 
+    --       if selectedVal == "Others" then continue newState
+    --       else
+    --       continueWithCmd newState [do
+    --         push <- getPushFn Nothing "AddVehicleDetailsScreen"
+    --         _ <- launchAff $ flowRunner defaultGlobalState $ getVehicleDetails push make selectedVal
+    --         pure NoAction
+    --       ]
+    _  -> continue newState
+
+eval (UpdateVehicleDetailsEntity entity) state = continue state{data{selectedVehicleDetails = Just entity}}
 
 eval _ state = update state
 
@@ -539,3 +603,22 @@ overrides _ push state = []
 
 dateFormat :: Int -> String
 dateFormat date = if date < 10 then "0" <> (show date) else (show date)
+
+
+getModelList :: (Action -> Effect Unit) -> String -> Flow GlobalState Unit
+getModelList push make = do
+  resp <- callApi $ GetModelListReq {make}
+  case resp of
+    Right (GetModelListResp resp) -> void $ liftFlow $ push $ UpdateDropDownList MODEL (resp.models <> ["Others"])
+    Left _ -> pure unit
+  
+getVehicleDetails :: (Action -> Effect Unit) -> String -> String -> Flow GlobalState Unit
+getVehicleDetails push make model = do
+  resp <- callApi $ GetVehicleDetailsReq {make, model}
+  case resp of
+    Right (VehicleDetailsResp resp) -> void $ liftFlow $ push $ UpdateVehicleDetailsEntity resp
+    Left _ -> pure unit
+  
+getMake :: Array DropDownList -> Maybe String
+getMake list = let make = head $ filter (\item -> item.type == MAKE) list
+                in maybe Nothing (\item -> Just item.selected) make

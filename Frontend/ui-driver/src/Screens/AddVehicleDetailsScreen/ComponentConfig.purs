@@ -24,6 +24,7 @@ import Animation.Config
 import Common.Types.App as Common
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryEditText as PrimaryEditText
 import Components.ReferralMobileNumber as ReferralMobileNumber
 import Components.GenericHeader as GenericHeader
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
@@ -34,6 +35,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resource.Constants as Constant
 import Screens.Types (StageStatus(..))
 import Screens.Types as ST
+import Screens.AddVehicleDetailsScreen.ScreenData as ST
 import Styles.Colors as Color
 import Helpers.Utils as HU
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -45,6 +47,7 @@ import Components.BottomDrawerList as BottomDrawerList
 import Data.Array as DA
 import Components.RequestInfoCard as RequestInfoCard
 import PrestoDOM.Animation as PrestoAnim
+import Engineering.Helpers.Commons as EHC
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -52,27 +55,33 @@ primaryButtonConfig state = let
     feature = (getAppConfig appConfig).feature
     imageUploadCondition = state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL
     rcMatch = caseInsensitiveCompare state.data.vehicle_registration_number state.data.reEnterVehicleRegistrationNumber
-    activate = (( rcMatch || (not state.data.cityConfig.uploadRCandDL)) && 
+    activate =  (( rcMatch || (not state.data.cityConfig.uploadRCandDL)) && 
                 -- (state.data.dateOfRegistration /= Just "") && 
                 (state.data.vehicleCategory /= Just ST.AmbulanceCategory || state.props.isvariant /= "") &&
                 state.data.vehicle_registration_number /= "" &&
-                (state.data.vehicleCategory /= Just ST.CarCategory || isJust state.props.buttonIndex) &&
-                ((DS.length state.data.vehicle_registration_number >= 2) && ((DS.take 2 state.data.vehicle_registration_number) `DA.elem` state.data.rcNumberPrefixList)))
+                ((state.data.vehicleCategory /= Just ST.CarCategory || isJust state.props.buttonIndex) || (not state.data.cityConfig.registration.enableAc)) &&
+                ((DS.length state.data.vehicle_registration_number >= 2) && validateRCPrefix state.data.vehicle_registration_number state.data.rcNumberPrefixList) && ((not state.data.config.vehicleRegisterationScreen.collectVehicleDetails) || (DA.length state.data.dropDownList == selectedCount state.data.dropDownList)))
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfRegistration then getString CONFIRM 
                            else if state.props.openHowToUploadManual then getString UPLOAD_PHOTO
                            else getString UPLOAD_REGISTRATION_CERTIFICATE}
       , width = MATCH_PARENT
       , height = (V 50)
-      , background = Color.black900 
-      , margin = if imageUploadCondition then Margin 15 0 15 10 else Margin 15 0 15 30
+      , margin = if imageUploadCondition then Margin 15 0 15 (EHC.safeMarginBottomWithDefault 10) else Margin 15 0 15 (EHC.safeMarginBottomWithDefault 30)
       , cornerRadius = 6.0
-      , alpha = if activate then 1.0 else 0.8
+      , alpha = if activate then 1.0 else 0.4
       , isClickable = activate
       , id = "AddVehiclePrimaryButton"
       }
   in primaryButtonConfig'
 
+validateRCPrefix :: String -> Array String -> Boolean
+validateRCPrefix number list = do
+  let len = DS.length $ fromMaybe "" $ DA.head $ list
+  if len == 0 then true else ((DS.take len number) `DA.elem` list)
+
+selectedCount :: Array ST.DropDownList -> Int
+selectedCount list = DA.foldr (\item acc -> if item.selected /= "Select" then acc + 1 else acc) 0 list
 
 referalNumberConfig :: ST.AddVehicleDetailsScreenState -> ReferralMobileNumber.Config
 referalNumberConfig state = let 
@@ -150,7 +159,7 @@ genericHeaderConfig state = let
   genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
-    , background = state.data.config.primaryBackground
+    , background = state.data.config.secondaryBackground
     , prefixImageConfig {
        visibility = VISIBLE
       , imageUrl = HU.fetchImage HU.FF_ASSET "ic_new_avatar"
@@ -191,7 +200,7 @@ optionsMenuConfig state = OptionsMenuConfig.config {
   menuItems = [
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : true, color : Color.black800},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : true, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : (DA.length state.data.variantList > 1), color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_logout_grey", textdata : getString LOGOUT, action : "logout", isVisible :  true, color : Color.black800}
   ],
   backgroundColor = Color.blackLessTrans,
@@ -212,7 +221,8 @@ bottomDrawerListConfig state = BottomDrawerList.config {
   titleText = getString CONTACT_SUPPORT_VIA,
   itemList = [
     {prefixImg : "ny_ic_whatsapp_black", title : "Whatsapp", desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.whatsappSupport, identifier : "whatsapp"},
-    {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.callSupport, identifier : "call"}
+    {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.callSupport, identifier : "call"},
+    {prefixImg : "ny_ic_mail", title : "Mail", desc : "Write an email for any help in uploading the documents" , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.emailSupport, identifier : "email"}
   ]
 }
 
@@ -352,3 +362,28 @@ getConfig  isExpanded =
     , fromY : 0
     , toY : -100
     }
+
+modelEditTextConfig :: ST.AddVehicleDetailsScreenState -> PrimaryEditText.Config
+modelEditTextConfig state = 
+  PrimaryEditText.config { editText
+        { color = Color.black800
+        , placeholder = "Others"
+        , singleLine = true
+        , pattern = Just "[A-Za-z0-9.,' ]*,20"
+        , margin = MarginHorizontal 10 10
+        , textStyle = FontStyle.Body7
+        , focused = true
+        , gravity = LEFT
+        }
+      , background = Color.white900
+      , margin = MarginVertical 16 16
+      , topLabel
+        { visibility = GONE
+        , alpha = 0.8
+        } 
+      , id = (EHC.getNewIDWithTag "modelEditText")
+      , height = V 54,
+      focusedStroke = "1," <> Color.borderColorLight,
+      width = MATCH_PARENT,
+      stroke = "1," <> Color.borderColorLight
+      }

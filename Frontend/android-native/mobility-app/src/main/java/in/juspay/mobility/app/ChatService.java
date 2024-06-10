@@ -317,6 +317,8 @@ public class ChatService extends Service {
                     sentBy = "yatriprovider";
                 else if(appName.equals("Yatri Sathi Driver"))
                     sentBy = "yatrisathiprovider";
+                else if(appName.equals("Bridge Driver"))
+                    sentBy = "bridgeprovider";
                 else
                     sentBy = "nammayatriprovider";
             } else {

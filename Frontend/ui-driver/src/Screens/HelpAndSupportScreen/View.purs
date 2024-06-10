@@ -23,7 +23,7 @@ import Data.Tuple (Tuple(Tuple), fst, snd)
 import Effect (Effect)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, unit, ($), (*), (/), (<>),bind,pure,(/=),(<<<),(==), discard, (||), (&&), (>), void, show, not, when)
+import Prelude
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback, rippleColor, clickable, relativeLayout)
 import PrestoDOM.Elements.Elements (scrollView)
 import PrestoDOM.Events (onClick)
@@ -34,7 +34,7 @@ import Services.API (FetchIssueListResp(..),FetchIssueListReq(..))
 import Services.Backend as Remote
 import Effect.Aff (launchAff)
 import Helpers.Utils (toStringJSON, fetchImage, FetchImageFrom(..))
-import Engineering.Helpers.Commons (flowRunner, screenWidth)
+import Engineering.Helpers.Commons (flowRunner, screenWidth, safeMarginTopWithDefault, safeMarginBottom, screenHeight, os)
 import Effect.Class (liftEffect)
 import Language.Types(STR(..))
 import Control.Monad.Except (runExceptT)
@@ -94,6 +94,7 @@ view push state =
     , onBackPressed push $ const BackPressed
     , afterRender push (const AfterRender)
     , background Color.white900
+    , padding $ PaddingBottom safeMarginBottom
     ]([linearLayout
      [height MATCH_PARENT
      , width MATCH_PARENT
@@ -102,11 +103,11 @@ view push state =
      ]
       [ headerLayout state push
         , scrollView
-          [ height MATCH_PARENT
+          [ height $ if os == "IOS" then V $ (screenHeight unit) - (30 + (safeMarginTopWithDefault 13) + safeMarginBottom) else MATCH_PARENT
           , width MATCH_PARENT
           , scrollBarY false
           ] [ linearLayout
-               [ height MATCH_PARENT
+               [ height WRAP_CONTENT
                , width MATCH_PARENT
                , orientation VERTICAL
                ] [ testRideRequestView state push
@@ -133,29 +134,24 @@ headerLayout state push =
     ]
     [ linearLayout
         [ width MATCH_PARENT
-        , height MATCH_PARENT
+        , height WRAP_CONTENT
         , orientation HORIZONTAL
         , gravity CENTER_VERTICAL
-        , layoutGravity "center_vertical"
-        , padding $ Padding 5 16 5 16
+        , padding $ Padding 10 (safeMarginTopWithDefault 13) 10 13
         ]
         [ imageView
-            [ width $ V 40
-            , height $ V 40
+            [ width $ V 30
+            , height $ V 30
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
             , onClick push $ const BackPressed
-            , padding $ Padding 7 7 7 7
-            , margin $ MarginLeft 5
             , rippleColor Color.rippleShade
-            , cornerRadius 20.0
             ]
         , textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text (getString HELP_AND_SUPPORT)
-              , textSize FontSize.a_18
               , margin $ MarginLeft 10
-              , weight 1.0
+              , padding $ PaddingBottom 2
               , color Color.black900
               ]
             <> FontStyle.h3 TypoGraphy
@@ -276,6 +272,7 @@ testRideRequestView state push =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
+    , visibility GONE
     ][ reportAnIssueHeader state push (getString CHECK_APP)
      , linearLayout
         [ width MATCH_PARENT
@@ -338,7 +335,7 @@ allOtherTopics :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> for
 allOtherTopics state push =
   linearLayout
     [ width MATCH_PARENT
-    , height MATCH_PARENT
+    , height WRAP_CONTENT
     , orientation VERTICAL
     , padding (Padding 0 5 0 5)
     ] (map(\optionItem ->

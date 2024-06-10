@@ -18,16 +18,24 @@ module Screens.EnterMobileNumberScreen.ScreenData where
 import Screens.Types (EnterMobileNumberScreenState)
 import Foreign.Object (empty)
 import ConfigProvider
+import Data.Maybe (Maybe(..))
 
 initData :: EnterMobileNumberScreenState
-initData =  {
+initData =  
+  let config = getAppConfig appConfig
+  in {
   data: { mobileNumber : "",
           logField : empty,
-          config : getAppConfig appConfig
+          config,
+          token : Nothing ,
+          name : Nothing,
+          email : Nothing,
+          oauthProvider : Nothing
         },
   props: {
-    btnActive :false,
-    isValid : false,
-    mobileNumberEditFocused : true
+    btnActive : false,
+    isValid : config.enterMobileNumberScreen.emailAuth,
+    mobileNumberEditFocused : true,
+    loginWithMobileBtnClicked : false
     }
 }

@@ -80,7 +80,7 @@ headerLayout push state =
         , orientation HORIZONTAL
         , gravity CENTER_VERTICAL
         , layoutGravity "center_vertical"
-        , padding $ Padding 5 16 5 16
+        , padding $ Padding 10 (EHC.safeMarginTopWithDefault 13) 10 13
         ]
         [ imageView
             [ width $ V 30

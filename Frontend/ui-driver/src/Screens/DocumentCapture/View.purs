@@ -16,7 +16,7 @@
 
 module Screens.DocumentCaptureScreen.View where
 
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, weight, width,  textView, text, color, textSize, fontStyle, visibility, cornerRadius, stroke, imageView, imageWithFallback, frameLayout, scrollView)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, weight, width,  textView, text, color, textSize, fontStyle, visibility, cornerRadius, stroke, imageView, imageWithFallback, frameLayout, scrollView, adjustViewWithKeyboard, alignParentBottom, disableKeyboardAvoidance, id, scrollBarY, relativeLayout, onClick, alpha, clickable, ellipsize, singleLine)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Effect (Effect)
@@ -24,7 +24,10 @@ import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
-import Prelude (Unit, const, ($), (<<<), (<>), bind, discard, unit, pure, map, (==), (/=))
+import Components.PrimaryEditText as PrimaryEditText
+import Components.MobileNumberEditor as MobileNumberEditor
+import Engineering.Helpers.Commons as EHC
+import Prelude (Unit, const, ($), (<<<), (<>), bind, discard, unit, pure, map, (==), (/=), (-), (&&), void, (/), (*))
 import Screens.DocumentCaptureScreen.Controller (Action(..), eval, ScreenOutput(..))
 import Screens.DocumentCaptureScreen.ComponentConfig
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
@@ -34,7 +37,7 @@ import Language.Types (STR(..))
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import JBridge as JB
 import PaymentPage (consumeBP)
-import Effect.Uncurried (runEffectFn1)
+import Effect.Uncurried (runEffectFn1, runEffectFn2)
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
 import Components.ValidateDocumentModal as ValidateDocumentModal
@@ -48,6 +51,8 @@ import Debug (spy)
 import Screens.RegistrationScreen.ComponentConfig (changeVehicleConfig)
 import Data.Array as DA
 import Components.BottomDrawerList as BottomDrawerList
+import Data.Maybe (fromMaybe)
+import Mobility.Prelude (boolToVisibility)
 
 screen :: ST.DocumentCaptureScreenState -> Screen Action ST.DocumentCaptureScreenState ScreenOutput
 screen initialState = 
@@ -56,21 +61,28 @@ screen initialState =
   , name : "DocumentCaptureScreen"
   , globalEvents : [(\push -> do
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
+    _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
     _ <- runEffectFn1 consumeBP unit
+    _ <- JB.storeCallBackOpenCamera push CallBackOpenCamera
+    if initialState.props.setDefault then do
+      let _ = EHC.setText (EHC.getNewIDWithTag "FirstNameEditText") (fromMaybe "" initialState.data.firstName)
+          _ = EHC.setText (EHC.getNewIDWithTag "LastNameEditText") (fromMaybe "" initialState.data.lastName)
+      pure unit
+      else pure unit
     pure $ pure unit
   )]
   , eval :
-      ( \state action -> do
+      ( \action state -> do
           let _ = spy "DocumentCaptureScreen ----- state" state
           let _ = spy "DocumentCaptureScreen --------action" action
-          eval state action
+          eval action state
         ) 
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.DocumentCaptureScreenState -> PrestoDOM (Effect Unit) w 
 view push state = 
   Anim.screenAnimation $
-  frameLayout
+  relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
   ] $ [ linearLayout
@@ -79,37 +91,76 @@ view push state =
       , orientation VERTICAL
       , background Color.white900
       , onBackPressed push $ const BackPressed 
+      , padding $ PaddingBottom EHC.safeMarginBottom
+      , weight 1.0
       ][ AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
         , linearLayout
           [ width MATCH_PARENT
           , weight 1.0
           , orientation VERTICAL
           ][  scrollView
-              [ height MATCH_PARENT
+              [ height $ if EHC.os == "IOS" then V $ (EHC.screenHeight unit) - (if state.props.isProfileView then 150 else 210) - EHC.safeMarginBottom else WRAP_CONTENT
               , width MATCH_PARENT
+              , disableKeyboardAvoidance true
+              , scrollBarY false
+              , id $ EHC.getNewIDWithTag "DocumentCaptureScrollView"
               ][ linearLayout
-                  [ height MATCH_PARENT
+                  [ height WRAP_CONTENT
                   , width MATCH_PARENT
                   , orientation VERTICAL
                   , margin $ Margin 20 20 15 0
-                  ][ howToUpload push state ]
+                  ]
+                  [ if state.props.isSSNView then
+                      ssnView push state
+                    else if state.props.isProfileView then
+                      linearLayout
+                        [ height WRAP_CONTENT
+                        , width MATCH_PARENT
+                        , orientation VERTICAL
+                        , adjustViewWithKeyboard "true"
+                        ]
+                        ([ PrimaryEditText.view (push <<< FirstNameEditText) $ firstNamePrimaryEditTextConfig state
+                        , PrimaryEditText.view (push <<< LastNameEditText) $ lastNamePrimaryEditTextConfig state
+                        ] <> if state.props.isloggedInViaMobileNumber then [PrimaryEditText.view (push <<< EmailEditText) $ emailIdPrimaryEditTextConfig state] else [PrimaryEditText.view (push <<< MobileEditText) $ mobileNumberPrimaryEditTextConfig state]) 
+                    else
+                      howToUpload push state
+                    ]
                 ]
           ]
-        , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.white900
+        ] [PrimaryButton.view (push <<< PrimaryButtonAC) (if state.props.isProfileView then profileViewPrimaryButtonConfig state else primaryButtonConfig state)]
       ]
     , if state.props.contactSupportModal /= ST.HIDE then BottomDrawerList.view (push <<< BottomDrawerListAC) (bottomDrawerListConfig state) else linearLayout[][]
     ] <> if state.props.validateDocModal then [ValidateDocumentModal.view (push <<< ValidateDocumentModalAction) (validateDocModalState state)] else []
       <> if DA.any (_ == true) [state.props.logoutModalView, state.props.confirmChangeVehicle] then [ popupModal push state ] else []
       <> if state.props.menuOptions then [menuOptionModal push state] else []
+      <> if state.props.previewSampleImage then [expandedSampleImgView push state] else []
 
+expandedSampleImgView :: forall w. (Action -> Effect Unit) -> ST.DocumentCaptureScreenState -> PrestoDOM (Effect Unit) w
+expandedSampleImgView push state = 
+  linearLayout
+    [ height MATCH_PARENT 
+    , width  MATCH_PARENT 
+    , gravity CENTER
+    , onClick push $ const BackPressed
+    , background Color.blackLessTrans
+    ]
+    [ imageView
+        [ height $ V (((EHC.screenHeight unit) / 10) * 8)
+        , width $ V (((EHC.screenWidth unit) / 10) * 8)
+        , imageWithFallback state.props.previewImgUrl
+        , clickable false
+        ]
+    ]
 
 menuOptionModal :: forall w. (Action -> Effect Unit) -> ST.DocumentCaptureScreenState -> PrestoDOM (Effect Unit) w
 menuOptionModal push state = 
   linearLayout 
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , padding $ PaddingTop 55
-    , background Color.blackLessTrans
     ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 
 popupModal :: forall w . (Action -> Effect Unit) -> ST.DocumentCaptureScreenState -> PrestoDOM (Effect Unit) w
@@ -141,7 +192,7 @@ howToUpload push state =
     , orientation VERTICAL
     , margin $ MarginVertical 0 10
     , padding $ PaddingVertical 16 16
-    ][ 
+    ]$[ 
       textView $ 
       [ text $ getVarString CAPTURE_DOC_DESC_1 [Constant.transformDocText state.data.docType]
       , color Color.black800
@@ -167,24 +218,108 @@ howToUpload push state =
         , margin $ MarginTop 20
         , stroke $ "1," <> Color.borderGreyColor
         , padding $ Padding 16 16 16 0
-        ][ rightWrongView true state
-         , rightWrongView false state
-         ]  
-    ]
+        ][ rightWrongView push true state
+         , rightWrongView push false state
+         ] 
+    ] <> if (state.data.docType == ST.VehicleInspectionForm) && (state.data.cityConfig.cityName == "Minneapolis") then
+            [ textView
+                $ [ text $ "Note: Upload any valid vehicle inspection form. Specifically need not be issued for Bridge"
+                  , color Color.black800
+                  , margin $ MarginTop 12
+                  ]
+                <> FontStyle.body3 TypoGraphy
+            ]
+          else
+            []
   ]
 
-rightWrongView :: Boolean -> ST.DocumentCaptureScreenState -> forall w . PrestoDOM (Effect Unit) w
-rightWrongView isRight state = 
+ssnView :: (Action -> Effect Unit) -> ST.DocumentCaptureScreenState -> forall w. PrestoDOM (Effect Unit) w
+ssnView push state = 
+  linearLayout[
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  ][ PrimaryEditText.view (push <<< SSNPEAC) $ ssnPrimaryEditTextConfig state
+  , ssnDetails push state
+  ]
+
+
+ssnDetails :: (Action -> Effect Unit) -> ST.DocumentCaptureScreenState -> forall w. PrestoDOM (Effect Unit) w
+ssnDetails push state =
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    ]
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        , margin $ MarginVertical 0 10
+        , padding $ PaddingVertical 16 16
+        ]
+        ( map
+            ( \item ->
+                linearLayout
+                  [ width MATCH_PARENT
+                  , height WRAP_CONTENT
+                  , gravity CENTER_VERTICAL
+                  , margin $ MarginBottom 12
+                  ]
+                  [ imageView
+                      [ height $ V 16
+                      , width $ V 16
+                      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_tick_purple"
+                      ]
+                  , textView
+                      $ [ text $ item
+                        , color Color.black800
+                        ]
+                      <> FontStyle.body3 TypoGraphy
+                  ]
+            )
+            [ "SSN is needed to do your background check", "Your personal information is protected and secure", "No credit check needed. Your credit won’t be affected" ]
+        )
+    ]
+
+
+rightWrongView :: (Action -> Effect Unit) -> Boolean -> ST.DocumentCaptureScreenState -> forall w . PrestoDOM (Effect Unit) w
+rightWrongView push isRight state = 
+  let imageNmae = sampleImage isRight state
+      isVehicleInspectionForm = state.data.docType /= ST.PROFILE_PHOTO
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER_VERTICAL
   , margin $ MarginBottom 16
-  ][ imageView
-    [ width $ V 120
-    , height $ V if isRight then 80 else 100
-    , imageWithFallback $ fetchImage FF_ASSET $ sampleImage isRight state
-    ]
+  ][ linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , orientation VERTICAL
+      , cornerRadius 4.0
+      , onClick push $ const $ PreviewSampleImage imageNmae
+      , clickable $ isRight && isVehicleInspectionForm
+      , stroke $ "1," <> (if (isRight && isVehicleInspectionForm) then Color.purple100 else Color.white900)
+      ]
+      [ imageView
+        [ width $ V 120
+        , height $ V if isRight then 80 else 100
+        , imageWithFallback $ fetchImage FF_ASSET $ imageNmae
+        ]
+      , textView $
+        [ height WRAP_CONTENT
+        , width $ V 120
+        , text $ getString CLICK_TO_PREVIEW
+        , color Color.purple900
+        , singleLine true
+        , ellipsize true
+        , padding $ PaddingBottom 4
+        , gravity CENTER
+        , background Color.purple100
+        , visibility $ boolToVisibility $ isRight && isVehicleInspectionForm
+        ] <>  FontStyle.captions TypoGraphy
+      ]
   , linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
@@ -197,11 +332,14 @@ rightWrongView isRight state =
   ]
 
 sampleImage :: Boolean -> ST.DocumentCaptureScreenState -> String
-sampleImage isRight state = 
+sampleImage isRight state =
   case state.data.docType of
     ST.VEHICLE_PERMIT -> if isRight then "ny_ic_permit_clear" else "ny_ic_permit_blur"
     ST.FITNESS_CERTIFICATE -> if isRight then "ny_ic_fitness_clear" else "ny_ic_fitness_blur"
+    ST.VehicleInspectionForm -> if isRight then "ny_ic_fitness_clear" else "ny_ic_fitness_blur"
     ST.VEHICLE_INSURANCE -> if isRight then "ny_ic_insurance_clear" else "ny_ic_insurance_blur"
+    ST.UploadProfile -> if isRight then "ny_ic_upload_profile_clear" else "ny_ic_upload_profile_blur"
+    ST.PROFILE_PHOTO -> if isRight then "ny_ic_profile_phote_right" else "ny_ic_profile_phote_wrong"
     ST.VEHICLE_PUC -> if isRight then "ny_ic_puc_clear" else "ny_ic_puc_blur"
     _ -> if isRight then "ny_ic_upload_right" else "ny_ic_image_wrong"
 

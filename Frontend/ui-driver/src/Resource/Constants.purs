@@ -121,6 +121,11 @@ transformDocText stage =
     ST.FITNESS_CERTIFICATE -> getString FITNESS_CERTIFICATE_STR
     ST.VEHICLE_INSURANCE -> getString VEHICLE_INSURANCE_STR
     ST.VEHICLE_PUC -> getString VEHICLE_PUC_STR
+    ST.SocialSecurityNumber -> getString SOCIAL_SECURITY_NUMBER_STR
+    ST.ProfileDetails -> "Profile Details"
+    ST.VehicleInspectionForm -> "Vehicle Inspection"
+    ST.UploadProfile -> "Driver Profile of Another App"
+    ST.BackgroundVerification -> "Background Verification"
     ST.NO_OPTION -> ""
 
 transformToRegisterationStep :: String -> ST.RegisterationStep
@@ -137,6 +142,11 @@ transformToRegisterationStep doctype =
         "VehicleFitnessCertificate" -> ST.FITNESS_CERTIFICATE
         "VehicleInsurance" -> ST.VEHICLE_INSURANCE
         "VehiclePUC" -> ST.VEHICLE_PUC
+        "SocialSecurityNumber" -> ST.SocialSecurityNumber
+        "ProfileDetails" -> ST.ProfileDetails
+        "VehicleInspectionForm" -> ST.VehicleInspectionForm
+        "UploadProfile" -> ST.UploadProfile
+        "BackgroundVerification" -> ST.BackgroundVerification
         _ -> ST.NO_OPTION
 
 transformToDoctype :: ST.RegisterationStep -> String
@@ -153,6 +163,11 @@ transformToDoctype step =
     ST.AADHAAR_CARD -> "AadhaarCard"
     ST.PAN_CARD -> "PanCard"
     ST.GRANT_PERMISSION -> "Permissions"
+    ST.SocialSecurityNumber -> "SocialSecurityNumber"
+    ST.ProfileDetails -> "ProfileDetails"
+    ST.VehicleInspectionForm -> "VehicleInspectionForm"
+    ST.UploadProfile -> "UploadProfile"
+    ST.BackgroundVerification -> "BackgroundVerification"
     ST.NO_OPTION -> ""
 
 transformVehicleType :: Maybe String -> Maybe ST.VehicleCategory
@@ -230,10 +245,10 @@ getHomeStageFromString localStage =
         _ -> ST.HomeScreen
 
 verifiedVehicleOnly :: Boolean
-verifiedVehicleOnly = true
+verifiedVehicleOnly = false
 
 pendingVehicleOnly :: Boolean
-pendingVehicleOnly = false
+pendingVehicleOnly = true
 
 getCategoryFromVariant :: String -> Maybe ST.VehicleCategory -- check here if any new vehicle category is introduced
 getCategoryFromVariant variant = case variant of

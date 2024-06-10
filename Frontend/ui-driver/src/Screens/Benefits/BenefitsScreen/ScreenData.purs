@@ -22,6 +22,7 @@ import Services.API (ModuleCompletionCriteria(..), LmsModuleRes(..), LmsCategory
 import Foreign.Object (empty)
 import ConfigProvider
 import Prelude
+import Halogen.VDom.DOM.Prop (PropValue)
 
 initData :: BenefitsScreenState
 initData = {
@@ -33,6 +34,7 @@ initData = {
          , referralCode : ""
          , rank : Nothing
          , totalEligibleDrivers : Nothing
+         , carouselItem : Nothing
          , moduleList : {
             completed : [],
             remaining : []
@@ -54,3 +56,21 @@ initData = {
       bannerLength : 0
     }
 }
+
+
+type CarouselProps = (
+  title :: PropValue,
+  referralCode :: PropValue,
+  background :: PropValue,
+  titleBackground :: PropValue,
+  titleImage :: PropValue,
+  titleCornerRadius :: PropValue,
+  cornerRadius :: PropValue,
+  qrCode :: PropValue,
+  bodyText :: PropValue,
+  isDriver :: PropValue,
+  referredCustomer :: PropValue,
+  activatedCustomers :: PropValue,
+  referredDrivers :: PropValue,
+  isCustomer :: PropValue 
+)

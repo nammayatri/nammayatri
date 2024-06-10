@@ -181,10 +181,13 @@ export const storeCallBackForNotification = function (cb) {
             cb(action(notificationType))();
           }
         });
-        window.onResumeListeners = [];
-        JBridge.storeCallBackForNotification(callback);
-      }
-      catch (error){
+        if (JBridge.storeCallBackForNotification) {
+          window.onResumeListeners = [];
+          JBridge.storeCallBackForNotification(callback);
+        } else if (window.__OS == "IOS" && JBridge.storeCallBackCustomer) {
+          JBridge.storeCallBackCustomer(callback);
+        }
+      } catch (error) {
         console.log("Error occurred in storeCallBackForNotification ------", error);
       }
     }
@@ -267,7 +270,15 @@ export const storeCallBackTime = function (cb) {
         const callback = callbackMapper.map(function (time, lat, lng) {
           cb(action(time)(lat)(lng))();
         });
-        JBridge.storeCallBackTime(callback);
+        if (window.__OS == "IOS") {
+          const payload = {
+            "event": "store_location_callback",
+            "callback" : callback
+          }
+          JOS.emitEvent("java")("onEvent")(JSON.stringify(payload))()();
+        } else {
+          JBridge.storeCallBackTime(callback);
+        }
       }
       catch (error){
         console.log("Error occurred in storeCallBackTime ------", error);
@@ -460,7 +471,7 @@ export const isDateGreaterThan = function(dateString){
 export const getPopupObject = function (just, nothing, key){
   try {
     const val = JBridge.getFromSharedPrefs(key);
-    if (val == "__failed") {
+    if (val == "__failed" || val == "(null)") {
       return nothing;
     } 
     return just(JSON.parse(val));
@@ -575,3 +586,19 @@ export const renderSlider = function (cb) {
 // window.activityResultListeners[requestCode] = function (reqCode, bundle) {
 //   cb(reqCode)(bundle)(); 
 // };
+function getPayload(action) {
+  const innerPayload = Object.assign({}, window.__payload.payload);
+  const initiatePayload = Object.assign({}, window.__payload);
+  if (action) innerPayload["action"] = action;
+  initiatePayload["payload"] = innerPayload;
+  initiatePayload["service"] = "in.yatri.yatririderequest";
+  return initiatePayload;
+}
+
+export const startRideRequestMApp = function () {
+  if (JOS && !top.mapps["in.yatri.yatririderequest"]) {
+    JOS.startApp("in.yatri.yatririderequest")(getPayload("initiate"))(null)();
+  } else {
+    console.error("JOS Not Found")
+  }
+}

@@ -25,6 +25,7 @@ import Components.SourceToDestination as SourceToDestination
 import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils (intPriceToBeDisplayed, distanceTobeDisplayed)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage, getCityConfig)
@@ -70,6 +71,7 @@ view push state =
   , background Color.white900
   , onBackPressed push (const BackPressed)
   , afterRender push (const AfterRender)
+  , padding $ PaddingBottom EHC.safeMarginBottom
   ][linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -78,14 +80,13 @@ view push state =
         , scrollView
           [ height MATCH_PARENT
             , width MATCH_PARENT
-            , orientation VERTICAL
           ][ 
             linearLayout
               [ height MATCH_PARENT
               , width MATCH_PARENT
               , orientation VERTICAL
               ][ 
-                scrollView
+                linearLayout
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
                   , visibility if state.props.issueReported then GONE else VISIBLE
@@ -176,7 +177,7 @@ tagView state config =
       linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , cornerRadius 26.0
+      , cornerRadius 13.0
       , background item.background
       , visibility if item.visibility then VISIBLE else GONE
       , padding $ Padding 12 5 12 5
@@ -260,7 +261,7 @@ tripDetailsView state =
       , gravity RIGHT
       , orientation VERTICAL
       ][  textView $
-          [ text $ (getCurrency appConfig) <> ( show state.data.totalAmount)
+          [ text $ intPriceToBeDisplayed state.data.totalAmountWithCurrency true
           , color Color.black
           ] <> FontStyle.body14 TypoGraphy
         , textView $
@@ -329,7 +330,7 @@ tripDataView push state =
       },
       tripDetailsRow push defaultTripDetailsRow {  
         keyLeft = getString DISTANCE
-      , valLeft = state.data.distance <> " km"
+      , valLeft = distanceTobeDisplayed state.data.distanceWithUnit true true
       , keyRight = getString RIDE_TIME
       , valRight = tripTime
       , leftVisibility = true
@@ -339,7 +340,7 @@ tripDataView push state =
         keyLeft = getString EARNINGS_PER_KM
       , valLeft = earningPerKm
       , keyRight = getString TOLL_INCLUDED
-      , valRight = currency <> show state.data.tollCharge
+      , valRight = intPriceToBeDisplayed state.data.tollChargeWithCurrency true
       , leftVisibility = true
       , rightVisibility = state.data.tollCharge /= 0.0
       }
@@ -541,10 +542,11 @@ issueReportedView state _push =
 getVehicleImage :: ST.TripDetailsScreenState -> String
 getVehicleImage state = 
   case getMerchant FunctionCall of
-    YATRI     -> getVehicleVariantImage state.data.vehicleServiceTier
+    YATRI      -> getVehicleVariantImage state.data.vehicleServiceTier
     YATRISATHI -> getVehicleVariantImage state.data.vehicleServiceTier
     NAMMAYATRI -> getVehicleVariantImage state.data.vehicleServiceTier
-    _           -> mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+    BRIDGE     -> getVehicleVariantImage state.data.vehicleServiceTier
+    _          -> mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
   
   where
     mkAsset cityConfig =

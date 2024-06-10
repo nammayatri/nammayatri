@@ -174,7 +174,8 @@ data Action = BackPressed Boolean
             | OptionsMenuAction OptionsMenu.Action
             | ChangeVehicleAC PopUpModal.Action
             | BottomDrawerListAC BottomDrawerList.Action
-            | WhatsAppClick
+            | WhatsAppClick Boolean
+            | PreviewSampleImage String
 
 eval :: Action -> UploadDrivingLicenseState -> Eval Action ScreenOutput UploadDrivingLicenseState
 eval AfterRender state = 
@@ -194,6 +195,7 @@ eval (BackPressed flag) state = do
       else continueWithCmd state {props {clickedButtonType = "front", fileCameraPopupModal = false, fileCameraOption = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} [do
             _ <- liftEffect $ uploadFile false
             pure NoAction]
+  else if state.props.previewSampleImage then continue state { props {previewSampleImage = false}}
   else if state.props.imageCaptureLayoutView then continue state{props{imageCaptureLayoutView = false,openHowToUploadManual = true}} 
   else if state.props.fileCameraPopupModal then continue state{props{fileCameraPopupModal = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} 
   else if state.props.openHowToUploadManual then continue state{props{openHowToUploadManual = false}} 
@@ -232,6 +234,8 @@ eval (PrimaryEditTextActionControllerReEnter (PrimaryEditText.TextChanged id val
     pure unit
     else pure unit
   continue state {data = state.data { reEnterDriverLicenseNumber = toUpper value }}
+  
+eval (PreviewSampleImage imgUrl) state = continue state {props {previewSampleImage = true, previewImgUrl = imgUrl}}
 
 eval DriverLicenseManual state = continue state{props{openLicenseManual = true}}
 
@@ -279,17 +283,18 @@ eval (CallBackImageUpload image imageName imagePath) state =
     continue state                    
 
 eval (DatePicker (label) resp year month date) state = do
-  let fullDate = (dateFormat year) <> "-" <> (dateFormat (month+1)) <> "-" <> (dateFormat date) <> " 00:00:00.233691+00" 
-  let dateView = (show date) <> "/" <> (show (month+1)) <> "/" <> (show year)
   case resp of 
-    "SELECTED" -> case label of
-                    "DATE_OF_BIRTH" -> do
-                      let _ = unsafePerformEffect $ logEvent state.data.logField "NY Driver - DOB"
-                      continue state {data = state.data { dob = fullDate, dobView = dateView }
-                                                        , props {isDateClickable = true }}
-                    "DATE_OF_ISSUE" -> continue state {data = state.data { dateOfIssue = Just fullDate , dateOfIssueView = dateView, imageFront = "null"}
-                                                        , props {isDateClickable = true }} 
-                    _ -> continue state { props {isDateClickable = true}}
+    "SELECTED" -> do
+      let fullDate = spy "label" $ (dateFormat year) <> "-" <> (dateFormat (month+1)) <> "-" <> (dateFormat date) <> " 00:00:00.233691+00" 
+      let dateView = spy "label" $ (show date) <> "/" <> (show (month+1)) <> "/" <> (show year)
+      case label of
+        "DATE_OF_BIRTH" -> do
+          let _ = unsafePerformEffect $ logEvent state.data.logField "NY Driver - DOB"
+          continue state {data = state.data { dob = fullDate, dobView = dateView }
+                                            , props {isDateClickable = true }}
+        "DATE_OF_ISSUE" -> continue state {data = state.data { dateOfIssue = Just fullDate , dateOfIssueView = dateView, imageFront = "null"}
+                                            , props {isDateClickable = true }} 
+        _ -> continue state { props {isDateClickable = true}}
     _ -> continue state { props {isDateClickable = true}}
 
 eval SelectDateOfBirthAction state = continue state { props {isDateClickable = false}}
@@ -358,20 +363,22 @@ eval (BottomDrawerListAC BottomDrawerList.OnAnimationEnd) state = continue state
 
 eval (BottomDrawerListAC (BottomDrawerList.OnItemClick item)) state = do
   case item.identifier of
-    "whatsapp" -> continueWithCmd state [pure WhatsAppClick]
+    "whatsapp" -> continueWithCmd state [pure $ WhatsAppClick false]
+    "email" -> continueWithCmd state [pure $ WhatsAppClick true]
     "call" -> do 
                 void $ pure $ showDialer (getSupportNumber "") false 
                 continue state
     _ -> continue state
 
-eval WhatsAppClick state = continueWithCmd state [do
+eval (WhatsAppClick isMail) state = continueWithCmd state [do
   let supportPhone = state.data.cityConfig.registration.supportWAN
       phone = "%0APhone%20Number%3A%20"<> getValueToLocalStore MOBILE_NUMBER_KEY
       dlNumber = getValueToLocalStore ENTERED_DL
       rcNumber = getValueToLocalStore ENTERED_RC
       dl = if (dlNumber /= "__failed") then ("%0ADL%20Number%3A%20"<> dlNumber) else ""
       rc = if (rcNumber /= "__failed") then ("%0ARC%20Number%3A%20"<> rcNumber) else ""
-  void $ JB.openUrlInApp $ "https://wa.me/" <> supportPhone <> "?text=Hi%20Team%2C%0AI%20would%20require%20help%20in%20onboarding%20%0A%E0%A4%AE%E0%A5%81%E0%A4%9D%E0%A5%87%20%E0%A4%AA%E0%A4%82%E0%A4%9C%E0%A5%80%E0%A4%95%E0%A4%B0%E0%A4%A3%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B8%E0%A4%B9%E0%A4%BE%E0%A4%AF%E0%A4%A4%E0%A4%BE%20%E0%A4%95%E0%A5%80%20%E0%A4%86%E0%A4%B5%E0%A4%B6%E0%A5%8D%E0%A4%AF%E0%A4%95%E0%A4%A4%E0%A4%BE%20%E0%A4%B9%E0%A5%8B%E0%A4%97%E0%A5%80" <> phone <> dl <> rc
+      url = if isMail then "mailto:" <> state.data.cityConfig.supportMail else "https://wa.me/" <> supportPhone <> "?text=Hi%20Team%2C%0AI%20would%20require%20help%20in%20onboarding%20%0A%E0%A4%AE%E0%A5%81%E0%A4%9D%E0%A5%87%20%E0%A4%AA%E0%A4%82%E0%A4%9C%E0%A5%80%E0%A4%95%E0%A4%B0%E0%A4%A3%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B8%E0%A4%B9%E0%A4%BE%E0%A4%AF%E0%A4%A4%E0%A4%BE%20%E0%A4%95%E0%A5%80%20%E0%A4%86%E0%A4%B5%E0%A4%B6%E0%A5%8D%E0%A4%AF%E0%A4%95%E0%A4%A4%E0%A4%BE%20%E0%A4%B9%E0%A5%8B%E0%A4%97%E0%A5%80" <> phone <> dl <> rc
+  void $ if isMail then JB.openUrlInMailApp url else JB.openUrlInApp $ url
   pure NoAction
   ]
 

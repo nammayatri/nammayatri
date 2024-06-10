@@ -17,12 +17,12 @@ module Animation where
 
 import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth)
-import Prelude (Unit, negate, unit, ($), (/))
+import Prelude (Unit, negate, unit, ($), (/), (<>), (>))
 import PrestoDOM (PrestoDOM)
 import PrestoDOM.Animation (Interpolator, toRotation)
 import PrestoDOM.Animation as PrestoAnim
 import Common.Animation.Config
-
+import Debug
 
 animateTime :: Int
 animateTime = 150
@@ -401,3 +401,62 @@ triggerOnAnimationEnd ifAnim =
   PrestoAnim.Animation
     [ PrestoAnim.duration 10
     ] ifAnim
+
+
+expandWithDuration :: Int -> Boolean -> PrestoAnim.Animation
+expandWithDuration duration isAnim = 
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.fromScaleY 0.0
+    , PrestoAnim.toScaleY 1.0
+    ]
+    isAnim
+
+collapseWithDuration :: Int -> Boolean -> PrestoAnim.Animation   
+collapseWithDuration duration isAnim = 
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.toScaleY 0.0
+    , PrestoAnim.fromScaleY 1.0
+    ]
+    isAnim
+
+scaleAnimWithDuration :: Int -> Boolean -> PrestoAnim.Animation
+scaleAnimWithDuration duration ifAnim =
+   PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.fromScaleY 0.0
+    , PrestoAnim.toScaleY 1.0
+    , PrestoAnim.fromScaleX 0.0
+    , PrestoAnim.toScaleX 1.0
+    , PrestoAnim.interpolator interpolator
+    ] ifAnim
+
+rotateToDegWithDuration :: Int -> Int -> Int -> PrestoAnim.Animation
+rotateToDegWithDuration duration fromRotation toRotation =
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.fromRotation fromRotation
+    , PrestoAnim.toRotation toRotation
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    ] true
+
+translateInXWithPosition :: Int -> Int -> Boolean -> PrestoAnim.Animation
+translateInXWithPosition fromX duration =
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.fromX fromX
+    , PrestoAnim.toX 0
+    , PrestoAnim.interpolator $ PrestoAnim.EaseInOut
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    ]
+
+translateInXWithPositioBoth :: Int -> Int -> Int -> Int -> Boolean -> PrestoAnim.Animation
+translateInXWithPositioBoth fromX toX duration delay =
+  PrestoAnim.Animation
+   ([ PrestoAnim.duration duration
+    , PrestoAnim.fromX fromX
+    , PrestoAnim.toX toX
+    , PrestoAnim.interpolator $ PrestoAnim.EaseInOut
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    ] <> if delay > 0 then [PrestoAnim.delay delay, PrestoAnim.fillMode PrestoAnim.Both] else [])

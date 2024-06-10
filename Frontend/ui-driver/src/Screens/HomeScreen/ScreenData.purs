@@ -23,6 +23,7 @@ import Domain.Payments as PP
 import ConfigProvider
 import Screens.Types as ST
 import RemoteConfig.Utils as RU
+import Constants.Configs (dummyPrice, dummyDistance)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 
 initData :: HomeScreenState
@@ -110,6 +111,7 @@ initData =
           , zeroCommision: 0
           , tip: Nothing
           , finalAmount: 0
+          , finalAmountWithCurrency: dummyPrice
           , riderName: ""
           , rating: 0
           , feedback: ""
@@ -149,6 +151,9 @@ initData =
       , prevLatLon: Nothing
       , noOfLocations: 0
       , isVehicleSupported: true
+      , earningPerKmWithCurrency : dummyPrice 
+      , totalEarningsOfDayWithCurrency : dummyPrice
+      , bonusEarnedWithCurrency : dummyPrice
       , parking : initialParkingData
       , toll : initialTollState
       , payoutVpa : Nothing
@@ -259,6 +264,9 @@ dummyDriverRideStats =
     , coinBalance: 0
     , totalEarningsOfDayPerKm : Nothing
     , totalValidRidesOfDay : Nothing
+    , totalEarningsOfDayPerKmWithCurrency : dummyPrice
+    , totalEarningsOfDayWithCurrency : dummyPrice
+    , bonusEarningWithCurrency : dummyPrice
     }
 
 dummyRideData :: ActiveRide
@@ -276,9 +284,10 @@ dummyRideData = {
       , tripActualDistance: Nothing
       , status: NOTHING
       , distance: 0.0
+      , distanceWithUnit: dummyDistance
       , duration: 0
       , riderName: ""
-      , estimatedFare: 0
+      , estimatedFareWithCurrency: dummyPrice
       , waitTimerId: ""
       , notifiedCustomer: false
       , exoPhone: ""
@@ -310,6 +319,7 @@ dummyRideData = {
       , acRide : Nothing
       , bapName : ""
       , bookingFromOtherPlatform : false
+      , enableOtpLessRide : Nothing
       , parkingCharge : 0.0
       }
 

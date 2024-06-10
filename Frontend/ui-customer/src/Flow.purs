@@ -79,9 +79,9 @@ import ModifyScreenState (modifyScreenState, updateSafetyScreenState, updateRepe
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField)
 import Helpers.Pooling (delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
-import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, dummyPrice, estimateLabelMaxWidth, markerArrowSize, estimateLabelMaxWidth, markerArrowSize)
+import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, estimateLabelMaxWidth, markerArrowSize, dummyPrice)
 import Screens (getScreen)
-import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, getAddressFromBooking, dummyPrice)
+import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, getAddressFromBooking)
 import Screens.AccountSetUpScreen.ScreenData as AccountSetUpScreenData
 import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
 import Screens.AddNewAddressScreen.Controller (encodeAddressDescription, getSavedLocations, getSavedTags, getLocationList, calculateDistance, getSavedTagsFromHome, validTag, isValidLocation, getLocTag, savedLocTransformer) as AddNewAddress
@@ -134,7 +134,7 @@ import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), 
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
-import Constants.Configs
+import Constants.Configs 
 import PrestoDOM (initUI)
 import Common.Resources.Constants (zoomLevel,locateOnMapLabelMaxWidth)
 import PaymentPage
@@ -3191,8 +3191,6 @@ permissionScreenFlow :: FlowBT String Unit
 permissionScreenFlow = do
   void $ pure $ hideKeyboardOnNavigation true
   flow <- UI.permissionScreen
-  permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
-  permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
   internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
   case flow of
     REFRESH_INTERNET -> do
@@ -3208,17 +3206,20 @@ permissionScreenFlow = do
       else do
         setValueToLocalStore PERMISSION_POPUP_TIRGGERED "true"
         currentFlowStatus
-    TURN_ON_INTERNET -> case (getValueToLocalStore USER_NAME == "__failed") of
-      true -> pure unit
-      _ ->
-        if os == "IOS" && not permissionConditionB then do
-          modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen { stage = LOCATION_DENIED })
-          permissionScreenFlow
-        else if not (permissionConditionA && permissionConditionB) then do
-          modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen { stage = LOCATION_DISABLED })
-          permissionScreenFlow
-        else
-          currentFlowStatus
+    TURN_ON_INTERNET -> do
+      permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+      permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
+      case (getValueToLocalStore USER_NAME == "__failed") of
+        true -> pure unit
+        _ ->
+          if os == "IOS" && not permissionConditionB then do
+            modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen { stage = LOCATION_DENIED })
+            permissionScreenFlow
+          else if not (permissionConditionA && permissionConditionB) then do
+            modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen { stage = LOCATION_DISABLED })
+            permissionScreenFlow
+          else
+            currentFlowStatus
 
 myProfileScreenFlow :: FlowBT String Unit
 myProfileScreenFlow = do

@@ -19,7 +19,7 @@ import ConfigProvider
 
 import Data.Array (filter, length, null, reverse, (!!), head, all, elem, foldl, mapMaybe, find)
 import Accessor (_description, _amount, _amountWithCurrency)
-import Common.Types.App (LazyCheck(..), OptionButtonList, Price)
+import Common.Types.App (LazyCheck(..), OptionButtonList, Price, Currency(..))
 import Data.Function.Uncurried (runFn2)
 import Data.Int (toNumber)
 import Data.Lens ((^.))
@@ -273,7 +273,7 @@ dummyFareBreakUp :: FareBreakupAPIEntity
 dummyFareBreakUp = FareBreakupAPIEntity{ amount : 0.0, amountWithCurrency : dummyPrice ,description: ""}
 
 dummyPrice :: Price
-dummyPrice = {amount: 0.0, currency: ""}
+dummyPrice = {amount: 0.0, currency: INR}
 
 getMerchantSpecificFilteredFares :: Merchant -> Array String
 getMerchantSpecificFilteredFares merchant = 
@@ -412,9 +412,6 @@ markerArrowSize = if (os == "IOS") then 12 else 18
 
 estimateLabelMaxWidth :: Int
 estimateLabelMaxWidth = if (os == "IOS") then 80 else 300
-
-locateOnMapLabelMaxWidth :: Int
-locateOnMapLabelMaxWidth = if (os == "IOS") then 140 else 400
 
 mailToLink :: String
 mailToLink = "mailto:" 

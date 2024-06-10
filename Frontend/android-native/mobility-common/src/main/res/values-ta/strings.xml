@@ -19,4 +19,7 @@
     <string name="please_allow_permission_to_capture_the_image">படத்தைப் பிடிக்க அனுமதிகளை அனுமதிக்கவும்</string>
     <string name="unable_to_upload_media">மீடியாவை பதிவேற்ற முடியவில்லை</string>
     <string name="location_is_too_far">இடம் வெகு தொலைவில் உள்ளது!</string>
+    <string name="unable_to_upload_image">படத்தைப் பதிவேற்ற முடியவில்லை</string>
+    <string name="take_photo">புகைப்படம் எடுங்கள்</string>
+    <string name="select_photo">புகைப்படத்தைத் தேர்ந்தெடுக்கவும்</string>
 </resources>

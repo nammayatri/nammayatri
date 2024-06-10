@@ -33,6 +33,7 @@ import Screens.NoInternetScreen.ComponentConfig
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Effect.Uncurried(runEffectFn3)
+import Engineering.Helpers.Commons as EHC
 
 screen :: ST.NoInternetScreenState -> String -> Screen Action ST.NoInternetScreenState ScreenOutput
 screen initialState triggertype = 
@@ -102,6 +103,7 @@ noInternetScreenView push state triggertype =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
+  , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
   ][ linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -117,12 +119,13 @@ noInternetScreenView push state triggertype =
         textView $
         [ text (getString NO_INTERNET_CONNECTION)
         , color Color.black800
-        , gravity LEFT
+        , gravity CENTER
         ] <> FontStyle.h1 LanguageStyle,
         textView $
         [ text (getString PLEASE_CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
         , color Color.black800
         , margin (MarginTop 10)
+        , gravity CENTER
         ] <> FontStyle.body5 TypoGraphy
       ]
       , buttonView push state triggertype

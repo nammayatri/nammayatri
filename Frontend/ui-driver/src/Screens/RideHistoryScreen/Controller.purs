@@ -27,6 +27,7 @@ import Components.IndividualRideCard.Controller as IndividualRideCardController
 import Components.PaymentHistoryListItem as PaymentHistoryModelItem
 import Components.PaymentHistoryModel as PaymentHistoryModel
 import Components.PrimaryButton as PrimaryButton
+import Constants.Configs (dummyDistance)
 import Data.Array (union, (!!), filter, length)
 import Data.Int (ceil)
 import Data.Int (fromString, toNumber)
@@ -36,7 +37,7 @@ import Data.Show (show)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (checkSpecialPickupZone, setRefreshing, setEnabled, parseFloat, getRideLabelData, convertUTCtoISC, getRequiredTag, incrementValueOfLocalStoreKey)
+import Helpers.Utils (checkSpecialPickupZone, setRefreshing, setEnabled, parseFloat, getRideLabelData, convertUTCtoISC, getRequiredTag, incrementValueOfLocalStoreKey, dummyPriceForCity)
 import JBridge (cleverTapCustomEvent, metaLogEvent, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -49,6 +50,8 @@ import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..),
 import Services.API (RidesInfo(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Styles.Colors as Color
+import ConfigProvider
+import Storage
 
 instance showAction :: Show Action where
   show _ = ""
@@ -135,7 +138,7 @@ eval Refresh state = exit $ RefreshScreen state
 eval (ScrollStateChanged scrollState) state = do
   _ <- case scrollState of
            SCROLL_STATE_FLING ->
-               pure $ setEnabled "2000030" false
+               pure $ setEnabled (getNewIDWithTag "MyRidesSceenSwipeRefreshLayout") false
            _ ->
                pure unit
   continue state
@@ -173,7 +176,7 @@ eval Loader state = exit $ LoaderOutput state{loaderButtonVisibility = false}
 eval (RideHistoryAPIResponseAction rideList) state = do
   let bufferCardDataPrestoList = (rideHistoryListTransformer rideList)
   let filteredRideList = (rideListResponseTransformer rideList)
-  _ <- pure $ setRefreshing "2000030" false
+  _ <- pure $ setRefreshing (getNewIDWithTag "MyRidesSceenSwipeRefreshLayout") false
   let loadBtnDisabled = if(length rideList == 0) then true else false
   continue $ state {shimmerLoader = AnimatedOut, recievedResponse = true,rideList = union(state.rideList) (filteredRideList) ,prestoListArrayItems =  union (state.prestoListArrayItems) (bufferCardDataPrestoList), loadMoreDisabled = loadBtnDisabled}
 
@@ -184,7 +187,7 @@ eval (Scroll value) state = do
   let totalItems = fromMaybe 0 (fromString (fromMaybe "0"((split (Pattern ",")(value))!!2)))
   let canScrollUp = fromMaybe true (strToBool (fromMaybe "true" ((split (Pattern ",")(value))!!3)))
   let loadMoreButton = if (totalItems == (firstIndex + visibleItems) && totalItems /= 0 && totalItems /= visibleItems) then true else false
-  _ <- if canScrollUp then (pure $ setEnabled "2000030" false) else  (pure $ setEnabled "2000030" true)
+  _ <- pure $ setEnabled (getNewIDWithTag "MyRidesSceenSwipeRefreshLayout") (not canScrollUp)
   continue state { loaderButtonVisibility = loadMoreButton}
 
 eval (DatePickerAC (DatePickerModel.OnDateSelect idx item)) state = do
@@ -213,7 +216,7 @@ rideHistoryListTransformer list = (map (\(RidesInfo ride) ->
       {
       date : toPropValue (convertUTCtoISC (ride.createdAt) "D MMM"),
       time : toPropValue (convertUTCtoISC (ride.createdAt )"h:mm A"),
-      total_amount : toPropValue $ fromMaybe ride.estimatedBaseFare ride.computedFare,
+      total_amount : toPropValue $ getCurrency appConfig <> (show $ fromMaybe ride.estimatedBaseFare ride.computedFare), 
       card_visibility : toPropValue "visible",
       shimmer_visibility : toPropValue "gone",
       rideDistance : toPropValue $ (parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2) <> " km Ride" <> case ride.riderName of 
@@ -258,16 +261,20 @@ rideListResponseTransformer =
     map (\(RidesInfo ride) -> 
       let specialLocationConfig = getRideLabelData ride.specialLocationTag
       in
-      { date : (convertUTCtoISC (ride.createdAt) "D MMM"),
+      { date : (convertUTCtoISC (ride.createdAt) "DD/MM/YYYY"),
         time : (convertUTCtoISC (ride.createdAt )"h:mm A"),
         total_amount : (case (ride.status) of
                         "CANCELLED" -> 0
                         _ -> fromMaybe ride.estimatedBaseFare ride.computedFare),
+        total_amount_with_currency : (case (ride.status) of
+                                      "CANCELLED" -> dummyPriceForCity (getValueToLocalStore DRIVER_LOCATION)
+                                      _ -> fromMaybe ride.estimatedBaseFareWithCurrency ride.computedFareWithCurrency),
         card_visibility : (case (ride.status) of
                             "CANCELLED" -> "gone"
                             _ -> "visible"),
         shimmer_visibility : "gone",
         rideDistance :  parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2,
+        rideDistanceWithUnit : fromMaybe dummyDistance ride.chargeableDistanceWithUnit,
         status :  (ride.status),
         vehicleModel : ride.vehicleModel ,
         shortRideId : ride.shortRideId  ,
@@ -291,6 +298,7 @@ rideListResponseTransformer =
         specialZonePickup : checkSpecialPickupZone ride.specialLocationTag,
         tripType : rideTypeConstructor ride.tripCategory,
         tollCharge : fromMaybe 0.0 ride.tollCharges,
+        tollChargeWithCurrency : fromMaybe (dummyPriceForCity $ getValueToLocalStore DRIVER_LOCATION) ride.tollChargesWithCurrency,
         rideType : ride.vehicleServiceTierName,
         tripStartTime : ride.tripStartTime,
         tripEndTime : ride.tripEndTime,
@@ -311,9 +319,11 @@ dummyCard =  {
     date : "",
     time : "",
     total_amount : 0,
+    total_amount_with_currency : dummyPriceForCity (getValueToLocalStore DRIVER_LOCATION),
     card_visibility : "",
     shimmer_visibility : "",
     rideDistance : "",
+    rideDistanceWithUnit : dummyDistance,
     status : "",
     vehicleModel : "",
     shortRideId : "",
@@ -337,6 +347,7 @@ dummyCard =  {
     specialZonePickup : false,
     tripType : OneWay,
     tollCharge : 0.0,
+    tollChargeWithCurrency : dummyPriceForCity (getValueToLocalStore DRIVER_LOCATION),
     rideType : "",
     tripStartTime : Nothing,
     tripEndTime : Nothing,

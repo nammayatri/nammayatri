@@ -29,12 +29,12 @@ import PrestoDOM.Types.Core (class Loggable)
 import Data.Show (show)
 import Data.String as DS
 import Data.String (Pattern(..), split, take, drop)
-import Engineering.Helpers.Commons (getCurrentUTC, getFutureDate, getDayName, convertUTCtoISC, getPastDays)
+import Engineering.Helpers.Commons (getCurrentUTC, getFutureDate, getDayName, convertUTCtoISC, getPastDays, getDayOfWeek)
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag)
-import JBridge (pauseYoutubeVideo, copyToClipboard, toast, toggleBtnLoader, showDialer)
+import Helpers.Utils (incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag)
+import JBridge (pauseYoutubeVideo, copyToClipboard, toast, toggleBtnLoader, showDialer, getCurrentDate)
 import Language.Strings (getString)
 import Language.Types
 import Log
@@ -381,5 +381,5 @@ getDatesList :: String -> CustomerReferralTrackerScreenState -> Array String
 getDatesList todaysDate state =
   map (\date -> convertUTCtoISC date.utcDate "YYYY-MM-DD") $ getListofPastDays
   where
-    getListofPastDays = getPastDays (22 + getDayOfWeek (getDayName todaysDate))
+    getListofPastDays = getPastDays getCurrentDate (22 + getDayOfWeek (getDayName todaysDate))
   

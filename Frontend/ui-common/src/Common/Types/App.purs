@@ -15,7 +15,7 @@
 
 module Common.Types.App where
 
-import Prelude (class Eq, class Show, ($))
+import Prelude (class Eq, class Show, ($), class Semiring, (+), (*))
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 
 import Data.Generic.Rep (class Generic)
@@ -36,7 +36,7 @@ import DecodeUtil (parseJSON)
 
 type FlowBT e st a = BackT (ExceptT e (Free (FlowWrapper st))) a
 
-data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance_Taxi | Ambulance_Taxi_Oxy | Ambulance_AC | Ambulance_AC_Oxy | Ambulance_Ventilator | SUV_PLUS
+data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance_Taxi | Ambulance_Taxi_Oxy | Ambulance_AC | Ambulance_AC_Oxy | Ambulance_Ventilator | Suv_Plus
 data LazyCheck = LanguageStyle | EndPoint | BaseUrl | TypoGraphy | WithoutOffers | FunctionCall | Config | Language
 
 newtype Place = Place {
@@ -71,13 +71,26 @@ instance showVehicalTypes :: Show VehicalTypes where
     show (Ambulance_Taxi ) = "Ambulance_Taxi"
     show (Ambulance_Taxi_Oxy ) = "Ambulance_Taxi_Oxy"
     show (Ambulance_Ventilator ) = "Ambulance_Ventilator"
-    show (SUV_PLUS) = "SUV_PLUS"
+    show (Suv_Plus) = "Suv_Plus"
 
 
-data NotificationType = REGISTRATION_APPROVED | SEARCH_CALLBACK | CONFIRM_CALLBACK
-  | TRACKING_CALLBACK | SEARCH_REQUEST | CONFIRM_REQUEST | UPCOMING_CASE
+data NotificationType
+  = REGISTRATION_APPROVED
+  | SEARCH_CALLBACK
+  | CONFIRM_CALLBACK
+  | TRACKING_CALLBACK
+  | SEARCH_REQUEST
+  | CONFIRM_REQUEST
+  | UPCOMING_CASE
+  | DRIVER_REACHED
+  | CANCELLED_PRODUCT
+  | DRIVER_ASSIGNMENT
+  | RIDE_REQUESTED
+  | TRIP_STARTED
+  | EDIT_LOCATION
 
 derive instance genericNotificationType :: Generic NotificationType _
+instance showNotificationType :: Show NotificationType where show = genericShow
 instance decodeNotificationType :: Decode NotificationType where decode = defaultEnumDecode
 instance encodeNotificationType :: Encode NotificationType where encode = defaultEnumEncode
 
@@ -135,12 +148,17 @@ newtype Payload = Payload
   , view_param :: Maybe String
   , deeplinkOptions :: Maybe DeeplinkOptions
   , deepLinkJSON :: Maybe QueryParam
+  , fragmentViewGroups :: Maybe FragmentViewGroup
   }
 
 newtype QueryParam = QueryParam {
   option :: Maybe String,
   bookingId :: Maybe String,
   rideId :: Maybe String
+}
+
+newtype FragmentViewGroup = FragmentViewGroup {
+  main :: Maybe String
 }
 
 newtype DeeplinkOptions = DeeplinkOptions {
@@ -153,6 +171,11 @@ newtype LocationData = LocationData {
   , lon :: Number
   , name :: Maybe String
 }
+
+derive instance newFragmentViewGroup :: Newtype FragmentViewGroup _
+derive instance genericFragmentViewGroup :: Generic FragmentViewGroup _
+instance decodeFragmentViewGroup :: Decode FragmentViewGroup where decode = defaultDecode
+instance encodeFragmentViewGroup :: Encode FragmentViewGroup where encode = defaultEncode
 
 derive instance newPayload :: Newtype Payload _
 derive instance genericPayload :: Generic Payload _
@@ -565,7 +588,7 @@ instance decodeProviderType :: Decode ProviderType where decode = defaultEnumDec
 
 type Price = {
     amount :: Number
-  , currency :: String
+  , currency :: Currency
 }
 
 type WaitingTimeInfo = {
@@ -588,8 +611,20 @@ type RentalBookingConfig = {
   , extraTimeFare :: String
 }
 
+data Currency = INR | USD | EUR
 
-
+derive instance genericCurrency :: Generic Currency _
+instance standardEncodeCurrency :: StandardEncode Currency where standardEncode _ = standardEncode {}
+instance showCurrency :: Show Currency 
+  where 
+    show item = 
+      case item of
+        INR -> "₹"
+        USD -> "$"
+        EUR -> "€"
+instance decodeCurrency :: Decode Currency where decode = defaultEnumDecode
+instance encodeCurrency  :: Encode Currency where encode = defaultEnumEncode
+instance eqCurrency :: Eq Currency where eq = genericEq
 
 data CustomerIssueTypes = TollCharge | NightSafety | Accessibility | NoIssue | MoreIssues
 derive instance genericCustomerIssueTypes :: Generic CustomerIssueTypes _
@@ -658,3 +693,44 @@ data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED |
 derive instance genericRecordingState :: Generic RecordingState _
 instance eqRecordingState :: Eq RecordingState where eq = genericEq
 instance showRecordingState :: Show RecordingState where show = genericShow
+data VehicleCategory = AutoCategory | CarCategory | BikeCategory | AmbulanceCategory | UnKnown
+
+derive instance genericVehicleCategory :: Generic VehicleCategory _
+instance eqVehicleCategory :: Eq VehicleCategory where eq = genericEq
+instance showVehicleCategory :: Show VehicleCategory where show = genericShow
+instance decodeVehicleCategory :: Decode VehicleCategory where decode = defaultEnumDecode
+instance encodeVehicleCategory :: Encode VehicleCategory where encode = defaultEnumEncode
+
+data DistanceUnit = Meter | Mile | Yard | Kilometer
+
+newtype Distance = Distance {
+  unit :: DistanceUnit,
+  value :: Number
+}
+
+derive instance genericDistanceUnit :: Generic DistanceUnit _
+instance standardEncodeDistanceUnit :: StandardEncode DistanceUnit where standardEncode body = defaultEnumEncode body
+instance eqDistanceUnit :: Eq DistanceUnit where eq = genericEq
+instance decodeDistanceUnit :: Decode DistanceUnit where decode = defaultEnumDecode
+instance showDistanceUnit :: Show DistanceUnit where show = genericShow
+instance encodeDistanceUnit :: Encode DistanceUnit where encode = defaultEnumEncode
+
+
+derive instance genericDistance :: Generic Distance _
+derive instance newtypeDistance :: Newtype Distance _
+instance standardEncodeDistance :: StandardEncode Distance where standardEncode (Distance body) = standardEncode body
+instance decodeDistance :: Decode Distance where decode = defaultDecode
+instance showDistance :: Show Distance where show = genericShow
+instance encodeDistance :: Encode Distance where encode = defaultEncode
+instance semiringDistance :: Semiring Distance where 
+    add (Distance a) (Distance b) = Distance {
+      unit : a.unit,
+      value : a.value + b.value
+    }
+    zero = Distance {value: 0.0, unit: Meter}
+    mul (Distance a) (Distance b) = Distance {
+      unit : a.unit,
+      value : a.value * b.value
+    }
+    one = Distance {value: 1.0, unit: Meter}
+instance eqDistance :: Eq Distance where eq = genericEq

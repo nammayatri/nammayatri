@@ -271,6 +271,7 @@ window.getMerchantConfig = function () {
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
         "gstPercentage" : "18",
+        "currency" : "₹",
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
           "onboarding_auto_image" : "ny_ic_auto_side",
@@ -331,6 +332,7 @@ window.getMerchantConfig = function () {
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
         "gstPercentage" :  "18",        
+        "currency" : "₹",
         "assets" :{
           "auto_image" :  "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -378,6 +380,7 @@ window.getMerchantConfig = function () {
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
       "gstPercentage" : "18",
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -444,7 +447,12 @@ window.getMerchantConfig = function () {
            "empty_referral_auto" : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
            "empty_referral_cab" : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
          },
-      "enableHvSdk" : false
+      "enableHvSdk" : false,
+      "currency" : "₹",
+      "assets" :{
+        "auto_image" : "ic_auto_rickshaw",
+        "onboarding_auto_image" : "ny_ic_auto_side"
+        }
       },
       {
         "cityName" : "Chennai",
@@ -545,6 +553,7 @@ window.getMerchantConfig = function () {
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
       "gstPercentage" :  "18",     
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -592,6 +601,7 @@ window.getMerchantConfig = function () {
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
       "gstPercentage" :  "18",     
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -639,6 +649,7 @@ window.getMerchantConfig = function () {
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
       "gstPercentage" : "18",
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -686,6 +697,7 @@ window.getMerchantConfig = function () {
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
       "gstPercentage" :  "18",     
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -733,6 +745,7 @@ window.getMerchantConfig = function () {
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
       "gstPercentage" :  "18",      
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -778,6 +791,7 @@ window.getMerchantConfig = function () {
       "waitingCharges" : 1.50,
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+      "currency" : "₹",
       "rateCardConfig" : defRateCardConfig,
       "gstPercentage" :  "18",     
       "assets" :{
@@ -827,6 +841,7 @@ window.getMerchantConfig = function () {
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
         "gstPercentage" :  "18",       
+        "currency" : "$",
         "assets" : {
           "auto_image" : "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -873,6 +888,7 @@ window.getMerchantConfig = function () {
       "waitingCharges" : 1.50,
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+      "currency" : "₹",
       "rateCardConfig" : defRateCardConfig,
       "gstPercentage" :  "18",     
       "assets" :{
@@ -932,6 +948,7 @@ window.getMerchantConfig = function () {
            }
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "currency" : "₹",
         "rateCardConfig" : defRateCardConfig,
         "gstPercentage" :  "18",       
         "assets": {
@@ -992,6 +1009,7 @@ window.getMerchantConfig = function () {
            }
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "currency" : "₹",
         "rateCardConfig" : defRateCardConfig,
         "gstPercentage" :  "18",        
         "assets": {
@@ -1039,6 +1057,7 @@ window.getMerchantConfig = function () {
         "waitingCharges": 1.50,
         "waitingChargesConfig": defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "currency" : "₹",
         "rateCardConfig" : defRateCardConfig,
         "gstPercentage" :  "18",       
         "assets": {
@@ -1086,6 +1105,7 @@ window.getMerchantConfig = function () {
         "waitingCharges": 1.50,
         "waitingChargesConfig": defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "currency" : "₹",
         "rateCardConfig" : defRateCardConfig,
         "gstPercentage" :  "18",        
         "assets": {
@@ -1133,6 +1153,7 @@ window.getMerchantConfig = function () {
         "waitingCharges": 1.50,
         "waitingChargesConfig": defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "currency" : "₹",
         "rateCardConfig" : defRateCardConfig,
         "gstPercentage" :  "18",       
         "assets": {

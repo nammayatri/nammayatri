@@ -6,7 +6,7 @@ import Components.PopUpModal as PopUpModal
 import Data.Array (filter, length, (!!), find)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Log (trackAppScreenRender)
-import Prelude (class Show, map, pure, show, unit, discard, void, (<>), (==), not, ($), (>), (<$>),(&&))
+import Prelude (class Show, map, pure, show, unit, discard, void, (<>), (==), not, ($), (>), (<$>), (>>=), (/=), (&&))
 import PrestoDOM (Eval, update, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (BookingOptionsScreenState, VehicleP, RidePreference)
@@ -25,6 +25,8 @@ import Data.Foldable as DF
 import Storage (getValueToLocalStore, KeyStore(..))
 import Helpers.Utils as HU
 import Screens.Types as ST
+import Services.Accessor (_amount)
+import Data.Lens ((^.))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -58,6 +60,7 @@ data ScreenOutput
   | ToggleACAvailability BookingOptionsScreenState Boolean
   | ToggleRentalIntercityRide BookingOptionsScreenState
   | ExitToRateCardScreen BookingOptionsScreenState
+  | OpenRateCard RidePreference BookingOptionsScreenState
 
 eval :: Action -> BookingOptionsScreenState -> Eval Action ScreenOutput BookingOptionsScreenState
 eval BackPressed state = 
@@ -102,6 +105,7 @@ eval (UpdateRateCard rateCardResp) state = do
       let rateCardOb = getRateCardOb item.serviceTierType rateCardResp
       in item { rateCardData = rateCardOb.rateCardData,
                 perKmRate = rateCardOb.perKmRate,
+                perMinRate = rateCardOb.perMinuteRate,
                 farePolicyHour = rateCardOb.farePolicyHour
               }) state.data.ridePreferences
   continue state { data { ridePreferences = ridePreferences  }, props { rateCardLoaded = true, peakTime = isJust $ find (\item -> item.farePolicyHour == Just API.Peak) ridePreferences } }
@@ -111,8 +115,8 @@ eval (ShowRateCard pref) state = do
   case mbPref of
     Just ridePreference -> do
       case ridePreference.rateCardData of
-        Just rateCardData -> 
-          continue state { data { rateCard  {
+        Just rateCardData -> do
+          let  newState = state { data { rateCard  {
               onFirstPage = false,
               serviceTierName = Just ridePreference.name,
               currentRateCardType = CTA.DefaultRateCard,
@@ -122,7 +126,9 @@ eval (ShowRateCard pref) state = do
               nightChargeTill = rateCardData.nightChargeEnd,
               nightChargeFrom = rateCardData.nightChargeStart,
               extraFare = rateCardData.fareList
-            }} , props {showRateCard = state.data.config.rateCardScreen.showRateCard } }
+            }}}
+          if getMerchant CTA.FunctionCall /= BRIDGE then continue newState {props {showRateCard = true }}
+            else exit $ OpenRateCard ridePreference newState{props {showRateCard = false}}
         Nothing -> continue state
     Nothing -> continue state
 
@@ -179,18 +185,24 @@ getRateCardOb serviceTierType (API.GetDriverRateCardRes rateCardResp) = do
   case rateCardRespItem of
     Just (API.RateCardRespItem rateCardRespItem) -> 
       { 
-        perKmRate : Just rateCardRespItem.perKmRate.amount, 
+        perKmRate : Just rateCardRespItem.perKmRate, 
         farePolicyHour : Just rateCardRespItem.farePolicyHour,
-        rateCardData : Just $ getFareBreakupList rateCardRespItem.rateCardItems tips
+        rateCardData : Just $ getFareBreakupList rateCardRespItem.rateCardItems tips,
+        perMinuteRate : rateCardRespItem.perMinuteRate, -- rateCardRespItem.perMinuteRate >>= (\a -> Just $ a.amount),
+        currency : Just $ rateCardRespItem.perKmRate.currency
       }
     Nothing -> {
         perKmRate : Nothing,
         farePolicyHour : Nothing,
-        rateCardData : Nothing
+        rateCardData : Nothing,
+        perMinuteRate : Nothing,
+        currency : Nothing
     }
 
 type RateCardOb = {
-  perKmRate :: Maybe Number,
+  perKmRate :: Maybe CTA.Price,
+  perMinuteRate :: Maybe CTA.Price,
   farePolicyHour :: Maybe API.FarePolicyHour,
-  rateCardData :: Maybe CTA.BreakupList
+  rateCardData :: Maybe CTA.BreakupList,
+  currency :: Maybe CTA.Currency
 }

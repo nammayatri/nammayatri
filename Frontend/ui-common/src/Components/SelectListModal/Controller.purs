@@ -23,6 +23,7 @@ import Font.Size as FontSize
 import Styles.Colors as Color
 import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Types (AppConfig)
+import ConfigProvider
 
 
 data Action = Button1 PrimaryButtonController.Action
@@ -129,7 +130,7 @@ config =
     , primaryButtonVisibility : true
     , secondaryButtonVisibility : true
     , topLeftIcon : false
-    , config : DC.config
+    , config : getAppConfig appConfig
     , hideOthers : true
     , showBgColor : false
     , editTextBgColor : Color.grey800

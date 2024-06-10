@@ -21,6 +21,7 @@ import Components.PrimaryButton.Controller as PrimaryButton
 import Styles.Colors (black700, black900, primaryButtonColor, white900) as Color
 import PrestoDOM.Types.DomAttributes (Length(..))
 import PrestoDOM (Margin(..))
+import ConfigProvider
 
 data Action = OnClickDone PrimaryButton.Action
             | OnClickCancel
@@ -66,13 +67,14 @@ config = {
 
 doneButtonConfig :: AddImagesModelState -> PrimaryButton.Config
 doneButtonConfig state = let
+    currnetConfig = getAppConfig appConfig
     primaryButtonConfig' =  PrimaryButton.config
       { textConfig
       { text = state.doneButtonText
-      , color = Color.primaryButtonColor
+      , color = currnetConfig.primaryTextColor
       }
       , cornerRadius = 8.0
-      , background = Color.black900
+      , background = currnetConfig.primaryBackground
       , height = V 48
       , alpha = 1.0 
       , isClickable = true 

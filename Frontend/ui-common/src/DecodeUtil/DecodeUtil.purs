@@ -67,7 +67,7 @@ handleForeignError error object defaultObject mbKey = case error of
     let _ = toastWithLog $ "Config Decode Failed - " <> ("Error for Key " <> (fromMaybe "" mbKey) <> " ErrorAtIndex " <> (show index))
     in handleForeignError fnError object defaultObject mbKey
   ErrorAtProperty key fnError ->
-    let _ = toastWithLog $ "Config Decode Failed - " <> ("Error for Key " <> "ErrorAtProperty " <> key <> " " <> (show fnError))
+    let _ = toastWithLog $ "Config Decode Failed - " <> ("Error for Key " <> "ErrorAtProperty " <> key <> " -> fnError " <> show fnError)
     in updateTheKey key
   where
   updateTheKey key =

@@ -441,11 +441,11 @@ primaryButtonConfig config = let
       {textConfig
       { text = config.primaryButtonTextConfig.firstText
       , accessibilityHint = config.primaryButtonTextConfig.firstText <> " : Button"
-      , color = config.config.primaryBackground}
+      , color = Color.black700}
       , background = Color.white900
       , isGradient = false
       , cornerRadius = config.cornerRadius
-      , stroke = "1," <> config.config.primaryBackground
+      , stroke = "1," <> Color.black700
       , width = if(config.secondaryButtonVisibility) then (V ((screenWidth unit/2)-30)) else config.primaryButtonTextConfig.width
       , id = "Button1"
       , visibility = if config.primaryButtonVisibility then VISIBLE else GONE

@@ -1,7 +1,7 @@
 module LocalStorage.Cache where
 
 
-import JBridge (getKeyInSharedPrefKeys, setKeyInSharedPref)
+-- import JBridge (setKeyInSharedPref)
 import Data.Maybe (Maybe(..))
 import Prelude
 import Data.Function.Uncurried (Fn2(..), Fn3(..), runFn2, runFn3)
@@ -10,7 +10,7 @@ import DecodeUtil
 foreign import getFromCache :: forall a.Fn3 String (Maybe a) (a -> (Maybe a)) (Maybe a)
 foreign import setInCache ::forall a. Fn2 String a a
 foreign import clearCache :: String -> Unit
-
+foreign import setKeyInSharedPref :: Fn2 String String Unit
 
 
 getValueFromCache :: forall a. String -> (String -> a) -> a

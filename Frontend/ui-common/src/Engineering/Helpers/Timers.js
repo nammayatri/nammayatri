@@ -4,6 +4,8 @@ import {
 
 const JBridge = window.JBridge;
 
+const debounceCallBacks = {}
+
 const activeTimers = {};
 
 let activeTimerIds = [];
@@ -105,7 +107,7 @@ export const waitingCountdownTimerV2Impl = function (startingTime, interval, tim
     const handler = function (keyId) {
       const timer = activeTimers[keyId];
       if (timer) {
-        let currentTimeStamp = new Date().getTime();
+        const currentTimeStamp = new Date().getTime();
         const time = Math.round((currentTimeStamp - timer.time) / 1000)
         const minutes = getTwoDigitsNumber(Math.floor(time / 60));
         const seconds = getTwoDigitsNumber(time - minutes * 60);
@@ -179,7 +181,7 @@ export const rideDurationTimerImpl = (startingTime, interval, timerId, cb, actio
     const handler = function (keyId) {
       const timer = activeTimers[keyId];
       if (timer) {
-        let currentTimeStamp = new Date().getTime();
+        const currentTimeStamp = new Date().getTime();
         const mins = Math.round((currentTimeStamp - timer.time) / 60000);
         // const mins = Math.floor(timer.time/60); // IF WE ARE STORING TIME IN SECONDS IN activeTimers ARRAY because of interval in seconds
         const hours = getTwoDigitsNumber(Math.floor(mins / 60));
@@ -189,7 +191,7 @@ export const rideDurationTimerImpl = (startingTime, interval, timerId, cb, actio
       }
     }
 
-    let remainingTimeID = setTimeout(function() {
+    const remainingTimeID = setTimeout(function() {
       const timerID = instantGetTimer(handler, timerId, interval * (60000));
       const currentTime = new Date().getTime();
       const timer = {
@@ -206,4 +208,38 @@ export const rideDurationTimerImpl = (startingTime, interval, timerId, cb, actio
     const timeInHHMMFormat = hours + " : " + minutes;
     cb(action(remainingTimeID)(timeInHHMMFormat)(startTimeInMinutes))();
   }
+}
+
+function clearDebounceTimeoutImpl(id) {
+  if (window.__OS == "IOS") {
+    clearTimerWithId(id)
+  } else {
+    clearTimeout(id);
+  }
+}
+
+export const debounceCallBackWithId = function (id,cb,timeOut) {
+  let existingDebounce = debounceCallBacks[id];
+  if (existingDebounce) {
+    clearDebounceTimeoutImpl(existingDebounce.id)
+    delete debounceCallBacks[id]
+  }
+  existingDebounce = {}
+  existingDebounce["cb"] = cb;
+  existingDebounce["timeOut"] = timeOut;
+  const handler = function () {
+    debounceCallBacks[id]["cb"]();
+    delete debounceCallBacks[id]
+  };
+  if (window.__OS == "IOS") {
+    existingDebounce["id"] = id;
+    if (JBridge.startCountDownTimerWithTimeV2) {
+      const callback = callbackMapper.map(handler);
+      const interval = (timeOut / 1000.0).toString();
+      JBridge.startCountDownTimerWithTimeV2(interval,interval, id, callback);
+    }
+  } else {
+    existingDebounce["id"] = setTimeout(handler, timeOut);
+  }
+  debounceCallBacks[id] = existingDebounce;
 }
