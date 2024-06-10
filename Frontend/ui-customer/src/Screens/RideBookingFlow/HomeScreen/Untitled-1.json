@@ -1,0 +1,25 @@
+{
+    "condition": "var appVersion = '0.0'; try{appVersion = JSON.parse(JBridge.getSessionInfo()).app_version}catch(e){};appVersion.replace( /^\\D+/g, '').localeCompare('10.40.4', undefined, { numeric: true, sensitivity: 'base' }) < 0",
+    "result": {
+        "live": {
+            "assets": {
+                "in.yatri.consumer": {
+                    "configuration": "https://assets.juspay.in/hyper/configs/mobilitypaytmconsumer/in.yatri.consumer/1.0.9/v1-configuration.zip"
+                }
+            },
+            "package": {
+                "in.yatri.consumer": "https://assets.juspay.in/hyper/bundles/app/in.yatri.consumer/1.0.28/android/v1-index_bundle.zip"
+            }
+        },
+        "new": {
+            "assets": {
+                "in.yatri.consumer": {
+                    "configuration": "https://assets.juspay.in/hyper/configs/mobilitypaytmconsumer/in.yatri.consumer/1.0.9/v1-configuration.zip"
+                }
+            },
+            "package": {
+                "in.yatri.consumer": "https://assets.juspay.in/hyper/bundles/app/in.yatri.consumer/1.0.28/android/v1-index_bundle.zip"
+            }
+        }
+    }
+}

@@ -80,6 +80,7 @@ import Common.Resources.Constants
 import Data.Function.Uncurried (runFn3)
 import DecodeUtil (getAnyFromWindow)
 import Resource.Constants as RC
+import Foreign.Object (lookup)
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -809,27 +810,85 @@ enterOdometerReadingConfig state = let
       }
       in inAppModalConfig'
 
-driverStatusIndicators :: Array ST.PillButtonState
-driverStatusIndicators = [
-    {
-      status : ST.Offline,
-      background : Color.red,
-      imageUrl : fetchImage FF_ASSET "ic_driver_status_offline",
-      textColor : Color.white900
-    },
-    {
-        status : ST.Silent,
-        background : Color.blue800,
-        imageUrl : fetchImage FF_ASSET "ic_driver_status_silent",
-        textColor : Color.white900
-    },
-    {
-      status : ST.Online,
-        background : Color.darkMint,
-        imageUrl : fetchImage FF_ASSET "ic_driver_status_online",
-        textColor : Color.white900
-    }
-]
+driverStatusIndicators :: ST.HomeScreenState -> Array ST.PillButtonState
+driverStatusIndicators state =
+  map
+    ( \item ->
+        let
+          config =
+            fromMaybe
+              { background: item.background
+              , imageUrl: item.imageUrl
+              , textColor: item.textColor
+              }
+              $ lookup (show item.status) state.data.config.homeScreen.statusPills
+        in
+          { status: item.status
+          , background: config.background
+          , imageUrl: config.imageUrl
+          , textColor: config.textColor
+          }
+    )
+    [ { status: ST.Offline
+      , background: Color.red
+      , imageUrl: fetchImage FF_ASSET "ic_driver_status_offline"
+      , textColor: Color.white900
+      }
+    , { status: ST.Silent
+      , background: Color.blue800
+      , imageUrl: fetchImage FF_ASSET "ic_driver_status_silent"
+      , textColor: Color.white900
+      }
+    , { status: ST.Online
+      , background: Color.darkMint
+      , imageUrl: fetchImage FF_ASSET "ic_driver_status_online"
+      , textColor: Color.white900
+      }
+    ]
+
+getStrokeColor :: ST.HomeScreenState -> Array ST.PillButtonState -> String
+getStrokeColor state config =
+  let
+    offline =
+      fromMaybe
+        { status: ST.Offline
+        , background: Color.red
+        , imageUrl: fetchImage FF_ASSET "ic_driver_status_offline"
+        , textColor: Color.white900
+        }
+        $ DA.head
+        $ DA.filter (\item -> item.status == ST.Offline) config
+
+    silent =
+      fromMaybe
+        { status: ST.Silent
+        , background: Color.blue800
+        , imageUrl: fetchImage FF_ASSET "ic_driver_status_silent"
+        , textColor: Color.white900
+        }
+        $ DA.head
+        $ DA.filter (\item -> item.status == ST.Silent) config
+
+    online =
+      fromMaybe
+        { status: ST.Online
+        , background: Color.darkMint
+        , imageUrl: fetchImage FF_ASSET "ic_driver_status_online"
+        , textColor: Color.white900
+        }
+        $ DA.head
+        $ DA.filter (\item -> item.status == ST.Online) config
+  in
+    if state.props.driverStatusSet == ST.Offline then
+      ("2," <> offline.background)
+    else if (((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") && ((state.props.driverStatusSet == ST.Online) || state.props.driverStatusSet == ST.Silent)) then
+      ("2," <> Color.yellow900)
+    else if state.props.driverStatusSet == ST.Online then
+      ("2," <> online.background)
+    else
+      ("2," <> silent.background)
+
+
 getCancelAlertText :: String -> STR
 getCancelAlertText key = case key of
   "ZONE_CANCEL_TEXT_PICKUP" -> ZONE_CANCEL_TEXT_PICKUP
@@ -1456,7 +1515,7 @@ getRideCompletedConfig state = let
       finalAmount = state.data.endRideData.finalAmount,
       initialAmount = state.data.endRideData.finalAmount,
       fareUpdatedVisiblity = state.props.isFreeRide,
-      gradient =  ["#F5F8FF","#E2EAFF"],
+      gradient =  state.data.config.rideCompletedCardConfig.topCardGradient,
       infoPill {
         text = getString COLLECT_VIA_CASE_UPI,
         color = Color.white900,
@@ -1548,6 +1607,7 @@ getRideCompletedConfig state = let
     , textColor = if state.data.endRideData.actualTollCharge > 0.0 then Color.blue800 else Color.black600
     , imageVisibility = boolToVisibility $ state.data.endRideData.estimatedTollCharge > 0.0 && state.data.endRideData.actualTollCharge > 0.0
     }
+  , bottomBackground = state.data.config.rideCompletedCardConfig.bottomBackground
   }
   in config'
 
@@ -1900,12 +1960,12 @@ gotoButtonConfig state = PrimaryButton.config
     }
   , height = WRAP_CONTENT
   , gravity = CENTER
-  , cornerRadius = 22.0
+  , cornerRadius = 18.0
   , width = WRAP_CONTENT
   , padding = if (state.data.driverGotoState.isGotoEnabled) then Padding 16 11 16 11 else Padding 24 11 24 11
   , margin = MarginLeft 0
   , isPrefixImage = true
-  , stroke = "0," <> Color.black900
+  , stroke = "1,"<> Color.grey900
   , background = gotoTimer.bgColor
   , prefixImageConfig
     { imageUrl = gotoTimer.imageString
@@ -2061,7 +2121,7 @@ bgLocPopup state =
       , textStyle = Body5
       , margin = Margin 16 0 16 15 },
       option1 {
-        text = getString ENABLE_PERMISSION_STR
+        text = getString $ if EHC.os == "IOS" then CONTINUE else ENABLE_PERMISSION_STR
       , color = Color.yellow900
       , background = Color.black900
       , strokeColor = Color.transparent

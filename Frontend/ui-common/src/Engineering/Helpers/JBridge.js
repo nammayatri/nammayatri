@@ -228,6 +228,12 @@ const JOS = window.JOS;
 //   }
 // }
 
+
+export const validateEmail = function (email) {
+  const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  return re.test(String(email).toLowerCase());
+}
+
 export const requestLocationPermissionDriver = function (cb) {
   return function (action) {
     return function () {
@@ -318,6 +324,12 @@ export const isLocationPermissionEnabled = function (unit) {
     return window.JBridge.isLocationPermissionEnabled();
 
   };
+};
+
+export const openLocationSettings = function () {
+  if (window.JBridge.openLocationSettings) {
+    return window.JBridge.openLocationSettings();
+  }
 };
 
 export const isBackgroundLocationEnabled = function(unit) {
@@ -480,14 +492,14 @@ export const timePicker = function (cb) {
 export const datePicker = function (label) {
   return function (cb) {
     return function (action) {
-      return function () {
-        const callback = callbackMapper.map(function (resp, year, month, date) {
-          cb(action(resp)(year)(month)(date))();
-        });
-        if (window.__OS == "IOS") 
-          return window.JBridge.datePicker(callback, label, "DatePicker");
-        else
-          return window.JBridge.datePicker(callback, label);
+      return function (defaultDate) {
+        return function () {
+          const callback = callbackMapper.map(function (resp, year, month, date) {
+            cb(action(resp)(year)(month)(date))();
+          });
+          if (window.__OS == "IOS") window.JBridge.datePicker(callback, label, "DatePicker", defaultDate);
+          else window.JBridge.datePicker(callback, label);
+        };
       };
     };
   };
@@ -533,7 +545,9 @@ export const dateTimePicker = function (cb) {
 };
 
 export const disableActionEditText = function (str) {
-  return window.JBridge.disableActionEditText(str);
+  if (window.JBridge.disableActionEditText) {
+    window.JBridge.disableActionEditText(str);
+  }
 };
 
 export const getNearbyPlaces = function (cb) {
@@ -584,10 +598,14 @@ export const openUrlInApp = function (str) {
 
 export const openUrlInMailApp = function (str) {
   return function (unit) {
-    if (window.JBridge.openUrlInMailApp) {
-      return window.JBridge.openUrlInMailApp(str);
+    if (window.__OS == "IOS") {
+      const payload = btoa(str);
+      if (JBridge.canOpenApp(payload) == "1"){
+        JBridge.openApp(payload)
+      }
+    } else {
+      openUrlInApp(str)();
     }
-
   };
 };
 
@@ -737,8 +755,8 @@ export const drawRouteV2 = function (drawRouteConfig){
       if (window.JBridge.drawRouteV2){
         return window.JBridge.drawRouteV2(JSON.stringify(drawRouteConfig));
       } else {
-       let filteredConfig = configs.filter(function(config){if(config.routeKey === 'DEFAULT'){return config}});
-       let configToDraw = configs[0];
+        const filteredConfig = configs.filter(function(config){if(config.routeKey === "DEFAULT"){return config}});
+        let configToDraw = configs[0];
         if (filteredConfig.length > 0) {configToDraw = filteredConfig[0];}
         const { locations, style, routeColor, isActual, startMarker, endMarker, routeWidth, routeType, startMarkerLabel, endMarkerLabel, mapRouteConfig } = configToDraw
         return drawRoute(locations, style, routeColor, isActual, startMarker, endMarker, routeWidth, routeType, startMarkerLabel, endMarkerLabel, mapRouteConfig);
@@ -1538,11 +1556,15 @@ export const showDialer = function (str) {
 };
 
 export const startLocationPollingAPI = function () {
-  if (locationPollingTimer) {
-    clearTimeout(locationPollingTimer);
-    locationPollingTimer = undefined;
+  if (window.__OS == "IOS") {
+    window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"start_location_updates"}))()()
+  } else {
+    if (locationPollingTimer) {
+      clearTimeout(locationPollingTimer);
+      locationPollingTimer = undefined;
+    }
+    return window.JBridge.startLocationPollingAPI();
   }
-  return window.JBridge.startLocationPollingAPI();
 }
 
 export const generatePDF = function (state) {
@@ -1562,13 +1584,17 @@ function stopLocationService() {
 
 
 export const stopLocationPollingAPI = function () {
-  if (locationPollingTimer) return;
-  if (JBridge.isServiceRunning) {
-    if (JBridge.isServiceRunning(locationUpdateServiceName)) {
+  if (window.__OS == "IOS") {
+    window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"stop_location_updates"}))()()
+  } else {
+    if (locationPollingTimer) return;
+    if (JBridge.isServiceRunning) {
+      if (JBridge.isServiceRunning(locationUpdateServiceName)) {
+        stopLocationService();
+      }
+    } else {
       stopLocationService();
     }
-  } else {
-    stopLocationService();
   }
 }
 
@@ -1792,7 +1818,7 @@ export const storeCallBackBatteryUsagePermission = function (cb) {
 
 export const isBatteryPermissionEnabled = function (unit) {
   return function () {
-    return window.JBridge.isBatteryPermissionEnabled();
+    return window.__OS == "IOS" ? true : window.JBridge.isBatteryPermissionEnabled();
   };
 };
 
@@ -1810,10 +1836,19 @@ export const isInternetAvailable = function (unit) {
   };
 };
 
+export const emitJOSEvent = function (mapp, eventType, payload) {
+  console.log("payload", payload);
+  JOS.emitEvent(mapp)(eventType)(JSON.stringify(payload))()()
+};
+
+
 export const restartApp = function () {
   return function() {
     console.log("HERE IN RESET ===--->>")
-    if (JBridge.restartApp){
+    if (window.__OS == "IOS") {
+      emitJOSEvent("java","onEvent",{event: "show_splash"})
+      emitJOSEvent("java","onEvent",{event: "reboot"})
+    } else if (JBridge.restartApp){
       JBridge.restartApp();
     } else {
       JBridge.factoryResetApp();
@@ -1824,7 +1859,12 @@ export const restartApp = function () {
 // Deprecated
 export const factoryResetApp = function (str) {
   console.log("HERE IN RESET ===--->>")
-  JBridge.factoryResetApp()
+  if (window.__OS == "IOS") {
+    emitJOSEvent("java","onEvent",{event: "show_splash"})
+    emitJOSEvent("java","onEvent",{event: "reboot"})
+  } else {
+    JBridge.factoryResetApp()
+  }
 }
 
 export const uploadFile = function (unit) {
@@ -1870,7 +1910,7 @@ export const renderBase64Image = function (image) {
 
 export const isOverlayPermissionEnabled = function (unit) {
   return function () {
-    return JBridge.isOverlayPermissionEnabled();
+    return window.__OS == "IOS" ? true : JBridge.isOverlayPermissionEnabled();
   };
 };
 
@@ -2125,11 +2165,13 @@ export const initialWebViewSetUp = function (cb) {
     return function (action) {
       return function () {
         try {
-          const callback = callbackMapper.map(function (val) {
-            cb(action(val))();
-          });
+          if (JBridge.initialWebViewSetUp) {
+            const callback = callbackMapper.map(function (val) {
+              cb(action(val))();
+            });
 
-          return JBridge.initialWebViewSetUp(callback, id);
+            JBridge.initialWebViewSetUp(callback, id);
+          }
         } catch (err) {
           console.log("initialWebViewSetUp error " + err);
         }
@@ -2233,11 +2275,6 @@ export const cleverTapEvent = function (_event) {
   }
 }
 
-export const emitJOSEvent = function (mapp, eventType, payload) {
-  console.log("payload", payload);
-  JOS.emitEvent(mapp)(eventType)(JSON.stringify(payload))()()
-};
-
 export const getLocationNameV2 = function (lat, lon) { 
   try {
     if (JBridge.getLocationNameSDK) {
@@ -2311,12 +2348,6 @@ export const listDownloadedTranslationModels = function (cb) {
   }
 }
 
-export const horizontalScrollToPos = function (id, childId, scrollFocus) {
-  if (window.JBridge.horizontalScrollToPos) {
-    window.JBridge.horizontalScrollToPos(id, childId, scrollFocus);
-  }
-}
-
 // focus values --
 // left - 17
 // right - 66
@@ -2379,6 +2410,22 @@ export const scrollViewFocus = function (parentID) {
       console.log("error in scrollViewFocus : " + err);
     }
     return false;
+  }
+}
+
+export const horizontalScrollToPos = function (id, childId, idx, scrollFocus) {
+  if (window.JBridge.horizontalScrollToPos) {
+    window.JBridge.horizontalScrollToPos(id, childId, scrollFocus);
+  } else if (window.JBridge.focusChild) {
+    window.JBridge.focusChild(id, idx)
+  }
+}
+
+export const focusChild = function(id,idx) {
+  if (window.JBridge.focusChild) {
+    window.JBridge.focusChild(id, idx)
+  } else {
+    scrollViewFocus(id)(idx);
   }
 }
 
@@ -2523,11 +2570,7 @@ export const renderCameraProfilePicture = function (id) {
 
 export const isNotificationPermissionEnabled = function () {
   return function() {
-    if (window.JBridge.isNotificationPermissionEnabled) {
-      return window.JBridge.isNotificationPermissionEnabled();
-    } else {
-      return false;
-    }
+    return window.JBridge.isNotificationPermissionEnabled ? window.JBridge.isNotificationPermissionEnabled() : true;
   }
 }
 

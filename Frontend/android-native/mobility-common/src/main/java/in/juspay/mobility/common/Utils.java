@@ -163,6 +163,7 @@ public class Utils {
     public static void startCropImageActivity(Uri imageUri, Activity activity) {
         CropImage.activity(imageUri)
                 .setAllowFlipping(false)
+                .setCropMenuCropButtonTitle("Done")
                 .start(activity);
     }
 

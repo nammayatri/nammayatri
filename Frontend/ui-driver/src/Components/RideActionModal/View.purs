@@ -33,7 +33,7 @@ import Data.Tuple
 import Debug (spy)
 import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag, convertUTCtoISC)
+import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag, safeMarginBottomWithDefault, os, convertUTCtoISC)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getRideLabelData, getRequiredTag, getCurrentUTC, fetchImage, FetchImageFrom(..), dummyLabelConfig)
@@ -72,6 +72,7 @@ view push config = do
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
+    , padding $ PaddingBottom $ if os == "IOS" then safeMarginBottomWithDefault 24 else 0
     ][linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -110,7 +111,7 @@ messageButton push config =
   , margin $ MarginLeft 16
   , background if config.bookingFromOtherPlatform then Color.grey700 else Color.white900
   , stroke if config.bookingFromOtherPlatform then "1,"<> Color.grey900 else "1,"<> Color.black500
-  , cornerRadius 30.0
+  , cornerRadius 26.0
   , afterRender push $ const $ LoadMessages
   , onClick (\action -> if config.bookingFromOtherPlatform
                           then void $ pure $ JB.toast $ getString SOME_FEATURES_ARE_NOT_AVAILABLE_FOR_THIRD_PARTY_RIDES
@@ -124,20 +125,8 @@ messageButton push config =
       ]
   ]
   where 
-    visibility' = boolToVisibility $ (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer || config.rideType == ST.Rental ) && checkVersionForChat (getCurrentAndroidVersion (getMerchant FunctionCall))
+    visibility' = boolToVisibility $ (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer || config.rideType == ST.Rental )
 
-getCurrentAndroidVersion :: Merchant -> Int
-getCurrentAndroidVersion merchant =
-  case merchant of
-    NAMMAYATRI -> 54
-    YATRI -> 47
-    YATRISATHI -> 1
-    _ -> 1
-
-checkVersionForChat :: Int -> Boolean
-checkVersionForChat reqVersion =
-  let currVersion = unsafePerformEffect getVersionCode
-    in currVersion > reqVersion
 
 callButton :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 callButton push config =
@@ -150,7 +139,7 @@ callButton push config =
   , margin $ MarginLeft 8
   , background Color.white900
   , stroke $ "1,"<> Color.black500
-  , cornerRadius 30.0
+  , cornerRadius 26.0
   , alpha if config.accessibilityTag == Maybe.Just HEAR_IMPAIRMENT then 0.5 else 1.0
   , visibility $ boolToVisibility $ config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer || config.rideType == ST.Rental
   , onClick push (const $ CallCustomer)
@@ -317,10 +306,10 @@ openGoogleMap push config =
   ][  linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , background Color.blue900
+      , background config.appConfig.rideActionModelConfig.mapBackground
       , padding $ Padding 24 16 24 16
       , margin $ MarginRight 16
-      , cornerRadius 30.0
+      , cornerRadius 26.0
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const OnNavigate)
@@ -353,7 +342,7 @@ rideActionDataView push config =
     ][  linearLayout
           [ width (V 34)
           , height (V 4)
-          , cornerRadius 4.0
+          , cornerRadius 2.0
           , background Color.black500
           ][]
       , customerNameView push config

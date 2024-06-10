@@ -29,6 +29,7 @@ import Components.GenericHeader as GenericHeader
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
+import Data.Array as DA
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -43,6 +44,7 @@ import ConfigProvider
 import Mobility.Prelude
 import Components.OptionsMenu as OptionsMenuConfig
 import Components.BottomDrawerList as BottomDrawerList
+import Debug
 
 ------------------------------ primaryButtonConfig --------------------------------
 primaryButtonConfig :: ST.UploadDrivingLicenseState -> PrimaryButton.Config
@@ -53,7 +55,7 @@ primaryButtonConfig state = let
     id = "UploadDrivingLicenseButton"
     driverLicenseLengthValid = DS.length state.data.driver_license_number >= 9
     dateOfIssueNotEmpty = state.data.dateOfIssue /= Just ""
-    isDriverInfoValid = dobNotEmpty 
+    isDriverInfoValid = spy "driver_license_number" $ dobNotEmpty 
                         && driverLicenseLengthValid
                         && dateOfIssueNotEmpty
     primaryButtonConfig' = config 
@@ -62,12 +64,11 @@ primaryButtonConfig state = let
                            else getString UPLOAD_DRIVING_LICENSE
       }
       , width = MATCH_PARENT
-      , background = Color.black900
-      , margin = if imageUploadCondition then Margin 15 0 15 10 else Margin 15 0 15 30
+      , margin = if imageUploadCondition then Margin 15 0 15 (EHC.safeMarginBottomWithDefault 10) else Margin 15 0 15 (EHC.safeMarginBottomWithDefault 30)
       , cornerRadius = 6.0
       , height = V 50
       , isClickable = isDriverInfoValid
-      , alpha = if isDriverInfoValid then 1.0 else 0.8
+      , alpha = if isDriverInfoValid then 1.0 else 0.4
       }
   in primaryButtonConfig'
 
@@ -182,7 +183,7 @@ genericHeaderConfig state = let
   genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
-    , background = state.data.config.primaryBackground
+    , background = state.data.config.secondaryBackground
     , prefixImageConfig {
        visibility = VISIBLE
       , imageUrl = HU.fetchImage HU.FF_ASSET "ic_new_avatar"
@@ -229,6 +230,7 @@ bottomDrawerListConfig state = BottomDrawerList.config {
   titleText = getString CONTACT_SUPPORT_VIA,
   itemList = [
     {prefixImg : "ny_ic_whatsapp_black", title : "Whatsapp", desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.whatsappSupport, identifier : "whatsapp"},
-    {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.callSupport, identifier : "call"}
+    {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.callSupport, identifier : "call"},
+    {prefixImg : "ny_ic_mail", title : "Mail", desc : "Write an email for any help in uploading the documents" , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.emailSupport, identifier : "email"}
   ]
 }

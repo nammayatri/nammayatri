@@ -33,6 +33,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Data.Array as DA
 import Common.Types.App as Common
+import MerchantConfig.DefaultConfig as DC
 
 initData :: RegistrationScreenState
 initData = {
@@ -48,7 +49,7 @@ initData = {
         variantList : [],
         phoneNumber : "",
         lastUpdateTime : "",
-        cityConfig : dummyCityConfig,
+        cityConfig : DC.dummyCityConfig,
         config : getAppConfig appConfig,
         referralCode : "",
         referral_code_input_data : "",
@@ -74,58 +75,8 @@ initData = {
         driverEnabled : false,
         menuOptions : false,
         manageVehicle : false,
-        manageVehicleCategory : Nothing
+        manageVehicleCategory : Nothing,
+        isApplicationInVerification: false,
+        isProfileDetailsCompleted: false
       }
   }
-
-dummyCityConfig :: CityConfig
-dummyCityConfig = {
-                    cityName : "",
-                    mapImage : "",
-                    cityCode : "",
-                    showSubscriptions : false,
-                    enableAdvancedBooking : false,
-                    advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
-                    callDriverInfoPost : false,
-                    cityLat : 0.0,
-                    cityLong : 0.0,
-                    supportNumber : "",
-                    languageKey : "",
-                    showDriverReferral : false,
-                    showCustomerReferral : false,
-                    uploadRCandDL : true,
-                    enableYatriCoins : false,
-                    vehicleNSImg : "",
-                    registration : { 
-                      callSupport : false,
-                      supportWAN : "", 
-                      whatsappSupport : false
-                    },
-                    variantSubscriptionConfig : {
-                      enableVariantBasedSubscription : true,
-                      variantList : ["AutoCategory"],
-                      enableCabsSubscriptionView : false,
-                      staticViewPlans : []
-                    },
-                    showEarningSection: true,
-                    referral : {
-                        domain : ""
-                      , customerAppId : ""
-                      , driverAppId : ""
-                    },
-                    waitingCharges : 1.50,
-                    waitingChargesConfig : {
-                      cab : {
-                        freeSeconds : 5,
-                        perMinCharges : 1.0
-                      },
-                      auto : {
-                        freeSeconds : 3,
-                        perMinCharges : 1.50
-                      }
-                    },
-                    rateCardConfig : {
-                      showLearnMore : false,
-                      learnMoreVideoLink : ""
-                    }
-                  }

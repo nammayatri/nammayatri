@@ -40,6 +40,7 @@ import Mobility.Prelude
 import LocalStorage.Cache (getValueFromCache)
 import JBridge as JB
 import Engineering.Helpers.Utils (getFixedTwoDecimals)
+import Engineering.Helpers.Commons as EHC
 
 primaryButtonConfig :: Boolean -> PrimaryButtonConfig.Config
 primaryButtonConfig isActive =
@@ -74,7 +75,7 @@ genericHeaderConfig state =
   in
     GenericHeaderConfig.config
       { height = WRAP_CONTENT
-      , padding = if state.props.subView == ST.EARNINGS_VIEW then Padding 16 16 16 16 else PaddingVertical 5 5
+      , padding = if state.props.subView == ST.EARNINGS_VIEW then Padding 10 (EHC.safeMarginTopWithDefault 13) 0 5 else PaddingVertical (EHC.safeMarginTopWithDefault 5) 5
       , textConfig
         { text = headerText
         , color = Color.darkCharcoal
@@ -83,7 +84,6 @@ genericHeaderConfig state =
         { height = V 30
         , width = V 30
         , imageUrl = "ny_ic_chevron_left_black"
-        , visibility = boolToVisibility enableYatriCoins
         , enableRipple = true
         , margin = Margin 8 8 8 8
         , layoutMargin = Margin 4 4 4 4
@@ -220,6 +220,7 @@ calendarPrimaryButtonConfig state =
     , isClickable = isJust state.props.calendarState.startDate
     , alpha = if isJust state.props.calendarState.startDate then 1.0 else 0.5
     , enableRipple = isJust state.props.calendarState.startDate
+    , id = "CalendarViewApplyButton"
     }
 
 calendarCancelButtonConfig :: ST.DriverEarningsScreenState -> PrimaryButtonConfig.Config
@@ -234,6 +235,7 @@ calendarCancelButtonConfig state =
     , margin = Margin 16 0 16 12
     , isClickable = isJust state.props.calendarState.startDate
     , alpha = if isJust state.props.calendarState.startDate then 1.0 else 0.5
+    , id = "CalendarViewCancelButton"
     }
 
 coinsInfoCardConfig :: LazyCheck -> RequestInfoCard.Config

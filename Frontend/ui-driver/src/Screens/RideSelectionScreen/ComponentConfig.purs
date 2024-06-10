@@ -46,8 +46,8 @@ cancelButtonConfig state = let
     }
   in primaryButtonConfig'
 
-errorModalConfig :: ErrorModal.Config
-errorModalConfig = let
+errorModalConfig :: RideSelectionScreenState -> ErrorModal.Config
+errorModalConfig state  = let
   config = ErrorModal.config
   errorModalConfig' = config
     { imageConfig {
