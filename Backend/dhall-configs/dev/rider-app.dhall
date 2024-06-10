@@ -177,10 +177,14 @@ let hccfg =
 
 let kvConfigUpdateFrequency = +10
 
-let RiderJobType = < CheckPNAndSendSMS | OtherJobTypes >
+let RiderJobType =
+      < CheckPNAndSendSMS | ScheduledRideNotificationsToRider | OtherJobTypes >
 
 let jobInfoMapx =
       [ { mapKey = RiderJobType.CheckPNAndSendSMS, mapValue = True }
+      , { mapKey = RiderJobType.ScheduledRideNotificationsToRider
+        , mapValue = True
+        }
       , { mapKey = RiderJobType.OtherJobTypes, mapValue = False }
       ]
 
