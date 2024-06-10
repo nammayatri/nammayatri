@@ -92,6 +92,7 @@ import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time (Day, diffDays, fromGregorian)
+import Domain.Action.Beckn.Search
 import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
 import qualified Domain.Action.UI.DriverGoHomeRequest as DDGR
 import qualified Domain.Action.UI.DriverHomeLocation as DDHL
@@ -524,7 +525,8 @@ data ClearDuesRes = ClearDuesRes
 
 data GetCityReq = GetCityReq
   { lat :: Double,
-    lon :: Double
+    lon :: Double,
+    merchantId :: Maybe (Id DM.Merchant)
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1829,17 +1831,24 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = d
     )
     driverFees
 
-getCity :: (CacheFlow m r, EsqDBFlow m r) => GetCityReq -> m GetCityResp
+getCity :: GetCityReq -> Flow GetCityResp
 getCity req = do
-  let latlng = LatLong {lat = req.lat, lon = req.lon}
-  geometry <-
-    runInReplica $
-      QGeometry.findGeometriesContainingGps latlng >>= \case
-        [] -> do
-          pure Nothing
-        (g : _) -> pure $ Just g
-  let city = (.city) <$> geometry
-  pure $ GetCityResp {city = show <$> city, status = APISuccess.Success}
+  let latLng = LatLong {lat = req.lat, lon = req.lon}
+  case req.merchantId of -- only for backward compatibility, Nothing part to be removed later
+    Just mId -> do
+      merchant <- CQM.findById mId >>= fromMaybeM (MerchantDoesNotExist mId.getId)
+      nearestAndSourceCity <- getNearestOperatingAndSourceCity merchant latLng
+      return GetCityResp {city = Just $ show nearestAndSourceCity.nearestOperatingCity.city, status = APISuccess.Success}
+    Nothing -> do
+      geometry <- runInReplica $ QGeometry.findGeometriesContainingGps latLng
+      case filter (\geom -> geom.city /= Context.AnyCity) geometry of
+        [] ->
+          find (\geom -> geom.city == Context.AnyCity) geometry & \case
+            Just anyCityGeom -> return GetCityResp {city = Just $ show anyCityGeom.city, status = APISuccess.Success}
+            Nothing -> do
+              logError $ "No geometry found for latLong: " <> show latLng
+              throwError LocationUnserviceable
+        (g : _) -> return GetCityResp {city = Just $ show g.city, status = APISuccess.Success}
 
 data DriverFeeResp = DriverFeeResp
   { createdAt :: UTCTime, -- window start day

@@ -16,6 +16,7 @@ module Domain.Action.Beckn.Search
   ( DSearchReq (..),
     DSearchRes (..),
     NearestDriverInfo (..),
+    getNearestOperatingAndSourceCity,
     handler,
     validateRequest,
     buildEstimate,
