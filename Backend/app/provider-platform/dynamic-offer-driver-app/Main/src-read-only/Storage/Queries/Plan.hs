@@ -27,10 +27,10 @@ createMany = traverse_ create
 findByIdAndPaymentModeWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Plan.Plan -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> m (Maybe Domain.Types.Plan.Plan))
-findByIdAndPaymentModeWithServiceName (Kernel.Types.Id.Id id) paymentMode serviceName = do
+findByIdAndPaymentModeWithServiceName id paymentMode serviceName = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id,
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id),
           Se.Is Beam.paymentMode $ Se.Eq paymentMode,
           Se.Is Beam.serviceName $ Se.Eq serviceName
         ]
@@ -39,10 +39,10 @@ findByIdAndPaymentModeWithServiceName (Kernel.Types.Id.Id id) paymentMode servic
 findByMerchantOpCityIdAndTypeWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PlanType -> Domain.Types.Plan.ServiceNames -> m [Domain.Types.Plan.Plan])
-findByMerchantOpCityIdAndTypeWithServiceName (Kernel.Types.Id.Id merchantOpCityId) planType serviceName = do
+findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId planType serviceName = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOpCityId $ Se.Eq merchantOpCityId,
+        [ Se.Is Beam.merchantOpCityId $ Se.Eq (Kernel.Types.Id.getId merchantOpCityId),
           Se.Is Beam.planType $ Se.Eq planType,
           Se.Is Beam.serviceName $ Se.Eq serviceName
         ]
@@ -51,10 +51,10 @@ findByMerchantOpCityIdAndTypeWithServiceName (Kernel.Types.Id.Id merchantOpCityI
 findByMerchantOpCityIdAndTypeWithServiceNameAndVariant ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant -> m [Domain.Types.Plan.Plan])
-findByMerchantOpCityIdAndTypeWithServiceNameAndVariant (Kernel.Types.Id.Id merchantOpCityId) paymentMode serviceName vehicleVariant = do
+findByMerchantOpCityIdAndTypeWithServiceNameAndVariant merchantOpCityId paymentMode serviceName vehicleVariant = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOpCityId $ Se.Eq merchantOpCityId,
+        [ Se.Is Beam.merchantOpCityId $ Se.Eq (Kernel.Types.Id.getId merchantOpCityId),
           Se.Is Beam.paymentMode $ Se.Eq paymentMode,
           Se.Is Beam.serviceName $ Se.Eq serviceName,
           Se.Is Beam.vehicleVariant $ Se.Eq vehicleVariant
@@ -64,16 +64,16 @@ findByMerchantOpCityIdAndTypeWithServiceNameAndVariant (Kernel.Types.Id.Id merch
 findByMerchantOpCityIdWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.ServiceNames -> m [Domain.Types.Plan.Plan])
-findByMerchantOpCityIdWithServiceName (Kernel.Types.Id.Id merchantOpCityId) serviceName = do
+findByMerchantOpCityIdWithServiceName merchantOpCityId serviceName = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOpCityId $ Se.Eq merchantOpCityId,
+        [ Se.Is Beam.merchantOpCityId $ Se.Eq (Kernel.Types.Id.getId merchantOpCityId),
           Se.Is Beam.serviceName $ Se.Eq serviceName
         ]
     ]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Plan.Plan -> m (Maybe Domain.Types.Plan.Plan))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Plan.Plan -> m ())
 updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do

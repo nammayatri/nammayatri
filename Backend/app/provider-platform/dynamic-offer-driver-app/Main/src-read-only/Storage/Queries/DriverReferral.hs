@@ -23,13 +23,13 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Driv
 createMany = traverse_ create
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverReferral.DriverReferral))
-findById (Kernel.Types.Id.Id driverId) = do findOneWithKV [Se.Is Beam.driverId $ Se.Eq driverId]
+findById driverId = do findOneWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findByRefferalCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverReferral.DriverReferral -> m (Maybe Domain.Types.DriverReferral.DriverReferral))
-findByRefferalCode (Kernel.Types.Id.Id referralCode) = do findOneWithKV [Se.Is Beam.referralCode $ Se.Eq referralCode]
+findByRefferalCode referralCode = do findOneWithKV [Se.Is Beam.referralCode $ Se.Eq (Kernel.Types.Id.getId referralCode)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverReferral.DriverReferral -> m (Maybe Domain.Types.DriverReferral.DriverReferral))
-findByPrimaryKey (Kernel.Types.Id.Id referralCode) = do findOneWithKV [Se.And [Se.Is Beam.referralCode $ Se.Eq referralCode]]
+findByPrimaryKey referralCode = do findOneWithKV [Se.And [Se.Is Beam.referralCode $ Se.Eq (Kernel.Types.Id.getId referralCode)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverReferral.DriverReferral -> m ())
 updateByPrimaryKey (Domain.Types.DriverReferral.DriverReferral {..}) = do

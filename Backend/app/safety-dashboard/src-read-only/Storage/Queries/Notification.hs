@@ -40,7 +40,7 @@ findByReceiverId limit offset receiverId = do findAllWithOptionsKV [Se.And [Se.I
 findByReceiverIdAndId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Notification.Notification -> m (Maybe Domain.Types.Notification.Notification))
-findByReceiverIdAndId receiverId (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.receiverId $ Se.Eq receiverId, Se.Is Beam.id $ Se.Eq id]]
+findByReceiverIdAndId receiverId id = do findOneWithKV [Se.And [Se.Is Beam.receiverId $ Se.Eq receiverId, Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 findByReceiverIdAndReadStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m ([Domain.Types.Notification.Notification]))
 findByReceiverIdAndReadStatus limit offset receiverId readStatus = do
@@ -55,10 +55,10 @@ findByReceiverIdAndReadStatus limit offset receiverId readStatus = do
     offset
 
 updateReadStatusById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Notification.Notification -> m ())
-updateReadStatusById readStatus (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.readStatus readStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+updateReadStatusById readStatus id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.readStatus readStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Notification.Notification -> m (Maybe Domain.Types.Notification.Notification))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Notification.Notification -> m ())
 updateByPrimaryKey (Domain.Types.Notification.Notification {..}) = do

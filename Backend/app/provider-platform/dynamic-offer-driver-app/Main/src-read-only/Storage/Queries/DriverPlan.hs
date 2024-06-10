@@ -29,10 +29,10 @@ createMany = traverse_ create
 findByDriverIdWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Plan.ServiceNames -> m (Maybe Domain.Types.DriverPlan.DriverPlan))
-findByDriverIdWithServiceName (Kernel.Types.Id.Id driverId) serviceName = do
+findByDriverIdWithServiceName driverId serviceName = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.driverId $ Se.Eq driverId,
+        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
           Se.Is Beam.serviceName $ Se.Eq (Kernel.Prelude.Just serviceName)
         ]
     ]
@@ -51,23 +51,23 @@ findByMandateIdAndServiceName mandateId serviceName = do
 updateEnableServiceUsageChargeByDriverIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Plan.ServiceNames -> m ())
-updateEnableServiceUsageChargeByDriverIdAndServiceName enableServiceUsageCharge (Kernel.Types.Id.Id driverId) serviceName = do
+updateEnableServiceUsageChargeByDriverIdAndServiceName enableServiceUsageCharge driverId serviceName = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.enableServiceUsageCharge (Kernel.Prelude.Just enableServiceUsageCharge),
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.serviceName $ Se.Eq (Kernel.Prelude.Just serviceName)]]
+    [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.serviceName $ Se.Eq (Kernel.Prelude.Just serviceName)]]
 
 updateLastPaymentLinkSentAtDateByDriverIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Plan.ServiceNames -> m ())
-updateLastPaymentLinkSentAtDateByDriverIdAndServiceName lastPaymentLinkSentAtIstDate (Kernel.Types.Id.Id driverId) serviceName = do
+updateLastPaymentLinkSentAtDateByDriverIdAndServiceName lastPaymentLinkSentAtIstDate driverId serviceName = do
   _now <- getCurrentTime
   updateOneWithKV
     [Se.Set Beam.lastPaymentLinkSentAtIstDate lastPaymentLinkSentAtIstDate, Se.Set Beam.updatedAt _now]
     [ Se.And
-        [ Se.Is Beam.driverId $ Se.Eq driverId,
+        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
           Se.Is Beam.serviceName $ Se.Eq (Kernel.Prelude.Just serviceName)
         ]
     ]
@@ -75,12 +75,12 @@ updateLastPaymentLinkSentAtDateByDriverIdAndServiceName lastPaymentLinkSentAtIst
 updateMandateIdByDriverIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Mandate.Mandate) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Plan.ServiceNames -> m ())
-updateMandateIdByDriverIdAndServiceName mandateId (Kernel.Types.Id.Id driverId) serviceName = do
+updateMandateIdByDriverIdAndServiceName mandateId driverId serviceName = do
   _now <- getCurrentTime
   updateOneWithKV
     [Se.Set Beam.mandateId (Kernel.Types.Id.getId <$> mandateId), Se.Set Beam.updatedAt _now]
     [ Se.And
-        [ Se.Is Beam.driverId $ Se.Eq driverId,
+        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
           Se.Is Beam.serviceName $ Se.Eq (Kernel.Prelude.Just serviceName)
         ]
     ]
@@ -88,12 +88,12 @@ updateMandateIdByDriverIdAndServiceName mandateId (Kernel.Types.Id.Id driverId) 
 updateMandateSetupDateByDriverIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Plan.ServiceNames -> m ())
-updateMandateSetupDateByDriverIdAndServiceName mandateSetupDate (Kernel.Types.Id.Id driverId) serviceName = do
+updateMandateSetupDateByDriverIdAndServiceName mandateSetupDate driverId serviceName = do
   _now <- getCurrentTime
   updateOneWithKV
     [Se.Set Beam.mandateSetupDate mandateSetupDate, Se.Set Beam.updatedAt _now]
     [ Se.And
-        [ Se.Is Beam.driverId $ Se.Eq driverId,
+        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
           Se.Is Beam.serviceName $ Se.Eq (Kernel.Prelude.Just serviceName)
         ]
     ]
@@ -101,12 +101,18 @@ updateMandateSetupDateByDriverIdAndServiceName mandateSetupDate (Kernel.Types.Id
 updatePaymentModeByDriverIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.Plan.PaymentMode -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Plan.ServiceNames -> m ())
-updatePaymentModeByDriverIdAndServiceName planType (Kernel.Types.Id.Id driverId) serviceName = do
+updatePaymentModeByDriverIdAndServiceName planType driverId serviceName = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.planType planType, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.serviceName $ Se.Eq (Kernel.Prelude.Just serviceName)]]
+  updateOneWithKV
+    [Se.Set Beam.planType planType, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
+          Se.Is Beam.serviceName $ Se.Eq (Kernel.Prelude.Just serviceName)
+        ]
+    ]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverPlan.DriverPlan))
-findByPrimaryKey (Kernel.Types.Id.Id driverId) = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId]]
+findByPrimaryKey driverId = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverPlan.DriverPlan -> m ())
 updateByPrimaryKey (Domain.Types.DriverPlan.DriverPlan {..}) = do

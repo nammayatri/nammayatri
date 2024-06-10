@@ -25,29 +25,34 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Driv
 createMany = traverse_ create
 
 findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.DriverModuleCompletion.DriverModuleCompletion])
-findByDriverId (Kernel.Types.Id.Id driverId) = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq driverId]
+findByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findByDriverIdAndModuleId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe Domain.Types.DriverModuleCompletion.DriverModuleCompletion))
-findByDriverIdAndModuleId (Kernel.Types.Id.Id driverId) (Kernel.Types.Id.Id moduleId) = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.moduleId $ Se.Eq moduleId]]
+findByDriverIdAndModuleId driverId moduleId = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.moduleId $ Se.Eq (Kernel.Types.Id.getId moduleId)]]
 
 findByDriverIdAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DriverModuleCompletion.ModuleCompletionStatus -> m [Domain.Types.DriverModuleCompletion.DriverModuleCompletion])
-findByDriverIdAndStatus (Kernel.Types.Id.Id driverId) status = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.status $ Se.Eq status]]
+findByDriverIdAndStatus driverId status = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.status $ Se.Eq status]]
 
 updateEntitiesCompleted ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> [Domain.Types.DriverModuleCompletion.ModuleCompletionEntity] -> Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m ())
-updateEntitiesCompleted completedAt entitiesCompleted (Kernel.Types.Id.Id completionId) = do
+updateEntitiesCompleted completedAt entitiesCompleted completionId = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.completedAt completedAt, Se.Set Beam.entitiesCompleted entitiesCompleted, Se.Set Beam.updatedAt _now] [Se.Is Beam.completionId $ Se.Eq completionId]
+  updateOneWithKV
+    [ Se.Set Beam.completedAt completedAt,
+      Se.Set Beam.entitiesCompleted entitiesCompleted,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.completionId $ Se.Eq (Kernel.Types.Id.getId completionId)]
 
 updatedCompletedAt ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> [Domain.Types.DriverModuleCompletion.ModuleCompletionEntity] -> Domain.Types.DriverModuleCompletion.ModuleCompletionStatus -> Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal -> Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m ())
-updatedCompletedAt completedAt entitiesCompleted status ratingAtTheTimeOfCompletion (Kernel.Types.Id.Id completionId) = do
+updatedCompletedAt completedAt entitiesCompleted status ratingAtTheTimeOfCompletion completionId = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.completedAt completedAt,
@@ -56,12 +61,12 @@ updatedCompletedAt completedAt entitiesCompleted status ratingAtTheTimeOfComplet
       Se.Set Beam.ratingAtTheTimeOfCompletion ratingAtTheTimeOfCompletion,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.Is Beam.completionId $ Se.Eq completionId]
+    [Se.Is Beam.completionId $ Se.Eq (Kernel.Types.Id.getId completionId)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m (Maybe Domain.Types.DriverModuleCompletion.DriverModuleCompletion))
-findByPrimaryKey (Kernel.Types.Id.Id completionId) = do findOneWithKV [Se.And [Se.Is Beam.completionId $ Se.Eq completionId]]
+findByPrimaryKey completionId = do findOneWithKV [Se.And [Se.Is Beam.completionId $ Se.Eq (Kernel.Types.Id.getId completionId)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m ())
 updateByPrimaryKey (Domain.Types.DriverModuleCompletion.DriverModuleCompletion {..}) = do

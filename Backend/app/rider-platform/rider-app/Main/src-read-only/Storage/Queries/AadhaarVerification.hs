@@ -24,18 +24,18 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Aadh
 createMany = traverse_ create
 
 deleteByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-deleteByPersonId (Kernel.Types.Id.Id personId) = do deleteWithKV [Se.Is Beam.personId $ Se.Eq personId]
+deleteByPersonId personId = do deleteWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
 findByAadhaarNumberHash :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash -> m (Maybe Domain.Types.AadhaarVerification.AadhaarVerification))
 findByAadhaarNumberHash aadhaarNumberHash = do findOneWithKV [Se.Is Beam.aadhaarNumberHash $ Se.Eq aadhaarNumberHash]
 
 findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.AadhaarVerification.AadhaarVerification))
-findByPersonId (Kernel.Types.Id.Id personId) = do findOneWithKV [Se.Is Beam.personId $ Se.Eq personId]
+findByPersonId personId = do findOneWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
 findByPhoneNumberAndUpdate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash -> Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-findByPhoneNumberAndUpdate personName personGender personDob aadhaarNumberHash isVerified (Kernel.Types.Id.Id personId) = do
+findByPhoneNumberAndUpdate personName personGender personDob aadhaarNumberHash isVerified personId = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.personName personName,
@@ -45,15 +45,15 @@ findByPhoneNumberAndUpdate personName personGender personDob aadhaarNumberHash i
       Se.Set Beam.isVerified isVerified,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.Is Beam.personId $ Se.Eq personId]
+    [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
 updatePersonImagePath :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updatePersonImagePath personImagePath (Kernel.Types.Id.Id personId) = do
+updatePersonImagePath personImagePath personId = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.personImagePath personImagePath, Se.Set Beam.updatedAt _now] [Se.Is Beam.personId $ Se.Eq personId]
+  updateOneWithKV [Se.Set Beam.personImagePath personImagePath, Se.Set Beam.updatedAt _now] [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.AadhaarVerification.AadhaarVerification))
-findByPrimaryKey (Kernel.Types.Id.Id personId) = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq personId]]
+findByPrimaryKey personId = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.AadhaarVerification.AadhaarVerification -> m ())
 updateByPrimaryKey (Domain.Types.AadhaarVerification.AadhaarVerification {..}) = do

@@ -23,7 +23,7 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Vehi
 createMany = traverse_ create
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleDetails.VehicleDetails -> m (Maybe Domain.Types.VehicleDetails.VehicleDetails))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByMake :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m [Domain.Types.VehicleDetails.VehicleDetails])
 findByMake make = do findAllWithKV [Se.Is Beam.make $ Se.Eq make]
@@ -32,7 +32,7 @@ findByMakeAndModel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.
 findByMakeAndModel make model = do findOneWithKV [Se.And [Se.Is Beam.make $ Se.Eq make, Se.Is Beam.model $ Se.Eq model]]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleDetails.VehicleDetails -> m (Maybe Domain.Types.VehicleDetails.VehicleDetails))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleDetails.VehicleDetails -> m ())
 updateByPrimaryKey (Domain.Types.VehicleDetails.VehicleDetails {..}) = do

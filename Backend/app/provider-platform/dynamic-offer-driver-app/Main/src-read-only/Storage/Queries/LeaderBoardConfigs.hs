@@ -24,23 +24,23 @@ createMany = traverse_ create
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs])
-findAllByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
+findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findLeaderBoardConfigbyType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.LeaderBoardConfigs.LeaderBoardType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs))
-findLeaderBoardConfigbyType leaderBoardType (Kernel.Types.Id.Id merchantOperatingCityId) = do
+findLeaderBoardConfigbyType leaderBoardType merchantOperatingCityId = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.leaderBoardType $ Se.Eq leaderBoardType,
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
         ]
     ]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs -> m (Maybe Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs -> m ())
 updateByPrimaryKey (Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs {..}) = do

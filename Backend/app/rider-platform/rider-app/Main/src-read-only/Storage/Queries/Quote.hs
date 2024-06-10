@@ -22,13 +22,13 @@ import Storage.Queries.Transformers.Quote
 import qualified Storage.Queries.Transformers.Quote
 
 findAllBySRId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Quote.Quote])
-findAllBySRId (Kernel.Types.Id.Id requestId) = do findAllWithKV [Se.Is Beam.requestId $ Se.Eq requestId]
+findAllBySRId requestId = do findAllWithKV [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Quote.Quote -> m (Maybe Domain.Types.Quote.Quote))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Quote.Quote -> m (Maybe Domain.Types.Quote.Quote))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Quote.Quote -> m ())
 updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do

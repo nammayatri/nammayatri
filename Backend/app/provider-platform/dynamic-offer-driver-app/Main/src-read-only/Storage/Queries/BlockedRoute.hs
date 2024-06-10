@@ -28,7 +28,7 @@ findAllBlockedRoutesByMerchantOperatingCity ::
 findAllBlockedRoutesByMerchantOperatingCity merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BlockedRoute.BlockedRoute -> m (Maybe Domain.Types.BlockedRoute.BlockedRoute))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BlockedRoute.BlockedRoute -> m ())
 updateByPrimaryKey (Domain.Types.BlockedRoute.BlockedRoute {..}) = do

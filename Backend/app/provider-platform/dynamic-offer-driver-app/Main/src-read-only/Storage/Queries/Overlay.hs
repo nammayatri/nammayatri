@@ -28,10 +28,10 @@ createMany = traverse_ create
 deleteByOverlayKeyMerchantOpCityIdUdf ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
-deleteByOverlayKeyMerchantOpCityIdUdf (Kernel.Types.Id.Id merchantOperatingCityId) overlayKey udf1 = do
+deleteByOverlayKeyMerchantOpCityIdUdf merchantOperatingCityId overlayKey udf1 = do
   deleteWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.overlayKey $ Se.Eq overlayKey,
           Se.Is Beam.udf1 $ Se.Eq udf1
         ]
@@ -40,24 +40,24 @@ deleteByOverlayKeyMerchantOpCityIdUdf (Kernel.Types.Id.Id merchantOperatingCityI
 findAllByLanguage ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Types.Language -> m [Domain.Types.Overlay.Overlay])
-findAllByLanguage (Kernel.Types.Id.Id merchantOperatingCityId) language = do
+findAllByLanguage merchantOperatingCityId language = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.language $ Se.Eq language
         ]
     ]
 
 findAllByMerchantOpCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.Overlay.Overlay])
-findAllByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
+findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findAllByOverlayKeyUdf ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.Overlay.Overlay])
-findAllByOverlayKeyUdf (Kernel.Types.Id.Id merchantOperatingCityId) overlayKey udf1 = do
+findAllByOverlayKeyUdf merchantOperatingCityId overlayKey udf1 = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.overlayKey $ Se.Eq overlayKey,
           Se.Is Beam.udf1 $ Se.Eq udf1
         ]
@@ -66,10 +66,10 @@ findAllByOverlayKeyUdf (Kernel.Types.Id.Id merchantOperatingCityId) overlayKey u
 findByMerchantOpCityIdPNKeyLangaugeUdf ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.External.Types.Language -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.Overlay.Overlay))
-findByMerchantOpCityIdPNKeyLangaugeUdf (Kernel.Types.Id.Id merchantOperatingCityId) overlayKey language udf1 = do
+findByMerchantOpCityIdPNKeyLangaugeUdf merchantOperatingCityId overlayKey language udf1 = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.overlayKey $ Se.Eq overlayKey,
           Se.Is Beam.language $ Se.Eq language,
           Se.Is Beam.udf1 $ Se.Eq udf1

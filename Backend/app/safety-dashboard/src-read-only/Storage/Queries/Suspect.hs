@@ -56,12 +56,12 @@ updateFlaggedCounterByVoterId flaggedCounter flaggedStatus flaggedBy voterId = d
     [Se.Is Beam.voterId $ Se.Eq voterId]
 
 updateFlaggedStatusById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Suspect.FlaggedStatus -> Kernel.Types.Id.Id Domain.Types.Suspect.Suspect -> m ())
-updateFlaggedStatusById flaggedStatus (Kernel.Types.Id.Id id) = do
+updateFlaggedStatusById flaggedStatus id = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.flaggedStatus flaggedStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateWithKV [Se.Set Beam.flaggedStatus flaggedStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Suspect.Suspect -> m (Maybe Domain.Types.Suspect.Suspect))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Suspect.Suspect -> m ())
 updateByPrimaryKey (Domain.Types.Suspect.Suspect {..}) = do

@@ -27,64 +27,64 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Pers
 createMany = traverse_ create
 
 deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-deleteById (Kernel.Types.Id.Id id) = do deleteWithKV [Se.Is Beam.id $ Se.Eq id]
+deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findAllByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> [Domain.Types.Person.Role] -> m [Domain.Types.Person.Person])
-findAllByMerchantId (Kernel.Types.Id.Id merchantId) role = do findAllWithDb [Se.And [Se.Is Beam.merchantId $ Se.Eq merchantId, Se.Is Beam.role $ Se.In role]]
+findAllByMerchantId merchantId role = do findAllWithDb [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId), Se.Is Beam.role $ Se.In role]]
 
 findByEmailAndMerchant ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.Person.Person))
-findByEmailAndMerchant email (Kernel.Types.Id.Id merchantId) = do findOneWithKV [Se.And [Se.Is Beam.email $ Se.Eq email, Se.Is Beam.merchantId $ Se.Eq merchantId]]
+findByEmailAndMerchant email merchantId = do findOneWithKV [Se.And [Se.Is Beam.email $ Se.Eq email, Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)]]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Person.Person))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByIdAndRoleAndMerchantId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Person.Role -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.Person.Person))
-findByIdAndRoleAndMerchantId (Kernel.Types.Id.Id id) role (Kernel.Types.Id.Id merchantId) = do
+findByIdAndRoleAndMerchantId id role merchantId = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id,
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id),
           Se.Is Beam.role $ Se.Eq role,
-          Se.Is Beam.merchantId $ Se.Eq merchantId
+          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)
         ]
     ]
 
 findByIdentifierAndMerchant ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.Person.Person))
-findByIdentifierAndMerchant identifier (Kernel.Types.Id.Id merchantId) = do findOneWithKV [Se.And [Se.Is Beam.identifier $ Se.Eq identifier, Se.Is Beam.merchantId $ Se.Eq merchantId]]
+findByIdentifierAndMerchant identifier merchantId = do findOneWithKV [Se.And [Se.Is Beam.identifier $ Se.Eq identifier, Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)]]
 
 setIsNewFalse :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-setIsNewFalse isNew (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.isNew isNew, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+setIsNewFalse isNew id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.isNew isNew, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateDeviceToken ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.External.Notification.FCM.Types.FCMRecipientToken -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateDeviceToken deviceToken (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.deviceToken deviceToken, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+updateDeviceToken deviceToken id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.deviceToken deviceToken, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateName firstName (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.firstName firstName, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+updateName firstName id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.firstName firstName, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateTotalEarnedCoins :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateTotalEarnedCoins totalEarnedCoins (Kernel.Types.Id.Id id) = do
+updateTotalEarnedCoins totalEarnedCoins id = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.totalEarnedCoins totalEarnedCoins, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateWithKV [Se.Set Beam.totalEarnedCoins totalEarnedCoins, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateUsedCoins :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateUsedCoins usedCoins (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.usedCoins usedCoins, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+updateUsedCoins usedCoins id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.usedCoins usedCoins, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateWhatsappNotificationEnrollStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.External.Whatsapp.Interface.Types.OptApiMethods -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateWhatsappNotificationEnrollStatus whatsappNotificationEnrollStatus (Kernel.Types.Id.Id id) = do
+updateWhatsappNotificationEnrollStatus whatsappNotificationEnrollStatus id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.whatsappNotificationEnrollStatus whatsappNotificationEnrollStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateOneWithKV [Se.Set Beam.whatsappNotificationEnrollStatus whatsappNotificationEnrollStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Person.Person))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Person.Person -> m ())
 updateByPrimaryKey (Domain.Types.Person.Person {..}) = do

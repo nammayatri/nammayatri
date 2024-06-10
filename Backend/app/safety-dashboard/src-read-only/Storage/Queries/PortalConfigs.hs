@@ -25,7 +25,7 @@ findByConfigName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelu
 findByConfigName configName = do findOneWithKV [Se.Is Beam.configName $ Se.Eq configName]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PortalConfigs.PortalConfigs -> m (Maybe Domain.Types.PortalConfigs.PortalConfigs))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PortalConfigs.PortalConfigs -> m ())
 updateByPrimaryKey (Domain.Types.PortalConfigs.PortalConfigs {..}) = do

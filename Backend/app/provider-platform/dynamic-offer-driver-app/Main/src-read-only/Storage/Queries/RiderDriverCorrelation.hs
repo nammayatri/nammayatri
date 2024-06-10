@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.RiderDriverCorrelation (module Storage.Queries.RiderDriverCorrelation, module ReExport) where
+module Storage.Queries.RiderDriverCorrelation where
 
 import qualified Domain.Types.Person
 import qualified Domain.Types.RiderDetails
@@ -16,7 +16,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RiderDriverCorrelation as Beam
-import Storage.Queries.RiderDriverCorrelationExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation -> m ())
 create = createWithKV
@@ -77,3 +76,32 @@ updateByPrimaryKey (Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation {
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.riderDetailId $ Se.Eq (Kernel.Types.Id.getId riderDetailId)]]
+
+instance FromTType' Beam.RiderDriverCorrelation Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation where
+  fromTType' (Beam.RiderDriverCorrelationT {..}) = do
+    pure $
+      Just
+        Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation
+          { createdAt = createdAt,
+            driverId = Kernel.Types.Id.Id driverId,
+            favourite = favourite,
+            merchantId = Kernel.Types.Id.Id merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
+            riderDetailId = Kernel.Types.Id.Id riderDetailId,
+            updatedAt = updatedAt
+          }
+
+instance ToTType' Beam.RiderDriverCorrelation Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation where
+  toTType' (Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation {..}) = do
+    Beam.RiderDriverCorrelationT
+      { Beam.createdAt = createdAt,
+        Beam.driverId = Kernel.Types.Id.getId driverId,
+        Beam.favourite = favourite,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.mobileNumberEncrypted = mobileNumber & unEncrypted . encrypted,
+        Beam.mobileNumberHash = mobileNumber & hash,
+        Beam.riderDetailId = Kernel.Types.Id.getId riderDetailId,
+        Beam.updatedAt = updatedAt
+      }

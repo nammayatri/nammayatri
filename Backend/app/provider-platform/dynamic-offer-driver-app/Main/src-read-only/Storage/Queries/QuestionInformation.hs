@@ -26,17 +26,17 @@ createMany = traverse_ create
 findByIdAndLanguage ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> Kernel.External.Types.Language -> m (Maybe Domain.Types.QuestionInformation.QuestionInformation))
-findByIdAndLanguage (Kernel.Types.Id.Id questionId) language = do findOneWithKV [Se.And [Se.Is Beam.questionId $ Se.Eq questionId, Se.Is Beam.language $ Se.Eq language]]
+findByIdAndLanguage questionId language = do findOneWithKV [Se.And [Se.Is Beam.questionId $ Se.Eq (Kernel.Types.Id.getId questionId), Se.Is Beam.language $ Se.Eq language]]
 
 getAllTranslationsByQuestionId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m [Domain.Types.QuestionInformation.QuestionInformation])
-getAllTranslationsByQuestionId (Kernel.Types.Id.Id questionId) = do findAllWithKV [Se.Is Beam.questionId $ Se.Eq questionId]
+getAllTranslationsByQuestionId questionId = do findAllWithKV [Se.Is Beam.questionId $ Se.Eq (Kernel.Types.Id.getId questionId)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m (Maybe Domain.Types.QuestionInformation.QuestionInformation))
-findByPrimaryKey language (Kernel.Types.Id.Id questionId) = do findOneWithKV [Se.And [Se.Is Beam.language $ Se.Eq language, Se.Is Beam.questionId $ Se.Eq questionId]]
+findByPrimaryKey language questionId = do findOneWithKV [Se.And [Se.Is Beam.language $ Se.Eq language, Se.Is Beam.questionId $ Se.Eq (Kernel.Types.Id.getId questionId)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.QuestionInformation.QuestionInformation -> m ())
 updateByPrimaryKey (Domain.Types.QuestionInformation.QuestionInformation {..}) = do
