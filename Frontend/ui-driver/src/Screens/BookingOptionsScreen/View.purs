@@ -20,7 +20,6 @@ import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Data.Array as DA
 import Mobility.Prelude as MP
-import Data.Array (elem)
 
 screen :: ST.BookingOptionsScreenState -> Screen Action ST.BookingOptionsScreenState ScreenOutput
 screen initialState =
@@ -66,11 +65,11 @@ downgradeVehicleView push state =
       downgradeFrom = case state.data.vehicleType of
                         "SUV" -> getString AC_SUV
                         "BIKE" -> "Bike"
-                        "AMBULANCE_TAXI" -> "Ambulance Taxi"
-                        "AMBULANCE_TAXI_OXY" -> "Ambulance Taxi with Oxygen"
-                        "AMBULANCE_AC" -> "Ambulance AC"
-                        "AMBULANCE_AC_OXY" -> "Ambulance AC with Oxygen"
-                        "AMBULANCE_VENTILATOR" -> "Ambulance with Ventilator"
+                        "AMBULANCE_TAXI" -> "AMBULANCE_TAXI"
+                        "AMBULANCE_TAXI_OXY" -> "AMBULANCE_TAXI_OXY"
+                        "AMBULANCE_AC" -> "AMBULANCE_AC"
+                        "AMBULANCE_AC_OXY" -> "AMBULANCE_AC_OXY"
+                        "AMBULANCE_VENTILATOR" -> "AMBULANCE_VENTILATOR"
                         _     -> getString AC_CAB
       downgradeTo = case state.data.vehicleType of
                       "SUV" -> getString AC_CAB
