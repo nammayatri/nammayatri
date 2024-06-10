@@ -280,11 +280,23 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         case NotificationTypes.TRIP_FINISHED:
                             NotificationUtils.showNotification(this, title, body, payload, imageUrl);
                             if (merchantType.equals("USER")) {
+                                String vehicleCategory = entity_payload.optString("vehicleCategory");
+                                String appNamePrefix = getPackageNamePrefix(getPackageName());
+                                String vehicleCategoryKey = getVehicleCategoryKey(vehicleCategory);
+                                NotificationUtils.firebaseLogEventWithParams(this, appNamePrefix+vehicleCategoryKey+"ride_completed_", "vehicle_category", vehicleCategory);
                                 sharedPref.edit().putInt("RIDE_COUNT", sharedPref.getInt("RIDE_COUNT", 0) + 1).apply();
                                 sharedPref.edit().putString("COMPLETED_RIDE_COUNT", String.valueOf(sharedPref.getInt("RIDE_COUNT", 0))).apply();
                             }
                             break;
 
+                        case NotificationTypes.FIRST_RIDE_EVENT:
+                            if (merchantType.equals("USER")){
+                                String vehicleCategory = entity_payload.optString("vehicleCategory");
+                                String appNamePrefix = getPackageNamePrefix(getPackageName());
+                                String vehicleCategoryKey = getVehicleCategoryKey(vehicleCategory);
+                                NotificationUtils.firebaseLogEventWithParams(this, appNamePrefix+vehicleCategoryKey+"ride_completed_first", "vehicle_category", vehicleCategory);
+                            }
+                            break;
                         case NotificationTypes.DRIVER_ASSIGNMENT:
                             NotificationUtils.showNotification(this, title, body, payload, imageUrl);
                             sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "true").apply();
@@ -441,6 +453,35 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             Exception exception = new Exception("Error in exception_in_notification " + e);
             FirebaseCrashlytics.getInstance().recordException(exception);
             NotificationUtils.firebaseLogEventWithParams(this, "exception_in_notification", "remoteMessage", remoteMessage.getData().toString());
+        }
+    }
+
+    private String getVehicleCategoryKey(String vehicleCategory) {
+        switch (vehicleCategory) {
+            case "CAB":
+                return "cab_";
+            case "AUTO_RICKSHAW":
+                return "auto_";
+            case "METRO":
+                return "metro_";
+            case "MOTORCYCLE":
+                return "bike_";
+            case "AMBULANCE":
+                return "ambulance_";
+            default:
+                return "not_found_";
+        }
+    }
+
+    private String getPackageNamePrefix(String appName) {
+        if(appName.contains("nammayatri")){
+            return "ny_";
+        }else if (appName.contains("manayatri")) {
+            return "my_";
+        }else if (appName.contains("yatri")) {
+            return "y_";
+        }else {
+            return "unknown_";
         }
     }
 
@@ -683,6 +724,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         public static final String CANCELLED_PRODUCT = "CANCELLED_PRODUCT";
         public static final String DRIVER_QUOTE_INCOMING = "DRIVER_QUOTE_INCOMING";
         public static final String TRIP_FINISHED = "TRIP_FINISHED";
+
+        public static final String FIRST_RIDE_EVENT = "FIRST_RIDE_EVENT";
         public static final String DRIVER_ASSIGNMENT = "DRIVER_ASSIGNMENT";
         public static final String TRIP_STARTED = "TRIP_STARTED";
         public static final String BUNDLE_UPDATE = "BUNDLE_UPDATE";
