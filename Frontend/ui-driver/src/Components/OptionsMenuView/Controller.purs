@@ -53,7 +53,7 @@ type Config = {
 config :: Config
 config = {
   menuItems : [{image : "", textdata : "", action : "", isVisible : false}],
-  backgroundColor : Color.transparent,
+  backgroundColor : Color.blackLessTrans,
   menuBackgroundColor : Color.white900,
   gravity : RIGHT,
   menuExpanded : false,

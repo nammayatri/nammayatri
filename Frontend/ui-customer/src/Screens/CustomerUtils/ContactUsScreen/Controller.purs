@@ -19,8 +19,7 @@ import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Data.String (length, trim)
-import Helpers.Utils (validateEmail)
-import JBridge (hideKeyboardOnNavigation)
+import JBridge (hideKeyboardOnNavigation, validateEmail)
 import Log (printLog)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (pure, unit, class Show, bind, (>), (&&), ($), discard, (==))

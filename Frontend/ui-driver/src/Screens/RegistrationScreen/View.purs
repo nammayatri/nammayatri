@@ -29,7 +29,7 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Control.Monad.ST (for)
-import Data.Array (all, any, elem, filter, fold, length, mapWithIndex, find)
+import Data.Array (all, any, elem, filter, fold, length, mapWithIndex, find, foldr)
 import Data.Foldable (foldl)
 import Data.Maybe (Maybe(..), isJust, isNothing)
 import Data.String as DS
@@ -41,6 +41,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..),getCityConfig)
 import JBridge (lottieAnimationConfig, startLottieProcess)
+import JBridge  as JB
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import PaymentPage (consumeBP)
@@ -94,12 +95,8 @@ view push state =
           , background Color.white900
           , clickable true
           , onBackPressed push (const BackPressed)
-          , afterRender
-              ( \action -> do
-                  _ <- push action
-                  pure unit
-              )
-              $ const (AfterRender)
+          , padding $ PaddingBottom EHC.safeMarginBottom
+          , afterRender push $ const AfterRender
           ]
       $ [ chooseVehicleView push state
         , linearLayout
@@ -204,16 +201,14 @@ view push state =
             , linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
-                , margin $ Margin 16 0 16 16
-                , clickable false
+                , margin $ Margin 16 8 16 16
                 , visibility $ boolToVisibility $ (state.data.cityConfig.showDriverReferral || state.data.config.enableDriverReferral) && (state.props.manageVehicle == false)
                 ][enterReferralCode push state]
             , linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , margin $ Margin 16 0 16 16
-                , clickable false
-                , visibility $ boolToVisibility callSupportVisibility
+                , visibility $ boolToVisibility $ callSupportVisibility state
                 ][contactSupportView push state]
             ]
             , if state.props.enterReferralCodeModal then enterReferralCodeModal push state else linearLayout[][]
@@ -221,12 +216,15 @@ view push state =
       <> if any (_ == true) [state.props.logoutModalView, state.props.confirmChangeVehicle, state.data.vehicleTypeMismatch] then [ popupModal push state ] else []
       <> if state.props.contactSupportModal /= ST.HIDE then [contactSupportModal push state] else []
       <> if state.props.menuOptions then [menuOptionModal push state] else []
+      <> if state.props.isApplicationInVerification then [applicationInVerification push state] else []
       where 
-        callSupportVisibility = (state.data.drivingLicenseStatus == ST.FAILED && state.data.enteredDL /= "__failed") || (state.data.vehicleDetailsStatus == ST.FAILED && state.data.enteredRC /= "__failed")
         documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs else state.data.registerationStepsAuto
         buttonVisibility = if state.props.manageVehicle then all (\docType -> (getStatus docType.stage state) == ST.COMPLETED) $ filter(\elem -> elem.isMandatory) documentList
                             else state.props.driverEnabled
 
+
+callSupportVisibility :: ST.RegistrationScreenState -> Boolean
+callSupportVisibility state = (state.data.drivingLicenseStatus == ST.FAILED && state.data.enteredDL /= "__failed") || (state.data.vehicleDetailsStatus == ST.FAILED && state.data.enteredRC /= "__failed")
 
 headerView :: forall w. ST.RegistrationScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerView state push = AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
@@ -236,8 +234,6 @@ menuOptionModal push state =
   linearLayout 
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , padding $ PaddingTop 55
-    , background Color.blackLessTrans
     ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 
 contactSupportView :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
@@ -289,23 +285,25 @@ commonTV push text' color' theme gravity' marginTop action visibility' padding' 
 
 cardsListView :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
 cardsListView push state =
-  scrollView
+  let documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs else state.data.registerationStepsAuto
+      isRefreshVisible = any (_ == IN_PROGRESS) $ map (\item -> getStatus item.stage state) documentList
+      count = foldr (\item acc -> if item then acc + 1 else acc) 0 [state.data.cityConfig.showDriverReferral, isRefreshVisible , callSupportVisibility state]
+  in scrollView
     [ width MATCH_PARENT
-    , height WRAP_CONTENT
+    , height $ if EHC.os == "IOS" then V $ (JB.getHeightFromPercent (80 - (count * 10))) - EHC.safeMarginBottom else WRAP_CONTENT
     , scrollBarY false
     , fillViewport true
-    , margin $ MarginBottom 20
     ][ linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        , weight 1.0
         ][ if state.data.vehicleCategory == Just ST.CarCategory then
             vehicleSpecificList push state state.data.registerationStepsCabs
           else
             vehicleSpecificList push state state.data.registerationStepsAuto
         ]
     ]
+
 
 vehicleSpecificList :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState -> Array ST.StepProgress -> PrestoDOM (Effect Unit) w
 vehicleSpecificList push state registerationSteps = 
@@ -361,7 +359,7 @@ listItem push item state =
     , orientation HORIZONTAL
     , padding $ Padding 12 12 12 12
     , cornerRadius 8.0
-    , visibility $ boolToVisibility $ compVisibility state item
+    , visibility $ boolToVisibility $ not item.isHidden
     , stroke $ componentStroke state item
     , background $ compBg state item
     , clickable $ compClickable state item
@@ -428,6 +426,9 @@ listItem push item state =
           ST.FITNESS_CERTIFICATE -> "ny_ic_fitness"
           ST.VEHICLE_INSURANCE -> "ny_ic_insurance"
           ST.VEHICLE_PUC -> "ny_ic_puc"
+          ST.SocialSecurityNumber -> "ny_ic_social_security"
+          ST.ProfileDetails -> "ny_ic_profile_details"
+          ST.VehicleInspectionForm -> "ny_ic_inspection"
           _ -> ""
 
       componentStroke :: ST.RegistrationScreenState -> ST.StepProgress -> String
@@ -508,7 +509,7 @@ refreshView push state =
       , cornerRadius 8.0
       , alignParentBottom "true,-1"
       , onClick push $ const Refresh
-      , margin $ Margin 16 0 16 16
+      , margin $ Margin 16 0 16 8
       , visibility $ boolToVisibility $ showRefresh
       ][ textView $
           [ text $ getString LAST_UPDATED
@@ -559,7 +560,7 @@ enterReferralCode push state =
                 , text $ getString ENTER_CODE
                 , margin $ MarginRight 7
                 , color if allStepsCompleted then Color.darkBlue else Color.primaryBG
-                , onClick push $ const $ EnterReferralCode allStepsCompleted
+                , onClick push $ const $ EnterReferralCode (allStepsCompleted || state.data.cityConfig.mandatoryDriverReferral)
                 , visibility $ boolToVisibility $ not state.props.referralCodeSubmitted
                 ] <> FontStyle.body3 TypoGraphy
               , imageView
@@ -674,7 +675,7 @@ getStatus step state =
                           then find (\docStatus -> docStatus.docType == step && filterCondition docStatus) documentStatusArr
                           else find (\docStatus -> docStatus.docType == step) documentStatusArr
           case findStatus of
-            Nothing -> ST.NOT_STARTED
+            Nothing -> if step == ST.ProfileDetails && state.props.isProfileDetailsCompleted then ST.COMPLETED else ST.NOT_STARTED
             Just docStatus -> docStatus.status
   where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) ||  (isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
 
@@ -683,3 +684,38 @@ dependentDocAvailable item state = all (\docType -> (getStatus docType state) ==
 
 compVisibility :: ST.RegistrationScreenState -> ST.StepProgress -> Boolean
 compVisibility state item = not item.isHidden && dependentDocAvailable item state
+
+applicationInVerification :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
+applicationInVerification push state = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.white900
+  , gravity CENTER
+  , orientation VERTICAL
+  ][ linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER
+      , margin $ MarginBottom 40
+      ][
+          imageView
+          [ height $ V 250
+          , width $ V 280
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_application_verifiaction_in_progress"
+          ]
+      ]
+    , textView $
+      [ text "Application verification in progress."
+      , color Color.black800
+      , width MATCH_PARENT
+      , gravity CENTER
+      ] <> FontStyle.h2 TypoGraphy
+    , textView $
+      [ text "Thank you for completing the registration. We will update you once the verification is done."
+      , color Color.black800
+      , width MATCH_PARENT
+      , margin $ Margin 16 10 16 0
+      , gravity CENTER
+      ] <> FontStyle.body1 TypoGraphy
+  ]

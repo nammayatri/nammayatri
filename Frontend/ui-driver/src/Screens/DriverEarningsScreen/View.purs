@@ -52,6 +52,7 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn7)
 import Engineering.Helpers.BackTrack (liftFlowBT)
+import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Commons (getCurrentUTC, flowRunner, getFormattedDate, getNewIDWithTag, screenHeight, getVideoID, getDayName, safeMarginBottom, screenWidth, convertUTCtoISC, liftFlow, formatCurrencyWithCommas)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getFixedTwoDecimals)
 import Font.Size as FontSize
@@ -61,7 +62,7 @@ import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Presto.Core.Types.Language.Flow (doAff, Flow)
-import PrestoDOM (textFromHtml, scrollView, frameLayout, shimmerFrameLayout, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, lottieAnimationView, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha, singleLine, rippleColor)
+import PrestoDOM (textFromHtml, scrollView, frameLayout, shimmerFrameLayout, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, lottieAnimationView, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha, singleLine, rippleColor, ellipsize, maxLines)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Events (globalOnScroll)
@@ -160,8 +161,9 @@ view push state =
     , onBackPressed push (const BackPressed)
     , afterRender push (const AfterRender)
     , background Color.white900
-    ]
-    [ frameLayout
+    , padding $ PaddingBottom EHC.safeMarginBottom
+    ] $
+    [ relativeLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
@@ -192,11 +194,11 @@ view push state =
                           , helpButton push
                           ]
                       else
-                        linearLayout [] []
+                        linearLayout [height $ V 0] []
                     _
                       | any (_ == state.props.subView) [ ST.FAQ_VIEW, ST.FAQ_QUESTON_VIEW ] || (not (state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins)) -> GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-                    _ -> linearLayout [] []
-                , if any (_ == state.props.subView) [ ST.FAQ_VIEW, ST.FAQ_QUESTON_VIEW ] then separatorView true state.props.subView else linearLayout [] []
+                    _ -> linearLayout [height $ V 0] []
+                , if any (_ == state.props.subView) [ ST.FAQ_VIEW, ST.FAQ_QUESTON_VIEW ] then separatorView true state.props.subView else linearLayout [height $ V 0] []
                 , if not state.data.anyRidesAssignedEver then
                     noRideHistoryView push state
                   else
@@ -206,7 +208,7 @@ view push state =
                       , orientation VERTICAL
                       ]
                       [ Keyed.relativeLayout
-                          [ height WRAP_CONTENT
+                          [ height MATCH_PARENT
                           , width MATCH_PARENT
                           , orientation VERTICAL
                           ]
@@ -223,7 +225,6 @@ view push state =
     , if DS.null state.props.showCoinsRedeemedAnim then dummyView else lottieView state push
     , if (state.props.subView == ST.YATRI_COINS_VIEW && isJust state.props.showCoinsEarnedAnim) then (lottieCoinDifference state push) else dummyView
     , if state.props.popupType /= ST.NO_POPUP then PopUpModal.view (push <<< PopUpModalAC) (earningsPopupConfig state) else dummyView
-    , if state.props.calendarState.calendarPopup then Calendar.view (push <<< CalendarAC) (calendarConfig state) else dummyView
     , if state.props.showCoinsUsagePopup then coinsUsagePopup push state else dummyView
     , linearLayout
         [ height WRAP_CONTENT
@@ -232,7 +233,7 @@ view push state =
         , visibility $ boolToVisibility (any (_ == state.props.subView) [ ST.YATRI_COINS_VIEW, ST.EARNINGS_VIEW ])
         ]
         [ BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.DRIVER_EARNINGS_SCREEN state.data.config.bottomNavConfig) ]
-    ]
+    ] <> if state.props.calendarState.calendarPopup then [Calendar.view (push <<< CalendarAC) (calendarConfig state)] else []
   where
   cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
 
@@ -357,9 +358,10 @@ earningsView push state =
     , orientation VERTICAL
     , onBackPressed push (const BackPressed)
     , afterRender push (const AfterRender)
-    , padding $ Padding 16 0 16 70
+    , padding $ if EHC.os == "IOS" then Padding 16 0 16 205 else Padding 16 0 16 70
     ]
-    [ totalEarningsView push state
+    [ 
+      totalEarningsView push state
     , transactionViewForEarnings push state
     ]
 
@@ -554,7 +556,7 @@ dotView push index state =
   linearLayout
     [ height $ V 6
     , width $ V 6
-    , cornerRadius 12.0
+    , cornerRadius 3.0
     , background $ if index == state.props.weekIndex then Color.black800 else Color.grey900
     , margin $ MarginHorizontal 2 2
     ]
@@ -1162,7 +1164,7 @@ calendarView push state =
     linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , cornerRadius 100.0
+      , cornerRadius 12.0
       , background Color.white900
       , gravity CENTER_VERTICAL
       , stroke $ "1," <> Color.grey900
@@ -1789,18 +1791,20 @@ barView push index item state =
       _ -> MarginHorizontal 6 6
   in
     linearLayout
-      [ height $ WRAP_CONTENT
-      , width $ WRAP_CONTENT
-      , margin setMargin
+      [ height $ V 150
       , weight 1.0
+      , margin setMargin
       , orientation VERTICAL
+      , alignParentBottom "true,-1"
+      , gravity CENTER
       ]
       [ linearLayout
-          [ height $ WRAP_CONTENT
-          , width $ WRAP_CONTENT
+          [ width $ WRAP_CONTENT
+          , height $ V 111
           , onClick push $ const $ BarViewSelected index
+          , gravity BOTTOM
           ]
-          [ PrestoAnim.animationSet [ Anim.translateInYAnim $ animConfig { duration = 1000 + (ceil item.percentLength), fromY = 200 + (ceil item.percentLength) } ]
+          [ PrestoAnim.animationSet (if EHC.os == "IOS" then [] else [ Anim.translateInYAnim $ animConfig { duration = 1000 + (ceil item.percentLength), fromY = 200 + (ceil item.percentLength) } ])
               $ linearLayout
                   [ height $ WRAP_CONTENT
                   , width $ WRAP_CONTENT
@@ -1865,12 +1869,13 @@ historyViewItemForEarnings push item state index =
           ]
           [ linearLayout
               [ height WRAP_CONTENT
-              , width WRAP_CONTENT
-              , weight 1.0
+              , weight 2.0
               , orientation VERTICAL
               ]
               [ textView
-                  $ [ text $ getString DESTINATION <> ":" <> DS.take 30 (fromMaybe "" item.destination) <> "..."
+                  $ [ text $ getString DESTINATION <> ":" <> fromMaybe "" item.destination
+                    , ellipsize true
+                    , maxLines 1
                     , color Color.black900
                     ]
                   <> FontStyle.body3 TypoGraphy
@@ -1907,22 +1912,27 @@ historyViewItemForEarnings push item state index =
                     ] (map (\name -> (tagview name)) item.tagImages)
                 ]
               ]
-          , linearLayout
+          , linearLayout 
               [ height WRAP_CONTENT
-              , width WRAP_CONTENT
-              , gravity CENTER
-              , background if rideStatus == "CANCELLED" then Color.red600 else Color.white900
-              , cornerRadius 100.0
-              , padding $ Padding 11 3 11 6
-              ]
-              [ textView
-                  $ [ text $ if rideStatus /= "CANCELLED" then "₹" <> formatCurrencyWithCommas (show earnings) else getString CANCELLED_
-                    , height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , color color'
-                    ]
-                  <> FontStyle.body6 TypoGraphy
-              ]
+              , weight 1.0
+              , gravity RIGHT
+              ][ linearLayout
+                  [ height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , background if rideStatus == "CANCELLED" then Color.red600 else Color.white900
+                  , cornerRadius 12.0
+                  , padding $ Padding 11 3 11 6
+                  , gravity RIGHT
+                  ]
+                  [ textView
+                      $ [ text $ if rideStatus /= "CANCELLED" then "₹" <> formatCurrencyWithCommas (show earnings) else getString CANCELLED_
+                        , height WRAP_CONTENT
+                        , width WRAP_CONTENT
+                        , color color'
+                        ]
+                      <> FontStyle.body6 TypoGraphy
+                  ]
+                ]
           ]
       , separatorView true state.props.subView
       ]

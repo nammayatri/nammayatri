@@ -23,9 +23,13 @@ export const fetchFromLocalStoreImpl = function(key) {
     };
   };
 }
-export const reboot = window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"reboot"}))()
+export const reboot = function () {
+  window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"reboot"}))()
+}
 
-export const showSplash = window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"show_splash"}))()
+export const showSplash = function () {
+  window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"show_splash"}))()
+}
 
 
 export const decrementMonth = function (month) {
