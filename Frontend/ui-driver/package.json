@@ -7,16 +7,18 @@
   "scripts": {
     "compile:purs": "spago build --purs-args '--censor-warnings'",
     "bundle:android": "webpack --env prod --mode=production --progress --config webpack.android.js",
-    "bundle:ios": "webpack --env prod --mode=production --progress --config webpack.ios.js",
     "prod:android": "npm-run-all compile:purs \"bundle:android\"",
-    "prod:ios": "npm-run-all compile:purs bundle:ios",
     "compileAndCreateJsa": "sh compileAndCreateJsa.sh",
-    "dev": "spago build --watch",
+    "dev": "spago build --watch --purs-args '--purs=fastpurs'",
     "webpack-dev": "webpack-dev-server --env sandbox --mode development --config webpack.config.js --host",
     "start": "npm-run-all -p dev webpack-dev",
     "clean": "sh cleanSpago.sh",
     "fast:purs": "spago build -w --purs-args '--purs=fastpurs'",
-    "fast:start": "npm-run-all -p fast:purs webpack-dev"
+    "fast:start": "npm-run-all -p fast:purs webpack-dev",
+    "bundle:ios": "webpack --env prod --mode=production --progress --config webpack.ios.js",
+    "prod:ios": "npm-run-all compile:purs \"bundle:ios\"",
+    "webpack-dev-ios": "webpack-dev-server --env master --mode development --config webpack.ios.js --host",
+    "start:ios": "npm-run-all -p dev webpack-dev-ios"
   },
   "author": "juspay",
   "license": "ISC",
@@ -43,7 +45,7 @@
     "webpack-cli": "^3.3.10",
     "webpack-dev-server": "^3.10.1",
     "webpack-merge": "^5.8.0",
-    "hyper-purescript": "^0.0.25",
+    "hyper-purescript": "^0.0.36",
     "purescript-psa": "0.8.2"
   },
   "dependencies": {

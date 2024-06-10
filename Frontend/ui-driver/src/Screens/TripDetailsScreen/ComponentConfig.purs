@@ -31,6 +31,10 @@ import Language.Types (STR(..))
 import Prelude ((<>), ($))
 import Screens.Types as ST
 import Styles.Colors as Color
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>), ($))
+import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons as EHC
 
 ---------------- genericHeaderConfig ----------------
@@ -41,16 +45,19 @@ genericHeaderConfig state= let
     {
       height = WRAP_CONTENT
     , prefixImageConfig {
-        height = (V 30)
-      , width = (V 30)
-      , margin = (Margin 16 16 25 16)
-      , imageUrl = fetchImage FF_ASSET "ny_ic_back"
-      , padding = (Padding 5 5 5 5 )
+        height = V 30
+      , width = V 30
+      , margin = MarginTop 0
+      , imageUrl = fetchImage FF_ASSET "ny_ic_chevron_left"
       , visibility = if state.props.issueReported then GONE else VISIBLE
       }
+    , padding = Padding 10 (EHC.safeMarginTopWithDefault 13) 0 13
+    , gravity = CENTER_VERTICAL
     , textConfig {
         text = if state.props.issueReported then "" else (getString RIDE_DETAILS)
       , color = Color.black
+      , margin = MarginLeft 10
+      , padding = PaddingBottom 2
       }
     , suffixImageConfig {
         visibility = GONE

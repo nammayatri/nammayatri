@@ -46,7 +46,7 @@ import Log (printLog)
 import Prelude (bind, discard, pure, unit, identity, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show, (<>), (||), not, (/=), (<$>))
 import Presto.Core.Types.API (ErrorResponse(..), Header(..), Headers(..))
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS)
-import Screens.Types (DriverStatus)
+import Screens.Types (DriverStatus, EnterMobileNumberScreenState)
 import Services.Config as SC
 import Services.EndPoints as EP
 import Engineering.Helpers.Events as Events
@@ -62,6 +62,9 @@ import Data.Boolean (otherwise)
 import Screens.Types as ST
 import Resource.Constants as RC
 import SessionCache
+import ConfigProvider
+import MerchantConfig.Types
+import Screens.AddVehicleDetailsScreen.ScreenData
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
@@ -75,7 +78,7 @@ getHeaders dummy isGzipCompressionEnabled = do
                         Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
                     ] <> case regToken of
                         Nothing -> []
-                        Just token -> [Header "token" token]
+                        Just token -> if token == "(null)" then [] else [Header "token" token]
                     <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
 
@@ -91,11 +94,11 @@ getHeaders' dummy isGzipCompressionEnabled = do
                         Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
                     ] <> case regToken of
                         Nothing -> []
-                        Just token -> [Header "token" token]
+                        Just token -> if token == "(null)" then [] else [Header "token" token]
                     <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
 withAPIResult url f flow = do
-    if (isInvalidUrl url) then pure $ Left customError
+    if (isInvalidUrl url) then pure $ Left (customError "")
     else do
         let start = getTime unit        
         resp <- Events.measureDurationFlow ("CallAPI." <> DS.replace (DS.Pattern $ SC.getBaseUrl "") (DS.Replacement "") url) $ either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
@@ -124,7 +127,7 @@ withAPIResult url f flow = do
 
 
 withAPIResultBT url f errorHandler flow = do
-    if (isInvalidUrl url) then errorHandler customErrorBT
+    if (isInvalidUrl url) then errorHandler (customErrorBT "")
     else do
         let start = getTime unit        
         resp <- Events.measureDurationFlowBT ("CallAPI." <> DS.replace (DS.Pattern $ SC.getBaseUrl "") (DS.Replacement "") url) $ either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
@@ -152,7 +155,8 @@ withAPIResultBT url f errorHandler flow = do
                         else pure unit
                 errorHandler (ErrorPayload err)
 
-customErrorBT = ErrorPayload { code : 400
+customErrorBT :: String -> ErrorPayloadWrapper
+customErrorBT dummy = ErrorPayload { code : 400
   , status : "success"
   , response : {
        error : true
@@ -162,8 +166,8 @@ customErrorBT = ErrorPayload { code : 400
   , responseHeaders : empty
   }
 
-customError :: ErrorResponse
-customError =  { code : 400
+customError :: String -> ErrorResponse
+customError dummy =  { code : 400
   , status : "success"
   , response : {
        error : true
@@ -190,24 +194,27 @@ triggerOTPBT payload = do
         BackT $ pure GoBack
 
 
-makeTriggerOTPReq :: String → LatLon -> TriggerOTPReq
-makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
+makeTriggerOTPReq :: EnterMobileNumberScreenState → LatLon -> TriggerOTPReq
+makeTriggerOTPReq state (LatLon lat lng _) = TriggerOTPReq
     let operatingCity = getValueToLocalStore DRIVER_LOCATION
         latitude = mkLatLon lat
         longitude = mkLatLon lng
+        config = getAppConfig appConfig
     in
     {
-      "mobileNumber"      : mobileNumber,
-      "mobileCountryCode" : "+91",
-      "merchantId" : if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" ),
-      "merchantOperatingCity" : mkOperatingCity operatingCity,
-      "registrationLat" : latitude,
-      "registrationLon" : longitude
+      mobileNumber      : if config.enterMobileNumberScreen.emailAuth then Nothing else Just state.data.mobileNumber,
+      mobileCountryCode : config.defaultCountryCodeConfig.countryCode,
+      merchantId : if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" ),
+      merchantOperatingCity : mkOperatingCity operatingCity config,
+      registrationLat : Nothing,
+      registrationLon : Nothing,
+      email : state.data.email,
+      identifierType : if state.data.email == Nothing then Nothing else Just "EMAIL"
     }
     where 
-        mkOperatingCity :: String -> Maybe String
-        mkOperatingCity operatingCity
-            | operatingCity `DA.elem` ["__failed", "--"] = Nothing
+        mkOperatingCity :: String -> AppConfig -> Maybe String
+        mkOperatingCity operatingCity config
+            | operatingCity `DA.elem` ["__failed", "--", "(null)"] = if config.flowConfig.chooseCity.useDefault then Just config.flowConfig.chooseCity.defCity else Nothing
             | operatingCity == "Puducherry"          = Just "Pondicherry"
             | operatingCity == "Tamil Nadu"          = Just "TamilNaduCities"
             | otherwise                              = Just operatingCity
@@ -717,16 +724,36 @@ callDriverToDriverBT rcNo = do
   where
     errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
 
-makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> Maybe ST.VehicleCategory -> Maybe Int -> DriverRCReq
-makeDriverRCReq regNo imageId dateOfRegistration multipleRc category airConditioned = DriverRCReq
+makeDriverRCReq :: AddVehicleDetailsScreenState -> DriverRCReq
+makeDriverRCReq state = DriverRCReq
     {
-      "vehicleRegistrationCertNumber" : regNo,
+      "vehicleRegistrationCertNumber" : state.data.vehicle_registration_number,
       "operatingCity" : "BANGALORE",
-      "imageId" : imageId,
-      "dateOfRegistration" : dateOfRegistration,
-      "vehicleCategory" : mkCategory category,
-      "airConditioned" : maybe Nothing (\ac -> Just (ac == 0)) airConditioned
+      "imageId" : state.data.rcImageID,
+      "dateOfRegistration" : state.data.dateOfRegistration,
+      "vehicleCategory" : mkCategory state.data.vehicleCategory,
+      "airConditioned" : maybe Nothing (\ac -> Just (ac == 0)) (state.props.buttonIndex),
+      vehicleDetails : if state.data.config.vehicleRegisterationScreen.collectVehicleDetails then mkVehicleDetails else Nothing
     }
+    where 
+      mkVehicleDetails = Just $ DriverVehicleDetails {
+        colour : getColor,
+        vehicleColour : getColor,
+        vehicleDoors : getDoor,
+        vehicleManufacturer : getMake,
+        vehicleModel : getModel,
+        vehicleSeatBelts :  getSeatBelts
+      }
+      getColor = let make = DA.head $ DA.filter (\item -> item.type == COLOR) state.data.dropDownList
+                      in maybe Nothing (\item -> Just item.selected) make
+      getMake = let make = DA.head $ DA.filter (\item -> item.type == MAKE) state.data.dropDownList
+                      in maybe Nothing (\item -> Just item.selected) make
+      getModel = let make = DA.head $ DA.filter (\item -> item.type == MODEL) state.data.dropDownList
+                      in maybe Nothing (\item -> Just item.selected) make
+      getDoor = let make = DA.head $ DA.filter (\item -> item.type == DOORS) state.data.dropDownList
+                      in maybe Nothing (\item -> INT.fromString item.selected) make
+      getSeatBelts = let make = DA.head $ DA.filter (\item -> item.type == SEATBELTS) state.data.dropDownList
+                      in maybe Nothing (\item -> INT.fromString item.selected) make
 
 mkCategory :: Maybe ST.VehicleCategory -> Maybe String
 mkCategory category =
@@ -789,8 +816,9 @@ makeValidateImageReq image imageType rcNumber category = ValidateImageReq
 
 driverRegistrationStatusBT :: DriverRegistrationStatusReq -> FlowBT String DriverRegistrationStatusResp
 driverRegistrationStatusBT payload = do
+     let (DriverRegistrationStatusReq req) = payload
      headers <- getHeaders' "" false
-     withAPIResultBT ((EP.driverRegistrationStatus "" )) identity errorHandler (lift $ lift $ callAPI headers payload)
+     withAPIResultBT ((EP.driverRegistrationStatus req)) identity errorHandler (lift $ lift $ callAPI headers payload)
     where
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
@@ -1538,6 +1566,48 @@ mkUpdateDriverVehiclesServiceTier ridePreferences =
 getRideStatusPastDays :: String -> Flow GlobalState (Either ErrorResponse RideStatusPastDaysRes)
 getRideStatusPastDays payload = do
     headers <- getHeaders "" true
-    withAPIResult (EP.getRideStatusPastDays "")  unwrapResponse $ callAPI headers (RideStatusPastDaysReq)
-    where
-        unwrapResponse x = x
+    withAPIResult (EP.getRideStatusPastDays "")  identity $ callAPI headers (RideStatusPastDaysReq)
+
+makeSocialLogin :: EnterMobileNumberScreenState -> LatLon -> SocialLoginReq
+makeSocialLogin state (LatLon lat lng _) = 
+    let operatingCity = getValueToLocalStore DRIVER_LOCATION
+        latitude = mkLatLon lat
+        longitude = mkLatLon lng
+        config = getAppConfig appConfig
+    in
+    SocialLoginReq {
+        email : state.data.email,
+        merchantId : if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" ),
+        merchantOperatingCity : mkOperatingCity operatingCity config,
+        name: state.data.name,
+        oauthProvider : state.data.oauthProvider,
+        registrationLat : latitude,
+        registrationLon : longitude,
+        tokenId : state.data.token
+    }
+    where 
+        mkOperatingCity :: String -> AppConfig -> Maybe String
+        mkOperatingCity operatingCity config
+            | operatingCity `DA.elem` ["__failed", "--", "(null)", ""] = if config.flowConfig.chooseCity.useDefault then Just config.flowConfig.chooseCity.defCity else Nothing
+            | operatingCity == "Puducherry"          = Just "Pondicherry"
+            | operatingCity == "Tamil Nadu"          = Just "TamilNaduCities"
+            | otherwise                              = Just operatingCity
+
+        mkLatLon :: String -> Maybe Number
+        mkLatLon latlon = 
+            if latlon == "0.0" 
+                then Nothing
+                else Number.fromString latlon
+
+
+mkSocialProfileUpdate :: ST.DocumentCaptureScreenState -> SocialProfileUpdate
+mkSocialProfileUpdate state =
+    let config = getAppConfig appConfig
+    in
+    SocialProfileUpdate
+    { email : (getValueToLocalStore MOBILE_NUMBER_KEY)
+    , firstName : state.data.firstName
+    , lastName : state.data.lastName
+    , mobileCountryCode : Just config.defaultCountryCodeConfig.countryCode
+    , mobileNumber : state.data.mobileNumber
+    }

@@ -370,5 +370,12 @@ greyBackDarkColor = "#D3D3D3"
 
 black12 :: Color
 black12 = "#1F000000"
+
 aliceBlueLight :: Color
 aliceBlueLight = "#F4F7FF"
+
+blue500 :: Color
+blue500 = "#4285F4"
+
+bridgeGreen :: Color
+bridgeGreen = "#F0F5F2"

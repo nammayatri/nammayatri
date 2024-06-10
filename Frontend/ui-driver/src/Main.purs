@@ -51,9 +51,10 @@ import Screens.Types as ST
 import Common.Types.App as Common
 import Storage (KeyStore(..), setValueToLocalStore)
 import Services.API (GetDriverInfoResp(..))
+import PrestoDOM (initUI)
 
-main :: Event -> Foreign -> Effect Unit
-main event driverInfoRespFiber = do
+main :: Event -> Foreign -> Boolean -> Effect Unit
+main event driverInfoRespFiber callInitUI = do
   void $ markPerformance "MAIN_START"
   void $ Events.initMeasuringDuration "Flow.mainFlow"
   void $ Events.initMeasuringDuration "mainToHomeScreenDuration"  
@@ -68,10 +69,10 @@ main event driverInfoRespFiber = do
   mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
     liftFlow $ setEventTimestamp "main_purs" 
     _ <- runExceptT $ runBackT $ updateEventData event
-    resp ← runExceptT $ runBackT $ Flow.baseAppFlow true Nothing driverInfoResp
+    resp ← runExceptT $ runBackT $ Flow.baseAppFlow callInitUI Nothing driverInfoResp
     case resp of
       Right _ -> pure $ printLog "printLog " "Success in main"
-      Left error -> liftFlow $ main event driverInfoRespFiber
+      Left error -> liftFlow $ main event driverInfoRespFiber callInitUI
   _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
   void $ markPerformance "MAIN_END"
   pure unit

@@ -53,7 +53,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
-import Screens.AddVehicleDetailsScreen.Views (redirectScreen, rightWrongView)
+import Screens.AddVehicleDetailsScreen.Views (redirectScreen)
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.Controller (Action(..), eval, ScreenOutput)
 import Styles.Colors as Color
@@ -81,6 +81,7 @@ screen initialState =
     else pure unit
     void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $
               if initialState.props.validateProfilePicturePopUp  then  lift $ lift $ doAff do liftEffect $ push $ AfterRender  else pure unit 
+    if initialState.props.setDefault then do pure $ EHC.setText (EHC.getNewIDWithTag "EnterDrivingLicenseEditText") (initialState.data.driver_license_number) else pure unit
     pure $ pure unit)]
   , eval : \action state -> do
       let _ = spy  "UploadDrivingLicenseScreen state -----" state
@@ -117,10 +118,10 @@ linearLayout
         , orientation VERTICAL
         ][ scrollView
             [ width MATCH_PARENT
-            , height MATCH_PARENT
+            , height WRAP_CONTENT
             , scrollBarY false
             ][ linearLayout
-                [ height MATCH_PARENT
+                [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
                 , padding (PaddingHorizontal 20 20)
@@ -192,8 +193,6 @@ menuOptionModal push state =
   linearLayout 
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , padding $ PaddingTop 55
-    , background Color.blackLessTrans
     ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 
 headerView :: forall w. ST.UploadDrivingLicenseState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -450,7 +449,7 @@ dateOfBirth push state =
         , orientation HORIZONTAL
         , onClick (\action -> do
                         _ <- push action
-                        JB.datePicker "MINIMUM_EIGHTEEN_YEARS" push $ DatePicker "DATE_OF_BIRTH"
+                        JB.datePicker "MINIMUM_EIGHTEEN_YEARS" push (DatePicker "DATE_OF_BIRTH") "631195200"
                       ) (const SelectDateOfBirthAction)
         , clickable state.props.isDateClickable 
       ][ textView
@@ -493,7 +492,7 @@ dateOfIssue push state =
         , orientation HORIZONTAL
         , onClick (\action -> do
                         _ <- push action 
-                        JB.datePicker "MAXIMUM_PRESENT_DATE" push $ DatePicker "DATE_OF_ISSUE"
+                        JB.datePicker "MAXIMUM_PRESENT_DATE" push (DatePicker "DATE_OF_ISSUE") ""
                       ) $ const SelectDateOfIssueAction
         , clickable state.props.isDateClickable
       ][ textView $
@@ -570,6 +569,49 @@ howToUpload push state =
       ]  
     ]
   ]
+
+rightWrongView :: Boolean -> forall w . PrestoDOM (Effect Unit) w
+rightWrongView isRight = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , gravity CENTER_VERTICAL
+  , margin $ MarginBottom 16
+  ][ imageView
+    [ width $ V 120
+    , height $ V if isRight then 80 else 100
+    , imageWithFallback $ fetchImage FF_ASSET if isRight then "ny_ic_upload_right" else "ny_ic_image_wrong"
+    ]
+  , linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    , padding $ Padding 16 16 0 0
+    , gravity CENTER
+    ][ rightWrongItemView isRight $ if isRight then (getString CLEAR_IMAGE) else (getString BLURRY_IMAGE)
+     , rightWrongItemView isRight $ if isRight then (getString CROPPED_CORRECTLY) else (getString WRONG_CROPPING)
+    ]
+  ]
+
+rightWrongItemView :: Boolean -> String -> forall w . PrestoDOM (Effect Unit) w
+rightWrongItemView isRight text' = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , margin $ MarginBottom 5
+  , gravity CENTER_VERTICAL
+  ][ imageView
+    [ width $ V 16
+    , height $ V 16
+    , imageWithFallback $ fetchImage FF_ASSET $ if isRight then "ny_ic_green_tick" else "ny_ic_payment_failed"
+    ]
+  , textView $
+    [ text text'
+    , color Color.black800
+    , margin $ MarginLeft 8
+    ] <> FontStyle.body1 TypoGraphy
+  ]
+
 
 popupModal :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
 popupModal push state =

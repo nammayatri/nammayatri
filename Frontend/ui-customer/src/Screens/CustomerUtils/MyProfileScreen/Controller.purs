@@ -15,7 +15,7 @@ import Components.GenericRadioButton as GenericRadioButton
 import Components.SelectListModal as SelectListModal
 import Resources.Constants as Constants
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
-import JBridge (hideKeyboardOnNavigation, requestKeyboardShow ,firebaseLogEvent, pauseYoutubeVideo, toggleBtnLoader)
+import JBridge (hideKeyboardOnNavigation, requestKeyboardShow ,firebaseLogEvent, pauseYoutubeVideo, toggleBtnLoader, validateEmail)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, pure, unit, ($), discard, bind, not, void, (<>), (<), (==), (&&), (/=), (||), (>=))
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
@@ -23,7 +23,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (MyProfileScreenState, DeleteStatus(..), FieldType(..), ErrorType(..), Gender(..), DisabilityT(..), DisabilityData(..))
 import Services.API (GetProfileRes(..))
-import Helpers.Utils (validateEmail, emitTerminateApp, isParentView)
+import Helpers.Utils (emitTerminateApp, isParentView)
 import Data.String(length,trim)
 import Storage(KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Engineering.Helpers.Commons(getNewIDWithTag, setText)

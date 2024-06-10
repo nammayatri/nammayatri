@@ -35,7 +35,7 @@ import Data.Maybe (Maybe(..))
 import Data.String as DS
 import Components.PrimaryButton as PrimaryButton
 import Storage (getValueToLocalStore, KeyStore(..))
-import Helpers.Utils (validateEmail)
+import JBridge (validateEmail)
 import Screens.HelpAndSupportScreen.Transformer (isEmailPresent)
 import Screens.HelpAndSupportScreen.ScreenData
 import Helpers.Utils (fetchImage, FetchImageFrom(..), isParentView, showTitle)

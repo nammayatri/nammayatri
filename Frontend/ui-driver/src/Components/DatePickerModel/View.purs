@@ -9,10 +9,10 @@ import Components.DatePickerModel.Controller (Action(..), Config)
 import Data.Array (mapWithIndex)
 import Debug (spy)
 import Effect (Effect)
-import Effect.Uncurried (runEffectFn2, runEffectFn3)
+import Effect.Uncurried (runEffectFn2, runEffectFn4)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Style as FontStyle
-import JBridge (horizontalScrollToPos)
+import JBridge (scrollViewFocus, horizontalScrollToPos)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), PrestoDOM, afterRender, background, color, cornerRadius, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onClick, orientation, scrollBarX, scrollBarY, stroke, text, textView, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Styles.Colors as Color
@@ -26,7 +26,9 @@ view push config =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , margin $ MarginVertical 18 20
-    , onAnimationEnd (\_ -> runEffectFn3 horizontalScrollToPos (getNewIDWithTag config.id) (getNewIDWithTag (config.id <> show config.activeIndex)) 66) (const unit)
+    , onAnimationEnd
+        ( \_ -> runEffectFn4 horizontalScrollToPos (getNewIDWithTag config.id) (getNewIDWithTag (config.id <> show config.activeIndex)) config.activeIndex 66)
+        (const unit)
     ]
     [ horizontalScrollView
         [ height WRAP_CONTENT

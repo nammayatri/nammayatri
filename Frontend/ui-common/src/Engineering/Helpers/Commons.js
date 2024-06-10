@@ -621,3 +621,9 @@ export const jBridgeMethodExists = function (method) {
   }
   return false;
 }
+
+export const oAuthSignIn = function (provider, callback) {
+  if (JBridge.oAuthSignIn) {
+    JBridge.oAuthSignIn(provider, callback);
+  }
+};

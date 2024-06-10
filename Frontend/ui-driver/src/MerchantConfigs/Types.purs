@@ -1,6 +1,7 @@
 module MerchantConfig.Types where
 
 import Common.Types.Config
+import Foreign.Object (Object)
 
 type AppConfig = AppConfigDriver CommonAppConfig
 
@@ -8,6 +9,7 @@ type AppConfigDriver a =
   {
     primaryTextColor :: String,
     primaryBackground :: String,
+    secondaryBackground :: String,
     languageList :: Array Language,
     popupBackground :: String,
     rideCompletedCardConfig :: RideCompletedCardConfig, 
@@ -40,7 +42,10 @@ type AppConfigDriver a =
     coinsConfig :: CoinsConfig,
     inAppKeyboardModalConfig :: InAppKeyboardModalConfig,
     chooseCity :: ChooseCityScreenConfig,
-    safetyRide :: SafetyRideConfig
+    safetyRide :: SafetyRideConfig,
+    welcomeScreen :: WelcomeScreen,
+    enterMobileNumberScreen :: EnterMobileNumberScreen,
+    vehicleRegisterationScreen :: VehicleRegisterationScreen
     | a
   } 
 
@@ -116,18 +121,21 @@ type GradientConfig = {
 
 type RideActionModelConfig = {
   showVehicleVariant :: Boolean
+, mapBackground :: String
 }
 
 type RideCompletedCardConfig = {
   showSavedCommission :: Boolean,
-  lottieQRAnim :: Boolean
+  lottieQRAnim :: Boolean,
+  topCardGradient :: Array String,
+  bottomBackground :: String
 }
 
 type ProfileConfig = {
   bookingOptionMenuForTaxi :: Boolean,
   showBookingOption :: Boolean
 , checkRCStatusForBookingOption :: Boolean
-
+, enableMultipleRC :: Boolean
 }
 
 type GotoConfig = {
@@ -168,7 +176,9 @@ type FlowConfig = {
 
 type ChooseCityFlowConfig = {
   runFlow :: Boolean,
-  defCity :: String
+  defCity :: String,
+  directAuth :: Boolean,
+  useDefault :: Boolean
 }
 
 type PermissionsConfig = {
@@ -178,7 +188,8 @@ type PermissionsConfig = {
 
 type HomeScreenConfig = {
   specialRideOtpView :: Boolean,
-  showGenderBanner :: Boolean
+  showGenderBanner :: Boolean,
+  statusPills :: Object PillButtonState
 }
 
 type Features = {
@@ -262,4 +273,23 @@ type ChooseCityScreenConfig = {
 type SafetyRideConfig = {
   startTime :: String
 , endTime :: String
+}
+
+type WelcomeScreen = {
+  background :: String
+}
+
+type EnterMobileNumberScreen = {
+  headerBackground :: String,
+  emailAuth :: Boolean
+}
+
+type PillButtonState = {
+  background :: String,
+  imageUrl :: String,
+  textColor :: String
+}
+
+type VehicleRegisterationScreen = {
+  collectVehicleDetails :: Boolean
 }
