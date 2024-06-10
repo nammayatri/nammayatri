@@ -15,7 +15,6 @@
 module App where
 
 import qualified Client.Main as CM
-import qualified Control.Concurrent as CC
 import qualified Data.Bool as B
 import Environment (HandlerCfg, HandlerEnv, buildHandlerEnv)
 import "dynamic-offer-driver-app" Environment (AppCfg (..))
@@ -104,7 +103,7 @@ runDriverOfferAllocator configModifier = do
   handlerEnv <- buildHandlerEnv handlerCfg
   hostname <- getPodName
   let loggerRt = L.getEulerLoggerRuntime hostname handlerCfg.appCfg.loggerConfig
-  _ <- liftIO $ CC.forkIO $ createCAC handlerCfg.appCfg
+  _ <- liftIO $ createCAC handlerCfg.appCfg
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     runFlow
       flowRt

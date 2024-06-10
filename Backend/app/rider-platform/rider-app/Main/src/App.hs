@@ -16,7 +16,6 @@ module App where
 
 import qualified App.Server as App
 import Client.Main as CM
-import qualified Control.Concurrent as CC
 import qualified Data.Bool as B
 import qualified Data.Text as T
 import Environment
@@ -120,7 +119,7 @@ runRiderApp' appCfg = do
         let allSubscriberIds = map ((.bapId) &&& (.bapUniqueKeyId)) allBaps
         if (length kvConfigs.useCAC > 0) || kvConfigs.useCACForFrontend
           then do
-            _ <- liftIO $ CC.forkIO $ createCAC appCfg
+            _ <- liftIO $ createCAC appCfg
             logInfo "Starting rider app using configs from CAC."
           else logInfo "Starting rider app using configs from DB."
         -- Load FRFS BAPs
