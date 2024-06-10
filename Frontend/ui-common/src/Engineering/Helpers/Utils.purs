@@ -61,9 +61,9 @@ import Data.Int as DI
 import Data.Number.Format (fixed, toStringWith)
 
 -- Common Utils
-foreign import reboot :: Effect Unit
+foreign import reboot :: EffectFn1 String Unit
 
-foreign import showSplash :: Effect Unit
+foreign import showSplash :: EffectFn1 String Unit
 
 ifelse :: forall a. Boolean -> a -> a -> a
 ifelse p a b = if p then a else b
@@ -322,6 +322,7 @@ cityCodeMap =
   , Tuple "std:0816" "tumakuru"
   , Tuple "std:01189" "noida"
   , Tuple "std:0124" "gurugram"
+  , Tuple "std:0820" "minneapolis"
   ]
 
 getCityFromCode :: String -> String

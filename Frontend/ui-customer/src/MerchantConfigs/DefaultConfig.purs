@@ -520,6 +520,7 @@ config =
       enableNonAcPopup : false,
       showAfterTime : 5
     }
+  , defaultCountryCodeConfig : countryCode
 }
 
 defaultCityConfig :: CityConfig

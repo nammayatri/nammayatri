@@ -568,7 +568,7 @@ driverSideBottomCardsView config push =
       height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , background Color.grey700
+    , background config.bottomBackground
     , gravity CENTER
     , visibility $ if config.isDriver then VISIBLE else GONE 
     ] $ map (\item -> getViewsByOrder config item push) config.viewsByOrder 

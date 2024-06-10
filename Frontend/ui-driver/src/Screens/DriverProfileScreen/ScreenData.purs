@@ -16,14 +16,13 @@
 module Screens.DriverProfileScreen.ScreenData where
 
 import Data.Maybe
-
 import Common.Types.App (CheckBoxOptions, LazyCheck(..))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Foreign.Object (empty)
 import Language.Types (STR(..)) as STR
 import ConfigProvider
-import Prelude (class Eq, unit, (<>), (==), (||), (/=))
+import Prelude (class Eq, map, unit, (<>), (==), (||), (/=))
 import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..))
 import Services.API (GetDriverInfoResp(..), OrganizationInfo(..), DriverGoHomeInfo(..))
 
@@ -139,39 +138,12 @@ initData =
 languagesChoices :: Array CheckBoxOptions
 languagesChoices =
   let config = getAppConfig appConfig
-  in
-  [ { value : "EN_US"
-    , text : "English"
-    , subText : config.engilshInNative
+  in map (\item -> { value : item.value
+    , text : item.name
+    , subText : item.subtitle
     , isSelected : false
-    }
-  , { value: "KN_IN"
-    , text: "ಕನ್ನಡ"
-    , subText : "Kannada"
-    , isSelected : false
-    }
-  , { value: "HI_IN"
-    , text: "हिंदी"
-    , subText : "Hindi"
-    , isSelected : false
-    }
-  , { value: "TA_IN"
-    , text: "தமிழ்"
-    , subText : "Tamil"
-    , isSelected : false
-    }
-  , { value: "TE_IN"
-    , text: "తెలుగు"
-    , subText : "Telugu"
-    , isSelected : false
-    }
-  , { value: "BN_IN"
-    , text: "বাংলা"
-    , subText : "Bangla"
-    , isSelected : false
-    }
-  ]
-
+    }) config.languageList
+ 
 dummyDriverInfo :: GetDriverInfoResp
 dummyDriverInfo = GetDriverInfoResp {
       id                    :  ""

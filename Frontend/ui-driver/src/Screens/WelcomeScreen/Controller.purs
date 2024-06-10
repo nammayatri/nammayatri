@@ -2,13 +2,15 @@ module Screens.WelcomeScreen.Controller where
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import JBridge (minimizeApp, firebaseLogEvent)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
-import Prelude (class Show, bind, pure, ($))
+import Prelude (class Show, bind, pure, ($), unit)
 import PrestoDOM (Eval, update, continue, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types (WelcomeScreenState)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
+import Data.Int (fromString)
+import Data.Maybe (fromMaybe)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -19,10 +21,13 @@ instance loggableAction :: Loggable Action where
     PrimaryButtonAC act -> case act of
       PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen WELCOME_SCREEN) "primary_button" "onclick"
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen WELCOME_SCREEN) "primary_button" "no_action"
+    _ -> pure unit
 
 data Action = BackPressed
             | AfterRender
             | PrimaryButtonAC PrimaryButtonController.Action
+            | OnPageChanged String
+            | ChangeSheet Int
 
 data ScreenOutput = MobileNumberScreen
 
@@ -36,4 +41,7 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_get_started"
   exit MobileNumberScreen
 
-eval _ state = update state
+eval (OnPageChanged idx) state = continue state{data{currentActiveIndex = fromMaybe 0 $ fromString idx}}
+eval (ChangeSheet idx) state = continue state{data{currentActiveIndex = idx}}
+
+eval _ state = continue state

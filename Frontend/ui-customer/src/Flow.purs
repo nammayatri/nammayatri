@@ -2720,8 +2720,6 @@ permissionScreenFlow :: FlowBT String Unit
 permissionScreenFlow = do
   void $ pure $ hideKeyboardOnNavigation true
   flow <- UI.permissionScreen
-  permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
-  permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
   internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
   case flow of
     REFRESH_INTERNET -> do
