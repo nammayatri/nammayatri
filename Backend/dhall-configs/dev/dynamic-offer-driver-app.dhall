@@ -203,6 +203,7 @@ let AllocatorJobType =
       | BadDebtCalculation
       | RetryDocumentVerification
       | SendManualPaymentLink
+      | ScheduledRideNotificationsToDriver
       >
 
 let jobInfoMapx =
@@ -222,6 +223,9 @@ let jobInfoMapx =
         , mapValue = False
         }
       , { mapKey = AllocatorJobType.SendManualPaymentLink, mapValue = True }
+      , { mapKey = AllocatorJobType.ScheduledRideNotificationsToDriver
+        , mapValue = True
+        }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
