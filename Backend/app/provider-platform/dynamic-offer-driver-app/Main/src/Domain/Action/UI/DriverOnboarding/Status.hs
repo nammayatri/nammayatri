@@ -68,6 +68,7 @@ import qualified Storage.Queries.VehicleInsurance as VIQuery
 import qualified Storage.Queries.VehiclePUC as VPUCQuery
 import qualified Storage.Queries.VehiclePermit as VPQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
+import Tools.Error (DriverOnboardingError (ImageNotValid))
 import Utils.Common.Cac.KeyNameConstants
 
 -- PENDING means "pending verification"
@@ -443,7 +444,7 @@ checkIfImageUploadedOrInvalidated docType driverId = do
     _ -> do
       let latestImage = head images
       if latestImage.verificationStatus == Just Documents.INVALID
-        then return (INVALID, show <$> latestImage.failureReason)
+        then return (INVALID, extractImageFailReason latestImage.failureReason)
         else return (MANUAL_VERIFICATION_REQUIRED, Nothing)
 
 checkIfUnderProgress :: DVC.DocumentType -> Id SP.Person -> Int -> Flow (ResponseStatus, Maybe Text)
@@ -456,16 +457,22 @@ checkIfUnderProgress docType driverId onboardingTryLimit = do
         else return (FAILED, verificationReq.idfyResponse)
     Nothing -> do
       images <- IQuery.findRecentByPersonIdAndImageType driverId docType
-      handlerImages images
+      handleImages images
   where
-    handlerImages images
+    handleImages images
       | null images = return (NO_DOC_AVAILABLE, Nothing)
       | length images > onboardingTryLimit = return (LIMIT_EXCEED, Nothing)
       | otherwise = do
         let latestImage = head images
         if latestImage.verificationStatus == Just Documents.INVALID
-          then return (INVALID, show <$> latestImage.failureReason)
+          then return (INVALID, extractImageFailReason latestImage.failureReason)
           else return (MANUAL_VERIFICATION_REQUIRED, Nothing)
+
+extractImageFailReason :: Maybe DriverOnboardingError -> Maybe Text
+extractImageFailReason imageError =
+  case imageError of
+    Just (ImageNotValid reason) -> Just reason -- only this because we are inserting this type only in manual reject request in update documents dashboard api
+    _ -> Nothing
 
 documentStatusMessage :: ResponseStatus -> Maybe Text -> DVC.DocumentType -> Language -> Flow Text
 documentStatusMessage status mbReason docType language = do
