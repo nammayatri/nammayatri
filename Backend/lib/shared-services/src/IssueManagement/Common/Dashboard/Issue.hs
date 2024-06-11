@@ -228,7 +228,7 @@ type TicketStatusCallBackAPI =
   "kapture"
     :> "ticketStatus"
     :> ReqBody '[JSON] TicketStatusCallBackReq
-    :> Put '[JSON] APISuccess
+    :> Post '[JSON] APISuccess
 
 data TicketStatusCallBackReq = TicketStatusCallBackReq
   { ticketId :: Text,
