@@ -1092,7 +1092,7 @@ tripStageTopBar push state =
         height WRAP_CONTENT,
         margin $ Margin 12 12 0 12,
         cornerRadius 32.0,
-        background Color.blue600,
+        background $ if isNothing state.data.advancedRideData then Color.grey700 else Color.blue600,
         padding $ Padding 4 4 4 4 
       ]$[ swichBtn (getString CURRENT_BUTTON_TEXT) CURRENT false $ state.props.bookingStage /= CURRENT
         , swichBtn (getString ADVANCE) ADVANCED (isNothing state.data.advancedRideData) (state.props.bookingStage /= ADVANCED)
@@ -1101,14 +1101,23 @@ tripStageTopBar push state =
     swichBtn txt stage isDisabled switchAllowed = 
       textView $ [
         text $ txt,
-        color if state.props.bookingStage == stage then Color.aliceBlueLight else Color.blue900,
-        background if state.props.bookingStage == stage then Color.blue900 else Color.blue600,
+        color $ 
+          case state.props.bookingStage == stage, isDisabled of
+            true, _ -> Color.aliceBlueLight
+            false, true -> Color.black700
+            false, false -> Color.blue900,
+        background $ 
+          case state.props.bookingStage == stage, isDisabled of
+            true, _ -> Color.blue900
+            false, true -> Color.grey700
+            false, false -> Color.blue600,
         padding $ Padding 12 12 12 12,
         cornerRadius 32.0,
         alpha $ if isDisabled then 0.5 else 1.0
       ] <> FontStyle.body6 TypoGraphy
         <> if isDisabled && switchAllowed then [] else [onClick push $ const $ SwitchBookingStage stage]
-    
+
+
 
 
 accessibilityHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> ContentConfig -> PrestoDOM (Effect Unit) w

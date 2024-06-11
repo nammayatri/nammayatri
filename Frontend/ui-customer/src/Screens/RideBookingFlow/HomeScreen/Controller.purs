@@ -1872,7 +1872,7 @@ eval (MAPREADY key latitude longitude) state =
           markers = HU.normalRoute ""
           srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
           destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = primaryText }
-          routeConfig = JB.mkRouteConfig (Remote.walkCoordinate srcLat srcLon dstLat dstLon) srcMarkerConfig destMarkerConfig "NORMAL_ROUTE" "DOT" false JB.DEFAULT (JB.mapRouteConfig{vehicleSizeTagIcon = HU.getVehicleSize unit, polylineAnimationConfig = getPolylineAnimationConfig})
+          routeConfig = JB.mkRouteConfig (Remote.walkCoordinate srcLat srcLon dstLat dstLon) srcMarkerConfig destMarkerConfig Nothing "NORMAL_ROUTE" "DOT" false JB.DEFAULT (JB.mapRouteConfig{vehicleSizeTagIcon = HU.getVehicleSize unit, polylineAnimationConfig = getPolylineAnimationConfig})
       void $ drawRoute [routeConfig] (getNewIDWithTag "CustomerHomeScreenEditDest")
       pure AfterRender
     ]

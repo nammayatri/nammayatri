@@ -2595,7 +2595,7 @@ homeScreenFlow = do
         let coors = (walkCoordinate srcLon srcLat destLon destLat)
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
         void $ pure $ removeAllPolylines ""
-        let normalRoute = JB.mkRouteConfig coors srcMarkerConfig destMarkerConfig "NORMAL" "DOT" false JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+        let normalRoute = JB.mkRouteConfig coors srcMarkerConfig destMarkerConfig Nothing "NORMAL" "DOT" false JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
         liftFlowBT $ drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
         homeScreenFlow
       else if not null state.data.route then do
@@ -2606,7 +2606,7 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
             pure $ removeMarker "ic_vehicle_side"
             void $ pure $ removeAllPolylines ""
-            let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+            let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
             liftFlowBT $ drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
             pure unit
           Nothing -> pure unit
@@ -2619,7 +2619,7 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
             pure $ removeMarker "ny_ic_auto"
             void $ pure $ removeAllPolylines ""
-            let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+            let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
             liftFlowBT $ drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
             pure unit
           Nothing -> pure unit                
@@ -2751,7 +2751,7 @@ homeScreenFlow = do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
           pure $ removeMarker "ny_ic_auto"
           void $ pure $ removeAllPolylines ""
-          let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+          let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
           liftFlowBT $ drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
           pure unit
         Nothing -> pure unit

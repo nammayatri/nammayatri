@@ -24,7 +24,7 @@ import Data.Either (Either(..), hush)
 import Data.Function.Uncurried (Fn2(..), Fn3, runFn3, Fn1, Fn4, runFn2, Fn5)
 import Data.Generic.Rep (class Generic)
 import Data.Int (toNumber)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import Effect (Effect)
@@ -460,7 +460,7 @@ removeAllPolylines str = removeAllPolylinesImpl markersToRemove
     removeAllPolylinesImpl mrkrToRemove = runFn2 removeAllPolylinesAndMarkers mrkrToRemove unit
     
     markersToRemove :: Array String   
-    markersToRemove = ["ic_auto_nav_on_map" , "ny_ic_vehicle_nav_on_map" , "ny_ic_black_yellow_auto" , "ny_ic_koc_auto_on_map", "ny_ic_src_marker", "ny_ic_dest_marker", "ny_ic_suv_nav_on_map", "ny_ic_hatchback_nav_on_map", "ny_ic_blue_marker","ny_ic_drop_loc_marker"]
+    markersToRemove = ["ic_auto_nav_on_map" , "ny_ic_vehicle_nav_on_map" , "ny_ic_black_yellow_auto" , "ny_ic_koc_auto_on_map", "ny_ic_src_marker", "ny_ic_dest_marker", "ny_ic_suv_nav_on_map", "ny_ic_hatchback_nav_on_map", "ny_ic_blue_marker","ny_ic_drop_loc_marker", ""]
 
 
 setKeyInSharedPrefKeys :: forall st. String -> String -> Flow st Unit
@@ -605,6 +605,10 @@ type MarkerConfig = {
   , position :: Paths
   , rotation :: Number
   , markerId :: String
+  , markerSize :: Number
+  , useSourcePoint :: Boolean
+  , useDestPoints :: Boolean
+  , usePosition :: Boolean
   , animationConfig :: AnimationConfig
   , anchorV :: Number
   , anchorU :: Number
@@ -632,6 +636,10 @@ defaultMarkerConfig = {
   , animationConfig : defaultAnimationConfig
   , anchorV : 0.5
   , anchorU : 0.5
+  , markerSize : 90.0
+  , useSourcePoint : false
+  , useDestPoints : true
+  , usePosition : false
 }
 
 type AnimationConfig = {
@@ -818,11 +826,12 @@ type RouteConfig = {
   mapRouteConfig :: MapRouteConfig,
   startMarkerConfig :: MarkerConfig,
   endMarkerConfig :: MarkerConfig,
+  stopMarkerConfig :: MarkerConfig,
   routeKey :: String
 }
 
-mkRouteConfig :: Locations -> MarkerConfig -> MarkerConfig -> String -> String -> Boolean -> RouteKeysType -> MapRouteConfig -> RouteConfig
-mkRouteConfig normalRoute startMarkerConfig endMarkerConfig routeType style isActual key mapRouteConfig = 
+mkRouteConfig :: Locations -> MarkerConfig -> MarkerConfig -> Maybe MarkerConfig -> String -> String -> Boolean -> RouteKeysType -> MapRouteConfig -> RouteConfig
+mkRouteConfig normalRoute startMarkerConfig endMarkerConfig mbStopMarkerConfig routeType style isActual key mapRouteConfig = 
   routeConfig{
     locations = normalRoute,
     routeType = routeType,
@@ -831,6 +840,7 @@ mkRouteConfig normalRoute startMarkerConfig endMarkerConfig routeType style isAc
     mapRouteConfig = mapRouteConfig,
     startMarkerConfig = startMarkerConfig,
     endMarkerConfig = endMarkerConfig,
+    stopMarkerConfig = fromMaybe defaultMarkerConfig mbStopMarkerConfig, 
     routeKey = show key
   }
 
@@ -852,6 +862,7 @@ routeConfig = {
   mapRouteConfig : defaultMapRouteConfig,
   startMarkerConfig : defaultMarkerConfig,
   endMarkerConfig : defaultMarkerConfig,
+  stopMarkerConfig : defaultMarkerConfig,
   routeKey : show DEFAULT
 }
 

@@ -587,7 +587,7 @@ drawRouteOnMap state =
                           let newPts = walkCoordinate startLat startLon endLat endLon
                               newRoute = {boundingBox: MB.Nothing, distance: 0, duration: 0, pointsForRentals: MB.Nothing, points : Snapped (map (\item -> LatLong { lat : item.lat, lon : item.lng}) newPts.points), snappedWaypoints : Snapped []}
                           in Tuple newRoute newPts
-      let routeConfig = JB.mkRouteConfig points sourceMarkerConfig destMarkerConfig "NORMAL" "LineString" false JB.DEFAULT (specialLocationConfig "" "" false getPolylineAnimationConfig)
+      let routeConfig = JB.mkRouteConfig points sourceMarkerConfig destMarkerConfig MB.Nothing "NORMAL" "LineString" false JB.DEFAULT (specialLocationConfig "" "" false getPolylineAnimationConfig)
       liftFlow $ drawRoute [routeConfig] (getNewIDWithTag "SearchLocationScreenMap")
     pure NoAction
   ] 

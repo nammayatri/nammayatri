@@ -849,7 +849,7 @@ driverLocationTracking push action duration id routeState = do
               srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker }
               destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = ride.destination, anchorV = 1.0 }
             addSosMarkers state.data.sosStatus point
-            let normalRoute = mkRouteConfig newPoints srcMarkerConfig destMarkerConfig "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT specialLocationTag
+            let normalRoute = mkRouteConfig newPoints srcMarkerConfig destMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT specialLocationTag
             liftFlow $ drawRoute [normalRoute] (getNewIDWithTag "FollowRideMap") -- check this
             liftFlow $ animateCamera srcLat srcLon 16.0 "ZOOM"
             void $ delay $ Milliseconds duration

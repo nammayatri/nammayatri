@@ -3006,12 +3006,12 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
             if ((getValueToLocalStore TRACKING_ID) == trackingId) then do
               if (getValueToLocalStore TRACKING_ENABLED) == "False" then do
                 let srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker }
-                    destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker }
+                    destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, anchorV = 1.0 }
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
                 
                 if (srcLat /= 0.0 && srcLon /= 0.0 && dstLat /= 0.0 && dstLon /= 0.0) then do 
                   _ <- pure $ removeAllPolylines ""
-                  let routeConfig = mkRouteConfig (walkCoordinate srcLat srcLon dstLat dstLon) srcMarkerConfig destMarkerConfig "DRIVER_LOCATION_UPDATE" "DOT" false JB.DEFAULT mapRouteConfig
+                  let routeConfig = mkRouteConfig (walkCoordinate srcLat srcLon dstLat dstLon) srcMarkerConfig destMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "DOT" false JB.DEFAULT mapRouteConfig
                   void $ liftFlow $ drawRoute [routeConfig] (getNewIDWithTag "CustomerHomeScreen")
                   else pure unit
                 void $ delay $ Milliseconds duration
@@ -3020,12 +3020,20 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
                 routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
                 routeResponseAdvanced <- do
-                  case state.data.routeCacheForAdvancedBooking, mbPreviousDropLat, mbPreviousDropLon of
-                    Nothing , Just previousDropLat, Just previousDropLon -> do
-                      let routeReq = makeGetRouteReq previousDropLat previousDropLon state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng
+                  case state.data.routeCacheForAdvancedBooking, mbPreviousDropLat, mbPreviousDropLon, routeResponse of
+                    Nothing , Just previousDropLat, Just previousDropLon, Right (GetRouteResp routeResp) -> do
+                      let routes = maybe (Nothing) (\(Route route) -> Just route) (routeResp !! 0)
+                      {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon dstLat dstLon routes
+                      let normalRoutePoints = fromMaybe {points : []} points
+                          lastPointInRoute = Arr.last normalRoutePoints.points
+                          previousDropLat' = maybe previousDropLat (\resp -> resp.lat) lastPointInRoute
+                          previousDropLon' = maybe previousDropLon (\resp -> resp.lng) lastPointInRoute
+                      --     dropMarkerConfig = defaultMarkerConfig{ markerId = "ny_ic_drop_loc_marker", pointerIcon = "ny_ic_drop_loc_marker", primaryText = "Dropping a rider nearby" , anchorV = 0.0, anchorU = 0.0 }
+                      -- JB.void $ showMarker markerConfig previousDropLat' previousDropLon' 20 0.5 0.5 (getNewIDWithTag "CustomerHomeScreen")
+                      let routeReq = makeGetRouteReq previousDropLat' previousDropLon' state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng
                       Just <$> getRoute routeState routeReq
-                    Just advRoute, Just previousDropLat, Just previousDropLon -> pure $ Just (Right (GetRouteResp ([advRoute])))
-                    _, _, _ -> pure $ Just (Right (GetRouteResp []))
+                    Just advRoute, Just previousDropLat, Just previousDropLon, _ -> pure $ Just (Right (GetRouteResp ([advRoute])))
+                    _, _, _, _ -> pure $ Just (Right (GetRouteResp []))
 
                 case routeResponse, routeResponseAdvanced of
                   Right (GetRouteResp routeResp), (Just (Right (GetRouteResp routeRespAdvanced)))  -> do
@@ -3043,13 +3051,14 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                             routeDistanceAdvanced = fromMaybe 0 routeDistance 
                             routeDurationAdvanced = fromMaybe 0 routeDuration
                             srcMarkerConfig = defaultMarkerConfig{ markerId = markers'.srcMarker, pointerIcon = markers'.srcMarker }
-                            srcMarkerConfig' = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = "Dropping another customer nearby" }
-                            destMarkerConfig = defaultMarkerConfig{ markerId = "", pointerIcon = "" , primaryText = "", anchorV = 1.0  }
+                            srcMarkerConfig' = defaultMarkerConfig{ markerId = "dummy_src", pointerIcon = "" , primaryText = "", anchorV = 1.0  }
+                            destMarkerConfig = defaultMarkerConfig{ markerId = "dummy_dest", pointerIcon = "" , primaryText = "", anchorV = 1.0  }
+                            stopMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = "Completing ride nearby" , anchorV = 0.8, markerSize = 80.0, useSourcePoint = true, useDestPoints = false, labelMaxWidth = 350 }
                             destMarkerConfig' = defaultMarkerConfig{ markerId = markers'.destMarker, pointerIcon = markers'.destMarker, primaryText = getMarkerPrimaryText (routes.distance + routesAdvanced.distance) , anchorV = 1.0 }
                             normalRoutePoints = fromMaybe {points : []} newPoints
                             normalAdvRoutePoints = fromMaybe {points : []} newPointsAdv
-                            normalRoute = mkRouteConfig normalRoutePoints srcMarkerConfig destMarkerConfig "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT mapRouteConfig
-                            normalAdvRouteConfig = mkRouteConfig normalAdvRoutePoints srcMarkerConfig' destMarkerConfig' "DRIVER_LOCATION_UPDATE" "DOT" true JB.ADVANCED mapRouteConfig
+                            normalRoute = mkRouteConfig normalRoutePoints srcMarkerConfig destMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT mapRouteConfig{isAnimation = false}
+                            normalAdvRouteConfig = mkRouteConfig normalAdvRoutePoints srcMarkerConfig' destMarkerConfig' (Just stopMarkerConfig) "ADVANCED_ROUTE" "DOT" true JB.ADVANCED mapRouteConfig{isAnimation = false}
                         liftFlow $ drawRoute [normalRoute,normalAdvRouteConfig] (getNewIDWithTag "CustomerHomeScreen")
                         _ <- doAff do liftEffect $ push $ updateState (routes.duration + routesAdvanced.duration) (routes.distance + routesAdvanced.distance)
                         void $ delay $ Milliseconds duration
@@ -3072,8 +3081,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                               destRentalMarkerConfig = defaultMarkerConfig{ markerId = "ny_ic_blue_marker", pointerIcon = "ny_ic_blue_marker", primaryText = "", anchorV = 1.0  }
                               normalRoutePoints = fromMaybe {points : []} points
                               rentalRoutePoints = fromMaybe {points : []} rentalPoints
-                              normalRoute = mkRouteConfig  normalRoutePoints srcMarkerConfig destMarkerConfig "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT mapRouteConfig
-                              rentalRouteConfig = mkRouteConfig rentalRoutePoints srcRentalMarkerConfig destRentalMarkerConfig "DRIVER_LOCATION_UPDATE" "DOT" true JB.RENTAL mapRouteConfig
+                              normalRoute = mkRouteConfig  normalRoutePoints srcMarkerConfig destMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT mapRouteConfig
+                              rentalRouteConfig = mkRouteConfig rentalRoutePoints srcRentalMarkerConfig destRentalMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "DOT" true JB.RENTAL mapRouteConfig
                           liftFlow $ drawRoute [normalRoute,rentalRouteConfig] (getNewIDWithTag "CustomerHomeScreen")
                           else pure unit
                         _ <- doAff do liftEffect $ push $ updateState (fromMaybe 1 routeDuration) $ fromMaybe 1 routeDistance
@@ -3098,7 +3107,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                                     else
                                                       specialLocationConfig "" destSpecialTagIcon false getPolylineAnimationConfig
                               mapRouteConfig = if onUsRide then specialLocationTag else specialLocationTag{dashUnit = 30, gapUnit = 20}
-                          liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  markers.destMarker, eta = if hasCurrentLocAndPrevDropLoc then "Dropping another customer nearby" else getMarkerPrimaryText locationResp.distance, srcMarker = markers.srcMarker, specialLocation = mapRouteConfig, zoomLevel = zoomLevel, pureScriptID = (getNewIDWithTag "CustomerHomeScreen"),  polylineKey = "DEFAULT"}
+                          liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  if hasCurrentLocAndPrevDropLoc then "dummy_dest" else markers.destMarker, eta = if hasCurrentLocAndPrevDropLoc then "" else getMarkerPrimaryText locationResp.distance, srcMarker = markers.srcMarker, specialLocation = mapRouteConfig, zoomLevel = zoomLevel, pureScriptID = (getNewIDWithTag "CustomerHomeScreen"),  polylineKey = "DEFAULT"}
                           _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
                           void $ delay $ Milliseconds duration
                           driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter

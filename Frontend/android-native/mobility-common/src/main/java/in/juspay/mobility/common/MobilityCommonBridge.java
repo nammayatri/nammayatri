@@ -333,6 +333,7 @@ public class MobilityCommonBridge extends HyperBridge {
         int labelMaxLines = 1;
         int labelTextSize = 11;        
         float rotation = 0;
+        int markerIconSize = 160;
         AnimationType animationType = AnimationType.NONE;
         int animationDuration = 0;
         public void locationName(String primaryText, String secondaryText) {
@@ -389,6 +390,7 @@ public class MobilityCommonBridge extends HyperBridge {
             }
         }
         public void setMarkerCallback(String callback) { this.markerCallback = callback; }
+        public void  setMarkerIconSize(int markerSize) {this.markerIconSize = markerSize; }
     }
 
     public static class MarkerImageConfig {
@@ -402,18 +404,9 @@ public class MobilityCommonBridge extends HyperBridge {
             this.width = width;
         }
     }
-    public Polyline getPolyLine(Boolean isOverPolyLine, PolylineDataPoints polylineData)
-    {
-        if (isOverPolyLine && polylineData != null){
-            return polylineData.overlayPolylines;
-        }
-        else if (!isOverPolyLine && polylineData != null)
-        {
-            return polylineData.polyline;
-        }
-        else {
-            return null;
-        }
+    public Polyline getPolyLine(Boolean isOverlayPolyLine, PolylineDataPoints polylineData)
+    {   
+        if (polylineData != null) { return isOverlayPolyLine ? polylineData.overlayPolylines : polylineData.polyline; }else{ return null; }
     }
     public static PolylineDataPoints getPolyLineDataByMapInstance(String mapKey, String polyLineKey)
     {
@@ -2327,7 +2320,7 @@ public class MobilityCommonBridge extends HyperBridge {
         try{
             isAnimationNeeded = mapRouteConfigObject != null && mapRouteConfigObject.optBoolean("isAnimation", false);
             
-            if(!isAnimationNeeded || Utils.getDeviceRAM() <= 3){
+            if(!isAnimationNeeded ){
                 if(polylineAnimationTimer != null){
                     polylineAnimationTimer.cancel();
                 }
@@ -2371,7 +2364,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             try{
                                 PolylineDataPoints polyDataPoints = getPolyLineDataByMapInstance(gmapKey,polyLineKey);
                                 Polyline polyline =  getPolyLine(false,polyDataPoints);
-                                Polyline overlayPolylines = getPolyLine(false,polyDataPoints);
+                                Polyline overlayPolylines = getPolyLine(true,polyDataPoints);
                                 if (polyline != null) {
                                     List<LatLng> foregroundPoints = polyline.getPoints();
                                     Collections.reverse(foregroundPoints);
@@ -2441,7 +2434,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
                     JSONObject startMarkerConfig = new JSONObject(drawRouteEntity.getString("startMarkerConfig"));
                     JSONObject endMarkerConfig = new JSONObject(drawRouteEntity.getString("endMarkerConfig"));
-                    JSONObject stopMarkerConfig = new JSONObject(drawRouteEntity.getString("endMarkerConfig"));
+                    JSONObject stopMarkerConfig = new JSONObject(drawRouteEntity.getString("stopMarkerConfig"));
                     Double sourceAnchorVD = startMarkerConfig.optDouble("anchorV", 0.5);
                     Double sourceAnchorUD = startMarkerConfig.optDouble("anchorU", 0.5);
                     Double destinationMarkerAnchorVD = endMarkerConfig.optDouble("anchorV", 0.5);
@@ -2530,7 +2523,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         // Destination Marker
                         if (!destIcon.equals("")) {
                             List<LatLng> points = polylineOptions.getPoints();
-                        LatLng dest = points.get(0);
+                            LatLng dest = points.get(0);
                             markerConfig.locationName(endMarkerConfig.optString("primaryText", ""), endMarkerConfig.optString("secondaryText", ""));
                             markerConfig.setLabelImageConfig(endLabelImageConfig);
                             markerConfig.setLabelActionImageConfig(endActionImageConfig);
@@ -2585,12 +2578,39 @@ public class MobilityCommonBridge extends HyperBridge {
                             }
                         }
                         if (!stopIcon.equals("")) {
+                            Double stopMarkerSize = stopMarkerConfig.optDouble("markerSize", 90);
+                            boolean useSourcePoint = stopMarkerConfig.optBoolean("useSourcePoint", false);
+                            boolean useDestPoints = stopMarkerConfig.optBoolean("useDestPoints", true);
+                            boolean usePosition = stopMarkerConfig.optBoolean("usePosition", false);
+                            JSONObject position = stopMarkerConfig.optJSONObject("position");
+                            Double lat = position != null ? position.optDouble("lat", 0.0) : 0.0;
+                            Double lng = position != null ? position.optDouble("lng", 0.0) : 0.0;
+                            Double stopMarkerAnchorVD = stopMarkerConfig.optDouble("anchorV", 1.0);
+                            Double stopMarkerAnchorUD = stopMarkerConfig.optDouble("anchorU", 0.5);
+                            float stopMarkerAnchorV = stopMarkerAnchorVD.floatValue();
+                            float stopMarkerAnchorU = stopMarkerAnchorUD.floatValue();
                             List<LatLng> points = polylineOptions.getPoints();
-                            LatLng source = points.get(0);
+                            LatLng source = useSourcePoint ? points.get(points.size() - 1) : useDestPoints ? points.get(0) : new LatLng(lat,lng); 
                             MarkerConfig mConfig = getMarkerConfigWithIdAndName(stopIcon, stopIconId);
-                            upsertMarkerV2(mConfig,String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 1.0f,purescriptId);
-                            Marker currMarker = (Marker) markers.get(stopIcon);
+                            String primaryText = stopMarkerConfig.optString("primaryText", "");
+                            String secondaryText = stopMarkerConfig.optString("secondaryText", "");
+                            mConfig.locationName(primaryText, secondaryText);
+                            mConfig.setLabelImageConfig(startLabelImageConfig);
+                            mConfig.setTheme(endTheme);
+                            mConfig.setLabelActionImageConfig(startActionImageConfig);
+                            mConfig.setLabelMaxWidth(stopMarkerConfig.optInt("labelMaxWidth",300));
+                            mConfig.setLabelMaxLines(stopMarkerConfig.optInt("labelMaxLines", 2));
+                            mConfig.setLabelTextSize(stopMarkerConfig.optInt("labelTextSize", 11));
+                            mConfig.setShortTitle(startShortTitle);
+                            mConfig.setMarkerIconSize(stopMarkerSize.intValue());
+                            MarkerOptions markerObj = new MarkerOptions()
+                                    .title("")
+                                    .position(source)
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(stopIcon, false, null, MarkerType.STOP_ICON_MARKER, mConfig)))
+                                    .anchor(stopMarkerAnchorU, stopMarkerAnchorV);
+                            Marker currMarker = gMap.addMarker(markerObj);
                             markers.put(stopIcon, currMarker);
+//                          
                         }
                     }  catch (JSONException e) {
                         System.out.println("Exception inside drawRouteV2" + e);
@@ -2799,7 +2819,7 @@ public class MobilityCommonBridge extends HyperBridge {
             setMarkerBackground(backgroundColor, customMarkerView);
             setMarkerText(textColor, customMarkerView, markerConfig);
             setMarkerlabelImage(markerConfig.labelImage, customMarkerView);
-            setMarkerPointerImage(pointerImage, isInvisiblePointer, markerType, customMarkerView, markerConfig.rotation);
+            setMarkerPointerImage(pointerImage, isInvisiblePointer, markerType, customMarkerView, markerConfig);
             setMarkerActionImage(actionImage, markerConfig.primaryText, customMarkerView);
             setLabelImageAction(customMarkerView, markerConfig.labelActionImage);
         } catch (Exception e) {
@@ -2926,8 +2946,10 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    private void setMarkerPointerImage(String pointerImage, Boolean isInvisiblePointer, MarkerType markerType, View customMarkerView, float markerRotation) {
+    private void setMarkerPointerImage(String pointerImage, Boolean isInvisiblePointer, MarkerType markerType, View customMarkerView, MarkerConfig markerConfig) {
         Context context = bridgeComponents.getContext();
+        float markerRotation = markerConfig.rotation;
+        int markerSize = markerConfig.markerIconSize;
         ImageView pointer = customMarkerView.findViewById(R.id.pointer_img);
         pointer.setRotation(markerRotation);
         if (pointerImage != null)
@@ -2939,7 +2961,14 @@ public class MobilityCommonBridge extends HyperBridge {
             layoutParams.height = 55;
             layoutParams.width = 55;
             pointer.setLayoutParams(layoutParams);
-        } else {
+        } 
+        else if (markerType.equals(MarkerType.STOP_ICON_MARKER) && markerSize != 0) {
+            ViewGroup.LayoutParams layoutParams = pointer.getLayoutParams();
+            layoutParams.height = markerSize;
+            layoutParams.width = markerSize;
+            pointer.setLayoutParams(layoutParams);
+        }
+        else {
             if (pointerImage != null && pointerImage.equals("ny_ic_customer_current_location")) {
                 ViewGroup.LayoutParams layoutParams = pointer.getLayoutParams();
                 layoutParams.height = 160;
@@ -2988,9 +3017,8 @@ public class MobilityCommonBridge extends HyperBridge {
                 String labelText = shortTitle != null && !shortTitle.equals("") ? shortTitle : primaryText;
                 primaryTextView.setText(labelText);
                 if(markerConfig.labelMaxWidth != 0) primaryTextView.setMaxWidth(markerConfig.labelMaxWidth);
-                if(secondaryText.equals("") && markerConfig.labelMaxLines != 1 && !markerConfig.labelActionImage.image.equals("")) {
-                    primaryTextView.setMaxLines(2);
-                }
+                if(secondaryText.equals("")) primaryTextView.setMaxLines(markerConfig.labelMaxLines);
+
                 primaryTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, markerConfig.labelTextSize);
                 primaryTextView.setImportantForAccessibility(TextView.IMPORTANT_FOR_ACCESSIBILITY_YES);
                 primaryTextView.setContentDescription(primaryText);
@@ -3044,6 +3072,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 removeMarker("ny_ic_src_marker");
                 removeMarker("ny_ic_dest_marker");
                 removeMarker("ny_ic_blue_marker");
+                removeMarker("");
                 if (polylinesByMapInstance != null) {
                     for (String i : polylinesByMapInstance.keySet()) {
                         mapkeys.add(i);
@@ -3059,7 +3088,6 @@ public class MobilityCommonBridge extends HyperBridge {
                 } catch (JSONException e) {
                     try {
                         jsonMarkersArray = new JSONArray(removePolyLineConfig);
-                        System.out.println("array of markers" + jsonMarkersArray);
                         if (jsonMarkersArray == null || (jsonMarkersArray != null && jsonMarkersArray.length() <= 0))
                         { removeAllMarkers();}
                         if (polylinesByMapInstance != null) {
@@ -4273,7 +4301,8 @@ public class MobilityCommonBridge extends HyperBridge {
 
     public enum MarkerType {
         SPECIAL_ZONE_MARKER,
-        NORMAL_MARKER
+        NORMAL_MARKER,
+        STOP_ICON_MARKER,
     }
 
     @JavascriptInterface
