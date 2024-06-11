@@ -57,9 +57,7 @@ We believe in the power of open-source. This repository aims to foster an open d
 
 Happy Contributing
 
-<a href="#Thanks to all contributors">
-  <h2 id="Thanks to all contributors">✨ Thanks to all contributors</h2>
-</a>
+## ✨ Thanks to all contributors
 
 Thank you for your support in nammayatri's growth. Keep up the great work! 🥂
 
