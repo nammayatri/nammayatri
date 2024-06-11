@@ -102,7 +102,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
       DriverPoolWithActualDistResultWithFlags
         { driverPoolWithActualDistResult = finalPool,
           poolType = poolType,
-          prevBatchDrivers = map fst prevBatchDrivers,
+          prevBatchDrivers = prevBatchDrivers,
           nextScheduleTime = nextScheduleTime
         }
     getPreviousBatchesDrivers ::
@@ -113,10 +113,10 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
         LT.HasLocationService m r
       ) =>
       Maybe Bool ->
-      m [(Id Driver, DVST.ServiceTierType)]
+      m [Id Driver]
     getPreviousBatchesDrivers mbOnRide = do
       batches <- previouslyAttemptedDrivers searchTry.id mbOnRide
-      return $ (\batch -> (batch.driverPoolResult.driverId, batch.driverPoolResult.serviceTier)) <$> batches
+      return $ (.driverPoolResult.driverId) <$> batches
 
     calculateWithFallback [] _ = return $ PrepareDriverPoolBatchEntity [] NormalPool Nothing []
     calculateWithFallback (prorityPoolType : fallbackPoolTypes) fn = do
@@ -235,7 +235,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
         calculateGoHomeBatch mOCityId transporterConfig intelligentPoolConfig allNearbyGoHomeDrivers blockListedDrivers = do
           let allNearbyGoHomeDrivers' = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` blockListedDrivers) allNearbyGoHomeDrivers
           logDebug $ "GoHomeDriverPool-" <> show allNearbyGoHomeDrivers'
-          let onlyNewGoHomeDriversWithMultipleSeriveTier = filter (\dpr -> (dpr.driverPoolResult.driverId, dpr.driverPoolResult.serviceTier) `notElem` previousBatchesDrivers) allNearbyGoHomeDrivers'
+          let onlyNewGoHomeDriversWithMultipleSeriveTier = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` previousBatchesDrivers) allNearbyGoHomeDrivers'
           let onlyNewGoHomeDrivers =
                 if isBookAny (tripQuoteDetails <&> (.vehicleServiceTier))
                   then do selectMinDowngrade transporterConfig.bookAnyVehicleDowngradeLevel onlyNewGoHomeDriversWithMultipleSeriveTier
@@ -289,7 +289,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
                 filterM
                   ( \dpr -> do
                       isHasValidRequests <- checkRequestCount searchTry.id (isBookAny $ tripQuoteDetails <&> (.vehicleServiceTier)) dpr.driverPoolResult.driverId dpr.driverPoolResult.serviceTier dpr.driverPoolResult.serviceTierDowngradeLevel driverPoolCfg
-                      let isPreviousBatchDriver = (dpr.driverPoolResult.driverId, dpr.driverPoolResult.serviceTier) `elem` previousDriverOnRide
+                      let isPreviousBatchDriver = dpr.driverPoolResult.driverId `elem` previousDriverOnRide
                       return $ isHasValidRequests && isPreviousBatchDriver
                   )
                   allNearbyDriversCurrentlyOnRide
@@ -302,7 +302,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
         filterSpecialDrivers specialDrivers = filter (\dpr -> not ((getId dpr.driverPoolResult.driverId) `elem` specialDrivers))
 
         bookAnyFilters transporterConfig allNearbyDrivers previousBatchesDrivers' = do
-          let onlyNewNormalDriversWithMultipleSeriveTier = filter (\dpr -> (dpr.driverPoolResult.driverId, dpr.driverPoolResult.serviceTier) `notElem` previousBatchesDrivers') allNearbyDrivers
+          let onlyNewNormalDriversWithMultipleSeriveTier = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` previousBatchesDrivers') allNearbyDrivers
           if isBookAny (tripQuoteDetails <&> (.vehicleServiceTier))
             then do selectMinDowngrade transporterConfig.bookAnyVehicleDowngradeLevel onlyNewNormalDriversWithMultipleSeriveTier
             else do onlyNewNormalDriversWithMultipleSeriveTier
