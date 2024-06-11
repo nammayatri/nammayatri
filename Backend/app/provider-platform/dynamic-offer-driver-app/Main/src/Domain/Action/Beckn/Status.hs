@@ -58,7 +58,8 @@ handler transporterId req = do
         DRide.NEW -> do
           bookingDetails <- SyncRide.fetchBookingDetails ride booking
           driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
-          resp <- try @_ @SomeException (Aadhaar.fetchAndCacheAadhaarImage bookingDetails.driver driverInfo)
+          driver <- (pure bookingDetails.driver) >>= fromMaybeM (InvalidRequest "Missing driver in booking details")
+          resp <- try @_ @SomeException (Aadhaar.fetchAndCacheAadhaarImage driver driverInfo)
           let image = join (eitherToMaybe resp)
           let isDriverBirthDay = False
           let isFreeRide = False

@@ -89,7 +89,7 @@ fetchBookingDetails ride booking = do
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-  pure DCommon.BookingDetails {..}
+  pure DCommon.BookingDetails {driver = Just driver, vehicle = Just vehicle, ..}
 
 -- IN_PROGRESS --
 

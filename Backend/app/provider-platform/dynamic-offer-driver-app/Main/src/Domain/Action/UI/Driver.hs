@@ -1175,7 +1175,7 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
     case mbSearchTry of
       Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchantId driver.id searchTry.id $ mkPrice (Just quote.currency) quote.estimatedFare
       Nothing -> pure []
-  void $ sendRideAssignedUpdateToBAP booking ride driver vehicle
+  void $ sendRideAssignedUpdateToBAP booking ride (Just driver) (Just vehicle)
   CS.markBookingAssignmentCompleted booking.id
   return driverFCMPulledList
 

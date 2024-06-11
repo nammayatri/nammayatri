@@ -276,10 +276,12 @@ sendRideAssignedUpdateToBAP ::
   ) =>
   DRB.Booking ->
   SRide.Ride ->
-  DP.Person ->
-  DVeh.Vehicle ->
+  Maybe DP.Person ->
+  Maybe DVeh.Vehicle ->
   m ()
-sendRideAssignedUpdateToBAP booking ride driver veh = do
+sendRideAssignedUpdateToBAP booking ride mbDriver mbVeh = do
+  driver <- (pure mbDriver) >>= fromMaybeM (InvalidRequest "Missing driver in booking details")
+  veh <- (pure mbVeh) >>= fromMaybeM (InvalidRequest "Missing vehicle in booking details")
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   let estimateId = booking.estimateId <&> getId
   merchant <-
@@ -298,7 +300,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
       Just transporterConfig ->
         if transporterConfig.refillVehicleModel
           then do
-            reffiledVeh <- refillVehicleModel
+            reffiledVeh <- refillVehicleModel veh
             pure $
               case reffiledVeh of
                 Right reffiledVeh' -> reffiledVeh'
@@ -307,7 +309,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
       Nothing -> pure veh
   riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-  let bookingDetails = ACL.BookingDetails {..}
+  let bookingDetails = ACL.BookingDetails {driver = Just driver, vehicle = Just vehicle, ..}
   resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
   let image = join (eitherToMaybe resp)
   isDriverBirthDay <- maybe (return False) (checkIsDriverBirthDay mbTransporterConfig) driverInfo.driverDob
@@ -321,7 +323,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
   where
     refillKey = "REFILLED_" <> ride.driverId.getId
     updateVehicle DVeh.Vehicle {..} newModel = DVeh.Vehicle {model = newModel, ..}
-    refillVehicleModel = try @_ @SomeException do
+    refillVehicleModel veh = try @_ @SomeException do
       -- TODO: remove later
       mbIsRefilledToday :: Maybe Bool <- Redis.get refillKey
       case mbIsRefilledToday of
@@ -393,7 +395,7 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
   let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
       paymentUrl = Nothing
-      bookingDetails = ACL.BookingDetails {..}
+      bookingDetails = ACL.BookingDetails {driver = Just driver, vehicle = Just vehicle, ..}
       estimateId = booking.estimateId <&> (.getId)
       rideStartedBuildReq = ACL.RideStartedReq ACL.DRideStartedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
@@ -428,7 +430,7 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-  let bookingDetails = ACL.BookingDetails {..}
+  let bookingDetails = ACL.BookingDetails {driver = Just driver, vehicle = Just vehicle, ..}
       estimateId = booking.estimateId <&> (.getId)
       rideCompletedBuildReq = ACL.RideCompletedBuildReq ACL.DRideCompletedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
@@ -543,7 +545,7 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
   let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
       paymentUrl = Nothing
-      bookingDetails = ACL.BookingDetails {..}
+      bookingDetails = ACL.BookingDetails {driver = Just driver, vehicle = Just vehicle, ..}
       estimateId = booking.estimateId <&> (.getId)
       driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
@@ -578,7 +580,7 @@ sendStopArrivalUpdateToBAP booking ride driver vehicle = do
     bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
     riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
     riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-    let bookingDetails = ACL.BookingDetails {..}
+    let bookingDetails = ACL.BookingDetails {driver = Just driver, vehicle = Just vehicle, ..}
         stopArrivedBuildReq = ACL.StopArrivedBuildReq ACL.DStopArrivedBuildReq {..}
     stopArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing stopArrivedBuildReq
     retryConfig <- asks (.shortDurationRetryCfg)
@@ -615,7 +617,7 @@ sendNewMessageToBAP booking ride message = do
     let paymentUrl = Nothing
     riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
     riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-    let bookingDetails = ACL.BookingDetails {..}
+    let bookingDetails = ACL.BookingDetails {driver = Just driver, vehicle = Just vehicle, ..}
         newMessageBuildReq = ACL.NewMessageBuildReq ACL.DNewMessageReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
     newMessageMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing newMessageBuildReq
@@ -655,7 +657,7 @@ sendUpdateEditDestToBAP booking ride bookingUpdateReqDetails newDestination curr
     let paymentUrl = Nothing
     riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
     riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-    let bookingDetails = ACL.BookingDetails {..}
+    let bookingDetails = ACL.BookingDetails {driver = Just driver, vehicle = Just vehicle, ..}
         sUpdateEditDestToBAPReq = ACL.EditDestinationUpdate ACL.DEditDestinationUpdateReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
     sUpdateEditDestToBAP <- ACL.buildOnUpdateMessageV2 merchant booking (Just bookingUpdateReqDetails.bapBookingUpdateRequestId) sUpdateEditDestToBAPReq
@@ -692,7 +694,7 @@ sendSafetyAlertToBAP booking ride reason driver vehicle = do
     let paymentUrl = Nothing
     riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
     riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-    let bookingDetails = ACL.BookingDetails {..}
+    let bookingDetails = ACL.BookingDetails {driver = Just driver, vehicle = Just vehicle, ..}
         safetyAlertBuildReq = ACL.SafetyAlertBuildReq ACL.DSafetyAlertReq {..}
 
     retryConfig <- asks (.shortDurationRetryCfg)
@@ -731,7 +733,7 @@ sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource dri
     bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
     riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
     riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-    let bookingDetails = ACL.BookingDetails {..}
+    let bookingDetails = ACL.BookingDetails {driver = Just driver, vehicle = Just vehicle, ..}
         estimateRepetitionBuildReq = ACL.EstimateRepetitionBuildReq ACL.DEstimateRepetitionReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
     estimateRepMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing estimateRepetitionBuildReq
@@ -769,7 +771,7 @@ sendQuoteRepetitionUpdateToBAP booking ride newBookingId cancellationSource driv
     bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
     riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
     riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-    let bookingDetails = ACL.BookingDetails {..}
+    let bookingDetails = ACL.BookingDetails {driver = Just driver, vehicle = Just vehicle, ..}
         quoteRepetitionBuildReq = ACL.QuoteRepetitionBuildReq ACL.DQuoteRepetitionReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
     quoteRepMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing quoteRepetitionBuildReq
@@ -804,7 +806,7 @@ sendTollCrossedUpdateToBAP (Just booking) (Just ride) driver vehicle = do
     let paymentUrl = Nothing
         riderPhone = Nothing
     bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
-    let bookingDetails = ACL.BookingDetails {..}
+    let bookingDetails = ACL.BookingDetails {driver = Just driver, vehicle = Just vehicle, ..}
         tollCrossedUpdateBuildReq = ACL.TollCrossedBuildReq ACL.DTollCrossedBuildReq {..}
     tollCrossedMsg <- ACL.buildOnUpdateMessageV2 merchant booking Nothing tollCrossedUpdateBuildReq
     retryConfig <- asks (.shortDurationRetryCfg)

@@ -397,7 +397,7 @@ otpRideCreate driver otpCode booking clientId = do
   throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo
   (ride, rideDetails, _) <- initializeRide transporter.id driver booking (Just otpCode) Nothing clientId
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
-  handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle
+  handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride (Just driver) (Just vehicle)
 
   driverNumber <- RD.getDriverNumber rideDetails
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone

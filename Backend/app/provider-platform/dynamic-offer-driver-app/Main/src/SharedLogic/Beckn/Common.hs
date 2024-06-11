@@ -29,8 +29,8 @@ import Kernel.Prelude
 data BookingDetails = BookingDetails
   { ride :: DRide.Ride,
     booking :: DRB.Booking,
-    driver :: SP.Person,
-    vehicle :: SVeh.Vehicle,
+    driver :: Maybe SP.Person,
+    vehicle :: Maybe SVeh.Vehicle,
     riderPhone :: Maybe Text,
     isValueAddNP :: Bool,
     bppConfig :: DBC.BecknConfig,
