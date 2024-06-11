@@ -9,7 +9,7 @@ Namma Yatri aims to empower service providers with a high-tech, cost-effective a
 
 1. **Zero Commission**: Ensuring no commission fees for drivers, promoting fair earnings and economic empowerment for service providers.
 2. **Open**: Utilizing open data platforms, open code, and open networks to foster transparency, innovation, and collaboration within the community.
-3. **Optimize**: Striving for high efficiency and reliability through continuous technological advancements and process improvements.
+3. **Optimize**: Achieve population scale growth with utility-like pricing by continuously optimizing maps, cloud, and development costs, all while maintaining high reliability and rich user experience.
 4. **Multimodal**: Supporting various modes of transport to provide comprehensive, integrated mobility solutions for a seamless user experience.
 5. **Shared Transport**: Promoting shared mobility options to reduce traffic congestion, lower costs, and minimize carbon emissions, contributing to a sustainable future.
 
