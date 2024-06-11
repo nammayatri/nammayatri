@@ -239,6 +239,7 @@ parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just Variant.AUTO_RICKSHAW
   (Just "CAB", Just "TAXI") -> Just Variant.TAXI
   (Just "CAB", Just "TAXI_PLUS") -> Just Variant.TAXI_PLUS
+  (Just "MOTORCYCLE", Just "BIKE") -> Just Variant.BIKE
   _ -> Nothing
 
 parseAddress :: MonadFlow m => Spec.Location -> m (Maybe DL.LocationAddress)

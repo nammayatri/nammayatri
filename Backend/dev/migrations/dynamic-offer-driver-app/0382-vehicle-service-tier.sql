@@ -32,11 +32,13 @@ update atlas_driver_offer_bpp.vehicle_service_tier set name = 'Hatchback' where 
 update atlas_driver_offer_bpp.vehicle_service_tier set name = 'Sedan' where service_tier_type = 'SEDAN';
 update atlas_driver_offer_bpp.vehicle_service_tier set name = 'SUV' where service_tier_type = 'SUV';
 update atlas_driver_offer_bpp.vehicle_service_tier set name = 'Non-AC' where service_tier_type = 'TAXI';
+update atlas_driver_offer_bpp.vehicle_service_tier set name = 'Bike Taxi' where service_tier_type = 'BIKE';
 
 update atlas_driver_offer_bpp.vehicle_service_tier set short_description = 'Commute friendly' where service_tier_type = 'AUTO_RICKSHAW';
 update atlas_driver_offer_bpp.vehicle_service_tier set short_description = 'AC, Spacious rides' where service_tier_type = 'SUV';
 update atlas_driver_offer_bpp.vehicle_service_tier set short_description = 'AC, Plush rides' where service_tier_type = 'SEDAN';
 update atlas_driver_offer_bpp.vehicle_service_tier set short_description = 'AC, Budget rides' where service_tier_type = 'HATCHBACK';
+update atlas_driver_offer_bpp.vehicle_service_tier set short_description = 'Commute friendly' where service_tier_type = 'BIKE';
 
 -- Backfill selected_service_tiers in vehicle
 UPDATE atlas_driver_offer_bpp.vehicle
@@ -79,3 +81,8 @@ SET selected_service_tiers = array_remove(ARRAY[
 ]::text[], NULL) -- Ensure array is of type text[], removing any NULL values
 FROM atlas_driver_offer_bpp.driver_information as driver_information
 WHERE vehicle.driver_id = driver_information.driver_id and vehicle.variant = 'AUTO_RICKSHAW';
+
+UPDATE atlas_driver_offer_bpp.vehicle
+SET selected_service_tiers = ARRAY['BIKE']::text[]
+FROM atlas_driver_offer_bpp.driver_information as driver_information
+WHERE vehicle.driver_id = driver_information.driver_id and vehicle.variant = 'BIKE';

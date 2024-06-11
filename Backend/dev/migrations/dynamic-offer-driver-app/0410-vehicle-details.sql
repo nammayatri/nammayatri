@@ -1203,3 +1203,4 @@ INSERT INTO atlas_driver_offer_bpp.vehicle_details (id, make, model, vehicle_var
 INSERT INTO atlas_driver_offer_bpp.vehicle_details (id, make, model, vehicle_variant, ac_available) VALUES ('ba2a0348-f591-4937-a063-e2f9f383143a', 'Volvo', 'XC70', 'SEDAN', true);
 INSERT INTO atlas_driver_offer_bpp.vehicle_details (id, make, model, vehicle_variant, ac_available) VALUES ('9be9a660-12fa-443c-9533-07deeab496a2', 'Volvo', 'XC90', 'SEDAN', true);
 INSERT INTO atlas_driver_offer_bpp.vehicle_details (id, make, model, vehicle_variant, ac_available) VALUES ('83337d8e-fcf1-41bf-bdcd-78236ceee9ec', 'Volvo', 'V90', 'HATCHBACK', true);
+INSERT INTO atlas_driver_offer_bpp.vehicle_details (id, make, model, vehicle_variant, ac_available) VALUES ('93337d8e-fcf1-41bf-bdcd-78236ceee9ec', 'Yamaha', 'YMZ', 'BIKE', true);
