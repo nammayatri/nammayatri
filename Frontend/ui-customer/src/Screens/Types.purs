@@ -557,12 +557,17 @@ data Stage = HomeScreen
            | ChangeToRideAccepted
            | ChangeToRideStarted
            | ConfirmingQuotes
+           | EditingDestinationLoc
+           | ConfirmEditDestinationLoc
+           | ConfirmingEditDestinationLoc
+           | RevisedEstimate
+           | FavouriteLocationModelEditDest
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
 instance showStage :: Show Stage where show = genericShow
 
-data SearchLocationModelType = SearchLocation | LocateOnMap | NoView
+data SearchLocationModelType = SearchLocation | LocateOnMap | NoView | RouteMap
 
 data PopupType = Logout | ConfirmBack | NoPopUp | ActiveQuotePopUp | TipsPopUp | CancelConfirmingQuotes
 
@@ -589,6 +594,8 @@ type HomeScreenStateData =
   , eta :: String
   , vehicleDetails :: String
   , registrationNumber :: String
+  , newEstimatedDistance :: Maybe Number
+  , newEstimatedFare :: Maybe Int
   , rating :: Number
   , locationList :: Array LocationListItemState
   , savedLocations :: Array LocationListItemState
@@ -792,6 +799,8 @@ type HomeScreenStateProps =
   , sourcePlaceId :: Maybe String
   , destinationPlaceId :: Maybe String
   , estimateId :: String
+  , bookingUpdateRequestId :: Maybe String
+  , showConfirmEditDestPopUp :: Boolean
   , selectedQuote :: Maybe String
   , locationRequestCount :: Int
   , searchId :: String
@@ -819,6 +828,7 @@ type HomeScreenStateProps =
   , searchExpire :: Int
   , isEstimateChanged :: Boolean
   , showRateCard :: Boolean
+  , showRevisedFareDetails :: Boolean
   , showRateCardIcon :: Boolean
   , sendMessageActive :: Boolean
   , chatcallbackInitiated :: Boolean
