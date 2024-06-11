@@ -111,6 +111,7 @@ import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
 import Domain.Types.DriverStats
+import qualified Domain.Types.DriverStats as DStats
 import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
@@ -564,7 +565,7 @@ getInformation (personId, merchantId, merchantOpCityId) mbToss = do
   driverStats <- runInReplica $ QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
-  driverEntity <- buildDriverEntityRes (person, driverInfo)
+  driverEntity <- buildDriverEntityRes (person, driverInfo, driverStats)
   dues <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName driverId YATRI_SUBSCRIPTION
   let currentDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dues
   let manualDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) $ filter (\due -> due.status == DDF.PAYMENT_OVERDUE) dues
@@ -710,8 +711,8 @@ deleteHomeLocation (driverId, _, merchantOpCityId) driverHomeLocationId = do
   QDHL.deleteById driverHomeLocationId
   return APISuccess.Success
 
-buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m), EsqDBFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
-buildDriverEntityRes (person, driverInfo) = do
+buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m), EsqDBFlow m r) => (SP.Person, DriverInformation, DStats.DriverStats) -> m DriverEntityRes
+buildDriverEntityRes (person, driverInfo, driverStats) = do
   transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   driverPlan <- snd <$> DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION person.id
   vehicleMB <- QVehicle.findById person.id
@@ -727,8 +728,8 @@ buildDriverEntityRes (person, driverInfo) = do
   freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
   let rating =
         if transporterConfig.ratingAsDecimal
-          then SP.roundToOneDecimal <$> person.rating
-          else person.rating <&> (\(Centesimal x) -> Centesimal (fromInteger (round x)))
+          then SP.roundToOneDecimal <$> driverStats.rating
+          else driverStats.rating <&> (\(Centesimal x) -> Centesimal (fromInteger (round x)))
   fareProductConfig <- CQFP.findAllFareProductByMerchantOpCityId person.merchantOperatingCityId
   let supportedServiceTiers = nub $ map (.vehicleServiceTier) fareProductConfig
   (checkIfACWorking, mbDefaultServiceTier) <-
@@ -882,7 +883,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId
   QPerson.updatePersonRec personId updPerson
   driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
-  driverEntity <- buildDriverEntityRes (updPerson, updatedDriverInfo)
+  driverEntity <- buildDriverEntityRes (updPerson, updatedDriverInfo, driverStats)
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById personId
   let merchantId = person.merchantId
   org <-
@@ -1043,6 +1044,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
     buildDriverQuote ::
       (MonadFlow m, MonadReader r m, HasField "driverQuoteExpirationSeconds" r NominalDiffTime, HasField "version" r DeploymentVersion) =>
       SP.Person ->
+      DStats.DriverStats ->
       DSR.SearchRequest ->
       SearchRequestForDriver ->
       Text ->
@@ -1053,7 +1055,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       Maybe Version ->
       Maybe Text ->
       m DDrQuote.DriverQuote
-    buildDriverQuote driver searchReq sd estimateId tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice' = do
+    buildDriverQuote driver driverStats searchReq sd estimateId tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice' = do
       guid <- generateGUID
       now <- getCurrentTime
       deploymentVersion <- asks (.version)
@@ -1068,7 +1070,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             clientId = clientId,
             driverId,
             driverName = driver.firstName,
-            driverRating = SP.roundToOneDecimal <$> driver.rating,
+            driverRating = SP.roundToOneDecimal <$> driverStats.rating,
             status = DDrQuote.Active,
             vehicleVariant = sd.vehicleVariant,
             vehicleServiceTier = sd.vehicleServiceTier,
@@ -1114,6 +1116,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       logDebug $ "offered fare: " <> show reqOfferedValue
       quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq.transactionId (fromMaybe SL.Default searchReq.area)
       quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
+      driverStats <- runInReplica $ QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
       when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
       farePolicy <- getFarePolicyByEstOrQuoteId merchantOpCityId searchTry.tripCategory sReqFD.vehicleServiceTier searchReq.area estimateId (Just (TransactionId (Id searchReq.transactionId)))
       let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
@@ -1146,7 +1149,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               ..
             }
       QFP.updateFareParameters fareParams
-      driverQuote <- buildDriverQuote driver searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice'
+      driverQuote <- buildDriverQuote driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice'
       void $ cacheFarePolicyByQuoteId driverQuote.id.getId farePolicy
       triggerQuoteEvent QuoteEventData {quote = driverQuote}
       void $ QDrQt.create driverQuote
@@ -1918,11 +1921,11 @@ listScheduledBookings ::
   m ScheduledBookingRes
 listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbDay mbTripCategory = do
   transporterConfig <- SCTC.findByMerchantOpCityId cityId Nothing >>= fromMaybeM (TransporterConfigNotFound cityId.getId)
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
   driverInfo <- runInReplica $ QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
+  driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
-  let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False person driverInfo vehicle cityServiceTiers))
+  let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverStats driverInfo vehicle cityServiceTiers))
   scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbDay DRB.NEW mbTripCategory availableServiceTiers True cityId transporterConfig.timeDiffFromUtc
   bookings <- mapM buildBookingAPIEntityFromBooking scheduledBookings
   return (ScheduledBookingRes bookings)

@@ -42,8 +42,12 @@ createInitialDriverStats currency distanceUnit driverId = do
             totalCoinsConvertedCash = 0.0,
             currency,
             distanceUnit,
-            updatedAt = now,
-            favRiderCount = 0
+            favRiderCount = 0,
+            rating = Nothing,
+            totalRatings = Just 0,
+            totalRatingScore = Just 0,
+            isValidRating = Just False,
+            updatedAt = now
           }
   createWithKV dStats
 
@@ -63,6 +67,9 @@ updateIdleTimes driverIds = do
 
 fetchAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [DriverStats]
 fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
+
+findAllByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Driver] -> m [DriverStats]
+findAllByDriverIds person = findAllWithKV [Se.Is BeamDS.driverId $ Se.In (getId <$> (person <&> (.id)))]
 
 incrementTotalRidesAndTotalDist :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Meters -> m ()
 incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
@@ -189,3 +196,14 @@ incFavouriteRiderCount driverId = do
   case mbDriverDetail of
     Just driverDetail -> updateOneWithKV [Se.Set BeamDS.favRiderCount (driverDetail.favRiderCount + 1)] [Se.Is BeamDS.driverId (Se.Eq driverId.getId)]
     Nothing -> pure ()
+
+updateAverageRating :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Maybe Int -> Maybe Int -> Maybe Bool -> m ()
+updateAverageRating (Id driverId') totalRatingsCount' totalRatingScore' isValidRating' = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set (\BeamDS.DriverStatsT {..} -> totalRatings) totalRatingsCount',
+      Se.Set (\BeamDS.DriverStatsT {..} -> totalRatingScore) totalRatingScore',
+      Se.Set BeamDS.isValidRating isValidRating',
+      Se.Set BeamDS.updatedAt now
+    ]
+    [Se.Is BeamDS.driverId (Se.Eq driverId')]

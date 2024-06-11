@@ -301,7 +301,6 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         mobileNumber = encMobNum,
         mobileCountryCode = req.mobileCountryCode,
         identifier = Nothing,
-        rating = Nothing,
         merchantId = merchantId,
         merchantOperatingCityId = merchantOperatingCityId,
         isNew = True,

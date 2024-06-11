@@ -4,6 +4,7 @@ imports:
   Driver: Domain.Types.Person
   Currency: Kernel.Types.Common
   DistanceUnit: Kernel.Types.Common
+  Centesimal: Kernel.Types.Common
 
 DriverStats:
   tableName: driver_stats
@@ -24,6 +25,10 @@ DriverStats:
     totalCoinsConvertedCash : HighPrecMoney
     currency : Currency
     distanceUnit: DistanceUnit
+    rating : Maybe Centesimal
+    totalRatings : Maybe Int
+    totalRatingScore : Maybe Int
+    isValidRating : Maybe Bool
     updatedAt : UTCTime
     favRiderCount : Int
 
@@ -48,6 +53,9 @@ DriverStats:
     coinCovertedToCashLeft: Maybe HighPrecMoney
     totalCoinsConvertedCash: Maybe HighPrecMoney
     distanceUnit: Maybe DistanceUnit
+    totalRatings :  Maybe Int
+    totalRatingScore :  Maybe Int
+    isValidRating :  Maybe Bool
 
   fromTType:
     totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E

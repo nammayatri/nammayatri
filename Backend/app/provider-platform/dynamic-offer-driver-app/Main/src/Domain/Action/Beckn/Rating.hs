@@ -34,8 +34,8 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.DriverStats as SQD
-import qualified Storage.Queries.PersonExtra as QP
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDriverCorrelation as RDC
@@ -52,7 +52,6 @@ data DRatingReq = DRatingReq
 handler :: Id Merchant -> DRatingReq -> DRide.Ride -> Flow ()
 handler merchantId req ride = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
-  rating <- B.runInReplica $ QRating.findRatingForRide ride.id
   let driverId = ride.driverId
   let ratingValue = req.ratingValue
       feedbackDetails = fromMaybe Nothing (listToMaybe req.feedbackDetails)
@@ -91,6 +90,22 @@ handler merchantId req ride = do
       logError $ "Booking not found for bookingId : " <> req.bookingId.getId
       pure ()
 
+  rating' <- B.runInReplica $ QRating.checkIfRatingExistsForDriver ride.driverId
+  driverStats <- runInReplica $ QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+
+  -- backfilling rating for the old driver entries
+  (ratingCount, ratingsSum) <- do
+    if ((not $ null rating') && (isNothing driverStats.totalRatings) && (isNothing driverStats.totalRatingScore) && (isNothing driverStats.isValidRating))
+      then do
+        allRatings <- QRating.findAllRatingsForPerson driverId
+        let ratingsSum = sum (allRatings <&> (.ratingValue))
+        let ratingCount = length allRatings
+        let isValidRating = ratingCount >= merchant.minimumDriverRatesCount
+        QDriverStats.updateAverageRating driverId (Just ratingCount) (Just ratingsSum) (Just isValidRating)
+        return (Just ratingCount, Just ratingsSum)
+      else return (driverStats.totalRatings, driverStats.totalRatingScore)
+
+  rating <- B.runInReplica $ QRating.findRatingForRide ride.id
   _ <- case rating of
     Nothing -> do
       logTagInfo "FeedbackAPI" $
@@ -105,24 +120,27 @@ handler merchantId req ride = do
       QRating.updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver rideRating.id driverId
       logDebug "Driver Rating Coin Event"
       fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride.chargeableDistance)
-  calculateAverageRating driverId merchant.minimumDriverRatesCount
+  calculateAverageRating driverId merchant.minimumDriverRatesCount ratingValue ratingCount ratingsSum
 
 calculateAverageRating ::
   (CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   Id DP.Person ->
   Int ->
+  Int ->
+  Maybe Int ->
+  Maybe Int ->
   m ()
-calculateAverageRating personId minimumDriverRatesCount = do
+calculateAverageRating personId minimumDriverRatesCount ratingValue mbtotalRatings mbtotalRatingScore = do
   logTagInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
-  allRatings <- B.runInReplica $ QRating.findAllRatingsForPerson personId
-  let ratingsSum = fromIntegral $ sum (allRatings <&> (.ratingValue))
-  let ratingCount = length allRatings
-  when (ratingCount == 0) $
+  let totalRatings = fromMaybe 0 mbtotalRatings
+  let totalRatingScore = fromMaybe 0 mbtotalRatingScore
+  let newRatingsCount = totalRatings + 1
+  let newTotalRatingScore = totalRatingScore + ratingValue
+  when (totalRatings == 0) $
     logTagInfo "PersonAPI" "No rating found to calculate"
-  when (ratingCount >= minimumDriverRatesCount) $ do
-    let newAverage = ratingsSum / fromIntegral ratingCount
-    logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
-    void $ QP.updateAverageRating personId newAverage
+  let isValidRating = newRatingsCount >= minimumDriverRatesCount
+  logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
+  void $ QDriverStats.updateAverageRating personId (Just newRatingsCount) (Just newTotalRatingScore) (Just isValidRating)
 
 buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> m DRating.Rating
 buildRating rideId driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance isFavourite = do

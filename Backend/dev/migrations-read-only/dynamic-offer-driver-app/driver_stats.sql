@@ -24,3 +24,7 @@ ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD PRIMARY KEY ( driver_id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN fav_rider_count integer NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_ratings integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_rating_score integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN rating text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN is_valid_rating boolean ;

@@ -61,6 +61,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverSSN as QDriverSSN
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as PersonQuery
 import qualified Storage.Queries.Translations as MTQuery
@@ -146,11 +147,11 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance mbService
   let mbDistance = reqDistance
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast personId)))
-  person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
+  driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
-  let driverVehicleServiceTierTypes = (\(vehicleServiceTier, _) -> vehicleServiceTier.serviceTierType) <$> selectVehicleTierForDriverWithUsageRestriction False person driverInfo vehicle cityVehicleServiceTiers
+  let driverVehicleServiceTierTypes = (\(vehicleServiceTier, _) -> vehicleServiceTier.serviceTierType) <$> selectVehicleTierForDriverWithUsageRestriction False driverStats driverInfo vehicle cityVehicleServiceTiers
   case mbServiceTierType of
     Just serviceTierType -> do
       when (serviceTierType `notElem` driverVehicleServiceTierTypes) $ throwError $ InvalidRequest ("Service tier " <> show serviceTierType <> " not available for driver")
@@ -258,10 +259,11 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
+  driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
   let personLangauge = fromMaybe ENGLISH person.language
 
-  let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction False person driverInfo vehicle cityVehicleServiceTiers
+  let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction False driverStats driverInfo vehicle cityVehicleServiceTiers
   let serviceTierACThresholds = map (\(VehicleServiceTier {..}, _) -> airConditioned) driverVehicleServiceTierTypes
   let isACCheckEnabledForCity = any isJust serviceTierACThresholds
   let isACAllowedForDriver = checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
@@ -316,14 +318,14 @@ postDriverUpdateServiceTiers ::
 postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers {..} = do
   -- Todo: Handle oxygen,ventilator here also. For now, frontend can handle
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
 
   whenJust airConditioned $ \ac -> checkAndUpdateAirConditioned False ac.isWorking personId cityVehicleServiceTiers
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
 
-  let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction False person driverInfo vehicle cityVehicleServiceTiers
+  let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction False driverStats driverInfo vehicle cityVehicleServiceTiers
   mbSelectedServiceTiers <-
     driverVehicleServiceTierTypes `forM` \(driverServiceTier, _) -> do
       let isAlreadySelected = driverServiceTier.serviceTierType `elem` vehicle.selectedServiceTiers

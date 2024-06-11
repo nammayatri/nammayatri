@@ -45,3 +45,29 @@ ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN use_fake_otp text ;
 ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN used_coins integer NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN whatsapp_notification_enroll_status character varying (255) ;
 ALTER TABLE atlas_driver_offer_bpp.person ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN total_ratings integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN total_rating_score integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN is_valid_rating boolean NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.person DROP COLUMN rating;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.person ALTER COLUMN total_ratings DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.person ALTER COLUMN total_rating_score DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.person ALTER COLUMN is_valid_rating DROP NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.person DROP COLUMN total_ratings;
+ALTER TABLE atlas_driver_offer_bpp.person DROP COLUMN total_rating_score;
+ALTER TABLE atlas_driver_offer_bpp.person DROP COLUMN is_valid_rating;

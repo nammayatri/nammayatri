@@ -26,6 +26,7 @@ import SharedLogic.VehicleServiceTier
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal as Int
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Vehicle.Internal as Int
 
@@ -73,27 +74,31 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
   driverInfos <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
+  driverStats <- QDriverStats.findAllByDriverIds drivers
+
   logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
-  let res = linkArrayList driverLocs driverInfos vehicle drivers
+  let res = linkArrayList driverLocs driverInfos vehicle drivers driverStats
   logDebug $ "GetNearestGoHomeDrivers Result:- " <> show (length res)
   return res
   where
-    linkArrayList driverLocations driverInformations vehicles persons =
+    linkArrayList driverLocations driverInformations vehicles persons driverStats =
       let personHashMap = HashMap.fromList $ (\p -> (p.id, p)) <$> persons
           driverInfoHashMap = HashMap.fromList $ (\info -> (info.driverId, info)) <$> driverInformations
           vehicleHashMap = HashMap.fromList $ (\v -> (v.driverId, v)) <$> vehicles
-       in concat $ mapMaybe (buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap) driverLocations
+          driverStatsHashMap = HashMap.fromList $ (\stats -> (stats.driverId, stats)) <$> driverStats
+       in concat $ mapMaybe (buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap driverStatsHashMap) driverLocations
 
-    buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap location = do
+    buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap driverStatsHashMap location = do
       let driverId' = location.driverId
       person <- HashMap.lookup driverId' personHashMap
       vehicle <- HashMap.lookup driverId' vehicleHashMap
       info <- HashMap.lookup driverId' driverInfoHashMap
+      driverStats <- HashMap.lookup driverId' driverStatsHashMap
+
       let dist = (realToFrac $ distanceBetweenInMeters fromLocation $ LatLong {lat = location.lat, lon = location.lon}) :: Double
-      -- ideally should be there inside the vehicle.selectedServiceTiers but still to make sure we have a default service tier for the driver
       let cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
       let mbDefaultServiceTierForDriver = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
-      let availableTiersWithUsageRestriction = selectVehicleTierForDriverWithUsageRestriction False person info vehicle cityServiceTiers
+      let availableTiersWithUsageRestriction = selectVehicleTierForDriverWithUsageRestriction False driverStats info vehicle cityServiceTiers
       let ifUsageRestricted = any (\(_, usageRestricted) -> usageRestricted) availableTiersWithUsageRestriction
       let selectedDriverServiceTiers =
             if ifUsageRestricted

@@ -38,3 +38,6 @@ findAllRatingUsersCountByPerson (Id driverId) = do
             do
               B.all_ (BeamCommon.rating BeamCommon.atlasDB)
   pure $ either (const 0) (\r -> if null r then 0 else head r) res
+
+checkIfRatingExistsForDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Types.Person.Person -> m [Domain.Types.Rating.Rating]
+checkIfRatingExistsForDriver (Id driverId) = do findAllWithOptionsKV' [Se.Is Beam.driverId $ Se.Eq driverId] (Just 1) Nothing

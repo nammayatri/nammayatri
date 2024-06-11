@@ -14,7 +14,6 @@ import qualified Kernel.External.Notification.FCM.Types
 import qualified Kernel.External.Types
 import qualified Kernel.External.Whatsapp.Interface.Types
 import Kernel.Prelude
-import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import qualified Kernel.Utils.TH
@@ -51,7 +50,6 @@ data PersonE e = Person
     mobileNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     onboardedFromDashboard :: Kernel.Prelude.Bool,
     passwordHash :: Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash,
-    rating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     registrationLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     registrationLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     role :: Domain.Types.Person.Role,
@@ -106,7 +104,6 @@ instance EncryptedItem Person where
           mobileNumber = mobileNumber_,
           onboardedFromDashboard = onboardedFromDashboard entity,
           passwordHash = passwordHash entity,
-          rating = rating entity,
           registrationLat = registrationLat entity,
           registrationLon = registrationLon entity,
           role = role entity,
@@ -153,7 +150,6 @@ instance EncryptedItem Person where
             mobileNumber = mobileNumber_,
             onboardedFromDashboard = onboardedFromDashboard entity,
             passwordHash = passwordHash entity,
-            rating = rating entity,
             registrationLat = registrationLat entity,
             registrationLon = registrationLon entity,
             role = role entity,

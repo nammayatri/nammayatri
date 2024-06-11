@@ -24,6 +24,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle.Internal as Int
@@ -76,22 +77,24 @@ getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong ra
   logDebug $ "GetNearestDriversCurrentlyOnRide - DInfo:- " <> show driverInfos
   vehicles <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicles
+  driverStats <- QDriverStats.findAllByDriverIds drivers
   rideCurrentlyInProgress <- filter (\ride -> show ride.tripCategory `elem` currentRideTripCategoryValidForForwardBatching) <$> QRide.getInProgressByDriverIds (map (.id) drivers)
   let rideEndLocations = mapMaybe (.toLocation) rideCurrentlyInProgress
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> "Rides" <> show (length rideCurrentlyInProgress) <> "RideLocs:- " <> show (length rideEndLocations)
-  let res = linkArrayListForOnRide rideCurrentlyInProgress rideEndLocations driverLocs driverInfos vehicles drivers (fromIntegral onRideRadius :: Double)
+  let res = linkArrayListForOnRide rideCurrentlyInProgress rideEndLocations driverLocs driverInfos vehicles drivers driverStats (fromIntegral onRideRadius :: Double)
   logDebug $ "GetNearestDriversCurrentlyOnRide Result:- " <> show (length res)
   return res
   where
-    linkArrayListForOnRide rideCurrentlyInProgress rideEndLocations driverLocations driverInformations vehicles persons onRideRadius =
+    linkArrayListForOnRide rideCurrentlyInProgress rideEndLocations driverLocations driverInformations vehicles persons driverStats onRideRadius =
       let locationHashMap = HashMap.fromList $ (\loc -> (loc.driverId, loc)) <$> driverLocations
           personHashMap = HashMap.fromList $ (\p -> (p.id, p)) <$> persons
+          driverStatsHashMap = HashMap.fromList $ (\stats -> (stats.driverId, stats)) <$> driverStats
           rideByDriverIdHashMap = HashMap.fromList $ (\ride -> (ride.driverId, ride)) <$> rideCurrentlyInProgress
           rideToLocsHashMap = HashMap.fromList $ (\loc -> (loc.id, loc)) <$> rideEndLocations
           driverInfoHashMap = HashMap.fromList $ (\info -> (info.driverId, info)) <$> driverInformations
-       in concat $ mapMaybe (buildFullDriverListOnRide rideByDriverIdHashMap rideToLocsHashMap locationHashMap driverInfoHashMap personHashMap onRideRadius) vehicles
+       in concat $ mapMaybe (buildFullDriverListOnRide rideByDriverIdHashMap rideToLocsHashMap locationHashMap driverInfoHashMap personHashMap driverStatsHashMap onRideRadius) vehicles
 
-    buildFullDriverListOnRide rideByDriverIdHashMap rideToLocsHashMap locationHashMap driverInfoHashMap personHashMap onRideRadius vehicle = do
+    buildFullDriverListOnRide rideByDriverIdHashMap rideToLocsHashMap locationHashMap driverInfoHashMap personHashMap driverStatsHashMap onRideRadius vehicle = do
       let driverId' = vehicle.driverId
       location <- HashMap.lookup driverId' locationHashMap
       ride <- HashMap.lookup driverId' rideByDriverIdHashMap
@@ -99,6 +102,7 @@ getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong ra
       rideToLocation <- HashMap.lookup rideToLoc.id rideToLocsHashMap
       info <- HashMap.lookup driverId' driverInfoHashMap
       person <- HashMap.lookup driverId' personHashMap
+      driverStats <- HashMap.lookup driverId' driverStatsHashMap
       let driverLocationPoint = LatLong {lat = location.lat, lon = location.lon}
           destinationPoint = LatLong {lat = rideToLocation.lat, lon = rideToLocation.lon}
           distanceFromDriverToDestination = realToFrac $ distanceBetweenInMeters driverLocationPoint destinationPoint
@@ -107,7 +111,7 @@ getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong ra
       -- ideally should be there inside the vehicle.selectedServiceTiers but still to make sure we have a default service tier for the driver
       let cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
       let mbDefaultServiceTierForDriver = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
-      let availableTiersWithUsageRestriction = selectVehicleTierForDriverWithUsageRestriction False person info vehicle cityServiceTiers
+      let availableTiersWithUsageRestriction = selectVehicleTierForDriverWithUsageRestriction False driverStats info vehicle cityServiceTiers
       let ifUsageRestricted = any (\(_, usageRestricted) -> usageRestricted) availableTiersWithUsageRestriction
       let selectedDriverServiceTiers =
             if ifUsageRestricted
