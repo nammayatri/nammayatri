@@ -61,6 +61,6 @@ Happy Contributing
 
 Thank you for your support in nammayatri's growth. Keep up the great work! 🥂
 
-<a href="https://github.com/juspay/nammayatri/graphs/contributors">
+<a href="https://github.com/nammayatri/nammayatri/graphs/contributors">
   <img src="https://contributors-img.web.app/image?repo=nammayatri/nammayatri" alt="Contributors"/>
 </a>
