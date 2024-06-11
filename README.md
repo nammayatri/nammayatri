@@ -10,6 +10,10 @@ As engineers, we often seek opportunities where one person can serve millions of
 
 Initiatives like **Beckn** focus on this enablement, giving equal importance to service providers and automation.
 
+Here is a video from our founder Vimal explaining the vision of Namma Yatri:
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/NnyoxiiZLZg" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
 ## 🌱 Core Values
 
 ### 👥 Community-first
