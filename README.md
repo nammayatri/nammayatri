@@ -3,12 +3,21 @@
 **Open and Driver Centric Mobility Platform**
 
 ![Alt text](docs/images/drivers-with-vehicles.png)
+
 ## 🌟 Vision
-Namma Yatri aims to empower service providers with a high-tech, cost-effective app and open data platform. This platform fosters transparency and prioritizes collaboration with service providers while being extremely customer-centric.
+Namma Yatri aims to empower service providers with a high-tech, cost-effective app and open data platform. Our vision is centered on the following principles:
+
+1. **Zero Commission**: Ensuring no commission fees for drivers, promoting fair earnings and economic empowerment for service providers.
+2. **Open**: Utilizing open data platforms, open code, and open networks to foster transparency, innovation, and collaboration within the community.
+3. **Optimize**: Striving for high efficiency and reliability through continuous technological advancements and process improvements.
+4. **Multimodal**: Supporting various modes of transport to provide comprehensive, integrated mobility solutions for a seamless user experience.
+5. **Shared Transport**: Promoting shared mobility options to reduce traffic congestion, lower costs, and minimize carbon emissions, contributing to a sustainable future.
 
 As engineers, we often seek opportunities where one person can serve millions of others. Namma Yatri is an effort to enable the careers of those who serve one-to-one, like auto drivers who transport people each and every day. These drivers indirectly serve millions of customers over time.
 
-Initiatives like **Beckn** focus on this enablement, giving equal importance to service providers and automation.
+Here is a [video from our founder](https://www.youtube.com/watch?v=NnyoxiiZLZg) explaining the vision of Namma Yatri:
+
+[![Namma Yatri Vision](https://img.youtube.com/vi/NnyoxiiZLZg/0.jpg)](https://www.youtube.com/watch?v=NnyoxiiZLZg)
 
 ## 🌱 Core Values
 
