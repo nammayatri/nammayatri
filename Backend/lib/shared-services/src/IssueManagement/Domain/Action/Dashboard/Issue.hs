@@ -285,5 +285,8 @@ ticketStatusCallBack _merchantShortId _opCity identifier req = do
             )
             issueMessageIds
   QIR.updateChats issueReport.id updatedChats
-  QIR.updateIssueStatus req.ticketId req.status
+  case req.status of
+    "Complete" -> QIR.updateIssueStatus req.ticketId RESOLVED
+    "Pending" -> QIR.updateIssueStatus req.ticketId PENDING_INTERNAL
+    _ -> throwError $ InvalidRequest ("Invalid ticket status " <> req.status <> " for ticket id " <> req.ticketId)
   return Success
