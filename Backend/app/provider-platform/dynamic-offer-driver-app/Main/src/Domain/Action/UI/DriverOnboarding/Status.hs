@@ -31,7 +31,6 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Action.UI.Plan as DAPlan
 import Domain.Types.AadhaarVerification as AV
 import qualified Domain.Types.DocumentVerificationConfig as DVC
-import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLicense as DL
 import qualified Domain.Types.IdfyVerification as IV
 import qualified Domain.Types.Merchant as DM
@@ -369,9 +368,6 @@ getProcessedDriverDocuments docType driverId =
     DVC.ProfilePhoto -> checkImageValidity DVC.ProfilePhoto driverId
     DVC.UploadProfile -> checkImageValidity DVC.UploadProfile driverId
     DVC.PanCard -> checkImageValidity DVC.PanCard driverId
-    DVC.SubscriptionPlan -> do
-      (autoPayStatus, mbPlan) <- DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION driverId -- fix later on basis of vehicle category
-      return (Just $ boolToStatus $ isJust mbPlan && autoPayStatus == Just DI.ACTIVE, Nothing)
     _ -> return (Nothing, Nothing)
   where
     boolToStatus :: Bool -> ResponseStatus
@@ -396,7 +392,15 @@ getProcessedVehicleDocuments docType driverId vehicleRC =
       mbDoc <- listToMaybe <$> VPUCQuery.findByRcIdAndDriverId vehicleRC.id driverId
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing)
     DVC.VehicleInspectionForm -> checkImageValidity DVC.VehicleInspectionForm driverId
+    DVC.SubscriptionPlan -> do
+      mbPlan <- snd <$> DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION driverId -- fix later on basis of vehicle category
+      return (Just $ boolToStatus (isJust mbPlan), Nothing)
     _ -> return (Nothing, Nothing)
+  where
+    boolToStatus :: Bool -> ResponseStatus
+    boolToStatus = \case
+      True -> VALID
+      False -> NO_DOC_AVAILABLE
 
 checkImageValidity :: DVC.DocumentType -> Id SP.Person -> Flow (Maybe ResponseStatus, Maybe Text)
 checkImageValidity docType driverId = do

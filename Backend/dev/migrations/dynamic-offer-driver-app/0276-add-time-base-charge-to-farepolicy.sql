@@ -20,3 +20,12 @@ WITH sedan_fp_ids AS (
 )
 UPDATE atlas_driver_offer_bpp.fare_policy SET per_minute_ride_extra_time_charge=1.5
 WHERE id IN (SELECT fare_policy_id FROM sedan_fp_ids);
+
+WITH bike_fp_ids AS (
+    SELECT fare_policy_id
+    FROM atlas_driver_offer_bpp.fare_product
+    WHERE merchant_id = 'favorit0-0000-0000-0000-00000favorit'
+    AND vehicle_variant = 'BIKE'
+)
+UPDATE atlas_driver_offer_bpp.fare_policy SET per_minute_ride_extra_time_charge=1.5
+WHERE id IN (SELECT fare_policy_id FROM bike_fp_ids);

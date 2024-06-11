@@ -11,3 +11,4 @@ update atlas_driver_offer_bpp.vehicle_service_tier set priority = 2 where name =
 update atlas_driver_offer_bpp.vehicle_service_tier set priority = 2 where name = 'HATCHBACK';
 update atlas_driver_offer_bpp.vehicle_service_tier set priority = 3 where name = 'TAXI';
 update atlas_driver_offer_bpp.vehicle_service_tier set priority = 4 where name = 'AUTO_RICKSHAW';
+update atlas_driver_offer_bpp.vehicle_service_tier set priority = 5 where name = 'BIKE';
