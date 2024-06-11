@@ -5,7 +5,7 @@ INSERT INTO atlas_app.beckn_config (
 SELECT
     'MOBILITY',
     'https://beta.beckn.uat.juspay.net/dev/gateway/v1',
-    ('7f038a31-a01b-4730-aa74-a4ca62e20cf1' || CURRENT_TIMESTAMP || m.id) :: uuid,
+    md5('7f038a31-a01b-4730-aa74-a4ca62e20cf1' || CURRENT_TIMESTAMP || m.id) :: uuid,
     'https://beta.beckn.uat.juspay.net/dev/registry',
     'api.sandbox.beckn.juspay.in/dev/bap/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51',
     'https://api.sandbox.beckn.juspay.in/dev/bap/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51',
