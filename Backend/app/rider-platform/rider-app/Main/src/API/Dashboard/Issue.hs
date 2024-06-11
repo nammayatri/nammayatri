@@ -121,4 +121,4 @@ issueFetchMedia :: ShortId DM.Merchant -> Context.City -> Text -> FlowHandler Te
 issueFetchMedia (ShortId merchantShortId) _ = withFlowHandlerAPI . DIssue.issueFetchMedia (ShortId merchantShortId)
 
 ticketStatusCallBack :: ShortId DM.Merchant -> Context.City -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
-ticketStatusCallBack (ShortId merchantShortId) city = withFlowHandlerAPI . DIssue.ticketStatusCallBack (ShortId merchantShortId) city Common.CUSTOMER
+ticketStatusCallBack (ShortId _merchantShortId) _city req = withFlowHandlerAPI $ DIssue.ticketStatusCallBack req Common.CUSTOMER
