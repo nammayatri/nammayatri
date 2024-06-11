@@ -74,6 +74,8 @@ onInit onInitReq merchant booking_ = do
   let booking = booking_ {FTBooking.price = onInitReq.totalPrice}
 
   orderShortId <- generateShortId
+  isMetroTestTransaction <- asks (.isMetroTestTransaction)
+  let updatedOrderShortId = bool (orderShortId.getShortId) ("test-" <> orderShortId.getShortId) isMetroTestTransaction
   orderId <- generateGUID
   ticketBookingPaymentId <- generateGUID
   now <- getCurrentTime
@@ -93,7 +95,7 @@ onInit onInitReq merchant booking_ = do
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = orderId.getId,
-            orderShortId = orderShortId.getShortId,
+            orderShortId = updatedOrderShortId,
             amount = booking.price.amount,
             customerId = person.id.getId,
             customerEmail = fromMaybe "test@gmail.com" personEmail,
