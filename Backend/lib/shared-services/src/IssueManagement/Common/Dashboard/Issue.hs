@@ -232,7 +232,7 @@ type TicketStatusCallBackAPI =
 
 data TicketStatusCallBackReq = TicketStatusCallBackReq
   { ticketId :: Text,
-    status :: IssueStatus
+    status :: Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

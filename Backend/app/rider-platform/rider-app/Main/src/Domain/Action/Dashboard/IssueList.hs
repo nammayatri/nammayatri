@@ -21,6 +21,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
 import Environment
+import qualified IssueManagement.Common as Common
 import qualified IssueManagement.Common.Dashboard.Issue as Common
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -107,5 +108,8 @@ buildIssueList (issues, person) = do
 ticketStatusCallBack :: ShortId DM.Merchant -> Common.TicketStatusCallBackReq -> Flow APISuccess
 ticketStatusCallBack _ req = do
   _ <- QIssue.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
-  QIssue.updateIssueStatus req.ticketId req.status
+  case req.status of
+    "Complete" -> QIssue.updateIssueStatus req.ticketId Common.RESOLVED
+    "Pending" -> QIssue.updateIssueStatus req.ticketId Common.PENDING_INTERNAL
+    _ -> throwError $ InvalidRequest ("Invalid ticket status " <> req.status <> " for ticket id " <> req.ticketId)
   return Success
