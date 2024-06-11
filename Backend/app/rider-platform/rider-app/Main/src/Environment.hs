@@ -147,7 +147,8 @@ data AppCfg = AppCfg
     cacTenants :: [String],
     superPositionConfig :: SuperPositionConfig,
     ondcTokenMap :: M.Map KeyConfig TokenConfig,
-    iosValidateEnpoint :: Text
+    iosValidateEnpoint :: Text,
+    isMetroTestTransaction :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -226,7 +227,8 @@ data AppEnv = AppEnv
     requestId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig,
-    iosValidateEnpoint :: Text
+    iosValidateEnpoint :: Text,
+    isMetroTestTransaction :: Bool
   }
   deriving (Generic)
 
