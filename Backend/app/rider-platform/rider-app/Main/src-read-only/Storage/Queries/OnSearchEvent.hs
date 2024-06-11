@@ -64,3 +64,7 @@ instance ToTType' Beam.OnSearchEvent Domain.Types.OnSearchEvent.OnSearchEvent wh
         Beam.messageId = messageId,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/OnSearchEvent.yaml
+-}

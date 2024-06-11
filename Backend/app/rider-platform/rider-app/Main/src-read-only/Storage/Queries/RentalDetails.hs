@@ -62,3 +62,7 @@ instance ToTType' Beam.RentalDetails Domain.Types.RentalDetails.RentalDetails wh
         Beam.plannedPerKmRate = (.amountInt) plannedPerKmRate,
         Beam.plannedPerKmRateAmount = Just $ (.amount) plannedPerKmRate
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RentalDetails.yaml
+-}

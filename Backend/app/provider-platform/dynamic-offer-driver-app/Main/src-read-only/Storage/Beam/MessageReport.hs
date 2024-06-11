@@ -36,3 +36,7 @@ type MessageReport = MessageReportT Identity
 $(enableKVPG ''MessageReportT ['driverId, 'messageId] [])
 
 $(mkTableInstances ''MessageReportT "message_report")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Message.yaml
+-}

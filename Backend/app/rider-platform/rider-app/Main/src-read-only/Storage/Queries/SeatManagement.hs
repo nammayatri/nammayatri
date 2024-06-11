@@ -115,3 +115,7 @@ instance ToTType' Beam.SeatManagement Domain.Types.SeatManagement.SeatManagement
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

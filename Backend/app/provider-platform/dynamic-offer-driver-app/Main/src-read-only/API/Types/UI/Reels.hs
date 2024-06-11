@@ -10,3 +10,7 @@ import Servant
 import Tools.Auth
 
 data ReelsResp = ReelsResp {reels :: [Domain.Types.ReelsData.ReelsData]} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/Reels.yaml
+-}

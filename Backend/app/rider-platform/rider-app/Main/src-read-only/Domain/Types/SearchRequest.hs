@@ -66,3 +66,7 @@ $(mkHttpInstancesForEnum ''RiderPreferredOption)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchRequestStatus)
 
 $(mkHttpInstancesForEnum ''SearchRequestStatus)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SearchRequest.yaml
+-}

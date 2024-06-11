@@ -32,3 +32,7 @@ type DriverSSN = DriverSSNT Identity
 $(enableKVPG ''DriverSSNT ['id] [['driverId], ['ssnHash]])
 
 $(mkTableInstances ''DriverSSNT "driver_ssn")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

@@ -77,3 +77,7 @@ instance ToTType' Beam.VehiclePUC Domain.Types.VehiclePUC.VehiclePUC where
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

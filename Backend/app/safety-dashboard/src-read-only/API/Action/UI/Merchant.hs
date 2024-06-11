@@ -71,3 +71,7 @@ getMerchantGetWebhookConfig a1 = withFlowHandlerAPI' $ Domain.Action.UI.Merchant
 
 postMerchantWebhookConfigPreference :: (TokenInfo -> API.Types.UI.Merchant.WebHookConfigPreferenceReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantWebhookConfigPreference a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.Merchant.postMerchantWebhookConfigPreference a2 a1
+
+{-
+	DSL Source Link: file://./../../../../spec/API/merchant.yaml
+-}

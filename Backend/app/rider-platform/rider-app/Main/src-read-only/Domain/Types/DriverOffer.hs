@@ -36,3 +36,7 @@ data BPPQuote = BPPQuote {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 data DriverOfferStatus = ACTIVE | INACTIVE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverOfferStatus)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOffer.yaml
+-}

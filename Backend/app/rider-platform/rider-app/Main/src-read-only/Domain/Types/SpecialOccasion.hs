@@ -31,3 +31,7 @@ data SpecialOccasion = SpecialOccasion
 data SpecialDayType = Open | Closed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SpecialDayType)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

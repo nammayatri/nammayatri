@@ -34,3 +34,7 @@ type RiderDriverCorrelation = RiderDriverCorrelationT Identity
 $(enableKVPG ''RiderDriverCorrelationT ['driverId, 'riderDetailId] [])
 
 $(mkTableInstances ''RiderDriverCorrelationT "rider_driver_correlation")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RiderDriverCorrelation.yaml
+-}

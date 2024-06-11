@@ -80,3 +80,7 @@ instance ToTType' Beam.Toll Domain.Types.Toll.Toll where
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Toll.yaml
+-}

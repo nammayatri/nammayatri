@@ -35,3 +35,7 @@ instance ToTType' Beam.VehicleDetails Domain.Types.VehicleDetails.VehicleDetails
         Beam.model = model,
         Beam.vehicleVariant = vehicleVariant
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/VehicleDetails.yaml
+-}

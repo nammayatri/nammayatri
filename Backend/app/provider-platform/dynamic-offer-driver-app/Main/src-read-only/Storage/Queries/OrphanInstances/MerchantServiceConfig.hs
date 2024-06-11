@@ -37,3 +37,7 @@ instance ToTType' Beam.MerchantServiceConfig Domain.Types.MerchantServiceConfig.
         Beam.serviceName = getServiceName serviceConfig,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Merchant.yaml
+-}

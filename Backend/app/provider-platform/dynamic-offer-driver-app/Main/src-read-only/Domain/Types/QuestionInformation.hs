@@ -38,3 +38,7 @@ data SingleOption
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''QuizQuestionType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SingleOption)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

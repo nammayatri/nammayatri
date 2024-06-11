@@ -34,3 +34,7 @@ findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Types.Id.Id Domain.Types.Message.Message -> m (Maybe Domain.Types.MessageReport.MessageReport))
 findByPrimaryKey driverId messageId = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.messageId $ Se.Eq (Kernel.Types.Id.getId messageId)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Message.yaml
+-}

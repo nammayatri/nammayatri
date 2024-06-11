@@ -135,3 +135,7 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.waitingChargePerMin = (.waitingChargePerMin) waitingCharges <&> (.amountInt),
         Beam.waitingChargePerMinAmount = (.waitingChargePerMin) waitingCharges <&> (.amount)
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/estimate.yaml
+-}

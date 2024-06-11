@@ -110,3 +110,7 @@ instance ToTType' Beam.SpecialOccasion Domain.Types.SpecialOccasion.SpecialOccas
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

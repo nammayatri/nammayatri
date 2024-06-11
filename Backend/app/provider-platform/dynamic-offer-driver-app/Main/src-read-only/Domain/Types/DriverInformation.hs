@@ -106,3 +106,7 @@ $(mkHttpInstancesForEnum ''DriverAutoPayStatus)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverMode)
 
 $(mkHttpInstancesForEnum ''DriverMode)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverInformation.yaml
+-}

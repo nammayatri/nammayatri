@@ -30,3 +30,7 @@ type DriverReferral = DriverReferralT Identity
 $(enableKVPG ''DriverReferralT ['referralCode] [['driverId]])
 
 $(mkTableInstances ''DriverReferralT "driver_referral")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverReferral.yaml
+-}

@@ -49,3 +49,7 @@ data LocationAddress = LocationAddress
     street :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, Data.OpenApi.ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Location.yaml
+-}

@@ -105,3 +105,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.toLocationId = Kernel.Types.Id.getId <$> (toLocation <&> (.id)),
         Beam.validTill = validTill
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/SearchRequest.yaml
+-}

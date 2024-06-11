@@ -41,3 +41,7 @@ updateByPrimaryKey (Domain.Types.DriverReferral.DriverReferral {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.referralCode $ Se.Eq (Kernel.Types.Id.getId referralCode)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverReferral.yaml
+-}

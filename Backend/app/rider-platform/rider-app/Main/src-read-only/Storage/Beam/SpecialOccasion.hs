@@ -37,3 +37,7 @@ type SpecialOccasion = SpecialOccasionT Identity
 $(enableKVPG ''SpecialOccasionT ['id] [['entityId]])
 
 $(mkTableInstances ''SpecialOccasionT "special_occasion")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

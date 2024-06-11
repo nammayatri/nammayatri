@@ -71,3 +71,7 @@ instance ToTType' Beam.BookingLocation Domain.Types.BookingLocation.BookingLocat
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Booking.yaml
+-}

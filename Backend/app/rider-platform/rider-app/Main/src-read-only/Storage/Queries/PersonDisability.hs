@@ -79,3 +79,7 @@ instance ToTType' Beam.PersonDisability Domain.Types.PersonDisability.PersonDisa
         Beam.tag = tag,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PersonDisability.yaml
+-}

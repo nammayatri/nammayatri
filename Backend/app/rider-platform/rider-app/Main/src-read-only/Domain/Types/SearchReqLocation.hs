@@ -22,3 +22,7 @@ data SearchReqLocation = SearchReqLocation
   deriving (Generic, Show, Kernel.External.Maps.HasCoordinates)
 
 data SearchReqLocationAPIEntity = SearchReqLocationAPIEntity {lat :: Kernel.Prelude.Double, lon :: Kernel.Prelude.Double} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SearchReqLocation.yaml
+-}

@@ -76,3 +76,7 @@ instance ToTType' Beam.PlaceNameCache Domain.Types.PlaceNameCache.PlaceNameCache
         Beam.placeId = placeId,
         Beam.plusCode = plusCode
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PlaceNameCache.yaml
+-}

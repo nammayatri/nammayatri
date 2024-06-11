@@ -50,3 +50,7 @@ type Overlay = OverlayT Identity
 $(enableKVPG ''OverlayT ['id] [['merchantOperatingCityId], ['overlayKey]])
 
 $(mkTableInstances ''OverlayT "merchant_overlay")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

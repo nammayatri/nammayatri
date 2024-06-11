@@ -51,3 +51,7 @@ type Plan = PlanT Identity
 $(enableKVPG ''PlanT ['id] [['merchantId], ['merchantOpCityId]])
 
 $(mkTableInstances ''PlanT "plan")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Plan.yaml
+-}

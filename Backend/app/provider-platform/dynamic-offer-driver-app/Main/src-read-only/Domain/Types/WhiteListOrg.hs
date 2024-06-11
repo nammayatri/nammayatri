@@ -30,3 +30,7 @@ instance ToJSON (WhiteListOrgD 'Unsafe)
 instance FromJSON (WhiteListOrgD 'Safe)
 
 instance ToJSON (WhiteListOrgD 'Safe)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/WhiteListOrg.yaml
+-}

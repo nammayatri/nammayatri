@@ -45,3 +45,7 @@ instance ToTType' Beam.PurchaseHistory Domain.Types.PurchaseHistory.PurchaseHist
         Beam.title = title,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/PurchaseHistory.yaml
+-}

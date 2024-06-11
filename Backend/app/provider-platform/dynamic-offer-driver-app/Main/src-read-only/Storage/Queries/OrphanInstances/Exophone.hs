@@ -43,3 +43,7 @@ instance ToTType' Beam.Exophone Domain.Types.Exophone.Exophone where
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Exophone.yaml
+-}

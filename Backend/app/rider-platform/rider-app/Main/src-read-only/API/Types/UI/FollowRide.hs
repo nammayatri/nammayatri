@@ -16,3 +16,7 @@ data Followers = Followers {bookingId :: Kernel.Types.Id.Id Domain.Types.Booking
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data ShareRideReq = ShareRideReq {emergencyContactNumbers :: [Data.Text.Text]} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/followRide.yaml
+-}

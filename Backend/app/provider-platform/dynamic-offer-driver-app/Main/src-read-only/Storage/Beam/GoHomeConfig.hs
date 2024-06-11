@@ -47,3 +47,7 @@ $(enableKVPG ''GoHomeConfigT ['merchantOperatingCityId] [])
 $(mkTableInstances ''GoHomeConfigT "go_home_config")
 
 $(Domain.Types.UtilsTH.mkCacParseInstance ''GoHomeConfigT)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverGoHome.yaml
+-}

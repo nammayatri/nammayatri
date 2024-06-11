@@ -21,3 +21,7 @@ data Volunteer = Volunteer
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Volunteer.yaml
+-}

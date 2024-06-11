@@ -53,3 +53,7 @@ getListSuspectsFlag a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI' $ Domain.Actio
 
 postProcessSuspectFlagRequest :: (TokenInfo -> API.Types.UI.SuspectFlagRequest.SuspectApprovalReqList -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postProcessSuspectFlagRequest a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.SuspectFlagRequest.postProcessSuspectFlagRequest a2 a1
+
+{-
+	DSL Source Link: file://./../../../../spec/API/suspectFlagRequest.yaml
+-}

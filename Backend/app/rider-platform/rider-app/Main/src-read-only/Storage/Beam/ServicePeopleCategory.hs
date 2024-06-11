@@ -36,3 +36,7 @@ type ServicePeopleCategory = ServicePeopleCategoryT Identity
 $(enableKVPG ''ServicePeopleCategoryT ['id] [])
 
 $(mkTableInstances ''ServicePeopleCategoryT "service_people_category")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

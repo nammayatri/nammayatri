@@ -30,3 +30,7 @@ data Exophone = Exophone
 data ExophoneType = CALL_RIDE | END_RIDE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExophoneType)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Exophone.yaml
+-}

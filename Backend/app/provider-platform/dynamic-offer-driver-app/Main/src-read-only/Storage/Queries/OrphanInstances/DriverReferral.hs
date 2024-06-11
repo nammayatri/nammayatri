@@ -33,3 +33,7 @@ instance ToTType' Beam.DriverReferral Domain.Types.DriverReferral.DriverReferral
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DriverReferral.yaml
+-}

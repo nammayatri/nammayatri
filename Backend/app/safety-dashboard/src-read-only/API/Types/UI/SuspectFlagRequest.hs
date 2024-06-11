@@ -36,3 +36,7 @@ data SuspectFlagRequestResp = SuspectFlagRequestResp
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data SuspectsApprovalReq = SuspectsApprovalReq {adminApproval :: Domain.Types.SuspectFlagRequest.AdminApproval, suspectFlagRequestId :: Data.Text.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/suspectFlagRequest.yaml
+-}

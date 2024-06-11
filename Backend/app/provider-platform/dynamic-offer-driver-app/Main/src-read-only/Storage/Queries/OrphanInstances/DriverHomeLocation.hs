@@ -39,3 +39,7 @@ instance ToTType' Beam.DriverHomeLocation Domain.Types.DriverHomeLocation.Driver
         Beam.tag = tag,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DriverGoHome.yaml
+-}

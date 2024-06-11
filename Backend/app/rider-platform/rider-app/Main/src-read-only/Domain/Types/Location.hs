@@ -36,3 +36,7 @@ data LocationAPIEntity = LocationAPIEntity
     ward :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Location.yaml
+-}

@@ -32,3 +32,7 @@ type PlanTranslation = PlanTranslationT Identity
 $(enableKVPG ''PlanTranslationT ['language, 'planId] [])
 
 $(mkTableInstances ''PlanTranslationT "plan_translation")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PlanTranslation.yaml
+-}

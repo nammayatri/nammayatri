@@ -36,3 +36,7 @@ data AadhaarCard = AadhaarCard
     verificationStatus :: Kernel.Types.Documents.VerificationStatus
   }
   deriving (Generic, Show, ToJSON, FromJSON)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

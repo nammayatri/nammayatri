@@ -51,3 +51,7 @@ instance ToTType' Beam.TicketService Domain.Types.TicketService.TicketService wh
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/ticket.yaml
+-}

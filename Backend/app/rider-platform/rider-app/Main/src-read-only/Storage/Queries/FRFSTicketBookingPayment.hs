@@ -95,3 +95,7 @@ instance ToTType' Beam.FRFSTicketBookingPayment Domain.Types.FRFSTicketBookingPa
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FrfsTicket.yaml
+-}

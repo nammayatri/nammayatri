@@ -100,3 +100,7 @@ updateByPrimaryKey (Domain.Types.FareProduct.FareProduct {..}) = do
       Se.Set Beam.vehicleVariant vehicleServiceTier
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FareProduct.yaml
+-}

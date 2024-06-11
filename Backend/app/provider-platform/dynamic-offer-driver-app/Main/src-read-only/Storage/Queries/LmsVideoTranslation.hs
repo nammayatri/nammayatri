@@ -129,3 +129,7 @@ instance ToTType' Beam.LmsVideoTranslation Domain.Types.LmsVideoTranslation.LmsV
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

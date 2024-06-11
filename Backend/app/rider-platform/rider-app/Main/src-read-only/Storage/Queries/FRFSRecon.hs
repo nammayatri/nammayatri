@@ -164,3 +164,7 @@ instance ToTType' Beam.FRFSRecon Domain.Types.FRFSRecon.FRFSRecon where
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FrfsTicket.yaml
+-}

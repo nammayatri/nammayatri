@@ -41,3 +41,7 @@ type BookingCancellationReason = BookingCancellationReasonT Identity
 $(enableKVPG ''BookingCancellationReasonT ['bookingId] [])
 
 $(mkTableInstances ''BookingCancellationReasonT "booking_cancellation_reason")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BookingCancellationReason.yaml
+-}

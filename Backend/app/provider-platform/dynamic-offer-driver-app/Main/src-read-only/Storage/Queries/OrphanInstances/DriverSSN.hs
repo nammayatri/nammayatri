@@ -34,3 +34,7 @@ instance ToTType' Beam.DriverSSN Domain.Types.DriverSSN.DriverSSN where
         Beam.ssnHash = ssn & hash,
         Beam.verificationStatus = verificationStatus
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DriverOnboarding.yaml
+-}

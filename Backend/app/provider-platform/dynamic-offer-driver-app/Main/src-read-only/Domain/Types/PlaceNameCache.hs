@@ -22,3 +22,7 @@ data PlaceNameCache = PlaceNameCache
     plusCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PlaceNameCache.yaml
+-}

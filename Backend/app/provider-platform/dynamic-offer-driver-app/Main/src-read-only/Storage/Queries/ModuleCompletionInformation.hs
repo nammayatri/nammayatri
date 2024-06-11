@@ -116,3 +116,7 @@ instance ToTType' Beam.ModuleCompletionInformation Domain.Types.ModuleCompletion
         Beam.selectedEntityId = selectedEntityId,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

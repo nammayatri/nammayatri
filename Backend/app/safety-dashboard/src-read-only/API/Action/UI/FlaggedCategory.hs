@@ -52,3 +52,7 @@ postDeleteFlagCategory a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.FlaggedCat
 
 getListFlagCategory :: (TokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.UI.FlaggedCategory.FlagCategoryList)
 getListFlagCategory a3 a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.FlaggedCategory.getListFlagCategory a3 a2 a1
+
+{-
+	DSL Source Link: file://./../../../../spec/API/flaggedCategory.yaml
+-}

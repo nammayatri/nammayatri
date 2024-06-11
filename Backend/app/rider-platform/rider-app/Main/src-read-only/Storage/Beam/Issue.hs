@@ -36,3 +36,7 @@ type Issue = IssueT Identity
 $(enableKVPG ''IssueT ['id] [['bookingId], ['customerId], ['ticketId]])
 
 $(mkTableInstances ''IssueT "issue")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/issue.yaml
+-}

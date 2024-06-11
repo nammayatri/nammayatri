@@ -66,3 +66,7 @@ type DriverInformation = DriverInformationT Identity
 $(enableKVPG ''DriverInformationT ['driverId] [])
 
 $(mkTableInstances ''DriverInformationT "driver_information")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverInformation.yaml
+-}

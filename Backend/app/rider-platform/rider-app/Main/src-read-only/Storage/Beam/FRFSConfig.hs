@@ -36,3 +36,7 @@ type FRFSConfig = FRFSConfigT Identity
 $(enableKVPG ''FRFSConfigT ['merchantOperatingCityId] [])
 
 $(mkTableInstances ''FRFSConfigT "frfs_config")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FrfsTicket.yaml
+-}

@@ -71,3 +71,7 @@ instance ToTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerificat
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DriverOnboarding.yaml
+-}

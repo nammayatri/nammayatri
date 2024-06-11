@@ -95,3 +95,7 @@ instance ToTType' Beam.Station Domain.Types.Station.Station where
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FrfsTicket.yaml
+-}

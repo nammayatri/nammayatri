@@ -56,3 +56,7 @@ $(enableKVPG ''MerchantServiceUsageConfigT ['merchantOperatingCityId] [])
 $(mkTableInstances ''MerchantServiceUsageConfigT "merchant_service_usage_config")
 
 $(Domain.Types.UtilsTH.mkCacParseInstance ''MerchantServiceUsageConfigT)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

@@ -35,3 +35,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.FlaggedCategory.FlaggedCategory {..}) = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.createdAt createdAt, Se.Set Beam.name name, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

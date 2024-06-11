@@ -31,3 +31,7 @@ type WhiteListOrg = WhiteListOrgT Identity
 $(enableKVPG ''WhiteListOrgT ['id] [['subscriberId]])
 
 $(mkTableInstancesWithTModifier ''WhiteListOrgT "white_list_org" [("subscriberId", "subscriber_id")])
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/WhiteListOrg.yaml
+-}

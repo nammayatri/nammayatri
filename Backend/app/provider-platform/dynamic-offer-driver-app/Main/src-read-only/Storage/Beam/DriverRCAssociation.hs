@@ -36,3 +36,7 @@ type DriverRCAssociation = DriverRCAssociationT Identity
 $(enableKVPG ''DriverRCAssociationT ['id] [['driverId], ['rcId]])
 
 $(mkTableInstances ''DriverRCAssociationT "driver_rc_association")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

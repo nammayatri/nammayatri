@@ -85,3 +85,7 @@ instance ToTType' Beam.SuspectStatusChangeRequest Domain.Types.SuspectStatusChan
         Beam.updatedAt = updatedAt,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

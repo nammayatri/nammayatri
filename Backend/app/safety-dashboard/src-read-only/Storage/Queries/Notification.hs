@@ -110,3 +110,7 @@ instance ToTType' Beam.Notification Domain.Types.Notification.Notification where
         Beam.updatedAt = updatedAt,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

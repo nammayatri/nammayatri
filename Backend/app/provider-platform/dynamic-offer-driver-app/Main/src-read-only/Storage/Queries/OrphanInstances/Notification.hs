@@ -64,3 +64,7 @@ instance ToTType' Beam.Notification Domain.Types.Notification.Notification where
         Beam.txnDate = txnDate,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Notification.yaml
+-}

@@ -71,3 +71,7 @@ instance ToTType' Beam.BppDetails Domain.Types.BppDetails.BppDetails where
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BppDetails.yaml
+-}

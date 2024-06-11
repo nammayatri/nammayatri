@@ -34,3 +34,7 @@ type SeatManagement = SeatManagementT Identity
 $(enableKVPG ''SeatManagementT ['id] [['ticketServiceCategoryId]])
 
 $(mkTableInstances ''SeatManagementT "seat_management")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

@@ -34,3 +34,7 @@ type DriverGoHomeRequest = DriverGoHomeRequestT Identity
 $(enableKVPG ''DriverGoHomeRequestT ['id] [])
 
 $(mkTableInstances ''DriverGoHomeRequestT "driver_go_home_request")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverGoHome.yaml
+-}

@@ -159,3 +159,7 @@ instance ToTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPool
         Beam.updatedAt = updatedAt,
         Beam.vehicleVariant = vehicleVariant
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/configs.yaml
+-}

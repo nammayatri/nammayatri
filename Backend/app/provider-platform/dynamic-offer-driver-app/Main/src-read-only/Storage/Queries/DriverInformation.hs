@@ -205,3 +205,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverInformation.yaml
+-}

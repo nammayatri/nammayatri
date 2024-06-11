@@ -144,3 +144,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         Beam.vehicleVariant = vehicleServiceTierType
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Booking.yaml
+-}

@@ -39,3 +39,7 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EventTime)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''NotificationType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TimeDiffEvent)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

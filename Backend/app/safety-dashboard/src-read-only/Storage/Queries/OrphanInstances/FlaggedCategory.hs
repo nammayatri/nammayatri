@@ -23,3 +23,7 @@ instance ToTType' Beam.FlaggedCategory Domain.Types.FlaggedCategory.FlaggedCateg
         Beam.name = name,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/suspect.yaml
+-}

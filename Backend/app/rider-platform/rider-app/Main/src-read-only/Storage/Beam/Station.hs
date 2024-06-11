@@ -36,3 +36,7 @@ type Station = StationT Identity
 $(enableKVPG ''StationT ['id] [['code]])
 
 $(mkTableInstances ''StationT "station")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FrfsTicket.yaml
+-}

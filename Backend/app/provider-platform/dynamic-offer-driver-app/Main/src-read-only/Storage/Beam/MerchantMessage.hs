@@ -35,3 +35,7 @@ type MerchantMessage = MerchantMessageT Identity
 $(enableKVPG ''MerchantMessageT ['merchantOperatingCityId, 'messageKey] [])
 
 $(mkTableInstances ''MerchantMessageT "merchant_message")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

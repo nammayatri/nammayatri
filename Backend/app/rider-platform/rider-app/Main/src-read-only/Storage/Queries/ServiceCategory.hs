@@ -73,3 +73,7 @@ instance ToTType' Beam.ServiceCategory Domain.Types.ServiceCategory.ServiceCateg
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

@@ -49,3 +49,7 @@ type FRFSQuote = FRFSQuoteT Identity
 $(enableKVPG ''FRFSQuoteT ['id] [['searchId]])
 
 $(mkTableInstances ''FRFSQuoteT "frfs_quote")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FrfsTicket.yaml
+-}

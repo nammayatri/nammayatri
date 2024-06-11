@@ -10,3 +10,7 @@ import Servant
 import Tools.Auth
 
 data EditLocationResultAPIResp = EditLocationResultAPIResp {bookingUpdateRequestDetails :: Domain.Types.BookingUpdateRequest.BookingUpdateRequest} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/EditLocation.yaml
+-}

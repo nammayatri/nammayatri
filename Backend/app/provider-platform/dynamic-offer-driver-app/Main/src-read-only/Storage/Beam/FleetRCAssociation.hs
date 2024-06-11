@@ -33,3 +33,7 @@ type FleetRCAssociation = FleetRCAssociationT Identity
 $(enableKVPG ''FleetRCAssociationT ['id] [['rcId]])
 
 $(mkTableInstances ''FleetRCAssociationT "fleet_rc_association")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

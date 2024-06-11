@@ -55,3 +55,7 @@ instance ToTType' Beam.Client Domain.Types.Client.Client where
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/client.yaml
+-}

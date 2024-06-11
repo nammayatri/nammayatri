@@ -110,3 +110,7 @@ postSosCreateMockSos ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postSosCreateMockSos a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosCreateMockSos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+{-
+	DSL Source Link: file://./../../../../spec/API/sos.yaml
+-}

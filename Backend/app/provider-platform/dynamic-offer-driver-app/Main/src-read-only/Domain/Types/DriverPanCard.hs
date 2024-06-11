@@ -94,3 +94,7 @@ instance EncryptedItem' DriverPanCard where
 data VerifiedBy = FRONTEND_SDK | DASHBOARD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VerifiedBy)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

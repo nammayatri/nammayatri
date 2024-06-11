@@ -63,3 +63,7 @@ instance FromJSON (OverlayD 'Safe)
 instance ToJSON (OverlayD 'Safe)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''OverlayCondition)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

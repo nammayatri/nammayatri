@@ -31,3 +31,7 @@ data SuspectUploadReq = SuspectUploadReq
     voterId :: Kernel.Prelude.Maybe Data.Text.Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/suspect.yaml
+-}

@@ -33,3 +33,7 @@ data BookingCancellationReason = BookingCancellationReason
 data CancellationSource = ByUser | ByDriver | ByMerchant | ByAllocator | ByApplication deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationSource)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BookingCancellationReason.yaml
+-}

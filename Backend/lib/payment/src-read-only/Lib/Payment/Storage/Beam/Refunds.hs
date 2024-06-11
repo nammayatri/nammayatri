@@ -38,3 +38,7 @@ type Refunds = RefundsT Identity
 $(enableKVPG ''RefundsT ['id] [])
 
 $(mkTableInstancesGenericSchema ''RefundsT "refunds")
+
+{-
+	DSL Source Link: file://./../../../../../spec/Storage/Refunds.yaml
+-}

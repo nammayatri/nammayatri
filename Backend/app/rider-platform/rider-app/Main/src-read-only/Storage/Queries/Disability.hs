@@ -10,3 +10,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import Storage.Queries.DisabilityExtra as ReExport
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PersonDisability.yaml
+-}

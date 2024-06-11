@@ -30,3 +30,7 @@ type CancellationCharges = CancellationChargesT Identity
 $(enableKVPG ''CancellationChargesT ['id] [])
 
 $(mkTableInstances ''CancellationChargesT "cancellation_charges")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/cancellationCharges.yaml
+-}

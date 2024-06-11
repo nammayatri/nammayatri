@@ -88,3 +88,7 @@ instance EncryptedItem' VehiclePermit where
   type UnencryptedItem VehiclePermit = DecryptedVehiclePermit
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

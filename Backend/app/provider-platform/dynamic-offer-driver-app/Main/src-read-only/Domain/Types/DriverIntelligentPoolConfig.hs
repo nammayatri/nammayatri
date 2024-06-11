@@ -61,3 +61,7 @@ instance ToJSON (DriverIntelligentPoolConfigD 'Unsafe)
 instance FromJSON (DriverIntelligentPoolConfigD 'Safe)
 
 instance ToJSON (DriverIntelligentPoolConfigD 'Safe)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

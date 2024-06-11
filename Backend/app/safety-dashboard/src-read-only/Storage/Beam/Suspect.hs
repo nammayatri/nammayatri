@@ -38,3 +38,7 @@ type Suspect = SuspectT Identity
 $(enableKVPG (''SuspectT) [('id)] [])
 
 $(mkTableInstances (''SuspectT) "suspect")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

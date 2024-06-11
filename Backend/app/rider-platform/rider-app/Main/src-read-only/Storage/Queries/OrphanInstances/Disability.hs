@@ -17,3 +17,7 @@ instance FromTType' Beam.Disability Domain.Types.Disability.Disability where
 
 instance ToTType' Beam.Disability Domain.Types.Disability.Disability where
   toTType' (Domain.Types.Disability.Disability {..}) = do Beam.DisabilityT {Beam.description = description, Beam.id = Kernel.Types.Id.getId id, Beam.tag = tag}
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/PersonDisability.yaml
+-}

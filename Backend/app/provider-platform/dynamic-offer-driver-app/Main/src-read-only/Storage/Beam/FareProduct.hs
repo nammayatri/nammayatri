@@ -39,3 +39,7 @@ type FareProduct = FareProductT Identity
 $(enableKVPG ''FareProductT ['id] [['merchantOperatingCityId]])
 
 $(mkTableInstances ''FareProductT "fare_product")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FareProduct.yaml
+-}

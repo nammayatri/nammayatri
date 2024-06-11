@@ -107,3 +107,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.vehicleVariant vehicleVariant
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SearchRequestForDriver.yaml
+-}

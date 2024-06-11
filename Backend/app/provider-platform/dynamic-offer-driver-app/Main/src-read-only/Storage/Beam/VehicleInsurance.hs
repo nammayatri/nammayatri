@@ -43,3 +43,7 @@ type VehicleInsurance = VehicleInsuranceT Identity
 $(enableKVPG ''VehicleInsuranceT ['id] [['documentImageId]])
 
 $(mkTableInstances ''VehicleInsuranceT "vehicle_insurance")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

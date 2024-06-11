@@ -31,3 +31,7 @@ type LmsModuleVideoInformation = LmsModuleVideoInformationT Identity
 $(enableKVPG ''LmsModuleVideoInformationT ['id] [])
 
 $(mkTableInstances ''LmsModuleVideoInformationT "lms_module_video_information")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

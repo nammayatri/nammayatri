@@ -24,3 +24,7 @@ type PersonFlowStatus = PersonFlowStatusT Identity
 $(enableKVPG ''PersonFlowStatusT ['personId] [])
 
 $(mkTableInstances ''PersonFlowStatusT "person_flow_status")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PersonFlowStatus.yaml
+-}

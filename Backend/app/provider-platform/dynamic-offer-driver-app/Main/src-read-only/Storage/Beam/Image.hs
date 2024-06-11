@@ -40,3 +40,7 @@ type Image = ImageT Identity
 $(enableKVPG ''ImageT ['id] [['personId]])
 
 $(mkTableInstances ''ImageT "image")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

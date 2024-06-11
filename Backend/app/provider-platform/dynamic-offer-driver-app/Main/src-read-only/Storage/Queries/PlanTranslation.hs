@@ -66,3 +66,7 @@ instance ToTType' Beam.PlanTranslation Domain.Types.PlanTranslation.PlanTranslat
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PlanTranslation.yaml
+-}

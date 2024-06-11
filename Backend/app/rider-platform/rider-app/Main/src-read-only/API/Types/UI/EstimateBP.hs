@@ -15,3 +15,7 @@ data EstimateBreakup = EstimateBreakup {price :: API.Types.UI.EstimateBP.Estimat
 data EstimateBreakupPrice = EstimateBreakupPrice {value :: Kernel.Types.Price.PriceAPIEntity} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data EstimateDetailsRes = EstimateDetailsRes {estimateBreakup :: [API.Types.UI.EstimateBP.EstimateBreakup]} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/estimateBP.yaml
+-}

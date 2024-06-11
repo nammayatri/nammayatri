@@ -69,3 +69,7 @@ $(enableKVPG ''DriverPoolConfigT ['id] [['merchantOperatingCityId]])
 $(mkTableInstances ''DriverPoolConfigT "driver_pool_config")
 
 $(Domain.Types.UtilsTH.mkCacParseInstance ''DriverPoolConfigT)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/configs.yaml
+-}

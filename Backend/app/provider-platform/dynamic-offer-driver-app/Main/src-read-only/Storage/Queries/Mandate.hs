@@ -51,3 +51,7 @@ updateByPrimaryKey (Domain.Types.Mandate.Mandate {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Mandate.yaml
+-}

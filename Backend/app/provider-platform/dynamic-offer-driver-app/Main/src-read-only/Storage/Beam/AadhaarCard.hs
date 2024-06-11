@@ -44,3 +44,7 @@ type AadhaarCard = AadhaarCardT Identity
 $(enableKVPG ''AadhaarCardT ['driverId] [])
 
 $(mkTableInstances ''AadhaarCardT "aadhaar_card")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

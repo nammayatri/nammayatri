@@ -52,3 +52,7 @@ updateByPrimaryKey (Domain.Types.PersonStats.PersonStats {..}) = do
       Se.Set Beam.weekendRides weekendRides
     ]
     [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PersonStats.yaml
+-}

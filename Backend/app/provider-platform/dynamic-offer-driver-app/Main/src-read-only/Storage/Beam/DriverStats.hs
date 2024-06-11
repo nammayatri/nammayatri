@@ -44,3 +44,7 @@ type DriverStats = DriverStatsT Identity
 $(enableKVPG ''DriverStatsT ['driverId] [])
 
 $(mkTableInstances ''DriverStatsT "driver_stats")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverStats.yaml
+-}

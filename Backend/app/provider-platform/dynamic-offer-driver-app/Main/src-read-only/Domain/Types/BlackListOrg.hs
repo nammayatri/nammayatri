@@ -24,3 +24,7 @@ instance ToJSON (BlackListOrgD 'Unsafe)
 instance FromJSON (BlackListOrgD 'Safe)
 
 instance ToJSON (BlackListOrgD 'Safe)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BlackListOrg.yaml
+-}

@@ -41,3 +41,7 @@ type DriverOffer = DriverOfferT Identity
 $(enableKVPG ''DriverOfferT ['id] [['bppQuoteId], ['estimateId]])
 
 $(mkTableInstances ''DriverOfferT "driver_offer")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOffer.yaml
+-}

@@ -81,3 +81,7 @@ instance ToTType' Beam.RideDetails Domain.Types.RideDetails.RideDetails where
         Beam.vehicleNumber = vehicleNumber,
         Beam.vehicleVariant = vehicleVariant
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RideDetails.yaml
+-}

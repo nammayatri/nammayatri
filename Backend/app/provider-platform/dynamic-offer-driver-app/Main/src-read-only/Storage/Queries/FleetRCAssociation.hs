@@ -43,3 +43,7 @@ updateByPrimaryKey (Domain.Types.FleetRCAssociation.FleetRCAssociation {..}) = d
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

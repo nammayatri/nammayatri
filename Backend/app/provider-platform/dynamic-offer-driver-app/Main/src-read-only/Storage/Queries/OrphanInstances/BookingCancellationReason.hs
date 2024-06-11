@@ -48,3 +48,7 @@ instance ToTType' Beam.BookingCancellationReason Domain.Types.BookingCancellatio
         Beam.rideId = Kernel.Types.Id.getId <$> rideId,
         Beam.source = source
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/BookingCancellationReason.yaml
+-}

@@ -35,3 +35,7 @@ instance ToTType' Beam.FeedbackForm Domain.Types.FeedbackForm.FeedbackForm where
         Beam.question = question,
         Beam.rating = rating
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/FeedbackForm.yaml
+-}

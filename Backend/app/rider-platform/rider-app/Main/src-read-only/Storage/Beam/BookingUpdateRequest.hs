@@ -42,3 +42,7 @@ type BookingUpdateRequest = BookingUpdateRequestT Identity
 $(enableKVPG ''BookingUpdateRequestT ['id] [['bookingId]])
 
 $(mkTableInstancesWithTModifier ''BookingUpdateRequestT "booking_update_request" [])
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BookingUpdateRequest.yaml
+-}

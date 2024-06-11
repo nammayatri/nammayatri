@@ -60,3 +60,7 @@ instance ToTType' Beam.DriverLicense Domain.Types.DriverLicense.DriverLicense wh
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DriverOnboarding.yaml
+-}

@@ -38,3 +38,7 @@ type BusinessEvent = BusinessEventT Identity
 $(enableKVPG ''BusinessEventT ['id] [])
 
 $(mkTableInstances ''BusinessEventT "business_event")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BusinessEvent.yaml
+-}

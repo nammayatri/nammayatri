@@ -22,3 +22,7 @@ data Rating = Rating
     wasOfferedAssistance :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/rating.yaml
+-}

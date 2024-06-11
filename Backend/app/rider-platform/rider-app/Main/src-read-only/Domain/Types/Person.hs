@@ -241,3 +241,7 @@ $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''Gender)
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''RideShareOptions)
 
 $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''RideShareOptions)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Person.yaml
+-}

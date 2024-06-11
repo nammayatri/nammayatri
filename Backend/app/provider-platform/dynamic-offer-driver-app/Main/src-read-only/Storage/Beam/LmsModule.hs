@@ -40,3 +40,7 @@ type LmsModule = LmsModuleT Identity
 $(enableKVPG ''LmsModuleT ['id] [])
 
 $(mkTableInstances ''LmsModuleT "lms_module")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

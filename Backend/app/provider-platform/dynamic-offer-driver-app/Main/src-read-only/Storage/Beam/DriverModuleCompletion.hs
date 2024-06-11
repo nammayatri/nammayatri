@@ -38,3 +38,7 @@ type DriverModuleCompletion = DriverModuleCompletionT Identity
 $(enableKVPG ''DriverModuleCompletionT ['completionId] [])
 
 $(mkTableInstances ''DriverModuleCompletionT "driver_module_completion")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

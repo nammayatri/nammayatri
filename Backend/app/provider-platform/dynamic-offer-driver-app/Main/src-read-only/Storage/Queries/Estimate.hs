@@ -111,3 +111,7 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.vehicleVariant = vehicleServiceTier,
         Beam.vehicleServiceTierName = vehicleServiceTierName
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Estimate.yaml
+-}

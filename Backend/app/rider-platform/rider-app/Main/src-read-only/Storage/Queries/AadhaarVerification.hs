@@ -99,3 +99,7 @@ instance ToTType' Beam.AadhaarVerification Domain.Types.AadhaarVerification.Aadh
         Beam.personName = personName,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Aadhaar.yaml
+-}

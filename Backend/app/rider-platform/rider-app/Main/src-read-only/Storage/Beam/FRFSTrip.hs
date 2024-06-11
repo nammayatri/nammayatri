@@ -36,3 +36,7 @@ type FRFSTrip = FRFSTripT Identity
 $(enableKVPG ''FRFSTripT ['id] [['quoteId]])
 
 $(mkTableInstances ''FRFSTripT "frfs_trip")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FrfsTicket.yaml
+-}

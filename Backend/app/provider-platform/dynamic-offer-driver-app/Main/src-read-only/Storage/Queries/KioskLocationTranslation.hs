@@ -60,3 +60,7 @@ instance ToTType' Beam.KioskLocationTranslation Domain.Types.KioskLocationTransl
         Beam.landmark = landmark,
         Beam.language = language
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/KioskLocationTranslation.yaml
+-}

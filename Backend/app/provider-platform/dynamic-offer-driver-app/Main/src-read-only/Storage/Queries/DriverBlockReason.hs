@@ -36,3 +36,7 @@ updateByPrimaryKey (Domain.Types.DriverBlockReason.DriverBlockReason {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.reasonCode $ Se.Eq (Kernel.Types.Id.getId reasonCode)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverBlockReason.yaml
+-}

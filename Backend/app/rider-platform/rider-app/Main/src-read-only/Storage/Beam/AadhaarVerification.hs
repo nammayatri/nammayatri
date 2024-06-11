@@ -34,3 +34,7 @@ type AadhaarVerification = AadhaarVerificationT Identity
 $(enableKVPG ''AadhaarVerificationT ['personId] [['aadhaarNumberHash]])
 
 $(mkTableInstances ''AadhaarVerificationT "aadhaar_verification")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Aadhaar.yaml
+-}

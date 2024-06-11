@@ -38,3 +38,7 @@ data BookingStatus = Pending | Failed | Booked | Cancelled deriving (Eq, Ord, Sh
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingStatus)
 
 $(mkHttpInstancesForEnum ''BookingStatus)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

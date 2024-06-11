@@ -35,3 +35,7 @@ type FRFSSearch = FRFSSearchT Identity
 $(enableKVPG ''FRFSSearchT ['id] [])
 
 $(mkTableInstances ''FRFSSearchT "frfs_search")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FrfsTicket.yaml
+-}

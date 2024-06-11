@@ -39,3 +39,7 @@ instance ToTType' Beam.FleetDriverAssociation Domain.Types.FleetDriverAssociatio
         Beam.isActive = isActive,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/FleetDriverAssociation.yaml
+-}

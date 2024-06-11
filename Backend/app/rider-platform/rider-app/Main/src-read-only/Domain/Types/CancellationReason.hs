@@ -32,3 +32,7 @@ data CancellationStage = OnSearch | OnInit | OnConfirm | OnAssign deriving (Show
 $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''CancellationStage)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationStage)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/CancellationReason.yaml
+-}

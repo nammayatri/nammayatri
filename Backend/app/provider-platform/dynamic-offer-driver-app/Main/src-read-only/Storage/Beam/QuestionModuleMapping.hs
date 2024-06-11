@@ -23,3 +23,7 @@ type QuestionModuleMapping = QuestionModuleMappingT Identity
 $(enableKVPG ''QuestionModuleMappingT ['moduleId, 'questionId] [])
 
 $(mkTableInstances ''QuestionModuleMappingT "question_module_mapping")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

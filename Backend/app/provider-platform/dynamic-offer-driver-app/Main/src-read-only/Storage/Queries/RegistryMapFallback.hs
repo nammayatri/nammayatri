@@ -54,3 +54,7 @@ instance ToTType' Beam.RegistryMapFallback Domain.Types.RegistryMapFallback.Regi
         Beam.subscriberId = subscriberId,
         Beam.uniqueId = uniqueId
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RegistryMapFallback.yaml
+-}

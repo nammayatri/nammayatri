@@ -20,3 +20,7 @@ data VehicleDetails = VehicleDetails
     vehicleVariant :: Domain.Types.Vehicle.Variant
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/VehicleDetails.yaml
+-}

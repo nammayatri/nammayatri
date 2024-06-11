@@ -64,3 +64,7 @@ instance ToTType' Beam.BusinessHour Domain.Types.BusinessHour.BusinessHour where
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

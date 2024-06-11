@@ -63,3 +63,7 @@ type MerchantServiceUsageConfig = MerchantServiceUsageConfigT Identity
 $(enableKVPG ''MerchantServiceUsageConfigT ['merchantOperatingCityId] [])
 
 $(mkTableInstances ''MerchantServiceUsageConfigT "merchant_service_usage_config")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

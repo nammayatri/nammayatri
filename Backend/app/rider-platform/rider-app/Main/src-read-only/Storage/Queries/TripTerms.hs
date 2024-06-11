@@ -52,3 +52,7 @@ instance ToTType' Beam.TripTerms Domain.Types.TripTerms.TripTerms where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/TripTerms.yaml
+-}

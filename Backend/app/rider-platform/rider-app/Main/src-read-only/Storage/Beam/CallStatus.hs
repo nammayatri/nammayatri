@@ -38,3 +38,7 @@ type CallStatus = CallStatusT Identity
 $(enableKVPG ''CallStatusT ['id] [['callId]])
 
 $(mkTableInstances ''CallStatusT "call_status")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/CallStatus.yaml
+-}

@@ -36,3 +36,7 @@ data GoHomeConfig = GoHomeConfig
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data Subscriber = Subscriber {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverGoHome.yaml
+-}

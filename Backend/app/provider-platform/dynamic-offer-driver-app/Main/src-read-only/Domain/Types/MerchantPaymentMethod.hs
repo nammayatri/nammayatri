@@ -37,3 +37,7 @@ instance ToJSON (MerchantPaymentMethodD 'Unsafe)
 instance FromJSON (MerchantPaymentMethodD 'Safe)
 
 instance ToJSON (MerchantPaymentMethodD 'Safe)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

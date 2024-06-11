@@ -37,3 +37,7 @@ instance ToTType' Beam.DriverBlockReason Domain.Types.DriverBlockReason.DriverBl
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DriverBlockReason.yaml
+-}

@@ -30,3 +30,7 @@ type PersonDisability = PersonDisabilityT Identity
 $(enableKVPG ''PersonDisabilityT ['personId] [])
 
 $(mkTableInstances ''PersonDisabilityT "person_disability")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PersonDisability.yaml
+-}

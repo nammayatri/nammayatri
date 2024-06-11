@@ -47,3 +47,7 @@ type VehicleServiceTier = VehicleServiceTierT Identity
 $(enableKVPG ''VehicleServiceTierT ['id] [['merchantOperatingCityId]])
 
 $(mkTableInstances ''VehicleServiceTierT "vehicle_service_tier")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/VehicleServiceTier.yaml
+-}

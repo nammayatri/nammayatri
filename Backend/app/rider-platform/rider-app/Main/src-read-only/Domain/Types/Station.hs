@@ -32,3 +32,7 @@ data FRFSVehicleType = METRO | BUS deriving (Eq, Ord, Show, Read, Generic, ToJSO
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSVehicleType)
 
 $(mkHttpInstancesForEnum ''FRFSVehicleType)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FrfsTicket.yaml
+-}

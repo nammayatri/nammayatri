@@ -119,3 +119,7 @@ instance ToTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subscr
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SubscriptionConfig.yaml
+-}

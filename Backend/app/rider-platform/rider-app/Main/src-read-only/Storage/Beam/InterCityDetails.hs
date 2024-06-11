@@ -43,3 +43,7 @@ type InterCityDetails = InterCityDetailsT Identity
 $(enableKVPG ''InterCityDetailsT ['id] [])
 
 $(mkTableInstances ''InterCityDetailsT "inter_city_details")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/InterCityDetails.yaml
+-}

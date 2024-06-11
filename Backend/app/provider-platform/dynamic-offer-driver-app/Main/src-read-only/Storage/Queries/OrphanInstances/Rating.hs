@@ -45,3 +45,7 @@ instance ToTType' Beam.Rating Domain.Types.Rating.Rating where
         Beam.updatedAt = updatedAt,
         Beam.wasOfferedAssistance = wasOfferedAssistance
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Rating.yaml
+-}

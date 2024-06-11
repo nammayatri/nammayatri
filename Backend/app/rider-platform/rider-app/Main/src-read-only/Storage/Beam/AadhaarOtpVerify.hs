@@ -32,3 +32,7 @@ type AadhaarOtpVerify = AadhaarOtpVerifyT Identity
 $(enableKVPG ''AadhaarOtpVerifyT ['id] [['personId]])
 
 $(mkTableInstances ''AadhaarOtpVerifyT "aadhaar_otp_verify")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Aadhaar.yaml
+-}

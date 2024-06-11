@@ -41,3 +41,7 @@ instance ToTType' Beam.DriverGoHomeRequest Domain.Types.DriverGoHomeRequest.Driv
         Beam.status = status,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DriverGoHome.yaml
+-}

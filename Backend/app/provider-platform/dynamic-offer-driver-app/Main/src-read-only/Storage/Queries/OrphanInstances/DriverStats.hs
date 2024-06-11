@@ -62,3 +62,7 @@ instance ToTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
         Beam.totalRidesAssigned = totalRidesAssigned,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DriverStats.yaml
+-}

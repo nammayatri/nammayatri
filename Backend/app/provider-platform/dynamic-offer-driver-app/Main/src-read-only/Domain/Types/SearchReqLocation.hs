@@ -28,3 +28,7 @@ data SearchReqLocation = SearchReqLocation
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, Kernel.Utils.GenericPretty.PrettyShow, Kernel.External.Maps.HasCoordinates.HasCoordinates)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SearchRequestLocation.yaml
+-}

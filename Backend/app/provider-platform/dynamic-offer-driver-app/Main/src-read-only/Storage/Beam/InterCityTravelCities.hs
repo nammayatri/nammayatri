@@ -32,3 +32,7 @@ type InterCityTravelCities = InterCityTravelCitiesT Identity
 $(enableKVPG ''InterCityTravelCitiesT ['cityName, 'merchantId] [])
 
 $(mkTableInstances ''InterCityTravelCitiesT "inter_city_travel_cities")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/configs.yaml
+-}

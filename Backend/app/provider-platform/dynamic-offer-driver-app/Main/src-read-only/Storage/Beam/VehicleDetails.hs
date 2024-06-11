@@ -32,3 +32,7 @@ type VehicleDetails = VehicleDetailsT Identity
 $(enableKVPG ''VehicleDetailsT ['id] [])
 
 $(mkTableInstances ''VehicleDetailsT "vehicle_details")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/VehicleDetails.yaml
+-}

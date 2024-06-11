@@ -150,3 +150,7 @@ instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BecknConfig.yaml
+-}

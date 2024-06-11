@@ -88,3 +88,7 @@ data QuoteDetails
   deriving (Generic, Show)
 
 data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, Show)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/quote.yaml
+-}

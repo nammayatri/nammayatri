@@ -116,3 +116,7 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.usedCoins = usedCoins,
         Beam.whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Person.yaml
+-}

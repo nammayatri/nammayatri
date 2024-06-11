@@ -38,3 +38,7 @@ type DailyStats = DailyStatsT Identity
 $(enableKVPG ''DailyStatsT ['id] [['driverId]])
 
 $(mkTableInstances ''DailyStatsT "daily_stats")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DailyStats.yaml
+-}

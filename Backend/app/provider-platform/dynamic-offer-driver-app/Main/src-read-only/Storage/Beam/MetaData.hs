@@ -32,3 +32,7 @@ type MetaData = MetaDataT Identity
 $(enableKVPG ''MetaDataT ['driverId] [])
 
 $(mkTableInstancesWithTModifier ''MetaDataT "meta_data" [("deviceOS", "device_o_s")])
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/MetaData.yaml
+-}

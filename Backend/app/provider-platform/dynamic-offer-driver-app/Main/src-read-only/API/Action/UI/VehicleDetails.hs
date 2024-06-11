@@ -68,3 +68,7 @@ postVehicleDetails ::
     Environment.FlowHandler Domain.Types.VehicleDetails.VehicleDetails
   )
 postVehicleDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.VehicleDetails.postVehicleDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+{-
+	DSL Source Link: file://./../../../../spec/API/VehicleDetails.yaml
+-}

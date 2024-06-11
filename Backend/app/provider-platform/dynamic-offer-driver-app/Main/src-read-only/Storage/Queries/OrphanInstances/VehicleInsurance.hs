@@ -56,3 +56,7 @@ instance ToTType' Beam.VehicleInsurance Domain.Types.VehicleInsurance.VehicleIns
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DriverOnboarding.yaml
+-}

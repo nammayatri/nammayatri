@@ -67,3 +67,7 @@ type DriverFee = DriverFeeT Identity
 $(enableKVPG ''DriverFeeT ['id] [['driverId]])
 
 $(mkTableInstances ''DriverFeeT "driver_fee")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverFee.yaml
+-}

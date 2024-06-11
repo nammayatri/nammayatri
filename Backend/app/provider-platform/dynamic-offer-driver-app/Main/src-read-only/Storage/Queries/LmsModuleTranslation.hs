@@ -78,3 +78,7 @@ instance ToTType' Beam.LmsModuleTranslation Domain.Types.LmsModuleTranslation.Lm
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

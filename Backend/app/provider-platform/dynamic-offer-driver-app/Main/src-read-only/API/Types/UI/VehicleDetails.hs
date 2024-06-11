@@ -16,3 +16,7 @@ data VehicleMakesResp = VehicleMakesResp {makes :: [Data.Text.Text]} deriving (G
 data VehicleModelsReq = VehicleModelsReq {make :: Data.Text.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data VehicleModelsResp = VehicleModelsResp {models :: [Data.Text.Text]} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/VehicleDetails.yaml
+-}

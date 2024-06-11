@@ -33,3 +33,7 @@ instance ToJSON (PlaceBasedServiceConfigD 'Unsafe)
 instance FromJSON (PlaceBasedServiceConfigD 'Safe)
 
 instance ToJSON (PlaceBasedServiceConfigD 'Safe)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PlaceBasedServiceConfig.yaml
+-}

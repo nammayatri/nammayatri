@@ -40,3 +40,7 @@ type RideRelatedNotificationConfig = RideRelatedNotificationConfigT Identity
 $(enableKVPG ''RideRelatedNotificationConfigT ['id, 'merchantOperatingCityId] [])
 
 $(mkTableInstances ''RideRelatedNotificationConfigT "ride_related_notification_config")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

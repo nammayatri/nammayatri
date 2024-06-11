@@ -49,3 +49,7 @@ instance ToTType' Beam.Image Domain.Types.Image.Image where
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DriverOnboarding.yaml
+-}

@@ -39,3 +39,7 @@ type SearchReqLocation = SearchReqLocationT Identity
 $(enableKVPG ''SearchReqLocationT ['id] [])
 
 $(mkTableInstances ''SearchReqLocationT "search_request_location")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SearchReqLocation.yaml
+-}

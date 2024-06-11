@@ -78,3 +78,7 @@ instance ToTType' Beam.SearchReqLocation Domain.Types.SearchReqLocation.SearchRe
         Beam.lon = lon,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SearchReqLocation.yaml
+-}

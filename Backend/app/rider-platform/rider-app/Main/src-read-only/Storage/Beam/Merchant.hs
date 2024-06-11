@@ -72,3 +72,7 @@ type Merchant = MerchantT Identity
 $(enableKVPG ''MerchantT ['id] [['shortId], ['subscriberId]])
 
 $(mkTableInstances ''MerchantT "merchant")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

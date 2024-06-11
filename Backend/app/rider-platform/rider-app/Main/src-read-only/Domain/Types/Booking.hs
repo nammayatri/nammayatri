@@ -94,3 +94,7 @@ data OneWaySpecialZoneBookingDetails = OneWaySpecialZoneBookingDetails {distance
   deriving (Show)
 
 data RentalBookingDetails = RentalBookingDetails {stopLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location} deriving (Show)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Booking.yaml
+-}

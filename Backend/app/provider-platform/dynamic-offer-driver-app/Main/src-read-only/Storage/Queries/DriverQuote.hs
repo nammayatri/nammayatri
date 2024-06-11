@@ -29,3 +29,7 @@ findDriverQuoteBySTId searchTryId = do findOneWithKV [Se.Is Beam.searchTryId $ S
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverQuote.DriverQuote -> m (Maybe Domain.Types.DriverQuote.DriverQuote))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverQuote.yaml
+-}

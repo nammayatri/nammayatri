@@ -49,3 +49,7 @@ instance ToTType' Beam.Mandate Domain.Types.Mandate.Mandate where
         Beam.status = status,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Mandate.yaml
+-}

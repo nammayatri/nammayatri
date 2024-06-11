@@ -111,3 +111,7 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         Beam.vehicleVariant = vehicleServiceTierType
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/quote.yaml
+-}

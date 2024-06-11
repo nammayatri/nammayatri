@@ -25,3 +25,7 @@ data FareBreakupAPIEntity = FareBreakupAPIEntity {amount :: Kernel.Types.Common.
 data FareBreakupEntityType = BOOKING_UPDATE_REQUEST | BOOKING | RIDE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FareBreakupEntityType)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FareBreakUp.yaml
+-}

@@ -38,3 +38,7 @@ data Notification = Notification
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Notification.yaml
+-}

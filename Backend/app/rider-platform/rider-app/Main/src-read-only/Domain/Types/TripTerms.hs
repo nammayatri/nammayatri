@@ -13,3 +13,7 @@ import qualified Tools.Beam.UtilsTH
 
 data TripTerms = TripTerms {createdAt :: Kernel.Prelude.UTCTime, descriptions :: [Data.Text.Text], id :: Kernel.Types.Id.Id Domain.Types.TripTerms.TripTerms, updatedAt :: Kernel.Prelude.UTCTime}
   deriving (Generic, Show, Kernel.Utils.GenericPretty.PrettyShow)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/TripTerms.yaml
+-}

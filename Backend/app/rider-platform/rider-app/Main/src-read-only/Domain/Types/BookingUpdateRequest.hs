@@ -39,3 +39,7 @@ data BookingUpdateRequestStatus = SOFT | CONFIRM deriving (Eq, Ord, Show, Read, 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingUpdateRequestStatus)
 
 $(mkHttpInstancesForEnum ''BookingUpdateRequestStatus)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BookingUpdateRequest.yaml
+-}

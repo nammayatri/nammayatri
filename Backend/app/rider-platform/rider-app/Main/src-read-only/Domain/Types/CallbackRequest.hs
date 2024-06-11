@@ -66,3 +66,7 @@ instance EncryptedItem' CallbackRequest where
 data CallbackRequestStatus = PENDING | RESOLVED | CLOSED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CallbackRequestStatus)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/CallBackRequest.yaml
+-}

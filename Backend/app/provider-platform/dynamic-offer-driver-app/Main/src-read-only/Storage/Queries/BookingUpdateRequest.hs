@@ -157,3 +157,7 @@ instance ToTType' Beam.BookingUpdateRequest Domain.Types.BookingUpdateRequest.Bo
         Beam.updatedAt = updatedAt,
         Beam.validTill = validTill
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BookingUpdateRequest.yaml
+-}

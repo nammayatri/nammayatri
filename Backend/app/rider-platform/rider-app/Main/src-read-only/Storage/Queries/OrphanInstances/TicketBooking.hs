@@ -52,3 +52,7 @@ instance ToTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking wh
         Beam.visitDate = visitDate,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/ticket.yaml
+-}

@@ -116,3 +116,7 @@ instance ToTType' Beam.ReelsData Domain.Types.ReelsData.ReelsData where
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Reels.yaml
+-}

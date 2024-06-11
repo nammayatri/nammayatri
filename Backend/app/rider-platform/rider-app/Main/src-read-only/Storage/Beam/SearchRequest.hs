@@ -66,3 +66,7 @@ type SearchRequest = SearchRequestT Identity
 $(enableKVPG ''SearchRequestT ['id] [['riderId]])
 
 $(mkTableInstances ''SearchRequestT "search_request")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SearchRequest.yaml
+-}

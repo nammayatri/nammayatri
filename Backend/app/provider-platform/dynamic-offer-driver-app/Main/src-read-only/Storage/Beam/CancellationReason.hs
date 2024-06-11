@@ -32,3 +32,7 @@ type CancellationReason = CancellationReasonT Identity
 $(enableKVPG ''CancellationReasonT ['reasonCode] [])
 
 $(mkTableInstances ''CancellationReasonT "cancellation_reason")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/CancellationReason.yaml
+-}

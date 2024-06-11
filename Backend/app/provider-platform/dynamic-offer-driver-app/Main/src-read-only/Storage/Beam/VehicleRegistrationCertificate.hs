@@ -63,3 +63,7 @@ type VehicleRegistrationCertificate = VehicleRegistrationCertificateT Identity
 $(enableKVPG ''VehicleRegistrationCertificateT ['id] [['certificateNumberHash]])
 
 $(mkTableInstances ''VehicleRegistrationCertificateT "vehicle_registration_certificate")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

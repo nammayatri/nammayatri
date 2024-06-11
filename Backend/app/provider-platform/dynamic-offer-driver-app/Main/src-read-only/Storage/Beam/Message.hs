@@ -39,3 +39,7 @@ type Message = MessageT Identity
 $(enableKVPG ''MessageT ['id] [])
 
 $(mkTableInstancesWithTModifier ''MessageT "message" [("messageType", "type")])
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Message.yaml
+-}

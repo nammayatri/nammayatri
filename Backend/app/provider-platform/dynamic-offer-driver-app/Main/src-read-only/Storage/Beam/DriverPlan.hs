@@ -44,3 +44,7 @@ type DriverPlan = DriverPlanT Identity
 $(enableKVPG ''DriverPlanT ['driverId] [['mandateId]])
 
 $(mkTableInstances ''DriverPlanT "driver_plan")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverPlan.yaml
+-}

@@ -56,3 +56,7 @@ postEditResultConfirm ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postEditResultConfirm a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.EditLocation.postEditResultConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+{-
+	DSL Source Link: file://./../../../../spec/API/EditLocation.yaml
+-}

@@ -28,3 +28,7 @@ data FleetOwnerInformation = FleetOwnerInformation
 data FleetType = RENTAL_FLEET | NORMAL_FLEET deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FleetType)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FleetOwnerInformation.yaml
+-}

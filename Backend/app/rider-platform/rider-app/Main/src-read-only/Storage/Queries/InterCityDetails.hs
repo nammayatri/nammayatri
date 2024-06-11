@@ -64,3 +64,7 @@ instance ToTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCityD
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/InterCityDetails.yaml
+-}

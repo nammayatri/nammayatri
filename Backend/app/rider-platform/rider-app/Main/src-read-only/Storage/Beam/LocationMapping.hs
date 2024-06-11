@@ -35,3 +35,7 @@ type LocationMapping = LocationMappingT Identity
 $(enableKVPG ''LocationMappingT ['id] [['entityId]])
 
 $(mkTableInstances ''LocationMappingT "location_mapping")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LocationMapping.yaml
+-}

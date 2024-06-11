@@ -43,3 +43,7 @@ type HotSpotConfig = HotSpotConfigT Identity
 $(enableKVPG ''HotSpotConfigT ['id] [])
 
 $(mkTableInstances ''HotSpotConfigT "hot_spot_config")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/HotSpotConfig.yaml
+-}

@@ -50,3 +50,7 @@ $(enableKVPG ''DriverIntelligentPoolConfigT ['merchantOperatingCityId] [])
 $(mkTableInstances ''DriverIntelligentPoolConfigT "driver_intelligent_pool_config")
 
 $(Domain.Types.UtilsTH.mkCacParseInstance ''DriverIntelligentPoolConfigT)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

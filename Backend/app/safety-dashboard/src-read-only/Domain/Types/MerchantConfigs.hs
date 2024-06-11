@@ -24,3 +24,7 @@ data MerchantConfigs = MerchantConfigs
 data WebHookHeaders = WebHookHeaders {key :: Kernel.Prelude.Text, value :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''WebHookHeaders))
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

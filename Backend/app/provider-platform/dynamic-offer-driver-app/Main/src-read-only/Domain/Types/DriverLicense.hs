@@ -95,3 +95,7 @@ instance EncryptedItem' DriverLicense where
   type UnencryptedItem DriverLicense = DecryptedDriverLicense
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

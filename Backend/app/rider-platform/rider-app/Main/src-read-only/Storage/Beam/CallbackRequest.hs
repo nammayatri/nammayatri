@@ -35,3 +35,7 @@ type CallbackRequest = CallbackRequestT Identity
 $(enableKVPG ''CallbackRequestT ['id] [])
 
 $(mkTableInstances ''CallbackRequestT "callback_request")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/CallBackRequest.yaml
+-}

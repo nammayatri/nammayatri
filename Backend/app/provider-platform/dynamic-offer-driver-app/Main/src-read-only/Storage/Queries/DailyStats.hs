@@ -62,3 +62,7 @@ updateByPrimaryKey (Domain.Types.DailyStats.DailyStats {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq id]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DailyStats.yaml
+-}

@@ -36,3 +36,7 @@ type FRFSTicket = FRFSTicketT Identity
 $(enableKVPG ''FRFSTicketT ['id] [['frfsTicketBookingId]])
 
 $(mkTableInstances ''FRFSTicketT "frfs_ticket")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FrfsTicket.yaml
+-}

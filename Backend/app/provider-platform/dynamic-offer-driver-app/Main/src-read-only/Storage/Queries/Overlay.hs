@@ -135,3 +135,7 @@ instance ToTType' Beam.Overlay Domain.Types.Overlay.Overlay where
         Beam.toastMessage = toastMessage,
         Beam.udf1 = udf1
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

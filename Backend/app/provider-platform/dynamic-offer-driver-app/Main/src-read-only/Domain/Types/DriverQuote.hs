@@ -65,3 +65,7 @@ data DriverQuote = DriverQuote
 data DriverQuoteStatus = Active | Inactive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverQuoteStatus)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverQuote.yaml
+-}

@@ -46,3 +46,7 @@ instance ToTType' Beam.AppInstalls Domain.Types.AppInstalls.AppInstalls where
         Beam.source = source,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/AppInstalls.yaml
+-}

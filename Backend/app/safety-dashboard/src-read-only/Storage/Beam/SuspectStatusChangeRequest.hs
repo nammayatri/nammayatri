@@ -33,3 +33,7 @@ type SuspectStatusChangeRequest = SuspectStatusChangeRequestT Identity
 $(enableKVPG (''SuspectStatusChangeRequestT) [('id)] [])
 
 $(mkTableInstances (''SuspectStatusChangeRequestT) "suspect_status_change_request")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

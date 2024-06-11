@@ -34,3 +34,7 @@ type ClientPersonInfo = ClientPersonInfoT Identity
 $(enableKVPG ''ClientPersonInfoT ['id] [['personId]])
 
 $(mkTableInstances ''ClientPersonInfoT "client_person_info")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ClientPersonInfo.yaml
+-}

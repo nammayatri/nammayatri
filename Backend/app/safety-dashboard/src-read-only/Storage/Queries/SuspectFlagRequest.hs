@@ -117,3 +117,7 @@ updateByPrimaryKey (Domain.Types.SuspectFlagRequest.SuspectFlagRequest {..}) = d
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

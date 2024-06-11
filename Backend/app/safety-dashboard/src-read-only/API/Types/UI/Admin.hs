@@ -22,3 +22,7 @@ data WebhookCheck = WebhookCheck {suspectList :: [API.Types.UI.Admin.WebhookRequ
 
 data WebhookRequest = WebhookRequest {dl :: Data.Text.Text, flaggedBy :: Data.Text.Text, flaggedCategory :: Data.Text.Text, flaggedReason :: Data.Text.Text, voterId :: Data.Text.Text}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/admin.yaml
+-}

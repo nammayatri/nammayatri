@@ -40,3 +40,7 @@ postShareRide ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postShareRide a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FollowRide.postShareRide (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+{-
+	DSL Source Link: file://./../../../../spec/API/followRide.yaml
+-}

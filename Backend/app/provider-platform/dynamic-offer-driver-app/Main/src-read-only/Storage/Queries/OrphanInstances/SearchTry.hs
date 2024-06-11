@@ -76,3 +76,7 @@ instance ToTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
         Beam.vehicleVariant = vehicleServiceTier,
         Beam.vehicleServiceTierName = Kernel.Prelude.Just vehicleServiceTierName
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/SearchTry.yaml
+-}

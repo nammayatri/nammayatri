@@ -93,3 +93,7 @@ $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''DriverFeeStatus)
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''FeeType)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''AutopayPaymentStage)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverFee.yaml
+-}

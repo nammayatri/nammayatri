@@ -76,3 +76,7 @@ updateByPrimaryKey (Domain.Types.RegistrationToken.RegistrationToken {..}) = do
       Se.Set Beam.verified verified
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RegistrationToken.yaml
+-}

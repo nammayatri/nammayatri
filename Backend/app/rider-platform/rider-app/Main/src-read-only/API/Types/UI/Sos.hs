@@ -25,3 +25,7 @@ data SosReq = SosReq {flow :: Domain.Types.Sos.SosType, isRideEnded :: Kernel.Pr
 data SosRes = SosRes {sosId :: Kernel.Types.Id.Id Domain.Types.Sos.Sos} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data SosUpdateReq = SosUpdateReq {comment :: Kernel.Prelude.Maybe Data.Text.Text, status :: Domain.Types.Sos.SosStatus} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/sos.yaml
+-}

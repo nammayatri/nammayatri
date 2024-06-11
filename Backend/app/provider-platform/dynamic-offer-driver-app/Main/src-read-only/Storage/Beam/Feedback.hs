@@ -29,3 +29,7 @@ type Feedback = FeedbackT Identity
 $(enableKVPG ''FeedbackT ['id] [])
 
 $(mkTableInstances ''FeedbackT "feedback")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FeedBack.yaml
+-}

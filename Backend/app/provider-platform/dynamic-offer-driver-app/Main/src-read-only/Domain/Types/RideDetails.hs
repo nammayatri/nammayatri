@@ -75,3 +75,7 @@ instance EncryptedItem' RideDetails where
   type UnencryptedItem RideDetails = DecryptedRideDetails
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RideDetails.yaml
+-}

@@ -68,3 +68,7 @@ instance ToTType' Beam.AadhaarOtpReq Domain.Types.AadhaarOtpReq.AadhaarOtpReq wh
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

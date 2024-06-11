@@ -53,3 +53,7 @@ type SearchTry = SearchTryT Identity
 $(enableKVPG ''SearchTryT ['id] [['estimateId], ['requestId]])
 
 $(mkTableInstances ''SearchTryT "search_try")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SearchTry.yaml
+-}

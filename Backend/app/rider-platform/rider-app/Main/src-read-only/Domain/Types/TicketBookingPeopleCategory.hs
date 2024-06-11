@@ -29,3 +29,7 @@ data TicketBookingPeopleCategory = TicketBookingPeopleCategory
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

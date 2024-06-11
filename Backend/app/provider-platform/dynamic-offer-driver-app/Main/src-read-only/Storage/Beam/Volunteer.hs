@@ -31,3 +31,7 @@ type Volunteer = VolunteerT Identity
 $(enableKVPG ''VolunteerT ['id] [['place]])
 
 $(mkTableInstances ''VolunteerT "volunteer")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Volunteer.yaml
+-}

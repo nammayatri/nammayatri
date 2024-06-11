@@ -32,3 +32,7 @@ type OnSearchEvent = OnSearchEventT Identity
 $(enableKVPG ''OnSearchEventT ['id] [])
 
 $(mkTableInstances ''OnSearchEventT "on_search_event")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/OnSearchEvent.yaml
+-}

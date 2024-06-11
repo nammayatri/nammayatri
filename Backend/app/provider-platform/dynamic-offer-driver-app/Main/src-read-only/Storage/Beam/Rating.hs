@@ -36,3 +36,7 @@ type Rating = RatingT Identity
 $(enableKVPG ''RatingT ['id] [['rideId]])
 
 $(mkTableInstances ''RatingT "rating")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Rating.yaml
+-}

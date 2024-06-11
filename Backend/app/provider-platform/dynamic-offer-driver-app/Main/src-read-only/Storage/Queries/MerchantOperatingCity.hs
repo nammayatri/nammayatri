@@ -82,3 +82,7 @@ instance ToTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCity.
         Beam.state = state,
         Beam.supportNumber = supportNumber
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

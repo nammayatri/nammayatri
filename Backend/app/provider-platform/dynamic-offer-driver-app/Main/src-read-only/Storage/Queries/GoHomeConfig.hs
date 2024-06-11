@@ -105,3 +105,7 @@ instance ToTType' Beam.GoHomeConfig Domain.Types.GoHomeConfig.GoHomeConfig where
         Beam.updateHomeLocationAfterSec = updateHomeLocationAfterSec,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverGoHome.yaml
+-}

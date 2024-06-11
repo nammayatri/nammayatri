@@ -77,3 +77,7 @@ instance ToTType' Beam.MerchantConfigs Domain.Types.MerchantConfigs.MerchantConf
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

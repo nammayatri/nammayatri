@@ -50,3 +50,7 @@ instance ToTType' Beam.PersonStats Domain.Types.PersonStats.PersonStats where
         Beam.weekendPeakRides = weekendPeakRides,
         Beam.weekendRides = weekendRides
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/PersonStats.yaml
+-}

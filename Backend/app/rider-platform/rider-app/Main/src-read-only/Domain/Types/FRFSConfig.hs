@@ -26,3 +26,7 @@ data FRFSConfig = FRFSConfig
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FrfsTicket.yaml
+-}

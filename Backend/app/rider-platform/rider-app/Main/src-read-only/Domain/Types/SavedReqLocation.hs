@@ -48,3 +48,7 @@ data SavedReqLocationAPIEntity = SavedReqLocationAPIEntity
     ward :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SavedReqLocation.yaml
+-}

@@ -37,3 +37,7 @@ data SelfieFetchStatus = APPROVED | NEEDS_REVIEW deriving (Eq, Ord, Show, Read, 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SelfieFetchStatus)
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''SelfieFetchStatus)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

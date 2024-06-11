@@ -48,3 +48,7 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FlaggedBy))
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FlaggedStatus))
 
 $(mkHttpInstancesForEnum (''FlaggedStatus))
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

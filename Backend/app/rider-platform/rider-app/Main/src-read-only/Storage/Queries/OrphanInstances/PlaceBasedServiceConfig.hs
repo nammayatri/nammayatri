@@ -38,3 +38,7 @@ instance ToTType' Beam.PlaceBasedServiceConfig Domain.Types.PlaceBasedServiceCon
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/PlaceBasedServiceConfig.yaml
+-}

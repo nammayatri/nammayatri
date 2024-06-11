@@ -32,3 +32,7 @@ type FleetDriverAssociation = FleetDriverAssociationT Identity
 $(enableKVPG ''FleetDriverAssociationT ['id] [['driverId], ['fleetOwnerId]])
 
 $(mkTableInstances ''FleetDriverAssociationT "fleet_driver_association")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FleetDriverAssociation.yaml
+-}

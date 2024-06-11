@@ -34,3 +34,7 @@ type ServiceCategory = ServiceCategoryT Identity
 $(enableKVPG ''ServiceCategoryT ['id] [])
 
 $(mkTableInstances ''ServiceCategoryT "service_category")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

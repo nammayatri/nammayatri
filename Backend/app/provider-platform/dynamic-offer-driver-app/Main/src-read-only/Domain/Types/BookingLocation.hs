@@ -45,3 +45,7 @@ data LocationAddress = LocationAddress
     street :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, Show, Eq)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Booking.yaml
+-}

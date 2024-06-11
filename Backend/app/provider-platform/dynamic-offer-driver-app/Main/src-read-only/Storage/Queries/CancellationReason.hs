@@ -62,3 +62,7 @@ instance ToTType' Beam.CancellationReason Domain.Types.CancellationReason.Cancel
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/CancellationReason.yaml
+-}

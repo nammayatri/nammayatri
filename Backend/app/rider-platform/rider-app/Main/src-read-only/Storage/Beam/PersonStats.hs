@@ -37,3 +37,7 @@ type PersonStats = PersonStatsT Identity
 $(enableKVPG ''PersonStatsT ['personId] [])
 
 $(mkTableInstances ''PersonStatsT "person_stats")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PersonStats.yaml
+-}

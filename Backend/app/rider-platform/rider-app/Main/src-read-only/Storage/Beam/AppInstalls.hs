@@ -33,3 +33,7 @@ type AppInstalls = AppInstallsT Identity
 $(enableKVPG ''AppInstallsT ['id] [])
 
 $(mkTableInstances ''AppInstallsT "app_installs")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/AppInstalls.yaml
+-}

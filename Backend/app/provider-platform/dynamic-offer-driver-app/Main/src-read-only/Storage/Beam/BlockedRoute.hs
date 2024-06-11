@@ -34,3 +34,7 @@ type BlockedRoute = BlockedRouteT Identity
 $(enableKVPG ''BlockedRouteT ['id] [])
 
 $(mkTableInstances ''BlockedRouteT "blocked_route")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BlockedRoute.yaml
+-}

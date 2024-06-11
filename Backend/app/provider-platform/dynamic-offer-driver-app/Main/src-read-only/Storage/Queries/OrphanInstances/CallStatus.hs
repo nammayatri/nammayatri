@@ -45,3 +45,7 @@ instance ToTType' Beam.CallStatus Domain.Types.CallStatus.CallStatus where
         Beam.recordingUrl = recordingUrl,
         Beam.status = status
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/CallStatus.yaml
+-}

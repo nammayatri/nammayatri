@@ -29,3 +29,7 @@ type TripTerms = TripTermsT Identity
 $(enableKVPG ''TripTermsT ['id] [])
 
 $(mkTableInstances ''TripTermsT "trip_terms")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/TripTerms.yaml
+-}

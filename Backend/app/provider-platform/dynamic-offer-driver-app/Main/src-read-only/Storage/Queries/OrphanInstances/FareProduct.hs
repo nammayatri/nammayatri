@@ -43,3 +43,7 @@ instance ToTType' Beam.FareProduct Domain.Types.FareProduct.FareProduct where
         Beam.tripCategory = tripCategory,
         Beam.vehicleVariant = vehicleServiceTier
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/FareProduct.yaml
+-}

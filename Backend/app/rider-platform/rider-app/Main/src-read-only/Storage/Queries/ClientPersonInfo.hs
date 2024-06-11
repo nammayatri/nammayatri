@@ -91,3 +91,7 @@ instance ToTType' Beam.ClientPersonInfo Domain.Types.ClientPersonInfo.ClientPers
         Beam.updatedAt = updatedAt,
         Beam.vehicleCategory = vehicleCategory
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ClientPersonInfo.yaml
+-}

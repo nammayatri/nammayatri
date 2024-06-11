@@ -38,3 +38,7 @@ type Location = LocationT Identity
 $(enableKVPG ''LocationT ['id] [])
 
 $(mkTableInstances ''LocationT "location")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Location.yaml
+-}

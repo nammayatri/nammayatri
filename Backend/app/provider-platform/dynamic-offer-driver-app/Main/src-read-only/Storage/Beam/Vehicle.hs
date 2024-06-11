@@ -49,3 +49,7 @@ type Vehicle = VehicleT Identity
 $(enableKVPG ''VehicleT ['driverId] [['registrationNo]])
 
 $(mkTableInstances ''VehicleT "vehicle")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Vehicle.yaml
+-}

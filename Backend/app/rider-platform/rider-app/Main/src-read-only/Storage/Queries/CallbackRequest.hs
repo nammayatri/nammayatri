@@ -66,3 +66,7 @@ instance ToTType' Beam.CallbackRequest Domain.Types.CallbackRequest.CallbackRequ
         Beam.status = status,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/CallBackRequest.yaml
+-}

@@ -75,3 +75,7 @@ instance ToJSON (MerchantMessageD 'Safe)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MediaChannel)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageKey)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

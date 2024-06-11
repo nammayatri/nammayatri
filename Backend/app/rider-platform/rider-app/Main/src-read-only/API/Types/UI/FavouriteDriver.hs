@@ -12,3 +12,7 @@ import Tools.Auth
 
 data FavouriteDriverResp = FavouriteDriverResp {driverName :: Data.Text.Text, driverPhone :: Data.Text.Text, driverRating :: Kernel.Prelude.Double, favCount :: Kernel.Prelude.Int, id :: Data.Text.Text}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/Favourites.yaml
+-}

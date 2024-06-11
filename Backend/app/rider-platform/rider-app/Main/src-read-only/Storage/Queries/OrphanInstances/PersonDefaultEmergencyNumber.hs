@@ -44,3 +44,7 @@ instance ToTType' Beam.PersonDefaultEmergencyNumber Domain.Types.PersonDefaultEm
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.priority = priority
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/PersonDefaultEmergencyNumber.yaml
+-}

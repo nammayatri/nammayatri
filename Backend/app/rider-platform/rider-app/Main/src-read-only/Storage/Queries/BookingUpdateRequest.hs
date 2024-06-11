@@ -122,3 +122,7 @@ instance ToTType' Beam.BookingUpdateRequest Domain.Types.BookingUpdateRequest.Bo
         Beam.travelledDistance = travelledDistance,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BookingUpdateRequest.yaml
+-}

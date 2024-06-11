@@ -48,3 +48,7 @@ data BookingUpdateRequestStatus = SOFT | DRIVER_ACCEPTED | DRIVER_REJECTED | USE
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingUpdateRequestStatus)
 
 $(mkHttpInstancesForEnum ''BookingUpdateRequestStatus)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BookingUpdateRequest.yaml
+-}

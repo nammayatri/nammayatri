@@ -47,3 +47,7 @@ instance ToTType' Beam.CallStatus Domain.Types.CallStatus.CallStatus where
         Beam.status = status,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/CallStatus.yaml
+-}

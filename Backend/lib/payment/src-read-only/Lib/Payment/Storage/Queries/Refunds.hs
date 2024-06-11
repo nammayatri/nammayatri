@@ -80,3 +80,7 @@ instance ToTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
         Beam.status = status,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../../spec/Storage/Refunds.yaml
+-}

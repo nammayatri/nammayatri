@@ -45,3 +45,7 @@ instance ToTType' Beam.Issue Domain.Types.Issue.Issue where
         Beam.ticketId = ticketId,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/issue.yaml
+-}

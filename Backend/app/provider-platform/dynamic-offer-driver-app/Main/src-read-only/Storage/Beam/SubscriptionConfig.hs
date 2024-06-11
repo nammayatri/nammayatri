@@ -47,3 +47,7 @@ type SubscriptionConfig = SubscriptionConfigT Identity
 $(enableKVPG ''SubscriptionConfigT ['serviceName, 'merchantOperatingCityId] [])
 
 $(mkTableInstances ''SubscriptionConfigT "subscription_config")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SubscriptionConfig.yaml
+-}

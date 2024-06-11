@@ -43,3 +43,7 @@ type VehicleFitnessCertificate = VehicleFitnessCertificateT Identity
 $(enableKVPG ''VehicleFitnessCertificateT ['id] [['documentImageId], ['rcId]])
 
 $(mkTableInstances ''VehicleFitnessCertificateT "vehicle_fitness_certificate")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

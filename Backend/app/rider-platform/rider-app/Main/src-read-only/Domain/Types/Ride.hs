@@ -115,3 +115,7 @@ data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Sh
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 
 $(mkHttpInstancesForEnum ''RideStatus)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ride.yaml
+-}

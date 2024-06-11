@@ -46,3 +46,7 @@ type RentalDetails = RentalDetailsT Identity
 $(enableKVPG ''RentalDetailsT ['id] [])
 
 $(mkTableInstances ''RentalDetailsT "rental_details")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RentalDetails.yaml
+-}

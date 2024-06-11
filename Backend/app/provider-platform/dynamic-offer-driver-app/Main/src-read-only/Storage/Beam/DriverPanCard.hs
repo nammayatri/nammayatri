@@ -44,3 +44,7 @@ type DriverPanCard = DriverPanCardT Identity
 $(enableKVPG ''DriverPanCardT ['id] [['driverId], ['panCardNumberHash]])
 
 $(mkTableInstances ''DriverPanCardT "driver_pan_card")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

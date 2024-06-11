@@ -33,3 +33,7 @@ data MandateStatus = ACTIVE | INACTIVE deriving (Read, Show, Eq, Generic, FromJS
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''MandateStatus)
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''MandateStatus)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Mandate.yaml
+-}

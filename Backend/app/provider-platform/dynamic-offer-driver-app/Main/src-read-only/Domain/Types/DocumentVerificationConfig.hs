@@ -83,3 +83,7 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentType)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SupportedVehicleClasses)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleClassCheckType)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

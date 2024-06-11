@@ -109,3 +109,7 @@ instance ToTType' Beam.VehicleFitnessCertificate Domain.Types.VehicleFitnessCert
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

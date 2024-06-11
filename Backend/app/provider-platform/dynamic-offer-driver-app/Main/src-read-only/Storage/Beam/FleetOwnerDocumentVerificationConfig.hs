@@ -46,3 +46,7 @@ type FleetOwnerDocumentVerificationConfig = FleetOwnerDocumentVerificationConfig
 $(enableKVPG ''FleetOwnerDocumentVerificationConfigT ['documentType, 'merchantOperatingCityId] [])
 
 $(mkTableInstances ''FleetOwnerDocumentVerificationConfigT "fleet_owner_document_verification_config")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

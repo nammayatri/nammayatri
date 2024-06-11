@@ -94,3 +94,7 @@ instance ToTType' Beam.VehiclePermit Domain.Types.VehiclePermit.VehiclePermit wh
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

@@ -33,3 +33,7 @@ instance ToJSON (MerchantServiceConfigD 'Unsafe)
 instance FromJSON (MerchantServiceConfigD 'Safe)
 
 instance ToJSON (MerchantServiceConfigD 'Safe)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

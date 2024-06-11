@@ -23,3 +23,7 @@ type FlaggedCategory = FlaggedCategoryT Identity
 $(enableKVPG (''FlaggedCategoryT) [('id)] [])
 
 $(mkTableInstances (''FlaggedCategoryT) "flagged_category")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

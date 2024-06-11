@@ -31,3 +31,7 @@ type FeedbackForm = FeedbackFormT Identity
 $(enableKVPG ''FeedbackFormT ['id] [])
 
 $(mkTableInstances ''FeedbackFormT "feedback_form")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FeedbackForm.yaml
+-}

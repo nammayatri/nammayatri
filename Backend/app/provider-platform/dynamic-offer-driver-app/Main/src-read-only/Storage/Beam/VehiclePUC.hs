@@ -35,3 +35,7 @@ type VehiclePUC = VehiclePUCT Identity
 $(enableKVPG ''VehiclePUCT ['id] [['rcId]])
 
 $(mkTableInstances ''VehiclePUCT "vehicle_puc")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

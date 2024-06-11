@@ -31,3 +31,7 @@ type KioskLocation = KioskLocationT Identity
 $(enableKVPG ''KioskLocationT ['id] [['merchantId]])
 
 $(mkTableInstances ''KioskLocationT "kiosk_location")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/KioskLocation.yaml
+-}

@@ -23,3 +23,7 @@ data LmsModuleVideoInformation = LmsModuleVideoInformation
 data VideoStatus = ACTIVE | INACTIVE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VideoStatus)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

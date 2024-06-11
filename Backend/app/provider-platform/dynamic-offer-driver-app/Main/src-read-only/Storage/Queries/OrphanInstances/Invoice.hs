@@ -56,3 +56,7 @@ instance ToTType' Beam.Invoice Domain.Types.Invoice.Invoice where
         Beam.serviceName = Just serviceName,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Invoice.yaml
+-}

@@ -67,3 +67,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.useFraudDetection = useFraudDetection,
         Beam.whatsappProvidersPriorityList = whatsappProvidersPriorityList
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Merchant.yaml
+-}

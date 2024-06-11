@@ -25,3 +25,7 @@ data ServiceCategory = ServiceCategory
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

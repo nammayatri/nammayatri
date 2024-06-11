@@ -53,3 +53,7 @@ $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''SearchTryStatus)
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''SearchTryStatus)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''SearchRepeatType)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SearchTry.yaml
+-}

@@ -53,3 +53,7 @@ instance ToTType' Beam.PortalConfigs Domain.Types.PortalConfigs.PortalConfigs wh
         Beam.updatedAt = updatedAt,
         Beam.value = value
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

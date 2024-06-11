@@ -80,3 +80,7 @@ instance ToTType' Beam.FRFSTrip Domain.Types.FRFSTrip.FRFSTrip where
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FrfsTicket.yaml
+-}

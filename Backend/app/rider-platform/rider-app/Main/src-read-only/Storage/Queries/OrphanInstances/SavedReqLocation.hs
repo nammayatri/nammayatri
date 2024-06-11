@@ -59,3 +59,7 @@ instance ToTType' Beam.SavedReqLocation Domain.Types.SavedReqLocation.SavedReqLo
         Beam.updatedAt = updatedAt,
         Beam.ward = ward
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/SavedReqLocation.yaml
+-}

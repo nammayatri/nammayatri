@@ -40,3 +40,7 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EmergencyContactId)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosStatus)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosType)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/sos.yaml
+-}

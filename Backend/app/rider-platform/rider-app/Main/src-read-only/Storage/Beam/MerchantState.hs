@@ -30,3 +30,7 @@ type MerchantState = MerchantStateT Identity
 $(enableKVPG ''MerchantStateT ['merchantId, 'state] [])
 
 $(mkTableInstances ''MerchantStateT "merchant_state")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/configs.yaml
+-}

@@ -80,3 +80,7 @@ instance ToTType' Beam.Sos Domain.Types.Sos.Sos where
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/sos.yaml
+-}

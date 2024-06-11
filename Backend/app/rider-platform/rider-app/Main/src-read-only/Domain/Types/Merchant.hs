@@ -67,3 +67,7 @@ instance ToJSON (MerchantD 'Unsafe)
 instance FromJSON (MerchantD 'Safe)
 
 instance ToJSON (MerchantD 'Safe)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

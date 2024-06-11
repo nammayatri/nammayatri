@@ -42,3 +42,7 @@ instance ToTType' Beam.MerchantPaymentMethod Domain.Types.MerchantPaymentMethod.
         Beam.priority = priority,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Merchant.yaml
+-}

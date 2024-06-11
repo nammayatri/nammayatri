@@ -20,3 +20,7 @@ data KioskLocation = KioskLocation
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/KioskLocation.yaml
+-}

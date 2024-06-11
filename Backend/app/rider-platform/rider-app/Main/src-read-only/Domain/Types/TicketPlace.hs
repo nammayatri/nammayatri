@@ -50,3 +50,7 @@ data PlaceType
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PlaceStatus)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PlaceType)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

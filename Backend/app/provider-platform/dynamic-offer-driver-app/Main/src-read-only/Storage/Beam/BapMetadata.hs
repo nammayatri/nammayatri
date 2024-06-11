@@ -31,3 +31,7 @@ type BapMetadata = BapMetadataT Identity
 $(enableKVPG ''BapMetadataT ['id] [])
 
 $(mkTableInstances ''BapMetadataT "bap_metadata")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BapMetadata.yaml
+-}

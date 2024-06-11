@@ -10,3 +10,7 @@ import Servant
 import Tools.Auth
 
 data ReferredCustomers = ReferredCustomers {count :: Kernel.Prelude.Int} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/CustomerReferral.yaml
+-}

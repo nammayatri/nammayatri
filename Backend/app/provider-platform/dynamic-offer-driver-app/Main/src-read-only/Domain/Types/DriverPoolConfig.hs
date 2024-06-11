@@ -56,3 +56,7 @@ data DriverPoolConfig = DriverPoolConfig
     vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/configs.yaml
+-}

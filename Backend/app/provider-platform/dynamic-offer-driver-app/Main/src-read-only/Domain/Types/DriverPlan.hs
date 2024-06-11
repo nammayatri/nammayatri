@@ -39,3 +39,7 @@ data DriverPlan = DriverPlan
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, Eq, Ord)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverPlan.yaml
+-}

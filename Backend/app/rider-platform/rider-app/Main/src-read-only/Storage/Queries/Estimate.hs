@@ -104,3 +104,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.waitingChargePerMinAmount ((.waitingChargePerMin) waitingCharges <&> (.amount))
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/estimate.yaml
+-}

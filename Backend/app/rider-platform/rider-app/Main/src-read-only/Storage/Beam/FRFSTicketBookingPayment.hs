@@ -33,3 +33,7 @@ type FRFSTicketBookingPayment = FRFSTicketBookingPaymentT Identity
 $(enableKVPG ''FRFSTicketBookingPaymentT ['id] [['frfsTicketBookingId], ['paymentOrderId]])
 
 $(mkTableInstances ''FRFSTicketBookingPaymentT "frfs_ticket_booking_payment")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FrfsTicket.yaml
+-}

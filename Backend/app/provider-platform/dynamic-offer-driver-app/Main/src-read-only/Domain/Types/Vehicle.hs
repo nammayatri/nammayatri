@@ -85,3 +85,7 @@ $(mkHttpInstancesForEnum ''RegistrationCategory)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Variant)
 
 $(mkHttpInstancesForEnum ''Variant)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Vehicle.yaml
+-}

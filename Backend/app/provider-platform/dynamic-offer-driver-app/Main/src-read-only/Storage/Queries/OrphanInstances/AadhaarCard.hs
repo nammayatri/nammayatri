@@ -59,3 +59,7 @@ instance ToTType' Beam.AadhaarCard Domain.Types.AadhaarCard.AadhaarCard where
         Beam.updatedAt = updatedAt,
         Beam.verificationStatus = verificationStatus
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DriverOnboarding.yaml
+-}

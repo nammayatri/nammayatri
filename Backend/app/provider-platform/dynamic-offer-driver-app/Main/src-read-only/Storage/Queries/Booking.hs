@@ -11,3 +11,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import Storage.Queries.BookingExtra as ReExport
 import Storage.Queries.Transformers.Booking
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Booking.yaml
+-}

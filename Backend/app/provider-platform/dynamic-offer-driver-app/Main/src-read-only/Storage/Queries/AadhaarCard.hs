@@ -82,3 +82,7 @@ updateByPrimaryKey (Domain.Types.AadhaarCard.AadhaarCard {..}) = do
       Se.Set Beam.verificationStatus verificationStatus
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

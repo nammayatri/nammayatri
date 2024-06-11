@@ -35,3 +35,7 @@ type QuestionInformation = QuestionInformationT Identity
 $(enableKVPG ''QuestionInformationT ['language, 'questionId] [])
 
 $(mkTableInstances ''QuestionInformationT "question_information")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

@@ -63,3 +63,7 @@ instance ToTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
         Beam.totalCoinsConvertedCash = totalCoinsConvertedCash,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DriverPlan.yaml
+-}

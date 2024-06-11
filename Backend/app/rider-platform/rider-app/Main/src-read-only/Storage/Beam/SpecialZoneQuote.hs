@@ -28,3 +28,7 @@ type SpecialZoneQuote = SpecialZoneQuoteT Identity
 $(enableKVPG ''SpecialZoneQuoteT ['id] [])
 
 $(mkTableInstances ''SpecialZoneQuoteT "special_zone_quote")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SpecialZoneQuote.yaml
+-}

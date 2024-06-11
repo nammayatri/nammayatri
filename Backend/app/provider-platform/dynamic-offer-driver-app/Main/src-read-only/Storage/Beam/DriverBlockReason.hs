@@ -31,3 +31,7 @@ type DriverBlockReason = DriverBlockReasonT Identity
 $(enableKVPG ''DriverBlockReasonT ['reasonCode] [])
 
 $(mkTableInstances ''DriverBlockReasonT "driver_block_reason")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverBlockReason.yaml
+-}

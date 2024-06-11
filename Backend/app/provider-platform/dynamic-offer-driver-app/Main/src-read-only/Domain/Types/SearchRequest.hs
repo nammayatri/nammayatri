@@ -57,3 +57,7 @@ data SearchRequest = SearchRequest
     validTill :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SearchRequest.yaml
+-}

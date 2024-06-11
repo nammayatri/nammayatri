@@ -65,3 +65,7 @@ instance EncryptedItem' RiderDriverCorrelation where
   type UnencryptedItem RiderDriverCorrelation = DecryptedRiderDriverCorrelation
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RiderDriverCorrelation.yaml
+-}

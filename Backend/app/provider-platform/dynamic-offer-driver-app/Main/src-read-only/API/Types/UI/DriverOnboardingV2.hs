@@ -127,3 +127,7 @@ data SSNReq = SSNReq {ssn :: Kernel.Prelude.Text} deriving (Generic, ToJSON, Fro
 newtype UpdateAirConditionUpdateRequest = UpdateAirConditionUpdateRequest {isAirConditioned :: Kernel.Prelude.Bool} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data ValidationStatus = APPROVED | DECLINED | AUTO_APPROVED | AUTO_DECLINED | NEEDS_REVIEW deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema, Read)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/DriverOnboarding.yaml
+-}

@@ -23,3 +23,7 @@ type RegistryMapFallback = RegistryMapFallbackT Identity
 $(enableKVPG ''RegistryMapFallbackT ['subscriberId, 'uniqueId] [])
 
 $(mkTableInstances ''RegistryMapFallbackT "registry_map_fallback")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RegistryMapFallback.yaml
+-}

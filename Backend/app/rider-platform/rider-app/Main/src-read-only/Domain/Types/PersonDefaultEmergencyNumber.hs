@@ -69,3 +69,7 @@ instance EncryptedItem' PersonDefaultEmergencyNumber where
   type UnencryptedItem PersonDefaultEmergencyNumber = DecryptedPersonDefaultEmergencyNumber
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PersonDefaultEmergencyNumber.yaml
+-}

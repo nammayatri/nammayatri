@@ -18,3 +18,7 @@ data DriverReferral = DriverReferral
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverReferral.yaml
+-}

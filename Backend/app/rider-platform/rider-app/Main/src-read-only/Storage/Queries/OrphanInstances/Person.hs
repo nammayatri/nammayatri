@@ -146,3 +146,7 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.useFakeOtp = useFakeOtp,
         Beam.whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Person.yaml
+-}

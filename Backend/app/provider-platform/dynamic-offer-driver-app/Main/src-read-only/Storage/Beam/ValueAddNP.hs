@@ -23,3 +23,7 @@ type ValueAddNP = ValueAddNPT Identity
 $(enableKVPG ''ValueAddNPT ['subscriberId] [])
 
 $(mkTableInstances ''ValueAddNPT "value_add_np")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/configs.yaml
+-}

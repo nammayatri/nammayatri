@@ -65,3 +65,7 @@ instance ToTType' Beam.Volunteer Domain.Types.Volunteer.Volunteer where
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Volunteer.yaml
+-}

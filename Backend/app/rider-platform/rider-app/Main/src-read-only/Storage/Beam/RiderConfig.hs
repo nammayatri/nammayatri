@@ -52,3 +52,7 @@ type RiderConfig = RiderConfigT Identity
 $(enableKVPG ''RiderConfigT ['merchantOperatingCityId] [])
 
 $(mkTableInstances ''RiderConfigT "rider_config")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RiderConfig.yaml
+-}

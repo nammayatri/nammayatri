@@ -41,3 +41,7 @@ postEditResult ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postEditResult a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.EditBooking.postEditResult (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+{-
+	DSL Source Link: file://./../../../../spec/API/EditBooking.yaml
+-}

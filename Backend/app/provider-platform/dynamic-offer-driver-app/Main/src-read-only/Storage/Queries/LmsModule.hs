@@ -88,3 +88,7 @@ instance ToTType' Beam.LmsModule Domain.Types.LmsModule.LmsModule where
         Beam.variant = variant,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

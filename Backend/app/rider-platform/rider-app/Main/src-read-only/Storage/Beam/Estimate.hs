@@ -83,3 +83,7 @@ type Estimate = EstimateT Identity
 $(enableKVPG ''EstimateT ['id] [['bppEstimateId], ['requestId]])
 
 $(mkTableInstancesWithTModifier ''EstimateT "estimate" [("oldNightShiftCharge", "night_shift_multiplier")])
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/estimate.yaml
+-}

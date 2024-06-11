@@ -59,3 +59,7 @@ instance ToTType' Beam.PlaceNameCache Domain.Types.PlaceNameCache.PlaceNameCache
         Beam.plusCode = plusCode,
         Beam.createdAt = createdAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Maps.yaml
+-}

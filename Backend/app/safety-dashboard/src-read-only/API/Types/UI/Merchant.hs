@@ -20,3 +20,7 @@ data SetMerchantConfigReq = SetMerchantConfigReq {merchantShortId :: Data.Text.T
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data WebHookConfigPreferenceReq = WebHookConfigPreferenceReq {preference :: Kernel.Prelude.Bool} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/merchant.yaml
+-}

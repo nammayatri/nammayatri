@@ -80,3 +80,7 @@ updateByPrimaryKey (Domain.Types.Suspect.Suspect {..}) = do
       Se.Set Beam.voterId voterId
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

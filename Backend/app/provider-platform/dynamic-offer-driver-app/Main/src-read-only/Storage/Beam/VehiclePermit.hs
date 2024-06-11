@@ -42,3 +42,7 @@ type VehiclePermit = VehiclePermitT Identity
 $(enableKVPG ''VehiclePermitT ['id] [['rcId]])
 
 $(mkTableInstances ''VehiclePermitT "vehicle_permit")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

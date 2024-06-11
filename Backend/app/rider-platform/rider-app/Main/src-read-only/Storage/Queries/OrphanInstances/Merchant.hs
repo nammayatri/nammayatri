@@ -113,3 +113,7 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.subscriberId = Kernel.Types.Id.getShortId subscriberId,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Merchant.yaml
+-}

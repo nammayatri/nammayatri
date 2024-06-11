@@ -42,3 +42,7 @@ postFavoritesRemove ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postFavoritesRemove a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FavouriteDriver.postFavoritesRemove (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+{-
+	DSL Source Link: file://./../../../../spec/API/Favourites.yaml
+-}

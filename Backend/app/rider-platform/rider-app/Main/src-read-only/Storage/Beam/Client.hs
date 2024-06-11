@@ -29,3 +29,7 @@ type Client = ClientT Identity
 $(enableKVPG ''ClientT ['id] [])
 
 $(mkTableInstances ''ClientT "client")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/client.yaml
+-}

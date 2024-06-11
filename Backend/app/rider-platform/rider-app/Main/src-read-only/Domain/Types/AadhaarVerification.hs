@@ -23,3 +23,7 @@ data AadhaarVerification = AadhaarVerification
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, Show)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Aadhaar.yaml
+-}

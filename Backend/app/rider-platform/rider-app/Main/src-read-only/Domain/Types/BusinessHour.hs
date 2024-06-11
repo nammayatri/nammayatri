@@ -26,3 +26,7 @@ data BusinessHour = BusinessHour
 data BusinessHourType = Slot Kernel.Prelude.TimeOfDay | Duration Kernel.Prelude.TimeOfDay Kernel.Prelude.TimeOfDay deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BusinessHourType)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

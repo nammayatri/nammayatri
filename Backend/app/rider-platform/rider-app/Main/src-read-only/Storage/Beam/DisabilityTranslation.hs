@@ -28,3 +28,7 @@ type DisabilityTranslation = DisabilityTranslationT Identity
 $(enableKVPG ''DisabilityTranslationT ['disabilityId, 'language] [])
 
 $(mkTableInstances ''DisabilityTranslationT "disability_translation")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PersonDisability.yaml
+-}

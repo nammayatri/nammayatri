@@ -36,3 +36,7 @@ type PersonDefaultEmergencyNumber = PersonDefaultEmergencyNumberT Identity
 $(enableKVPG ''PersonDefaultEmergencyNumberT ['mobileNumberHash, 'personId] [['mobileNumberHash], ['personId]])
 
 $(mkTableInstances ''PersonDefaultEmergencyNumberT "person_default_emergency_number")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PersonDefaultEmergencyNumber.yaml
+-}

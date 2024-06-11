@@ -33,3 +33,7 @@ type BppDetails = BppDetailsT Identity
 $(enableKVPG ''BppDetailsT ['id] [['subscriberId]])
 
 $(mkTableInstances ''BppDetailsT "bpp_details")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BppDetails.yaml
+-}

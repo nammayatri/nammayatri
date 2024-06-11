@@ -106,3 +106,7 @@ instance ToTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
         Beam.vehicleServiceTierName = vehicleServiceTierName,
         Beam.vehicleVariant = vehicleVariant
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DriverQuote.yaml
+-}

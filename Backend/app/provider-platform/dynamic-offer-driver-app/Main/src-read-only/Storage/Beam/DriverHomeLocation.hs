@@ -32,3 +32,7 @@ type DriverHomeLocation = DriverHomeLocationT Identity
 $(enableKVPG ''DriverHomeLocationT ['id] [['driverId]])
 
 $(mkTableInstancesWithTModifier ''DriverHomeLocationT "driver_home_location" [("address", "home_address")])
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverGoHome.yaml
+-}

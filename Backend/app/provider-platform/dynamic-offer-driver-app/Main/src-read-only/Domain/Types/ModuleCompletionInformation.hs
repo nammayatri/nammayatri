@@ -29,3 +29,7 @@ data ModuleEntity = QUIZ | VIDEO deriving (Eq, Ord, Show, Read, Generic, ToJSON,
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EntityStatus)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleEntity)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

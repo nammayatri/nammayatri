@@ -91,3 +91,7 @@ instance ToTType' Beam.DriverBankAccount Domain.Types.DriverBankAccount.DriverBa
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

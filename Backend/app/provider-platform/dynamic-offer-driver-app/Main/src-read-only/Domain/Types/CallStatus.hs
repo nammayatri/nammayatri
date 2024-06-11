@@ -25,3 +25,7 @@ data CallStatus = CallStatus
     status :: Kernel.External.Call.Interface.Types.CallStatus
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/CallStatus.yaml
+-}

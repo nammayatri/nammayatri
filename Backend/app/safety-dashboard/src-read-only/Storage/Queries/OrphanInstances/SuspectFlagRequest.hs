@@ -59,3 +59,7 @@ instance ToTType' Beam.SuspectFlagRequest Domain.Types.SuspectFlagRequest.Suspec
         Beam.voterId = voterId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/suspect.yaml
+-}

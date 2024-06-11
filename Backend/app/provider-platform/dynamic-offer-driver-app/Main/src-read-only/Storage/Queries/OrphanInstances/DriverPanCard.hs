@@ -56,3 +56,7 @@ instance ToTType' Beam.DriverPanCard Domain.Types.DriverPanCard.DriverPanCard wh
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DriverOnboarding.yaml
+-}

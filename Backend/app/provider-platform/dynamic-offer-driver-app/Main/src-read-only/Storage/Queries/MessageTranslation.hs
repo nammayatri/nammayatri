@@ -71,3 +71,7 @@ instance ToTType' Beam.MessageTranslation Domain.Types.MessageTranslation.Messag
         Beam.shortDescription = shortDescription,
         Beam.title = title
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Message.yaml
+-}

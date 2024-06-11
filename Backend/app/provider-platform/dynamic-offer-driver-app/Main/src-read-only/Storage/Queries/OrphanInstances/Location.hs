@@ -44,3 +44,7 @@ instance ToTType' Beam.Location Domain.Types.Location.Location where
         Beam.lon = lon,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Location.yaml
+-}

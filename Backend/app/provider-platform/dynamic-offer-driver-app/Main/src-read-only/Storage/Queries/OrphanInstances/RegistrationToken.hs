@@ -60,3 +60,7 @@ instance ToTType' Beam.RegistrationToken Domain.Types.RegistrationToken.Registra
         Beam.updatedAt = updatedAt,
         Beam.verified = verified
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/RegistrationToken.yaml
+-}

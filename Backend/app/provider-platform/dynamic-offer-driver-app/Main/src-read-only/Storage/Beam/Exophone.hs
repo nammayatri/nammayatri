@@ -37,3 +37,7 @@ type Exophone = ExophoneT Identity
 $(enableKVPG ''ExophoneT ['id] [['backupPhone], ['merchantOperatingCityId], ['primaryPhone]])
 
 $(mkTableInstances ''ExophoneT "exophone")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Exophone.yaml
+-}

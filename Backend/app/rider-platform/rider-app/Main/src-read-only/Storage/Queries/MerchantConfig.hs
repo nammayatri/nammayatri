@@ -98,3 +98,7 @@ instance ToTType' Beam.MerchantConfig Domain.Types.MerchantConfig.MerchantConfig
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/MerchantConfig.yaml
+-}

@@ -27,3 +27,7 @@ data DriverGoHomeRequest = DriverGoHomeRequest
 data DriverGoHomeRequestStatus = ACTIVE | SUCCESS | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverGoHomeRequestStatus)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverGoHome.yaml
+-}

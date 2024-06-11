@@ -101,3 +101,7 @@ instance ToTType' Beam.RideRelatedNotificationConfig Domain.Types.RideRelatedNot
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

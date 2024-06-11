@@ -142,3 +142,7 @@ instance ToTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDrive
         Beam.vehicleServiceTierName = vehicleServiceTierName,
         Beam.vehicleVariant = vehicleVariant
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/SearchRequestForDriver.yaml
+-}

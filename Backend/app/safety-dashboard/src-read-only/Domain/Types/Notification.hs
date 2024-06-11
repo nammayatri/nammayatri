@@ -37,3 +37,7 @@ data NotificationCategory
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''NotificationCategory))
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

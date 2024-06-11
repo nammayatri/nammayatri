@@ -81,3 +81,7 @@ instance ToTType' Beam.NotificationSoundsConfig Domain.Types.NotificationSoundsC
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/NotificationSoundConfig.yaml
+-}

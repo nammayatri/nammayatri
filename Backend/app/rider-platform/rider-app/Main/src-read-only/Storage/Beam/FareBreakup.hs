@@ -32,3 +32,7 @@ type FareBreakup = FareBreakupT Identity
 $(enableKVPG ''FareBreakupT ['id] [['bookingId]])
 
 $(mkTableInstances ''FareBreakupT "fare_breakup")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FareBreakUp.yaml
+-}

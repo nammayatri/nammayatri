@@ -23,3 +23,7 @@ data PurchaseHistory = PurchaseHistory
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PurchaseHistory.yaml
+-}

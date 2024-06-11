@@ -37,3 +37,7 @@ data TicketBookingServiceCategory = TicketBookingServiceCategory
 data CancelledBy = User | Merchant deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancelledBy)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

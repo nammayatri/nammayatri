@@ -67,3 +67,7 @@ type DriverQuote = DriverQuoteT Identity
 $(enableKVPG ''DriverQuoteT ['id] [['driverId], ['requestId], ['searchTryId]])
 
 $(mkTableInstancesWithTModifier ''DriverQuoteT "driver_quote" [("requestId", "search_request_id")])
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverQuote.yaml
+-}

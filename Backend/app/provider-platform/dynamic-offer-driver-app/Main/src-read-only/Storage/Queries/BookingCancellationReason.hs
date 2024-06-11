@@ -51,3 +51,7 @@ updateByPrimaryKey (Domain.Types.BookingCancellationReason.BookingCancellationRe
       Se.Set Beam.source source
     ]
     [Se.And [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BookingCancellationReason.yaml
+-}

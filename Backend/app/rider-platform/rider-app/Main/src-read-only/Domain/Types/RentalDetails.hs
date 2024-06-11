@@ -25,3 +25,7 @@ data RentalDetails = RentalDetails
     plannedPerKmRate :: Kernel.Types.Common.Price
   }
   deriving (Generic, Show)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RentalDetails.yaml
+-}

@@ -42,3 +42,7 @@ type RegistrationToken = RegistrationTokenT Identity
 $(enableKVPG ''RegistrationTokenT ['id] [['entityId], ['token]])
 
 $(mkTableInstances ''RegistrationTokenT "registration_token")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RegistrationToken.yaml
+-}

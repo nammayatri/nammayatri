@@ -40,3 +40,7 @@ type SuspectStatusHistory = SuspectStatusHistoryT Identity
 $(enableKVPG (''SuspectStatusHistoryT) [('id)] [])
 
 $(mkTableInstances (''SuspectStatusHistoryT) "suspect_status_history")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

@@ -108,3 +108,7 @@ data WaitingCharges = WaitingCharges {waitingChargePerMin :: Kernel.Prelude.Mayb
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''EstimateStatus)
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''EstimateStatus)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/estimate.yaml
+-}

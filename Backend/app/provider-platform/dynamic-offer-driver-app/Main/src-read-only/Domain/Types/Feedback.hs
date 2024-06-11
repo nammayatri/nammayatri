@@ -21,3 +21,7 @@ data Feedback = Feedback
     rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FeedBack.yaml
+-}

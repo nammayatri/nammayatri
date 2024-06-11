@@ -43,3 +43,7 @@ instance ToTType' Beam.LocationMapping Domain.Types.LocationMapping.LocationMapp
         Beam.updatedAt = updatedAt,
         Beam.version = version
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Location.yaml
+-}

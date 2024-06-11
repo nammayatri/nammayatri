@@ -29,3 +29,7 @@ data LocationMapping = LocationMapping
 data LocationMappingTags = BOOKING | SEARCH_REQUEST | RIDE | BOOKING_UPDATE_REQUEST deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''LocationMappingTags)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LocationMapping.yaml
+-}

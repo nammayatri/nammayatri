@@ -190,3 +190,7 @@ instance ToJSON (TransporterConfigD 'Unsafe)
 instance FromJSON (TransporterConfigD 'Safe)
 
 instance ToJSON (TransporterConfigD 'Safe)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

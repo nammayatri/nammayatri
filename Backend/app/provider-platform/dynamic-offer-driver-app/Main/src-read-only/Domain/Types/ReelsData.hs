@@ -77,3 +77,7 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ReelButtonConfig)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ReelRowButtonConfig)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ReelVideoThresholdConfig)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Reels.yaml
+-}

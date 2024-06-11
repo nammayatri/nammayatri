@@ -37,3 +37,7 @@ data SubscriptionConfig = SubscriptionConfig
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SubscriptionConfig.yaml
+-}

@@ -30,3 +30,7 @@ type BlackListOrg = BlackListOrgT Identity
 $(enableKVPG ''BlackListOrgT ['id] [['subscriberId]])
 
 $(mkTableInstancesWithTModifier ''BlackListOrgT "black_list_org" [("subscriberId", "subscriber_id")])
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BlackListOrg.yaml
+-}

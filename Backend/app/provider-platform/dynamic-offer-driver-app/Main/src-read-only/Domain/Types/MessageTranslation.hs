@@ -21,3 +21,7 @@ data MessageTranslation = MessageTranslation
     title :: Kernel.Prelude.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Message.yaml
+-}

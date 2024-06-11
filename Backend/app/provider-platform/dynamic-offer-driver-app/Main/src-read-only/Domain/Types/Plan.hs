@@ -74,3 +74,7 @@ $(Kernel.Utils.TH.mkHttpInstancesForEnum ''BasedOnEntity)
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceNames)
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''ServiceNames)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Plan.yaml
+-}

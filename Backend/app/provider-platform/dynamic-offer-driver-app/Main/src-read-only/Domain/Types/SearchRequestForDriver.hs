@@ -85,3 +85,7 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverSearchRequestStatus)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''NotificationSource)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchRequestForDriverResponse)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SearchRequestForDriver.yaml
+-}

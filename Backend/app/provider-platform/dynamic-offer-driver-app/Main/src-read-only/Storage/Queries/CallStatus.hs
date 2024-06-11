@@ -76,3 +76,7 @@ updateByPrimaryKey (Domain.Types.CallStatus.CallStatus {..}) = do
       Se.Set Beam.status status
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/CallStatus.yaml
+-}

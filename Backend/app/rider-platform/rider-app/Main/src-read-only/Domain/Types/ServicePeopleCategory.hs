@@ -33,3 +33,7 @@ data CancellationCharge = CancellationCharge {cancelCharge :: Domain.Types.Servi
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancelCharge)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationCharge)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

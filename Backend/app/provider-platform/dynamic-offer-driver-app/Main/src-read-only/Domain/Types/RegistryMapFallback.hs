@@ -10,3 +10,7 @@ import qualified Tools.Beam.UtilsTH
 
 data RegistryMapFallback = RegistryMapFallback {registryUrl :: Kernel.Prelude.BaseUrl, subscriberId :: Kernel.Prelude.Text, uniqueId :: Kernel.Prelude.Text}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RegistryMapFallback.yaml
+-}

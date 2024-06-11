@@ -32,3 +32,7 @@ type BusinessHour = BusinessHourT Identity
 $(enableKVPG ''BusinessHourT ['id] [])
 
 $(mkTableInstances ''BusinessHourT "business_hour")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

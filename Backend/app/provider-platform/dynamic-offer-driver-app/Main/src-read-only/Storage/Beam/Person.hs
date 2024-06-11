@@ -75,3 +75,7 @@ type Person = PersonT Identity
 $(enableKVPG ''PersonT ['id] [['mobileNumberHash]])
 
 $(mkTableInstances ''PersonT "person")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Person.yaml
+-}

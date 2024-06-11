@@ -58,3 +58,7 @@ instance ToTType' Beam.CancellationCharges Domain.Types.CancellationCharges.Canc
         Beam.id = Kernel.Types.Id.getId id,
         Beam.rideId = Kernel.Types.Id.getId <$> rideId
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/cancellationCharges.yaml
+-}

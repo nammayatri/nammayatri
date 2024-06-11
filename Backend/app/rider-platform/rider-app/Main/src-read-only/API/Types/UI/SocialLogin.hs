@@ -35,3 +35,7 @@ data SocialUpdateProfileReq = SocialUpdateProfileReq
     mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/SocialLogin.yaml
+-}

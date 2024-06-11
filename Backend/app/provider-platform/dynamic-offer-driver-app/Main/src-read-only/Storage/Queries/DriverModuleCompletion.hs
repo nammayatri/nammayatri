@@ -121,3 +121,7 @@ instance ToTType' Beam.DriverModuleCompletion Domain.Types.DriverModuleCompletio
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

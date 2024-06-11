@@ -136,3 +136,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.vehicleServiceTierType = vehicleServiceTierType,
         Beam.vehicleVariant = vehicleVariant
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/ride.yaml
+-}

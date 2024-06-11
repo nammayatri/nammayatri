@@ -39,3 +39,7 @@ type BookingLocation = BookingLocationT Identity
 $(enableKVPG ''BookingLocationT ['id] [])
 
 $(mkTableInstances ''BookingLocationT "booking_location")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Booking.yaml
+-}

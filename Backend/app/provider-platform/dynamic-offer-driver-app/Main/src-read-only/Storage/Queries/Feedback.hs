@@ -54,3 +54,7 @@ instance ToTType' Beam.Feedback Domain.Types.Feedback.Feedback where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.rideId = Kernel.Types.Id.getId rideId
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FeedBack.yaml
+-}

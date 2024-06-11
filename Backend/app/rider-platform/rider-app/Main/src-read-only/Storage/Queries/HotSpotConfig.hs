@@ -99,3 +99,7 @@ instance ToTType' Beam.HotSpotConfig Domain.Types.HotSpotConfig.HotSpotConfig wh
         Beam.weightOfTripEnd = weightOfTripEnd,
         Beam.weightOfTripStart = weightOfTripStart
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/HotSpotConfig.yaml
+-}

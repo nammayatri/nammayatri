@@ -53,3 +53,7 @@ data StatusHistory = StatusHistory
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data SuspectsList = SuspectsList {summary :: API.Types.UI.Notification.Summary, suspects :: [API.Types.UI.SearchSuspect.SearchSuspectResp]} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/searchSuspect.yaml
+-}

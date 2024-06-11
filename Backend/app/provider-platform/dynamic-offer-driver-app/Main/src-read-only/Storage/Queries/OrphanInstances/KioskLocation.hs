@@ -37,3 +37,7 @@ instance ToTType' Beam.KioskLocation Domain.Types.KioskLocation.KioskLocation wh
         Beam.longitude = longitude,
         Beam.merchantId = Kernel.Types.Id.getId merchantId
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/KioskLocation.yaml
+-}

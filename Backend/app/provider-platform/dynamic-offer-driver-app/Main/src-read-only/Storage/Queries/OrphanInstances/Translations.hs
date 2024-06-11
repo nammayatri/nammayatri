@@ -35,3 +35,7 @@ instance ToTType' Beam.Translations Domain.Types.Translations.Translations where
         Beam.messageKey = messageKey,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Translations.yaml
+-}

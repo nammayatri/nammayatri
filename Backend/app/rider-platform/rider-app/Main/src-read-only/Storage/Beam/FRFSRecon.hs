@@ -60,3 +60,7 @@ type FRFSRecon = FRFSReconT Identity
 $(enableKVPG ''FRFSReconT ['id] [])
 
 $(mkTableInstances ''FRFSReconT "frfs_recon")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FrfsTicket.yaml
+-}

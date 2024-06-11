@@ -76,3 +76,7 @@ type Booking = BookingT Identity
 $(enableKVPG ''BookingT ['id] [['quoteId], ['specialZoneOtpCode], ['transactionId]])
 
 $(mkTableInstances ''BookingT "booking")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Booking.yaml
+-}

@@ -89,3 +89,7 @@ instance ToTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformation.
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FleetOwnerInformation.yaml
+-}

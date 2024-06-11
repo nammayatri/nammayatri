@@ -28,3 +28,7 @@ data MerchantOperatingCity = MerchantOperatingCity
     supportNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

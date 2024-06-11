@@ -37,3 +37,7 @@ type Toll = TollT Identity
 $(enableKVPG ''TollT ['id] [['merchantOperatingCityId]])
 
 $(mkTableInstances ''TollT "toll")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Toll.yaml
+-}

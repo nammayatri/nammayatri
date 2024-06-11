@@ -80,3 +80,7 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingStatus)
 $(mkHttpInstancesForEnum ''BookingStatus)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingType)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Booking.yaml
+-}

@@ -29,3 +29,7 @@ type PortalConfigs = PortalConfigsT Identity
 $(enableKVPG (''PortalConfigsT) [('id)] [])
 
 $(mkTableInstances (''PortalConfigsT) "portal_configs")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

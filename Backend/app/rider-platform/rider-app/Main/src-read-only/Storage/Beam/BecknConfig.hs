@@ -53,3 +53,7 @@ type BecknConfig = BecknConfigT Identity
 $(enableKVPG ''BecknConfigT ['id] [['merchantId]])
 
 $(mkTableInstances ''BecknConfigT "beckn_config")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BecknConfig.yaml
+-}

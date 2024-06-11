@@ -41,3 +41,7 @@ instance ToTType' Beam.FleetRCAssociation Domain.Types.FleetRCAssociation.FleetR
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DriverOnboarding.yaml
+-}

@@ -69,3 +69,7 @@ instance ToTType' Beam.AadhaarOtpReq Domain.Types.AadhaarOtpReq.AadhaarOtpReq wh
         Beam.transactionId = transactionId,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Aadhaar.yaml
+-}

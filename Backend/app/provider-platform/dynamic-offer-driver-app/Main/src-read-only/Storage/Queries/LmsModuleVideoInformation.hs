@@ -71,3 +71,7 @@ instance ToTType' Beam.LmsModuleVideoInformation Domain.Types.LmsModuleVideoInfo
         Beam.updatedAt = updatedAt,
         Beam.videoStatus = videoStatus
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

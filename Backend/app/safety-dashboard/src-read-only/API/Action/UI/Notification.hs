@@ -53,3 +53,7 @@ postReadNotification a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.Notification
 
 postUpdateReceiveNotificationStatus :: (TokenInfo -> API.Types.UI.Notification.UpdateRecieveNotificationStatusRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postUpdateReceiveNotificationStatus a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.Notification.postUpdateReceiveNotificationStatus a2 a1
+
+{-
+	DSL Source Link: file://./../../../../spec/API/notification.yaml
+-}

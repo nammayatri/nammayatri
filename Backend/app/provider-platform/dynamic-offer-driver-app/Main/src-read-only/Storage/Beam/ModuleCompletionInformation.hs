@@ -35,3 +35,7 @@ type ModuleCompletionInformation = ModuleCompletionInformationT Identity
 $(enableKVPG ''ModuleCompletionInformationT ['attempt, 'completionId, 'entity, 'entityId] [])
 
 $(mkTableInstances ''ModuleCompletionInformationT "module_completion_information")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

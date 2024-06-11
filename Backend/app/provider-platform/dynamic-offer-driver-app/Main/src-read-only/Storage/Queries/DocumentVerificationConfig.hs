@@ -72,3 +72,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
           Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
         ]
     ]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

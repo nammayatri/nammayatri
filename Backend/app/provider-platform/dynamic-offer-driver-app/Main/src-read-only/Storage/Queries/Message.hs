@@ -37,3 +37,7 @@ updateByPrimaryKey (Domain.Types.Message.Message {..}) = do
       Se.Set Beam.viewCount viewCount
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Message.yaml
+-}

@@ -36,3 +36,7 @@ type Notification = NotificationT Identity
 $(enableKVPG (''NotificationT) [('id)] [])
 
 $(mkTableInstances (''NotificationT) "notification")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

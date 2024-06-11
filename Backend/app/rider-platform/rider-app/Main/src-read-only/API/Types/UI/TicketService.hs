@@ -224,3 +224,7 @@ data TicketVerificationStatus
   | InvalidBooking
   | CancelledBooking
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/ticket.yaml
+-}

@@ -86,3 +86,7 @@ instance ToTType' Beam.MerchantPushNotification Domain.Types.MerchantPushNotific
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

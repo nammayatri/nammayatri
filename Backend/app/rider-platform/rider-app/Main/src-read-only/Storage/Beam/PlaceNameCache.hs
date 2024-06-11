@@ -34,3 +34,7 @@ type PlaceNameCache = PlaceNameCacheT Identity
 $(enableKVPG ''PlaceNameCacheT ['id] [['geoHash], ['placeId]])
 
 $(mkTableInstances ''PlaceNameCacheT "place_name_cache")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Maps.yaml
+-}

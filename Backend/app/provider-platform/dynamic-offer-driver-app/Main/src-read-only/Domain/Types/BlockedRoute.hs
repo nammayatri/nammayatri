@@ -24,3 +24,7 @@ data BlockedRoute = BlockedRoute
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
   deriving (Generic, Show, Read, FromJSON, ToJSON)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BlockedRoute.yaml
+-}

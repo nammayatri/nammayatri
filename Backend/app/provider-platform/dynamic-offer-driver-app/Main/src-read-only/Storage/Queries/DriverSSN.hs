@@ -38,3 +38,7 @@ updateByPrimaryKey (Domain.Types.DriverSSN.DriverSSN {..}) = do
       Se.Set Beam.verificationStatus verificationStatus
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

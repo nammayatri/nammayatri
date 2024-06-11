@@ -26,3 +26,7 @@ data PersonStats = PersonStats
     weekendRides :: Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PersonStats.yaml
+-}

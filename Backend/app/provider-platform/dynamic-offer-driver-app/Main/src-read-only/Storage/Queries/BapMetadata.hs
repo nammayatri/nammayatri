@@ -60,3 +60,7 @@ instance ToTType' Beam.BapMetadata Domain.Types.BapMetadata.BapMetadata where
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BapMetadata.yaml
+-}

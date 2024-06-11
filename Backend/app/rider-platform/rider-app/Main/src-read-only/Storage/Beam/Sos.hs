@@ -35,3 +35,7 @@ type Sos = SosT Identity
 $(enableKVPG ''SosT ['id] [['rideId]])
 
 $(mkTableInstances ''SosT "sos")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/sos.yaml
+-}

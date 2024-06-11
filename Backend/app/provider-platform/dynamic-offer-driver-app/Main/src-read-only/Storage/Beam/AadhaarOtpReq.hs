@@ -32,3 +32,7 @@ type AadhaarOtpReq = AadhaarOtpReqT Identity
 $(enableKVPG ''AadhaarOtpReqT ['id] [['driverId]])
 
 $(mkTableInstances ''AadhaarOtpReqT "aadhaar_otp_req")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

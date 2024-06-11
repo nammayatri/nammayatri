@@ -20,3 +20,7 @@ data CancellationCharges = CancellationCharges
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
   }
   deriving (Generic)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/cancellationCharges.yaml
+-}

@@ -46,3 +46,7 @@ instance ToTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DailyStats.yaml
+-}

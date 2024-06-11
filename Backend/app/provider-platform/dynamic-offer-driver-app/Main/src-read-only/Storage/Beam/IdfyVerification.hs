@@ -52,3 +52,7 @@ type IdfyVerification = IdfyVerificationT Identity
 $(enableKVPG ''IdfyVerificationT ['id] [['driverId], ['requestId]])
 
 $(mkTableInstancesWithTModifier ''IdfyVerificationT "idfy_verification" [("multipleRC", "multiple_r_c")])
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

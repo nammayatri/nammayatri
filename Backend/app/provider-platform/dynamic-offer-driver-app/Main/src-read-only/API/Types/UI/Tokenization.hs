@@ -10,3 +10,7 @@ import Servant
 import Tools.Auth
 
 data GetTokenRes = GetTokenRes {token :: Kernel.Prelude.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/Tokenization.yaml
+-}

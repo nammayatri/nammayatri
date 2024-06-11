@@ -27,3 +27,7 @@ findAllByEntityIdAndEntityType entityId entityType = do findAllWithKV [Se.And [S
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FareBreakup.FareBreakup -> m (Maybe Domain.Types.FareBreakup.FareBreakup))
 findById id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FareBreakUp.yaml
+-}

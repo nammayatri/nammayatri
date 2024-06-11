@@ -37,3 +37,7 @@ data Estimate = Estimate
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, Show)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Estimate.yaml
+-}

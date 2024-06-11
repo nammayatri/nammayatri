@@ -69,3 +69,7 @@ instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
         Beam.subscribedFlagToggleAllowed = subscribedFlagToggleAllowed,
         Beam.vehicleVariant = vehicleVariant
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Plan.yaml
+-}

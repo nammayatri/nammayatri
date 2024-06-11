@@ -29,3 +29,7 @@ type KioskLocationTranslation = KioskLocationTranslationT Identity
 $(enableKVPG ''KioskLocationTranslationT ['kioskLocationId] [['language]])
 
 $(mkTableInstances ''KioskLocationTranslationT "kiosk_location_translation")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/KioskLocationTranslation.yaml
+-}

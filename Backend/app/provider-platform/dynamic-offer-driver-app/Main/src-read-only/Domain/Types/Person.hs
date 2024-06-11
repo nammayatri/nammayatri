@@ -192,3 +192,7 @@ $(Kernel.Utils.TH.mkHttpInstancesForEnum ''IdentifierType)
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Gender)
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''Gender)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Person.yaml
+-}

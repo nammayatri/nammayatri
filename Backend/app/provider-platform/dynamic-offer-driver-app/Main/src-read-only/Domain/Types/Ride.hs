@@ -102,3 +102,7 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 
 $(mkHttpInstancesForEnum ''RideStatus)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ride.yaml
+-}

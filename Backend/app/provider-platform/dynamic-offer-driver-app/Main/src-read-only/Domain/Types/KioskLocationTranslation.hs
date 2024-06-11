@@ -18,3 +18,7 @@ data KioskLocationTranslation = KioskLocationTranslation
     language :: Kernel.External.Types.Language
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/KioskLocationTranslation.yaml
+-}

@@ -49,3 +49,7 @@ instance ToTType' Beam.Suspect Domain.Types.Suspect.Suspect where
         Beam.updatedAt = updatedAt,
         Beam.voterId = voterId
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/suspect.yaml
+-}

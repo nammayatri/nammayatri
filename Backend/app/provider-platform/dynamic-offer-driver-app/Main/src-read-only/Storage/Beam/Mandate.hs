@@ -38,3 +38,7 @@ type Mandate = MandateT Identity
 $(enableKVPG ''MandateT ['id] [])
 
 $(mkTableInstances ''MandateT "mandate")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Mandate.yaml
+-}

@@ -95,3 +95,7 @@ instance ToTType' Beam.LeaderBoardConfigs Domain.Types.LeaderBoardConfigs.Leader
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LeaderBoardConfigs.yaml
+-}

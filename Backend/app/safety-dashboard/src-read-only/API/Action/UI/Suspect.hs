@@ -36,3 +36,7 @@ postUploadSuspectBulk a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.Suspect.pos
 
 postChangeFlag :: (TokenInfo -> API.Types.UI.Suspect.SuspectFlagStatusChangeReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postChangeFlag a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.Suspect.postChangeFlag a2 a1
+
+{-
+	DSL Source Link: file://./../../../../spec/API/suspect.yaml
+-}

@@ -63,3 +63,7 @@ instance ToTType' Beam.MerchantState Domain.Types.MerchantState.MerchantState wh
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/configs.yaml
+-}

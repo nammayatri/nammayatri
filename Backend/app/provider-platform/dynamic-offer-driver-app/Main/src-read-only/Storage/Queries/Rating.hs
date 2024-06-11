@@ -66,3 +66,7 @@ updateByPrimaryKey (Domain.Types.Rating.Rating {..}) = do
       Se.Set Beam.wasOfferedAssistance wasOfferedAssistance
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Rating.yaml
+-}

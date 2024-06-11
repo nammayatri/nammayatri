@@ -89,3 +89,7 @@ type Person = PersonT Identity
 $(enableKVPG ''PersonT ['id] [['customerReferralCode], ['deviceToken], ['emailHash], ['mobileNumberHash], ['referralCode]])
 
 $(mkTableInstances ''PersonT "person")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Person.yaml
+-}

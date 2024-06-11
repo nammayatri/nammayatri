@@ -34,3 +34,7 @@ type LmsModuleTranslation = LmsModuleTranslationT Identity
 $(enableKVPG ''LmsModuleTranslationT ['language, 'moduleId] [])
 
 $(mkTableInstances ''LmsModuleTranslationT "lms_module_translation")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

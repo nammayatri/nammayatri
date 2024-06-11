@@ -26,3 +26,7 @@ data DailyStats = DailyStats
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DailyStats.yaml
+-}

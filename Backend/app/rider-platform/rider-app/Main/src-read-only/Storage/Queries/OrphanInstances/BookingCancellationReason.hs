@@ -55,3 +55,7 @@ instance ToTType' Beam.BookingCancellationReason Domain.Types.BookingCancellatio
         Beam.source = source,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/BookingCancellationReason.yaml
+-}

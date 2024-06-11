@@ -39,3 +39,7 @@ getDriverSdkToken ::
     Environment.FlowHandler API.Types.UI.Tokenization.GetTokenRes
   )
 getDriverSdkToken a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Tokenization.getDriverSdkToken (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+{-
+	DSL Source Link: file://./../../../../spec/API/Tokenization.yaml
+-}

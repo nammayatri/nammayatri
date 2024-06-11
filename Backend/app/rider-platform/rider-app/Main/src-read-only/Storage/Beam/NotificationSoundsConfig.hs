@@ -32,3 +32,7 @@ type NotificationSoundsConfig = NotificationSoundsConfigT Identity
 $(enableKVPG ''NotificationSoundsConfigT ['merchantOperatingCityId, 'notificationType] [])
 
 $(mkTableInstances ''NotificationSoundsConfigT "notification_sounds_config")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/NotificationSoundConfig.yaml
+-}

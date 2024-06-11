@@ -82,3 +82,7 @@ type Ride = RideT Identity
 $(enableKVPG ''RideT ['id] [['bookingId], ['bppRideId], ['shortId]])
 
 $(mkTableInstances ''RideT "ride")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ride.yaml
+-}

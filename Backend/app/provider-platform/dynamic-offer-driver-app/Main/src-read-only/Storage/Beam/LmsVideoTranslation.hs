@@ -44,3 +44,7 @@ type LmsVideoTranslation = LmsVideoTranslationT Identity
 $(enableKVPG ''LmsVideoTranslationT ['language, 'videoId] [])
 
 $(mkTableInstances ''LmsVideoTranslationT "lms_video_translation")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

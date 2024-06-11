@@ -29,3 +29,7 @@ data EstimateApi = EstimateApi
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data FareResponse = FareResponse {estimatedFares :: [API.Types.UI.FareCalculator.EstimateApi]} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/fareCalculate.yaml
+-}

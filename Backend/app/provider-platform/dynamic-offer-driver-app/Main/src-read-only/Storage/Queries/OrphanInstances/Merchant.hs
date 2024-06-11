@@ -79,3 +79,7 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.updatedAt = updatedAt,
         Beam.verified = verified
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Merchant.yaml
+-}

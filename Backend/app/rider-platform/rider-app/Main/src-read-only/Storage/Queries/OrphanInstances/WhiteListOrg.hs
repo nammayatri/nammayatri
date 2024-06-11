@@ -39,3 +39,7 @@ instance ToTType' Beam.WhiteListOrg Domain.Types.WhiteListOrg.WhiteListOrg where
         Beam.subscriberId = Kernel.Types.Id.getShortId subscriberId,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/WhiteListOrg.yaml
+-}

@@ -176,3 +176,7 @@ $(enableKVPG ''TransporterConfigT ['merchantOperatingCityId] [])
 $(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])
 
 $(Domain.Types.UtilsTH.mkCacParseInstance ''TransporterConfigT)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

@@ -15,3 +15,7 @@ import qualified Tools.Beam.UtilsTH
 
 data PersonFlowStatus = PersonFlowStatus {flowStatus :: Domain.Types.Extra.PersonFlowStatus.FlowStatus, personId :: Kernel.Types.Id.Id Domain.Types.Person.Person, updatedAt :: Kernel.Prelude.UTCTime}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PersonFlowStatus.yaml
+-}

@@ -18,3 +18,7 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod] -> m ())
 createMany = traverse_ create
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

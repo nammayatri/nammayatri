@@ -36,3 +36,7 @@ type PurchaseHistory = PurchaseHistoryT Identity
 $(enableKVPG ''PurchaseHistoryT ['id] [['driverId]])
 
 $(Kernel.Beam.Lib.UtilsTH.mkTableInstances ''PurchaseHistoryT "coin_purchase_history" "atlas_driver_offer_bpp")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PurchaseHistory.yaml
+-}

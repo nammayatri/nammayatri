@@ -27,3 +27,7 @@ findByTransactionIdAndMerchantId transactionId providerId = do findOneWithKV [Se
 
 updateIsAdvancedBookingEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateIsAdvancedBookingEnabled isAdvanceBookingEnabled id = do updateWithKV [Se.Set Beam.isAdvanceBookingEnabled (Just isAdvanceBookingEnabled)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SearchRequest.yaml
+-}

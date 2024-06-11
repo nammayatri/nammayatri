@@ -252,3 +252,7 @@ getFrfsConfig ::
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
   )
 getFrfsConfig a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsConfig (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+{-
+	DSL Source Link: file://./../../../../spec/API/FrfsTicket.yaml
+-}

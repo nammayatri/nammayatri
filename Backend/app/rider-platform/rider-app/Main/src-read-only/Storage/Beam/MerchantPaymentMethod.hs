@@ -34,3 +34,7 @@ type MerchantPaymentMethod = MerchantPaymentMethodT Identity
 $(enableKVPG ''MerchantPaymentMethodT ['id] [['merchantOperatingCityId]])
 
 $(mkTableInstances ''MerchantPaymentMethodT "merchant_payment_method")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

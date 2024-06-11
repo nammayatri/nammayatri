@@ -32,3 +32,7 @@ type AadhaarOtpVerify = AadhaarOtpVerifyT Identity
 $(enableKVPG ''AadhaarOtpVerifyT ['id] [['driverId]])
 
 $(mkTableInstances ''AadhaarOtpVerifyT "aadhaar_otp_verify")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

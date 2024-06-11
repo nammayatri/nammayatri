@@ -44,3 +44,7 @@ updateByPrimaryKey (Domain.Types.VehicleDetails.VehicleDetails {..}) = do
       Se.Set Beam.vehicleVariant vehicleVariant
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/VehicleDetails.yaml
+-}

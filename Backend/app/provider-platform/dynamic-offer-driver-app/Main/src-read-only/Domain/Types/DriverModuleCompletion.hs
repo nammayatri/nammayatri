@@ -37,3 +37,7 @@ data ModuleCompletionStatus = MODULE_NOT_YET_STARTED | MODULE_ONGOING | MODULE_C
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleCompletionEntity)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleCompletionStatus)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

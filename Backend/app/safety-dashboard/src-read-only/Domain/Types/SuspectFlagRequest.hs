@@ -39,3 +39,7 @@ data AdminApproval = Pending | Approved | Rejected deriving (Eq, Ord, Show, Read
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AdminApproval))
 
 $(mkHttpInstancesForEnum (''AdminApproval))
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

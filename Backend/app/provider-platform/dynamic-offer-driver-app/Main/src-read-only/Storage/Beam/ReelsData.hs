@@ -47,3 +47,7 @@ type ReelsData = ReelsDataT Identity
 $(enableKVPG ''ReelsDataT ['id] [])
 
 $(mkTableInstances ''ReelsDataT "reels_data")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Reels.yaml
+-}

@@ -58,3 +58,7 @@ instance ToTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails where
         Beam.referredByDriver = Kernel.Types.Id.getId <$> referredByDriver,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/RiderDetails.yaml
+-}

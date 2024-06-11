@@ -39,3 +39,7 @@ type LeaderBoardConfigs = LeaderBoardConfigsT Identity
 $(enableKVPG ''LeaderBoardConfigsT ['id] [['merchantOperatingCityId]])
 
 $(mkTableInstances ''LeaderBoardConfigsT "leader_board_configs")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LeaderBoardConfigs.yaml
+-}

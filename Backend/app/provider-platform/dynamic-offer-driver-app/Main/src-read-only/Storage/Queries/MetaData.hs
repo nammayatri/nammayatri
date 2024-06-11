@@ -78,3 +78,7 @@ instance ToTType' Beam.MetaData Domain.Types.MetaData.MetaData where
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/MetaData.yaml
+-}

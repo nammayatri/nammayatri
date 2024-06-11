@@ -51,3 +51,7 @@ data VehicleCategory = CAB | AUTO_RICKSHAW | METRO | MOTORCYCLE | AMBULANCE deri
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentCollectedBy)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleCategory)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BecknConfig.yaml
+-}

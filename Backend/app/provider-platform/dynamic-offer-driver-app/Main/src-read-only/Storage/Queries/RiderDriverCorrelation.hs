@@ -105,3 +105,7 @@ instance ToTType' Beam.RiderDriverCorrelation Domain.Types.RiderDriverCorrelatio
         Beam.riderDetailId = Kernel.Types.Id.getId riderDetailId,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RiderDriverCorrelation.yaml
+-}

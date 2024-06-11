@@ -36,3 +36,7 @@ instance FromTType' Beam.ValueAddNP Domain.Types.ValueAddNP.ValueAddNP where
 
 instance ToTType' Beam.ValueAddNP Domain.Types.ValueAddNP.ValueAddNP where
   toTType' (Domain.Types.ValueAddNP.ValueAddNP {..}) = do Beam.ValueAddNPT {Beam.enabled = enabled, Beam.subscriberId = subscriberId, Beam.createdAt = createdAt, Beam.updatedAt = updatedAt}
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/configs.yaml
+-}

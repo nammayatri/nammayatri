@@ -52,3 +52,7 @@ type DocumentVerificationConfig = DocumentVerificationConfigT Identity
 $(enableKVPG ''DocumentVerificationConfigT ['documentType, 'merchantOperatingCityId, 'vehicleCategory] [])
 
 $(mkTableInstances ''DocumentVerificationConfigT "document_verification_config")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

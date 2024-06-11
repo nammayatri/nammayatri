@@ -62,3 +62,7 @@ updateByPrimaryKey (Domain.Types.SearchTry.SearchTry {..}) = do
       Se.Set Beam.vehicleServiceTierName (Kernel.Prelude.Just vehicleServiceTierName)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SearchTry.yaml
+-}

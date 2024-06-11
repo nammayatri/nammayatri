@@ -35,3 +35,7 @@ type MerchantPushNotification = MerchantPushNotificationT Identity
 $(enableKVPG ''MerchantPushNotificationT ['key, 'merchantOperatingCityId] [])
 
 $(mkTableInstances ''MerchantPushNotificationT "merchant_push_notification")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

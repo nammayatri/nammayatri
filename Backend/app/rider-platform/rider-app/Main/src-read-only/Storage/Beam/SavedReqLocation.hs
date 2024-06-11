@@ -42,3 +42,7 @@ type SavedReqLocation = SavedReqLocationT Identity
 $(enableKVPG ''SavedReqLocationT ['id] [['riderId]])
 
 $(mkTableInstances ''SavedReqLocationT "saved_location")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SavedReqLocation.yaml
+-}

@@ -51,3 +51,7 @@ $(Kernel.Utils.TH.mkHttpInstancesForEnum ''InvoiceStatus)
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''InvoicePaymentMode)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''InvoicePaymentMode)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Invoice.yaml
+-}

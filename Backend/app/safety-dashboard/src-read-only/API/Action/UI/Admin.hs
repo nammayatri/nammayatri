@@ -97,3 +97,7 @@ postMerchantUserAssignRole a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.Admin.
 
 deleteMerchantUserDelete :: (TokenInfo -> API.Types.UI.Admin.DeleteMerchantUserReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 deleteMerchantUserDelete a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.Admin.deleteMerchantUserDelete a2 a1
+
+{-
+	DSL Source Link: file://./../../../../spec/API/admin.yaml
+-}

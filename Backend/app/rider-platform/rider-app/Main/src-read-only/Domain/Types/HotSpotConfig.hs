@@ -31,3 +31,7 @@ data HotSpotConfig = HotSpotConfig
     weightOfTripStart :: Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/HotSpotConfig.yaml
+-}

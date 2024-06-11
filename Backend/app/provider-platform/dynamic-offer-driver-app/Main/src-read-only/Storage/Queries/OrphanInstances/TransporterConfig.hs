@@ -314,3 +314,7 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.variantsToEnableForSubscription = variantsToEnableForSubscription,
         Beam.volunteerSmsSendingLimit = Kernel.Prelude.toJSON <$> volunteerSmsSendingLimit
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Merchant.yaml
+-}

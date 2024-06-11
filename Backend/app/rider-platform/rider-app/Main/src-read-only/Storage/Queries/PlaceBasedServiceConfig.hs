@@ -17,3 +17,7 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PlaceBasedServiceConfig.PlaceBasedServiceConfig] -> m ())
 createMany = traverse_ create
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PlaceBasedServiceConfig.yaml
+-}

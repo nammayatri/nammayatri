@@ -47,3 +47,7 @@ instance ToTType' Beam.BusinessEvent Domain.Types.BusinessEvent.BusinessEvent wh
         Beam.vehicleVariant = vehicleVariant,
         Beam.whenPoolWasComputed = whenPoolWasComputed
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/BusinessEvent.yaml
+-}

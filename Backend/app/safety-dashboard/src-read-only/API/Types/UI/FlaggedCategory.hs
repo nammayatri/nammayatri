@@ -17,3 +17,7 @@ data DeleteFlagCategoryReq = DeleteFlagCategoryReq {id :: Data.Text.Text} derivi
 
 data FlagCategoryList = FlagCategoryList {flagCategoryList :: [Domain.Types.FlaggedCategory.FlaggedCategory], summary :: API.Types.UI.Notification.Summary}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/flaggedCategory.yaml
+-}

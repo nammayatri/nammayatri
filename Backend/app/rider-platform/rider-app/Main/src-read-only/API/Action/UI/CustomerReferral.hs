@@ -29,3 +29,7 @@ getCustomerRefferalCount ::
     Environment.FlowHandler API.Types.UI.CustomerReferral.ReferredCustomers
   )
 getCustomerRefferalCount a1 = withFlowHandlerAPI $ Domain.Action.UI.CustomerReferral.getCustomerRefferalCount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/CustomerReferral.yaml
+-}

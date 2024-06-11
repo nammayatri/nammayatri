@@ -58,3 +58,7 @@ instance ToTType' Beam.BlackListOrg Domain.Types.BlackListOrg.BlackListOrg where
         Beam.subscriberId = Kernel.Types.Id.getShortId subscriberId,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BlackListOrg.yaml
+-}

@@ -42,3 +42,7 @@ type Invoice = InvoiceT Identity
 $(enableKVPG ''InvoiceT ['id] [['driverFeeId], ['driverId], ['invoiceShortId]])
 
 $(mkTableInstances ''InvoiceT "invoice")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Invoice.yaml
+-}

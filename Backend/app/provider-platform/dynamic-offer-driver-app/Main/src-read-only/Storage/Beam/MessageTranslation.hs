@@ -33,3 +33,7 @@ type MessageTranslation = MessageTranslationT Identity
 $(enableKVPG ''MessageTranslationT ['messageId] [])
 
 $(mkTableInstances ''MessageTranslationT "message_translation")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Message.yaml
+-}

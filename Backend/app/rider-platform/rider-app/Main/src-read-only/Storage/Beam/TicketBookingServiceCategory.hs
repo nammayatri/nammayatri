@@ -44,3 +44,7 @@ type TicketBookingServiceCategory = TicketBookingServiceCategoryT Identity
 $(enableKVPG ''TicketBookingServiceCategoryT ['id] [])
 
 $(mkTableInstances ''TicketBookingServiceCategoryT "ticket_booking_service_category")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

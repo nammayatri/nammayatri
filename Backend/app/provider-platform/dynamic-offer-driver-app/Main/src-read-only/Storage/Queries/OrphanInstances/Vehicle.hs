@@ -69,3 +69,7 @@ instance ToTType' Beam.Vehicle Domain.Types.Vehicle.Vehicle where
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Vehicle.yaml
+-}

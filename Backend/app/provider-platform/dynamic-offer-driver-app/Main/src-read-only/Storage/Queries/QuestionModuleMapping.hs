@@ -59,3 +59,7 @@ instance ToTType' Beam.QuestionModuleMapping Domain.Types.QuestionModuleMapping.
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

@@ -22,3 +22,7 @@ instance ToTType' Beam.PersonFlowStatus Domain.Types.PersonFlowStatus.PersonFlow
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/PersonFlowStatus.yaml
+-}

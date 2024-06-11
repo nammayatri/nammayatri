@@ -15,3 +15,7 @@ data PortalConfigs = PortalConfigs
     value :: Kernel.Prelude.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

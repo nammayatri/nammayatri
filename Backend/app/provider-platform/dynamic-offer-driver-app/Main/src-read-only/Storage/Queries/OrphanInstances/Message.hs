@@ -55,3 +55,7 @@ instance ToTType' Beam.Message Domain.Types.Message.Message where
         Beam.title = title,
         Beam.viewCount = viewCount
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Message.yaml
+-}

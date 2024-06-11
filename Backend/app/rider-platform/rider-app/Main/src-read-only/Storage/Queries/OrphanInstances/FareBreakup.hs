@@ -35,3 +35,7 @@ instance ToTType' Beam.FareBreakup Domain.Types.FareBreakup.FareBreakup where
         Beam.entityType = entityType,
         Beam.id = Kernel.Types.Id.getId id
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/FareBreakUp.yaml
+-}

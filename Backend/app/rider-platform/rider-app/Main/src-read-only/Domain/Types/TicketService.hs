@@ -33,3 +33,7 @@ data TicketService = TicketService
 data ExpiryType = InstantExpiry Kernel.Prelude.Int | VisitDate Kernel.Prelude.TimeOfDay deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExpiryType)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

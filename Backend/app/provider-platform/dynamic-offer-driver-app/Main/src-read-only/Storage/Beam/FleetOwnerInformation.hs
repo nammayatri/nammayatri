@@ -35,3 +35,7 @@ type FleetOwnerInformation = FleetOwnerInformationT Identity
 $(enableKVPG ''FleetOwnerInformationT ['fleetOwnerPersonId] [])
 
 $(mkTableInstances ''FleetOwnerInformationT "fleet_owner_information")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FleetOwnerInformation.yaml
+-}

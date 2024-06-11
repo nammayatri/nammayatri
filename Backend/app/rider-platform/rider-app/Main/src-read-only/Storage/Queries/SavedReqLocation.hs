@@ -24,3 +24,7 @@ createMany = traverse_ create
 
 deleteAllByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteAllByRiderId riderId = do deleteWithKV [Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId)]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SavedReqLocation.yaml
+-}

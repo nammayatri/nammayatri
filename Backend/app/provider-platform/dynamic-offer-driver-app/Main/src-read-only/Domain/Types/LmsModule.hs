@@ -37,3 +37,7 @@ data ModuleCompletionCriteria = ONLY_VIDEOS | VIDEOS_AND_QUIZ Kernel.Prelude.Int
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''LmsCategory)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleCompletionCriteria)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/LMS.yaml
+-}

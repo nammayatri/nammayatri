@@ -116,3 +116,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.transactionId = transactionId,
         Beam.validTill = Just validTill
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/SearchRequest.yaml
+-}

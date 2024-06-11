@@ -35,3 +35,7 @@ type DriverBankAccount = DriverBankAccountT Identity
 $(enableKVPG ''DriverBankAccountT ['driverId] [['accountId]])
 
 $(mkTableInstances ''DriverBankAccountT "driver_bank_account")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

@@ -45,3 +45,7 @@ type DriverLicense = DriverLicenseT Identity
 $(enableKVPG ''DriverLicenseT ['id] [['documentImageId1], ['driverId], ['licenseNumberHash]])
 
 $(mkTableInstances ''DriverLicenseT "driver_license")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOnboarding.yaml
+-}

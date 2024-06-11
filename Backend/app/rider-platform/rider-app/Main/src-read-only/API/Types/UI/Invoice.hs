@@ -28,3 +28,7 @@ data InvoiceRes = InvoiceRes
     vehicleNumber :: Data.Text.Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/invoice.yaml
+-}

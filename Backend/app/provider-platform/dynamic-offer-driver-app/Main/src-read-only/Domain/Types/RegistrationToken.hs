@@ -41,3 +41,7 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''LoginType)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Medium)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RTEntityType)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RegistrationToken.yaml
+-}

@@ -69,3 +69,7 @@ type Quote = QuoteT Identity
 $(enableKVPG ''QuoteT ['id] [['driverOfferId], ['requestId]])
 
 $(mkTableInstances ''QuoteT "quote")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/quote.yaml
+-}

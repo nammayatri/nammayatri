@@ -44,3 +44,7 @@ type SuspectFlagRequest = SuspectFlagRequestT Identity
 $(enableKVPG (''SuspectFlagRequestT) [('id)] [])
 
 $(mkTableInstances (''SuspectFlagRequestT) "suspect_flag_request")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/suspect.yaml
+-}

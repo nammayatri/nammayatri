@@ -104,3 +104,7 @@ instance ToTType' Beam.DriverFee Domain.Types.DriverFee.DriverFee where
         Beam.updatedAt = updatedAt,
         Beam.vehicleNumber = vehicleNumber
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DriverFee.yaml
+-}

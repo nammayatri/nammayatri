@@ -101,3 +101,7 @@ instance ToTType' Beam.DriverIntelligentPoolConfig Domain.Types.DriverIntelligen
         Beam.speedNormalizer = speedNormalizer,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

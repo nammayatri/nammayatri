@@ -44,3 +44,7 @@ instance ToTType' Beam.MessageReport Domain.Types.MessageReport.MessageReport wh
         Beam.reply = reply,
         Beam.updatedAt = Data.Time.utcToLocalTime Data.Time.utc updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/Message.yaml
+-}

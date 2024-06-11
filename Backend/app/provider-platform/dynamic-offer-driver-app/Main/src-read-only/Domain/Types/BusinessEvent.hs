@@ -36,3 +36,7 @@ data WhenPoolWasComputed = ON_SEARCH | ON_CONFIRM | ON_REALLOCATION deriving (Eq
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EventType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''WhenPoolWasComputed)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BusinessEvent.yaml
+-}

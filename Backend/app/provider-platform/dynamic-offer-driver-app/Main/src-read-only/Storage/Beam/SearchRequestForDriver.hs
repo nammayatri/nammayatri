@@ -87,3 +87,7 @@ type SearchRequestForDriver = SearchRequestForDriverT Identity
 $(enableKVPG ''SearchRequestForDriverT ['id] [['requestId], ['searchTryId]])
 
 $(mkTableInstancesWithTModifier ''SearchRequestForDriverT "search_request_for_driver" [("requestId", "search_request_id")])
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SearchRequestForDriver.yaml
+-}

@@ -48,3 +48,7 @@ type Estimate = EstimateT Identity
 $(enableKVPG ''EstimateT ['id] [])
 
 $(mkTableInstancesWithTModifier ''EstimateT "estimate" [])
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Estimate.yaml
+-}

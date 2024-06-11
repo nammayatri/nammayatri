@@ -47,3 +47,7 @@ instance ToTType' Beam.SpecialZoneQuote Domain.Types.SpecialZoneQuote.SpecialZon
         Beam.quoteId = quoteId,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/SpecialZoneQuote.yaml
+-}

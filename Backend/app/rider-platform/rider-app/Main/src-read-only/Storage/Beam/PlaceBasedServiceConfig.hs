@@ -33,3 +33,7 @@ type PlaceBasedServiceConfig = PlaceBasedServiceConfigT Identity
 $(enableKVPG ''PlaceBasedServiceConfigT ['placeId] [])
 
 $(mkTableInstances ''PlaceBasedServiceConfigT "place_based_service_config")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PlaceBasedServiceConfig.yaml
+-}

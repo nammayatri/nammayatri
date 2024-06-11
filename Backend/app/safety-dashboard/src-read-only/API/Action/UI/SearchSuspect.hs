@@ -129,3 +129,7 @@ getSuspectList a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI' $ Domain.Act
 
 getPartnerSuspectList :: (TokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.FlowHandler API.Types.UI.SearchSuspect.SuspectsList)
 getPartnerSuspectList a5 a4 a3 a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.SearchSuspect.getPartnerSuspectList a5 a4 a3 a2 a1
+
+{-
+	DSL Source Link: file://./../../../../spec/API/searchSuspect.yaml
+-}

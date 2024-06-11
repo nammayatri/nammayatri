@@ -41,3 +41,7 @@ updateByPrimaryKey (Domain.Types.CancellationReason.CancellationReason {..}) = d
       Se.Set Beam.updatedAt (Just _now)
     ]
     [Se.And [Se.Is Beam.reasonCode $ Se.Eq reasonCode]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/CancellationReason.yaml
+-}

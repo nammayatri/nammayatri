@@ -11,3 +11,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import Storage.Queries.RideExtra as ReExport
 import Storage.Queries.Transformers.Ride
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ride.yaml
+-}

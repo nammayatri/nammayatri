@@ -31,3 +31,7 @@ getInvoice ::
     Environment.FlowHandler [API.Types.UI.Invoice.InvoiceRes]
   )
 getInvoice a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Invoice.getInvoice (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+{-
+	DSL Source Link: file://./../../../../spec/API/invoice.yaml
+-}

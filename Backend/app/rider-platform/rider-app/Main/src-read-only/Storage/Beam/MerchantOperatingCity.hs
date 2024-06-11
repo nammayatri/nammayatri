@@ -37,3 +37,7 @@ type MerchantOperatingCity = MerchantOperatingCityT Identity
 $(enableKVPG ''MerchantOperatingCityT ['id] [])
 
 $(mkTableInstances ''MerchantOperatingCityT "merchant_operating_city")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/configs.yaml
+-}

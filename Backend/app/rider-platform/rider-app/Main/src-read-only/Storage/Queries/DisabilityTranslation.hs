@@ -38,3 +38,7 @@ instance ToTType' Beam.DisabilityTranslation Domain.Types.DisabilityTranslation.
         Beam.language = language,
         Beam.translation = translation
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/PersonDisability.yaml
+-}

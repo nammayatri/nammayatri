@@ -96,3 +96,7 @@ instance ToTType' Beam.DriverOffer Domain.Types.DriverOffer.DriverOffer where
         Beam.updatedAt = updatedAt,
         Beam.validTill = validTill
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/DriverOffer.yaml
+-}

@@ -43,3 +43,7 @@ type RiderDetails = RiderDetailsT Identity
 $(enableKVPG ''RiderDetailsT ['id] [['merchantId], ['mobileNumberHash]])
 
 $(mkTableInstances ''RiderDetailsT "rider_details")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RiderDetails.yaml
+-}

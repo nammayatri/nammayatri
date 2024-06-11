@@ -48,3 +48,7 @@ instance ToTType' Beam.BlackListOrg Domain.Types.BlackListOrg.BlackListOrg where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.subscriberId = Kernel.Types.Id.getShortId subscriberId
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BlackListOrg.yaml
+-}

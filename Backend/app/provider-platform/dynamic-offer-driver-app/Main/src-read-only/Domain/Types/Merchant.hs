@@ -70,3 +70,7 @@ instance ToJSON (MerchantD 'Safe)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Status)
 
 $(mkHttpInstancesForEnum ''Status)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

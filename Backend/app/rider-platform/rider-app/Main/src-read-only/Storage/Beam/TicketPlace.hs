@@ -43,3 +43,7 @@ type TicketPlace = TicketPlaceT Identity
 $(enableKVPG ''TicketPlaceT ['id] [])
 
 $(mkTableInstances ''TicketPlaceT "ticket_place")
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/ticket.yaml
+-}

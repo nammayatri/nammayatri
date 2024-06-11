@@ -96,3 +96,7 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     vehicleType :: Domain.Types.Station.FRFSVehicleType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/FrfsTicket.yaml
+-}

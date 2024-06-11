@@ -31,3 +31,7 @@ getSpecialLocationList ::
     Environment.FlowHandler [Lib.Queries.SpecialLocation.SpecialLocationFull]
   )
 getSpecialLocationList a1 = withFlowHandlerAPI $ Domain.Action.UI.SpecialLocation.getSpecialLocationList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/specialLocation.yaml
+-}

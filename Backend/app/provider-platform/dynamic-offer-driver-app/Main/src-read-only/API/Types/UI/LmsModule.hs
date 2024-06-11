@@ -143,3 +143,7 @@ data VideoUpdateAPIReq = VideoUpdateAPIReq
     videoId :: Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../spec/API/LMS.yaml
+-}

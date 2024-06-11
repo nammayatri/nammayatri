@@ -48,3 +48,7 @@ data FeedbackFormReq = FeedbackFormReq {feedback :: [Domain.Types.FeedbackForm.F
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AnswerType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Category)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/FeedbackForm.yaml
+-}

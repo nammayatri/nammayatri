@@ -56,3 +56,7 @@ instance ToTType' Beam.TicketBookingServiceCategory Domain.Types.TicketBookingSe
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/ticket.yaml
+-}
