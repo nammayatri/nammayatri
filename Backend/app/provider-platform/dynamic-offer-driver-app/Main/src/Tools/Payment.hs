@@ -51,6 +51,12 @@ mandateNotificationStatus = runWithServiceConfigAndName Payment.mandateNotificat
 mandateExecution :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.MandateExecutionReq -> m Payment.MandateExecutionRes
 mandateExecution = runWithServiceConfigAndName Payment.mandateExecution
 
+createPayoutOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Payment.CreatePayoutOrderReq -> m Payment.CreatePayoutOrderResp
+createPayoutOrder = runWithServiceConfig Payment.createPayoutOrder
+
+payoutOrderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Payment.PayoutOrderStatusReq -> m Payment.CreatePayoutOrderResp
+payoutOrderStatus = runWithServiceConfig Payment.payoutOrderStatus
+
 runWithServiceConfigAndName ::
   ServiceFlow m r =>
   (Payment.PaymentServiceConfig -> req -> m resp) ->

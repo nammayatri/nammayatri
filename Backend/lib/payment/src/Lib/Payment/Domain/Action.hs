@@ -32,6 +32,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Payment.Juspay.Types (RefundStatus (REFUND_PENDING))
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
+import qualified Kernel.External.Payment.Juspay.Types.Payout as Payout
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value, isNothing)
 import qualified Kernel.Storage.Hedis as Redis
@@ -81,16 +82,13 @@ data PaymentStatusResp
         responseMessage :: Maybe Text,
         notificationId :: Text
       }
-  | PayoutPaymentStatus
-      { status :: Payment.TransactionStatus, -- domain status
-        bankErrorMessage :: Maybe Text,
-        bankErrorCode :: Maybe Text,
-        isRetried :: Maybe Bool,
-        responseCode :: Maybe Text,
-        responseMessage :: Maybe Text
-        -- isRetargeted :: Maybe Bool,
-        -- retargetLink :: Maybe Text,
-      }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data PayoutPaymentStatus = PayoutPaymentStatus
+  { status :: Payout.PayoutOrderStatus, -- domain status
+    orderId :: Text,
+    accountDetailsType :: Maybe Text
+  }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 -- create order -----------------------------------------------------
@@ -319,16 +317,13 @@ orderStatusService personId orderId orderStatusCall = do
             Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn Nothing
         )
         transactionUUID
-      return $
-        PayoutPaymentStatus
-          { status = orderStatusResp.transactionStatus,
-            bankErrorMessage = Nothing,
-            bankErrorCode = Nothing,
-            isRetried = Nothing,
-            responseCode = Nothing,
-            responseMessage = Nothing,
-            ..
-          }
+    -- return $
+    --   PayoutPaymentStatus
+    --     { status : Payout.PayoutOrderStatus, -- domain status
+    --       orderId :: Text,
+    --       accountDetailsType :: Maybe Text
+    --       ..
+    --     }
     _ -> throwError $ InternalError "Unexpected Order Status Response."
 
 data OrderTxn = OrderTxn
@@ -606,28 +601,79 @@ createPayoutService ::
   (Payment.CreatePayoutOrderReq -> m Payment.CreatePayoutOrderResp) ->
   m (Maybe Payment.CreatePayoutOrderResp)
 createPayoutService merchantId personId createPayoutOrderReq createPayoutOrderCall = do
-  mbExistingPayoutOrder <- QPayoutOrder.findById (Id createPayoutOrderReq.infoId)
+  mbExistingPayoutOrder <- QPayoutOrder.findById createPayoutOrderReq.orderId
   case mbExistingPayoutOrder of
     Nothing -> do
       createPayoutOrderResp <- createPayoutOrderCall createPayoutOrderReq -- api call
       payoutOrder <- buildPayoutOrder merchantId personId createPayoutOrderReq createPayoutOrderResp
       QOrder.create payoutOrder
       return $ Just createPayoutOrderResp
-    Just existingPayoutOrder -> do
-      isOrderExpired <- maybe (pure True) checkIfExpired existingPayoutOrder.clientAuthTokenExpiry
-      if isOrderExpired
-        then do
-          QOrder.updateStatusToExpired existingPayoutOrder.id
-          return Nothing
-        else return Nothing
+    Just existingPayoutOrder -> throwError $ PayoutOrderAlreadyExists (existingPayoutOrder.id.getId)
+  where
+    buildPayoutOrder merchantId personId req resp = do
+      now <- getCurrentTime
+      uuid <- generateGUID
+      pure $
+        Payment.PayoutOrders
+          { id = uuid,
+            customerId = personId.getId,
+            orderId = req.orderId,
+            merchantId = merchantId.getId,
+            mobileNo = req.mobileNo,
+            city = req.city,
+            amount = req.amount,
+            status = resp.status,
+            accountDetailsType = ((.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< resp.fulfillments), --- for now only one fullfillment supported
+            vpa = req.customerVpa,
+            customerEmail = req.customerEmail,
+            createdAt = now,
+            updatedAt = now
+          }
 
--- case sdkPayload of
---   Just sdk_payload -> do
---     return $
---       Just $
---         Payment.createPayoutOrderResp
---           { status = existingOrder.status,
---             id = existingOrder.paymentServiceOrderId
+payoutStatusService ::
+  ( EncFlow m r,
+    BeamFlow m r
+  ) =>
+  Id Merchant ->
+  Id Person ->
+  Payment.PayoutOrderStatusReq ->
+  (Payment.PayoutOrderStatusReq -> m Payment.CreatePayoutOrderResp) ->
+  m PayoutPaymentStatus
+payoutStatusService merchantId personId createPayoutOrderStatusReq createPayoutOrderStatusCall = do
+  mbExistingPayoutOrder <- QPayoutOrder.findById (createPayoutOrderStatusReq.orderId) >>= fromMaybeM (PayoutOrderNotFound (createPayoutOrderStatusReq.orderId))
+  let payoutOrderStatusReq = Payment.PayoutOrderStatusReq {orderId = createPayoutOrderStatusReq.orderId.getId}
+  now <- getCurrentTime
+  statusResp <- orderStatusCall payoutOrderStatusReq -- api call
+  payoutStatusUpdates statusResp.status createPayoutOrderStatusReq.orderId.getId (Just statusResp)
+  pure $ PayoutPaymentStatus {status = statusResp.status, orderId = statusResp.createPayoutOrderStatusReq.orderId.getId, accountDetailsType = (.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< statusResp.fulfillments}
 
---           }
---   Nothing -> return Nothing
+payoutStatusUpdates :: (EncFlow m r, BeamFlow m r) => Payout.PayoutOrderStatus -> Text -> Maybe CreatePayoutOrderResp -> m ()
+payoutStatusUpdates status orderId statusResp = do
+  payoutOrder <- QPayoutOrder.findById (Id orderId) >>= fromMaybeM (PayoutOrderNotFound orderId)
+  let payoutOrderStatus = PayoutOrderStatus {status = status, orderId = orderId, accountDetailsType = statusResp.accountDetailsType}
+  QPayoutOrder.updateStatus orderId payoutOrderStatus
+  case statusResp of
+    Just Payment.CreatePayoutOrderResp {..} -> do
+      let mbTxn = listToMaybe $ sortBy (comapring updatedAt) transactions
+      case mbTxn of
+        Just Payout.Transaction {amount = amount_txn, ..} -> do
+          findTransaction <- QPayoutTransaction.findByTransactionRef transactionRef
+          case findTransaction of
+            Just _ -> updatePayoutTransactionStatus status transactionRef
+            Nothing -> do
+              uuid <- generateGUID
+              now <- getCurrentTime
+              let payoutTransaction =
+                    PayoutTransaction
+                      { id = uuid,
+                        payoutOrderId = orderId,
+                        transactionRef = transactionRef,
+                        gateWayRefId = gateWayRefId,
+                        fulfillmentMethod = fulfillmentMethod,
+                        amount = realToFrac amount_txn,
+                        status = status,
+                        createdAt = now,
+                        updatedAt = now
+                      }
+              QPayoutTransaction.create payoutTransaction
+        Nothing -> pure ()
