@@ -559,7 +559,7 @@ defaultCityConfig =
     dashboardUrl : "",
     appLogoLight : "",
     enableAcViews : false,
-    enableRentals : false,
+    enableRentals : true,
     enableIntercity : false, 
     waitingChargeConfig : {
       auto : {
