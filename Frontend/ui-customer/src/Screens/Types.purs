@@ -52,7 +52,7 @@ import JBridge (Location)
 import Data.HashMap as DHM
 import Data.Map as DM
 import MerchantConfig.Types as MRC
-
+import Services.API (DeadKmFare)
 type Contacts = {
   name :: String,
   number :: String
@@ -2518,7 +2518,7 @@ type FareDetails = {
   perHourCharge :: Int,
   nightShiftCharge :: Int,
   tollCharges :: Maybe Number,
-  deadKmFare :: Maybe Number
+  deadKmFare :: Maybe DeadKmFare
 }
 
 data RentalScreenStage = RENTAL_SELECT_PACKAGE | RENTAL_SELECT_VARIANT | RENTAL_CONFIRMATION
