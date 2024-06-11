@@ -48,6 +48,9 @@ getDelayForAutoComplete = 800
 getDelayForLocateOnMap :: Int
 getDelayForLocateOnMap = 1000
 
+getEditDestPollingCount :: Number
+getEditDestPollingCount = 10.0
+
 getLanguages :: Array Language
 getLanguages =
   [ { name: "English", value: "EN_US" }
