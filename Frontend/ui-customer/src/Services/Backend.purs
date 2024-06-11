@@ -778,7 +778,7 @@ drawMapRoute srcLat srcLng destLat destLng sourceMarkerConfig destMarkerConfig r
         callDrawRoute route = do 
             case route of
                 Just (Route routes) -> do
-                    let routeConfig = JB.mkRouteConfig (walkCoordinates routes.points) sourceMarkerConfig destMarkerConfig routeType "LineString" true JB.DEFAULT specialLocation
+                    let routeConfig = JB.mkRouteConfig (walkCoordinates routes.points) sourceMarkerConfig destMarkerConfig{anchorV = 1.0} Nothing routeType "LineString" true JB.DEFAULT specialLocation
                     lift $ lift $ liftFlow $ drawRoute [routeConfig] (getNewIDWithTag "CustomerHomeScreen")
                     pure route
                     

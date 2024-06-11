@@ -202,27 +202,32 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     MarkerConfig markerConfig = new MarkerConfig();
                     markerConfig.locationName(eta);
                     markerConfig.setLabelImage(destinationSpecialTagIcon);
-                    destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(dest, false,null, MarkerType.NORMAL_MARKER, markerConfig))));
-                    destMarker.setTitle("Driver is " + eta);
+                    if (destMarker != null)
+                    {
+                        destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(dest, false,null, MarkerType.NORMAL_MARKER, markerConfig))));
+                        destMarker.setTitle("Driver is " + eta);
+                    }
                     PolylineDataPoints polylineDataPoints = getPolyLineDataByMapInstance(pureScriptID,polylineKey);
                     Polyline polyline = getPolyLine(false, polylineDataPoints);
                     if (polyline != null) {
                         polyline.setEndCap(new ButtCap());
                         if (path.size() == 0) {
-                            LatLng destination = destMarker.getPosition();
-                            animateMarkerNew(src, destination, currMarker);
-                            Polyline overlayPolylines = getPolyLine(true, polylineDataPoints);
-                            if(overlayPolylines != null) {
-                                overlayPolylines.remove();
+                            if (destMarker != null) {
+                                LatLng destination = destMarker.getPosition();
+                                animateMarkerNew(src, destination, currMarker);
+                                Polyline overlayPolylines = getPolyLine(true, polylineDataPoints);
+                                if (overlayPolylines != null) {
+                                    overlayPolylines.remove();
+                                }
+                                polyline.remove();
+                                polylineDataPoints.setPolyline(null);
+                                polylineDataPoints.setOverlayPolylines(null);
+                                setPolyLineDataByMapInstance(pureScriptID, polylineKey, polylineDataPoints);
+                                currMarker.setAnchor(0.5f, 0);
+                                mapUpdate.isMapMoved = false;
+                                mapUpdate.isMapIdle = true;
+                                animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, zoomLevel, ZoomType.ZOOM);
                             }
-                            polyline.remove();
-                            polylineDataPoints.setPolyline(null);
-                            polylineDataPoints.setOverlayPolylines(null);
-                            setPolyLineDataByMapInstance(pureScriptID,polylineKey,polylineDataPoints);
-                            currMarker.setAnchor(0.5f, 0);
-                            mapUpdate.isMapMoved = false;
-                            mapUpdate.isMapIdle = true;
-                            animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, zoomLevel, ZoomType.ZOOM);
                         } else {
                                 double destinationLat = path.get(0).latitude;
                                 double destinationLon = path.get(0).longitude;

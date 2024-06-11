@@ -1205,7 +1205,7 @@ homeScreenFlow = do
             push <- lift $ lift $ liftFlow $ getPushFn Nothing "HomeScreen"
             let callback = runFn2 EHC.getMarkerCallback push MarkerLabelOnClick 
                 sourceMarkerConfig = JB.defaultMarkerConfig{ markerId = srcMarker, pointerIcon = srcMarker, shortTitle = (runFn3 splitString sourceAddress "," 2), primaryText = sourceAddress, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = defaultMarkerImageConfig{image = sourceSpecialTagIcon}, position{ lat = points.source.lat, lng = points.source.lng }, labelActionImage = defaultMarkerImageConfig{image = "ny_ic_chevron_right_black_2", height = markerArrowSize, width = markerArrowSize}, markerCallback = callback, labelMaxWidth = estimateLabelMaxWidth, labelMaxLines = 2, labelTextSize = 11}
-                destMarkerConfig = JB.defaultMarkerConfig{ markerId = destMarker, pointerIcon = destMarker, shortTitle = (runFn3 splitString points.destination.place "," 2), primaryText = points.destination.place, labelImage = defaultMarkerImageConfig{image = destSpecialTagIcon}, position{ lat = points.destination.lat, lng = points.destination.lng }, labelActionImage = defaultMarkerImageConfig{image = "ny_ic_chevron_right_black_2", height = markerArrowSize, width = markerArrowSize}, markerCallback = callback, labelMaxWidth = estimateLabelMaxWidth, labelMaxLines = 2, labelTextSize = 11}
+                destMarkerConfig = JB.defaultMarkerConfig{ markerId = destMarker, pointerIcon = destMarker, shortTitle = (runFn3 splitString points.destination.place "," 2), primaryText = points.destination.place, labelImage = defaultMarkerImageConfig{image = destSpecialTagIcon}, position{ lat = points.destination.lat, lng = points.destination.lng }, labelActionImage = defaultMarkerImageConfig{image = "ny_ic_chevron_right_black_2", height = markerArrowSize, width = markerArrowSize}, markerCallback = callback, labelMaxWidth = estimateLabelMaxWidth, labelMaxLines = 2, labelTextSize = 11, anchorV = 1.0}
             lift $ lift $ liftFlow $ updateMarker sourceMarkerConfig
             lift $ lift $ liftFlow $ updateMarker destMarkerConfig
           Nothing -> pure unit
@@ -2223,7 +2223,7 @@ findEstimates updatedState = do
 
     srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker, shortTitle = (runFn3 splitString sourceAddress "," 2), primaryText = sourceAddress, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = defaultMarkerImageConfig{image = zoneLabelIcon state.props.zoneType.sourceTag}, labelActionImage = defaultMarkerImageConfig{image = "ny_ic_chevron_right_black_2", height = markerArrowSize, width = markerArrowSize}, labelMaxWidth = estimateLabelMaxWidth, markerCallback = callback, labelMaxLines = 2, labelTextSize = 11}
     
-    destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, shortTitle = (runFn3 splitString state.data.destination "," 2), primaryText = state.data.destination, labelImage = defaultMarkerImageConfig{image = zoneLabelIcon state.props.zoneType.destinationTag}, labelActionImage = defaultMarkerImageConfig{image = "ny_ic_chevron_right_black_2", height = markerArrowSize, width = markerArrowSize}, labelMaxWidth = estimateLabelMaxWidth, markerCallback = callback, labelMaxLines = 2, labelTextSize = 11}
+    destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, shortTitle = (runFn3 splitString state.data.destination "," 2), primaryText = state.data.destination, labelImage = defaultMarkerImageConfig{image = zoneLabelIcon state.props.zoneType.destinationTag}, labelActionImage = defaultMarkerImageConfig{image = "ny_ic_chevron_right_black_2", height = markerArrowSize, width = markerArrowSize}, labelMaxWidth = estimateLabelMaxWidth, markerCallback = callback, labelMaxLines = 2, labelTextSize = 11,  anchorV = 1.0}
   void $ pure
     $ setCleverTapUserProp
         [ { key: "Latest Search From", value: unsafeToForeign ("lat: " <> (show updatedState.props.sourceLat) <> " long: " <> (show updatedState.props.sourceLong)) }
@@ -2445,7 +2445,7 @@ editDestinationFlow = do
       markers = normalRoute ""
       srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
       destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = primaryText }
-      routeConfig = JB.mkRouteConfig (Remote.walkCoordinate srcLat srcLon dstLat dstLon) srcMarkerConfig destMarkerConfig "NORMAL_ROUTE" "DOT" false JB.DEFAULT (JB.mapRouteConfig{vehicleSizeTagIcon = HU.getVehicleSize unit, polylineAnimationConfig = getPolylineAnimationConfig})
+      routeConfig = JB.mkRouteConfig (Remote.walkCoordinate srcLat srcLon dstLat dstLon) srcMarkerConfig destMarkerConfig Nothing "NORMAL_ROUTE" "DOT" false JB.DEFAULT (JB.mapRouteConfig{vehicleSizeTagIcon = HU.getVehicleSize unit, polylineAnimationConfig = getPolylineAnimationConfig})
   liftFlowBT $ drawRoute [routeConfig] (getNewIDWithTag "CustomerHomeScreenEditDest")
   resp <- lift $ lift $ HelpersAPI.callApi $ Remote.makeEditLocationRequest homeScreenState.data.driverInfoCardState.rideId homeScreenState.props.destinationLat homeScreenState.props.destinationLong homeScreenState.data.destinationAddress
   case resp of
