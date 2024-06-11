@@ -55,7 +55,7 @@ primaryButtonConfig state = let
     imageUploadCondition = state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL
     rcMatch = caseInsensitiveCompare state.data.vehicle_registration_number state.data.reEnterVehicleRegistrationNumber
     activate = (( rcMatch || (not state.data.cityConfig.uploadRCandDL)) && 
-                -- (state.data.dateOfRegistration /= Just "") && 
+                 (state.props.isvariant /= "") && 
                 state.data.vehicle_registration_number /= "" &&
                 ((DS.length state.data.vehicle_registration_number >= 2) && ((DS.take 2 state.data.vehicle_registration_number) `DA.elem` rcNumberPrefixList)))
     -- validateWithRCPrefixlist regNum =
@@ -214,19 +214,15 @@ ambulanceModalConfig :: ST.AddVehicleDetailsScreenState -> RequestInfoCard.Confi
 ambulanceModalConfig state =
   RequestInfoCard.config
     { title
-      { text = "Ambulance Facilities"
+      { text = getString A_F
       }
     , primaryText
-      { text = "Select what facilities your Ambulance have to get rides based on that."
-      , padding = Padding 16 16 0 0
-      }
-    , secondaryText
-      { text = "Note: Ventilator includes AC and Oxygen"
+      { text = getString SELECT_FACILITIES
       , padding = Padding 16 16 0 0
       }
     , subTitle
       { 
-        text = "Terms and Conditions"
+        text = getString T_C
        , visibility = VISIBLE
       , padding = Padding 16 5 0 0
       }
@@ -237,7 +233,7 @@ ambulanceModalConfig state =
       , padding = Padding 0 4 1 0
       , visibility = VISIBLE
       }
-    , bulletPoints = ["At all times, ambulances must have a stretcher and a first-aid kit available." , "The driver acknowledges and assumes full responsibility for selecting and ensuring fully operational facilities as per the chosen Booking Preference.","Drivers can change the variant/facilities to align with their Booking Preference and the status of the facilities.","Ambulance providers must make their ambulances available for random Health Department inspections at any time. Any discrepancies found during inspections will result in immediate legal action."]
+    , bulletPoints = [getString FIRST_AID_KIT , getString DRIVER_ACKNOWLEDGE,getString BOOKING_PREFERENCE,getString INSPECTION]
     , buttonConfig
       { text = getString GOT_IT
       , padding = PaddingVertical 16 20
