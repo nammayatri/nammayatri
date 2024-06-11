@@ -42,6 +42,9 @@ import Data.Eq.Generic (genericEq)
 import Data.Maybe
 import PaymentPage (PaymentPagePayload(..))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import Data.Lens ((^.))
+import Accessor (_amount)
+
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorPayload
 
@@ -701,7 +704,12 @@ newtype RentalQuoteAPIDetails = RentalQuoteAPIDetails {
   plannedPerKmRate :: Maybe Int ,
   nightShiftCharge :: Maybe Int ,
   tollCharges :: Maybe Number ,
-  deadKmFare :: Maybe Number
+  deadKmFare :: Maybe DeadKmFare
+}
+
+newtype DeadKmFare = DeadKmFare {
+  amount :: Int,
+  currency :: String
 }
 
 newtype SpecialZoneQuoteAPIDetails = SpecialZoneQuoteAPIDetails {
@@ -960,6 +968,15 @@ instance standardEncodeConfirmRequest :: StandardEncode ConfirmRequest where sta
 instance showConfirmRequest :: Show ConfirmRequest where show = genericShow
 instance decodeConfirmRequest :: Decode ConfirmRequest where decode = defaultDecode
 instance encodeConfirmRequest  :: Encode ConfirmRequest where encode = defaultEncode
+
+
+derive instance genericDeadKmFare :: Generic DeadKmFare _
+derive instance newtypeDeadKmFare :: Newtype DeadKmFare _
+instance standardEncodeDeadKmFare :: StandardEncode DeadKmFare where standardEncode (DeadKmFare body) = standardEncode body
+instance showDeadKmFare :: Show DeadKmFare where show = genericShow
+instance decodeDeadKmFare :: Decode DeadKmFare where decode = defaultDecode
+instance encodeDeadKmFare  :: Encode DeadKmFare where encode = defaultEncode
+
 
 ------- rideBooking/{bookingId}
 
