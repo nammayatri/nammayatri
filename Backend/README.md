@@ -87,6 +87,7 @@ For much shorter compile times and quicker feedback cycles while developing, you
 
 This is now easily & quickly achieved by simply un-commenting the flags under ["DEVELOPMENT FLAGS" section in cabal.project file](cabal.project) when developing.
 
+Additionaly, set the stack size limit to a higher value to avoid linker phase failures (```ulimit -s 9999```)
 
 #### Parallel Jobs
 To speed up the compilation times, we use 6 parallel jobs by default. If you have a powerful computer with lots of cores and memory, you can increment the `jobs` setting in [cabal.project](cabal.project) file to run more parallel jobs for faster results. Inversely, if its a low-powered machine, you may consider lowering that number.
