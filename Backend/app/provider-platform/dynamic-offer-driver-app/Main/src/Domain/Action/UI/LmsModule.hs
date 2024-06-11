@@ -28,6 +28,7 @@ import qualified Domain.Types.ReelsData as DTRD
 import qualified Domain.Types.Vehicle
 import qualified Environment
 import EulerHS.Prelude hiding (id, length)
+import Kernel.Beam.Functions
 import Kernel.External.Types (Language (..))
 import qualified Kernel.External.Types
 import Kernel.Prelude hiding (all, elem, find, foldl', map, notElem, null, whenJust)
@@ -38,6 +39,7 @@ import Servant hiding (throwError)
 import qualified Storage.CachedQueries.Lms as SCQL
 import Storage.CachedQueries.Merchant.MerchantOperatingCity as SCQMM
 import qualified Storage.Queries.DriverModuleCompletion as SQDMC
+import qualified Storage.Queries.DriverStats as QDriverStats
 import Storage.Queries.LmsVideoTranslation as SQLVT
 import Storage.Queries.ModuleCompletionInformation as SQMCI
 import qualified Storage.Queries.Person as QPerson
@@ -212,7 +214,7 @@ postLmsMarkVideoAsCompleted (mbPersonId, merchantId, merchantOpCityId) req = mar
 markVideoByStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> API.Types.UI.LmsModule.VideoUpdateAPIReq -> DTMCI.EntityStatus -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 markVideoByStatus (mbPersonId, merchantId, merchantOpCityId) req status = do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
-  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
   moduleInfo <- fromMaybeM (LmsModuleNotFound req.moduleId.getId) . find ((== req.moduleId) . (.id)) =<< SCQL.getAllModules Nothing Nothing merchantOpCityId
   videos <- SCQL.getAllVideos req.moduleId [ACTIVE]
   unless (req.videoId `elem` ((.id) <$> videos)) $ do throwError (LmsVideoNotFound req.videoId.getId req.moduleId.getId)
@@ -235,7 +237,7 @@ markVideoByStatus (mbPersonId, merchantId, merchantOpCityId) req status = do
     DTMCI.ENTITY_ONGOING -> SQLVT.updateViewCount (currentVideo.viewCount + 1) currentVideo.videoId currentVideo.language
     DTMCI.ENTITY_PASSED -> do
       void $ SQLVT.updateCompletedWatchCount (currentVideo.completedWatchCount + 1) currentVideo.videoId currentVideo.language
-      updateModuleInformationIfVideosCompletedCriteriaIsPassed moduleInfo driverModuleCompletion driver videos
+      updateModuleInformationIfVideosCompletedCriteriaIsPassed moduleInfo driverModuleCompletion driverStats videos
     _ -> pure ()
 
   pure Kernel.Types.APISuccess.Success
@@ -270,6 +272,7 @@ postLmsQuestionConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types
 postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driverStats <- runInReplica $ QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
   moduleInfo <- fromMaybeM (LmsModuleNotFound req.moduleId.getId) . find ((== req.moduleId) . (.id)) =<< SCQL.getAllModules Nothing Nothing merchantOpCityId
   questions <- SCQL.getAllQuestions req.moduleId
   unless (req.questionId `elem` ((.questionId) <$> questions)) $ do throwError (LmsQuestionNotFoundForModule req.questionId.getId req.moduleId.getId)
@@ -301,7 +304,7 @@ postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
               Just attempt -> when (attempt.entityStatus /= DTMCI.ENTITY_PASSED) $ do (createModuleCompletionInformation driverModuleCompletion.completionId (attempt.attempt + 1) isCorrect selectedOptions) >>= SQMCI.create
           )
         . listToMaybe
-  void $ updateModuleInformationIfQuizCompletedCriteriaIsPassed driverModuleCompletion driver moduleInfo questions
+  void $ updateModuleInformationIfQuizCompletedCriteriaIsPassed driverModuleCompletion driverStats moduleInfo questions
   -- todo :: in future if rewards are there for each question watched then add the rewards && bonus
   return $
     API.Types.UI.LmsModule.QuestionConfirmRes
@@ -322,7 +325,7 @@ postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
             createdAt = now,
             updatedAt = now
           }
-    updateModuleInformationIfQuizCompletedCriteriaIsPassed dmc driver moduleInfo questions = do
+    updateModuleInformationIfQuizCompletedCriteriaIsPassed dmc driverStats moduleInfo questions = do
       when (dmc.status /= DTDMC.MODULE_COMPLETED) $ do
         completedQuestions <- SQMCI.findAllByCompletionIdAndEntityAndStatus DTMCI.QUIZ DTMCI.ENTITY_PASSED dmc.completionId
         let completedQuestionIds = completedQuestions <&> (.entityId)
@@ -330,7 +333,7 @@ postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
         case moduleInfo.moduleCompletionCriteria of
           LmsModule.VIDEOS_AND_QUIZ noOfQuestion -> when (noOfQuestion <= totalCorrectCompleted) $ do
             now <- getCurrentTime
-            SQDMC.updatedCompletedAt (Just now) (dmc.entitiesCompleted <> [DTDMC.QUIZ]) DTDMC.MODULE_COMPLETED driver.rating dmc.completionId
+            SQDMC.updatedCompletedAt (Just now) (dmc.entitiesCompleted <> [DTDMC.QUIZ]) DTDMC.MODULE_COMPLETED driverStats.rating dmc.completionId
           _ -> return ()
 
 buildDriverModuleCompletion :: (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Environment.Flow DTDMC.DriverModuleCompletion

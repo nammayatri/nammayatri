@@ -52,7 +52,7 @@ getFavouriteDrivers merchantId apiKey GetFavouriteDriverInfoReq {..} = do
       let driverName = person.firstName
           id = person.id.getId
           favCount = personStat.favRiderCount
-          driverRating = person.rating
+          driverRating = personStat.rating
       driverPhone <- mapM decrypt person.mobileNumber
       pure $ FavouriteDriverResp {..}
 

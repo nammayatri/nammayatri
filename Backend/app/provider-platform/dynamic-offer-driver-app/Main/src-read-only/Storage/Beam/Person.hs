@@ -14,7 +14,6 @@ import qualified Kernel.External.Types
 import qualified Kernel.External.Whatsapp.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Common
 import qualified Kernel.Types.Version
 import Tools.Beam.UtilsTH
 
@@ -52,7 +51,6 @@ data PersonT f = PersonT
     mobileNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     onboardedFromDashboard :: B.C f Kernel.Prelude.Bool,
     passwordHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
-    rating :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     registrationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     registrationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     role :: B.C f Domain.Types.Person.Role,

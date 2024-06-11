@@ -358,7 +358,6 @@ updatePersonRec (Id personId) person = do
       Se.Set BeamP.hometown $ person.hometown,
       Se.Set BeamP.languagesSpoken $ person.languagesSpoken,
       Se.Set BeamP.identifier $ person.identifier,
-      Se.Set BeamP.rating $ person.rating,
       Se.Set BeamP.language $ person.language,
       Se.Set BeamP.deviceToken $ person.deviceToken,
       Se.Set BeamP.merchantId $ getId person.merchantId,
@@ -464,15 +463,6 @@ updateMobileNumberAndCode person = do
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq $ getId person.id)]
-
-updateAverageRating :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Centesimal -> m ()
-updateAverageRating (Id personId) newAverageRating = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamP.rating (Just newAverageRating),
-      Se.Set BeamP.updatedAt now
-    ]
-    [Se.Is BeamP.id (Se.Eq personId)]
 
 updatePersonDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Person -> m ()
 updatePersonDetails person = do

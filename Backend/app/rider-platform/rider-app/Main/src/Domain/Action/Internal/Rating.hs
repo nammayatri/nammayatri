@@ -91,14 +91,9 @@ calculateAverageRating personId minimumDriverRatesCount ratingValue totalRatings
   let newTotalRatingScore = totalRatingScore + ratingValue
   when (totalRatings == 0) $
     logTagInfo "PersonAPI" "No rating found to calculate"
-  if totalRatings >= minimumDriverRatesCount
-    then do
-      let isValidRating = True
-      logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
-      void $ QP.updateAverageRating newRatingsCount newTotalRatingScore isValidRating personId
-    else do
-      let isValidRating = False
-      void $ QP.updateAverageRating newRatingsCount newTotalRatingScore isValidRating personId
+  let isValidRating = newRatingsCount >= minimumDriverRatesCount
+  logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
+  void $ QP.updateAverageRating newRatingsCount newTotalRatingScore isValidRating personId
 
 buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> Maybe Bool -> m DRating.Rating
 buildRating rideId riderId ratingValue feedbackDetails wasOfferedAssistance = do

@@ -48,8 +48,9 @@ FROM
 WHERE
     vehicle_category = 'CAR' AND merchant_id = (select merchant_id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Siliguri');
 
-update atlas_driver_offer_bpp.document_verification_config set supported_vehicle_classes_json =
-    json_build_array('MCWG', 'MCWOG') where document_type = 'DriverLicense' and vehicle_category = 'MOTORCYCLE';
+UPDATE atlas_driver_offer_bpp.document_verification_config
+SET supported_vehicle_classes_json = json_build_array('MCWG', 'MCWOG')
+WHERE document_type = 'DriverLicense' AND vehicle_category = 'MOTORCYCLE';
 
 update atlas_driver_offer_bpp.document_verification_config set supported_vehicle_classes_json =
     json_build_array(json_build_object('vehicleClass', '2WN', 'vehicleVariant', 'BIKE'),

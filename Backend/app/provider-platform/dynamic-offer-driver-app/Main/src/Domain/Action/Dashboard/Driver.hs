@@ -176,6 +176,7 @@ import qualified Storage.Queries.DriverPanCard as DPC
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import Storage.Queries.FleetRCAssociationExtra as FRAE
@@ -731,6 +732,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
     Nothing -> pure []
   merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
+  driverStats <- runInReplica $ QDriverStats.findById person.id >>= fromMaybeM DriverInfoNotFound
   selectedServiceTiers <-
     maybe
       (pure [])
@@ -772,7 +774,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         selectedServiceTiers,
         driverLicenseDetails,
         vehicleRegistrationDetails,
-        rating = person.rating,
+        rating = driverStats.rating,
         alternateNumber = person.unencryptedAlternateMobileNumber,
         availableMerchants = availableMerchants,
         merchantOperatingCity = merchantOperatingCity <&> (.city),
@@ -895,6 +897,7 @@ addVehicle merchantShortId opCity reqDriverId req = do
   driver <-
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
 
   -- merchant access checking
   let merchantId = driver.merchantId
@@ -934,7 +937,7 @@ addVehicle merchantShortId opCity reqDriverId req = do
       fork "Parallely verifying RC for add Vehicle: " $ runVerifyRCFlow personId merchant merchantOpCityId opCity req False -- run RC verification details
       cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
       driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-      let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now
+      let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver driverStats merchant.id req.registrationNo newRC merchantOpCityId now
       QVehicle.create vehicle
       when (vehicle.variant == DVeh.SUV) $
         QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
@@ -2185,8 +2188,9 @@ updateVehicleVariantAndServiceTier :: DVeh.Variant -> DVeh.Vehicle -> Flow ()
 updateVehicleVariantAndServiceTier variant vehicle = do
   driver <- B.runInReplica $ QPerson.findById vehicle.driverId >>= fromMaybeM (PersonDoesNotExist vehicle.driverId.getId)
   driverInfo' <- QDriverInfo.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
+  driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
   vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId
-  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction True driver driverInfo' vehicle vehicleServiceTiers
+  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction True driverStats driverInfo' vehicle vehicleServiceTiers
   QVehicle.updateVariantAndServiceTiers variant availableServiceTiersForDriver vehicle.driverId
 
 updateDriverTag :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateDriverTagReq -> Flow APISuccess

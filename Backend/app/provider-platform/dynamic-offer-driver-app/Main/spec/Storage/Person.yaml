@@ -49,7 +49,6 @@ Person:
     mobileCountryCode : Maybe Text
     passwordHash : Maybe DbHash
     identifier : Maybe Text
-    rating : Maybe Centesimal
     isNew : Bool
     onboardedFromDashboard : Bool
     merchantId : Id Merchant
@@ -149,7 +148,6 @@ Person:
     merchantId: character varying (255)
     deviceToken: character varying (255)
     description: character varying (255)
-    rating: double precision
     language: character varying (255)
     unEncryptedMobileNumber: character varying (255)
     whatsappNotificationEnrollStatus: character varying (255)
@@ -233,3 +231,4 @@ Person:
     - EXTRA_QUERY_FILE
 
   excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
+
