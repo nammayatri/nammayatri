@@ -55,9 +55,9 @@ primaryButtonConfig state = let
     imageUploadCondition = state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL
     rcMatch = caseInsensitiveCompare state.data.vehicle_registration_number state.data.reEnterVehicleRegistrationNumber
     activate = (( rcMatch || (not state.data.cityConfig.uploadRCandDL)) && 
-                 (state.props.isvariant /= "") && 
-                state.data.vehicle_registration_number /= "" &&
-                ((DS.length state.data.vehicle_registration_number >= 2) && ((DS.take 2 state.data.vehicle_registration_number) `DA.elem` rcNumberPrefixList)))
+             (state.data.vehicleCategory /= Just ST.AmbulanceCategory || state.props.isvariant /= "") && 
+            state.data.vehicle_registration_number /= "" &&
+            ((DS.length state.data.vehicle_registration_number >= 2) && ((DS.take 2 state.data.vehicle_registration_number) `DA.elem` rcNumberPrefixList)))
     -- validateWithRCPrefixlist regNum =
     --       let vehicleConfig = (getAppConfig appConfig).vehicle
     --           rcValues = DS.split (DS.Pattern "|") $ vehicleConfig.validationPrefix
@@ -252,7 +252,7 @@ agreeTermsModalConfig state = let
       dismissPopup = true,
       backgroundClickable = true,
      primaryText {
-         text = "By proceeding, you accept full responsibility for ambulance facilities and agree to random Health Department inspections, with legal action for any discrepancies."
+         text = getString BY_PROCEEDING_YOU_ACCEPT_FULL_RESPONSIBILITY
         , margin = Margin 16 0 16 0
         , visibility = VISIBLE
         , gravity = CENTER
@@ -261,7 +261,7 @@ agreeTermsModalConfig state = let
         visibility = GONE
       },
       option1 {
-        text = "Agree & Continue"
+        text = getString A_C
       , color = Color.yellow900
       , strokeColor = Color.white900
       , padding = Padding 15 10 15 10
@@ -272,7 +272,7 @@ agreeTermsModalConfig state = let
       , gravity = CENTER
       },
       option2 {
-        text = "Cancel"
+        text = getString CANCEL
       , color = Color.black900
       , strokeColor = Color.white900
       , padding = Padding 15 10 15 10
