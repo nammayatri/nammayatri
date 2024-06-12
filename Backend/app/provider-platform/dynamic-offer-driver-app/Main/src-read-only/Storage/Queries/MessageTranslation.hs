@@ -23,7 +23,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MessageTranslation.MessageTranslation] -> m ())
 createMany = traverse_ create
 
-findByMessageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Message.Message -> m ([Domain.Types.MessageTranslation.MessageTranslation]))
+findByMessageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Message.Message -> m [Domain.Types.MessageTranslation.MessageTranslation])
 findByMessageId (Kernel.Types.Id.Id messageId) = do findAllWithKV [Se.Is Beam.messageId $ Se.Eq messageId]
 
 findByMessageIdAndLanguage ::

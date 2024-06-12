@@ -12,20 +12,20 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data SearchReqLocationT f = SearchReqLocationT
-  { area :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    areaCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    building :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    city :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    country :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    door :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    full_address :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    lat :: (B.C f Kernel.Prelude.Double),
-    lon :: (B.C f Kernel.Prelude.Double),
-    state :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    street :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { area :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    areaCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    building :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    city :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    country :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    door :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    full_address :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    lat :: B.C f Kernel.Prelude.Double,
+    lon :: B.C f Kernel.Prelude.Double,
+    state :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    street :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -35,6 +35,6 @@ instance B.Table SearchReqLocationT where
 
 type SearchReqLocation = SearchReqLocationT Identity
 
-$(enableKVPG (''SearchReqLocationT) [('id)] [])
+$(enableKVPG ''SearchReqLocationT ['id] [])
 
-$(mkTableInstances (''SearchReqLocationT) "search_request_location")
+$(mkTableInstances ''SearchReqLocationT "search_request_location")

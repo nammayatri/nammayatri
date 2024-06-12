@@ -27,4 +27,4 @@ data SearchReqLocation = SearchReqLocation
     street :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (ToJSON), (FromJSON), (ToSchema), (Show), (Kernel.Utils.GenericPretty.PrettyShow), (Kernel.External.Maps.HasCoordinates.HasCoordinates))
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show, Kernel.Utils.GenericPretty.PrettyShow, Kernel.External.Maps.HasCoordinates.HasCoordinates)

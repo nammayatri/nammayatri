@@ -37,7 +37,7 @@ findByRiderIdAndDriverId riderDetailId driverId = do
 
 findFavDriversForRider ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> Kernel.Prelude.Bool -> m ([Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation]))
+  (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> Kernel.Prelude.Bool -> m [Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation])
 findFavDriversForRider riderDetailId favourite = do findAllWithKV [Se.And [Se.Is Beam.riderDetailId $ Se.Eq (Kernel.Types.Id.getId riderDetailId), Se.Is Beam.favourite $ Se.Eq favourite]]
 
 updateFavouriteDriverForRider ::
@@ -72,8 +72,8 @@ updateByPrimaryKey (Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation {
       Se.Set Beam.favourite favourite,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.mobileNumberEncrypted (((mobileNumber & unEncrypted . encrypted))),
-      Se.Set Beam.mobileNumberHash ((mobileNumber & hash)),
+      Se.Set Beam.mobileNumberEncrypted (mobileNumber & unEncrypted . encrypted),
+      Se.Set Beam.mobileNumberHash (mobileNumber & hash),
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.riderDetailId $ Se.Eq (Kernel.Types.Id.getId riderDetailId)]]

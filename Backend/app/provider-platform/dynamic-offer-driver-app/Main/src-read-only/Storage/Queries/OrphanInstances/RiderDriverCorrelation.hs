@@ -35,8 +35,8 @@ instance ToTType' Beam.RiderDriverCorrelation Domain.Types.RiderDriverCorrelatio
         Beam.favourite = favourite,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.mobileNumberEncrypted = ((mobileNumber & unEncrypted . encrypted)),
-        Beam.mobileNumberHash = (mobileNumber & hash),
+        Beam.mobileNumberEncrypted = mobileNumber & unEncrypted . encrypted,
+        Beam.mobileNumberHash = mobileNumber & hash,
         Beam.riderDetailId = Kernel.Types.Id.getId riderDetailId,
         Beam.updatedAt = updatedAt
       }
