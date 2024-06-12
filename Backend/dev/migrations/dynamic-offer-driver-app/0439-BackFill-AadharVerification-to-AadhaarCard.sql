@@ -45,4 +45,4 @@ FROM atlas_driver_offer_bpp.aadhaar_verification
   CROSS JOIN
     (SELECT merchant_id, id
      FROM atlas_driver_offer_bpp.merchant_operating_city
-     WHERE merchant_id = 'YATRI_SAATHI_PARTNER' AND city = 'Kolkata') moc;
+     WHERE merchant_short_id = 'JATRI_SAATHI_PARTNER' AND city = 'Kolkata') moc;

@@ -161,5 +161,5 @@ WHERE
 
 --------------------------------- For Local Only -----------------------
 
-UPDATE atlas_driver_offer_bpp.document_verification_config SET dependency_document_type = '{ProfilePhoto}' WHERE document_type = 'AadhaarCard' AND vehicle_category = 'CAR';
-UPDATE atlas_driver_offer_bpp.document_verification_config SET dependency_document_type = '{ProfilePhoto}' WHERE document_type = 'PanCard' AND vehicle_category = 'CAR';
+UPDATE atlas_driver_offer_bpp.document_verification_config SET dependency_document_type = '{ProfilePhoto}', is_mandatory = true WHERE document_type = 'AadhaarCard' AND vehicle_category = 'CAR' AND merchant_operating_city_id like '%1e7b7%';
+UPDATE atlas_driver_offer_bpp.document_verification_config SET dependency_document_type = '{ProfilePhoto}', is_mandatory = true WHERE document_type = 'PanCard' AND vehicle_category = 'CAR' AND merchant_operating_city_id like '%1e7b7%';
