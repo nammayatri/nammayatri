@@ -31,6 +31,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.RateCardScreen.Controller (Action(..), eval, ScreenOutput)
 import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Mobility.Prelude (boolToVisibility)
+import Data.Number.Format (fixed, toStringWith)
 import Engineering.Helpers.Commons as EHC
 import Components.RateCard as RateCard
 import Screens.Types as ST
@@ -173,7 +174,7 @@ serviceTierItem push state service index =
     [ linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , padding $ Padding 12 4 12 4
+        , padding $ Padding 12 2 12 2
         , margin $ MarginVertical 5 5
         , orientation HORIZONTAL
         , stroke $ "1," <> Color.grey900
@@ -187,56 +188,97 @@ serviceTierItem push state service index =
             , height $ V 48
             ]
         , linearLayout
-        [ weight 1.0
-        , height WRAP_CONTENT
-        , orientation VERTICAL
-        ][ linearLayout
-           [ width MATCH_PARENT
-           , height WRAP_CONTENT
-           , gravity CENTER_VERTICAL
-           , onClick push $ const $ ShowRateCard index
-           ][ textView $
-              [ height WRAP_CONTENT
-              , text service.name
-              , margin $ MarginHorizontal 12 2
-              , color Color.black800
-              , singleLine true
-              ] <> FontStyle.body25 CT.TypoGraphy
-            , imageView
-              [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_grey"
-              , width $ V 12
-              , height $ V 12
-              , visibility $ boolToVisibility $ isJust service.rateCardData
-              ]
-           ]
-        ]
-        , linearLayout
-            [ width WRAP_CONTENT
+          [ weight 1.0
+          , height WRAP_CONTENT
+          , orientation VERTICAL
+          ][ linearLayout
+            [ width MATCH_PARENT
             , height WRAP_CONTENT
-            , padding $ PaddingVertical 12 12
-            , orientation VERTICAL
-            , gravity RIGHT
-            , visibility $ boolToVisibility $ isJust service.perKmRate
-            ] [ textView $
-               [ height WRAP_CONTENT
-               , text primaryText
-               , color primaryTextColor
-               ] <> FontStyle.h2 CT.TypoGraphy
-            , textView $
-               [ height WRAP_CONTENT
-               , text secondaryText
-               , color secondaryTextColor
-               ]  <> FontStyle.body3 CT.TypoGraphy
+            , gravity CENTER_VERTICAL
+            , onClick push $ const $ ShowRateCard index
+            ][ textView $
+                [ height WRAP_CONTENT
+                , text service.name
+                , margin $ MarginHorizontal 12 2
+                , color Color.black800
+                , singleLine true
+                ] <> FontStyle.body25 CT.TypoGraphy
+              , imageView
+                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_grey"
+                , width $ V 12
+                , height $ V 12
+                , visibility $ boolToVisibility $ isJust service.rateCardData
+                ]
             ]
+          ]
+        , relativeLayout
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , padding $ PaddingVertical 12 12
+          , orientation VERTICAL
+          , gravity RIGHT
+          ][  PrestoAnim.animationSet [ Anim.fadeIn $ not state.props.sliderLoading ] $
+              linearLayout
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , orientation VERTICAL
+              , gravity RIGHT
+              ] [ textView $
+                  [ height WRAP_CONTENT
+                  , text primaryText
+                  , color primaryTextColor
+                  ] <> FontStyle.h2 CT.TypoGraphy
+              , textView $
+                [ height WRAP_CONTENT
+                , text secondaryText
+                , color secondaryTextColor
+                , margin $ MarginTop 3
+                ]  <> FontStyle.body3 CT.TypoGraphy
+              ]
+            , linearLayout
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , orientation VERTICAL
+              , gravity RIGHT
+              , background Color.white900
+              , visibility $ boolToVisibility $ state.props.sliderLoading
+              ] [ shimmerFrameLayout
+                    [ height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , cornerRadius 8.0
+                    , background Color.grey900
+                    , padding $ PaddingHorizontal 5 5
+                    ][  textView $
+                        [ height WRAP_CONTENT
+                        , width MATCH_PARENT
+                        , text primaryText
+                        , visibility INVISIBLE
+                        ] <> FontStyle.h2 CT.TypoGraphy
+                    ]
+                , shimmerFrameLayout
+                    [ height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , cornerRadius 4.0
+                    , background Color.grey900
+                    , padding $ PaddingHorizontal 5 5
+                    , margin $ MarginTop 3
+                    ][  textView $
+                        [ height WRAP_CONTENT
+                        , width MATCH_PARENT
+                        , text secondaryText
+                        , visibility INVISIBLE
+                        ]  <> FontStyle.body3 CT.TypoGraphy
+                    ]
+              ]
+          ]
         ]
     ]
     where primaryTextColor = if peakTime then Color.green900 else Color.black800
           secondaryTextColor = if peakTime then Color.green900 else Color.black600
           curr = CP.getCurrency CS.appConfig
-          primaryText = curr <> show ((DI.toNumber state.props.sliderVal) * (fromMaybe 0.0 service.perKmRate))
-          secondaryText = curr <> ( show $ fromMaybe 0.0 service.perKmRate) <> "/km"
+          primaryText = curr <> show (DI.round $  (DI.toNumber state.props.sliderVal) * (fromMaybe 0.0 service.perKmRate))
+          secondaryText = curr <> (toStringWith (fixed 2) $ fromMaybe 0.0 service.perKmRate) <> "/km"
           peakTime = service.farePolicyHour == Just API.Peak
-          
 
 peakTimeView :: forall w. (Action -> Effect Unit) -> ST.RateCardScreenState -> PrestoDOM (Effect Unit) w
 peakTimeView push state =
@@ -267,7 +309,7 @@ peakTimeView push state =
             , width MATCH_PARENT
             , gravity CENTER
             ]
-    ]
+          ]
     ] 
   where peakTime = isJust $ DA.find (\item -> item.farePolicyHour == Just API.Peak) state.data.ridePreferences
 
@@ -302,16 +344,11 @@ rateSlider push state =
             , gravity CENTER
             , margin $ MarginHorizontal 10 10
             ]
-            [ textView
-                $ [ text "-"
-                  , color Color.blue800
-                  , background Color.white900
+            [ imageView
+                $ [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_minus_dec"
                   , width $ V 32
                   , height $ V 32
-                  , padding $ PaddingBottom 6
-                  , gravity CENTER
                   , stroke $ "1," <> Color.grey900
-                  , textSize FontSize.a_24
                   , onClick push $ const $ ChangeSlider false
                   , cornerRadius 24.0
                   , alpha decButtonAlpha
@@ -323,16 +360,11 @@ rateSlider push state =
                   , weight 1.0
                   ]
                 <> FontStyle.priceFont CT.TypoGraphy
-            , textView
-                $ [ text "+"
-                  , color Color.blue800
-                  , background Color.white900
+            , imageView
+                $ [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_plus_inc"
                   , width $ V 32
                   , height $ V 32
-                  , padding $ PaddingBottom 6
-                  , gravity CENTER
                   , stroke $ "1," <> Color.grey900
-                  , textSize FontSize.a_24
                   , onClick push $ const $ ChangeSlider true
                   , cornerRadius 24.0
                   , alpha incButtonAlpha
@@ -348,21 +380,13 @@ rateSlider push state =
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , id $ EHC.getNewIDWithTag "RateSlider"
-                , onAnimationEnd 
-                    ( \action -> void $ JB.renderSlider push SliderCallback 
-                        JB.sliderConfig{ 
-                          id= EHC.getNewIDWithTag "RateSlider", 
-                          toolTipId = EHC.getNewIDWithTag "RateSliderTool",
-                          sliderMinValue = state.props.sliderMinValue,
-                          sliderMaxValue = state.props.sliderMaxValue,
-                          sliderDefaultValue = state.props.sliderDefVal,
-                          stepFunctionForCoinConversion = state.props.incrementUnit,
-                          enableToolTip = false,
-                          getCallbackOnProgressChanged = true,
-                          thumbColor = Color.blue800,
-                          bgColor = Color.white900,
-                          bgAlpha = 1000
-                          }) (const AfterRender)
+                , onAnimationEnd ( \action -> void $ JB.renderSlider 
+                    ( \sliderAction -> do
+                        void $ JB.debounceFunction 800 push DebounceCallBack false
+                        void $ push sliderAction
+                        pure unit
+                    )  
+                    SliderCallback sliderConfig ) (const AfterRender)
                 ][]
           , textView
             $ [ text $ getString RATES_CHANGE_AS_THE_DIST
@@ -375,7 +399,8 @@ rateSlider push state =
             , gravity CENTER
             , margin $ MarginTop 4
             , gravity CENTER 
-            , onClick push $ const $ OpenLink "https://www.youtube.com/shorts/NUTNKPzslpw"
+            , onClick push $ const $ OpenLink state.data.cityConfig.rateCardConfig.learnMoreVideoLink
+            , visibility $ boolToVisibility $ state.data.cityConfig.rateCardConfig.showLearnMore
             ][  imageView
                 [ width $ V 32
                 , height $ V 32
@@ -397,6 +422,21 @@ rateSlider push state =
           decButtonAlpha = if decButtonEnabled then 1.0 else 0.4
           incButtonEnabled = state.props.sliderVal < state.props.sliderMaxValue
           decButtonEnabled = state.props.sliderVal > state.props.sliderMinValue
+          sliderConfig = 
+            JB.sliderConfig { 
+              id= EHC.getNewIDWithTag "RateSlider", 
+              toolTipId = EHC.getNewIDWithTag "RateSliderTool",
+              sliderMinValue = state.props.sliderMinValue,
+              sliderMaxValue = state.props.sliderMaxValue,
+              sliderDefaultValue = state.props.sliderDefVal,
+              stepFunctionForCoinConversion = state.props.incrementUnit,
+              enableToolTip = false,
+              getCallbackOnProgressChanged = true,
+              thumbColor = Color.blue800,
+              bgColor = Color.grey900,
+              progressColor = Color.blue800,
+              bgAlpha = 1000
+              }
 
 rateCardView :: forall w. (Action -> Effect Unit) -> ST.RateCardScreenState -> PrestoDOM (Effect Unit) w
 rateCardView push state =

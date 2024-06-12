@@ -1918,7 +1918,9 @@ type BookingOptionsScreenProps = {
   acExplanationPopup :: Boolean,
   fromDeepLink :: Boolean,
   canSwitchToIntercity :: Maybe Boolean,
-  showRateCard :: Boolean
+  showRateCard :: Boolean,
+  rateCardLoaded :: Boolean,
+  peakTime :: Boolean
 }
 
 data LeaderBoardType = Daily | Weekly
@@ -2771,7 +2773,8 @@ type RateCardScreenState = {
 
 type RateCardScreenData = {
   ridePreferences :: Array RidePreference,
-  rateCard :: Common.RateCard
+  rateCard :: Common.RateCard,
+  cityConfig :: CityConfig
 }
 
 type RateCardScreenProps = {
@@ -2780,5 +2783,6 @@ type RateCardScreenProps = {
   sliderDefVal :: Int,
   incrementUnit :: Int,
   sliderMinValue :: Int,
-  sliderMaxValue :: Int
+  sliderMaxValue :: Int,
+  sliderLoading :: Boolean
 }

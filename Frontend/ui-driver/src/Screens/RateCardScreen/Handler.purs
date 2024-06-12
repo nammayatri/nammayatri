@@ -31,4 +31,7 @@ rateCardScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ RateCardScreen.screen state.rateCardScreen
   case action of
+    UpdatePrice updatedState val -> do
+      modifyScreenState $ RateCardScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ RATE_CARD_API updatedState val)
     _ -> App.BackT $ pure App.GoBack

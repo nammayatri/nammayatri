@@ -90,7 +90,7 @@ public class SheetModel {
         this.sourceAddress = sourceAddress;
         this.destinationArea = destinationArea;
         this.destinationAddress = destinationAddress;
-        this.updatedAmount = 0;
+        this.updatedAmount = offeredPrice;
         this.reqExpiryTime = reqExpiryTime;
         this.searchRequestId = searchRequestId;
         this.offeredPrice = offeredPrice;

@@ -16,7 +16,7 @@
 module Services.EndPoints where
 
 import Data.Maybe (Maybe(..))
-import Prelude (show, (<>), (==))
+import Prelude (show, (<>), (==), (*))
 import Services.Config (getBaseUrl)
 
 
@@ -340,9 +340,12 @@ getRideStatusPastDays _ = (getBaseUrl "") <> "/coins/rideStatusPastDays"
 updateAirConditioned :: String -> String
 updateAirConditioned _ = (getBaseUrl "") <> "/driver/updateAirCondition"
 
-getDriverRateCard :: Maybe String -> String
-getDriverRateCard serviceTier = 
-  (getBaseUrl "") <> "/driver/rateCard"
-                  <> case serviceTier of
-                      Just serviceTier' -> "?vehicleServiceTier=" <> serviceTier'
-                      Nothing -> ""
+getDriverRateCard :: Maybe String -> Maybe Int -> String
+getDriverRateCard mbServiceTier mbDist = 
+  (getBaseUrl "")
+    <> "/driver/rateCard"
+    <> case mbServiceTier , mbDist  of
+        Just serviceTier, Just dist -> "?vehicleServiceTier=" <> serviceTier <> "?distance=" <> show dist
+        Just serviceTier, Nothing -> "?vehicleServiceTier=" <> serviceTier
+        Nothing, Just dist -> "?distance=" <> show (dist*1000)
+        _ , _ -> ""

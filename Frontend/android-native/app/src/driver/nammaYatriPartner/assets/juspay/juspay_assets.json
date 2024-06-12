@@ -58,6 +58,7 @@
       "ic_booking_options" : true,
       "ic_call_plus" : true,
       "ic_cancel_prevention" : true,
+      "ic_cancel_prevention_cab" : true,
       "ic_cancel_unfilled" : true,
       "ic_cancelride_metro_drop" : true,
       "ic_cancelride_metro_pickup" : true,
@@ -195,9 +196,9 @@
       "ny_ic_add_unfilled" : true,
       "ny_ic_advanced_booking" : true,
       "ny_ic_alarm_new" : true,
-      "ny_ic_alert_red" : true,
       "ny_ic_alert_hexagon" : true,
       "ny_ic_alert_hexagon_red" : true,
+      "ny_ic_alert_red" : true,
       "ny_ic_alerts_active" : true,
       "ny_ic_alerts_inactive" : true,
       "ny_ic_amazonpay" : true,
@@ -483,6 +484,7 @@
       "ny_ic_message_square" : true,
       "ny_ic_message_unfilled" : true,
       "ny_ic_metro_logo_mini" : true,
+      "ny_ic_minus_dec" : true,
       "ny_ic_money_filled" : true,
       "ny_ic_money_filled_black" : true,
       "ny_ic_money_filled_red" : true,
@@ -503,6 +505,7 @@
       "ny_ic_no_past_rides_auto" : true,
       "ny_ic_no_rides_history" : true,
       "ny_ic_noida_map" : true,
+      "ny_ic_non_ac_white" : true,
       "ny_ic_ny_driver" : true,
       "ny_ic_ny_driver_auto" : true,
       "ny_ic_ny_driver_cab" : true,
@@ -542,6 +545,7 @@
       "ny_ic_play_no_background" : true,
       "ny_ic_play_recorded_audio" : true,
       "ny_ic_plus_circle_blue" : true,
+      "ny_ic_plus_inc" : true,
       "ny_ic_polite_driver_badge" : true,
       "ny_ic_poor_hearing" : true,
       "ny_ic_pop_advanced_ride_feat" : true,
@@ -710,7 +714,6 @@
       "tip_banner_rectangle" : true,
       "up_hand_arrow" : true,
       "widget_close_gradient" : true,
-      "zone_curve" : true,
-      "ic_cancel_prevention_cab": true
+      "zone_curve" : true
    }
 }

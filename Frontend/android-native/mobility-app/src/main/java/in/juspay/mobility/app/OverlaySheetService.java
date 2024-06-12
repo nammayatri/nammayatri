@@ -55,6 +55,7 @@ import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -72,6 +73,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -86,6 +88,8 @@ import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.callbacks.CallBack;
 
 import in.juspay.mobility.app.dataModel.VariantConfig;
+import in.juspay.mobility.common.services.MobilityAPIResponse;
+import in.juspay.mobility.common.services.MobilityCallAPI;
 import in.juspay.mobility.common.services.TLSSocketFactory;
 
 public class OverlaySheetService extends Service implements View.OnTouchListener {
@@ -1010,6 +1014,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         showAcknowledgement(getString(R.string.DRIVER_ASSIGNMENT));
                     } else if (sharedPref.getString(getString(R.string.CLEAR_FARE), "null").equals(id)) {
                         showAcknowledgement(getString(R.string.CLEAR_FARE));
+                    } else {
+                        boolean poolingCondition = remoteConfigs.hasKey("pool_for_ride") && remoteConfigs.getBoolean("pool_for_ride") && (((millisUntilFinished / 1000) % 3) == 0);
+                        if (poolingCondition){
+                            checkDriverRideList();
+                        }
                     }
                 }
 
@@ -1026,6 +1035,38 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             cleanUp();
             e.printStackTrace();
         }
+    }
+
+
+    private void checkDriverRideList() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() ->
+        {
+            SharedPreferences sharedPref = getSharedPreferences(getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String baseUrl = sharedPref.getString("BASE_URL", "null");
+            String orderUrl = baseUrl + "/driver/ride/list?limit=1&offset=0&onlyActive=true";
+            try {
+                MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
+                Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(this);
+                MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(orderUrl, baseHeaders, null, "GET", false);
+                String apiResp = apiResponse.getResponseBody();
+                JSONObject respOb = new JSONObject(apiResp);
+                if (respOb.has("list")){
+                    JSONArray jsonArray = respOb.getJSONArray("list");
+                     int rideListLength = jsonArray.length();
+                     if (rideListLength > 0) {
+                         sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "true").apply();
+                         sharedPref.edit().putString(getResources().getString(R.string.RIDE_STATUS), "null").apply();
+                         showAcknowledgement(getString(R.string.DRIVER_ASSIGNMENT));
+                         RideRequestUtils.openApplication(this);
+                     }
+                }
+                executor.shutdown();
+            } catch (Exception error) {
+                Exception exception = new Exception("Error in updateDriverStatus " + error);
+                FirebaseCrashlytics.getInstance().recordException(exception);
+            }
+        });
     }
 
     private void showAcknowledgement(String ackType) {

@@ -25,6 +25,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (<<<), (<>), (==), (>), not, void, discard, (-), show, (*), (<=), (>=), (/))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, relativeLayout, gravity, height, alpha, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, singleLine, id, frameLayout, scrollBarY, fillViewport, onAnimationEnd, rippleColor, alignParentBottom, progressBar)
+import Engineering.Helpers.Commons (safeMarginBottom, safeMarginTop)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -71,6 +72,7 @@ view push state =
      , width MATCH_PARENT
      , background Color.grey700
      , onBackPressed push $ const BackClick
+     , margin $ Margin 0 safeMarginTop 0 0
      ] $
      [ linearLayout
         [ width MATCH_PARENT
@@ -82,7 +84,7 @@ view push state =
           [ width MATCH_PARENT
           , weight 1.0
           , scrollBarY false
-          , margin $ MarginBottom 70
+          , margin $ MarginBottom 85
           ][ linearLayout
               [ width MATCH_PARENT
               , height MATCH_PARENT

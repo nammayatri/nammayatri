@@ -1679,8 +1679,15 @@ bookingOptionsFlow = do
       bookingOptionsFlow
     GO_TO_PROFILE -> driverProfileFlow
     EXIT_TO_RATE_CARD_SCREEN bopState -> do
-      modifyScreenState $ RateCardScreenStateType $ \_ -> RateCardScreenData.initData{data{ ridePreferences = bopState.data.ridePreferences, rateCard = bopState.data.rateCard}}
-      rateCardScreenFlow
+      response <- lift $ lift $ HelpersAPI.callApi $ API.GetDriverRateCardReq Nothing (Just RC.defaultSliderDist)
+      case response of
+        Right resp -> do
+          let prefs = map (\item ->  HU.setPerKmRate resp item ) bopState.data.ridePreferences
+          modifyScreenState $ RateCardScreenStateType $ \_ -> RateCardScreenData.initData{data{ ridePreferences = prefs, rateCard = bopState.data.rateCard}}
+          rateCardScreenFlow
+        Left errorPayload -> do
+          void $ pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+          bookingOptionsFlow
   where 
     transfromRidePreferences :: Array API.DriverVehicleServiceTier -> Array ST.RidePreference
     transfromRidePreferences = 
@@ -1706,8 +1713,19 @@ bookingOptionsFlow = do
 
 rateCardScreenFlow :: FlowBT String Unit
 rateCardScreenFlow = do
+  config <- getAppConfigFlowBT Constants.appConfig
+  let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  modifyScreenState $ RateCardScreenStateType (\rateCardScreen -> rateCardScreen{data {cityConfig = cityConfig}})
   action <- UI.rateCardScreen
   case action of
+    TA.RATE_CARD_API updatedState dist -> do
+      response <- lift $ lift $ HelpersAPI.callApi $ API.GetDriverRateCardReq Nothing (Just dist)
+      case response of
+        Left _ -> pure unit
+        Right resp -> do
+          let prefs = map (\item ->  HU.setPerKmRate resp item ) updatedState.data.ridePreferences
+          modifyScreenState $ RateCardScreenStateType (\rcsType -> rcsType { props { sliderLoading = false}, data { ridePreferences = prefs}})
+      rateCardScreenFlow
     _ -> rateCardScreenFlow
 
 helpAndSupportFlow :: FlowBT String Unit

@@ -123,5 +123,9 @@ dummyCityConfig = {
                         freeSeconds : 3,
                         perMinCharges : 1.50
                       }
+                    },
+                    rateCardConfig : {
+                      showLearnMore : false,
+                      learnMoreVideoLink : ""
                     }
                   }

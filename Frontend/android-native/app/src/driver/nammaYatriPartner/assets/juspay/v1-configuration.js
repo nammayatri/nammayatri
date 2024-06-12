@@ -214,7 +214,8 @@ window.getMerchantConfig = function () {
           , "driverAppId" : "in.juspay.nammayatripartner"
         },
         "waitingCharges" : 1.50,
-        "waitingChargesConfig" : defWaitingChargesConfig
+        "waitingChargesConfig" : defWaitingChargesConfig,
+        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" }
       },
       {
         "cityName" : "Hyderabad",
@@ -260,7 +261,8 @@ window.getMerchantConfig = function () {
             "freeSeconds" : 180,
             "perMinCharges" : 2.00
           }
-        }
+        },
+        "rateCardConfig" : defRateCardConfig
       },
       {
         "cityName" : "Mysore",
@@ -297,7 +299,8 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" }
       },
       {
         "cityName" : "Delhi",
@@ -343,7 +346,8 @@ window.getMerchantConfig = function () {
           "freeSeconds" : 180,
           "perMinCharges" : 0.75
         }
-      }
+      },
+      "rateCardConfig" : defRateCardConfig
       },
       {
         "cityName" : "Chennai",
@@ -389,7 +393,8 @@ window.getMerchantConfig = function () {
           "freeSeconds" : 180,
           "perMinCharges" : 1.0
         }
-      }
+      },
+      "rateCardConfig" : defRateCardConfig
       },
       {
         "cityName" : "Coimbatore",
@@ -426,7 +431,8 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "rateCardConfig" : defRateCardConfig
       },
       {
         "cityName" : "Pondicherry",
@@ -463,7 +469,8 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "rateCardConfig" : defRateCardConfig
       },
       {
         "cityName" : "Tumakuru",
@@ -500,7 +507,8 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" }
       },
       {
         "cityName" : "Gurugram",
@@ -537,7 +545,8 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "rateCardConfig" : defRateCardConfig
       },
       {
         "cityName" : "Noida",
@@ -574,7 +583,8 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "rateCardConfig" : defRateCardConfig
       },
       {
         "cityName" : "TamilNaduCities",
@@ -611,7 +621,8 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "rateCardConfig" : defRateCardConfig
       },
       {
         "cityName" : "Minneapolis",
@@ -648,7 +659,8 @@ window.getMerchantConfig = function () {
         , "driverAppId" : "in.juspay.nammayatripartner"
       },
       "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "rateCardConfig" : defRateCardConfig
       }
   ]
   , "coinsConfig" : {
@@ -703,4 +715,9 @@ let defWaitingChargesConfig = {
       "freeSeconds" : 180,
       "perMinCharges" : 1.50
     }
+  }
+
+let defRateCardConfig = {
+    "showLearnMore" : false,
+    "learnMoreVideoLink" : ""
   }

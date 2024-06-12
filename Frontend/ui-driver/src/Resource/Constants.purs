@@ -255,4 +255,8 @@ serviceTierMapping :: String -> Maybe Boolean -> String
 serviceTierMapping tierName acRide = 
   case acRide, tierName of
     Just true, "AC Mini" -> "Mini"
+    Just false, "Non-AC Mini" -> "Mini"
     _ , _ -> tierName
+
+defaultSliderDist :: Int
+defaultSliderDist = 4

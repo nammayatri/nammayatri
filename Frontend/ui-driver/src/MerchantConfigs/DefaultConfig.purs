@@ -157,7 +157,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              rateCardConfig : { showLearnMore : true, learnMoreVideoLink : "https://www.youtube.com/shorts/NUTNKPzslpw" }
             },
             {
               cityName : "Hyderabad",
@@ -190,7 +191,8 @@ config =
                 , driverAppId : "in.mobility.manayatripartner"
               },
               waitingCharges : 2.00,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              rateCardConfig : defRateCardConfig
             },
             {
               cityName : "Mysore",
@@ -223,7 +225,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              rateCardConfig : { showLearnMore : true, learnMoreVideoLink : "https://www.youtube.com/shorts/NUTNKPzslpw" }
             },
             {
               cityName : "Delhi",
@@ -256,7 +259,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 0.75,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              rateCardConfig : defRateCardConfig
             },
             {
               cityName : "Chennai",
@@ -289,7 +293,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.00,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              rateCardConfig : defRateCardConfig
             },
             {
               cityName : "Coimbatore",
@@ -322,7 +327,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              rateCardConfig : defRateCardConfig
             },
             {
               cityName : "Puducherry",
@@ -355,7 +361,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              rateCardConfig : defRateCardConfig
             },
             {
               cityName : "Gurugram",
@@ -388,7 +395,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              rateCardConfig : defRateCardConfig
             },
             {             
               cityName : "Noida",
@@ -421,7 +429,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              rateCardConfig : defRateCardConfig
             },
             {
               cityName : "TamilNaduCities",
@@ -454,7 +463,8 @@ config =
                 , driverAppId : "in.juspay.nammayatripartner"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              rateCardConfig : defRateCardConfig
             },
             {
               cityName : "Kolkata",
@@ -491,20 +501,9 @@ config =
                 , driverAppId : "in.juspay.jatrisaathidriver"
               },
               waitingCharges : 1.50,
-              waitingChargesConfig : defWaitingChargesConfig
+              waitingChargesConfig : defWaitingChargesConfig,
+              rateCardConfig : defRateCardConfig
             }
-            --, For future use
-            -- {
-            --   cityName : "Madurai",
-            --   mapImage : "ny_ic_madurai_map",
-            --   cityCode : "std:0452",
-            --   showSubscriptions : false,
-            --   cityLat : 9.93069,
-            --   cityLong : 78.11956,
-            --   supportNumber : "",
-            --   languageKey : "TA_IN",
-            --   enableYatriCoins : false
-            -- }
         ]
   , enableMockLocation : false
   , permissions : {
@@ -635,4 +634,10 @@ defWaitingChargesConfig = {
     freeSeconds : 180,
     perMinCharges : 1.50
   }
+}
+
+defRateCardConfig :: CTC.RateCardConfig
+defRateCardConfig = {
+  showLearnMore : false,
+  learnMoreVideoLink : ""
 }
