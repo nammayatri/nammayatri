@@ -17,3 +17,8 @@ ALTER TABLE atlas_app.station ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.station ALTER COLUMN merchant_operating_city_id SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.station ALTER COLUMN merchant_id SET NOT NULL;

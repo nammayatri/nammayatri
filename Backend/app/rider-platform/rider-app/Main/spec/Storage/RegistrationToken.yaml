@@ -2,13 +2,14 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Person: Domain.Types.Person
+  PartnerOrganization: Domain.Types.PartnerOrganization
 
 RegistrationToken:
   tableName: registration_token
 
   types:
     Medium:
-      enum: "SMS, WHATSAPP, EMAIL, SIGNATURE"
+      enum: "SMS, WHATSAPP, EMAIL, SIGNATURE, PARTNER_ORG"
 
     RTEntityType:
       enum: "CUSTOMER, USER"
@@ -32,6 +33,7 @@ RegistrationToken:
     createdAt : UTCTime
     updatedAt : UTCTime
     info : Maybe Text
+    createdViaPartnerOrgId : Maybe (Id PartnerOrganization)
 
   excludedFields: [merchantOperatingCityId]
   constraints:

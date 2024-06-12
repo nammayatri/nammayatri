@@ -22,9 +22,13 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.Text.Encoding as TE
 import qualified Domain.Types.Merchant as Merchant
+import Domain.Types.PartnerOrganization as PO
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Functions as B
+import Kernel.External.Encryption (getDbHash)
+import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.App
 import Kernel.Types.Base64
@@ -35,6 +39,7 @@ import qualified Kernel.Utils.Common as Utils
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.HeaderAuth
 import Servant hiding (Context, throwError)
+import qualified Storage.CachedQueries.PartnerOrganization as CQPO
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Tools.Error
 
@@ -150,3 +155,43 @@ decryptAES128 (Just (Base64 cipherText)) encryptedText = do
   return $ TE.decodeUtf8 decrypted
   where
     mkAuthTag authTag = AuthTag $ BA.convert authTag
+
+-- | Performs authentication based on PartnerOrganization APIKey.
+type APIKey = Text
+
+type PartnerOrganizationAPIKey = HeaderAuth "x-api-key" PartnerOrganizationVerifyAPIKey
+
+data PartnerOrganizationVerifyAPIKey = PartnerOrganizationVerifyAPIKey
+
+instance
+  SanitizedUrl (sub :: Type) =>
+  SanitizedUrl (PartnerOrganizationAPIKey :> sub)
+  where
+  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
+
+instance VerificationMethod PartnerOrganizationVerifyAPIKey where
+  type VerificationResult PartnerOrganizationVerifyAPIKey = PartnerOrganization
+  verificationDescription =
+    "Checks whether partner organization api key is registered.\
+    \If you don't have a partner organization api key, please contact our support team."
+
+verifyPartnerOrganizationAction ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    DB.EsqDBReplicaFlow m r,
+    EncFlow m r
+  ) =>
+  VerificationAction PartnerOrganizationVerifyAPIKey m
+verifyPartnerOrganizationAction = VerificationAction verifyPartnerOrganization
+
+verifyPartnerOrganization ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r
+  ) =>
+  APIKey ->
+  m PartnerOrganization
+verifyPartnerOrganization apiKey = do
+  apiKeyHash <- getDbHash apiKey
+  mbPartnerOrganization <- B.runInReplica $ CQPO.findByApiKeyHash apiKeyHash
+  mbPartnerOrganization & fromMaybeM (InvalidAPIKey apiKey)

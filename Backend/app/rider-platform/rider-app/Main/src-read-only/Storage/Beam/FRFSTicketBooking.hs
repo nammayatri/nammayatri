@@ -30,6 +30,8 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     isBookingCancellable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentTxnId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     price :: B.C f Kernel.Types.Common.HighPrecMoney,
@@ -59,6 +61,6 @@ instance B.Table FRFSTicketBookingT where
 
 type FRFSTicketBooking = FRFSTicketBookingT Identity
 
-$(enableKVPG ''FRFSTicketBookingT ['id] [['bppOrderId], ['quoteId], ['riderId], ['searchId]])
+$(enableKVPG ''FRFSTicketBookingT ['id] [['bppOrderId], ['partnerOrgTransactionId], ['quoteId], ['riderId], ['searchId]])
 
 $(mkTableInstances ''FRFSTicketBookingT "frfs_ticket_booking")

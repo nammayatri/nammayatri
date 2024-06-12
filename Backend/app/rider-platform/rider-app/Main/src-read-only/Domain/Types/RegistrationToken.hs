@@ -5,6 +5,7 @@
 module Domain.Types.RegistrationToken where
 
 import Data.Aeson
+import qualified Domain.Types.PartnerOrganization
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -16,6 +17,7 @@ data RegistrationToken = RegistrationToken
     authType :: Domain.Types.RegistrationToken.LoginType,
     authValueHash :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
+    createdViaPartnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     entityId :: Kernel.Prelude.Text,
     entityType :: Domain.Types.RegistrationToken.RTEntityType,
     id :: Kernel.Types.Id.Id Domain.Types.RegistrationToken.RegistrationToken,
@@ -30,7 +32,7 @@ data RegistrationToken = RegistrationToken
 
 data LoginType = OTP | PASSWORD | DIRECT | OAUTH deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data Medium = SMS | WHATSAPP | EMAIL | SIGNATURE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data Medium = SMS | WHATSAPP | EMAIL | SIGNATURE | PARTNER_ORG deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data RTEntityType = CUSTOMER | USER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

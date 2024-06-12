@@ -9,7 +9,6 @@ imports:
   FRFSVehicleType: Domain.Types.Station
   FRFSSearch: Domain.Types.FRFSSearch
   FRFSQuote: Domain.Types.FRFSQuote
-  FRFSTrip: Domain.Types.FRFSTrip
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
   FRFSTicket: Domain.Types.FRFSTicket
   FRFSTicketBookingPayment: Domain.Types.FRFSTicketBookingPayment
@@ -21,6 +20,8 @@ imports:
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   Person: Domain.Types.Person
   City: Kernel.Types.Beckn.Context
+  PartnerOrganization: Domain.Types.PartnerOrganization
+  PartnerOrgTransaction: Domain.Types.PartnerOrganization
 
 FRFSSearch:
   tableName: frfs_search
@@ -32,11 +33,12 @@ FRFSSearch:
     quantity: Int
     vehicleType: FRFSVehicleType
     riderId: Id Person
+    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
+    partnerOrgId: Maybe (Id PartnerOrganization)
 
-  # types:
-  #   FRFSVehicleType:
-  #     enum: "METRO"
-  #     derive: HttpInstance
+  constraints:
+    riderId: SecondaryKey
+    partnerOrgTransactionId: SecondaryKey
 
   queries:
     getTicketPlaces:
@@ -57,12 +59,14 @@ Station:
     lat: Maybe Double
     lon: Maybe Double
     address: Maybe Text
+    merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
 
   types:
     FRFSVehicleType:
       enum: "METRO, BUS"
       derive: HttpInstance
+
   constraints:
     id: PrimaryKey
     code: SecondaryKey
@@ -103,6 +107,8 @@ FRFSQuote:
     price: Price
     validTill: UTCTime
     riderId: Id Person
+    partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
+    partnerOrgId: Maybe (Id PartnerOrganization)
 
   beamFields:
     price:
@@ -123,6 +129,7 @@ FRFSQuote:
   constraints:
     id: PrimaryKey
     searchId: SecondaryKey
+    partnerOrgTransactionId: SecondaryKey
 
   queries:
     findById:
@@ -132,33 +139,6 @@ FRFSQuote:
       kvFunction: findAllWithKV
       where: searchId
 
-FRFSTrip:
-  tableName: frfs_trip
-
-  fields:
-    id: Id FRFSTrip
-    bppFulfillmentId: Text
-    quoteId: Id FRFSQuote
-    stationCode: Text
-    stationType: StationType
-    stopSequence: Int
-    stationName: Text
-
-  constraints:
-    id: PrimaryKey
-    quoteId: SecondaryKey
-
-  types:
-    StationType:
-      enum: "START, END, TRANSIT, INTERMEDIATE"
-
-  queries:
-    findById:
-      kvFunction: findOneWithKV
-      where: id
-    findAllByQuoteId:
-      kvFunction: findAllWithKV
-      where: quoteId
 
 FRFSTicketBooking:
   tableName: frfs_ticket_booking
@@ -193,6 +173,8 @@ FRFSTicketBooking:
     refundAmount: Maybe HighPrecMoney
     isBookingCancellable: Maybe Bool
     customerCancelled: Bool
+    partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
+    partnerOrgId: Maybe (Id PartnerOrganization)
 
   default:
     customerCancelled: "false"
@@ -227,6 +209,7 @@ FRFSTicketBooking:
     bppOrderId: SecondaryKey
     riderId: SecondaryKey
     quoteId: SecondaryKey
+    partnerOrgTransactionId: SecondaryKey
 
   queries:
     findById:
@@ -305,6 +288,8 @@ FRFSTicket:
     qrData: Text
     validTill: UTCTime
     ticketNumber: Text
+    partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
+    partnerOrgId: Maybe (Id PartnerOrganization)
 
   types:
     FRFSTicketStatus:
@@ -313,6 +298,8 @@ FRFSTicket:
   constraints:
     id: PrimaryKey
     frfsTicketBookingId: SecondaryKey
+    partnerOrgTransactionId: SecondaryKey
+
   queries:
     findById:
       kvFunction: findOneWithKV

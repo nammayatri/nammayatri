@@ -16,3 +16,8 @@ ALTER TABLE atlas_app.registration_token ADD COLUMN token_expiry integer NOT NUL
 ALTER TABLE atlas_app.registration_token ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.registration_token ADD COLUMN verified boolean NOT NULL;
 ALTER TABLE atlas_app.registration_token ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.registration_token ADD COLUMN created_via_partner_org_id character varying(36) ;

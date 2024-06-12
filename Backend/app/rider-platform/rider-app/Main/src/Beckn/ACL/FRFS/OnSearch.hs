@@ -14,12 +14,12 @@
 
 module Beckn.ACL.FRFS.OnSearch where
 
+import API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
 import qualified Domain.Types.FRFSQuote as DQuote
-import Domain.Types.FRFSTrip as DTrip
 import qualified Domain.Types.Station as Domain.DStation
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -161,12 +161,12 @@ castVehicleVariant = \case
   "BUS" -> Just Domain.DStation.BUS
   _ -> Nothing
 
-castStationType :: Text -> Maybe DTrip.StationType
+castStationType :: Text -> Maybe API.StationType
 castStationType = \case
-  "START" -> Just DTrip.START
-  "END" -> Just DTrip.END
-  "TRANSIT_STOP" -> Just DTrip.TRANSIT
-  "INTERMEDIATE_STOP" -> Just DTrip.INTERMEDIATE
+  "START" -> Just API.START
+  "END" -> Just API.END
+  "TRANSIT_STOP" -> Just API.TRANSIT
+  "INTERMEDIATE_STOP" -> Just API.INTERMEDIATE
   _ -> Nothing
 
 castQuoteType :: MonadFlow m => Text -> m DQuote.FRFSQuoteType

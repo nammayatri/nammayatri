@@ -14,14 +14,19 @@
 
 module SharedLogic.CallFRFSBPP where
 
+import qualified Beckn.ACL.FRFS.Status as ACL
+import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified Data.HashMap.Strict as HM
+import Domain.Types.BecknConfig
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.Merchant as Merchant
 import qualified EulerHS.Types as Euler
 import GHC.Records.Extra
 import Kernel.Prelude
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -31,6 +36,33 @@ import Kernel.Utils.Servant.SignatureAuth
 import Tools.Metrics (CoreMetrics)
 import TransactionLogs.PushLogs
 import TransactionLogs.Types
+
+type BecknAPICallFlow m r =
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]
+  )
+
+callBPPStatus ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]
+  ) =>
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  BecknConfig ->
+  Context.City ->
+  Id Merchant.Merchant ->
+  m ()
+callBPPStatus booking bapConfig city merchantId = do
+  fork "FRFS Status Req" $ do
+    providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
+    bknStatusReq <- ACL.buildStatusReq booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} city
+    logDebug $ "FRFS StatusReq " <> encodeToText bknStatusReq
+    void $ status providerUrl bknStatusReq merchantId
 
 search ::
   ( MonadFlow m,
@@ -90,10 +122,8 @@ status ::
   ( MonadFlow m,
     CoreMetrics m,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
-    EsqDBFlow m r
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]
   ) =>
   BaseUrl ->
   Spec.StatusReq ->
@@ -128,10 +158,8 @@ callBecknAPIWithSignature' ::
     IsBecknAPI api req res,
     SanitizedUrl api,
     ToJSON req,
-    CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
-    EsqDBFlow m r
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]
   ) =>
   Id Merchant.Merchant ->
   Text ->

@@ -39,6 +39,7 @@ import Domain.Action.UI.Person as SP
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.PartnerOrganization as DPO
 import Domain.Types.Person (PersonE (updatedAt))
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.PersonFlowStatus as DPFS
@@ -206,7 +207,7 @@ auth ::
   Maybe Text ->
   m AuthRes
 auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
-  let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = (ShortId "NAMMA_YATRI")} else req'
+  let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = ShortId "NAMMA_YATRI"} else req'
   runRequestValidation validateAuthReq req
   let identifierType = fromMaybe SP.MOBILENUMBER req'.identifierType
   merchantTemp <-
@@ -229,13 +230,13 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
         mobileNumberHash <- getDbHash mobileNumber
         person <-
           Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
-            >>= maybe (createPerson req SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) merchant) return
+            >>= maybe (createPerson req SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) merchant Nothing) return
         return (person, otpChannel)
       SP.EMAIL -> do
         email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
         person <-
           Person.findByEmailAndMerchantId merchant.id email
-            >>= maybe (createPerson req SP.EMAIL Nothing mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) merchant) return
+            >>= maybe (createPerson req SP.EMAIL Nothing mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) merchant Nothing) return
         return (person, EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar auth is not supported"
 
@@ -307,7 +308,7 @@ signatureAuth ::
   Maybe Text ->
   m AuthRes
 signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
-  let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = (ShortId "NAMMA_YATRI")} else req'
+  let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = ShortId "NAMMA_YATRI"} else req'
   runRequestValidation validateSignatureAuthReq req
   smsCfg <- asks (.smsCfg)
   countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for signature auth")
@@ -322,7 +323,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevic
   mobileNumberHash <- getDbHash mobileNumberDecrypted
   person <-
     Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
-      >>= maybe (createPerson reqWithMobileNumebr SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) merchant) return
+      >>= maybe (createPerson reqWithMobileNumebr SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) merchant Nothing) return
   let entityId = getId $ person.id
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
@@ -334,7 +335,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevic
       void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion
       _ <- RegistrationToken.create regToken
       mbEncEmail <- encrypt `mapM` reqWithMobileNumebr.email
-      _ <- RegistrationToken.setDirectAuth regToken.id
+      _ <- RegistrationToken.setDirectAuth regToken.id SR.SIGNATURE
       _ <- Person.updatePersonalInfo person.id (reqWithMobileNumebr.firstName <|> person.firstName <|> Just "User") reqWithMobileNumebr.middleName reqWithMobileNumebr.lastName Nothing mbEncEmail deviceToken notificationToken (reqWithMobileNumebr.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumebr.gender <|> Just person.gender) (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion
       personAPIEntity <- verifyFlow person regToken reqWithMobileNumebr.whatsappNotificationEnroll deviceToken
       return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked
@@ -358,8 +359,9 @@ buildPerson ::
   DMerchant.Merchant ->
   Context.City ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe (Id DPO.PartnerOrganization) ->
   m SP.Person
-buildPerson req identifierType notificationToken clientBundleVersion clientSdkVersion clientConfigVersion clientDevice merchant currentCity merchantOperatingCityId = do
+buildPerson req identifierType notificationToken clientBundleVersion clientSdkVersion clientConfigVersion clientDevice merchant currentCity merchantOperatingCityId mbPartnerOrgId = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   let useFakeOtp =
@@ -433,7 +435,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         safetyCenterDisabledOnDate = Nothing,
         referredByCustomer = Nothing,
         customerReferralCode = Nothing,
-        blockedCount = Just 0
+        blockedCount = Just 0,
+        registeredViaPartnerOrgId = mbPartnerOrgId
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -466,7 +469,8 @@ makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp = do
         entityType = SR.USER,
         createdAt = now,
         updatedAt = now,
-        info = Nothing
+        info = Nothing,
+        createdViaPartnerOrgId = Nothing
       }
 
 verifyHitsCountKey :: Id SP.Person -> Text
@@ -569,8 +573,9 @@ createPerson ::
   Maybe Version ->
   Maybe Device ->
   DMerchant.Merchant ->
+  Maybe (Id DPO.PartnerOrganization) ->
   m SP.Person
-createPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice merchant = do
+createPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice merchant mbPartnerOrgId = do
   let currentCity = merchant.defaultCity
   merchantOperatingCityId <-
     CQMOC.findByMerchantIdAndCity merchant.id currentCity
@@ -579,7 +584,7 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
           ( MerchantOperatingCityNotFound $
               "merchantId: " <> merchant.id.getId <> " ,city: " <> show currentCity
           )
-  person <- buildPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice merchant currentCity merchantOperatingCityId
+  person <- buildPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice merchant currentCity merchantOperatingCityId mbPartnerOrgId
   createPersonStats <- makePersonStats person
   Person.create person
   QDFS.create $ makeIdlePersonFlowStatus person

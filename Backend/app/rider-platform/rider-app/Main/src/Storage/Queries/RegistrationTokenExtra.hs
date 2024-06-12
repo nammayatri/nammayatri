@@ -25,12 +25,12 @@ deleteByPersonId (Id personId) = deleteWithKV [Se.And [Se.Is BeamRT.entityId (Se
 findAllByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m [RegistrationToken]
 findAllByPersonId personId = findAllWithKV [Se.Is BeamRT.entityId $ Se.Eq $ getId personId]
 
-setDirectAuth :: (MonadFlow m, EsqDBFlow m r) => Id RegistrationToken -> m ()
-setDirectAuth (Id rtId) = do
+setDirectAuth :: (MonadFlow m, EsqDBFlow m r) => Id RegistrationToken -> Medium -> m ()
+setDirectAuth (Id rtId) authMedium = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamRT.verified True,
-      Se.Set BeamRT.authMedium SIGNATURE,
+      Se.Set BeamRT.authMedium authMedium,
       Se.Set BeamRT.authType DIRECT,
       Se.Set BeamRT.updatedAt now
     ]

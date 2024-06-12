@@ -53,10 +53,10 @@ updateByPrimaryKey (Domain.Types.Station.Station {..}) = do
       Se.Set Beam.code code,
       Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name name,
       Se.Set Beam.vehicleType vehicleType,
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -72,10 +72,10 @@ instance FromTType' Beam.Station Domain.Types.Station.Station where
             id = Kernel.Types.Id.Id id,
             lat = lat,
             lon = lon,
+            merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             name = name,
             vehicleType = vehicleType,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -88,10 +88,10 @@ instance ToTType' Beam.Station Domain.Types.Station.Station where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.lat = lat,
         Beam.lon = lon,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.name = name,
         Beam.vehicleType = vehicleType,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

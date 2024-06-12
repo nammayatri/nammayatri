@@ -64,3 +64,8 @@ ALTER TABLE atlas_app.person ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person ADD COLUMN blocked_count integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN registered_via_partner_org_id character varying(36) ;

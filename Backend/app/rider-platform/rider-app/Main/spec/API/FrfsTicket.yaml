@@ -61,6 +61,7 @@ types:
     qrData: Text
     validTill: UTCTime
     ticketNumber: Text
+    derive: "Show"
 
   FRFSBookingPaymentAPI:
     status: FRFSBookingPaymentStatusAPI
@@ -78,6 +79,10 @@ types:
     stationType: Maybe StationType
     color: Maybe Text
     sequenceNum: Maybe Int
+    derive: "Show"
+
+  StationType:
+    enum: "START, END, TRANSIT, INTERMEDIATE"
 
   FRFSCanCancelStatus:
     cancellationCharges : Maybe HighPrecMoney
@@ -97,6 +102,7 @@ types:
     discount: Int
     customDates: [Text]
     customEndTime: Text
+    derive: "Show"
 
 apis:
   # GET metro stops for the merchant city

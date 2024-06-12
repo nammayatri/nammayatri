@@ -55,3 +55,9 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN currency text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN customer_cancelled boolean NOT NULL default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN partner_org_transaction_id character varying(36) ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN partner_org_id character varying(36) ;

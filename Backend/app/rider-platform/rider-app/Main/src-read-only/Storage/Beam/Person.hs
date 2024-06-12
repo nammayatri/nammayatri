@@ -65,6 +65,7 @@ data PersonT f = PersonT
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     referredByCustomer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    registeredViaPartnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     registrationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     registrationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     role :: B.C f Domain.Types.Person.Role,

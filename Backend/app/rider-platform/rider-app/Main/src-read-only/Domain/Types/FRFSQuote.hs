@@ -8,6 +8,7 @@ import Data.Aeson
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
 import qualified Domain.Types.Station
 import Kernel.Prelude
@@ -22,6 +23,8 @@ data FRFSQuote = FRFSQuote
     bppSubscriberUrl :: Kernel.Prelude.Text,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
+    partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
+    partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),
     price :: Kernel.Types.Common.Price,
     providerDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     providerId :: Kernel.Prelude.Text,
