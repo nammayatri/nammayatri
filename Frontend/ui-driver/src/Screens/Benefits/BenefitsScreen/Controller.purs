@@ -1,6 +1,6 @@
 module Screens.Benefits.BenefitsScreen.Controller where
 
-import JBridge (shareTextMessage, minimizeApp, firebaseLogEvent, hideKeyboardOnNavigation, cleverTapCustomEvent, metaLogEvent, shareImageMessage, setCleverTapUserProp)
+import JBridge (shareTextMessage, minimizeApp, firebaseLogEvent, hideKeyboardOnNavigation, cleverTapCustomEvent, metaLogEvent, shareImageMessage)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import Prelude (class Show, bind, pure, ($))
 import PrestoDOM (Eval, update, continue, exit)

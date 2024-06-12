@@ -233,6 +233,8 @@ foreign import initialWebViewSetUp :: forall action. (action -> Effect Unit) -> 
 foreign import goBackPrevWebPage ::  String -> Effect Unit
 foreign import detectPhoneNumbers :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
 foreign import setCleverTapUserData :: String -> String -> Effect Unit
+foreign import setCleverTapProfileData :: String -> String -> Effect Unit
+foreign import loginCleverTapUser :: Unit -> Effect Unit
 foreign import setCleverTapUserProp :: Array ClevertapEventParams -> Unit
 foreign import cleverTapCustomEvent :: String -> Effect Unit
 foreign import cleverTapCustomEventWithParams :: String -> String -> String -> Effect Unit

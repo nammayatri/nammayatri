@@ -17,7 +17,7 @@ module Helpers.Logs where
 
 import Prelude
 import Control.Monad.Except.Trans (lift)
-import JBridge (setCleverTapUserProp, getVersionCode, getVersionName, setCleverTapUserData, metaLogEvent)
+import JBridge (setCleverTapUserProp, getVersionCode, getVersionName, metaLogEvent)
 import Foreign (unsafeToForeign)
 import Presto.Core.Types.Language.Flow (getLogFields, setLogField)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
@@ -65,7 +65,6 @@ baseAppLogs = do
 updateCTEventData :: GetProfileRes -> FlowBT String Unit
 updateCTEventData response = do
   let name = catMaybeStrings [ response ^. _firstName, response ^. _middleName, response ^. _lastName ]
-      mobileNumber = getValueToLocalStore MOBILE_NUMBER
       appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just 
   case appName of
     "Namma Yatri" -> do
@@ -90,13 +89,6 @@ updateCTEventData response = do
       logFirstRideEvent ((fromMaybe false $ response ^. _hasTakenValidBikeRide) && (getValueFromWindow logEventNames.y.bike) /= logEventNames.y.bike) logEventNames.y.bike
       void $ pure $ setValueInWindow logEventNames.y.bike logEventNames.y.bike
     _ -> pure unit
-  void $ liftFlowBT $ setCleverTapUserData "Name" name
-  void $ liftFlowBT $ traverse (setCleverTapUserData "gender") $ response ^. _gender
-  void $ liftFlowBT $ traverse (setCleverTapUserData "preferred Language") $ response ^. _language
-  void $ liftFlowBT $ setCleverTapUserData "Identity" $ response ^._id
-  void $ liftFlowBT $ setCleverTapUserData "Phone" $ "+91" <> mobileNumber
-  void $ liftFlowBT $ traverse (setCleverTapUserData "email") $ response ^. _email
-  void $ pure $ setCleverTapUserProp [{key : "Mobile Number", value : unsafeToForeign $ getValueToLocalStore COUNTRY_CODE <> mobileNumber}]
   where
     logFirstRideEvent :: Boolean -> String -> FlowBT String Unit
     logFirstRideEvent toLogEvent event = 

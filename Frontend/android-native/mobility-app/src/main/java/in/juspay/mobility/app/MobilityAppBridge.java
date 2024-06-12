@@ -93,6 +93,8 @@ import in.juspay.mobility.app.carousel.ViewPagerItem;
 import in.juspay.mobility.app.reels.ReelController;
 
 public class MobilityAppBridge extends HyperBridge {
+    // Clever Tap
+    HashMap<String, Object> clevertapProfileData = new HashMap<>();
 
     // Log Tags
     private static final String LOG_TAG = "MobilityAppBridge";
@@ -1015,6 +1017,23 @@ public class MobilityAppBridge extends HyperBridge {
             }
             clevertapDefaultInstance.pushEvent(event, resultMap);
         }
+        });
+    }
+
+    @JavascriptInterface
+    public void setCleverTapProfileData(String key, String value){
+        clevertapProfileData.put(key, value);
+    }
+
+    @JavascriptInterface
+    public void loginCleverTapUser(){
+        ExecutorManager.runOnBackgroundThread(() -> {
+            if (clevertapDefaultInstance != null) {
+                clevertapDefaultInstance.onUserLogin(clevertapProfileData);
+                SharedPreferences sharedPrefs = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                String fcmRegId = sharedPrefs.getString("FCM_TOKEN", "null");
+                clevertapDefaultInstance.pushFcmRegistrationId(fcmRegId, true);
+            }
         });
     }
 
