@@ -398,7 +398,7 @@ isValidCOVRC mbAirConditioned mbOxygen mbVentilator mVehicleCategory capacity ma
       let manufacturerMatched = manufacturerCheckFunction obj.manufacturer manufacturer
       let manufacturerModelMatched = manufacturerModelCheckFunction obj.manufacturerModel manufacturerModel
       let bodyTypeMatched = bodyTypeCheckFunction obj.bodyType bodyType
-      let ambulanceMatched = if obj.vehicleVariant `elem` ambulanceVariants then checkAmbulanceVariant obj.vehicleVariant else True
+      let ambulanceMatched = if obj.vehicleVariant `elem` ambulanceVariants then checkAmbulanceVariant obj.vehicleVariant else ensureNonAmbulance bodyType manufacturerModel
       (classMatched || categoryMatched) && capacityMatched && manufacturerMatched && manufacturerModelMatched && bodyTypeMatched && ambulanceMatched
 
     ambulanceVariants = [AMBULANCE_TAXI, AMBULANCE_TAXI_OXY, AMBULANCE_AC, AMBULANCE_AC_OXY, AMBULANCE_VENTILATOR] -- Todo: Create a fn to get variants by category
@@ -408,6 +408,14 @@ isValidCOVRC mbAirConditioned mbOxygen mbVentilator mVehicleCategory capacity ma
       (Just True, _, _) -> variant == AMBULANCE_AC
       (Just False, Just True, _) -> variant == AMBULANCE_TAXI_OXY
       _ -> variant == AMBULANCE_TAXI
+
+    ensureNonAmbulance bodyType_ manufacturerModel_ = do
+      let checkerLiteral = Just "AMBULANCE"
+      case (bodyType_, manufacturerModel_) of
+        (Nothing, Nothing) -> True
+        (Just bt, Nothing) -> not $ bodyTypeCheckFunction checkerLiteral (Just bt)
+        (Nothing, Just mfg) -> not $ manufacturerModelCheckFunction checkerLiteral (Just mfg)
+        (Just bt, Just mfg) -> not (bodyTypeCheckFunction checkerLiteral (Just bt) || manufacturerModelCheckFunction checkerLiteral (Just mfg))
 
 -- capacityCheckFunction validCapacity rcCapacity
 capacityCheckFunction :: Maybe Int -> Maybe Int -> Bool
