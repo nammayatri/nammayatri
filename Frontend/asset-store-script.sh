@@ -11,7 +11,7 @@ add_file_for_commit() { #dir , sub_dir, asset_type, asset_name, source_path
     local asset_type="$3"
     local asset_name="$4"
     local updated_path="beckn/$dir/$sub_dir/$asset_type/$asset_name"
-    files_to_be_added+=("../../$source_path:$updated_path")
+    files_to_be_added+=("../../../$source_path:$updated_path")
 
     echo "Inside add_file_for_commit" $source_path "->" $updated_path
 }
