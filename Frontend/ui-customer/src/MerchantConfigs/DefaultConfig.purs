@@ -194,8 +194,11 @@ config =
         autoRickshaw : {
           name : "Auto Rickshaw",
           image : "ny_ic_auto_quote_list,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_quote_list.png"
+        },
+        bike : {
+          name : "Bike Taxi",
+          image : "ny_ic_bike_side,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_bike.png"
         }
-
       }
       , enableOnlyAuto : false
       , showNearByDrivers: false

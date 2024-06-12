@@ -602,6 +602,7 @@ getVehicleVariantImage variant =
                           Chennai -> fetchImage FF_ASSET "ny_ic_black_yellow_auto_quote_list" 
                           Hyderabad -> fetchImage FF_ASSET "ny_ic_black_yellow_auto_quote_list"
                           _ -> variantConfig.autoRickshaw.image
+      "BIKE"          -> variantConfig.bike.image
       _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
 getVariantRideType :: String -> String

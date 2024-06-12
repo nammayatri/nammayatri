@@ -277,6 +277,7 @@ fetchVehicleVariant variant =
     "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
     "TAXI"          -> Just ST.TAXI 
     "TAXI_PLUS"     -> Just ST.TAXI_PLUS
+    "BIKE"          -> Just ST.BIKE
     _               -> Nothing
 
 getVehicleCapacity :: String -> String 
