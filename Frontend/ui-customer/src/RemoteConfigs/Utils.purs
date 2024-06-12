@@ -12,10 +12,12 @@ import Data.Newtype (class Newtype)
 import Presto.Core.Utils.Encoding (defaultDecode)
 import Control.Monad.Except (runExcept)
 import Data.Function (on)
-import Data.String.Common (trim)
+import Data.String as DS
 import Common.Types.App
 import RemoteConfig.Types
 import Data.Array as DA
+import Locale.Utils(getLanguageLocale)
+import Constants (languageKey)
 
 safetyVideoConfigData :: String -> String -> Array SafetyVideoConfig
 safetyVideoConfigData city language = do
@@ -33,7 +35,7 @@ pickupInstructions :: String -> String -> String -> Array PickupInstructions
 pickupInstructions placeName gateName language = do
     let config = fetchRemoteConfigString ("pickup_instructions_" <> language)
         pickupPlaces = decodeForeignObject (parseJSON config) defPlaces
-        compareStrings = on (==) trim
+        compareStrings = on (==) DS.trim
         locationsArr = pickupPlaces.locations
         myMbSpecialLocation = DA.find (\el -> compareStrings el.name placeName) locationsArr
     case myMbSpecialLocation of
@@ -52,6 +54,13 @@ defPlaces = {
 
 getFamousDestinations :: String -> Array FamousDestination
 getFamousDestinations city = do
-    let config = fetchRemoteConfigString "famous_destinations"
+    let langConfig = fetchRemoteConfigString $ "famous_destinations" <> (getLanguage $ getLanguageLocale languageKey)
+        config = if not $ DS.null langConfig
+                   then langConfig 
+                   else fetchRemoteConfigString "famous_destinations_en"
         value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
     getCityBasedConfig value city
+  where
+    getLanguage lang = 
+      let language = DS.toLower $ DS.take 2 lang
+      in if not (DS.null language) then "_" <> language else "_en"

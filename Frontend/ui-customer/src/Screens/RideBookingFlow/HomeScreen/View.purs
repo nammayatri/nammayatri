@@ -189,7 +189,7 @@ import JBridge as JB
 import Common.Types.App as CT
 import Effect.Unsafe (unsafePerformEffect)
 import Screens.Types (FareProductType(..)) as FPT
-import Helpers.Utils (decodeBookingTimeList, getCityFromString)
+import Helpers.Utils (decodeBookingTimeList, getCityFromString, getLanguageBasedCityName)
 import Resources.Localizable.EN (getEN)
 import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
 
@@ -4370,7 +4370,7 @@ preferenceView push state =
                   , cornerRadius 24.0
                   , clickable true
                   , visibility $ boolToVisibility if isProviderPrefView then providerPrefVisibility else bookingPrefVisibility
-                  , accessibilityHint "Booking Preferences : Button"
+                  , accessibility DISABLE
                   , onClick push $ const ShowPref
                   , rippleColor Color.rippleShade
                   ]
@@ -4485,7 +4485,7 @@ exploreCitySection push state =
     , padding $ Padding 16 8 16 16
     , visibility $ boolToVisibility $ state.data.currentCityConfig.featureConfig.showExploreCity && (not $ null state.data.famousDestinations)
     ][  textView $
-          [ text $ getString $ EXPLORE_CITY_WITH_US city
+          [ text $ getString $ EXPLORE_CITY_WITH_US $ getLanguageBasedCityName city
           , color Color.black900
           ] <> FontStyle.h3 TypoGraphy
       , horizontalScrollView
@@ -4522,23 +4522,23 @@ exploreCityCard push state index locationItem =
     , orientation VERTICAL
     , margin $ MarginRight 12
     , onClick push $ const $ SuggestedDestinationClicked locationItem
+    , accessibilityHint $ "Go to " <> locationItem.title
     ][ imageView
         [ imageUrl locationItem.postfixImageUrl
         , height $ V 110
         , width MATCH_PARENT
         , cornerRadius 9.0
+        , accessibility DISABLE
         ]
       , textView $
-          [ text $ getString $ GO_TO_DESTINATION locationItem.title
+          [ text $ getString $ GO_TO_DESTINATION locationItem.address
           , color Color.black800
-          , ellipsize true
           , margin $ MarginTop 8
-          , singleLine true
+          , accessibility DISABLE
           ] <> FontStyle.body1 TypoGraphy
       , textView $
           [ text locationItem.description
           , color Color.black700
-          , ellipsize true
-          , singleLine true
+          , accessibility DISABLE
           ] <> FontStyle.body3 TypoGraphy
     ]

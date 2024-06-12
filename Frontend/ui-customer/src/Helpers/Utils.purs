@@ -1059,3 +1059,22 @@ normalRoute _ = {
     srcMarker : "ny_ic_src_marker",
     destMarker : "ny_ic_dest_marker"
 }
+
+getLanguageBasedCityName :: String -> String
+getLanguageBasedCityName cityName = 
+  case getCityFromString cityName of
+    Bangalore -> getString BANGALORE
+    Kolkata -> getString KOLKATA
+    Paris -> getString PARIS
+    Kochi -> getString KOCHI
+    Delhi -> getString DELHI
+    Hyderabad -> getString HYDERABAD
+    Mumbai -> getString MUMBAI
+    Chennai -> getString CHENNAI
+    Coimbatore -> getString COIMBATORE
+    Pondicherry -> getString PONDICHERRY
+    Goa -> getString GOA
+    Pune -> getString PUNE
+    Mysore -> getString MYSORE
+    Tumakuru -> getString TUMAKURU
+    AnyCity -> ""

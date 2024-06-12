@@ -53,7 +53,8 @@ newtype FamousDestination = FamousDestination {
   imageUrl :: String,
   lat :: Number,
   lon :: Number,
-  description :: String
+  description :: String,
+  langName :: String
 }
 
 derive instance genericFamousDestination :: Generic FamousDestination _

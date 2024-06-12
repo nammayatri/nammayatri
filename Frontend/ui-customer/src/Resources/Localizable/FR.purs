@@ -1279,3 +1279,17 @@ getFR stringKey =
         EXPLORE_CITY_WITH_US city -> "Explorez " <> city <> " avec nous"
         GO_TO_DESTINATION destination -> "visitez " <> destination
         WALK_TO address -> "Marcher jusqu'à " <> address
+        BANGALORE -> "Bangalore"
+        KOLKATA -> "Kolkata"
+        PARIS -> "Paris"
+        KOCHI -> "Kochi"
+        DELHI -> "Delhi"
+        HYDERABAD -> "Hyderabad"
+        MUMBAI -> "Mumbai"
+        CHENNAI -> "Chennai"
+        COIMBATORE -> "Coimbatore"
+        PONDICHERRY -> "Pondicherry"
+        GOA -> "Goa"
+        PUNE -> "Pune"
+        MYSORE -> "Mysore"
+        TUMAKURU -> "Tumakuru"
