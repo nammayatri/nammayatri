@@ -2185,6 +2185,18 @@ export const setCleverTapUserData = function (key) {
   };
 };
 
+export const setCleverTapProfileData = (key) => (value) => () => {
+  if (window.JBridge.setCleverTapProfileData) {
+    window.JBridge.setCleverTapProfileData(key, value);
+  }
+}
+
+export const loginCleverTapUser = (unit) => () => {
+  if (window.JBridge.loginCleverTapUser) {
+    window.JBridge.loginCleverTapUser();
+  }
+}
+
 export const setCleverTapUserProp = function (arr) {
   try {
     if (window.JBridge.setCleverTapUserMultipleProp) {
