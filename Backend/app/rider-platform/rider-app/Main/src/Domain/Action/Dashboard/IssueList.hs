@@ -23,6 +23,7 @@ import qualified Domain.Types.Quote as DQuote
 import Environment
 import qualified IssueManagement.Common as Common
 import qualified IssueManagement.Common.Dashboard.Issue as Common
+import qualified IssueManagement.Domain.Action.Dashboard.Issue as DCommon
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -30,6 +31,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.Beam.IssueManagement ()
 import qualified Storage.Queries.Issue as QIssue
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QPerson
@@ -107,9 +109,8 @@ buildIssueList (issues, person) = do
 
 ticketStatusCallBack :: ShortId DM.Merchant -> Common.TicketStatusCallBackReq -> Flow APISuccess
 ticketStatusCallBack _ req = do
-  _ <- QIssue.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
-  case req.status of
-    "Complete" -> QIssue.updateIssueStatus req.ticketId Common.RESOLVED
-    "Pending" -> QIssue.updateIssueStatus req.ticketId Common.PENDING_INTERNAL
-    _ -> throwError $ InvalidRequest ("Invalid ticket status " <> req.status <> " for ticket id " <> req.ticketId)
+  mbTicket <- QIssue.findByTicketId req.ticketId
+  case mbTicket of
+    Just _ -> QIssue.updateIssueStatus req.ticketId =<< DCommon.transformKaptureStatus req
+    Nothing -> void $ DCommon.ticketStatusCallBack req Common.CUSTOMER
   return Success
