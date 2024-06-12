@@ -110,7 +110,13 @@ type CityConfig = {
   showEarningSection :: Boolean,
   referral :: Referral,
   waitingCharges :: Number,
-  waitingChargesConfig :: WaitingChargesConfig
+  waitingChargesConfig :: WaitingChargesConfig,
+  rateCardConfig :: RateCardConfig
+}
+
+type RateCardConfig = {
+  showLearnMore :: Boolean,
+  learnMoreVideoLink :: String
 }
 
 type Referral = {

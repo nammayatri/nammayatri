@@ -30,6 +30,8 @@ initData =
       , canSwitchToIntercity : Nothing
       , fromDeepLink : false
       , showRateCard : false
+      , rateCardLoaded : false
+      , peakTime : true
       }
   }
 

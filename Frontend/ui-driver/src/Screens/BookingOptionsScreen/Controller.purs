@@ -12,7 +12,7 @@ import Components.ChooseVehicle as ChooseVehicle
 import Components.PrimaryButton as PrimaryButton
 import Components.PopUpModal as PopUpModal
 import Data.Array (filter, length, (!!), find)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Log (trackAppScreenRender)
 import Prelude (class Show, map, pure, show, unit, discard, void, (<>), (==), not, ($), (>), (<$>))
 import PrestoDOM (Eval, update, continue, exit, continueWithCmd, updateAndExit)
@@ -74,7 +74,7 @@ eval (ToggleRidePreference service) state =
   if service.isUsageRestricted then do
     void $ pure $ JB.toast $ getString $ SET_THE_AC_ON_TO_ENABLE service.name
     update state
-  else exit $ ChangeRidePreference state service
+  else updateAndExit state $ ChangeRidePreference state service
 
 eval ToggleRentalRide state = updateAndExit state { props {canSwitchToRental = not state.props.canSwitchToRental} } $ ToggleRentalIntercityRide state { props {canSwitchToRental = not state.props.canSwitchToRental} }
 
@@ -110,7 +110,7 @@ eval (UpdateRateCard rateCardResp) state = do
                 perKmRate = rateCardOb.perKmRate,
                 farePolicyHour = rateCardOb.farePolicyHour
               }) state.data.ridePreferences
-  continue state { data { ridePreferences = ridePreferences  } }
+  continue state { data { ridePreferences = ridePreferences  }, props { rateCardLoaded = true, peakTime = isJust $ find (\item -> item.farePolicyHour == Just API.Peak) ridePreferences } }
 
 eval (ShowRateCard index) state = case state.data.ridePreferences !! index of
   Just ridePreference -> do

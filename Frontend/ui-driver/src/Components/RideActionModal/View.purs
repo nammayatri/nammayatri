@@ -863,19 +863,19 @@ rideTierAndCapacity push config =
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , cornerRadius 18.0
-      , background Color.blue800
+      , background tierBackground
       , padding $ Padding 8 2 8 2
       , gravity CENTER_VERTICAL
-      , visibility $ boolToVisibility $ Maybe.fromMaybe false config.acRide
+      , visibility $ boolToVisibility $ Maybe.isJust config.acRide
       ][ imageView
           [ height $ V 16
           , width $ V 16
-          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_ac_white"
+          , imageWithFallback $ fetchImage FF_ASSET tierImage
           ]
         , textView $
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
-          , text "AC"
+          , text tierName
           , color Color.white900
           , margin $ MarginLeft 5
           , padding $ PaddingBottom 2
@@ -915,7 +915,10 @@ rideTierAndCapacity push config =
             Maybe.Just cap -> [text $ show cap]
             Maybe.Nothing -> [visibility GONE]
   ] 
-  where paddingLeft = if config.acRide == Maybe.Just true then 4 else 10
+  where paddingLeft = if Maybe.isJust config.acRide then 4 else 10
+        tierName = if config.acRide == Maybe.Just true then "AC" else if config.acRide == Maybe.Just false then "Non-AC" else ""
+        tierImage = if config.acRide == Maybe.Just true then "ny_ic_ac_white" else if config.acRide == Maybe.Just false then "ny_ic_non_ac_white" else ""
+        tierBackground = if config.acRide == Maybe.Just true then Color.blue800 else if config.acRide == Maybe.Just false then Color.black700 else Color.blue800
 
 normalRideInfoView :: (Action -> Effect Unit) -> Config -> forall w. Array (PrestoDOM (Effect Unit) w)
 normalRideInfoView push config =

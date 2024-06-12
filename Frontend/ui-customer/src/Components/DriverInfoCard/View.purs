@@ -961,7 +961,7 @@ airportPickupView push state directionText =
         , id $ getNewIDWithTag "WalkingLottie"
         , margin $ MarginRight 4
         , onAnimationEnd (\action -> do
-          void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/walk_anim.json", lottieId = getNewIDWithTag "WalkingLottie", repeat = true}
+          void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {speed = 1.0, rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/walk_anim.json", lottieId = getNewIDWithTag "WalkingLottie", repeat = true}
           push action
           ) (const NoAction)
         ]

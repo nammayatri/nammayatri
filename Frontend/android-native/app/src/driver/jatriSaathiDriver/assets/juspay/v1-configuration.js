@@ -384,8 +384,14 @@ window.getMerchantConfig = function () {
              "freeSeconds" : 180,
              "perMinCharges" : 1.50
            }
-         }
+         },
+       "rateCardConfig" : defRateCardConfig
     }
   ]
   })
 }
+
+let defRateCardConfig = {
+    "showLearnMore" : false,
+    "learnMoreVideoLink" : ""
+  }

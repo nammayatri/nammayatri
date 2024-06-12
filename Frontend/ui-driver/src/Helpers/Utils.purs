@@ -698,7 +698,8 @@ getCityConfig cityConfig cityName = do
                               freeSeconds : 3,
                               perMinCharges : 1.50
                             }
-                          }
+                          },
+                          rateCardConfig : { showLearnMore : false, learnMoreVideoLink : "" }
                         }
   maybe dummyCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig
   where 
@@ -930,6 +931,13 @@ appName removeDriver = do
   if removeDriver then
       foldl (\acc word -> DS.replaceAll (DS.Pattern word) (DS.Replacement "") acc) driverAppName ["Driver", "Partner"]
   else driverAppName
+
+setPerKmRate :: SA.GetDriverRateCardRes -> ST.RidePreference -> ST.RidePreference
+setPerKmRate (SA.GetDriverRateCardRes rateCardResp) prefOb = 
+  let rateCardRespItem = DA.find (\(SA.RateCardRespItem item) -> item.serviceTierType == prefOb.serviceTierType) rateCardResp
+  in case rateCardRespItem of
+    Just (SA.RateCardRespItem rateCardRespItem) -> prefOb { perKmRate = Just $ rateCardRespItem.perKmRate.amount}
+    Nothing -> prefOb
 
 getVehicleMapping :: SA.ServiceTierType -> String
 getVehicleMapping serviceTierType = case serviceTierType of

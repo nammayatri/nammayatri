@@ -4693,7 +4693,7 @@ instance encodeUpdateAirConditionUpdateResponse  :: Encode UpdateAirConditionUpd
 
 --------------------------------------------------------- Get Driver Rate Card --------------------------------------------------------------------------
 
-data GetDriverRateCardReq = GetDriverRateCardReq (Maybe String)
+data GetDriverRateCardReq = GetDriverRateCardReq (Maybe String) (Maybe Int)
 
 newtype GetDriverRateCardRes = GetDriverRateCardRes (Array RateCardRespItem)
 
@@ -4707,12 +4707,12 @@ newtype RateCardRespItem = RateCardRespItem {
   }
 
 instance makeGetDriverRateCardReq :: RestEndpoint GetDriverRateCardReq GetDriverRateCardRes where
-  makeRequest reqBody@(GetDriverRateCardReq vehicleServiceTier) headers = defaultMakeRequest GET (EP.getDriverRateCard vehicleServiceTier) headers reqBody Nothing
+  makeRequest reqBody@(GetDriverRateCardReq vehicleServiceTier dist) headers = defaultMakeRequest GET (EP.getDriverRateCard vehicleServiceTier dist) headers reqBody Nothing
   decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 derive instance genericGetDriverRateCardReq :: Generic GetDriverRateCardReq _
-instance standardEncodeGetDriverRateCardReq :: StandardEncode GetDriverRateCardReq where standardEncode (GetDriverRateCardReq _) = standardEncode {}
+instance standardEncodeGetDriverRateCardReq :: StandardEncode GetDriverRateCardReq where standardEncode (GetDriverRateCardReq _ _ ) = standardEncode {}
 instance showGetDriverRateCardReq :: Show GetDriverRateCardReq where show = genericShow
 instance decodeGetDriverRateCardReq :: Decode GetDriverRateCardReq where decode = defaultDecode
 instance encodeGetDriverRateCardReq  :: Encode GetDriverRateCardReq where encode = defaultEncode

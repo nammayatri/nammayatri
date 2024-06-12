@@ -29,7 +29,7 @@ import Data.Maybe (Maybe(..))
 import JBridge as JB
 import Engineering.Helpers.Commons as EHC
 
-data ScreenOutput = Back RateCardScreenState
+data ScreenOutput = Back RateCardScreenState | UpdatePrice RateCardScreenState Int
 
 data Action = BackClick
     | ShowRateCard Int
@@ -39,6 +39,7 @@ data Action = BackClick
     | RateCardAction RateCard.Action
     | ChangeSlider Boolean
     | OpenLink String
+    | DebounceCallBack String Boolean
 
 instance showAction :: Show Action where
     show _ = ""
@@ -65,6 +66,7 @@ instance loggableAction :: Loggable Action where
           PrimaryButton.OnClick -> trackAppActionClick appId (getScreen RATE_CARD_SCREEN) "primary_button_action" "open_google_maps"
           _ -> pure unit
       ChangeSlider increment -> trackAppActionClick appId (getScreen RATE_CARD_SCREEN) "in_screen" "slider"
+      _ -> pure unit
       
 
 
@@ -74,7 +76,9 @@ eval BackClick state = exit $ Back state
 
 eval (PrimaryButtonAC PrimaryButton.OnClick) state = continueWithCmd state [ pure $ BackClick ]
 
-eval (SliderCallback val) state = continue state { props { sliderVal = val}}
+eval (SliderCallback val) state = continue state { props { sliderVal = val, sliderLoading = true}}
+
+eval (DebounceCallBack _ _) state = updateAndExit state $ UpdatePrice state state.props.sliderVal
 
 eval (ChangeSlider increment) state = continueWithCmd state [do 
     let val = if increment then state.props.sliderVal + state.props.incrementUnit else state.props.sliderVal - state.props.incrementUnit
