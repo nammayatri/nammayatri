@@ -62,7 +62,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import JBridge (getCurrentLatLong, showMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, defaultMarkerImageConfig, timeValidity, removeMarker)
+import JBridge (getCurrentLatLong, showMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, defaultMarkerImageConfig, timeValidity, removeMarker, setCleverTapProfileData, loginCleverTapUser)
 import JBridge as JB
 import Helpers.Utils (compareDate, convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getCityFromString, getMetroConfigFromAppConfig, encodeBookingTimeList, decodeBookingTimeList, bufferTimePerKm, invalidBookingTime, getAndRemoveLatestNotificationType, normalRoute)
 import Language.Strings (getString)
@@ -595,9 +595,11 @@ enterMobileNumberScreenFlow = do
                         void $ lift $ lift $ setLogField "customer_id" $ encode (customerId)
                         pure unit
                     setValueToLocalStore CUSTOMER_ID customerId
-                    void $ liftFlowBT $ setCleverTapUserData "Identity" customerId
+                    void $ liftFlowBT $ setCleverTapProfileData "Identity" customerId
+                    void $ liftFlowBT $ setCleverTapProfileData "Preferred Language" "ENGLISH"
                     setValueToLocalStore REGISTERATION_TOKEN response.token
                     setValueToLocalStore USER_NAME $ (fromMaybe "" $ response.person ^. _firstName) <> " " <> (fromMaybe "" $ response.person ^. _middleName) <> " " <> (fromMaybe "" $ response.person ^. _lastName)
+                    void $ liftFlowBT $ loginCleverTapUser unit
                     if isNothing (response.person ^. _firstName) then currentFlowStatus else handleDeepLinks Nothing false
               Left err -> do
                 pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
@@ -623,7 +625,7 @@ enterMobileNumberScreenFlow = do
             deleteValueFromLocalStore RECENT_SEARCHES
       void $ pure $ setValueInWindow (show MOBILE_NUMBER) state.data.mobileNumber
       setValueToLocalStore COUNTRY_CODE (state.data.countryObj.countryCode)
-      void $ liftFlowBT $ setCleverTapUserData "Phone" (state.data.countryObj.countryCode <> (getValueToLocalStore MOBILE_NUMBER))
+      void $ liftFlowBT $ setCleverTapProfileData "Phone" (state.data.countryObj.countryCode <> (getValueToLocalStore MOBILE_NUMBER))
       (TriggerOTPResp triggerOtpResp) <- Remote.triggerOTPBT (Remote.makeTriggerOTPReq state.data.mobileNumber state.data.countryObj.countryCode (show state.data.otpChannel))
       void $ pure $ toast (getString if state.data.otpChannel == SMS then STR.SENT_OTP_VIA_SMS else STR.SENT_OTP_VIA_WHATSAPP)
       modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data { tokenId = triggerOtpResp.authId, attempts = triggerOtpResp.attempts }, props { enterOTP = true, resendEnable = false } })
@@ -673,16 +675,15 @@ accountSetUpScreenFlow = do
             }
       setValueToLocalStore DISABILITY_UPDATED "true"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { showDisabilityPopUp = (isJust selectedDisability) }, data { disability = selectedDisability } })
-      case gender of
-        Just value -> void $ liftFlowBT $ setCleverTapUserData "gender" value
-        Nothing -> pure unit
       resp <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
       case resp of
         Right response -> do
           setValueToLocalStore USER_NAME state.data.name
-          void $ liftFlowBT $ setCleverTapUserData "Name" (getValueToLocalStore USER_NAME)
+          void $ pure $ setCleverTapUserProp  [{key : "Name", value :  unsafeToForeign state.data.name}]
           case gender of
-            Just value -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { settingSideBar { gender = Just value } }, props { isBanner = false, referral { showAddReferralPopup = false } } })
+            Just value -> do 
+              void $ pure $ setCleverTapUserProp [{key : "gender", value : unsafeToForeign value}]
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { settingSideBar { gender = Just value } }, props { isBanner = false, referral { showAddReferralPopup = false } } })
             Nothing -> pure unit
           void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_onboarded"
           void $ pure $ metaLogEvent "ny_user_onboarded"
@@ -2977,16 +2978,20 @@ myProfileScreenFlow = do
       case resp of
         Right response -> do
           setValueToLocalStore USER_NAME stringName
+          void $ pure $ setCleverTapUserProp [{key : "Name", value : unsafeToForeign stringName}]
           let
             tag = case disability of
               Just (Disability value) -> value.tag
               Nothing -> ""
           modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { data { disability = Just { id: "", tag: tag, description: "" } } })
           case gender of
-            Just gender -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { settingSideBar { gender = Just gender } }, props { isBanner = false } })
+            Just gender -> do 
+              void $ pure $ setCleverTapUserProp [{key : "gender", value : unsafeToForeign gender}]
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { settingSideBar { gender = Just gender } }, props { isBanner = false } })
             _ -> pure unit
           case email of
-            Just email -> do
+            Just email -> do 
+              void $ pure $ setCleverTapUserProp [{key : "email", value : unsafeToForeign email}]
               setValueToLocalStore USER_EMAIL email
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { settingSideBar { email = Just email } } })
             _ -> pure unit
