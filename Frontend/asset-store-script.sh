@@ -11,7 +11,7 @@ add_file_for_commit() { #dir , sub_dir, asset_type, asset_name, source_path
     local asset_type="$3"
     local asset_name="$4"
     local updated_path="beckn/$dir/$sub_dir/$asset_type/$asset_name"
-    files_to_be_added+=("../../$source_path:$updated_path")
+    files_to_be_added+=("../../../$source_path:$updated_path")
 
     echo "Inside add_file_for_commit" $source_path "->" $updated_path
 }
@@ -84,10 +84,11 @@ create_pull_request() {
                     final_dir="jatrisaathi"
                 elif echo ${dir} | grep -q "nammaYatri"; then
                     final_dir="nammayatri"
-                elif echo ${dir} | grep -q "yatri"; then
-                    final_dir="yatri"
                 elif echo ${dir} | grep -q "manayatri"; then
                     final_dir="manayatri"
+                elif echo ${dir} | grep -q "yatri"; then
+                    final_dir="yatri"
+                
                 else 
                     final_dir=""
                 fi
