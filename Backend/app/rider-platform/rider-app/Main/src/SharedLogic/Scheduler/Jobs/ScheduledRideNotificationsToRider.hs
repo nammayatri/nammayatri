@@ -27,7 +27,6 @@ import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Types.Error
-import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.JobScheduler
@@ -46,11 +45,11 @@ sendScheduledRideNotificationsToRider ::
     CacheFlow m r,
     MonadFlow m,
     EsqDBFlow m r,
-    HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     SchedulerFlow r
   ) =>
   Job 'ScheduledRideNotificationsToRider ->
-  m ()
+  m ExecutionResult
 sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
       merchantOpCityId = jobData.merchantOperatingCityId
@@ -93,6 +92,7 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
         Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq smsReqBody phoneNumber sender) -- TODO: append SMS heading
           >>= Sms.checkSmsResult
       _ -> pure ()
+  return Complete
   where
     generateReq notifTitle notifBody booking ride = do
       let (title, message) = formatMessageTransformer notifTitle notifBody booking ride

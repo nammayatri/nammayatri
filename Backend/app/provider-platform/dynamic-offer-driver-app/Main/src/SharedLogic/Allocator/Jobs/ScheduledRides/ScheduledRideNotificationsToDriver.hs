@@ -29,7 +29,6 @@ import Kernel.External.Types (Language (..), SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Types.Error
-import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator
@@ -50,11 +49,11 @@ sendScheduledRideNotificationsToDriver ::
     CacheFlow m r,
     MonadFlow m,
     EsqDBFlow m r,
-    HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     SchedulerFlow r
   ) =>
   Job 'ScheduledRideNotificationsToDriver ->
-  m ()
+  m ExecutionResult
 sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
       merchantOpCityId = jobData.merchantOperatingCityId
@@ -103,6 +102,7 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
         merchantMessage <- CMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId messageKey >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId notificationKey)
         Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq merchantMessage.message phoneNumber sender) >>= Sms.checkSmsResult
       _ -> pure () -- WHATSAPP or Other Notifications can be implemented here
+  return Complete
   where
     generateReq notifTitle notifBody booking = do
       let (title, message) = formatMessageTransformer notifTitle notifBody booking
