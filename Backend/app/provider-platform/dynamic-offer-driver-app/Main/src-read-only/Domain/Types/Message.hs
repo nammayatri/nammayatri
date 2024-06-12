@@ -63,4 +63,4 @@ data RawMessage = RawMessage
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MessageType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageType)

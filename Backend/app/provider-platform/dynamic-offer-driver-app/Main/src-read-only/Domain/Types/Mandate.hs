@@ -28,8 +28,8 @@ data Mandate = Mandate
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data MandateStatus = ACTIVE | INACTIVE deriving (Read, (Show), (Eq), (Generic), (FromJSON), (ToJSON), (ToSchema), (ToParamSchema), (Ord))
+data MandateStatus = ACTIVE | INACTIVE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''MandateStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''MandateStatus)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''MandateStatus))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''MandateStatus)

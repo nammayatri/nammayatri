@@ -20,12 +20,12 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "driver" :> "favorites" :> Get ('[JSON]) [API.Types.UI.FavouriteDriver.FavouriteDriverResp] :<|> TokenAuth :> "favorites"
+  ( TokenAuth :> "driver" :> "favorites" :> Get '[JSON] [API.Types.UI.FavouriteDriver.FavouriteDriverResp] :<|> TokenAuth :> "favorites"
       :> Capture
            "driverId"
            Data.Text.Text
       :> "remove"
-      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API

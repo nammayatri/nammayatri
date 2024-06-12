@@ -12,14 +12,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data DriverHomeLocationT f = DriverHomeLocationT
-  { address :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    driverId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    lat :: (B.C f Kernel.Prelude.Double),
-    lon :: (B.C f Kernel.Prelude.Double),
-    tag :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { address :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    driverId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    lat :: B.C f Kernel.Prelude.Double,
+    lon :: B.C f Kernel.Prelude.Double,
+    tag :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table DriverHomeLocationT where
 
 type DriverHomeLocation = DriverHomeLocationT Identity
 
-$(enableKVPG (''DriverHomeLocationT) [('id)] [[('driverId)]])
+$(enableKVPG ''DriverHomeLocationT ['id] [['driverId]])
 
-$(mkTableInstancesWithTModifier (''DriverHomeLocationT) "driver_home_location" [("address", "home_address")])
+$(mkTableInstancesWithTModifier ''DriverHomeLocationT "driver_home_location" [("address", "home_address")])
