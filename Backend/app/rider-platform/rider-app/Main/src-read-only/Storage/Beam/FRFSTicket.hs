@@ -15,6 +15,8 @@ import Tools.Beam.UtilsTH
 data FRFSTicketT f = FRFSTicketT
   { frfsTicketBookingId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     qrData :: B.C f Kernel.Prelude.Text,
     riderId :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.FRFSTicket.FRFSTicketStatus,
@@ -33,6 +35,6 @@ instance B.Table FRFSTicketT where
 
 type FRFSTicket = FRFSTicketT Identity
 
-$(enableKVPG ''FRFSTicketT ['id] [['frfsTicketBookingId]])
+$(enableKVPG ''FRFSTicketT ['id] [['frfsTicketBookingId], ['partnerOrgTransactionId]])
 
 $(mkTableInstances ''FRFSTicketT "frfs_ticket")

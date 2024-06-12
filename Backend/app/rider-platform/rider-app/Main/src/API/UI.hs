@@ -44,6 +44,7 @@ import qualified API.UI.GoogleTranslate as GoogleTranslateProxy
 import qualified API.UI.HotSpot as HotSpot
 import qualified API.UI.Issue as Issue
 import qualified API.UI.Maps as MapsProxy
+import qualified API.UI.PartnerOrganizationFRFS as PartnerOrgFRFS
 import qualified API.UI.Payment as Payment
 import qualified API.UI.PersonStats as PersonStats
 import qualified API.UI.Profile as Profile
@@ -107,6 +108,7 @@ type API =
            :<|> SocialLogin.API
            :<|> EstimateBP.API
            :<|> FavouriteDriver.API
+           :<|> PartnerOrgFRFS.API
        )
 
 handler :: FlowServer API
@@ -153,3 +155,4 @@ handler =
     :<|> SocialLogin.handler
     :<|> EstimateBP.handler
     :<|> FavouriteDriver.handler
+    :<|> PartnerOrgFRFS.handler

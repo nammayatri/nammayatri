@@ -322,6 +322,191 @@ instance IsHTTPError BecknSchemaError where
 
 instance IsAPIError BecknSchemaError
 
+newtype APIKeyError
+  = InvalidAPIKey Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''APIKeyError
+
+instance IsBaseError APIKeyError where
+  toMessage = \case
+    InvalidAPIKey "" -> Just "Invalid API Key"
+    InvalidAPIKey msg -> Just $ "Invalid API Key:-" <> msg
+
+instance IsHTTPError APIKeyError where
+  toErrorCode = \case
+    InvalidAPIKey _ -> "INVALID_API_KEY"
+
+  toHttpCode = \case
+    InvalidAPIKey _ -> E401
+
+instance IsAPIError APIKeyError
+
+data PartnerOrgConfigError
+  = PartnerOrgConfigNotFound Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''PartnerOrgConfigError
+
+instance IsBaseError PartnerOrgConfigError where
+  toMessage = \case
+    PartnerOrgConfigNotFound partnerOrgId cfgType -> Just $ "PartnerOrg Config with partnerOrgId:" +|| partnerOrgId ||+ " and configType:" +|| cfgType ||+ " not found."
+
+instance IsHTTPError PartnerOrgConfigError where
+  toErrorCode = \case
+    PartnerOrgConfigNotFound _ _ -> "PARTNER_ORG_CONFIG_NOT_FOUND"
+
+  toHttpCode = \case
+    PartnerOrgConfigNotFound _ _ -> E500
+
+instance IsAPIError PartnerOrgConfigError
+
+data StationError
+  = StationNotFound Text
+  | StationDoesNotExist Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''StationError
+
+instance IsBaseError StationError where
+  toMessage = \case
+    StationNotFound msg -> Just $ "Station Not Found:-" <> msg
+    StationDoesNotExist msg -> Just $ "Station Does Not Exist:-" <> msg
+
+instance IsHTTPError StationError where
+  toErrorCode = \case
+    StationNotFound _ -> "STATION_NOT_FOUND"
+    StationDoesNotExist _ -> "STATION_DOES_NOT_EXIST"
+
+  toHttpCode = \case
+    StationNotFound _ -> E500
+    StationDoesNotExist _ -> E400
+
+instance IsAPIError StationError
+
+data PartnerOrgStationError
+  = PartnerOrgStationNotFound Text Text
+  | PartnerOrgStationNotFoundForStationId Text Text
+  | PartnerOrgStationDoesNotExist Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''PartnerOrgStationError
+
+instance IsBaseError PartnerOrgStationError where
+  toMessage = \case
+    PartnerOrgStationNotFound pOrgId pOrgStationId -> Just $ "PartnerOrg Station for partnerOrgId:" +|| pOrgId ||+ " and partnerOrgStationId:" +|| pOrgStationId ||+ " not found."
+    PartnerOrgStationNotFoundForStationId pOrgId stationId -> Just $ "PartnerOrg Station for partnerOrgId:" +|| pOrgId ||+ " and stationId:" +|| stationId ||+ " not found."
+    PartnerOrgStationDoesNotExist pOrgId pOrgStationId -> Just $ "PartnerOrg Station for partnerOrgId:" +|| pOrgId ||+ " and partnerOrgStationId:" +|| pOrgStationId ||+ " does not exist."
+
+instance IsHTTPError PartnerOrgStationError where
+  toErrorCode = \case
+    PartnerOrgStationNotFound _ _ -> "PARTNER_ORG_STATION_NOT_FOUND"
+    PartnerOrgStationNotFoundForStationId _ _ -> "PARTNER_ORG_STATION_NOT_FOUND_FOR_STATION_ID"
+    PartnerOrgStationDoesNotExist _ _ -> "PARTNER_ORG_STATION_DOES_NOT_EXIST"
+
+  toHttpCode = \case
+    PartnerOrgStationNotFound _ _ -> E500
+    PartnerOrgStationNotFoundForStationId _ _ -> E500
+    PartnerOrgStationDoesNotExist _ _ -> E400
+
+instance IsAPIError PartnerOrgStationError
+
+data FRFSConfigError
+  = FRFSConfigNotFound Text
+  | FRFSConfigDoesNotExist Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FRFSConfigError
+
+instance IsBaseError FRFSConfigError where
+  toMessage = \case
+    FRFSConfigNotFound mocId -> Just $ "FRFS Config with merchantOperatingCityId:" +|| mocId ||+ " not found."
+    FRFSConfigDoesNotExist mocId -> Just $ "FRFS Config with merchantOperatingCityId:" +|| mocId ||+ " does not exist."
+
+instance IsHTTPError FRFSConfigError where
+  toErrorCode = \case
+    FRFSConfigNotFound _ -> "FRFS_CONFIG_NOT_FOUND"
+    FRFSConfigDoesNotExist _ -> "FRFS_CONFIG_DOES_NOT_EXIST"
+
+  toHttpCode = \case
+    FRFSConfigNotFound _ -> E500
+    FRFSConfigDoesNotExist _ -> E400
+
+instance IsAPIError FRFSConfigError
+
+data FRFSTicketError
+  = FRFSTicketDoesNotExist Text
+  | FRFSTicketExpired Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FRFSTicketError
+
+instance IsBaseError FRFSTicketError where
+  toMessage = \case
+    FRFSTicketDoesNotExist ticketId -> Just $ "FRFS Ticket with ticketId:" +|| ticketId ||+ " does not exist."
+    FRFSTicketExpired ticketId -> Just $ "FRFS Ticket with ticketId:" +|| ticketId ||+ " has expired."
+
+instance IsHTTPError FRFSTicketError where
+  toErrorCode = \case
+    FRFSTicketDoesNotExist _ -> "FRFS_TICKET_DOES_NOT_EXIST"
+    FRFSTicketExpired _ -> "FRFS_TICKET_EXPIRED"
+
+  toHttpCode = \case
+    FRFSTicketDoesNotExist _ -> E400
+    FRFSTicketExpired _ -> E400
+
+instance IsAPIError FRFSTicketError
+
+data FRFSTicketBookingError
+  = FRFSTicketBookingNotFound Text
+  | FRFSTicketBookingDoesNotExist Text
+  | FRFSTicketsForBookingExpired Text
+  | FRFSTicketsForBookingDoesNotExist Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FRFSTicketBookingError
+
+instance IsBaseError FRFSTicketBookingError where
+  toMessage = \case
+    FRFSTicketBookingNotFound bookingId -> Just $ "FRFS Ticket Booking with bookingId:" +|| bookingId ||+ " not found."
+    FRFSTicketBookingDoesNotExist bookingId -> Just $ "FRFS Ticket Booking with bookingId:" +|| bookingId ||+ " does not exist."
+    FRFSTicketsForBookingExpired bookingId -> Just $ "FRFS Tickets for booking with bookingId:" +|| bookingId ||+ " has expired."
+    FRFSTicketsForBookingDoesNotExist bookingId -> Just $ "FRFS Tickets for booking with bookingId:" +|| bookingId ||+ " does not exist."
+
+instance IsHTTPError FRFSTicketBookingError where
+  toErrorCode = \case
+    FRFSTicketBookingNotFound _ -> "FRFS_TICKET_BOOKING_NOT_FOUND"
+    FRFSTicketBookingDoesNotExist _ -> "FRFS_TICKET_BOOKING_DOES_NOT_EXIST"
+    FRFSTicketsForBookingExpired _ -> "FRFS_TICKETS_FOR_BOOKING_EXPIRED"
+    FRFSTicketsForBookingDoesNotExist _ -> "FRFS_TICKETS_FOR_BOOKING_DOES_NOT_EXIST"
+
+  toHttpCode = \case
+    FRFSTicketBookingNotFound _ -> E500
+    FRFSTicketBookingDoesNotExist _ -> E400
+    FRFSTicketsForBookingExpired _ -> E400
+    FRFSTicketsForBookingDoesNotExist _ -> E400
+
+instance IsAPIError FRFSTicketBookingError
+
+data BecknConfigError
+  = BecknConfigNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''BecknConfigError
+
+instance IsBaseError BecknConfigError where
+  toMessage = \case
+    BecknConfigNotFound msg -> Just $ "Beckn Config not found:-" <> msg
+
+instance IsHTTPError BecknConfigError where
+  toErrorCode = \case
+    BecknConfigNotFound _ -> "BECKN_CONFIG_NOT_FOUND"
+
+  toHttpCode = \case
+    BecknConfigNotFound _ -> E500
+
+instance IsAPIError BecknConfigError
+
 ------------------ CAC ---------------------
 -- This is for temporary implementation of the CAC auth API. This will be depcricated once we have SSO for CAC.
 data CacAuthError = CacAuthError | CacInvalidToken

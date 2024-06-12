@@ -15,6 +15,8 @@ import Tools.Beam.UtilsTH
 data FRFSSearchT f = FRFSSearchT
   { fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     quantity :: B.C f Kernel.Prelude.Int,
     riderId :: B.C f Kernel.Prelude.Text,
     toStationId :: B.C f Kernel.Prelude.Text,
@@ -32,6 +34,6 @@ instance B.Table FRFSSearchT where
 
 type FRFSSearch = FRFSSearchT Identity
 
-$(enableKVPG ''FRFSSearchT ['id] [])
+$(enableKVPG ''FRFSSearchT ['id] [['partnerOrgTransactionId], ['riderId]])
 
 $(mkTableInstances ''FRFSSearchT "frfs_search")

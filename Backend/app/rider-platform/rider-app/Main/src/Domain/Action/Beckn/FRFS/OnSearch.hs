@@ -17,7 +17,6 @@ module Domain.Action.Beckn.FRFS.OnSearch where
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSSearch as Search
-import qualified Domain.Types.FRFSTrip as DTrip
 import Domain.Types.Merchant
 import qualified Domain.Types.Station as DStation
 import Environment
@@ -56,7 +55,7 @@ data DStation = DStation
     stationName :: Text,
     stationLat :: Maybe Double,
     stationLon :: Maybe Double,
-    stationType :: DTrip.StationType,
+    stationType :: API.StationType,
     stopSequence :: Maybe Int
   }
 
@@ -111,15 +110,17 @@ mkQuotes dOnSearch search merchant DQuote {..} = do
         Quote.vehicleType,
         Quote.merchantId = Just merchant.id,
         Quote.merchantOperatingCityId = search.merchantOperatingCityId,
+        Quote.partnerOrgId = search.partnerOrgId,
+        Quote.partnerOrgTransactionId = search.partnerOrgTransactionId,
         Quote.createdAt = now,
         Quote.updatedAt = now
       }
 
 getStartStation :: [DStation] -> Maybe DStation
-getStartStation stations = find (\station -> station.stationType == DTrip.START) stations
+getStartStation = find (\station -> station.stationType == API.START)
 
 getEndStation :: [DStation] -> Maybe DStation
-getEndStation stations = find (\station -> station.stationType == DTrip.END) stations
+getEndStation = find (\station -> station.stationType == API.END)
 
 castStationToAPI :: DStation -> API.FRFSStationAPI
 castStationToAPI DStation {..} =

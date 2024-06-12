@@ -19,6 +19,7 @@ data RegistrationTokenT f = RegistrationTokenT
     authType :: B.C f Domain.Types.RegistrationToken.LoginType,
     authValueHash :: B.C f Kernel.Prelude.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
+    createdViaPartnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     entityId :: B.C f Kernel.Prelude.Text,
     entityType :: B.C f Domain.Types.RegistrationToken.RTEntityType,
     id :: B.C f Kernel.Prelude.Text,

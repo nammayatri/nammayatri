@@ -84,6 +84,7 @@ library
       API.UI.HotSpot
       API.UI.Issue
       API.UI.Maps
+      API.UI.PartnerOrganizationFRFS
       API.UI.Payment
       API.UI.PersonStats
       API.UI.Profile
@@ -191,6 +192,7 @@ library
       Domain.Action.UI.Location
       Domain.Action.UI.Maps
       Domain.Action.UI.MerchantPaymentMethod
+      Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Payment
       Domain.Action.UI.Person
       Domain.Action.UI.PersonDefaultEmergencyNumber
@@ -221,6 +223,7 @@ library
       Domain.Types.Extra.MerchantMessage
       Domain.Types.Extra.MerchantPaymentMethod
       Domain.Types.Extra.MerchantServiceConfig
+      Domain.Types.Extra.PartnerOrgConfig
       Domain.Types.Extra.PersonFlowStatus
       Domain.Types.Extra.PlaceNameCache
       Domain.Types.Extra.RentalDetails
@@ -279,12 +282,16 @@ library
       Storage.CachedQueries.Merchant.MerchantState
       Storage.CachedQueries.Merchant.RiderConfig
       Storage.CachedQueries.MerchantConfig
+      Storage.CachedQueries.PartnerOrganization
+      Storage.CachedQueries.PartnerOrgConfig
+      Storage.CachedQueries.PartnerOrgStation
       Storage.CachedQueries.Person
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.PlaceBasedServiceConfig
       Storage.CachedQueries.RideRelatedNotificationConfig
       Storage.CachedQueries.SavedReqLocationExtra
       Storage.CachedQueries.Sos
+      Storage.CachedQueries.Station
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.Booking
@@ -313,6 +320,8 @@ library
       Storage.Queries.MerchantPaymentMethodExtra
       Storage.Queries.MerchantServiceConfigExtra
       Storage.Queries.MerchantServiceUsageConfigExtra
+      Storage.Queries.PartnerOrganizationExtra
+      Storage.Queries.PartnerOrgConfigExtra
       Storage.Queries.PersonDefaultEmergencyNumberExtra
       Storage.Queries.PersonExtra
       Storage.Queries.PersonFlowStatusExtra
@@ -339,6 +348,7 @@ library
       Storage.Queries.Transformers.MerchantMessage
       Storage.Queries.Transformers.MerchantPaymentMethod
       Storage.Queries.Transformers.MerchantServiceConfig
+      Storage.Queries.Transformers.PartnerOrgConfig
       Storage.Queries.Transformers.Person
       Storage.Queries.Transformers.Quote
       Storage.Queries.Transformers.RentalDetails
@@ -437,6 +447,9 @@ library
       Domain.Types.MerchantState
       Domain.Types.NotificationSoundsConfig
       Domain.Types.OnSearchEvent
+      Domain.Types.PartnerOrganization
+      Domain.Types.PartnerOrgConfig
+      Domain.Types.PartnerOrgStation
       Domain.Types.Person
       Domain.Types.PersonDefaultEmergencyNumber
       Domain.Types.PersonDisability
@@ -518,6 +531,9 @@ library
       Storage.Beam.MerchantState
       Storage.Beam.NotificationSoundsConfig
       Storage.Beam.OnSearchEvent
+      Storage.Beam.PartnerOrganization
+      Storage.Beam.PartnerOrgConfig
+      Storage.Beam.PartnerOrgStation
       Storage.Beam.Person
       Storage.Beam.PersonDefaultEmergencyNumber
       Storage.Beam.PersonDisability
@@ -617,6 +633,8 @@ library
       Storage.Queries.OrphanInstances.MerchantPaymentMethod
       Storage.Queries.OrphanInstances.MerchantServiceConfig
       Storage.Queries.OrphanInstances.MerchantServiceUsageConfig
+      Storage.Queries.OrphanInstances.PartnerOrganization
+      Storage.Queries.OrphanInstances.PartnerOrgConfig
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.PersonDefaultEmergencyNumber
       Storage.Queries.OrphanInstances.PersonFlowStatus
@@ -633,6 +651,9 @@ library
       Storage.Queries.OrphanInstances.TicketBookingServiceCategory
       Storage.Queries.OrphanInstances.TicketService
       Storage.Queries.OrphanInstances.WhiteListOrg
+      Storage.Queries.PartnerOrganization
+      Storage.Queries.PartnerOrgConfig
+      Storage.Queries.PartnerOrgStation
       Storage.Queries.Person
       Storage.Queries.PersonDefaultEmergencyNumber
       Storage.Queries.PersonDisability

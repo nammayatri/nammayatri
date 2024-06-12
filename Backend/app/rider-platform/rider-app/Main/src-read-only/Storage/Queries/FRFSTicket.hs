@@ -57,6 +57,8 @@ updateByPrimaryKey (Domain.Types.FRFSTicket.FRFSTicket {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.frfsTicketBookingId (Kernel.Types.Id.getId frfsTicketBookingId),
+      Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
+      Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
       Se.Set Beam.qrData qrData,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.status status,
@@ -76,6 +78,8 @@ instance FromTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
         Domain.Types.FRFSTicket.FRFSTicket
           { frfsTicketBookingId = Kernel.Types.Id.Id frfsTicketBookingId,
             id = Kernel.Types.Id.Id id,
+            partnerOrgId = Kernel.Types.Id.Id <$> partnerOrgId,
+            partnerOrgTransactionId = Kernel.Types.Id.Id <$> partnerOrgTransactionId,
             qrData = qrData,
             riderId = Kernel.Types.Id.Id riderId,
             status = status,
@@ -92,6 +96,8 @@ instance ToTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
     Beam.FRFSTicketT
       { Beam.frfsTicketBookingId = Kernel.Types.Id.getId frfsTicketBookingId,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.partnerOrgId = Kernel.Types.Id.getId <$> partnerOrgId,
+        Beam.partnerOrgTransactionId = Kernel.Types.Id.getId <$> partnerOrgTransactionId,
         Beam.qrData = qrData,
         Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.status = status,

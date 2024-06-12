@@ -38,6 +38,8 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
+      Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
+      Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
       Se.Set Beam.quantity quantity,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.toStationId (Kernel.Types.Id.getId toStationId),
@@ -56,6 +58,8 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
         Domain.Types.FRFSSearch.FRFSSearch
           { fromStationId = Kernel.Types.Id.Id fromStationId,
             id = Kernel.Types.Id.Id id,
+            partnerOrgId = Kernel.Types.Id.Id <$> partnerOrgId,
+            partnerOrgTransactionId = Kernel.Types.Id.Id <$> partnerOrgTransactionId,
             quantity = quantity,
             riderId = Kernel.Types.Id.Id riderId,
             toStationId = Kernel.Types.Id.Id toStationId,
@@ -71,6 +75,8 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
     Beam.FRFSSearchT
       { Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.partnerOrgId = Kernel.Types.Id.getId <$> partnerOrgId,
+        Beam.partnerOrgTransactionId = Kernel.Types.Id.getId <$> partnerOrgTransactionId,
         Beam.quantity = quantity,
         Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.toStationId = Kernel.Types.Id.getId toStationId,

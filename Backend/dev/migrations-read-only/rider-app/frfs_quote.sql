@@ -27,3 +27,9 @@ ALTER TABLE atlas_app.frfs_quote ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN currency text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN partner_org_transaction_id character varying(36) ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN partner_org_id character varying(36) ;

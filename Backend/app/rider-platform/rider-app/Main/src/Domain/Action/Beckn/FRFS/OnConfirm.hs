@@ -64,7 +64,7 @@ validateRequest DOrder {..} = do
       void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
       callBPPCancel updatedBooking bapConfig Spec.CONFIRM_CANCEL merchantId
-      throwM $ (InvalidRequest "Booking expired, initated cancel request")
+      throwM $ InvalidRequest "Booking expired, initated cancel request"
     else do
       -- Booking is valid, proceed to onConfirm handler
       merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -163,6 +163,8 @@ mkTicket booking dTicket = do
         Ticket.validTill = dTicket.validTill,
         Ticket.merchantId = booking.merchantId,
         Ticket.merchantOperatingCityId = booking.merchantOperatingCityId,
+        Ticket.partnerOrgId = booking.partnerOrgId,
+        Ticket.partnerOrgTransactionId = booking.partnerOrgTransactionId,
         Ticket.createdAt = now,
         Ticket.updatedAt = now
       }

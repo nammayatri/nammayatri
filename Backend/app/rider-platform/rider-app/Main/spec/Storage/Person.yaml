@@ -12,6 +12,7 @@ imports:
   LocalTime: Data.Time
   Device: Kernel.Types.Version
   DeviceType: Kernel.Types.Version
+  PartnerOrganization: Domain.Types.PartnerOrganization
 
 Person:
   tableName: person
@@ -90,6 +91,7 @@ Person:
     clientDevice : Maybe Device
     backendAppVersion : Maybe Text
     blockedCount : Maybe Int
+    registeredViaPartnerOrgId : Maybe (Id PartnerOrganization)
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>

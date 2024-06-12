@@ -146,6 +146,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.referralCode referralCode,
       Se.Set Beam.referredAt referredAt,
       Se.Set Beam.referredByCustomer referredByCustomer,
+      Se.Set Beam.registeredViaPartnerOrgId (Kernel.Types.Id.getId <$> registeredViaPartnerOrgId),
       Se.Set Beam.registrationLat registrationLat,
       Se.Set Beam.registrationLon registrationLon,
       Se.Set Beam.role role,

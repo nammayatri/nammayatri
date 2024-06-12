@@ -40,4 +40,5 @@ run = withModifiedEnv' $ \modifiedEnv ->
     context =
       verifyPersonAction @(FlowR AppEnv)
         :. verifyDashboardAction @(FlowR AppEnv)
+        :. verifyPartnerOrganizationAction @(FlowR AppEnv)
         :. EmptyContext

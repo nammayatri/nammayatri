@@ -10,7 +10,6 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
-import qualified Domain.Types.FRFSTrip
 import qualified Domain.Types.Station
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Juspay.Types.CreateOrder
@@ -46,7 +45,7 @@ data FRFSConfigAPIRes = FRFSConfigAPIRes
     oneWayTicketLimit :: Kernel.Prelude.Int,
     roundTripTicketLimit :: Kernel.Prelude.Int
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
@@ -72,12 +71,12 @@ data FRFSStationAPI = FRFSStationAPI
     lon :: Data.Maybe.Maybe Kernel.Prelude.Double,
     name :: Data.Text.Text,
     sequenceNum :: Data.Maybe.Maybe Kernel.Prelude.Int,
-    stationType :: Data.Maybe.Maybe Domain.Types.FRFSTrip.StationType
+    stationType :: Data.Maybe.Maybe API.Types.UI.FRFSTicketService.StationType
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 data FRFSTicketAPI = FRFSTicketAPI {qrData :: Data.Text.Text, status :: Domain.Types.FRFSTicket.FRFSTicketStatus, ticketNumber :: Data.Text.Text, validTill :: Kernel.Prelude.UTCTime}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
@@ -96,3 +95,5 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     vehicleType :: Domain.Types.Station.FRFSVehicleType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data StationType = START | END | TRANSIT | INTERMEDIATE deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)

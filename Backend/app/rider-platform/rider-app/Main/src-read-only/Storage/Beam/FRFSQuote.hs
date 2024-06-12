@@ -21,6 +21,8 @@ data FRFSQuoteT f = FRFSQuoteT
     bppSubscriberUrl :: B.C f Kernel.Prelude.Text,
     fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     price :: B.C f Kernel.Types.Common.HighPrecMoney,
     providerDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -46,6 +48,6 @@ instance B.Table FRFSQuoteT where
 
 type FRFSQuote = FRFSQuoteT Identity
 
-$(enableKVPG ''FRFSQuoteT ['id] [['searchId]])
+$(enableKVPG ''FRFSQuoteT ['id] [['partnerOrgTransactionId], ['searchId]])
 
 $(mkTableInstances ''FRFSQuoteT "frfs_quote")

@@ -8,6 +8,7 @@ import Data.Aeson
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -16,6 +17,8 @@ import qualified Tools.Beam.UtilsTH
 data FRFSTicket = FRFSTicket
   { frfsTicketBookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicket.FRFSTicket,
+    partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
+    partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),
     qrData :: Kernel.Prelude.Text,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     status :: Domain.Types.FRFSTicket.FRFSTicketStatus,

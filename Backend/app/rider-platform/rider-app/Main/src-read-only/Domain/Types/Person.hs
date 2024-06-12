@@ -8,6 +8,7 @@ import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantConfig
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.PartnerOrganization
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -65,6 +66,7 @@ data PersonE e = Person
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     referredByCustomer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    registeredViaPartnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     registrationLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     registrationLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     role :: Domain.Types.Person.Role,
@@ -135,6 +137,7 @@ instance EncryptedItem Person where
           referralCode = referralCode entity,
           referredAt = referredAt entity,
           referredByCustomer = referredByCustomer entity,
+          registeredViaPartnerOrgId = registeredViaPartnerOrgId entity,
           registrationLat = registrationLat entity,
           registrationLon = registrationLon entity,
           role = role entity,
@@ -197,6 +200,7 @@ instance EncryptedItem Person where
             referralCode = referralCode entity,
             referredAt = referredAt entity,
             referredByCustomer = referredByCustomer entity,
+            registeredViaPartnerOrgId = registeredViaPartnerOrgId entity,
             registrationLat = registrationLat entity,
             registrationLon = registrationLon entity,
             role = role entity,
