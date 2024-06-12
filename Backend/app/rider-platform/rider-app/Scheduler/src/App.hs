@@ -36,6 +36,7 @@ import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.JobScheduler
 import "rider-app" SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
+import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
 import Storage.Beam.SystemConfigs ()
 
 schedulerHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle RiderJobType
@@ -53,6 +54,7 @@ schedulerHandle flowRt env =
       jobHandlers =
         emptyJobHandlerList
           & putJobHandlerInList (liftIO . runFlowR flowRt env . checkPNAndSendSMS)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideNotificationsToRider)
     }
 
 runRiderAppScheduler ::
