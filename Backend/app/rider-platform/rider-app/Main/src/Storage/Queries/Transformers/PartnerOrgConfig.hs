@@ -5,7 +5,6 @@ module Storage.Queries.Transformers.PartnerOrgConfig where
 
 import qualified Data.Aeson as A
 import qualified Data.Text as T
-import Domain.Types.PartnerOrgConfig
 import Domain.Types.PartnerOrgConfig as Domain
 import Kernel.Beam.Functions
 import Kernel.External.Encryption

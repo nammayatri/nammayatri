@@ -5,7 +5,6 @@ module Storage.Queries.PartnerOrganizationExtra where
 
 import Domain.Types.PartnerOrganization
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
 import Kernel.Types.Error
