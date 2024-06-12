@@ -25,6 +25,7 @@ where
 
 -- temp import for backward compatibility should be removed later
 
+import Control.Applicative ((<|>))
 import qualified Control.Monad.Extra as Extra
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
@@ -40,7 +41,6 @@ import Domain.Types.Plan as Plan
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleRegistrationCertificate as RC
 import Environment
-import qualified EulerHS.Prelude as EPrelude
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Types
@@ -160,11 +160,11 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
       case mbStatus of
         Just status -> do
           message <- documentStatusMessage status Nothing docType language
-          return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = (EPrelude.<|>) mbProcessedReason (Just message)}
+          return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message}
         Nothing -> do
           (status, mbReason) <- getInProgressDriverDocuments docType personId transporterConfig.onboardingTryLimit
           message <- documentStatusMessage status mbReason docType language
-          return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = (EPrelude.<|>) mbReason (Just message)}
+          return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
 
   processedVehicleDocumentsWithRC <- do
     processedVehicles <- do
@@ -181,11 +181,11 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
           case mbStatus of
             Just status -> do
               message <- documentStatusMessage status Nothing docType language
-              return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = (EPrelude.<|>) mbProcessedReason (Just message)}
+              return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message}
             Nothing -> do
               (status, mbReason) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit
               message <- documentStatusMessage status mbReason docType language
-              return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = (EPrelude.<|>) mbReason (Just message)}
+              return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message}
       return $
         VehicleDocumentItem
           { registrationNo,
@@ -482,9 +482,15 @@ documentStatusMessage status mbReason docType language = do
     (PENDING, _) -> toVerificationMessage VerificationInProgress language
     (LIMIT_EXCEED, _) -> toVerificationMessage LimitExceed language
     (NO_DOC_AVAILABLE, _) -> toVerificationMessage NoDcoumentFound language
-    (INVALID, DVC.DriverLicense) -> toVerificationMessage DLInvalid language
-    (INVALID, DVC.VehicleRegistrationCertificate) -> toVerificationMessage RCInvalid language
-    (INVALID, _) -> toVerificationMessage DocumentInvalid language
+    (INVALID, DVC.DriverLicense) -> do
+      msg <- toVerificationMessage DLInvalid language
+      return $ fromMaybe msg mbReason
+    (INVALID, DVC.VehicleRegistrationCertificate) -> do
+      msg <- toVerificationMessage RCInvalid language
+      return $ fromMaybe msg mbReason
+    (INVALID, _) -> do
+      msg <- toVerificationMessage DocumentInvalid language
+      return $ fromMaybe msg mbReason
     (FAILED, _) -> do
       case mbReason of
         Just res
