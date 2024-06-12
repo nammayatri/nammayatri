@@ -486,7 +486,7 @@ getFamousCityDestination (FamousDestination destnData)  =
     , tag : ""
     , tagType : Nothing
     , cardType : Nothing
-    , address : ""
+    , address : destnData.langName
     , tagName : ""
     , isEditEnabled : true
     , savedLocation : ""

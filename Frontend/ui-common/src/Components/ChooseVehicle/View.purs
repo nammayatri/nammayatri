@@ -316,11 +316,13 @@ priceDetailsView push config =
       [ linearLayout
          [ height WRAP_CONTENT
          , width WRAP_CONTENT
+         , accessibility DISABLE
          ][ textView $ 
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , text config.price
             , color Color.black800
+            , accessibility DISABLE
             ] <> FontStyle.body7 TypoGraphy
           , linearLayout
             [ height MATCH_PARENT
