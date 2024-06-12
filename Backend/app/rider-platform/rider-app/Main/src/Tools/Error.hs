@@ -488,7 +488,7 @@ instance IsHTTPError FRFSTicketBookingError where
 
 instance IsAPIError FRFSTicketBookingError
 
-data BecknConfigError
+newtype BecknConfigError
   = BecknConfigNotFound Text
   deriving (Eq, Show, IsBecknAPIError)
 
