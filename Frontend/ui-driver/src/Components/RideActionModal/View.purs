@@ -424,7 +424,8 @@ pickUpDistance push config =
               , color Color.black650
               , ellipsize true
               , singleLine true
-              ,margin $ MarginLeft 20
+              , margin $ MarginLeft 10
+              
               ]
             <> FontStyle.body1 TypoGraphy
         , textView
@@ -737,8 +738,9 @@ waitTimeView push config =
          ]
          [textView $
         [ height WRAP_CONTENT
-         , width $ V 80
-         , text (getString WAIT_TIME)
+         , width $ V 65
+         , text (getString WAIT_TIME) 
+         ,margin $ Margin 20 0 0 0 
          , color Color.black650
          , textSize FontSize.a_14
          , ellipsize true
@@ -746,13 +748,15 @@ waitTimeView push config =
          ] <> FontStyle.body1 TypoGraphy
         ,
         imageView
-          [ height MATCH_PARENT
-            , width  $ V 20
+          [ height $ V 18 
+            , width  $ V 18
             , visibility if config.notifiedCustomer then VISIBLE else GONE
             , onClick push (const WaitingInfo)
+            , gravity CENTER
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
             , rippleColor Color.rippleShade
             , cornerRadius 20.0
+            , margin $ Margin 0 2 0 0 
           ]
          ]
        , linearLayout
@@ -766,8 +770,10 @@ waitTimeView push config =
             , color Color.black900
             , ellipsize true
             , textSize FontSize.a_20
-            , singleLine true
-            , fontStyle $ FontStyle.semiBold TypoGraphy
+            -- ,padding $ Padding 4 0 0 0 
+            ,margin $ Margin 28 0 0 0  
+            ,singleLine true
+            ,fontStyle $ FontStyle.semiBold TypoGraphy
             ]
             , if config.waitTimeSeconds > chargesOb.freeSeconds then 
                 yellowPill push ("+ " <> HU.formatSecIntoMinSecs (config.waitTimeSeconds - chargesOb.freeSeconds)) false 
@@ -930,9 +936,6 @@ normalRideInfoView push config =
           , width MATCH_PARENT
           ]
           [ estimatedFareView push config
-          , separator true
-          , totalDistanceView push config
-    
           
           , if isWaitingTimeStarted config then  
                 linearLayout
@@ -945,6 +948,8 @@ normalRideInfoView push config =
               , height MATCH_PARENT
               ]
               []
+          , separator true
+          , totalDistanceView push config
           ]
       , linearLayout[
           height WRAP_CONTENT
