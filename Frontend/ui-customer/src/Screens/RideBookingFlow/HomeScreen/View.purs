@@ -482,8 +482,8 @@ view push state =
                   , width MATCH_PARENT
                   , background Color.transparent
                   ][ 
-                    if showHomeScreenV2 state then homeScreenViewV2 push state else emptyTextView state
-                  , if isEditDestination || showHomeScreenV2 state then emptyTextView state else mapView' push state $  "CustomerHomeScreen"
+                    if isHomeScreenView state then homeScreenViewV2 push state else emptyTextView state
+                  , if isEditDestination || isHomeScreenView state then emptyTextView state else mapView' push state $  "CustomerHomeScreen"
                   , if isEditDestination then mapView' push state "CustomerHomeScreenEditDest" else emptyTextView state
                     ]
                 , if not state.data.config.feature.enableSpecialPickup then
@@ -3411,8 +3411,8 @@ homeScreenViewV2 push state = let
                                         Just followers -> if (showFollowerBar followers state) && state.props.currentStage == HomeScreen 
                                                             then [followView push followers] 
                                                             else [])
-                              <> [ if showHomeScreenV2 state then mapView' push state "CustomerHomeScreenMap" else emptyLayout state
-                                 , if showHomeScreenV2 state then contentView state else emptyLayout state
+                              <> [ if isHomeScreenView state then mapView' push state "CustomerHomeScreenMap" else emptyLayout state
+                                 , if isHomeScreenView state then contentView state else emptyLayout state
                               -- <> if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else []
                                 , if state.data.config.feature.enableAdditionalServices || cityConfig.enableRentals then additionalServicesView push state else linearLayout[visibility GONE][]
                                 , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][]
@@ -4276,7 +4276,7 @@ pillTagView config =
       ]
 
 suggestionViewVisibility :: HomeScreenState -> Boolean
-suggestionViewVisibility state =  ((length state.data.tripSuggestions  > 0 || length state.data.destinationSuggestions  > 0) && showHomeScreenV2 state)
+suggestionViewVisibility state =  ((length state.data.tripSuggestions  > 0 || length state.data.destinationSuggestions  > 0) && isHomeScreenView state)
 
 isBannerVisible :: HomeScreenState -> Boolean
 isBannerVisible state = getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner && isHomeScreenView state
@@ -4607,9 +4607,6 @@ newView push state =
 
 extraBottomPadding :: Int 
 extraBottomPadding =  if os == "IOS" then 60 + safeMarginBottom else 112 
-
-showHomeScreenV2 :: HomeScreenState -> Boolean
-showHomeScreenV2 state = (Arr.elem state.props.currentStage [HomeScreen, SearchLocationModel]) && (Arr.elem state.props.isSearchLocation [SearchLocation, NoView])
 
 isAcWorkingView ::  forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 isAcWorkingView push state = 

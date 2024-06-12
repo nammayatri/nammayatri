@@ -346,7 +346,7 @@ view push state =
       , if (state.props.showChatBlockerPopUp || state.data.paymentState.showBlockingPopup) then blockerPopUpView push state else dummyTextView
       , if state.props.currentStage == RideCompleted then RideCompletedCard.view (getRideCompletedConfig state) (push <<< RideCompletedAC) else dummyTextView -- 
       , if state.props.showRideRating then RatingCard.view (push <<< RatingCardAC) (getRatingCardConfig state) else dummyTextView
-      , if state.props.showAcWorkingPopup == Just true then isAcWorkingPopupView push state else dummyTextView 
+      , if state.props.showAcWorkingPopup == Just true && isCar then isAcWorkingPopupView push state else dummyTextView 
       , if state.props.currentStage == RideAccepted && state.data.activeRide.hasToll && state.props.toll.showTollChargePopup then PopUpModal.view (push <<< TollChargesPopUpAC) (PopUpConfig.tollChargesIncluded state) else dummyTextView
       , if state.props.currentStage == RideCompleted && state.data.endRideData.tollAmbigous && state.props.toll.showTollChargeAmbigousPopup then PopUpModal.view (push <<< TollChargesAmbigousPopUpAC) (PopUpConfig.finalFareExcludesToll state) else dummyTextView
       , if state.props.showInterOperablePopUp then interOperableInfoPopUpView push state else dummyTextView
@@ -359,11 +359,11 @@ view push state =
         state.data.driverGotoState.confirmGotoCancel,
         state.props.accountBlockedPopup,
         state.props.vehicleNSPopup && not state.props.rcDeactivePopup,
-        state.props.acExplanationPopup && not onRide && (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.CarCategory
+        state.props.acExplanationPopup && not onRide && isCar
       ])
     onRide = DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted]
     showEnterOdometerReadingModalView = state.props.isOdometerReadingsRequired && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
-
+    isCar = (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.CarCategory
 
 interOperableInfoPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 interOperableInfoPopUpView push state =
