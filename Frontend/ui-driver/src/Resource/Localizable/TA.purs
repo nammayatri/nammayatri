@@ -979,6 +979,7 @@ getTA stringKey =
         LOCATION_ALREADY_EXISTS ->  "இடம் ஏற்கனவே உள்ளது"
         MIN_LEFT ->  "இன்னும் நிமிடம்"
         GOTO_LOC_REACHED ->  "“கோ-டூ” இருப்பிடத்தை அடைந்தது!"
+        CLICK_TO_PREVIEW -> "முன்னோட்டம் பார்க்க கிளிக் செய்யவும்"
         GET_READY_FOR_YS_SUBSCRIPTION _ ->  "யாத்ரி சதி திட்டங்களுக்கு தயாராகுங்கள்!"
         SIGNUP_EARLY_FOR_SPECIAL_OFFERS ->  "சிறப்புச் சலுகைகளுக்கு முன்கூட்டியே பதிவுசெய்க"
         GUARANTEED_FIXED_PRICE _ ->  "ஜனவரி 1, 2025 வரை நிலையான விலைக்கு உத்தரவாதம்"

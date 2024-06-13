@@ -4098,7 +4098,7 @@ documentcaptureScreenFlow = do
           void $ pure $ toast $ getString DOCUMENT_UPLOADED_SUCCESSFULLY
           onBoardingFlow
         Left error -> do
-          modifyScreenState $ DocumentCaptureScreenStateType $ \docCapScreenState -> docCapScreenState { props {validating = false}, data {errorMessage = Just $ Remote.getCorrespondingErrorMessage error}}
+          modifyScreenState $ DocumentCaptureScreenStateType $ \docCapScreenState -> docCapScreenState { props {validating = false, previewSampleImage = false}, data {errorMessage = Just $ Remote.getCorrespondingErrorMessage error}}
           documentcaptureScreenFlow
     TA.OPEN_CAMERA_FOR_PROFILE_PIC state -> openCameraScreenFlow
   documentcaptureScreenFlow
