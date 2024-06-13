@@ -371,7 +371,7 @@ ratingAndInvoiceView state push =
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
   , orientation HORIZONTAL
-  , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
+  , visibility if state.data.selectedItem.status == "CANCELLED" || state.props.fromMyRides == ST.Home then GONE else VISIBLE
   ][  textView $ 
       [ text $ getString YOU_RATED
       , accessibilityHint $ "You Rated " <> (show state.data.rating) <> " Stars"
