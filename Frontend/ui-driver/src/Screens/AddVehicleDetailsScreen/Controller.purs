@@ -230,6 +230,7 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | UpdateVehicleDetailsEntity VehicleDetailsEntity
   | OptionSelcted VehicleDetails String
   | ModelEditText VehicleDetails PrimaryEditText.Action
+  | PreviewSampleImage String
 
 
 eval :: Action -> AddVehicleDetailsScreenState -> Eval Action ScreenOutput AddVehicleDetailsScreenState
@@ -252,6 +253,7 @@ eval (BackPressed flag) state = do
             continueWithCmd state {props { validateProfilePicturePopUp = false, fileCameraPopupModal = false, fileCameraOption = false, imageCaptureLayoutView = false}} [do
                 _ <- liftEffect $ uploadFile false
                 pure NoAction]
+    else if state.props.previewSampleImage then continue state { props {previewSampleImage = false}}
     else if(state.props.imageCaptureLayoutView) then continue state{props{imageCaptureLayoutView = false,openHowToUploadManual = true}} 
     else if(state.props.fileCameraPopupModal) then continue state{props{fileCameraPopupModal = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} 
     else if(state.props.openHowToUploadManual) then continue state{props{openHowToUploadManual = false}} 
@@ -308,6 +310,8 @@ eval (VehicleRCNumber val) state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "VehicleRCNumber")
   let newState = state {data = state.data { vehicle_rc_number = val }}
   continue newState
+
+eval (PreviewSampleImage imgUrl) state = continue state {props {previewSampleImage = true, previewImgUrl = imgUrl}}
 
 eval (SelectVehicleTypeModalAction (SelectVehicleTypeModal.OnCloseClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true

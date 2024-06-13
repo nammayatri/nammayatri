@@ -196,6 +196,8 @@ type UploadDrivingLicenseStateProps = {
   , confirmChangeVehicle :: Boolean
   , contactSupportModal :: AnimType
   , setDefault :: Boolean
+  , previewSampleImage :: Boolean
+  , previewImgUrl :: String
 }
 
  -- ############################################################# RegistrationScreen ################################################################################
@@ -2685,7 +2687,9 @@ type DocumentCaptureScreenProps = {
   isValidFirstName :: Boolean,
   isValidMobileNumber :: Boolean,
   setDefault :: Boolean,
-  shouldGoBack :: Boolean
+  shouldGoBack :: Boolean,
+  previewSampleImage :: Boolean,
+  previewImgUrl :: String
 } 
 
 

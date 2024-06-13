@@ -70,5 +70,7 @@ initData = {
       , confirmChangeVehicle : false
       , contactSupportModal : ST.HIDE
       , setDefault : false
+      , previewSampleImage : false
+      , previewImgUrl : ""
       }
     }

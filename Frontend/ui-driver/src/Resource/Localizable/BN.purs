@@ -973,6 +973,7 @@ getBN stringKey =
         LOCATION_ALREADY_EXISTS ->  "অবস্থান ইতিমধ্যেই বিদ্যমান"
         MIN_LEFT ->  "মিনিট বাকি"
         GOTO_LOC_REACHED ->  "“গো-টু” অবস্থানে পৌঁছে গেছে!"
+        CLICK_TO_PREVIEW -> "পূর্বরূপ দেখতে ক্লিক করুন"
         GET_READY_FOR_YS_SUBSCRIPTION _ ->  "যাত্রী সাথী পরিকল্পনার জন্য প্রস্তুত হন!"
         GUARANTEED_FIXED_PRICE _ ->  "1 জানুয়ারী, 2025 পর্যন্ত নির্দিষ্ট মূল্যের নিশ্চয়তা"
         INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON ->  "পরিচয়মূলক অফার শীঘ্রই ঘোষণা করা হবে!"

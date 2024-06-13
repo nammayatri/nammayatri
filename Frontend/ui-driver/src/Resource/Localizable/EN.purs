@@ -994,6 +994,7 @@ getEN stringKey =
         YOU_STILL_HAVE_TIME_LEFT -> "You still have time left on your “Go-To” Request"
         YES_DISABLE -> "Yes, Disable"
         GOTO_LOC_REACHED -> "“Go To” Location Reached!"
+        CLICK_TO_PREVIEW -> "Click to preview"
         REPORT_ISSUE -> "Report Issue"
         YOU_ARE_ALMOST_AT_LOCATION -> "You are almost at the Go To Location."
         DRIVER_HOME_LOCATION_NOT_FOUND -> "Location not found"

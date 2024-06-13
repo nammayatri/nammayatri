@@ -47,9 +47,10 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (/=), (==), (&&), (>), (<), discard, void, not, (||))
+import Mobility.Prelude (boolToVisibility)
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (/=), (==), (&&), (>), (<), discard, void, not, (||), (*), (/))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, ellipsize, singleLine)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
@@ -187,6 +188,7 @@ linearLayout
     <> if state.props.validateProfilePicturePopUp then [validateProfilePictureModal push state] else []
     <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else []
     <> if state.props.menuOptions then [menuOptionModal push state] else []
+    <> if state.props.previewSampleImage then [expandedSampleImgView push state] else []
 
 menuOptionModal :: forall w. (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
 menuOptionModal push state = 
@@ -522,6 +524,23 @@ dateOfIssue push state =
       ]
   ]
 
+expandedSampleImgView :: forall w. (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
+expandedSampleImgView push state = 
+  linearLayout
+    [ height MATCH_PARENT 
+    , width  MATCH_PARENT 
+    , gravity CENTER
+    , onClick push $ const $ BackPressed false
+    , background Color.blackLessTrans
+    ]
+    [ imageView
+        [ height $ V (((EHC.screenHeight unit) / 10) * 8)
+        , width $ V (((EHC.screenWidth unit) / 10) * 8)
+        , imageWithFallback state.props.previewImgUrl
+        , clickable false
+        ]
+    ]
+
 howToUpload :: (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> forall w . PrestoDOM (Effect Unit) w
 howToUpload push state = 
   linearLayout
@@ -564,24 +583,49 @@ howToUpload push state =
       , margin $ MarginTop 20
       , stroke $ "1," <> Color.borderGreyColor
       , padding $ Padding 16 16 16 0
-      ][ rightWrongView true
-       , rightWrongView false
+      ][ rightWrongView push true
+       , rightWrongView push false
       ]  
     ]
   ]
 
-rightWrongView :: Boolean -> forall w . PrestoDOM (Effect Unit) w
-rightWrongView isRight = 
+rightWrongView :: (Action -> Effect Unit) -> Boolean -> forall w . PrestoDOM (Effect Unit) w
+rightWrongView push isRight = 
+  let imageNmae = if isRight then "ny_ic_upload_right" else "ny_ic_image_wrong"
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER_VERTICAL
   , margin $ MarginBottom 16
-  ][ imageView
-    [ width $ V 120
-    , height $ V if isRight then 80 else 100
-    , imageWithFallback $ fetchImage FF_ASSET if isRight then "ny_ic_upload_right" else "ny_ic_image_wrong"
-    ]
+  ][ linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , orientation VERTICAL
+      , cornerRadius 4.0
+      , onClick push $ const $ PreviewSampleImage imageNmae
+      , clickable $ isRight
+      , stroke $ "1," <> (if isRight then Color.purple100 else Color.white900)
+      ]
+      [ imageView
+        [ width $ V 120
+        , height $ V if isRight then 80 else 100
+        , imageWithFallback $ fetchImage FF_ASSET $ imageNmae
+        ]
+      , textView 
+        [ height WRAP_CONTENT
+        , width $ V 120
+        , text $ getString CLICK_TO_PREVIEW
+        , color Color.purple900
+        , singleLine true
+        , ellipsize true
+        , padding $ PaddingBottom 4
+        , gravity CENTER
+        , background Color.purple100
+        , visibility $ boolToVisibility isRight
+        , stroke $ "1," <> Color.purple100
+        ]
+      ]
   , linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
