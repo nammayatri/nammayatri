@@ -72,6 +72,7 @@ library
       API.Internal.DriverReferee
       API.Internal.FavouriteDrivers
       API.Internal.FeedbackForm
+      API.Internal.KnowYourDriver
       API.Internal.ReportACIssue
       API.Internal.ReportIssue
       API.UI
@@ -166,6 +167,7 @@ library
       Domain.Action.Internal.DriverReferee
       Domain.Action.Internal.FavouriteDrivers
       Domain.Action.Internal.FeedbackForm
+      Domain.Action.Internal.KnowYourDriver
       Domain.Action.Internal.ReportACIssue
       Domain.Action.Internal.ReportIssue
       Domain.Action.UI.Cac
@@ -187,6 +189,7 @@ library
       Domain.Action.UI.DriverOnboarding.Status
       Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
       Domain.Action.UI.DriverOnboardingV2
+      Domain.Action.UI.DriverProfileQuestions
       Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
       Domain.Action.UI.EditBooking
@@ -550,6 +553,7 @@ library
       Tools.Whatsapp
       API.Action.UI.Cac
       API.Action.UI.DriverOnboardingV2
+      API.Action.UI.DriverProfileQuestions
       API.Action.UI.EditBooking
       API.Action.UI.FareCalculator
       API.Action.UI.LmsModule
@@ -559,6 +563,7 @@ library
       API.Action.UI.Tokenization
       API.Action.UI.VehicleDetails
       API.Types.UI.DriverOnboardingV2
+      API.Types.UI.DriverProfileQuestions
       API.Types.UI.EditBooking
       API.Types.UI.FareCalculator
       API.Types.UI.LmsModule
@@ -596,6 +601,7 @@ library
       Domain.Types.DriverPanCard
       Domain.Types.DriverPlan
       Domain.Types.DriverPoolConfig
+      Domain.Types.DriverProfileQuestions
       Domain.Types.DriverQuote
       Domain.Types.DriverRCAssociation
       Domain.Types.DriverReferral
@@ -704,6 +710,7 @@ library
       Storage.Beam.DriverPanCard
       Storage.Beam.DriverPlan
       Storage.Beam.DriverPoolConfig
+      Storage.Beam.DriverProfileQuestions
       Storage.Beam.DriverQuote
       Storage.Beam.DriverRCAssociation
       Storage.Beam.DriverReferral
@@ -812,6 +819,7 @@ library
       Storage.Queries.DriverPanCard
       Storage.Queries.DriverPlan
       Storage.Queries.DriverPoolConfig
+      Storage.Queries.DriverProfileQuestions
       Storage.Queries.DriverQuote
       Storage.Queries.DriverRCAssociation
       Storage.Queries.DriverReferral

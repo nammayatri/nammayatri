@@ -16,6 +16,7 @@ module API.UI.Rating
   ( API,
     handler,
     DFeedback.FeedbackReq (..),
+    DFeedback.DriverProfileResponse (..),
   )
 where
 
@@ -23,6 +24,7 @@ import qualified Beckn.ACL.Rating as ACL
 import qualified Domain.Action.UI.Feedback as DFeedback
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Ride as DRide
 import qualified Environment as App
 import EulerHS.Prelude hiding (product)
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -34,7 +36,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Tools.Auth
 
--------- Feedback Flow ----------
+-------- Feedback Flow and Know your Driver Flow----------
 type API =
   "feedback"
     :> ( "rateRide"
@@ -42,9 +44,20 @@ type API =
            :> ReqBody '[JSON] DFeedback.FeedbackReq
            :> Post '[JSON] APISuccess
        )
+    :<|> "knowYourDriver"
+      :> TokenAuth
+      :> Capture "rideId" (Id DRide.Ride)
+      :> Get '[JSON] DFeedback.DriverProfileResponse
+    :<|> "knowYourFavDriver"
+      :> TokenAuth
+      :> Capture "driverId" Text
+      :> Get '[JSON] DFeedback.DriverProfileResponse
 
 handler :: App.FlowServer API
-handler = rating
+handler =
+  rating
+    :<|> knowYourDriver
+    :<|> knowYourFavDriver
 
 rating :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackReq -> App.FlowHandler APISuccess
 rating (personId, merchantId) request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
@@ -54,3 +67,9 @@ rating (personId, merchantId) request = withFlowHandlerAPI . withPersonIdLogTag 
     isValueAddNP <- CQVAN.isValueAddNP dFeedbackRes.providerId
     when isValueAddNP . void . withLongRetry $ CallBPP.feedbackV2 dFeedbackRes.providerUrl becknReq merchantId
   pure Success
+
+knowYourDriver :: (Id Person.Person, Id Merchant.Merchant) -> Id DRide.Ride -> App.FlowHandler DFeedback.DriverProfileResponse
+knowYourDriver (personId, _merchantId) rideId = withFlowHandlerAPI . withPersonIdLogTag personId $ DFeedback.knowYourDriver rideId
+
+knowYourFavDriver :: (Id Person.Person, Id Merchant.Merchant) -> Text -> App.FlowHandler DFeedback.DriverProfileResponse
+knowYourFavDriver (personId, merchantId) driverId = withFlowHandlerAPI . withPersonIdLogTag personId $ DFeedback.knowYourFavDriver driverId merchantId

@@ -20,6 +20,7 @@ where
 
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
+import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
 import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FareCalculator as FareCalculator
 import qualified API.Action.UI.LmsModule as LmsModule
@@ -68,6 +69,7 @@ type API =
            :<|> Registration.API
            :<|> DriverOnboarding.API
            :<|> DriverOnboardingV2.API
+           :<|> DriverProfileQuestions.API
            :<|> OrgAdmin.API
            :<|> Payment.API
            :<|> Driver.API
@@ -111,6 +113,7 @@ handler =
     :<|> Registration.handler
     :<|> DriverOnboarding.handler
     :<|> DriverOnboardingV2.handler
+    :<|> DriverProfileQuestions.handler
     :<|> OrgAdmin.handler
     :<|> Payment.handler
     :<|> Driver.handler

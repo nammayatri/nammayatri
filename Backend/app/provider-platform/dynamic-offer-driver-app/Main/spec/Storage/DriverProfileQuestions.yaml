@@ -1,0 +1,34 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+
+DriverProfileQuestions:
+  tableName: driver_profile_questions
+
+  fields:
+    driverId : Id Person
+    hometown : Maybe Text
+    expertAt : "[Text]"
+    pledges : "[Text]"
+    whyNY : "[Text]"
+    aspirations : "[Text]"
+    createdAt : UTCTime
+    merchantId : Id Merchant
+    merchantOperatingCityId : Id MerchantOperatingCity
+
+  default:
+    expertAt: '[]'
+    pledges: '[]'
+    whyNY: '[]'
+    aspirations: '[]'
+
+  constraints:
+    driverId : PrimaryKey
+
+  queries:
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where: driverId
+
+  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]

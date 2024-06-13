@@ -1,0 +1,32 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  APISuccess: Kernel.Types.APISuccess
+module: DriverProfileQuestions
+types:
+  DriverProfileQuesRes:
+    hometown : Maybe Text
+    expertAt : "[Text]"
+    pledges : "[Text]"
+    whyNY : "[Text]"
+    aspirations : "[Text]"
+  DriverProfileQuesReq:
+    aspirations : "[Text]"
+    expertAt : "[Text]"
+    hometown : Maybe Text
+    pledges : "[Text]"
+    whyNY : "[Text]"
+apis:
+  # POST /DriverProfileQues
+  - POST:
+      endpoint: /DriverProfileQues
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DriverProfileQuesReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+  # GET /DriverProfileQues
+  - GET:
+      endpoint: /DriverProfileQues
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: DriverProfileQuesRes
