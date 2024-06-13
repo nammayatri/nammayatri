@@ -60,6 +60,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             selectedPaymentMethodId = selectedPaymentMethodId,
             startTime = startTime,
             toLocation = toLocation',
+            totalRidesCount = totalRidesCount,
             validTill = validTill
           }
 
@@ -101,5 +102,6 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.selectedPaymentMethodId = selectedPaymentMethodId,
         Beam.startTime = startTime,
         Beam.toLocationId = Kernel.Types.Id.getId <$> (toLocation <&> (.id)),
+        Beam.totalRidesCount = totalRidesCount,
         Beam.validTill = validTill
       }

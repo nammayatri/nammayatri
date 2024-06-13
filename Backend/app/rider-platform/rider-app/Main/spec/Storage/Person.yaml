@@ -92,6 +92,7 @@ Person:
     clientConfigVersion : Maybe Version
     clientDevice : Maybe Device
     backendAppVersion : Maybe Text
+    totalRidesCount: Maybe Int
     blockedCount : Maybe Int
     registeredViaPartnerOrgId : Maybe (Id PartnerOrganization)
     customerPaymentId : Maybe CustomerId
@@ -208,9 +209,6 @@ Person:
     enabled: "true"
     merchantId: "'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51'"
 
-
-
-
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -291,6 +289,9 @@ Person:
     updateDefaultPaymentMethodId:
       kvFunction: updateWithKV
       params: [defaultPaymentMethodId]
+    updateTotalRidesCount:
+      kvFunction: updateOneWithKV
+      params: [id, totalRidesCount]
       where: id
 
   extraOperations:

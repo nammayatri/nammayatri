@@ -29,6 +29,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DVST
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -46,6 +47,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Error
 import Tools.Maps as Maps
@@ -132,6 +134,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
       guid <- generateGUID
       now <- getCurrentTime
       let dpRes = dpwRes.driverPoolResult
+      driverStats <- runInReplica $ QDriverStats.findById dpRes.driverId
       tripQuoteDetail <- HashMap.lookup dpRes.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dpRes.serviceTier)
       parallelSearchRequestCount <- Just <$> SDP.getValidSearchRequestCount searchReq.providerId dpRes.driverId now
       deploymentVersion <- asks (.version)
@@ -185,6 +188,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 backendAppVersion = Just deploymentVersion.getDeploymentVersion,
                 isForwardRequest = dpwRes.isForwardRequest,
                 notificationSource = Nothing,
+                totalRides = fromMaybe (-1) (driverStats <&> (.totalRides)),
                 ..
               }
       pure searchRequestForDriver
