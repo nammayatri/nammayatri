@@ -49,7 +49,7 @@ import qualified Kernel.External.Maps.Interface.NextBillion as NextBillion
 import qualified Kernel.External.Maps.NextBillion.Types as NBT
 import qualified Kernel.External.Maps.Utils as Search
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto
+import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Context (City)
 import Kernel.Types.Id
@@ -241,7 +241,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
           InterCitySearch interCityReq ->
             (SearchRequest.InterCity, interCityReq.origin, interCityReq.roundTrip, fromMaybe [] interCityReq.stops, interCityReq.isSourceManuallyMoved, interCityReq.isSpecialLocation, interCityReq.startTime, interCityReq.returnTime, interCityReq.isReallocationEnabled, interCityReq.quotesUnifiedFlow)
 
-  let isDashboardRequest = isDashboardRequest_ || (fromMaybe False quotesUnifiedFlow)
+  let isDashboardRequest = isDashboardRequest_ || isNothing quotesUnifiedFlow -- Don't get confused with this, it is done to handle backward compatibility so that in both dashboard request or mobile app request without quotesUnifiedFlow can be consider same
   whenJust returnTime $ \rt -> do
     when (rt <= startTime) $ throwError (InvalidRequest "Return time should be greater than start time")
 
