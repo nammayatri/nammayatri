@@ -41,15 +41,16 @@ import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils as HU
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<<<), (/=), const, map, pure, unit, discard, bind, not, void, show, (<>), (==), (&&))
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), alignParentBottom, background, color, fontStyle, frameLayout, gravity, height, linearLayout, onBackPressed, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, visibility, width, relativeLayout, alignParentRight, margin, stroke, onClick, cornerRadius, afterRender, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), alignParentBottom, background, color, fontStyle, frameLayout, gravity, height, linearLayout, onBackPressed, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, visibility, width, relativeLayout, alignParentRight, margin, stroke, onClick, cornerRadius, afterRender, accessibility, maxLines, imageView, imageWithFallback)
 import Screens.SavedLocationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
-import Services.API (SavedLocationReq(..), SavedLocationsListRes(..))
+import Services.API (SavedLocationReq(..), SavedLocationsListRes(..), GetFavouriteDriverListRes(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState, FlowBT)
@@ -63,6 +64,8 @@ screen initialState st =
   , name : "SavedLocationScreen"
   , globalEvents : [
       (\push -> do
+        void $ pure $ spy "Hello i am in global Events" 
+        _ <- launchAff $ EHC.flowRunner st $ runExceptT $ runBackT $ getFavouriteDriverList GetFavouriteDriversListAPIResponseAction push initialState
         _ <- launchAff $ EHC.flowRunner st $ runExceptT $ runBackT $ getSavedLocationsList SavedLocationListAPIResponseAction push initialState
         pure $ pure unit
           )
@@ -83,12 +86,14 @@ view push state =
   , orientation VERTICAL
   , padding $ Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 24 else EHC.safeMarginBottom)
   , onBackPressed push $ const BackPressed state.props.showDeleteLocationModel
-  ]([  linearLayout
-      [ height MATCH_PARENT
+  ][
+     linearLayout
+      [ 
+        height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , accessibility if (state.props.showDeleteLocationModel) then DISABLE_DESCENDANT else DISABLE 
-      ][GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+      ][
+      GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
     , if (not state.data.config.nyBrandingVisibility) then 
         linearLayout
         [ height $ V 1
@@ -97,7 +102,105 @@ view push state =
         ][]
       else
         linearLayout[][]
-    , frameLayout
+    , linearLayout
+      [
+        height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation HORIZONTAL
+      , background Color.blue600 
+      , cornerRadius 24.0
+      , padding $ Padding 4 4 4 4
+      , margin $ Margin 15 20 15 15
+      ][
+        linearLayout
+        [
+           height WRAP_CONTENT
+         , width WRAP_CONTENT
+         , background if state.data.current == "Drivers" then Color.black900 else Color.blue600 
+         , padding $ Padding 65 5 65 5
+         , cornerRadius 24.0
+         , onClick push $ const $ ChangeView "Drivers"
+        ][
+          textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , gravity CENTER
+            , text "Drivers"
+            , color if state.data.current == "Drivers" then Color.white900 else Color.black700 
+            ]
+        ]
+        , linearLayout
+        [
+           height WRAP_CONTENT
+         , width WRAP_CONTENT
+         , background if state.data.current == "Drivers" then Color.blue600 else Color.black900
+         , padding $ Padding 65 5 65 5
+         , cornerRadius 24.0
+         , margin $ MarginLeft 5
+         , onClick push $ const $ ChangeView "Locations"
+        ][
+          textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , gravity CENTER
+            , text "Locations"
+            , color if state.data.current == "Drivers" then Color.black700 else Color.white900
+            ]
+        ]
+      ]
+        ]
+    ,
+     linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , margin $ MarginTop 150
+      ][
+       linearLayout
+        [
+           height WRAP_CONTENT
+         , width WRAP_CONTENT
+         , visibility if state.data.current == "Drivers" then VISIBLE else GONE
+        ][
+          textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , gravity LEFT
+            , text "This list includes all the drivers you've marked as favourites."
+            , color Color.black700
+            , margin $ Margin 15 0 15 0
+            , textSize FontSize.a_17
+            , maxLines 2
+            ]
+        ] 
+      , frameLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , visibility if state.data.current == "Drivers" then VISIBLE else GONE
+      ][  linearLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          ][  linearLayout
+              [ height MATCH_PARENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              ][ 
+                savedLocationsViews push state
+              ]
+            ]
+        ]
+      ]
+    ,
+      linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , margin $ MarginTop 130
+      , accessibility if (state.props.showDeleteLocationModel) then DISABLE_DESCENDANT else DISABLE 
+      , visibility if state.data.current == "Locations" then VISIBLE else GONE
+      ][
+      frameLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       ][  relativeLayout
@@ -126,13 +229,12 @@ view push state =
           ][  ErrorModal.view (push <<< ErrorModalAC) (errorModalConfig state )]
         ]
       ]
-      
-    ] <>  [linearLayout
+    , linearLayout
           [ width MATCH_PARENT
           , height MATCH_PARENT
           , background Color.lightBlack900
           , visibility if (state.props.showDeleteLocationModel) then VISIBLE else GONE
-          ][ PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state )]])
+          ][ PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state )]]
 
 savedLocationsView :: forall w.(Action -> Effect Unit) -> ST.SavedLocationScreenState -> PrestoDOM (Effect Unit) w
 savedLocationsView push state =
@@ -199,3 +301,134 @@ getSavedLocationsList action push state = do
   void $ lift $ lift $ EHU.toggleLoader false
   liftFlowBT $ push $ action ( SavedLocationsListRes savedLocationResp)
   pure unit
+
+getFavouriteDriverList :: forall action. (GetFavouriteDriverListRes -> action) -> (action -> Effect Unit) -> ST.SavedLocationScreenState -> FlowBT String Unit
+getFavouriteDriverList action push state = do
+  void $ lift $ lift $ EHU.toggleLoader true
+  (GetFavouriteDriverListRes favouriteDriverResp ) <- FlowCache.updateAndFetchFavouriteDriver
+  void $ lift $ lift $ EHU.toggleLoader false
+  liftFlowBT $ push $ action ( GetFavouriteDriverListRes favouriteDriverResp)
+  pure unit
+
+
+savedLocationsViews :: forall w.(Action -> Effect Unit) -> ST.SavedLocationScreenState -> PrestoDOM (Effect Unit) w
+savedLocationsViews push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , padding (PaddingBottom 85)
+  ][  scrollView
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , scrollBarY true
+      , margin $ Margin 16 7 16 16
+      ][
+        linearLayout[
+          height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , margin $ MarginTop 6
+        ]
+        (map 
+          (\item ->
+            linearLayout 
+              [
+                height MATCH_PARENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              , padding $ Padding 16 16 16 16
+              , stroke $ "1,"<> Color.grey900
+              , cornerRadius 10.0
+              , margin $ MarginTop 10
+              , onClick push $ const $ ChangeScreen item.driverPhone item.driverName item.id
+              ][
+                linearLayout
+                  [
+                    height WRAP_CONTENT
+                  , width MATCH_PARENT
+                  , orientation HORIZONTAL
+                  , margin $ MarginTop 5
+                  ][
+                    imageView [ 
+                    width $ V 55
+                  , height $ V 55
+                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_driver_avatar"
+                  , cornerRadius 50.0
+                    ]
+                  , linearLayout [
+                      height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , orientation VERTICAL
+                    , margin $ Margin 10 3 0 0
+                      ][ 
+                    textView $ [ 
+                      height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , gravity LEFT
+                    , text item.driverName
+                    , color Color.black900
+                    , textSize FontSize.a_18
+                    , maxLines 1
+                    ] <> FontStyle.subHeading1 TypoGraphy
+                  , textView $ [ 
+                      height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , gravity LEFT
+                    , text "Know your Driver >"
+                    , color Color.blue900
+                    -- , margin $ Margin 15 0 15 0
+                    , textSize FontSize.a_16
+                    , maxLines 1
+                    ]
+                  ]
+                ]
+                , linearLayout
+                    [
+                      height $ V 2
+                    , width MATCH_PARENT
+                    , stroke $ "1," <> Color.grey800
+                    , margin $ Margin 4 13 4 14
+                    ][
+
+                    ]
+                , linearLayout
+                  [
+                    height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , orientation HORIZONTAL
+                  , margin $ MarginLeft 4
+                  ][
+                    imageView [ 
+                    width $ V 18
+                  , height $ V 18
+                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_greenthumbsup"
+                    ]
+                  , textView $
+                    [ height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , gravity CENTER
+                    , text "98% Approval rate"
+                    , color Color.black800
+                    , margin $ MarginLeft 8
+                    , textSize FontSize.a_16
+                    ]
+                  , imageView [ 
+                      width $ V 18
+                    , height $ V 18
+                    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_heart_red"
+                    , margin $ MarginLeft 80
+                    ]
+                  , textView $
+                      [ height WRAP_CONTENT
+                      , width WRAP_CONTENT
+                      , gravity CENTER
+                      , text $ "By " <> show item.favCount <> " others"
+                      , color Color.black800
+                      , margin $ MarginLeft 8
+                      , textSize FontSize.a_16
+                    ]
+                  ]
+              ]
+          ) state.data.favouriteDriversList)
+      ]
+  ]

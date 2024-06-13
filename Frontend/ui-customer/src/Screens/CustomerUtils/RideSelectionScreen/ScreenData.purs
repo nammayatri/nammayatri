@@ -117,6 +117,7 @@ dummyIndividualCard = {
     isSuccessfull :  "",
     isScheduled : "",
     rating : 0,
+    -- favDriver : false,
     driverName : "",
     rideStartTime : "",
     rideEndTime : "",

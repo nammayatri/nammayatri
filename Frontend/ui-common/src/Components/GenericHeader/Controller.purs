@@ -64,6 +64,7 @@ type TextConfig =
   , color :: String
   , textStyle :: Style
   , accessibilityHint :: String
+  , ellipsize :: Boolean
   }
 
 config :: Config
@@ -99,6 +100,7 @@ config =
     , margin : (Margin 0 0 0 0)
     , color : Color.black800
     , accessibilityHint : ""
+    , ellipsize : false
     }
   , suffixImageConfig : {
       height : V 25
@@ -150,6 +152,7 @@ merchantConfig =
     , margin : (Margin 16 0 16 10)
     , color : "#101010"
     , accessibilityHint : ""
+    , ellipsize : false
     }
   , suffixImageConfig : {
       height : V 25

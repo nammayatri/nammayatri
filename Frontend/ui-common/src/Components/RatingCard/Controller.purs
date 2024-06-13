@@ -28,6 +28,7 @@ data Action = NoAction
             | BackPressed
             | PrimaryButtonAC PrimaryButton.Action
             | Rating Int
+            | Favourite
             | FeedbackChanged String
             | SelectPill String String
 
@@ -43,11 +44,15 @@ type RatingCardConfig =
   , accessibility :: Accessiblity
   , closeImgVisible :: Visibility
   , driverImage :: String
+  , isAlreadyFav :: Maybe Boolean
+  , favCount :: Maybe Int
+  , driverName :: String
   }
 
 type RatingCardData =
   {
     rating :: Int
+  , favDriver :: Boolean
   , driverName :: String
   , rideId :: String
   , finalAmount :: Int
@@ -86,6 +91,9 @@ ratingCardConfig = {
   accessibility : DISABLE,
   closeImgVisible : GONE
 , driverImage : ""
+, isAlreadyFav : Just false
+, favCount : Just 0
+, driverName : ""
 }
 
 
@@ -93,6 +101,7 @@ dummyPreviousRiderating :: RatingCardData
 dummyPreviousRiderating = {
   rideId : ""
 , rating : 0
+, favDriver : false
 , driverName : ""
 , finalAmount : 0
 , rideStartTime : ""

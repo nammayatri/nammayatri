@@ -207,6 +207,8 @@ import Screens.Types (SearchResultType(..)) as SearchResultType
 import Screens.Types (FareProductType(..)) as FPT
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Helpers.TipConfig (isTipEnabled, setTipViewData)
+import Helpers.Pooling (delay)
+import Effect.Aff (Milliseconds(..))
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -2423,7 +2425,7 @@ rideSearchFlow flowType = do
     homeScreenFlow
 
 getfeedbackReq :: HomeScreenState -> FeedbackReq
-getfeedbackReq state = (Remote.makeFeedBackReq (state.data.rideRatingState.rating) (state.data.rideRatingState.rideId) (state.data.rideRatingState.feedback) (state.data.ratingViewState.wasOfferedAssistance))
+getfeedbackReq state = (Remote.makeFeedBackReq (state.data.rideRatingState.rating) (state.data.rideRatingState.rideId) (state.data.rideRatingState.feedback) (state.data.ratingViewState.wasOfferedAssistance) (state.data.rideRatingState.favDriver))
 
 dummyAddressGeometry :: AddressGeometry
 dummyAddressGeometry =
@@ -2808,12 +2810,34 @@ myProfileScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { settingSideBar { opened = SettingSideBarController.CLOSED } } })
       homeScreenFlow
 
+favouriteDriverTripFlow :: FlowBT String Unit
+favouriteDriverTripFlow = do
+  act <- UI.favouriteDriverTrips
+  case act of 
+    GO_BACK_TO_SAVED_LOCATION state -> do 
+      void $ lift $ lift $ toggleLoader true
+      resp <- lift $ lift $ Remote.removeFavouriteDriver (fromMaybe "" state.data.driverId)
+      let _ = spy "removeFavouriteDriver" resp
+      void $ lift $ lift $ delay $ Milliseconds 2000.0
+      void $ lift $ lift $ toggleLoader false
+      case resp of
+        Right resp -> do
+          savedLocationFlow 
+        Left _ -> do 
+          void $ pure $ toast "Failed To Remove Favourite Ride"
+          savedLocationFlow
+  pure unit
+
 savedLocationFlow :: FlowBT String Unit
 savedLocationFlow = do
   void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
   flow <- UI.savedLocationScreen
   (SavedLocationsListRes savedLocationResp) <- FlowCache.updateAndFetchSavedLocationsBT SavedLocationReq false
   case flow of
+    GOTO_FAVOURITEDRIVERS_LIST state -> do
+      modifyScreenState $  FavouriteDriverTripsStateType (\favouriteDriverListScreen -> favouriteDriverListScreen { data { driverNumber = state.data.driverNo, driverName = state.data.driverName, driverId = state.data.driverId}})
+      favouriteDriverTripFlow
+
     ADD_NEW_LOCATION state -> do
       (GlobalState newState) <- getState
       resp <- lift $ lift $ getRecentSearches newState.addNewAddressScreen

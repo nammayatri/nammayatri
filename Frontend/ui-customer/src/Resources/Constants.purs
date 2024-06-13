@@ -35,7 +35,7 @@ import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (map, show, negate, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
 import Resources.Localizable.EN (getEN)
 import Screens.Types as ST
-import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
+import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..), LocationAPIEntity(..))
 
 type Language
   = { name :: String
@@ -58,8 +58,30 @@ data DecodeAddress
   = Booking BookingLocationAPIEntity
   | SavedLoc SavedReqLocationAPIEntity
 
+data DecodeLocation = Location LocationAPIEntity
+
+decodeLocationAddress :: Maybe DecodeLocation -> String
+decodeLocationAddress (Just (Location decodeLocation)) = 
+    let (LocationAPIEntity address) = decodeLocation
+      in 
+        if (all isNothing [address.city, address.area, address.country, address.building, address.door, address.street, address.city, address.areaCode, address.ward]) then
+              ""
+            else if (trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
+              ((fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+            else if (trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
+              ((fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+            else if (trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
+              ((fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+            else if (trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
+              ((fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+            else if (trim (fromMaybe "" address.door) == "") then
+              ((fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+            else
+              ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+decodeLocationAddress Nothing = ""
+
 decodeAddress :: DecodeAddress -> String
-decodeAddress addressWithCons =
+decodeAddress addressWithCons = 
   let
     (BookingLocationAPIEntity address) = case addressWithCons of
       Booking bookingLocation -> bookingLocation

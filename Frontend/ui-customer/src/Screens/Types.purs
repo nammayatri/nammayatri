@@ -43,7 +43,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import RemoteConfig as RC
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..))
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), LocationAddress, LocationAPIEntity(..))
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
@@ -287,6 +287,7 @@ type TripDetailsScreenData =
     totalAmount :: String,
     paymentMode :: PaymentMode,
     rating :: Int,
+    favDriver :: Boolean,
     selectedItem :: IndividualRideCardState,
     tripId :: String,
     config :: AppConfig,
@@ -432,6 +433,7 @@ type IndividualRideCardState =
     isCancelled :: String,
     isSuccessfull :: String,
     rating :: Int,
+    -- favDriver :: Boolean,
     driverName :: String,
     rideStartTime :: String,
     rideEndTime :: String,
@@ -497,6 +499,7 @@ type ItemState =
     isSuccessfull :: PropValue,
     isScheduled :: PropValue,
     rating :: PropValue,
+    -- favDriver :: PropValue,
     driverName :: PropValue,
     rideStartTime :: PropValue,
     rideEndTime :: PropValue,
@@ -557,6 +560,7 @@ data Stage = HomeScreen
            | ChangeToRideAccepted
            | ChangeToRideStarted
            | ConfirmingQuotes
+           | FavouriteDriverScreen
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -590,6 +594,7 @@ type HomeScreenStateData =
   , vehicleDetails :: String
   , registrationNumber :: String
   , rating :: Number
+  , favDriver :: Boolean
   , locationList :: Array LocationListItemState
   , savedLocations :: Array LocationListItemState
   , recentSearchs :: RecentlySearchedObject
@@ -1238,6 +1243,7 @@ type DriverInfoCard =
   , vehicleDetails :: String
   , registrationNumber :: String
   , rating :: Number
+  , favDriver :: Boolean
   , startedAt :: String
   , endedAt :: String
   , source :: String
@@ -1274,12 +1280,15 @@ type DriverInfoCard =
   , fareProductType :: FareProductType
   , driversPreviousRideDropLocLat :: Maybe Number
   , driversPreviousRideDropLocLon :: Maybe Number
+  , isAlreadyFav :: Maybe Boolean
+  , favCount :: Maybe Int
   }
 
 type RatingCard =
   {
     rideId :: String
   , rating :: Int
+  , favDriver :: Boolean
   , driverName :: String
   , finalAmount :: Int
   , rideStartTime :: String
@@ -1312,7 +1321,38 @@ type Address =
   , placeId :: Maybe String
   }
 
+type FavouriteDriverTripsState =
+  {
+    data :: FavouriteDriverTripsData
+  , props :: FavouriteDriverTripsProps
+  }
 
+type FavouriteDriverTripsData =
+  {
+    driverNumber :: String
+  , driverName :: String
+  , driverId :: Maybe String
+  , details :: Array Details 
+  }
+
+type FavouriteDriverTripsProps = 
+  {
+    activateSubmit :: Boolean
+  , fromMyRides :: FavouriteDriverTripsType,
+    triggerUIUpdate :: Boolean
+  }
+
+data FavouriteDriverTripsType = SavedLocations
+
+type Details =
+  {    
+    rideRating :: Maybe Int
+  , fromLocation :: Maybe LocationAPIEntity
+  , toLocation :: Maybe LocationAPIEntity
+  , totalFare :: Maybe Int
+  , startTime :: Maybe String
+  , id :: Maybe String
+  }
 type SavedLocationScreenState =
   {
       data :: SavedLocationScreenData
@@ -1331,6 +1371,11 @@ type SavedLocationScreenData =
   , deleteTag :: Maybe String
   , config :: AppConfig
   , logField :: Object Foreign
+  , favouriteDriversList :: Array FavouriteDriverListItemState
+  , current :: String 
+  , driverNo :: String
+  , driverName :: String
+  , driverId :: Maybe String
   }
 
 type DistInfo =
@@ -1490,6 +1535,14 @@ type LocationListItemState = {
   , frequencyCount :: Maybe Int
   , recencyDate :: Maybe String
   , locationScore :: Maybe Number
+}
+
+type FavouriteDriverListItemState = {
+    driverName :: String
+  , driverPhone :: String
+  , driverRating :: Number
+  , favCount :: Int
+  , id :: Maybe String
 }
 
 type SuggestionsMap = Map SourceGeoHash Suggestions

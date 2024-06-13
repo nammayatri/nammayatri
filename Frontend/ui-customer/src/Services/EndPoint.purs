@@ -279,3 +279,21 @@ rentalSearch dummy = (getBaseUrl "49") <> "/rental/search"
 
 addOrEditStop :: Boolean -> String -> String 
 addOrEditStop isEdit rideBookingId = (getBaseUrl "47") <> "/rideBooking/" <> rideBookingId <> if isEdit then "/editStop" else "/addStop" 
+
+getFavouriteDriverList :: String
+getFavouriteDriverList = ((getBaseUrl "58") <> "/favorites") 
+
+getFavouriteDriverTrips :: String -> String -> String -> Maybe String -> Maybe String -> String
+getFavouriteDriverTrips limit offset isActive status clientId = 
+  maybe 
+    ((getBaseUrl "16") <> "/rideBooking/favouriteList?limit="<> limit <>"&offset="<> offset <>"&onlyActive=" <> isActive)
+    (\rideStatus ->
+      let clientIdStr = (fromMaybe "" clientId)
+      in
+        if null clientIdStr
+          then (getBaseUrl "41") <> "/rideBooking/favouriteList?limit=" <> limit <> "&offset=" <> offset <> "&onlyActive=false" <> "&status=" <> show rideStatus
+          else (getBaseUrl "41") <> "/rideBooking/favouriteList?limit=" <> limit <> "&offset=" <> offset <> "&onlyActive=false" <> "&status=" <> show rideStatus <> "&clientId=" <> clientIdStr)
+    status
+
+removeFavouriteDriver :: String -> String
+removeFavouriteDriver id = ((getBaseUrl "59") <> "/favourites/driverId=" <> id <> "/remove") 

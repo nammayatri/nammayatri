@@ -492,14 +492,38 @@ callDriverBT rideId = do
 ------------------------------------------------------------------------ Feedback Function --------------------------------------------------------------------------------------------
 
 
-makeFeedBackReq :: Int -> String -> String -> Maybe Boolean -> FeedbackReq
-makeFeedBackReq rating rideId feedback wasOfferedAssistance = FeedbackReq
+makeFeedBackReq :: Int -> String -> String -> Maybe Boolean  -> Boolean -> FeedbackReq
+makeFeedBackReq rating rideId feedback wasOfferedAssistance favDriver= FeedbackReq
     {   "rating" : rating
     ,   "rideId" : rideId
     ,   "feedbackDetails" : feedback
     ,   "wasOfferedAssistance" : wasOfferedAssistance
+    ,   "shouldFavDriver" : favDriver
     }
 
+removeFavouriteDriver :: String -> Flow GlobalState (Either ErrorResponse RemoveFavouriteDriverResp)
+removeFavouriteDriver id = do
+        let _ =  spy "i am in " "removeFavouriteDriver"
+        headers <- getHeaders "" true
+        withAPIResult (EP.removeFavouriteDriver id) unwrapResponse $ callAPI headers (RemoveFavouriteDriverReq id)
+    where
+        unwrapResponse (x) = x
+ 
+getFavouriteDriverList = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getFavouriteDriverList)  unwrapResponse $ callAPI headers (GetFavouriteDriverListReq)
+    where
+        unwrapResponse (x) = x
+
+getFavouriteDriverTrips limit offset onlyActive driverNo = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getFavouriteDriverTrips limit offset onlyActive Nothing Nothing)  unwrapResponse $ callAPI headers $ makeUpdateReq limit offset onlyActive Nothing Nothing driverNo
+    where
+        makeUpdateReq :: String -> String -> String -> Maybe String -> Maybe String -> String -> FavouriteDriverTripsReq
+        makeUpdateReq limit offset onlyActive status clientId driverNo = 
+            FavouriteDriverTripsReq limit offset onlyActive status clientId $ FavouriteDriverTripsBody $ { driverNo : driverNo }
+
+        unwrapResponse (x) = x
 
 ----------------------------------------------------------------------- RideBooking BT Function ---------------------------------------------------------------------------------------
 rideBookingBT :: String -> FlowBT String RideBookingRes

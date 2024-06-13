@@ -166,6 +166,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , vehicleDetails : rideList.vehicleModel
       , registrationNumber : rideList.vehicleNumber
       , rating : (fromMaybe 0.0 rideList.driverRatings)
+      , favDriver : false
       , startedAt : (convertUTCtoISC resp.createdAt "h:mm A")
       , endedAt : (convertUTCtoISC resp.updatedAt "h:mm A")
       , source : decodeAddress (Booking resp.fromLocation)
@@ -211,6 +212,8 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , fareProductType : fareProductType
       , driversPreviousRideDropLocLat : resp.driversPreviousRideDropLocLat
       , driversPreviousRideDropLocLon : resp.driversPreviousRideDropLocLon
+      , isAlreadyFav : resp.isAlreadyFav
+      , favCount : resp.favCount
       }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity

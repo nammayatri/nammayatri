@@ -66,6 +66,7 @@ import Components.QuoteListModel.View as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
 import Components.Referral as ReferralComponent
+import Components.FavDriverGotIt as FavDriverGotIt
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SaveFavouriteCard as SaveFavouriteCard
@@ -568,8 +569,9 @@ view push state =
             , if state.props.showLiveDashboard then showLiveStatsDashboard push state else emptyTextView state
             , if state.props.showCallPopUp then (driverCallPopUp push state) else emptyTextView state
             , if state.props.cancelSearchCallDriver then cancelSearchPopUp push state else emptyTextView state
-            , if state.props.currentStage == RideCompleted || state.props.currentStage == RideRating then rideCompletedCardView push state else emptyTextView state
+            , if state.props.currentStage == RideCompleted || state.props.currentStage == RideRating || state.props.currentStage == FavouriteDriverScreen then rideCompletedCardView push state else emptyTextView state
             , if state.props.currentStage == RideRating then rideRatingCardView state push else emptyTextView state
+            , if state.props.currentStage == FavouriteDriverScreen then favDriverGotItCardView state push else emptyTextView state
             , if state.props.showRateCard then (rateCardView push state) else emptyTextView state
             -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
@@ -1552,6 +1554,17 @@ rideRatingCardView state push =
     , background Color.transparent
     ]
     [ RatingCard.view (push <<< RatingCardAC) $ ratingCardViewState state
+    ]
+
+favDriverGotItCardView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+favDriverGotItCardView state push =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , gravity BOTTOM
+    , background Color.transparent
+    ]
+    [ FavDriverGotIt.view (push <<< FavDriverCardAC) $ favDriverCardViewState state
     ]
 
 commonTextView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> PrestoDOM (Effect Unit) w

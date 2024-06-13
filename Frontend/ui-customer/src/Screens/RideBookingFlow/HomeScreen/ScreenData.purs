@@ -49,6 +49,7 @@ initData = {
     , vehicleDetails : "Bajaj RE Auto"
     , registrationNumber : "KA  01  YF  4921"
     , rating : 4.0
+    , favDriver : false
     , locationList : []
     , savedLocations : []
     , fareProductType : FPT.ONE_WAY
@@ -60,7 +61,7 @@ initData = {
     , selectList : []
     , quoteListModelState : []
     , driverInfoCardState : dummyDriverInfo
-    , rideRatingState : dummyPreviousRiderating
+    , rideRatingState : dummyPreviousRideRating
     , settingSideBar : dummySettingBar
     , sourceAddress : dummyAddress
     , destinationAddress : dummyAddress
@@ -404,10 +405,11 @@ emergencyHelpModalData = {
 }
 
 
-dummyPreviousRiderating :: RatingCard
-dummyPreviousRiderating = {
+dummyPreviousRideRating :: RatingCard
+dummyPreviousRideRating = {
   rideId : ""
 , rating : 0
+, favDriver : false
 , driverName : ""
 , finalAmount : 0
 , rideStartTime : ""
@@ -436,6 +438,7 @@ dummyDriverInfo =
   , vehicleDetails : ""
   , registrationNumber : ""
   , rating : 0.0
+  , favDriver : false
   , startedAt : ""
   , endedAt : ""
   , source : ""
@@ -472,6 +475,8 @@ dummyDriverInfo =
   , fareProductType : FPT.ONE_WAY
   , driversPreviousRideDropLocLat : Nothing
   , driversPreviousRideDropLocLon : Nothing
+  , isAlreadyFav : Just false 
+  , favCount : Just 0
   }
 
 dummySettingBar :: SettingSideBarState
@@ -522,6 +527,7 @@ dummyDriverOfferAPIEntity =
   DRIVER_OFFER
     $ DriverOfferAPIEntity
         { rating: Nothing
+        -- , favDriver: Nothing
         , validTill: ""
         , driverName: ""
         , distanceToPickup: Nothing
@@ -594,7 +600,9 @@ dummyRideBooking = RideBookingRes
   vehicleServiceTierType : Nothing,
   tollConfidence : Nothing,
   driversPreviousRideDropLocLat : Nothing,
-  driversPreviousRideDropLocLon : Nothing
+  driversPreviousRideDropLocLon : Nothing,
+  isAlreadyFav : Just false,
+  favCount : Just 0
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails

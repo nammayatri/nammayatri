@@ -12,7 +12,10 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-module Services.FlowCache where
+module Services.FlowCache
+  ( updateAndFetchSavedLocationsBT, updateAndFetchSavedLocations, updateAndFetchFavouriteDriver , updateAndFetchFavouriteDriverTrips
+  )
+  where
 
 import Prelude
 import Services.API
@@ -27,6 +30,201 @@ import Data.Either (Either(..))
 import Presto.Core.Flow
 import Engineering.Helpers.Commons
 import Effect.Class
+
+-------------------------------- GET Favourite Driver List API-----------------------------------
+
+updateAndFetchFavouriteDriver :: FlowBT String GetFavouriteDriverListRes
+updateAndFetchFavouriteDriver = do
+  -- (favouriteDriversResp) <- lift $ lift $ Remote.getFavouriteDriverList 
+  -- case favouriteDriversResp of
+  --   Right resp -> pure $ resp
+  --   Left _ -> pure $ dummyFavouriteDriversListRes
+
+  let favouriteDriversResp = GetFavouriteDriverListRes {
+    list : [
+       FavouriteDriverList {
+        driverName : "Rammoorthy Parashuram",
+        driverPhone : "78687687676",
+        driverRating : 4.0,
+        favCount : 5,
+        id : Just "Don't know"
+      }, 
+       FavouriteDriverList {
+        driverName : "Rammoorthy Parashuram",
+        driverPhone : "78687687676",
+        driverRating : 4.0,
+        favCount : 5,
+        id : Just "Don't know"
+      }
+      ] 
+    }
+  pure $ favouriteDriversResp
+
+
+-------------------------------- GET Favourite Driver Trips API-----------------------------------
+
+updateAndFetchFavouriteDriverTrips  :: String -> String -> String -> String -> FlowBT String FavouriteDriverTripsResp
+updateAndFetchFavouriteDriverTrips limit offset onlyActive driverNo = do
+  -- (favouriteDriversResp) <- lift $ lift $ Remote.getFavouriteDriverTrips limit offset onlyActive driverNo
+  -- case favouriteDriversResp of
+  --   Right resp -> pure $ resp
+  --   Left _ -> pure $ dummyFavouriteDriversTripsRes
+  
+  let favouriteDriversResp = FavouriteDriverTripsResp {
+    list : [
+       FavouriteDriverRides {
+        rideRating : Just 5
+      , fromLocation : Just $ LocationAPIEntity {
+        street : Just "27th Cross Rd",
+        door : Nothing,
+        city : Just "Bengaluru",
+        state : Just "Karnataka",
+        country : Nothing,
+        building : Just "Nagarjuna Apartments,15/2",
+        areaCode : Just "560102",
+        area : Just "Sector 2",
+        ward : Just "19th Main",
+        placeId : Nothing
+      }
+      , toLocation : Just $ LocationAPIEntity {
+        street : Just "28th Cross Rd",
+        door : Nothing,
+        city : Just "Nangal",
+        state : Just "Punjab",
+        country : Nothing,
+        building : Just "Nagarjuna Apartments,15/2",
+        areaCode : Just "560102",
+        area : Just "Sector 2",
+        ward : Just "19th Main",
+        placeId : Nothing
+      }
+      , totalFare : Just 220
+      , startTime : Just "String"
+      , id : Just ""
+      }, 
+       FavouriteDriverRides {
+        rideRating : Just 5
+      , fromLocation : Just $ LocationAPIEntity {
+        street : Just "27th Cross Rd",
+        door : Nothing,
+        city : Just "Bengaluru",
+        state : Just "Karnataka",
+        country : Nothing,
+        building : Just "Nagarjuna Apartments,15/2",
+        areaCode : Just "560102",
+        area : Just "Sector 2",
+        ward : Just "19th Main",
+        placeId : Nothing
+      }
+      , toLocation : Just $ LocationAPIEntity {
+        street : Just "28th Cross Rd",
+        door : Nothing,
+        city : Just "Nangal",
+        state : Just "Punjab",
+        country : Nothing,
+        building : Just "Nagarjuna Apartments,15/2",
+        areaCode : Just "560102",
+        area : Just "Sector 2",
+        ward : Just "19th Main",
+        placeId : Nothing
+      }
+      , totalFare : Just 220
+      , startTime : Just "String"
+      , id : Just ""
+      }, 
+       FavouriteDriverRides {
+        rideRating : Just 5
+      , fromLocation : Just $ LocationAPIEntity {
+        street : Just "27th Cross Rd",
+        door : Nothing,
+        city : Just "Bengaluru",
+        state : Just "Karnataka",
+        country : Nothing,
+        building : Just "Nagarjuna Apartments,15/2",
+        areaCode : Just "560102",
+        area : Just "Sector 2",
+        ward : Just "19th Main",
+        placeId : Nothing
+      }
+      , toLocation : Just $ LocationAPIEntity {
+        street : Just "28th Cross Rd",
+        door : Nothing,
+        city : Just "Nangal",
+        state : Just "Punjab",
+        country : Nothing,
+        building : Just "Nagarjuna Apartments,15/2",
+        areaCode : Just "560102",
+        area : Just "Sector 2",
+        ward : Just "19th Main",
+        placeId : Nothing
+      }
+      , totalFare : Just 220
+      , startTime : Just "String"
+      , id : Just ""
+      }, 
+       FavouriteDriverRides {
+        rideRating : Just 5
+      , fromLocation : Just $ LocationAPIEntity {
+        street : Just "27th Cross Rd",
+        door : Nothing,
+        city : Just "Bengaluru",
+        state : Just "Karnataka",
+        country : Nothing,
+        building : Just "Nagarjuna Apartments,15/2",
+        areaCode : Just "560102",
+        area : Just "Sector 2",
+        ward : Just "19th Main",
+        placeId : Nothing
+      }
+      , toLocation : Just $ LocationAPIEntity {
+        street : Just "28th Cross Rd",
+        door : Nothing,
+        city : Just "Nangal",
+        state : Just "Punjab",
+        country : Nothing,
+        building : Just "Nagarjuna Apartments,15/2",
+        areaCode : Just "560102",
+        area : Just "Sector 2",
+        ward : Just "19th Main",
+        placeId : Nothing
+      }
+      , totalFare : Just 220
+      , startTime : Just "String"
+      , id : Just ""
+      }, 
+       FavouriteDriverRides {
+        rideRating : Just 5
+      , fromLocation : Just $ LocationAPIEntity {
+        street : Just "27th Cross Rd",
+        door : Nothing,
+        city : Just "Bengaluru",
+        state : Just "Karnataka",
+        country : Nothing,
+        building : Just "Nagarjuna Apartments,15/2",
+        areaCode : Just "560102",
+        area : Just "Sector 2",
+        ward : Just "19th Main",
+        placeId : Nothing
+      }
+      , toLocation : Just $ LocationAPIEntity {
+        street : Just "28th Cross Rd",
+        door : Nothing,
+        city : Just "Nangal",
+        state : Just "Punjab",
+        country : Nothing,
+        building : Just "Nagarjuna Apartments,15/2",
+        areaCode : Just "560102",
+        area : Just "Sector 2",
+        ward : Just "19th Main",
+        placeId : Nothing
+      }
+      , totalFare : Just 220
+      , startTime : Just "String"
+      , id : Just ""
+      }
+      ] 
+    }
+  pure $ favouriteDriversResp
 
 -------------------------------- GET Saved Location List API--------------------------
 updateAndFetchSavedLocations :: Boolean -> FlowBT String SavedLocationsListRes
@@ -61,3 +259,16 @@ dummySavedLocationsListRes =
   SavedLocationsListRes
     { list: []
     }
+
+dummyFavouriteDriversListRes :: GetFavouriteDriverListRes
+dummyFavouriteDriversListRes =
+  GetFavouriteDriverListRes
+    { list: []
+    }
+
+dummyFavouriteDriversTripsRes :: FavouriteDriverTripsResp
+dummyFavouriteDriversTripsRes =
+  FavouriteDriverTripsResp
+    { list: []
+    }
+

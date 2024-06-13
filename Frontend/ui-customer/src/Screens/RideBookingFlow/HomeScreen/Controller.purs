@@ -45,6 +45,7 @@ import Components.QuoteListModel.Controller as QuoteListModelController
 import Components.QuoteListModel.View (dummyQuoteList)
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
+import Components.FavDriverGotIt as FavDriverGotIt
 import Components.RequestInfoCard as RequestInfoCard
 import Components.SaveFavouriteCard as SaveFavouriteCardController
 import Components.SavedLocationCard.Controller as SavedLocationCardController
@@ -773,6 +774,7 @@ data Action = NoAction
             | QuoteListModelActionController QuoteListModelController.Action
             | DriverInfoCardActionController DriverInfoCardController.Action
             | RatingCardAC RatingCard.Action
+            | FavDriverCardAC FavDriverGotIt.Action
             | UpdateLocation String String String
             | CancelRidePopUpAction CancelRidePopUp.Action
             | PopUpModalAction PopUpModal.Action
@@ -1887,14 +1889,26 @@ eval PreferencesDropDown state = do
 
 eval (RatingCardAC (RatingCard.Rating index)) state = do
   let feedbackListArr = if index == state.data.rideRatingState.rating then state.data.rideRatingState.feedbackList else []
-  continue state { data { rideRatingState { rating = index , feedbackList = feedbackListArr}, ratingViewState { selectedRating = index} } }
+      fav = if index == 1 then false else state.data.rideRatingState.favDriver
+  continue state { data { rideRatingState { rating = index , feedbackList = feedbackListArr, favDriver = fav}, ratingViewState { selectedRating = index} } }
+
+eval (RatingCardAC (RatingCard.Favourite)) state = do 
+  continue state { data { rideRatingState { favDriver = not state.data.favDriver}} }
 
 eval (RatingCardAC (RatingCard.SelectPill feedbackItem id)) state = do
   let newFeedbackList = updateFeedback id feedbackItem state.data.rideRatingState.feedbackList
       filterFeedbackList = filter (\item -> length item.answer > 0) newFeedbackList
   continue state { data { rideRatingState {  feedbackList = filterFeedbackList} } }
 
-eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = updateAndExit state $ SubmitRating state
+eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = do
+  void $ pure $ spy "key in submit" state 
+  if (spy "key in submit 2 ->" state.data.rideRatingState.favDriver) == true
+    then do
+    void $ pure $ spy "key" "i am in fav driver"
+    continue state { props { currentStage = FavouriteDriverScreen }}
+    else do
+    void $ pure $ spy "key" "i am not in fav driver"
+    updateAndExit state $ SubmitRating state
 
 eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.NoAction)) state = continue state
 
@@ -1903,6 +1917,8 @@ eval (RatingCardAC (RatingCard.FeedbackChanged value)) state = continue state { 
 eval (RatingCardAC (RatingCard.BackPressed)) state = do
   _ <- pure $ updateLocalStage RideCompleted
   continue state {props {currentStage = RideCompleted}}
+
+eval (FavDriverCardAC (FavDriverGotIt.GotIt PrimaryButtonController.OnClick)) state = do updateAndExit state $ SubmitRating state
 
 eval (SettingSideBarActionController (SettingSideBarController.PastRides)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_myrides_click"
@@ -3330,6 +3346,7 @@ getEstimateId esimates config =
 dummyRideRatingState :: RatingCard
 dummyRideRatingState = {
   rating              : 0,
+  favDriver           : false,
   driverName          : "",
   rideId              :  "",
   finalAmount         : 0,

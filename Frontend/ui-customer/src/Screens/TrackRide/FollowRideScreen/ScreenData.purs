@@ -174,6 +174,7 @@ mockDriverInfo =
   , vehicleDetails: ""
   , registrationNumber: "XXXXXXXXXX"
   , rating: 5.0
+  , favDriver: false
   , startedAt: ""
   , endedAt: ""
   , source: "NA"
@@ -210,4 +211,6 @@ mockDriverInfo =
   , fareProductType : FPT.ONE_WAY
   , driversPreviousRideDropLocLat : Nothing
   , driversPreviousRideDropLocLon : Nothing
+  , isAlreadyFav : Just false
+  , favCount : Just 0
   }

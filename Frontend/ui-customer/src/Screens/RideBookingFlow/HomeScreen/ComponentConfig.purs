@@ -44,6 +44,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListModel as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
+import Components.FavDriverGotIt as FavDriverGotIt
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SearchLocationModel as SearchLocationModel
@@ -1192,7 +1193,33 @@ ratingCardViewState state =
   , accessibility: ENABLE
   , closeImgVisible: GONE
   , driverImage : fetchImage FF_ASSET if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then "ic_new_avatar" else "ic_driver_avatar_cab"
+  , isAlreadyFav : state.data.driverInfoCardState.isAlreadyFav
+  , favCount : state.data.driverInfoCardState.favCount
+  , driverName : state.data.driverInfoCardState.driverName
   }
+
+favDriverCardViewState :: ST.HomeScreenState -> FavDriverGotIt.FavDriverConfig
+favDriverCardViewState state = {
+   primaryButtonConfig : PrimaryButton.config {
+    textConfig{
+      text = getString GOT_IT
+    , color = state.data.config.primaryTextColor
+    , id = "RateYourDriver"
+    },
+    background = state.data.config.primaryBackground,
+    margin = MarginHorizontal 16 16,
+    isClickable = if state.data.ratingViewState.selectedRating == 0 then false else true,
+    alpha = if not (state.data.ratingViewState.selectedRating< 1) then 1.0 else 0.4
+    , id = "RateYourDriver"
+    , enableLoader = (JB.getBtnLoader "RateYourDriver")
+    , enableRipple = true
+    , rippleColor = Color.rippleShade
+  }
+  , showProfileImg : true
+  , title : getRateYourRideString ( getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName
+  , accessibility : ENABLE
+  , closeImgVisible : GONE
+}
 
 getRateYourRideString :: String -> String -> String
 getRateYourRideString str driverName = case getLanguageLocale languageKey of
@@ -1789,16 +1816,12 @@ customerFeedbackPillData :: ST.HomeScreenState -> Array (Array (Array RatingCard
 customerFeedbackPillData state = [ feedbackPillDataWithRating1 state, feedbackPillDataWithRating2 state, feedbackPillDataWithRating3 state, feedbackPillDataWithRating4 state, feedbackPillDataWithRating5 state ]
 
 feedbackPillDataWithRating1 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
-feedbackPillDataWithRating1 state =
-  [ [ { id: "6", text: getString RUDE_DRIVER }
-    , { id: "1", text: getString FELT_UNSAFE }
-    ]
-  , [ { id: "6", text: getString RECKLESS_DRIVING }
-    , { id: "6", text: getString DRIVER_CHARGED_MORE }
-    ]
-  , ( [ { id: "15", text: getString TRIP_DELAYED } ] <> acNotWorkingPill state
-    )
-  ]
+feedbackPillDataWithRating1 state = [
+  [{id : "6", text : getString RUDE_DRIVER},
+   {id : "1", text : getString FELT_UNSAFE},
+  {id : "6", text : getString DRIVER_CHARGED_MORE},
+  {id : "1", text : getString LATE_DROP_OFF}]
+]
 
 acNotWorkingPill :: ST.HomeScreenState -> Array RatingCard.FeedbackItem
 acNotWorkingPill state =

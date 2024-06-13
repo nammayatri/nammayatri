@@ -234,6 +234,9 @@ fadedPurple = "#339747FF"
 red900 :: Color
 red900 = "#E55454"
 
+red900Opacity10 :: Color
+red900Opacity10 = "#F3D7D7"
+
 red900Alpha16 :: Color
 red900Alpha16 = "#29E55454"
 
@@ -372,3 +375,9 @@ black12 :: Color
 black12 = "#1F000000"
 aliceBlueLight :: Color
 aliceBlueLight = "#F4F7FF"
+
+creamy :: Color 
+creamy = "#FFF4D5"
+
+back900 :: Color 
+back900 = "#2C2F3A"
