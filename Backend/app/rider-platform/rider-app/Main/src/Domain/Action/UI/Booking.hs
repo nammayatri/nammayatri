@@ -49,9 +49,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Sequelize as Se
 import qualified SharedLogic.CallBPP as CallBPP
-import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -68,7 +66,7 @@ data StopReq = StopReq
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-data DriverNo = DriverNo
+newtype DriverNo = DriverNo
   { driverNumber :: Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -163,10 +161,10 @@ bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClient
 favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DriverNo -> Flow FavouriteBookingListRes
 favouriteBookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driver = do
   rides <- runInReplica $ QR.findAllByRiderIdAndDriverNumber personId mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driver.driverNumber
-  rbList <- findAllWithKV [Se.Is BeamB.id $ Se.In $ getId . (.bookingId) <$> rides]
+  rbList <- runInReplica $ QR.findAllBookingsOfRides rides
   fork "booking list status update" $ checkBookingsForStatus rbList
   logInfo $ "rbList: test " <> show rbList
-  FavouriteBookingListRes <$> catMaybes <$> traverse SRB.favouritebuildBookingAPIEntity rbList
+  FavouriteBookingListRes . catMaybes <$> traverse SRB.favouritebuildBookingAPIEntity rbList
 
 addStop :: (Id Person.Person, Id Merchant) -> Id SRB.Booking -> StopReq -> Flow APISuccess
 addStop (_, merchantId) bookingId req = do
