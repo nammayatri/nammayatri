@@ -15,7 +15,10 @@
 module Domain.Action.UI.Feedback
   ( FeedbackReq (..),
     FeedbackRes (..),
+    DriverProfileResponse (..),
     feedback,
+    knowYourFavDriver,
+    knowYourDriver,
   )
 where
 
@@ -32,6 +35,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -70,6 +74,11 @@ data FeedbackRes = FeedbackRes
     riderPhoneNum :: Maybe Text,
     isValueAddNP :: Bool
   }
+
+data DriverProfileResponse = DriverProfileResponse
+  { response :: Maybe CallBPPInternal.DriverProfileRes
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 feedback :: FeedbackReq -> Id Person.Person -> App.Flow FeedbackRes
 feedback request personId = do
@@ -116,3 +125,22 @@ feedback request personId = do
       case res of
         Just issue -> return $ Just issue.id.getId
         Nothing -> return Nothing
+
+knowYourDriver :: Id DRide.Ride -> App.Flow DriverProfileResponse
+knowYourDriver rideId = do
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  unless (ride.status == DRide.COMPLETED) $ throwError (RideInvalidStatus "KnowYourDriver available only for completed rides.")
+  merchantId <- maybe ((QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId) <&> (Id . (.providerId)))) return ride.merchantId
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  isValueAddNP <- CQVAN.isValueAddNP merchantId.getId
+  if isValueAddNP
+    then do
+      res <- CallBPPInternal.getknowYourDriverDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId
+      pure $ DriverProfileResponse {response = Just res}
+    else pure $ DriverProfileResponse {response = Nothing}
+
+knowYourFavDriver :: Text -> Id DM.Merchant -> App.Flow DriverProfileResponse
+knowYourFavDriver driverId merchantId = do
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  res <- CallBPPInternal.getKnowYourFavDriverDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl driverId
+  pure $ DriverProfileResponse {response = Just res}

@@ -12,6 +12,7 @@ import qualified API.Internal.DriverInactiveFCM as DriverInactiveFCM
 import qualified API.Internal.DriverReferee as DriverReferee
 import qualified API.Internal.FavouriteDrivers as FavouriteDrivers
 import qualified API.Internal.FeedbackForm as FeedbackForm
+import qualified API.Internal.KnowYourDriver as KnowYourDriver
 import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
 import Environment
@@ -30,6 +31,7 @@ type API =
            :<|> DriverInactiveFCM.API
            :<|> Cac.API
            :<|> FavouriteDrivers.API
+           :<|> KnowYourDriver.API
        )
 
 handler :: FlowServer API
@@ -44,3 +46,4 @@ handler =
     :<|> DriverInactiveFCM.handler
     :<|> Cac.handler
     :<|> FavouriteDrivers.handler
+    :<|> KnowYourDriver.handler

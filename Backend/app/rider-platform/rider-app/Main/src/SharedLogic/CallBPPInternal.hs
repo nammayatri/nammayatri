@@ -319,3 +319,70 @@ reportIssue ::
 reportIssue apiKey internalUrl bppRideId issueReportType = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (reportIssueClient bppRideId issueReportType (Just apiKey)) "ReportACIssue" reportACIssueApi
+
+data DriverProfileRes = DriverProfileRes
+  { certificates :: [Text],
+    driverName :: Text,
+    likedByRidersNum :: Int,
+    trips :: Int,
+    approvalRate :: Maybe Centesimal,
+    cancellation :: Int,
+    onboardedAt :: UTCTime,
+    pledges :: [Text],
+    expertAt :: [Text],
+    whyNY :: [Text],
+    languages :: [Text]
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+type GetgetknowYourDriverDetailsAPI =
+  "internal"
+    :> Capture "rideId" Text
+    :> "knowYourDriver"
+    :> Header "token" Text
+    :> Get '[JSON] DriverProfileRes
+
+getknowYourDriverClient :: Text -> Maybe Text -> EulerClient DriverProfileRes
+getknowYourDriverClient = client getKnowYourDriverApi
+
+getKnowYourDriverApi :: Proxy GetgetknowYourDriverDetailsAPI
+getKnowYourDriverApi = Proxy
+
+getknowYourDriverDetails ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m DriverProfileRes
+getknowYourDriverDetails apiKey internalUrl bppRideId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getknowYourDriverClient bppRideId (Just apiKey)) "KnowYourDriver" getKnowYourDriverApi
+
+type GetKnowYourFavDriverDetailsAPI =
+  "internal"
+    :> Capture "driverId" Text
+    :> "knowYourFavDriver"
+    :> Header "token" Text
+    :> Get '[JSON] DriverProfileRes
+
+getKnowYourDriverClient :: Text -> Maybe Text -> EulerClient DriverProfileRes
+getKnowYourDriverClient = client getKnowYourFavDriverApi
+
+getKnowYourFavDriverApi :: Proxy GetKnowYourFavDriverDetailsAPI
+getKnowYourFavDriverApi = Proxy
+
+getKnowYourFavDriverDetails ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m DriverProfileRes
+getKnowYourFavDriverDetails apiKey internalUrl bppRideId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getKnowYourDriverClient bppRideId (Just apiKey)) "KnowYourFavDriver" getKnowYourFavDriverApi
