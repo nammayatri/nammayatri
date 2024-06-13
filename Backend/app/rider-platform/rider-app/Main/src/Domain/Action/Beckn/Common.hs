@@ -541,7 +541,7 @@ bookingCancelledReqHandler ValidatedBookingCancelledReq {..} = do
       Nothing -> do
         logDebug "No ride found for the booking."
     let merchantOperatingCityId = booking.merchantOperatingCityId
-    mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs
+    mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs Nothing
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
   triggerBookingCancelledEvent BookingEventData {booking = booking{status = DRB.CANCELLED}}
   _ <- QPFS.updateStatus booking.riderId DPFS.IDLE

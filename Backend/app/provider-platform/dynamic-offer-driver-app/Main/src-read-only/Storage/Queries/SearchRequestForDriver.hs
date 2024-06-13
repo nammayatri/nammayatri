@@ -102,6 +102,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.startTime startTime,
       Se.Set Beam.status status,
       Se.Set Beam.straightLineDistanceToPickup straightLineDistanceToPickup,
+      Se.Set Beam.totalRides (Kernel.Prelude.Just totalRides),
       Se.Set Beam.vehicleServiceTier (Kernel.Prelude.Just vehicleServiceTier),
       Se.Set Beam.vehicleServiceTierName vehicleServiceTierName,
       Se.Set Beam.vehicleVariant vehicleVariant

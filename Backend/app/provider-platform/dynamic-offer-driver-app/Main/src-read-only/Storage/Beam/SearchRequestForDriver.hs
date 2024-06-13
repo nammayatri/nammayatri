@@ -72,6 +72,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     startTime :: B.C f Kernel.Prelude.UTCTime,
     status :: B.C f Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus,
     straightLineDistanceToPickup :: B.C f Kernel.Types.Common.Meters,
+    totalRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType),
     vehicleServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleVariant :: B.C f Domain.Types.Vehicle.Variant

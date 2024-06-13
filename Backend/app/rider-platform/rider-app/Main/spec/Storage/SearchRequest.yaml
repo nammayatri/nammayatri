@@ -55,6 +55,7 @@ SearchRequest:
     clientDevice: Maybe Device
     backendConfigVersion: Maybe Version
     backendAppVersion: Maybe Text
+    totalRidesCount: Maybe Int
     isAdvanceBookingEnabled: Maybe Bool
 
   types:
@@ -152,6 +153,11 @@ SearchRequest:
       kvFunction: updateOneWithKV
       where: id
       params: [isAdvanceBookingEnabled]
+
+    updateTotalRidesCount:
+      kvFunction: updateOneWithKV
+      params: [id, totalRidesCount]
+      where: riderId
 
   constraints:
     id: PrimaryKey

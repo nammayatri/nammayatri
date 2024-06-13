@@ -50,6 +50,7 @@ data SearchRequest = SearchRequest
     selectedPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
     startTime :: Kernel.Prelude.UTCTime,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
+    totalRidesCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     validTill :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show)
