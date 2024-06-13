@@ -68,7 +68,7 @@ import Services.API (ServiceabilityType(..)) as ServiceabilityType
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
-    regToken <- loadS $ show REGISTERATION_TOKEN
+    let regToken = Just $ (getValueToLocalStore REGISTERATION_TOKEN) --loadS $ show REGISTERATION_TOKEN
     pure $ Headers $ [   Header "Content-Type" "application/json",
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
                         Header "x-config-version" (getValueFromWindow "CONFIG_VERSION"),
@@ -84,7 +84,7 @@ getHeaders val isGzipCompressionEnabled = do
 
 getHeaders' :: String -> Boolean -> FlowBT String Headers
 getHeaders' val isGzipCompressionEnabled = do
-    regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
+    let regToken = Just $ (getValueToLocalStore REGISTERATION_TOKEN) --lift $ lift $ loadS $ show REGISTERATION_TOKEN
     lift $ lift $ pure $ Headers $ [   Header "Content-Type" "application/json",
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
                         Header "x-config-version" (getValueToLocalStore CONFIG_VERSION),

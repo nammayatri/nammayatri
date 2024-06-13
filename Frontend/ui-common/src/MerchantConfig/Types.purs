@@ -28,6 +28,7 @@ type CommonAppConfig = (
   , appData :: AppDatas
   , otpRegex :: String
   , termsLink :: String
+  , reactNativeFlowEnabled :: Boolean
   , termsVersion :: Number
   , privacyLink :: String
   , dashboard :: DashboardConfig

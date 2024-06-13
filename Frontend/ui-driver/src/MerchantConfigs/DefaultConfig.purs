@@ -500,6 +500,7 @@ config =
   , genericHeaderConfig : defaultGenericHeader
   , currency: "₹"
   , internationalNumberEnabled : false
+  , reactNativeFlowEnabled : false
   , countryCodeConfig : []
   , feature : {
     enableBonus : false

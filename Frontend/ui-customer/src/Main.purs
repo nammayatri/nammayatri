@@ -43,6 +43,7 @@ import AssetsProvider (fetchAssets)
 import Effect.Uncurried
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Storage (setValueToLocalStore, KeyStore(..))
+import Debug(spy)
 
 main :: Event -> Boolean -> Effect Unit
 main event callInitUI = do

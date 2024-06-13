@@ -34,6 +34,7 @@ import Control.Monad.Except.Trans (lift)
 import Data.Maybe
 import Log
 import DecodeUtil
+import Debug (spy)
 
 foreign import mergeforegin :: Array Foreign -> Foreign
 
@@ -60,7 +61,7 @@ loadAppConfig _ =
 
 getConfigFromFile :: String -> Array Foreign
 getConfigFromFile fileName = do
-  let config = loadFileInDUI $ fileName <> ReExport.dotJSA
+  let config = loadFileInDUI $ fileName <> ReExport.dotJS
   if isFilePresent config 
     then 
       [encode $ evalJSString config]

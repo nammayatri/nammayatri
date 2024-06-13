@@ -45,30 +45,35 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  screenAnimation
-    $ linearLayout
+  relativeLayout
+  [ height $ MATCH_PARENT
+  , width $ MATCH_PARENT
+  , onClick push $ const NoAction
+  , background Color.white900
+  , onBackPressed push $ const BackPressed
+  ][screenAnimation  $ linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , background background'
+    , padding padding'
+    ]
+    [ Header.view (push <<< SafetyHeaderAction) headerConfig
+    , linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , background background'
-        , onBackPressed push $ const BackPressed
-        , padding padding'
         ]
-        [ Header.view (push <<< SafetyHeaderAction) headerConfig
-        , linearLayout
-            [ height MATCH_PARENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            ]
-            [ if Mb.isJust state.props.educationViewIndex then
-                if state.props.showVideoView then
-                  videoView push state
-                else
-                  descriptionView push state
-              else
-                aboutNammaSafetyView state push
-            ]
+        [ if Mb.isJust state.props.educationViewIndex then
+            if state.props.showVideoView then
+              videoView push state
+            else
+              descriptionView push state
+          else
+            aboutNammaSafetyView state push
         ]
+    ]
+  ]
   where
   background' = if Mb.isJust state.props.educationViewIndex && state.props.showVideoView then Color.black900 else Color.white900
 

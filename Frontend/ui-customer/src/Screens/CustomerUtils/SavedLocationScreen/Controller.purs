@@ -43,6 +43,7 @@ import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.LogEvent (logEvent)
 import Foreign.Object (empty)
 import Effect.Unsafe (unsafePerformEffect)
+import Debug(spy)
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -112,11 +113,15 @@ eval (SavedLocationCardAction (SavedLocationCardController.EditLocation cardStat
 eval (BackPressed flag) state = do 
   if state.props.showDeleteLocationModel then continue state{props{showDeleteLocationModel = false}, data{deleteTag = Nothing}}
     else
+      let hello = spy "HELLO WORLD" "I am here" in
       if isParentView FunctionCall 
         then do 
+          let hello2 = spy "HELLO WORLD" "I am here 2"
           void $ pure $ emitTerminateApp Nothing true
           continue state
-        else exit $ GoBack
+        else do
+          let hello2 = spy "HELLO WORLD" "I am here 3"
+          exit $ GoBack
 
 eval (SavedLocationCardAction (SavedLocationCardController.DeleteLocation tagName)) state = do 
   continue state{props{showDeleteLocationModel = true}, data{deleteTag = (Just tagName)}}

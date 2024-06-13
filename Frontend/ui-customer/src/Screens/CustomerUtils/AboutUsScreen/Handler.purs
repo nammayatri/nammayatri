@@ -23,11 +23,14 @@ import Control.Transformers.Back.Trans as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.AboutUsScreen.View as AboutUsScreen
 import Types.App (FlowBT, GlobalState(..), ABOUT_US_SCREEN_OUTPUT(..))
+import Debug(spy)
 
 
 aboutUsScreen :: FlowBT String ABOUT_US_SCREEN_OUTPUT
 aboutUsScreen = do
+  let hello1 = spy "This is inside handler" "aboutUsScreen"
   (GlobalState state) <- getState
+  let hello = spy "This is inside handler" "aboutUsScreen"
   action <- lift $ lift $ runScreen $ AboutUsScreen.screen state.aboutUsScreen
   case action of
     GoToHomeScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_FROM_ABOUT)

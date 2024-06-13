@@ -85,7 +85,14 @@ screen initialState =
 view ::
   forall w. (Action -> Effect Unit) -> ST.NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  screenAnimation
+  relativeLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , background Color.white900
+  , onClick push $ const NoAction
+  , onBackPressed push (const BackPressed)
+  ][  screenAnimation
     $ relativeLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
@@ -104,6 +111,7 @@ view push state =
             ]
         , if state.props.showInfoPopUp then removeContactPopUpView push state else emptyTextView
         ]
+  ]
   where
   padding' = if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 16 else EHC.safeMarginBottom)) else (PaddingLeft 0)
 

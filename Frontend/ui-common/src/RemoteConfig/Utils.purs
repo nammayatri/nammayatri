@@ -22,6 +22,7 @@ import Prelude (not, ($), (==))
 import Data.Maybe (fromMaybe)
 import Data.Array (elem, filter, uncons)
 import Data.Array as DA
+import Debug (spy)
 
 foreign import fetchRemoteConfigString :: String -> String
 
@@ -57,6 +58,7 @@ carouselConfigData city configKey default userId categoryFilter =
     parseVal = if not null remoteConfig then remoteConfig else fetchRemoteConfigString default
 
     decodedConfg = decodeForeignObject (parseJSON parseVal) defaultRemoteConfig
+    hello = spy "carousel" "crashed"
   in
     filterWhiteListedConfigs userId $ filterCategoryBasedCarousel categoryFilter $ getCityBasedConfig decodedConfg city
 

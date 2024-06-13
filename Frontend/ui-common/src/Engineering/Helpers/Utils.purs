@@ -59,6 +59,7 @@ import Language.Types
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Data.Int as DI
 import Data.Number.Format (fixed, toStringWith)
+import Debug(spy)
 
 -- Common Utils
 foreign import reboot :: Effect Unit
@@ -75,8 +76,10 @@ fromProp = unsafeCoerce
 
 -- Loader Utils
 toggleLoader :: Boolean -> Flow GlobalState Unit
-toggleLoader =
-  if _ then do
+toggleLoader val =
+  let hello = spy "I am here " "toggleLoader"
+  in
+  if val then do
     state <- getState
     _ <- liftFlow $ launchAff $ flowRunner state UI.loaderScreen
     pure unit

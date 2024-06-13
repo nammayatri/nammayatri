@@ -9,7 +9,7 @@ try {
     window.events.assetDownloadDuration =
       Date.now() - window.assetDownloadDuration;
   }
-} catch (err) {}
+} catch (err) { }
 
 if (!window.__OS) {
   const getOS = function () { //taken from getOS() in presto-ui
@@ -24,29 +24,29 @@ if (!window.__OS) {
 
 const blackListFunctions = ["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "addToLogList", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds"]
 
-if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){  
-  Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
-    return blackListFunctions.indexOf(fnName) == -1
-  }).forEach(fnName => {
-      window.JBridgeProxy = window.JBridgeProxy || {};
-      window.JBridgeProxy[fnName] = window.JBridge[fnName];
-      window.JBridge[fnName] = function () {
-        let params = Object.values(arguments).join(", ");
-        if (fnName === "callAPI") {
-          params = arguments[1].split("/").splice(6).join("/");
-        }
-        let shouldLog = true;
-        if (window.appConfig) {
-        shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
-        }
-        if (shouldLog) {
-        window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
-        }
-        const result = window.JBridgeProxy[fnName](...arguments);
-        return result;
-      };
-    });
-}
+Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
+  return blackListFunctions.indexOf(fnName) == -1
+}).forEach(fnName => {
+  window.JBridgeProxy = window.JBridgeProxy || {};
+  window.JBridgeProxy[fnName] = window.JBridge[fnName];
+  window.JBridge[fnName] = function () {
+    let params = Object.values(arguments).join(", ");
+    if (fnName === "callAPI") {
+      params = arguments[1].split("/").splice(6).join("/");
+    }
+    let shouldLog = true;
+    if (window.appConfig) {
+      shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
+    }
+    try {
+      const result = window.JBridgeProxy[fnName](...arguments);
+      return result;
+    } catch {
+
+      return;
+    }
+  }
+});
 
 function guid() {
   function s4() {
@@ -75,12 +75,12 @@ const JOS = window.JOS;
 const Android = window.Android;
 
 const eventObject = {
-  type : ""
-  , data : ""
+  type: ""
+  , data: ""
 }
 
 function makeEvent(_type, _data) {
-  return { type : _type, data : _data };
+  return { type: _type, data: _data };
 }
 
 window.isObject = function (object) {
@@ -94,23 +94,20 @@ const isUndefined = function (val) {
   return (typeof val == "undefined");
 }
 
-const logger = function()
-{
+const logger = function () {
   let oldConsoleLog = null;
   const pub = {};
 
-  pub.enableLogger =  function enableLogger()
-  {
-    if(oldConsoleLog === null)
+  pub.enableLogger = function enableLogger() {
+    if (oldConsoleLog === null)
       return;
 
     window["console"]["log"] = oldConsoleLog;
   };
 
-  pub.disableLogger = function disableLogger()
-  {
+  pub.disableLogger = function disableLogger() {
     oldConsoleLog = console.log;
-    window["console"]["log"] = function() {};
+    window["console"]["log"] = function () { };
   };
 
   return pub;
@@ -138,11 +135,11 @@ const purescript = require("./output/Main");
 //   purescript.main();
 // }
 
-function callInitiateResult () {
+function callInitiateResult() {
   const payload = {
     event: "initiate_result"
     , service: "in.juspay.becknui"
-    , payload: { action : "initiate", status: "SUCCESS" }
+    , payload: { action: "initiate", status: "SUCCESS" }
     , error: false
     , errorMessage: ""
     , errorCode: ""
@@ -161,10 +158,10 @@ function shouldRefresh() {
   const diff = Math.abs(previousDateObject - currentDate) / 1000;
   const token = (window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN"));
   const currentState = (window.JBridge.getKeysInSharedPref("LOCAL_STAGE"));
-  return ((diff > refreshThreshold) && 
-      (token != "__failed") && 
-      (token != "(null)") &&
-      ((currentState == "RideStarted") || currentState == "RideAccepted"))
+  return ((diff > refreshThreshold) &&
+    (token != "__failed") &&
+    (token != "(null)") &&
+    ((currentState == "RideStarted") || currentState == "RideAccepted"))
 }
 
 window.onMerchantEvent = function (_event, globalPayload) {
@@ -179,17 +176,16 @@ window.onMerchantEvent = function (_event, globalPayload) {
       new Date().getTime()
     );
     let clientId = clientPaylod.clientId;
-    if (clientId.includes("_ios"))
-    {
-      clientId = clientId.replace("_ios","");
+    if (clientId.includes("_ios")) {
+      clientId = clientId.replace("_ios", "");
     }
     if (!clientId.startsWith("mobility") && clientId.includes("consumer")) {
-      let merchant = clientId.replace("mobility","")
-      merchant = merchant.replace("consumer","")
+      let merchant = clientId.replace("mobility", "")
+      merchant = merchant.replace("consumer", "")
       window.merchantID = merchant.toUpperCase();
     } else {
-      let merchant = clientId.replace("mobility","")
-      merchant = merchant.replace("consumer","")
+      let merchant = clientId.replace("mobility", "")
+      merchant = merchant.replace("consumer", "")
       merchant = merchant.toUpperCase();
       window.merchantID = "MOBILITY_" + merchant.charAt(0) + merchant.charAt(merchant.length - 1);
     }
@@ -212,11 +208,18 @@ window.onMerchantEvent = function (_event, globalPayload) {
           clientPaylod.initiateTimeStamp
         );
       }
-    } catch (err) {}
+    } catch (err) { }
     callInitiateResult();
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
     console.warn("Process called");
+    const jpConsumingBackpress = {
+      event: "jp_consuming_backpress",
+      payload: { jp_consuming_backpress: true }
+    }
+    console.log("APP_PERF get back press : ", new Date().getTime());
+    JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
+
     window.__payload.sdkVersion = "2.0.1"
     try {
       const clientPaylod = window.__payload.payload;
@@ -240,19 +243,19 @@ window.onMerchantEvent = function (_event, globalPayload) {
       window.openChatScreen();
     } else {
       console.log("client Payload: ", clientPaylod);
-      if(clientPaylod.notification_type == "SOS_MOCK_DRILL" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL"){
+      if (clientPaylod.notification_type == "SOS_MOCK_DRILL" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL") {
         purescript.mockFollowRideEvent(makeEvent("SOS_MOCK_DRILL", ""))();
-      }else if(clientPaylod.notification_type == "SOS_MOCK_DRILL_NOTIFY" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL_NOTIFY"){
+      } else if (clientPaylod.notification_type == "SOS_MOCK_DRILL_NOTIFY" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL_NOTIFY") {
         purescript.mockFollowRideEvent(makeEvent("SOS_MOCK_DRILL_NOTIFY", ""))();
-      }else if(clientPaylod.notification_type == "CHAT_MESSAGE" || (clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "CHAT_MESSAGE")){
+      } else if (clientPaylod.notification_type == "CHAT_MESSAGE" || (clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "CHAT_MESSAGE")) {
         purescript.main(makeEvent("CHAT_MESSAGE", ""))(!clientPaylod.onNewIntent)();
-      }else if (clientPaylod.viewParamNewIntent && clientPaylod.viewParamNewIntent.slice(0, 8) == "referrer") {
+      } else if (clientPaylod.viewParamNewIntent && clientPaylod.viewParamNewIntent.slice(0, 8) == "referrer") {
         purescript.onNewIntent(makeEvent("REFERRAL", clientPaylod.viewParamNewIntent.slice(9)))();
-      }else if (clientPaylod.viewParam && clientPaylod.viewParam.slice(0, 8) == "referrer") {
+      } else if (clientPaylod.viewParam && clientPaylod.viewParam.slice(0, 8) == "referrer") {
         purescript.onNewIntent(makeEvent("REFERRAL_NEW_INTENT", clientPaylod.viewParam.slice(9)))();
-      }else if(clientPaylod.notification_type == "SAFETY_ALERT_DEVIATION" || (clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SAFETY_ALERT_DEVIATION")){
+      } else if (clientPaylod.notification_type == "SAFETY_ALERT_DEVIATION" || (clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SAFETY_ALERT_DEVIATION")) {
         purescript.main(makeEvent("SAFETY_ALERT_DEVIATION", ""))(!clientPaylod.onNewIntent)();
-      }else if (!clientPaylod.notification_type || !clientPaylod.onNewIntent) {
+      } else if (!clientPaylod.notification_type || !clientPaylod.onNewIntent) {
         purescript.main(makeEvent("", ""))(!clientPaylod.onNewIntent)();
       }
     }
@@ -280,10 +283,10 @@ window.onPause = function () {
 window.onResume = function () {
   console.error("onEvent onResume");
   if (window.onResumeListeners && Array.isArray(window.onResumeListeners)) {
-    for (let i = 0; i < window.onResumeListeners.length;i++) {
+    for (let i = 0; i < window.onResumeListeners.length; i++) {
       window.onResumeListeners[i].call();
     }
-    if(window.scrollAction) {
+    if (window.scrollAction) {
       window.scrollAction();
     }
   }
@@ -313,9 +316,9 @@ window.onActivityResult = function (requestCode, resultCode, bundle) {
   }
 }
 
-function refreshFlow(){
-  if (shouldRefresh()){
-    if(window.storeCallBackMessageUpdated){
+function refreshFlow() {
+  if (shouldRefresh()) {
+    if (window.storeCallBackMessageUpdated) {
       window.__PROXY_FN[window.storeCallBackMessageUpdated] = undefined;
     }
     window.chatMessages = undefined;
@@ -341,7 +344,7 @@ window["onEvent'"] = function (_event, args) {
     purescript.onConnectivityEvent("LOCATION_DISABLED")();
   } else if (_event == "onInternetChanged") {
     purescript.onConnectivityEvent("INTERNET_ACTION")();
-  }else if(_event == "onBundleUpdated"){
+  } else if (_event == "onBundleUpdated") {
     purescript.onBundleUpdatedEvent(JSON.parse(args))();
   } else if ((_event == "onKeyboardOpen" || _event == "onKeyboardClose") && window.keyBoardCallback) {
     window.keyBoardCallback(_event);
@@ -375,16 +378,18 @@ if (typeof window.JOS != "undefined") {
   window.JOS.addEventListener("onMerchantEvent")();
   window.JOS.addEventListener("onActivityResult")();
   console.error("Calling action DUI_READY");
-  JOS.emitEvent("java")("onEvent")(JSON.stringify({ action: "DUI_READY", service : JOS.self }))()();
+  JOS.emitEvent("java")("onEvent")(JSON.stringify({ action: "DUI_READY", service: JOS.self }))()();
 } else {
   console.error("JOS not present")
 }
 
 const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
-if(sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging")){
+if (sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging")) {
   logger.enableLogger();
-}else{
+} else {
   logger.disableLogger();
-  Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;","null");
+  Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;", "null");
 }
+logger.enableLogger();
+
 console.log("APP_PERF INDEX_BUNDLE_END : ", new Date().getTime());
