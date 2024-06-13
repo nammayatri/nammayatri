@@ -21,8 +21,12 @@ where
 import "dynamic-offer-driver-app" API.Dashboard.Fleet as BPP
 import qualified Dashboard.ProviderPlatform.Driver as Driver
 import qualified Dashboard.ProviderPlatform.Driver.Registration as Registration
+import Data.Time
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as Fleet
+import qualified "dynamic-offer-driver-app" Domain.Action.UI.Ride as DARide
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import qualified "dynamic-offer-driver-app" Domain.Types.Person as DP
+import qualified "dynamic-offer-driver-app" Domain.Types.Ride as DRide
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
 import Kernel.Prelude
@@ -53,7 +57,8 @@ data FleetOperationsAPIs = FleetOperationsAPIs
     updateFleetOwnerInfo :: Id Driver.Driver -> Driver.UpdateFleetOwnerInfoReq -> Euler.EulerClient APISuccess,
     getFleetOwnerInfo :: Id Driver.Driver -> Euler.EulerClient Driver.FleetOwnerInfoRes,
     sendFleetJoiningOtp :: Text -> Registration.AuthReq -> Euler.EulerClient APISuccess,
-    verifyFleetJoiningOtp :: Text -> Driver.VerifyFleetJoiningOtpReq -> Euler.EulerClient APISuccess
+    verifyFleetJoiningOtp :: Text -> Driver.VerifyFleetJoiningOtpReq -> Euler.EulerClient APISuccess,
+    listDriverRidesForFleet :: Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe Day -> Maybe Text -> Euler.EulerClient DARide.DriverRideListRes
   }
 
 data FleetRegistrationAPIs = FleetRegistrationAPIs
@@ -93,7 +98,8 @@ mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
       :<|> updateFleetOwnerInfo
       :<|> getFleetOwnerInfo
       :<|> sendFleetJoiningOtp
-      :<|> verifyFleetJoiningOtp = fleetOperationsClient
+      :<|> verifyFleetJoiningOtp
+      :<|> listDriverRidesForFleet = fleetOperationsClient
 
     fleetOwnerLogin
       :<|> fleetOwnerVerify
