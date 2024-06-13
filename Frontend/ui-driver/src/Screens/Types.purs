@@ -2789,3 +2789,11 @@ type RateCardScreenProps = {
   sliderMaxValue :: Int,
   sliderLoading :: Boolean
 }
+
+type GullakSDKResp = {
+  amount :: Number,
+  quantity :: String,
+  responseMessage :: String,
+  responseCode :: Int,
+  isNewUser :: Boolean
+}

@@ -29,6 +29,7 @@ import Data.Array (find)
 import Services.API
 import Effect.Uncurried (runEffectFn4)
 import Debug (spy)
+import JBridge as JB
 import Screens.Benefits.BenefitsScreen.Transformer (buildLmsModuleRes)
 
 instance showAction :: Show Action where
@@ -63,6 +64,7 @@ instance loggableAction :: Loggable Action where
     UpdateModuleList _ ->  trackAppActionClick appId (getScreen REFERRAL_SCREEN) "update_module_list" "update_module_list"
     UpdateModuleListErrorOccurred -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "update_module_list_error_occurred" "update_module_list"
     ShareQRLink -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "screen" "render_qr_link"
+    _ -> pure unit
 
 data Action = BackPressed
             | AfterRender
@@ -82,6 +84,7 @@ data Action = BackPressed
             | OpenModule LmsModuleRes
             | UpdateModuleList LmsGetModuleRes
             | UpdateModuleListErrorOccurred
+            | GullakSDKResponse String
 
 data ScreenOutput = GoToHomeScreen BenefitsScreenState
                   | GoToNotifications BenefitsScreenState
@@ -101,6 +104,8 @@ eval BackPressed state =
   else exit $ GoToHomeScreen state
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = exit $ GoBack
+
+eval (GullakSDKResponse _ ) state = continue state
 
 eval ShowQRCode state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_contest_app_qr_code_click"

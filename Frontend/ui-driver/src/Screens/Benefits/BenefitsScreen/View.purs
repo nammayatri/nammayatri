@@ -45,6 +45,8 @@ import Data.Array (length)
 import Data.Either (Either(..))
 import Locale.Utils
 import PrestoDOM.Animation as PrestoAnim
+import Data.Function.Uncurried as UC
+import JBridge as JB
 
 screen :: BenefitsScreenState -> Screen Action BenefitsScreenState ScreenOutput
 screen initialState =
@@ -136,6 +138,7 @@ referralScreenInnerBody push state =
       , orientation VERTICAL
       ]
       [ if shouldShowReferral state then driverReferralCode push state else dummyView
+      , savingWithGullak push state
       , rideLeaderBoardView push state
       ]
   ,   learnAndEarnShimmerView push state
@@ -499,6 +502,38 @@ referralInfoPop push state =
     REFERRED_CUSTOMERS_POPUP -> { heading: getString REFERRED_CUSTOMERS, subtext: getString $ REFERRED_CUSTOMERS_INFO "REFERRED_CUSTOMERS_INFO" }
     ACTIVATED_CUSTOMERS_POPUP -> { heading: getString ACTIVATED_CUSTOMERS, subtext: getString ACTIVATED_CUSTOMERS_INFO }
     _ -> { heading: "", subtext: "" }
+
+savingWithGullak :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
+savingWithGullak push state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ MarginVertical 10 10
+    ]
+    [ textView
+        $ [ text "Save with Gullak"
+          , color Color.black800
+          , margin $ MarginBottom 12
+          ]
+        <> FontStyle.h2 TypoGraphy
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity CENTER
+        , cornerRadius 12.0
+        ][ imageView
+            [ width $ V ((screenWidth unit) - 32)
+            , height $ V $ ceil ((toNumber(screenWidth unit))/2.26)
+            , onClick (\action -> do
+                  void $ pure $ UC.runFn4 JB.emitJOSEventWithCb "gl_sdk" "4bf003823bcc449f802b2ff457660660" push GullakSDKResponse -- Get token from API
+                  pure unit)
+                (const AfterRender)
+            , gravity CENTER
+            , imageUrl "https://firebasestorage.googleapis.com/v0/b/jp-beckn-dev.appspot.com/o/Gullak%2Fgullak_banner.png?alt=media&token=68fd4f55-e23a-4c77-ba66-ac4b094cbb14"
+            ]
+        ]
+    ]
 
 rideLeaderBoardView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 rideLeaderBoardView push state =
