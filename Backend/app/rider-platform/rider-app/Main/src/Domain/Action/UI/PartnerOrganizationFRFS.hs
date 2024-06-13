@@ -79,7 +79,7 @@ data GetFareReq = GetFareReq
     mobileCountryCode :: Text,
     mobileNumber :: Text,
     identifierType :: SP.IdentifierType,
-    partnerOrgTransactionId :: Id PartnerOrgTransaction
+    partnerOrgTransactionId :: Maybe (Id PartnerOrgTransaction)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
