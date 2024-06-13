@@ -49,7 +49,7 @@ data DOnCancel = DOnCancel
 validateRequest :: DOnCancel -> Flow (Merchant, FTBooking.FRFSTicketBooking)
 validateRequest DOnCancel {..} = do
   booking <- runInReplica $ QTBooking.findBySearchId (Id transactionId) >>= fromMaybeM (BookingDoesNotExist messageId)
-  merchantId <- booking.merchantId & fromMaybeM (InternalError "MerchantId not found in booking")
+  let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   when (totalPrice /= baseFare + refundAmount + cancellationCharges) $ throwError (InternalError "Fare Mismatch in onCancel Req")
   return (merchant, booking)

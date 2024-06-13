@@ -33,6 +33,8 @@ FRFSSearch:
     quantity: Int
     vehicleType: FRFSVehicleType
     riderId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
 
@@ -106,6 +108,8 @@ FRFSQuote:
     price: Price
     validTill: UTCTime
     riderId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
     partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
 
@@ -171,6 +175,8 @@ FRFSTicketBooking:
     refundAmount: Maybe HighPrecMoney
     isBookingCancellable: Maybe Bool
     customerCancelled: Bool
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
     partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
 
@@ -285,6 +291,8 @@ FRFSTicket:
     qrData: Text
     validTill: UTCTime
     ticketNumber: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
     partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
 

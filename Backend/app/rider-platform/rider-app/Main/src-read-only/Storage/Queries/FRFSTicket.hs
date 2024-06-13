@@ -57,6 +57,8 @@ updateByPrimaryKey (Domain.Types.FRFSTicket.FRFSTicket {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.frfsTicketBookingId (Kernel.Types.Id.getId frfsTicketBookingId),
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
       Se.Set Beam.qrData qrData,
@@ -64,8 +66,6 @@ updateByPrimaryKey (Domain.Types.FRFSTicket.FRFSTicket {..}) = do
       Se.Set Beam.status status,
       Se.Set Beam.ticketNumber ticketNumber,
       Se.Set Beam.validTill validTill,
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -78,6 +78,8 @@ instance FromTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
         Domain.Types.FRFSTicket.FRFSTicket
           { frfsTicketBookingId = Kernel.Types.Id.Id frfsTicketBookingId,
             id = Kernel.Types.Id.Id id,
+            merchantId = Kernel.Types.Id.Id merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             partnerOrgId = Kernel.Types.Id.Id <$> partnerOrgId,
             partnerOrgTransactionId = Kernel.Types.Id.Id <$> partnerOrgTransactionId,
             qrData = qrData,
@@ -85,8 +87,6 @@ instance FromTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
             status = status,
             ticketNumber = ticketNumber,
             validTill = validTill,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -96,6 +96,8 @@ instance ToTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
     Beam.FRFSTicketT
       { Beam.frfsTicketBookingId = Kernel.Types.Id.getId frfsTicketBookingId,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.partnerOrgId = Kernel.Types.Id.getId <$> partnerOrgId,
         Beam.partnerOrgTransactionId = Kernel.Types.Id.getId <$> partnerOrgTransactionId,
         Beam.qrData = qrData,
@@ -103,8 +105,6 @@ instance ToTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
         Beam.status = status,
         Beam.ticketNumber = ticketNumber,
         Beam.validTill = validTill,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

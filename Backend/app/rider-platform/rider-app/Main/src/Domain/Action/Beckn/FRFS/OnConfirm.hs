@@ -54,7 +54,7 @@ validateRequest :: DOrder -> Flow (Merchant, Booking.FRFSTicketBooking)
 validateRequest DOrder {..} = do
   _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   booking <- runInReplica $ QTBooking.findById (Id messageId) >>= fromMaybeM (BookingDoesNotExist messageId)
-  merchantId <- booking.merchantId & fromMaybeM (InternalError "MerchantId not found in booking")
+  let merchantId = booking.merchantId
   now <- getCurrentTime
 
   if booking.validTill < now
@@ -126,8 +126,8 @@ buildReconTable merchant booking _dOrder tickets = do
             Recon.txnId = txn.txnId,
             Recon.totalOrderValue = tOrderValue,
             Recon.transactionRefNumber = transactionRefNumber,
-            Recon.merchantId = booking.merchantId,
-            Recon.merchantOperatingCityId = booking.merchantOperatingCityId,
+            Recon.merchantId = Just booking.merchantId,
+            Recon.merchantOperatingCityId = Just booking.merchantOperatingCityId,
             Recon.createdAt = now,
             Recon.updatedAt = now,
             Recon.ticketStatus = Nothing,

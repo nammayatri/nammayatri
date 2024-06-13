@@ -21,7 +21,6 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.Station as QStation
 
 data DFareBreakUp = DFareBreakUp
   { title :: Text,
@@ -52,9 +51,5 @@ data DTicket = DTicket
 
 getMerchantOperatingCityFromBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m DMOC.MerchantOperatingCity
 getMerchantOperatingCityFromBooking tBooking = do
-  moCityId <- case tBooking.merchantOperatingCityId of
-    Nothing -> do
-      station <- QStation.findById tBooking.fromStationId >>= fromMaybeM (InternalError $ "Station with id - " <> show tBooking.fromStationId <> " not found.")
-      return station.merchantOperatingCityId
-    Just moCityId -> return moCityId
+  let moCityId = tBooking.merchantOperatingCityId
   CQMOC.findById moCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show moCityId)

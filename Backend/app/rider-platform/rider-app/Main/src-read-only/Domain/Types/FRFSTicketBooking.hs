@@ -32,6 +32,8 @@ data FRFSTicketBooking = FRFSTicketBooking
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     isBookingCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),
     paymentTxnId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -49,8 +51,6 @@ data FRFSTicketBooking = FRFSTicketBooking
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: Domain.Types.Station.FRFSVehicleType,
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

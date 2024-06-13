@@ -50,7 +50,7 @@ onConfirm _ req = withFlowHandlerAPI $ do
   transaction_id <- req.onConfirmReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   bookingId <- req.onConfirmReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   ticketBooking <- QFRFSTicketBooking.findById (Id bookingId) >>= fromMaybeM (InvalidRequest "Invalid booking id")
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle ticketBooking.merchantId (show Spec.FRFS) METRO >>= fromMaybeM (InternalError "Beckn Config not found")
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just ticketBooking.merchantId) (show Spec.FRFS) METRO >>= fromMaybeM (InternalError "Beckn Config not found")
   logDebug $ "Received OnConfirm request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
     dOnConfirmReq <- ACL.buildOnConfirmReq req
@@ -58,15 +58,14 @@ onConfirm _ req = withFlowHandlerAPI $ do
       then do
         let onConfirmReq = fromJust dOnConfirmReq
         (merchant, booking) <- DOnConfirm.validateRequest onConfirmReq
-        let merchantOperatingCityID = maybe "" (.getId) booking.merchantOperatingCityId
-        Metrics.finishMetrics Metrics.CONFIRM merchant.name transaction_id merchantOperatingCityID
+        Metrics.finishMetrics Metrics.CONFIRM merchant.name transaction_id booking.merchantOperatingCityId.getId
         fork "onConfirm request processing" $
           Redis.whenWithLockRedis (onConfirmProcessingLockKey onConfirmReq.bppOrderId) 60 $
             DOnConfirm.onConfirm merchant booking onConfirmReq
       else do
         void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED (Id bookingId)
         void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING (Id bookingId)
-        void $ DACFOC.callBPPCancel ticketBooking bapConfig Spec.CONFIRM_CANCEL (fromJust $ ticketBooking.merchantId)
+        void $ DACFOC.callBPPCancel ticketBooking bapConfig Spec.CONFIRM_CANCEL ticketBooking.merchantId
 
   pure Utils.ack
 

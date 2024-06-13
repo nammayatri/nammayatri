@@ -35,7 +35,7 @@ validateRequest :: DOrder -> Flow (Merchant, Booking.FRFSTicketBooking)
 validateRequest DOrder {..} = do
   _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   booking <- runInReplica $ QTBooking.findByBppOrderId (Just bppOrderId) >>= fromMaybeM (BookingDoesNotExist messageId)
-  merchantId <- booking.merchantId & fromMaybeM (InternalError "MerchantId not found in booking") -- TODO: Make merchantId required
+  let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return (merchant, booking)
 

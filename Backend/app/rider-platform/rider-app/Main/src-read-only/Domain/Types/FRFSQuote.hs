@@ -23,6 +23,8 @@ data FRFSQuote = FRFSQuote
     bppSubscriberUrl :: Kernel.Prelude.Text,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),
     price :: Kernel.Types.Common.Price,
@@ -36,8 +38,6 @@ data FRFSQuote = FRFSQuote
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: Domain.Types.Station.FRFSVehicleType,
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
