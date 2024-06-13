@@ -261,7 +261,6 @@ getDistanceString currDistance initDistance zoneType
 skipButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 skipButtonConfig state =
   let
-    isRentalRide = state.data.fareProductType == FPT.RENTAL
     accessibilityOption = fromMaybe {issueType: Accessibility, selectedYes: Nothing} ((DA.filter(\x -> x.issueType == Accessibility) state.data.rideCompletedData.issueReportData.customerResponse) DA.!! 0)
     config = PrimaryButton.config
     primaryButtonConfig' =
@@ -283,9 +282,10 @@ skipButtonConfig state =
   in
     primaryButtonConfig'
   where 
+    isRentalRide = state.data.fareProductType == FPT.RENTAL
     issueFlowClickable = (DA.null $ issueReportBannerConfigs state) || state.data.rideCompletedData.issueReportData.respondedValidIssues
     ratingFlowClickable = state.data.ratingViewState.selectedRating > 0
-    clickale = if state.data.rideCompletedData.issueReportData.showIssueBanners then  issueFlowClickable else ratingFlowClickable
+    clickale = (if state.data.rideCompletedData.issueReportData.showIssueBanners then  issueFlowClickable else ratingFlowClickable) || isRentalRide
 
 
 

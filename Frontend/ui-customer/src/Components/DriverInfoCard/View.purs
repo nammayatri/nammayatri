@@ -658,6 +658,7 @@ driverInfoView push state =
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
+      , nestedScrollView true
       , scrollBarY false
       ][ linearLayout
          [ orientation VERTICAL
