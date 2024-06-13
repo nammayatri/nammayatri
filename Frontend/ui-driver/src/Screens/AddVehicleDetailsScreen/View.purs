@@ -866,7 +866,7 @@ rightWrongView push isRight =
         , height $ V if isRight then 80 else 100
         , imageWithFallback $ fetchImage FF_ASSET $ imageNmae
         ]
-      , textView 
+      , textView $
         [ height WRAP_CONTENT
         , width $ V 120
         , text $ getString CLICK_TO_PREVIEW
@@ -878,7 +878,7 @@ rightWrongView push isRight =
         , background Color.purple100
         , visibility $ boolToVisibility isRight
         , stroke $ "1," <> Color.purple100
-        ]
+        ] <> FontStyle.captions TypoGraphy
       ]
   , linearLayout
     [ width MATCH_PARENT

@@ -63,7 +63,7 @@ import MerchantConfig.Utils as MU
 import Mobility.Prelude as MP
 import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback, onAnimationEnd, rippleColor, fillViewport)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback, onAnimationEnd, rippleColor, fillViewport, gradient)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii, scrollBarY)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -302,7 +302,7 @@ manageVehicleItem state vehicle push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , background Color.blue600
+    , background state.data.config.profile.background
     , cornerRadius 12.0
     , margin $ MarginBottom 18
     ]
@@ -439,7 +439,6 @@ profileView push state =
     $ linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
-        , background Color.blue600
         , orientation VERTICAL
         , visibility $ if state.props.openSettings || state.props.manageVehicleVisibility then GONE else VISIBLE
         ]
@@ -453,7 +452,6 @@ profileView push state =
         , scrollView
             [ height MATCH_PARENT
             , width MATCH_PARENT
-            , background if state.props.screenType == ST.DRIVER_DETAILS then Color.white900 else Color.blue600
             , orientation VERTICAL
             , weight 1.0
             , fillViewport true
@@ -463,13 +461,15 @@ profileView push state =
                 [ height MATCH_PARENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
+                , cornerRadii $ Corners 16.0 false false true true
                 ]
                 [ linearLayout
                     [ height MATCH_PARENT
                     , width MATCH_PARENT
                     , orientation VERTICAL
-                    , background Color.blue600
-                    , padding $ if state.props.screenType == ST.DRIVER_DETAILS then (PaddingVertical 16 24) else (PaddingTop 16)
+                    , gradient $ Linear (if EHC.os == "IOS" then 270.0 else 90.0) state.data.config.profile.backgroundGradient
+                    , background state.data.config.profile.background
+                    , padding $ PaddingVertical 16 24
                     ]
                     [ tabView state push
                     , tabImageView state push
@@ -581,7 +581,7 @@ headerView state push =
             ]
         , textView
             ( [ text (getString SETTINGS)
-              , color Color.blue900
+              , color state.data.config.profile.settingsBtnColor
               , padding $ PaddingBottom 2
               ]
                 <> FontStyle.body1 TypoGraphy
@@ -663,7 +663,6 @@ tabImageView state push =
       , width MATCH_PARENT
       , gravity CENTER_HORIZONTAL
       , padding $ PaddingVertical 32 32
-      , background Color.blue600
       , orientation HORIZONTAL
       ]
       [ PrestoAnim.animationSet
@@ -815,7 +814,7 @@ driverAnalyticsView state push =
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , margin if bonusActivated then (MarginVertical 12 12) else (MarginVertical 4 12)
-            , background if bonusActivated then Color.blue600 else Color.transparent
+            , background if bonusActivated then state.data.config.profile.background else Color.transparent
             , cornerRadius 10.0
             ]
             [ if bonusActivated then
@@ -854,7 +853,7 @@ driverAnalyticsView state push =
               , height MATCH_PARENT
               , orientation HORIZONTAL
               ]
-              $ map (\item -> chipRailView item) (getChipRailArray state.data.analyticsData.lateNightTrips state.data.analyticsData.lastRegistered state.data.languagesSpoken state.data.analyticsData.totalDistanceTravelled)
+              $ map (\item -> chipRailView item state) (getChipRailArray state.data.analyticsData.lateNightTrips state.data.analyticsData.lastRegistered state.data.languagesSpoken state.data.analyticsData.totalDistanceTravelled)
           ]
       ]
 
@@ -878,13 +877,13 @@ addRcView state push =
     ]
 
 ------------------------------ CHIP RAIL LAYOUT ---------------------------------------------
-chipRailView :: forall w. ST.ChipRailData -> PrestoDOM (Effect Unit) w
-chipRailView item =
+chipRailView :: forall w. ST.ChipRailData -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+chipRailView item state =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , cornerRadius 20.0
-    , background Color.blue600
+    , background state.data.config.profile.background
     , padding $ Padding 12 10 12 10
     , margin $ MarginHorizontal 5 5
     , gravity CENTER_VERTICAL
@@ -935,18 +934,18 @@ badgeLayoutView state =
             , height MATCH_PARENT
             , orientation HORIZONTAL
             ]
-            (map (\item -> badgeView item) state.data.analyticsData.badges)
+            (map (\item -> badgeView item state) state.data.analyticsData.badges)
         ]
     ]
 
 ------------------------------------------------------- BADGE VIEW -------------------------------------------------------------
-badgeView :: forall w. { badgeImage :: String, primaryText :: String, subText :: String } -> PrestoDOM (Effect Unit) w
-badgeView state =
+badgeView :: forall w. { badgeImage :: String, primaryText :: String, subText :: String } -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+badgeView config state =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , background Color.blue600
+    , background state.data.config.profile.background
     , cornerRadius 15.0
     , padding $ Padding 25 10 25 12
     , margin $ MarginRight 16
@@ -954,10 +953,10 @@ badgeView state =
     [ imageView
         [ width $ V 100
         , height $ V 100
-        , imageWithFallback state.badgeImage
+        , imageWithFallback config.badgeImage
         ]
     , textView
-        [ text state.primaryText
+        [ text config.primaryText
         , layoutGravity "center_horizontal"
         , textSize FontSize.a_16
         , color Color.black900
@@ -965,7 +964,7 @@ badgeView state =
         , height WRAP_CONTENT
         ]
     , textView
-        [ text state.subText
+        [ text config.subText
         , layoutGravity "center_horizontal"
         , textSize FontSize.a_14
         , color Color.black800
@@ -1062,7 +1061,7 @@ payment push state =
       ]
         <> if state.data.autoPayStatus == ACTIVE_AUTOPAY then
             [ detailsListViewComponent state push
-                { backgroundColor: Color.blue600
+                { backgroundColor: state.data.config.profile.background
                 , separatorColor: Color.white900
                 , isLeftKeyClickable: false
                 , arrayList: driverPaymentsArray state
@@ -1070,7 +1069,7 @@ payment push state =
             ]
           else
             [ detailsListViewComponent state push
-                { backgroundColor: Color.blue600
+                { backgroundColor: state.data.config.profile.background
                 , separatorColor: Color.white900
                 , isLeftKeyClickable: true
                 , arrayList: driverNoAutoPayArray state
@@ -1098,7 +1097,7 @@ additionalDetails push state =
           ]
       ]
         <> [ detailsListViewComponent state push
-              { backgroundColor: Color.blue600
+              { backgroundColor: state.data.config.profile.background
               , separatorColor: Color.white900
               , isLeftKeyClickable: false
               , arrayList: list
@@ -1440,9 +1439,8 @@ vehicleListItem state push vehicle =
     , orientation VERTICAL
     , onClick push if vehicle.isVerified then (const (ActivateRc vehicle.registrationNo (vehicle.isActive && vehicle.isVerified))) else const $ PendingVehicle vehicle.registrationNo vehicle.userSelectedVehicleCategory
     , gravity CENTER_VERTICAL
-    , clickable $ not $ vehicle.isActive && vehicle.isVerified
     , visibility $ MP.boolToVisibility $ not $ state.props.screenType == ST.DRIVER_DETAILS
-    , background if vehicle.isVerified then Color.white900 else Color.blue600
+    , background if vehicle.isVerified then Color.white900 else state.data.config.profile.background
     , cornerRadius 15.0
     , padding $ Padding 16 16 16 16
     , margin $ Margin 16 12 16 0
@@ -1506,7 +1504,7 @@ vehicleListItem state push vehicle =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation HORIZONTAL
-        , background Color.blue600
+        , background state.data.config.profile.background
         , cornerRadius 8.0
         , visibility $ MP.boolToVisibility $ vehicle.isActive && vehicle.isVerified
         , padding $ Padding 16 8 16 8
@@ -1612,7 +1610,7 @@ infoTileView state config =
         , height WRAP_CONTENT
         , orientation VERTICAL
         , margin $ config.margin
-        , background Color.blue600
+        , background state.data.config.profile.background
         , padding $ Padding 16 16 16 16
         , cornerRadius 10.0
         ]
@@ -1686,7 +1684,7 @@ showMenuButtonView state push genderName genderType =
     , height $ V 56
     , gravity CENTER
     , margin $ (Margin 0 10 0 10)
-    , background if checkGenderSelect state.data.genderTypeSelect genderType then Color.blue600 else Color.white900
+    , background if checkGenderSelect state.data.genderTypeSelect genderType then state.data.config.profile.background else Color.white900
     , stroke if checkGenderSelect state.data.genderTypeSelect genderType then ("1," <> Color.blue900) else ("1," <> Color.grey700)
     , cornerRadius 6.0
     , onClick push (const $ CheckBoxClick genderType)
@@ -1853,7 +1851,7 @@ infoCard state push config =
     , padding $ Padding 16 16 16 16
     , margin $ MarginTop 8
     , cornerRadius 10.0
-    , background Color.blue600
+    , background state.data.config.profile.background
     ]
     [ (addAnimation state)
         $ linearLayout

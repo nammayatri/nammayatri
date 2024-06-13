@@ -5,7 +5,7 @@ import Prelude
 import Screens.Types(RateCardScreenState)
 import ConfigProvider
 import Screens.BookingOptionsScreen.ScreenData as BOP
-import Screens.RegistrationScreen.ScreenData as RSD
+import MerchantConfig.DefaultConfig as DC
 import Resource.Constants as RC
 
 initData :: RateCardScreenState
@@ -13,7 +13,7 @@ initData = {
     data: { 
         ridePreferences : [],
         rateCard : BOP.dummyRateCard,
-        cityConfig : RSD.dummyCityConfig
+        cityConfig : DC.dummyCityConfig
      }, 
     props: { 
         sliderVal : RC.defaultSliderDist,
