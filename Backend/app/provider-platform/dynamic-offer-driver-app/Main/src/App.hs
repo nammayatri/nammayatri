@@ -17,7 +17,6 @@ module App where
 import AWS.S3
 import qualified App.Server as App
 import qualified Client.Main as CM
-import qualified Control.Concurrent as CC
 import qualified Data.Bool as B
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
@@ -123,7 +122,7 @@ runDynamicOfferDriverApp' appCfg = do
         L.setOption KBT.Tables kvConfigs
         if (length kvConfigs.useCAC > 0) || kvConfigs.useCACForFrontend
           then do
-            _ <- liftIO $ CC.forkIO $ createCAC appCfg
+            _ <- liftIO $ createCAC appCfg
             logInfo "Starting App using configs from CAC."
           else logInfo "Starting App using configs from DB."
         allProviders <-
