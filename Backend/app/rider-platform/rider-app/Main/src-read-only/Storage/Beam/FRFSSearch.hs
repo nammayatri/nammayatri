@@ -34,6 +34,6 @@ instance B.Table FRFSSearchT where
 
 type FRFSSearch = FRFSSearchT Identity
 
-$(enableKVPG ''FRFSSearchT ['id] [['partnerOrgTransactionId], ['riderId]])
+$(enableKVPG ''FRFSSearchT ['id] [['riderId]])
 
 $(mkTableInstances ''FRFSSearchT "frfs_search")

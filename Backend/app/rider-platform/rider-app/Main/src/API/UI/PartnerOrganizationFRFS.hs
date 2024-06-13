@@ -92,7 +92,7 @@ upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
   Log.withLogTag ("FRFS:GetFare:PersonId:" <> personId.getId) $ do
     let frfsSearchReq = buildFRFSSearchReq fromStation.code toStation.code req.numberOfPassengers
         frfsVehicleType = fromStation.vehicleType
-    res <- DFRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) frfsVehicleType frfsSearchReq (Just req.partnerOrgTransactionId) (Just partnerOrg.orgId)
+    res <- DFRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) frfsVehicleType frfsSearchReq req.partnerOrgTransactionId (Just partnerOrg.orgId)
 
     return $ DPOFRFS.GetFareResp {searchId = res.searchId, ..}
   where

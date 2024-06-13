@@ -38,7 +38,6 @@ FRFSSearch:
 
   constraints:
     riderId: SecondaryKey
-    partnerOrgTransactionId: SecondaryKey
 
   queries:
     getTicketPlaces:
@@ -129,7 +128,6 @@ FRFSQuote:
   constraints:
     id: PrimaryKey
     searchId: SecondaryKey
-    partnerOrgTransactionId: SecondaryKey
 
   queries:
     findById:
@@ -209,7 +207,6 @@ FRFSTicketBooking:
     bppOrderId: SecondaryKey
     riderId: SecondaryKey
     quoteId: SecondaryKey
-    partnerOrgTransactionId: SecondaryKey
 
   queries:
     findById:
@@ -298,7 +295,6 @@ FRFSTicket:
   constraints:
     id: PrimaryKey
     frfsTicketBookingId: SecondaryKey
-    partnerOrgTransactionId: SecondaryKey
 
   queries:
     findById:
