@@ -1258,7 +1258,8 @@ eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
                                   baseDuration = (fromMaybe 0 resp.estimatedDuration) / 3600, 
                                   baseDistance = (fromMaybe 0 resp.estimatedDistance) / 1000 
                                 },
-                                destination =  decodeAddress (Booking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation))), 
+                                destination =  decodeAddress (Booking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation))),
+                                price = resp.estimatedTotalFare,
                                 destinationLat = toLocation.lat , destinationLng = toLocation.lon , destinationAddress = getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation)),
                                 driversPreviousRideDropLocLat = resp.driversPreviousRideDropLocLat,
                                 driversPreviousRideDropLocLon = resp.driversPreviousRideDropLocLon
@@ -3397,8 +3398,6 @@ eval (EditDestSearchLocationModelActionController (SearchLocationModelController
       ]
   where
   editDestStageFlow = do
-    when (state.props.currentStage == ConfirmingEditDestinationLoc) do
-      void $ pure $ hideKeyboardOnNavigation true
     void $ pure $ updateInputString input
     pure NoAction
 
