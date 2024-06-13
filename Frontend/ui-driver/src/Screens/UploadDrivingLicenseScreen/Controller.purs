@@ -175,6 +175,7 @@ data Action = BackPressed Boolean
             | ChangeVehicleAC PopUpModal.Action
             | BottomDrawerListAC BottomDrawerList.Action
             | WhatsAppClick Boolean
+            | PreviewSampleImage String
 
 eval :: Action -> UploadDrivingLicenseState -> Eval Action ScreenOutput UploadDrivingLicenseState
 eval AfterRender state = 
@@ -194,6 +195,7 @@ eval (BackPressed flag) state = do
       else continueWithCmd state {props {clickedButtonType = "front", fileCameraPopupModal = false, fileCameraOption = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} [do
             _ <- liftEffect $ uploadFile false
             pure NoAction]
+  else if state.props.previewSampleImage then continue state { props {previewSampleImage = false}}
   else if state.props.imageCaptureLayoutView then continue state{props{imageCaptureLayoutView = false,openHowToUploadManual = true}} 
   else if state.props.fileCameraPopupModal then continue state{props{fileCameraPopupModal = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} 
   else if state.props.openHowToUploadManual then continue state{props{openHowToUploadManual = false}} 
@@ -232,6 +234,8 @@ eval (PrimaryEditTextActionControllerReEnter (PrimaryEditText.TextChanged id val
     pure unit
     else pure unit
   continue state {data = state.data { reEnterDriverLicenseNumber = toUpper value }}
+  
+eval (PreviewSampleImage imgUrl) state = continue state {props {previewSampleImage = true, previewImgUrl = imgUrl}}
 
 eval DriverLicenseManual state = continue state{props{openLicenseManual = true}}
 

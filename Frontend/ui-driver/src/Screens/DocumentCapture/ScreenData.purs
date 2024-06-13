@@ -48,6 +48,8 @@ initData =
         isValidFirstName : true,
         isValidMobileNumber: true,
         setDefault : false,
-        shouldGoBack : true
+        shouldGoBack : true,
+        previewSampleImage : false,
+        previewImgUrl : ""
       }
   }

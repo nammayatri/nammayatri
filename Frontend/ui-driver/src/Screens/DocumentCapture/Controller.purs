@@ -74,6 +74,7 @@ data Action = PrimaryButtonAC PrimaryButtonController.Action
             | MobileNumberEditText MobileNumberEditor.Action
             | CallBackOpenCamera
             | UpdateShouldGoBack
+            | PreviewSampleImage String
 
 data ScreenOutput = GoBack 
                   | UploadAPI DocumentCaptureScreenState
@@ -146,6 +147,7 @@ eval BackPressed state =
   else if state.props.confirmChangeVehicle then continue state{props{confirmChangeVehicle = false}}
   else if state.props.menuOptions then continue state{props{menuOptions = false}} 
   else if state.props.contactSupportModal == ST.SHOW then continue state { props { contactSupportModal = ST.ANIMATING}}
+  else if state.props.previewSampleImage then continue state { props {previewSampleImage = false}}
   else if not state.props.shouldGoBack then continue state {props { shouldGoBack = true}}
   else exit $ GoBack
 
@@ -178,6 +180,8 @@ eval (BottomDrawerListAC (BottomDrawerList.OnItemClick item)) state = do
                 void $ pure $ unsafePerformEffect $ HU.contactSupportNumber ""
                 continue state
     _ -> continue state
+
+eval (PreviewSampleImage imgUrl) state = continue state {props {previewSampleImage = true, previewImgUrl = imgUrl}}
 
 eval (WhatsAppClick isMail) state = continueWithCmd state [do
   let supportPhone = state.data.cityConfig.registration.supportWAN

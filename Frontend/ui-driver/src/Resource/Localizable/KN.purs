@@ -976,6 +976,7 @@ getKN stringKey =
         LOCATION_ALREADY_EXISTS ->  "ಸ್ಥಳ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ"
         MIN_LEFT ->  "ನಿಮಿಷ ಬಾಕಿ"
         GOTO_LOC_REACHED ->  "“ಗೋ-ಟು” ಸ್ಥಳವನ್ನು ತಲುಪಿದೆ!"
+        CLICK_TO_PREVIEW -> "ಪೂರ್ವವೀಕ್ಷಣೆ ಮಾಡಲು ಕ್ಲಿಕ್ ಮಾಡಿ"
         GET_READY_FOR_YS_SUBSCRIPTION _ ->  "ಯಾತ್ರಿ ಸತಿ ಯೋಜನೆಗಳಿಗೆ ಸಿದ್ಧರಾಗಿ!"
         SIGNUP_EARLY_FOR_SPECIAL_OFFERS ->  "ವಿಶೇಷ ಕೊಡುಗೆಗಳಿಗಾಗಿ ಮುಂಚಿತವಾಗಿ ಸೈನ್ ಅಪ್ ಮಾಡಿ"
         GUARANTEED_FIXED_PRICE _ ->  "ಜನವರಿ 1, 2025 ರವರೆಗೆ ಖಾತರಿಪಡಿಸಿದ ಸ್ಥಿರ ಬೆಲೆ"
