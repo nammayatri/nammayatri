@@ -24,6 +24,7 @@ import qualified Control.Monad as CM
 import Control.Monad.Extra (partitionM)
 import Data.Foldable.Extra (notNull)
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashSet as HashSet
 import qualified Data.List as DL
 import qualified Data.Map as Map
 import Domain.Types.Common
@@ -32,6 +33,7 @@ import qualified Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverIntelligentPoolConfig
 import Domain.Types.DriverPoolConfig
 import Domain.Types.GoHomeConfig (GoHomeConfig)
+import Domain.Types.Merchant (Merchant)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
@@ -39,6 +41,7 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.TransporterConfig (TransporterConfig)
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption (getDbHash)
 import Kernel.Randomizer (randomizeList)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -53,6 +56,8 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import qualified Storage.Queries.RiderDetails as QRD
+import qualified Storage.Queries.RiderDriverCorrelation as RDC
 import Tools.Maps as Maps
 import Utils.Common.Cac.KeyNameConstants
 
@@ -74,6 +79,48 @@ previouslyAttemptedDriversKey searchTryId consideOnRideDrivers = do
     Just consideOnRideDrivers' -> "Driver-Offer:PreviouslyAttemptedDrivers:SearchTryId-" <> searchTryId.getId <> ":consideOnRideDrivers-" <> show consideOnRideDrivers'
     Nothing -> "Driver-Offer:PreviouslyAttemptedDrivers:SearchTryId-" <> searchTryId.getId
 
+getCustomerFavDrivers ::
+  ( EncFlow m r,
+    MonadFlow m,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Maybe Text ->
+  Id Merchant ->
+  m [Id Driver]
+getCustomerFavDrivers mPhoneNum merchantId = maybe (pure []) fetchFavDrivers mPhoneNum
+  where
+    fetchFavDrivers phoneNum = do
+      numberHash <- getDbHash phoneNum
+      mbRiderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchantId
+      case mbRiderDetails of
+        Just rider -> map (.driverId) <$> RDC.findFavDriversForRider rider.id True
+        Nothing -> pure []
+
+rearrangefavDriverProrityInNormalBatch ::
+  ( EncFlow m r,
+    MonadFlow m,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  [Id Driver] ->
+  [DriverPoolWithActualDistResult] ->
+  DriverPoolConfig ->
+  Bool ->
+  m [DriverPoolWithActualDistResult]
+rearrangefavDriverProrityInNormalBatch customerFavDrivers currentPoolBatch driverPoolConfig addFavInBegining
+  | not (driverPoolConfig.favDriver) = pure currentPoolBatch
+  | otherwise = do
+    let customerFavDriversSet = HashSet.fromList customerFavDrivers
+        matches = filter (\driverPool -> (.driverId) (driverPoolResult driverPool) `HashSet.member` customerFavDriversSet) currentPoolBatch
+        nonMatches = filter (\driverPool -> not $ (.driverId) (driverPoolResult driverPool) `HashSet.member` customerFavDriversSet) currentPoolBatch
+    pure $
+      if addFavInBegining
+        then matches ++ nonMatches
+        else nonMatches ++ matches
+
 prepareDriverPoolBatch ::
   ( EncFlow m r,
     EsqDBReplicaFlow m r,
@@ -87,13 +134,16 @@ prepareDriverPoolBatch ::
   [TripQuoteDetail] ->
   PoolBatchNum ->
   GoHomeConfig ->
+  Maybe Text ->
   m DriverPoolWithActualDistResultWithFlags
-prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails startingbatchNum goHomeConfig = withLogTag ("startingbatchNum- (" <> show startingbatchNum <> ")") $ do
+prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails startingbatchNum goHomeConfig customerPhoneNum = withLogTag ("startingbatchNum- (" <> show startingbatchNum <> ")") $ do
+  customerFavDrivers <- getCustomerFavDrivers customerPhoneNum searchReq.providerId
+  logDebug $ "CustomerFavDrivers : " <> show customerFavDrivers
   previousBatchesDrivers <- getPreviousBatchesDrivers Nothing
   previousBatchesDriversOnRide <- getPreviousBatchesDrivers (Just True)
   let merchantOpCityId = searchReq.merchantOperatingCityId
   logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
-  PrepareDriverPoolBatchEntity {..} <- prepareDriverPoolBatch' previousBatchesDrivers startingbatchNum True merchantOpCityId searchReq.transactionId
+  PrepareDriverPoolBatchEntity {..} <- prepareDriverPoolBatch' previousBatchesDrivers startingbatchNum True merchantOpCityId searchReq.transactionId customerFavDrivers
   let finalPool = currentDriverPoolBatch <> currentDriverPoolBatchOnRide
   incrementDriverRequestCount finalPool searchTry.id
   pure $ buildDriverPoolWithActualDistResultWithFlags finalPool poolType nextScheduleTime (previousBatchesDrivers <> previousBatchesDriversOnRide)
@@ -125,7 +175,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
         then return poolResult
         else calculateWithFallback fallbackPoolTypes fn
 
-    prepareDriverPoolBatch' previousBatchesDrivers batchNum doSpecialPooling merchantOpCityId_ txnId = withLogTag ("BatchNum - " <> show batchNum) $ do
+    prepareDriverPoolBatch' previousBatchesDrivers batchNum doSpecialPooling merchantOpCityId_ txnId customerFavDrivers = withLogTag ("BatchNum - " <> show batchNum) $ do
       radiusStep <- getPoolRadiusStep searchTry.id
       transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId_ Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId_.getId)
       intelligentPoolConfig <- CDIP.findByMerchantOpCityId merchantOpCityId_ (Just ((TransactionId . Id) txnId)) >>= fromMaybeM (InternalError "Intelligent Pool Config not found")
@@ -148,7 +198,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
           case poolType of
             SkipPool -> do
               incrementBatchNum searchTry.id
-              prepareDriverPoolBatch' previousBatchesDrivers (batchNum + 1) True merchantOpCityId_ txnId
+              prepareDriverPoolBatch' previousBatchesDrivers (batchNum + 1) True merchantOpCityId_ txnId customerFavDrivers
             SpecialZoneQueuePool -> do
               (driversInQueue, _) <- splitDriverFromGateAndRest allDriversNotOnRide
               logDebug $ "SpecialPickupZonePoolBatch DriversInQueue -" <> show driversInQueue
@@ -242,6 +292,8 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
                   else do onlyNewGoHomeDriversWithMultipleSeriveTier
           goHomeDriverPoolBatch <- mkDriverPoolBatch mOCityId onlyNewGoHomeDrivers intelligentPoolConfig transporterConfig batchSize False
           logDebug $ "GoHomeDriverPoolBatch-" <> show goHomeDriverPoolBatch
+          goHomeDriverPoolBatchWithFav <- rearrangefavDriverProrityInNormalBatch customerFavDrivers goHomeDriverPoolBatch driverPoolCfg False
+          logDebug $ "GoHomeDriverPoolBatch with fav rearrange : " <> show goHomeDriverPoolBatchWithFav
           pure goHomeDriverPoolBatch
 
         filtersForNormalBatch mOCityId transporterConfig normalDriverPool blockListedDrivers previousBatchesDrivers' = do
@@ -253,6 +305,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
         calculateNormalBatch mOCityId transporterConfig intelligentPoolConfig normalDriverPool radiusStep blockListedDrivers txnId' poolType = do
           logDebug $ "NormalDriverPool-" <> show normalDriverPool
           onlyNewNormalDrivers <- filtersForNormalBatch mOCityId transporterConfig normalDriverPool blockListedDrivers previousBatchesDrivers
+          -- yaha karegai toh filter ho jaega
           (normalBatchNotOnRide, normalBatchOnRide', mbRadiusThreshold) <- getDriverPoolNotOnRide mOCityId transporterConfig intelligentPoolConfig normalDriverPool radiusStep blockListedDrivers onlyNewNormalDrivers txnId'
           normalBatchOnRide <-
             case mbRadiusThreshold of
@@ -265,17 +318,22 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
           if length onlyNewNormalDrivers < batchSize && not (isAtMaxRadiusStep radiusStep)
             then do
               incrementPoolRadiusStep searchTry.id
-              batchEntity <- prepareDriverPoolBatch' previousBatchesDrivers batchNum False mOCityId txnId'
+              batchEntity <- prepareDriverPoolBatch' previousBatchesDrivers batchNum False mOCityId txnId' customerFavDrivers
               pure (batchEntity.currentDriverPoolBatch, batchEntity.currentDriverPoolBatchOnRide, Nothing)
             else do
               normalDriverPoolBatch <- mkDriverPoolBatch mOCityId onlyNewNormalDrivers intelligentPoolConfig transporterConfig batchSize False
+              -- yaha karegai toh jagah kam bachegi : yaha karegai
               if length normalDriverPoolBatch < batchSize
                 then do
                   filledBatch <- fillBatch transporterConfig mOCityId normalDriverPool normalDriverPoolBatch intelligentPoolConfig blockListedDrivers
                   logDebug $ "FilledDriverPoolBatch-" <> show filledBatch
-                  pure (filledBatch, [], Just radiusStep)
+                  normalDriverPoolBatchWithFav <- rearrangefavDriverProrityInNormalBatch customerFavDrivers filledBatch driverPoolCfg True
+                  logDebug $ "FilledDriverPoolBatch with fav rearrange : " <> show filledBatch
+                  pure (normalDriverPoolBatchWithFav, [], Just radiusStep)
                 else do
-                  pure (normalDriverPoolBatch, [], Just radiusStep)
+                  normalDriverPoolBatchWithFav <- rearrangefavDriverProrityInNormalBatch customerFavDrivers normalDriverPoolBatch driverPoolCfg True
+                  logDebug $ "NormalDriverPoolBatch with fav rearrange : " <> show normalDriverPoolBatchWithFav
+                  pure (normalDriverPoolBatchWithFav, [], Just radiusStep)
 
         getDriverPoolOnRide mOCityId transporterConfig intelligentPoolConfig radiusStep blockListedDrivers poolType = do
           if poolType == NormalPool && driverPoolCfg.enableForwardBatching && searchTry.isAdvancedBookingEnabled
@@ -634,11 +692,12 @@ getNextDriverPoolBatch ::
   DST.SearchTry ->
   [TripQuoteDetail] ->
   GoHomeConfig ->
+  Maybe Text ->
   m DriverPoolWithActualDistResultWithFlags
-getNextDriverPoolBatch driverPoolConfig searchReq searchTry tripQuoteDetails goHomeConfig = withLogTag "getNextDriverPoolBatch" do
+getNextDriverPoolBatch driverPoolConfig searchReq searchTry tripQuoteDetails goHomeConfig customerPhoneNum = withLogTag "getNextDriverPoolBatch" do
   batchNum <- getPoolBatchNum searchTry.id
   incrementBatchNum searchTry.id
-  prepareDriverPoolBatch driverPoolConfig searchReq searchTry tripQuoteDetails batchNum goHomeConfig
+  prepareDriverPoolBatch driverPoolConfig searchReq searchTry tripQuoteDetails batchNum goHomeConfig customerPhoneNum
 
 getPoolBatchNum :: (Redis.HedisFlow m r) => Id DST.SearchTry -> m PoolBatchNum
 getPoolBatchNum searchTryId = do

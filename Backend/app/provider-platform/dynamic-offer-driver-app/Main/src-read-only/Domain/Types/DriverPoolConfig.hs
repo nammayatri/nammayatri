@@ -32,6 +32,7 @@ data DriverPoolConfig = DriverPoolConfig
     driverToDestinationDistanceThreshold :: Kernel.Types.Common.Meters,
     driverToDestinationDuration :: Kernel.Types.Common.Seconds,
     enableForwardBatching :: Kernel.Prelude.Bool,
+    favDriver :: Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.DriverPoolConfig.DriverPoolConfig,
     maxDriverQuotesRequired :: Kernel.Prelude.Int,
     maxNumberOfBatches :: Kernel.Prelude.Int,

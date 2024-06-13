@@ -111,7 +111,8 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
             tripQuoteDetails,
             customerExtraFee = searchTry.customerExtraFee,
             messageId = searchTry.messageId,
-            isRepeatSearch = False
+            isRepeatSearch = False,
+            customerPhoneNum = Nothing
           }
   (res, _, _) <- sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput goHomeCfg
   return res
@@ -166,6 +167,7 @@ sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput go
           isSearchTryValid = I.isSearchTryValid searchTry.id,
           initiateDriverSearchBatch = SST.initiateDriverSearchBatch driverSearchBatchInput,
           isScheduledBooking = searchTry.isScheduled,
+          customerPhoneNum = driverSearchBatchInput.customerPhoneNum,
           cancelSearchTry = I.cancelSearchTry searchTry.id,
           isBookingValid = do
             case mbBooking of

@@ -82,7 +82,8 @@ handler merchant sReq searchReq estimates = do
             tripQuoteDetails,
             customerExtraFee = sReq.customerExtraFee,
             messageId = sReq.messageId,
-            isRepeatSearch = False
+            isRepeatSearch = False,
+            customerPhoneNum = sReq.customerPhoneNum
           }
   initiateDriverSearchBatch driverSearchBatchInput
 

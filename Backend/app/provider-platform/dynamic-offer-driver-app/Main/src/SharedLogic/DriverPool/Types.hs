@@ -169,7 +169,8 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     tripQuoteDetails :: [TripQuoteDetail],
     customerExtraFee :: Maybe HighPrecMoney,
     messageId :: Text,
-    isRepeatSearch :: Bool
+    isRepeatSearch :: Bool,
+    customerPhoneNum :: Maybe Text
   }
 
 castServiceTierToVariant :: DVST.ServiceTierType -> Vehicle.Variant

@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.DriverPoolConfig.DriverPoolConfig])
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.DriverPoolConfig.DriverPoolConfig]))
 findAllByMerchantOpCityId limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Desc Beam.tripDistance) limit offset
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverPoolConfig.DriverPoolConfig -> m (Maybe Domain.Types.DriverPoolConfig.DriverPoolConfig))
@@ -50,6 +50,7 @@ updateByPrimaryKey (Domain.Types.DriverPoolConfig.DriverPoolConfig {..}) = do
       Se.Set Beam.driverToDestinationDistanceThreshold driverToDestinationDistanceThreshold,
       Se.Set Beam.driverToDestinationDuration driverToDestinationDuration,
       Se.Set Beam.enableForwardBatching enableForwardBatching,
+      Se.Set Beam.favDriver favDriver,
       Se.Set Beam.maxDriverQuotesRequired maxDriverQuotesRequired,
       Se.Set Beam.maxNumberOfBatches maxNumberOfBatches,
       Se.Set Beam.maxParallelSearchRequests maxParallelSearchRequests,
@@ -94,6 +95,7 @@ instance FromTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPo
             driverToDestinationDistanceThreshold = driverToDestinationDistanceThreshold,
             driverToDestinationDuration = driverToDestinationDuration,
             enableForwardBatching = enableForwardBatching,
+            favDriver = favDriver,
             id = Kernel.Types.Id.Id id,
             maxDriverQuotesRequired = maxDriverQuotesRequired,
             maxNumberOfBatches = maxNumberOfBatches,
@@ -136,6 +138,7 @@ instance ToTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPool
         Beam.driverToDestinationDistanceThreshold = driverToDestinationDistanceThreshold,
         Beam.driverToDestinationDuration = driverToDestinationDuration,
         Beam.enableForwardBatching = enableForwardBatching,
+        Beam.favDriver = favDriver,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.maxDriverQuotesRequired = maxDriverQuotesRequired,
         Beam.maxNumberOfBatches = maxNumberOfBatches,
