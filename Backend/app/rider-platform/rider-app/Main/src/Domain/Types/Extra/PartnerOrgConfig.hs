@@ -47,9 +47,14 @@ newtype RateLimitConfig = RateLimitConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-newtype TicketSMSConfig = TicketSMSConfig
-  { -- | Template for the SMS have `{#URL#}` as a placeholder for the URL
-    template :: Maybe Text
+data TicketSMSConfig = TicketSMSConfig
+  { -- | Template for the SMS have variables:
+    -- | 1. `{#URL#}` as a placeholder for the URL
+    -- | 2. `{#TICKET_PLURAL#}` as a placeholder for the word "tickets are" or "ticket is"
+    template :: Maybe Text,
+    -- | Template for public url have variable:
+    -- | 1. `{#FRFS_BOOKING_ID#}` as a placeholder for the booking id
+    publicUrl :: Text
   }
   deriving (Generic, Show, ToSchema)
 

@@ -28,6 +28,7 @@ import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import Domain.Types.Merchant as Merchant
 import Environment
+import EulerHS.Prelude ((+||), (||+))
 import Kernel.Beam.Functions
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -38,6 +39,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import qualified SharedLogic.CallFRFSBPP as CallBPP
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.BecknConfig as QBC
@@ -49,6 +51,7 @@ import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPa
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Station as QStation
+import qualified Tools.SMS as Sms
 
 validateRequest :: DOrder -> Flow (Merchant, Booking.FRFSTicketBooking)
 validateRequest DOrder {..} = do
@@ -76,21 +79,47 @@ onConfirm merchant booking' dOrder = do
   tickets <- traverse (mkTicket booking) dOrder.tickets
   void $ QTicket.createMany tickets
   void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
-  buildReconTable merchant booking dOrder tickets
+  person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  mRiderNumber <- mapM decrypt person.mobileNumber
+  buildReconTable merchant booking dOrder tickets mRiderNumber
+  void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode
   return ()
+  where
+    sendTicketBookedSMS :: Maybe Text -> Maybe Text -> Flow ()
+    sendTicketBookedSMS mRiderNumber mRiderMobileCountryCode =
+      whenJust booking'.partnerOrgId $ \pOrgId -> do
+        fork "send ticket booked sms" $
+          withLogTag ("SMS:FRFSBookingId:" <> booking'.id.getId) $ do
+            mobileNumber <- mRiderNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+            smsCfg <- asks (.smsCfg)
+            let mocId = booking'.merchantOperatingCityId
+                countryCode = fromMaybe "+91" mRiderMobileCountryCode
+                phoneNumber = countryCode <> mobileNumber
+                sender = smsCfg.sender
+            mbMsg <-
+              MessageBuilder.buildFRFSTicketBookedMessage pOrgId $
+                MessageBuilder.BuildFRFSTicketBookedMessageReq
+                  { countOfTickets = booking'.quantity,
+                    bookingId = booking'.id
+                  }
+            if isJust mbMsg
+              then do
+                let message = fromJust mbMsg
+                logDebug $ "SMS Message:" +|| message ||+ ""
+                Sms.sendSMS booking'.merchantId mocId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+              else do
+                logError $ "SMS not sent, SMS template not found for partnerOrgId:" <> pOrgId.getId
 
-buildReconTable :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> [Ticket.FRFSTicket] -> Flow ()
-buildReconTable merchant booking _dOrder tickets = do
+buildReconTable :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> [Ticket.FRFSTicket] -> Maybe Text -> Flow ()
+buildReconTable merchant booking _dOrder tickets mRiderNumber = do
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) METRO >>= fromMaybeM (InternalError "Beckn Config not found")
   quote <- runInReplica $ QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
   fromStation <- runInReplica $ QStation.findById booking.fromStationId >>= fromMaybeM (InternalError "Station not found")
   toStation <- runInReplica $ QStation.findById booking.toStationId >>= fromMaybeM (InternalError "Station not found")
-  person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   transactionRefNumber <- booking.paymentTxnId & fromMaybeM (InternalError "Payment Txn Id not found in booking")
   txn <- runInReplica $ QPaymentTransaction.findById (Id transactionRefNumber) >>= fromMaybeM (InvalidRequest "Payment Transaction not found for approved TicketBookingId")
   paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
   let paymentBookingStatus = paymentBooking.status
-  mRiderNumber <- mapM decrypt person.mobileNumber
   now <- getCurrentTime
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "BPP Order Id not found in booking")
   let finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee -- FIXME

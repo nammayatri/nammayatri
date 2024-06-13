@@ -29,16 +29,22 @@ module SharedLogic.MessageBuilder
     buildAddedAsEmergencyContactMessage,
     BuildTicketBookingCancelledMessageReq (..),
     buildTicketBookingCancelled,
+    BuildFRFSTicketBookedMessageReq (..),
+    buildFRFSTicketBookedMessage,
   )
 where
 
 import qualified Data.Text as T
+import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.PartnerOrgConfig as DPOC
+import qualified Domain.Types.PartnerOrganization as DPO
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
+import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import Tools.Error
 
 templateText :: Text -> Text
@@ -168,3 +174,23 @@ buildTicketBookingCancelled merchantOperatingCityId req = do
     merchantMessage.message
       & T.replace (templateText "personName") req.personName
       & T.replace (templateText "categoryName") req.categoryName
+
+data BuildFRFSTicketBookedMessageReq = BuildFRFSTicketBookedMessageReq
+  { countOfTickets :: Int,
+    bookingId :: Id DFTB.FRFSTicketBooking
+  }
+  deriving (Generic, Show)
+
+buildFRFSTicketBookedMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DPO.PartnerOrganization -> BuildFRFSTicketBookedMessageReq -> m (Maybe Text)
+buildFRFSTicketBookedMessage pOrgId req = do
+  smsPOCfg <- do
+    pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.TICKET_SMS >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.TICKET_SMS)
+    DPOC.getTicketSMSConfig pOrgCfg.config
+
+  pure $
+    smsPOCfg.template <&> \msg ->
+      let ticketPlural = bool "tickets are" "ticket is" $ req.countOfTickets == 1
+          url = smsPOCfg.publicUrl & T.replace (templateText "FRFS_BOOKING_ID") req.bookingId.getId
+       in msg
+            & T.replace (templateText "TICKET_PLURAL") ticketPlural
+            & T.replace (templateText "URL") url

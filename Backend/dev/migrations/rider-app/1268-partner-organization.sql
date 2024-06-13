@@ -39,7 +39,7 @@ WITH RLCfg AS (SELECT 'RATE_LIMIT' as config_type, '{ "rateLimitOptions": {"limi
 INSERT INTO atlas_app.partner_org_config (partner_org_id, config_type, config_json)
 SELECT org_id as partner_org_id, RLCfg.config_type as config_type, RLCfg.config_json as config_json FROM atlas_app.partner_organization CROSS JOIN RLCfg;
 
-WITH TSCfg AS (SELECT 'TICKET_SMS' as config_type, '{ "template": "Your metro tickets are booked! {#URL#} Click the link to view and manage your booking. Thank you for choosing Namma Yatri!" }'::json as config_json)
+WITH TSCfg AS (SELECT 'TICKET_SMS' as config_type, '{ "template": "Your metro {#TICKET_PLURAL#} booked! {#URL#} Click the link to view and manage your booking. Thank you for choosing Namma Yatri!", "publicUrl": "<domain>/<path>?bookingId={#FRFS_BOOKING_ID#}" }'::json as config_json)
 INSERT INTO atlas_app.partner_org_config (partner_org_id, config_type, config_json)
 SELECT org_id as partner_org_id, TSCfg.config_type as config_type, TSCfg.config_json as config_json FROM atlas_app.partner_organization CROSS JOIN TSCfg;
 
