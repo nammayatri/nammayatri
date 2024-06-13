@@ -54,7 +54,7 @@ import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common as Kernel
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
@@ -149,10 +149,22 @@ upsertPersonAndGetToken pOrgId regPOCfg fromStationMOCId mId mbRegCoordinates re
   regToken <- do
     let entityId = person.id
     RegistrationToken.findAllByPersonId entityId
-      <&> listToMaybe . sortBy (comparing (.updatedAt))
+      <&> listToMaybe . sortBy (comparing (.updatedAt)) . filter (isJust . (.createdViaPartnerOrgId))
+      >>= validateToken
       >>= maybe (makeSessionViaPartner regPOCfg.sessionConfig entityId.getId mId.getId regPOCfg.fakeOtp pOrgId) return
 
   return (person.id, regToken.token)
+  where
+    validateToken :: (CacheFlow m r, EsqDBFlow m r) => Maybe SR.RegistrationToken -> m (Maybe SR.RegistrationToken)
+    validateToken = \case
+      Nothing -> pure Nothing
+      Just regToken -> do
+        let nominal = realToFrac $ regToken.tokenExpiry * 24 * 60 * 60
+        expired <- Kernel.isExpired nominal regToken.updatedAt
+        let res = bool Nothing (Just regToken) $ regToken.verified && not expired && regToken.createdViaPartnerOrgId == Just pOrgId
+        when (isNothing res && regToken.createdViaPartnerOrgId == Just pOrgId) $ do
+          RegistrationToken.deleteByTokenCreatedViaPartnerOrgId regToken.token pOrgId
+        return res
 
 createPersonViaPartner ::
   ( CacheFlow m r,

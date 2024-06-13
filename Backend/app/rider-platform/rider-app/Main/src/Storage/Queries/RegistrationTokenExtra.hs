@@ -1,5 +1,6 @@
 module Storage.Queries.RegistrationTokenExtra where
 
+import qualified Domain.Types.PartnerOrganization as DPOrg
 import Domain.Types.Person
 import Domain.Types.RegistrationToken
 import Kernel.Beam.Functions
@@ -35,3 +36,12 @@ setDirectAuth (Id rtId) authMedium = do
       Se.Set BeamRT.updatedAt now
     ]
     [Se.Is BeamRT.id (Se.Eq rtId)]
+
+deleteByTokenCreatedViaPartnerOrgId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => RegToken -> Id DPOrg.PartnerOrganization -> m ()
+deleteByTokenCreatedViaPartnerOrgId token (Id orgId) =
+  deleteWithKV
+    [ Se.And
+        [ Se.Is BeamRT.token $ Se.Eq token,
+          Se.Is BeamRT.createdViaPartnerOrgId $ Se.Eq (Just orgId)
+        ]
+    ]
