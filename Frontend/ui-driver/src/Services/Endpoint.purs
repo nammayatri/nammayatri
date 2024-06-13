@@ -349,12 +349,6 @@ getDriverRateCard mbServiceTier mbDist =
         Just serviceTier, Nothing -> "?vehicleServiceTier=" <> serviceTier
         Nothing, Just dist -> "?distance=" <> show (dist*1000)
         _ , _ -> ""
-getDriverRateCard :: Maybe String -> String
-getDriverRateCard serviceTier = 
-  (getBaseUrl "") <> "/driver/rateCard"
-                  <> case serviceTier of
-                      Just serviceTier' -> "?vehicleServiceTier=" <> serviceTier'
-                      Nothing -> ""
 
 getMakeList :: String -> String
 getMakeList _ = (getBaseUrl "") <> "/vehicleMakes"

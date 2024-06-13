@@ -7,6 +7,7 @@ defaultColors :: Colors
 defaultColors = {
     black800 : "#454545"
   , black900 : "#2C2F3A"
+  , green700 : "#268C6E"
   , red : "#E55454"
   }
 

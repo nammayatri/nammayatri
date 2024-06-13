@@ -136,6 +136,9 @@ type ProfileConfig = {
   showBookingOption :: Boolean
 , checkRCStatusForBookingOption :: Boolean
 , enableMultipleRC :: Boolean
+, backgroundGradient :: Array String
+, background :: String
+, settingsBtnColor :: String
 }
 
 type GotoConfig = {
@@ -149,7 +152,8 @@ type BottomNavConfig = {
   subscription :: BottomNavItemConfig,
   referral :: BottomNavItemConfig,
   notifications :: BottomNavItemConfig,
-  driverEarnings :: BottomNavItemConfig
+  driverEarnings :: BottomNavItemConfig,
+  activeColor :: String
 }
 
 type BottomNavItemConfig = {
@@ -189,7 +193,9 @@ type PermissionsConfig = {
 type HomeScreenConfig = {
   specialRideOtpView :: Boolean,
   showGenderBanner :: Boolean,
-  statusPills :: Object PillButtonState
+  statusPills :: Object PillButtonState,
+  offlineBtnColor :: String,
+  statsBackground :: String
 }
 
 type Features = {

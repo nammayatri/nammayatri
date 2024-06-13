@@ -56,9 +56,14 @@ public class MediaPlayer {
     private static final int IMAGE_CAPTURE_REQ_CODE = 101;
     private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
     private BridgeComponents bridgeComponents = null;
+    private boolean showCircularFrame= false;
 
     public MediaPlayer (BridgeComponents bridgeComponents){
         this.bridgeComponents = bridgeComponents;
+    }
+
+    public boolean getShowCircularFrame() {
+        return this.showCircularFrame;
     }
 
     public String saveAudioFile(String source) throws IOException {
@@ -105,11 +110,12 @@ public class MediaPlayer {
     }
 
     public void uploadFile(String storeCallBackOpenCamera, Boolean showCircularFrame) {
+        this.showCircularFrame = showCircularFrame;
         if (!isUploadPopupOpen) {
-            isUploadPopupOpen = true;
             ExecutorManager.runOnMainThread(() -> {
                 Context context = bridgeComponents.getContext();
                 if (ActivityCompat.checkSelfPermission(context.getApplicationContext(), CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                    isUploadPopupOpen = true;
                     if (bridgeComponents.getActivity() != null) {
                         AlertDialog.Builder builder = new AlertDialog.Builder(bridgeComponents.getActivity());
                         builder.setTitle(context.getString(R.string.upload_image));
@@ -119,7 +125,7 @@ public class MediaPlayer {
                         }, (dialog, which) -> {
                             switch (which) {
                                 case 0:
-                                    if (!showCircularFrame) {
+                                    if (!this.showCircularFrame) {
                                         takePhoto();
                                     } else {
                                         String javascript = String.format("window.callUICallback('%s');", storeCallBackOpenCamera);

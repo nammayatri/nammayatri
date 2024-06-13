@@ -645,7 +645,7 @@ getCarouselConfig view state = {
   , onPageScrolled : Nothing
   , currentIndex : state.data.bannerData.currentBanner
   , showScrollIndicator : true
-  , layoutHeight : V 100
+  , layoutHeight : V 115
   , overlayScrollIndicator : true
 }
 
@@ -921,7 +921,7 @@ offlineView push state =
                 [ height $ V 135
                 , width $ V 135
                 , cornerRadius 68.0
-                , background if showGoInYellow then Color.yellowText else Color.darkMint
+                , background if showGoInYellow then Color.yellowText else state.data.config.homeScreen.offlineBtnColor
                 , onClick  push  (const $ SwitchDriverStatus Online)
                 , rippleColor Color.rippleShade
                 ][ textView
@@ -1217,9 +1217,9 @@ statsModel push state =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , gravity CENTER_VERTICAL
-        , background Color.blue600
-        , cornerRadius 12.0
-        , padding $ Padding 16 2 8 2
+        , background state.data.config.homeScreen.statsBackground
+        , cornerRadius 8.0
+        , padding $ Padding 16 8 16 8
         ][ textView $
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
