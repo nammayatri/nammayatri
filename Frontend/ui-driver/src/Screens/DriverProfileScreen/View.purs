@@ -355,7 +355,7 @@ manageVehicleItem state vehicle push =
         , width MATCH_PARENT
         , orientation HORIZONTAL
         , padding $ PaddingVertical 12 12
-        , visibility $ MP.boolToVisibility vehicle.isActive
+        , visibility $ MP.boolToVisibility vehicle.isActive 
         , gravity CENTER_HORIZONTAL
         ]
         [ textView
@@ -734,6 +734,7 @@ tabImageView state push =
       ST.AutoCategory -> getAutoImage cityConfig
       ST.CarCategory -> "ny_ic_sedan"
       ST.BikeCategory -> "ny_ic_bike_side"
+      ST.AmbulanceCategory -> "ny_ic_ambulance_side"
       _ -> "ny_ic_silhouette"
 
   getAutoImage :: CityConfig -> String
@@ -1367,7 +1368,7 @@ profileOptionsLayout state push =
   where
   visibilityCondition optionItem = case optionItem.menuOptions of
     GO_TO_LOCATIONS -> state.props.enableGoto
-    DRIVER_BOOKING_OPTIONS -> state.data.config.profile.showBookingOption
+    DRIVER_BOOKING_OPTIONS -> state.data.config.profile.showBookingOption && not (state.data.driverVehicleType `elem` ["BIKE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"])
     LIVE_STATS_DASHBOARD -> state.data.config.dashboard.enable && not DS.null state.data.config.dashboard.url
     _ -> true
 
@@ -1506,7 +1507,7 @@ vehicleListItem state push vehicle =
         , orientation HORIZONTAL
         , background Color.blue600
         , cornerRadius 8.0
-        , visibility $ MP.boolToVisibility $ vehicle.isActive && vehicle.isVerified
+        , visibility $ MP.boolToVisibility $ vehicle.isActive && vehicle.isVerified && not (vehicle.userSelectedVehicleCategory == ST.AmbulanceCategory || vehicle.userSelectedVehicleCategory == ST.BikeCategory)
         , padding $ Padding 16 8 16 8
         , margin $ MarginTop 16
         , onClick push $ const $ OptionClick DRIVER_BOOKING_OPTIONS
@@ -1537,6 +1538,8 @@ vehicleListItem state push vehicle =
       "ny_ic_sedan"
     else if category == ST.BikeCategory then
       "ny_ic_bike_side"
+    else if category == ST.AmbulanceCategory then
+      "ny_ic_ambulance_side"
     else
       "ny_ic_silhouette"
 

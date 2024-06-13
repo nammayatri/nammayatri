@@ -653,8 +653,9 @@ onBoardingFlow = do
       registerationStepsCabs = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.cabs) updatedGs.globalProps.onBoardingDocs
       registerationStepsAutos = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.autos) updatedGs.globalProps.onBoardingDocs
       registerationStepsBike = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.bikes) updatedGs.globalProps.onBoardingDocs
+      registerationStepsAmbulance = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.ambulances) updatedGs.globalProps.onBoardingDocs
       checkAvailability field = maybe false (\(API.OnboardingDocsRes mbDoc) -> isJust (field mbDoc)) updatedGs.globalProps.onBoardingDocs
-      variantList = (if checkAvailability _.bikes then [ST.BikeCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else [])
+      variantList = (if checkAvailability _.bikes then [ST.BikeCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else [])  <> (if checkAvailability _.ambulances then [ST.AmbulanceCategory] else [])
       mismatchLogic vehicleDocument = (uiCurrentCategory == (RC.transformVehicleType $ Just vehicleDocument.userSelectedVehicleCategory)) && isJust vehicleDocument.verifiedVehicleCategory && (Just vehicleDocument.userSelectedVehicleCategory /= vehicleDocument.verifiedVehicleCategory)
       vehicleTypeMismatch = not registrationState.props.manageVehicle && any (\(API.VehicleDocumentItem item) -> mismatchLogic item) driverRegistrationResp.vehicleDocuments
       documentStatusList = mkStatusList (DriverRegistrationStatusResp driverRegistrationResp)
@@ -677,6 +678,7 @@ onBoardingFlow = do
                       enteredRC = localStoreRC,
                       registerationStepsCabs = registerationStepsCabs,
                       registerationStepsAuto = registerationStepsAutos,
+                      registerationStepsAmbulance = registerationStepsAmbulance,
                       documentStatusList = filteredVehicleDocs,
                       registerationStepsBike = registerationStepsBike,
                       variantList = variantList,
@@ -982,7 +984,7 @@ addVehicleDetailsflow addRcFromProf = do
           modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""},props{ addRcFromProfile = addRcFromProf}}
           addVehicleDetailsflow state.props.addRcFromProfile
         else do
-          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number resp.imageId state.data.dateOfRegistration true state.data.vehicleCategory state.props.buttonIndex)
+          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number resp.imageId state.data.dateOfRegistration true state.data.vehicleCategory state.props.buttonIndex state.data.oxygen state.data.ventilator )
           case registerDriverRCResp of
             Right (DriverRCResp resp) -> do
               void $ pure $ toast $ getString RC_ADDED_SUCCESSFULLY
@@ -1031,7 +1033,7 @@ addVehicleDetailsflow addRcFromProf = do
           modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""},props{ addRcFromProfile = addRcFromProf}}
           addVehicleDetailsflow state.props.addRcFromProfile
         else do
-          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number state.data.rcImageID state.data.dateOfRegistration true state.data.vehicleCategory state.props.buttonIndex)
+          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number state.data.rcImageID state.data.dateOfRegistration true state.data.vehicleCategory state.props.buttonIndex state.data.oxygen state.data.ventilator)
           void $ pure $ setValueToLocalStore ENTERED_RC state.data.vehicle_registration_number
           case registerDriverRCResp of
             Right (DriverRCResp resp) -> do

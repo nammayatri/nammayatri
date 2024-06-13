@@ -162,6 +162,11 @@ getVehicleCapacity vehicleType = case vehicleType of
   "TAXI" -> getString ECONOMICAL <> " · " <> "4 " <> getString PEOPLE
   "SUV" -> getString SPACIOUS <> " · " <> "6 " <> getString PEOPLE
   "BIKE" -> getString ECONOMICAL <> " · " <> "1 " <> getString PEOPLE -- todo-codex: Add proper string for vehicle capacity
+  "AMBULANCE_TAXI" -> "Ambulance Taxi" <> " · " <> "4 " <> getString PEOPLE
+  "AMBULANCE_TAXI_OXY" -> "Ambulance Taxi Oxy" <> " · " <> "4 " <> getString PEOPLE
+  "AMBULANCE_AC" -> "Ambulance AC" <> " · " <> "4 " <> getString PEOPLE
+  "AMBULANCE_AC_OXY" -> "Ambulance AC Oxy" <> " · " <> "4 " <> getString PEOPLE
+  "AMBULANCE_VENTILATOR" -> "Ambulance Ventilator" <> " · " <> "4 " <> getString PEOPLE
   _ -> getString COMFY <> " · " <> "4 " <> getString PEOPLE
 
 dummyVehicleP :: VehicleP
