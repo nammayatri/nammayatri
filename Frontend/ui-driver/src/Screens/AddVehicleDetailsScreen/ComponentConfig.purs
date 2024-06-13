@@ -248,15 +248,15 @@ ambulanceModalConfig :: ST.AddVehicleDetailsScreenState -> RequestInfoCard.Confi
 ambulanceModalConfig state =
   RequestInfoCard.config
     { title
-      { text = "Ambulance Facilities"
+      { text = getString A_F
       }
     , primaryText
-      { text = "Select what facilities your Ambulance have to get rides based on that.<br/> <br/> Note: Ventilator includes AC and Oxygen<br/>"
+      { text = getString SELECT_FACILITIES
       , padding = Padding 16 16 0 0
       }
     , subTitle
       { 
-        text = "Terms and Conditions"
+        text = getString T_C
        , visibility = VISIBLE
       , padding = Padding 16 5 0 0
       }
@@ -267,7 +267,7 @@ ambulanceModalConfig state =
       , padding = Padding 0 4 1 0
       , visibility = VISIBLE
       }
-    , bulletPoints = ["At all times, ambulances must have a stretcher and a first-aid kit available." , "The driver acknowledges and assumes full responsibility for selecting and ensuring fully operational facilities as per the chosen Booking Preference.","Drivers can change the variant/facilities to align with their Booking Preference and the status of the facilities.","Ambulance providers must make their ambulances available for random Health Department inspections at any time. Any discrepancies found during inspections will result in immediate legal action."]
+    , bulletPoints = [getString FIRST_AID_KIT , getString DRIVER_ACKNOWLEDGE,getString BOOKING_PREFERENCE,getString INSPECTION]
     , buttonConfig
       { text = getString GOT_IT
       , padding = PaddingVertical 16 20
@@ -285,7 +285,7 @@ agreeTermsModalConfig state = let
       buttonLayoutMargin = Margin 0 0 0 0,
 
      primaryText {
-         text = "By proceeding, you accept full responsibility for ambulance facilities and agree to random Health Department inspections, with legal action for any discrepancies."
+         text = getString BY_PROCEEDING_YOU_ACCEPT_FULL_RESPONSIBILITY
         , margin = Margin 16 0 16 0
         , visibility = VISIBLE
         , gravity = CENTER
@@ -294,7 +294,7 @@ agreeTermsModalConfig state = let
         visibility = GONE
       },
       option1 {
-        text = "Agree & Continue"
+        text = getString A_C
       , color = Color.yellow900
       , strokeColor = Color.white900
       , padding = Padding 15 10 15 10
@@ -305,7 +305,7 @@ agreeTermsModalConfig state = let
       , gravity = CENTER
       },
       option2 {
-        text = "Cancel"
+        text = getString CANCEL
       , color = Color.black900
       , strokeColor = Color.white900
       , padding = Padding 15 10 15 10

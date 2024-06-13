@@ -344,6 +344,16 @@ getLatestAndroidVersion merchant =
     MOBILITY_RS -> 1
     PASSCULTURE -> 1
 
+getMerchantName :: Merchant -> String
+getMerchantName merchant =
+  case merchant of
+    NAMMAYATRI -> "Nammayatri"
+    YATRI -> "Yatri"
+    YATRISATHI -> "YatriSathi"
+    MOBILITY_PM -> "MobilityPM"
+    MOBILITY_RS -> "MobilityRS"
+    PASSCULTURE -> "PassCulture"
+
 ifNotRegistered :: Unit -> Boolean
 ifNotRegistered _ = getValueToLocalStore REGISTERATION_TOKEN == "__failed"
 
@@ -632,6 +642,7 @@ onBoardingFlow = do
   let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       registrationState = allState.registrationScreen
       driverEnabled = fromMaybe false driverRegistrationResp.enabled
+      merchantName = getMerchantName $ getMerchant FunctionCall
   permissions <- checkAllPermissions false config.permissions.locationPermission
   if isNothing allState.globalProps.onBoardingDocs then updateOnboardingDocs registrationState.props.manageVehicle else pure unit
   GlobalState updatedGs <- getState
@@ -716,7 +727,7 @@ onBoardingFlow = do
         modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing }
         modifyScreenState $ AcknowledgementScreenType $ \_ -> AckScreenInitData.initData { data {
           title = Just $ getString CONGRATULATIONS,
-          description = Just $ getString YOU_ARE_ALL_SET_TO_TAKE_RIDES,
+          description = Just $ getString (YOU_ARE_ALL_SET_TO_TAKE_RIDES merchantName),
           primaryButtonText = Just $ getString CONTINUE,
           illustrationAsset = "success_lottie.json"}}
         ackScreenFlow $ getDriverInfoFlow Nothing Nothing Nothing false (Just state.data.cityConfig.enableAdvancedBooking)

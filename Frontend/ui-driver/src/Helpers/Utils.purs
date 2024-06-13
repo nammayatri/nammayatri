@@ -358,11 +358,11 @@ getVehicleType vehicleType =
     "TAXI" -> (getString TAXI)
     "TAXI_PLUS" -> (getString TAXI_PLUS)
     "BIKE" -> "Bike"
-    "AMBULANCE_TAXI" -> "Ambulance_Taxi"
-    "AMBULANCE_TAXI_OXY" -> "Ambulance_Taxi_Oxy"
-    "AMBULANCE_AC" -> "Ambulance_AC" 
-    "AMBULANCE_AC_OXY" -> "Ambulance_AC_Oxy"
-    "AMBULANCE_VENTILATOR" -> "Ambulance_Ventilator"
+    "AMBULANCE_TAXI" -> getString NON_AC <> "\x00B7" <> getString NO_OXYGEN
+    "AMBULANCE_TAXI_OXY" -> getString NON_AC <> "\x00B7" <> getString OXYGEN
+    "AMBULANCE_AC" -> getString AC <> "\x00B7" <> getString NO_OXYGEN
+    "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getString OXYGEN
+    "AMBULANCE_VENTILATOR" -> getString VENTILATOR
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig
