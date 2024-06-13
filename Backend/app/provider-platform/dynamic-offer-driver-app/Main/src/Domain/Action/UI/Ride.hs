@@ -29,8 +29,7 @@ where
 
 import qualified AWS.S3 as S3
 import qualified Data.ByteString as BS
-import Data.HashMap.Strict as HMS
-import qualified Data.HashMap.Strict as HM
+import qualified Data.HashMap.Strict as HM hiding (filter)
 import Data.List (sortOn)
 import Data.Ord
 import qualified Data.Text as T hiding (count, map)
@@ -91,6 +90,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
@@ -204,7 +204,8 @@ data DriverRideRes = DriverRideRes
     tripScheduledAt :: UTCTime,
     isValueAddNP :: Bool,
     bookingType :: BookingType,
-    enableFrequentLocationUpdates :: Maybe Bool
+    enableFrequentLocationUpdates :: Maybe Bool,
+    fleetOwnerId :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -228,8 +229,9 @@ listDriverRides ::
   Maybe Bool ->
   Maybe DRide.RideStatus ->
   Maybe Day ->
+  Maybe Text ->
   m DriverRideListRes
-listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
+listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFleetOwnerId = do
   rides <-
     if mbOnlyActive == Just True
       then runInReplica $ QRide.getActiveBookingAndRideByDriverId driverId
@@ -244,7 +246,13 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
     isValueAddNP <- CQVAN.isValueAddNP booking.bapId
     let goHomeReqId = ride.driverGoHomeRequestId
     mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP
-  pure . DriverRideListRes $ sortOn (Down . (.bookingType)) driverRideLis
+  filteredRides <- case mbFleetOwnerId of
+    Just fleetOwnerId -> do
+      isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId True
+      unless (isJust isFleetDriver) $ throwError (InvalidRequest "Driver is not the  part of this fleet")
+      return $ filter (\ride -> ride.fleetOwnerId == (Just fleetOwnerId)) driverRideLis
+    Nothing -> return driverRideLis
+  pure . DriverRideListRes $ sortOn (Down . (.bookingType)) filteredRides
 
 mkDriverRideRes ::
   ( EncFlow m r,
@@ -342,7 +350,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         tripScheduledAt = booking.startTime,
         bookingType = if ride.status == DRide.NEW && ride.isAdvanceBooking && maybe False (.hasAdvanceBooking) driverInfo then ADVANCED else CURRENT,
         isValueAddNP,
-        enableFrequentLocationUpdates = ride.enableFrequentLocationUpdates
+        enableFrequentLocationUpdates = ride.enableFrequentLocationUpdates,
+        fleetOwnerId = rideDetails.fleetOwnerId
       }
 
 calculateLocations ::
@@ -363,7 +372,7 @@ calculateLocations bookingId stopLocationId = do
       lastLoc <- mkLocationFromLocationMapping bookingId.getId (maxOrder - 1)
       return (nextLoc, lastLoc)
 
-arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]) => Id DRide.Ride -> LatLong -> m APISuccess
+arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."

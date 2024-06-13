@@ -1331,13 +1331,13 @@ instance HideSecrets FleetOwnerInfoRes where
 ---------------- Fleet Driver Joining API  ------------------------------------------------
 
 type SendFleetJoiningOtpAPI =
-  "driver"
+  "fleet"
     :> "sendJoiningOtp"
     :> ReqBody '[JSON] Registration.AuthReq
     :> Post '[JSON] APISuccess
 
 type VerifyFleetJoiningOtpAPI =
-  "driver"
+  "fleet"
     :> "verifyJoiningOtp"
     :> ReqBody '[JSON] VerifyFleetJoiningOtpReq
     :> Post '[JSON] APISuccess

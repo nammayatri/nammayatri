@@ -186,7 +186,7 @@ listDriverRides ::
   Maybe Ride.RideStatus ->
   Maybe Day ->
   FlowHandler DRide.DriverRideListRes
-listDriverRides (driverId, _, _) mbLimit mbOffset mbRideStatus mbDay = withFlowHandlerAPI . DRide.listDriverRides driverId mbLimit mbOffset mbRideStatus mbDay
+listDriverRides (driverId, _, _) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = withFlowHandlerAPI $ DRide.listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay Nothing
 
 arrivedAtPickup :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
 arrivedAtPickup (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req

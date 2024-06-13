@@ -16,9 +16,13 @@ module API.Dashboard.Fleet.Operations where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
+import Data.Time
 import qualified Domain.Action.Dashboard.Driver as DDriver
 import qualified Domain.Action.Dashboard.Fleet.Registration as Fleet
+import qualified Domain.Action.UI.Ride as DARide
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.Person as DP
+import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
@@ -48,6 +52,7 @@ type API =
            :<|> Common.GetFleetOwnerInfoAPI
            :<|> SendFleetJoiningOtpAPI
            :<|> VerifyFleetJoiningOtpAPI
+           :<|> ListDriverRidesForFleetAPI
        )
 
 -----------------------------------
@@ -212,6 +217,18 @@ type VerifyFleetJoiningOtpAPI =
     :> ReqBody '[JSON] Common.VerifyFleetJoiningOtpReq
     :> Post '[JSON] APISuccess
 
+type ListDriverRidesForFleetAPI =
+  "fleet"
+    :> "listRides"
+    :> Capture "driverId" (Id DP.Person)
+    :> QueryParam "limit" Integer
+    :> QueryParam "offset" Integer
+    :> QueryParam "onlyActive" Bool
+    :> QueryParam "status" DRide.RideStatus
+    :> QueryParam "day" Day
+    :> QueryParam "fleetOwnerId" Text
+    :> Get '[JSON] DARide.DriverRideListRes
+
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city =
   addVehicleForFleet merchantId city
@@ -232,6 +249,7 @@ handler merchantId city =
     :<|> getFleetOwnerInfo merchantId city
     :<|> sendFleetJoiningOtp merchantId city
     :<|> verifyFleetJoiningOtp merchantId city
+    :<|> listDriverRidesForFleet merchantId city
 
 addVehicleForFleet :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Text -> Common.AddVehicleReq -> FlowHandler APISuccess
 addVehicleForFleet merchantShortId opCity phoneNo mbMobileCountryCode fleetOwnerId = withFlowHandlerAPI . DDriver.addVehicleForFleet merchantShortId opCity phoneNo mbMobileCountryCode fleetOwnerId
@@ -286,3 +304,6 @@ sendFleetJoiningOtp merchantShortId opCity fleetOwnerName req = withFlowHandlerA
 
 verifyFleetJoiningOtp :: ShortId DM.Merchant -> Context.City -> Text -> Common.VerifyFleetJoiningOtpReq -> FlowHandler APISuccess
 verifyFleetJoiningOtp merchantShortId opCity fleetOwnerId req = withFlowHandlerAPI $ Fleet.verifyFleetJoiningOtp merchantShortId opCity fleetOwnerId req
+
+listDriverRidesForFleet :: ShortId DM.Merchant -> Context.City -> Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe Day -> Maybe Text -> FlowHandler DARide.DriverRideListRes
+listDriverRidesForFleet _ _ driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId = withFlowHandlerAPI $ DARide.listDriverRides driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId

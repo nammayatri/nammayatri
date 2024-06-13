@@ -19,15 +19,20 @@ where
 
 -- import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
 
+import qualified "dynamic-offer-driver-app" API.Dashboard.Fleet.Operations as Fleet
 import qualified "dynamic-offer-driver-app" API.Dashboard.Management.Subscription as ADSubscription
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Registration
+import qualified Data.Time as DT
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Driver as DDriver
 import "lib-dashboard" Domain.Action.Dashboard.Person as DPerson
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Driver as Driver
+import qualified "dynamic-offer-driver-app" Domain.Action.UI.Ride as DARide
 import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import qualified "dynamic-offer-driver-app" Domain.Types.Person as DP
 import qualified "dynamic-offer-driver-app" Domain.Types.Plan as DPlan
+import qualified "dynamic-offer-driver-app" Domain.Types.Ride as DRide
 import qualified "lib-dashboard" Domain.Types.Role as DRole
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -119,6 +124,7 @@ type API =
            :<|> GetFleetOwnerInfoAPI
            :<|> SendFleetJoiningOtpAPI
            :<|> VerifyFleetJoiningOtpAPI
+           :<|> ListDriverRidesForFleetAPI
        )
 
 type DriverDocumentsInfoAPI =
@@ -389,6 +395,10 @@ type VerifyFleetJoiningOtpAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'FLEET 'VERIFY_FLEET_JOINING_OTP
     :> Common.VerifyFleetJoiningOtpAPI
 
+type ListDriverRidesForFleetAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'FLEET 'LIST_DRIVER_RIDES
+    :> Fleet.ListDriverRidesForFleetAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   driverDocuments merchantId city
@@ -458,6 +468,7 @@ handler merchantId city =
     :<|> getFleetOwnerInfo merchantId city
     :<|> sendFleetJoiningOtp merchantId city
     :<|> verifyFleetJoiningOtp merchantId city
+    :<|> listDriverRidesForFleet merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -957,3 +968,9 @@ verifyFleetJoiningOtp merchantShortId opCity apiTokenInfo req =
   withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
     Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.verifyFleetJoiningOtp) apiTokenInfo.personId.getId req
+
+listDriverRidesForFleet :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe DT.Day -> Maybe Text -> FlowHandler DARide.DriverRideListRes
+listDriverRidesForFleet merchantShortId opCity apiTokenInfo driverId mbLimit mbOffset mbOnlyActive mbStatus mbDate mbFleetOwnerId =
+  withFlowHandlerAPI' $ do
+    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+    Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.listDriverRidesForFleet) driverId mbLimit mbOffset mbOnlyActive mbStatus mbDate mbFleetOwnerId
