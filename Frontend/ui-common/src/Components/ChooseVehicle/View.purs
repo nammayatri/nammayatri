@@ -175,13 +175,14 @@ variantsView push state =
                             Just index -> index
                             Nothing -> 0
                           isActiveIndex = elem item state.selectedServices
+                          itemCount = if (length state.services) == 4 then 2 else 3
                           isInActive = not $ elem item state.availableServices
-                          widthFactor = if (length listItem < 3) && item == "Non-AC Mini" then 20 else 34
+                          widthFactor = if (length listItem < 3) && item == "Non-AC Mini" then 20 else if itemCount == 2 then 36 else 28
                           shadowOpacity = if isInActive then 0.0 else 1.0
                         in
                           linearLayout
                             [ height $ V 32
-                            , width $ V ((EHC.screenWidth unit / 3) - widthFactor)
+                            , width $ V ((EHC.screenWidth unit / itemCount) - widthFactor)
                             , clipChildren false
                             , margin $ Margin 4 4 4 4
                             , cornerRadius 6.0
