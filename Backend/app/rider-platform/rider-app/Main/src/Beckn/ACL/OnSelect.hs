@@ -14,6 +14,7 @@
 
 module Beckn.ACL.OnSelect where
 
+import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as OnSelect
 import qualified BecknV2.OnDemand.Tags as Tag
@@ -33,14 +34,16 @@ import Kernel.Utils.Common
 import Tools.Error
 
 buildOnSelectReqV2 ::
-  HasFlowEnv m r '["_version" ::: Text] =>
+  (HasFlowEnv m r '["_version" ::: Text]) =>
   OnSelect.OnSelectReqV2 ->
+  Bool ->
   m (Maybe DOnSelect.DOnSelectReq)
-buildOnSelectReqV2 req = do
+buildOnSelectReqV2 req isValueAddNP = do
   logDebug $ "on_select requestV2: " <> show req
   let context = req.onSelectReqContext
   ContextV2.validateContext Context.ON_SELECT context
   handleErrorV2 req $ \message -> do
+    transactionId <- Utils.getTransactionId context
     providerId <- context.contextBppId & fromMaybeM (InvalidRequest "Missing bpp_id")
     mbProviderUrl <- Utils.getContextBppUri context
     providerUrl <- mbProviderUrl & fromMaybeM (InvalidRequest "Missing bpp_uri")
@@ -50,9 +53,9 @@ buildOnSelectReqV2 req = do
     fulfillment <- listToMaybe fulfillments & fromMaybeM (InvalidRequest "Missing fulfillment")
     quote <- order.orderQuote & fromMaybeM (InvalidRequest "Missing orderQuote")
     (timestamp, validTill) <- Utils.getTimestampAndValidTill context
-    quotesInfo <- traverse (buildQuoteInfoV2 fulfillment quote timestamp order validTill) items
+    quotesInfo <- traverse (buildQuoteInfoV2 fulfillment quote timestamp order validTill transactionId isValueAddNP) items
     itemId <- listToMaybe items >>= (.itemId) & fromMaybeM (InvalidRequest "Missing itemId")
-    let bppEstimateId = Id itemId
+    let bppEstimateId = if isValueAddNP then Id itemId else Common.buildOffUsEstimateId (Id transactionId) (Id itemId)
         providerInfo =
           DOnSelect.ProviderInfo
             { providerId = providerId,
@@ -82,12 +85,14 @@ buildQuoteInfoV2 ::
   UTCTime ->
   Spec.Order ->
   UTCTime ->
+  Text ->
+  Bool ->
   Spec.Item ->
   m DOnSelect.QuoteInfo
-buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
+buildQuoteInfoV2 fulfillment quote contextTime order validTill transactionId isValueAddNP item = do
   fulfillmentType <- fulfillment.fulfillmentType & fromMaybeM (InvalidRequest "Missing fulfillmentType")
   quoteDetails <- case fulfillmentType of
-    "DELIVERY" -> buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime validTill
+    "DELIVERY" -> buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime validTill transactionId isValueAddNP
     "RIDE_OTP" -> throwError $ InvalidRequest "select not supported for ride otp trip"
     _ -> throwError $ InvalidRequest "Invalid fulfillmentType"
   vehicle <- fulfillment.fulfillmentVehicle & fromMaybeM (InvalidRequest "Missing fulfillmentVehicle")
@@ -142,8 +147,10 @@ buildDriverOfferQuoteDetailsV2 ::
   Spec.Quotation ->
   UTCTime ->
   UTCTime ->
+  Text ->
+  Bool ->
   m DOnSelect.DriverOfferQuoteDetails
-buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl = do
+buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl transactionId isValueAddNP = do
   let agentTags = fulfillment.fulfillmentAgent >>= (.agentPerson) >>= (.personTags)
       itemTags = item.itemTags
       driverName = fulfillment.fulfillmentAgent >>= (.agentPerson) >>= (.personName) & fromMaybe "Driver"
@@ -156,7 +163,7 @@ buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl = do
   pure $
     DOnSelect.DriverOfferQuoteDetails
       { distanceToPickup = realToFrac <$> distanceToPickup',
-        bppDriverQuoteId = bppQuoteId,
+        bppDriverQuoteId = if isValueAddNP then bppQuoteId else Common.buildOffUsBppQuoteId (Id transactionId) bppQuoteId,
         ..
       }
 

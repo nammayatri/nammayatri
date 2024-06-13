@@ -60,7 +60,7 @@ DriverOffer:
     driverName: character varying(255)
     distanceToPickup: double precision
     rating: double precision
-    bppQuoteId: character(36)
+    bppQuoteId: character varying(255)
     status: character varying(255)
 
   default:

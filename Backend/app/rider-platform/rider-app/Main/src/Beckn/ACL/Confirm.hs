@@ -15,6 +15,7 @@
 
 module Beckn.ACL.Confirm (buildConfirmReqV2) where
 
+import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
@@ -80,7 +81,7 @@ tfFulfillments res =
     [ Spec.Fulfillment
         { fulfillmentAgent = Nothing,
           fulfillmentCustomer = tfCustomer res,
-          fulfillmentId = res.fulfillmentId,
+          fulfillmentId = if res.isValueAddNP then res.fulfillmentId else Common.buildOffUsFulfillmentId res.fulfillmentId,
           fulfillmentState = Nothing,
           fulfillmentStops = Utils.mkStops' (Just res.fromLocation) res.mbToLocation,
           fulfillmentTags = Nothing,

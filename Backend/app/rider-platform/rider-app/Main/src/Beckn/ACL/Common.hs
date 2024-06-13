@@ -25,7 +25,9 @@ import qualified Data.Text as T
 import Domain.Action.Beckn.Common as Common
 import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.SearchRequest as DSearchReq
 import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -263,3 +265,13 @@ parseBookingCancelledEvent order msgId = do
 
 makeContextMessageIdStatusSyncKey :: Text -> Text
 makeContextMessageIdStatusSyncKey msgId = "SyncAPI:Ride:Cron:Status:MessageId" <> msgId
+
+buildOffUsEstimateId :: Id DSearchReq.SearchRequest -> Id DEstimate.BPPEstimate -> Id DEstimate.BPPEstimate
+buildOffUsEstimateId transactionId itemId = Id $ itemId.getId <> ":" <> transactionId.getId
+
+buildOffUsBppQuoteId :: Id DSearchReq.SearchRequest -> Text -> Text
+buildOffUsBppQuoteId transactionId fulfillmentId = fulfillmentId <> ":" <> transactionId.getId
+
+buildOffUsFulfillmentId :: Maybe Text -> Maybe Text
+buildOffUsFulfillmentId (Just bppEstimateId) = Just $ head $ T.splitOn ":" bppEstimateId
+buildOffUsFulfillmentId Nothing = Nothing

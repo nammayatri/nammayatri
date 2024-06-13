@@ -27,6 +27,8 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Tools.Error
 import TransactionLogs.PushLogs
 
 type API = OnSelect.OnSelectAPIV2
@@ -41,7 +43,9 @@ onSelect ::
 onSelect _ reqV2 = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId reqV2.onSelectReqContext
   Utils.withTransactionIdLogTag transactionId $ do
-    mbDOnSelectReq <- ACL.buildOnSelectReqV2 reqV2
+    providerId <- reqV2.onSelectReqContext.contextBppId & fromMaybeM (InvalidRequest "Missing bpp_id")
+    isValueAddNP <- CQVAN.isValueAddNP providerId
+    mbDOnSelectReq <- ACL.buildOnSelectReqV2 reqV2 isValueAddNP
     messageId <- Utils.getMessageIdText reqV2.onSelectReqContext
     whenJust mbDOnSelectReq $ \onSelectReq ->
       Redis.whenWithLockRedis (onSelectLockKey messageId) 60 $ do

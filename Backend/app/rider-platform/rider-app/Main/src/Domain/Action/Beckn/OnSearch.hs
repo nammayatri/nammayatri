@@ -33,6 +33,7 @@ module Domain.Action.Beckn.OnSearch
   )
 where
 
+import qualified Beckn.ACL.Common as Common
 import qualified Domain.Action.UI.Quote as DQ (estimateBuildLockKey)
 import Domain.Types.BppDetails
 import qualified Domain.Types.Estimate as DEstimate
@@ -235,7 +236,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       pure ()
     else do
       deploymentVersion <- asks (.version)
-      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo)
+      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion isValueAddNP) (filterEstimtesByPrefference estimatesInfo)
       quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo)
       merchantPaymentMethods <- CQMPM.findAllByMerchantOperatingCityId merchantOperatingCityId
       let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
@@ -291,9 +292,10 @@ buildEstimate ::
   UTCTime ->
   SearchRequest ->
   DeploymentVersion ->
+  Bool ->
   EstimateInfo ->
   m DEstimate.Estimate
-buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..} = do
+buildEstimate providerInfo now searchRequest deploymentVersion isValueAddNP est@EstimateInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
@@ -344,6 +346,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         backendConfigVersion = searchRequest.backendConfigVersion,
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         distanceUnit = searchRequest.distanceUnit,
+        bppEstimateId = if isValueAddNP then est.bppEstimateId else Common.buildOffUsEstimateId searchRequest.id est.bppEstimateId,
         ..
       }
 

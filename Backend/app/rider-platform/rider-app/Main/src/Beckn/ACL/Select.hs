@@ -15,6 +15,7 @@
 
 module Beckn.ACL.Select (buildSelectReqV2) where
 
+import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
@@ -86,7 +87,7 @@ tfFulfillment res startLoc endLoc isValueAddNP =
       fulfillmentTags = Nothing
       fulfillmentState = Nothing
       fulfillmentCustomer = if isValueAddNP then tfCustomer res.phoneNumber else Nothing
-      fulfillmentId = Just res.estimate.bppEstimateId.getId
+      fulfillmentId = if isValueAddNP then Just res.estimate.bppEstimateId.getId else Common.buildOffUsFulfillmentId $ Just res.estimate.bppEstimateId.getId
       fulfillmentType = Just $ show Enums.DELIVERY
       fulfillmentStops = UCommon.mkStops' (Just startLoc) (Just endLoc)
       fulfillmentVehicle = tfVehicle res

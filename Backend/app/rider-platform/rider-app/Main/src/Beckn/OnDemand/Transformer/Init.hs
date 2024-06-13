@@ -3,6 +3,7 @@
 
 module Beckn.OnDemand.Transformer.Init where
 
+import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.OnDemand.Utils.Init
@@ -12,6 +13,7 @@ import qualified BecknV2.OnDemand.Utils.Context
 import BecknV2.Utils (maskNumber)
 import qualified Data.List
 import qualified Data.Text
+import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Types.BecknConfig as DBC
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Encryption
@@ -58,7 +60,7 @@ tfOrder uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP bapConfig = d
   let orderQuote_ = Nothing
   let orderBilling_ = tfOrderBilling uiConfirm.riderPhone uiConfirm.riderName & Just
   let orderFulfillments_ = Just $ Data.List.singleton $ tfOrderFulfillments uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP
-  let orderItems_ = Just $ Data.List.singleton $ tfOrderItems uiConfirm mbBppFullfillmentId
+  let orderItems_ = Just $ Data.List.singleton $ tfOrderItems uiConfirm mbBppFullfillmentId isValueAddNP
   BecknV2.OnDemand.Types.Order {orderBilling = orderBilling_, orderCancellation = orderCancellation_, orderCancellationTerms = orderCancellationTerms_, orderFulfillments = orderFulfillments_, orderId = orderId_, orderItems = orderItems_, orderPayments = orderPayments_, orderProvider = orderProvider_, orderQuote = orderQuote_, orderStatus = orderStatus_, orderCreatedAt = Just uiConfirm.booking.createdAt, orderUpdatedAt = Just uiConfirm.booking.updatedAt}
 
 tfOrderBilling :: Maybe Data.Text.Text -> Maybe Data.Text.Text -> BecknV2.OnDemand.Types.Billing
@@ -70,7 +72,7 @@ tfOrderFulfillments :: SharedLogic.Confirm.DConfirmRes -> Data.Text.Text -> Mayb
 tfOrderFulfillments uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP = do
   let fulfillmentAgent_ = Nothing
   let fulfillmentCustomer_ = tfCustomer uiConfirm
-  let fulfillmentId_ = mbBppFullfillmentId
+  let fulfillmentId_ = if isValueAddNP then mbBppFullfillmentId else Common.buildOffUsFulfillmentId mbBppFullfillmentId
   let fulfillmentState_ = Nothing
   let fulfillmentStops_ = Beckn.OnDemand.Utils.Init.mkStops uiConfirm.fromLoc uiConfirm.toLoc Nothing
   let fulfillmentTags_ = if isValueAddNP then Beckn.OnDemand.Utils.Init.mkFulfillmentTags uiConfirm.maxEstimatedDistance else Nothing
@@ -78,10 +80,10 @@ tfOrderFulfillments uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP =
   let fulfillmentVehicle_ = tfFulfillmentVehicle uiConfirm & Just
   BecknV2.OnDemand.Types.Fulfillment {fulfillmentAgent = fulfillmentAgent_, fulfillmentCustomer = fulfillmentCustomer_, fulfillmentId = fulfillmentId_, fulfillmentState = fulfillmentState_, fulfillmentStops = fulfillmentStops_, fulfillmentTags = fulfillmentTags_, fulfillmentType = fulfillmentType_, fulfillmentVehicle = fulfillmentVehicle_}
 
-tfOrderItems :: SharedLogic.Confirm.DConfirmRes -> Maybe Data.Text.Text -> BecknV2.OnDemand.Types.Item
-tfOrderItems uiConfirm mbBppFullfillmentId = do
+tfOrderItems :: SharedLogic.Confirm.DConfirmRes -> Maybe Data.Text.Text -> Bool -> BecknV2.OnDemand.Types.Item
+tfOrderItems uiConfirm mbBppFullfillmentId isValueAddNP = do
   let itemDescriptor_ = Nothing
-  let itemFulfillmentIds_ = Data.List.singleton <$> mbBppFullfillmentId
+  let itemFulfillmentIds_ = Data.List.singleton <$> if isValueAddNP then mbBppFullfillmentId else Common.buildOffUsFulfillmentId mbBppFullfillmentId
   let itemId_ = Just uiConfirm.itemId
   let itemLocationIds_ = Nothing
   let itemPaymentIds_ = Nothing

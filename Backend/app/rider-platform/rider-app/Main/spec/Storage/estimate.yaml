@@ -231,6 +231,7 @@ Estimate:
     nightShiftCharge: integer
     currency: character varying(255)
     estimatedPickupDuration: integer
+    bppEstimateId: character varying(255)
 
   queries:
     findById:
