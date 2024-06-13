@@ -995,6 +995,7 @@ getTE stringKey =
         YOU_STILL_HAVE_TIME_LEFT -> "మీ గో-టు అభ్యర్థనలో మీకు ఇంకా సమయం మిగిలి ఉంది"
         YES_DISABLE -> "అవును, ఆపివేయి"
         GOTO_LOC_REACHED -> "గో-టు లొకేషన్కి చేరుకున్నారు!"
+        CLICK_TO_PREVIEW -> "ప్రివ్యూ కోసం క్లిక్ చేయండి"
         REPORT_ISSUE -> "సమస్యను నివేదించండి"
         YOU_ARE_ALMOST_AT_LOCATION -> "మీరు దాదాపు గో-టు లొకేషన్కి చేరుకున్నారు."
         DRIVER_HOME_LOCATION_NOT_FOUND -> "లొకేషన్ కనుగొనబడలేదు"

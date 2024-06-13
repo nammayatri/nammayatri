@@ -45,7 +45,7 @@ import PaymentPage (consumeBP)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, not, pure, when, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||), (-), (+), (<=), (>))
+import Prelude (Unit, bind, const, discard, not, pure, when, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||), (-), (+), (<=), (>), (*), (/))
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, scrollBarY, singleLine, onAnimationEnd, autoCapitalizationType)
 import PrestoDOM.Animation as PrestoAnim
@@ -178,6 +178,7 @@ view push state =
       <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else [] 
       <> if state.props.multipleRCstatus /= NOT_STARTED then [addRCFromProfileStatusView state push] else []
       <> if state.props.menuOptions then [menuOptionModal push state] else []
+      <> if state.props.previewSampleImage then [expandedSampleImgView push state] else []
       <> if state.props.acModal then [RequestInfoCard.view (push <<< RequestInfoCardAction) (acModalConfig state)] else []
 
 menuOptionModal :: forall w. (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
@@ -774,6 +775,24 @@ headerLayout state push =
       ]
     ]
 
+expandedSampleImgView :: forall w. (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
+expandedSampleImgView push state = 
+  linearLayout
+    [ height MATCH_PARENT 
+    , width  MATCH_PARENT 
+    , gravity CENTER
+    , onClick push $ const $ BackPressed false
+    , background Color.blackLessTrans
+    ]
+    [ imageView
+        [ height $ V (((EHC.screenHeight unit) / 10) * 8)
+        , width $ V (((EHC.screenWidth unit) / 10) * 8)
+        , imageWithFallback state.props.previewImgUrl
+        , clickable false
+        ]
+    ]
+
+
 howToUpload :: (Action -> Effect Unit) ->  AddVehicleDetailsScreenState -> forall w . PrestoDOM (Effect Unit) w
 howToUpload push state = 
   linearLayout
@@ -818,24 +837,49 @@ howToUpload push state =
         , margin $ MarginTop 20
         , stroke $ "1," <> Color.borderGreyColor
         , padding $ Padding 16 16 16 0
-        ][ rightWrongView true
-         , rightWrongView false
+        ][ rightWrongView push true
+         , rightWrongView push false
          ]  
     ]
   ]
 
-rightWrongView :: Boolean -> forall w . PrestoDOM (Effect Unit) w
-rightWrongView isRight = 
+rightWrongView :: (Action -> Effect Unit) -> Boolean -> forall w . PrestoDOM (Effect Unit) w
+rightWrongView push isRight = 
+  let imageNmae = if isRight then "ny_ic_upload_rc_right" else "ny_ic_upload_rc_wrong"
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER_VERTICAL
   , margin $ MarginBottom 16
-  ][ imageView
-    [ width $ V 120
-    , height $ V 100
-    , imageWithFallback $ fetchImage FF_ASSET if isRight then "ny_ic_upload_rc_right" else "ny_ic_upload_rc_wrong"
-    ]
+  ][ linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , orientation VERTICAL
+      , cornerRadius 4.0
+      , onClick push $ const $ PreviewSampleImage imageNmae
+      , clickable $ isRight
+      , stroke $ "1," <> (if isRight then Color.purple100 else Color.white900)
+      ]
+      [ imageView
+        [ width $ V 120
+        , height $ V if isRight then 80 else 100
+        , imageWithFallback $ fetchImage FF_ASSET $ imageNmae
+        ]
+      , textView 
+        [ height WRAP_CONTENT
+        , width $ V 120
+        , text $ getString CLICK_TO_PREVIEW
+        , color Color.purple900
+        , singleLine true
+        , ellipsize true
+        , padding $ PaddingBottom 4
+        , gravity CENTER
+        , background Color.purple100
+        , visibility $ boolToVisibility isRight
+        , stroke $ "1," <> Color.purple100
+        ]
+      ]
   , linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT

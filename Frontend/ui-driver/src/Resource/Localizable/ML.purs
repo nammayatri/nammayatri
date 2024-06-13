@@ -941,6 +941,7 @@ getML stringKey =
         LOCATION_ALREADY_EXISTS ->  "ലൊക്കേഷൻ ഇതിനകം നിലവിലുണ്ട്"
         MIN_LEFT ->  "മിനിറ്റ്"
         GOTO_LOC_REACHED ->  "“ഗോ റ്റു” ലൊക്കേഷനിൽ എത്തി!"
+        CLICK_TO_PREVIEW -> "പ്രിവ്യൂ ചെയ്യാൻ ക്ലിക്ക് ചെയ്യുക"
         GET_READY_FOR_YS_SUBSCRIPTION _ ->  "യാത്രി സതി പദ്ധതികൾക്കായി തയ്യാറാകൂ!"
         SIGNUP_EARLY_FOR_SPECIAL_OFFERS ->  "പ്രത്യേക ഓഫറുകൾക്കായി നേരത്തെ സൈൻ അപ്പ് ചെയ്യുക"
         GUARANTEED_FIXED_PRICE _ ->  "ജനുവരി 1, 2025 വരെ ഉറപ്പുള്ള സ്ഥിര വില"

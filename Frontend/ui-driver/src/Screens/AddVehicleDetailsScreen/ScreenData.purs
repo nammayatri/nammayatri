@@ -126,7 +126,9 @@ initData = {
       confirmChangeVehicle : false,
       contactSupportModal : ST.HIDE,
       buttonIndex : Nothing,
-      acModal : false
+      acModal : false,
+      previewSampleImage : false,
+      previewImgUrl : ""
     }
 }
 
@@ -195,7 +197,9 @@ type AddVehicleDetailsScreenProps =  {
   confirmChangeVehicle :: Boolean,
   contactSupportModal :: AnimType,
   buttonIndex :: Maybe Int,
-  acModal :: Boolean
+  acModal :: Boolean,
+  previewSampleImage :: Boolean,
+  previewImgUrl :: String
  }
 
 type DropDownList = {
