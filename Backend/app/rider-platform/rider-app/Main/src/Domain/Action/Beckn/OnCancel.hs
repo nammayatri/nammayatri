@@ -87,7 +87,7 @@ onCancel ValidatedBookingCancelledReq {..} = do
   bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) (castCancellatonSource cancellationSource_)
   fork "incrementing fraud counters" $ do
     let merchantOperatingCityId = booking.merchantOperatingCityId
-    mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs
+    mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs Nothing
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
   case mbRide of
     Just ride -> do

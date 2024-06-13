@@ -312,6 +312,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
       shortestRouteDuration
       riderPreferredOption
       merchantOperatingCity.distanceUnit
+      person.totalRidesCount
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
   let txnId = getId (searchRequest.id)
@@ -335,7 +336,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
   fork "updating search counters" $ do
     merchantConfigs <- QMC.findAllByMerchantOperatingCityId person.merchantOperatingCityId
     SMC.updateSearchFraudCounters personId merchantConfigs
-    mFraudDetected <- SMC.anyFraudDetected personId merchantOperatingCity.id merchantConfigs
+    mFraudDetected <- SMC.anyFraudDetected personId merchantOperatingCity.id merchantConfigs (Just searchRequest)
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer personId (Just mc.id)
   return dSearchRes
   where
@@ -368,8 +369,9 @@ buildSearchRequest ::
   Maybe Seconds ->
   SearchRequest.RiderPreferredOption ->
   DistanceUnit ->
+  Maybe Int ->
   Flow SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration riderPreferredOption distanceUnit = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration riderPreferredOption distanceUnit totalRidesCount = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)
@@ -405,7 +407,8 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         selectedPaymentMethodId = Nothing,
         isAdvanceBookingEnabled = Nothing,
         riderPreferredOption, -- this is just to store the rider preference for the ride type to handle backward compatibility
-        distanceUnit
+        distanceUnit,
+        totalRidesCount
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime

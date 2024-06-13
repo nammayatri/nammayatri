@@ -53,6 +53,7 @@ data SearchRequestT f = SearchRequestT
     selectedPaymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
     startTime :: B.C f Kernel.Prelude.UTCTime,
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    totalRidesCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     validTill :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)

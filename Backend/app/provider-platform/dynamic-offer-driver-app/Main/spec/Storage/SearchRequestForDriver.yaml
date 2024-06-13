@@ -81,6 +81,7 @@ SearchRequestForDriver:
     isForwardRequest : Bool
     currency: Currency
     distanceUnit: DistanceUnit
+    totalRides: Int
 
   beamType:
     clientBundleVersion: Maybe Text
@@ -96,6 +97,7 @@ SearchRequestForDriver:
     customerCancellationDues: Maybe HighPrecMoney
     isForwardRequest: Maybe Bool
     distanceUnit: Maybe DistanceUnit
+    totalRides: Maybe Int
 
   beamFields:
     clientDevice:
@@ -141,6 +143,7 @@ SearchRequestForDriver:
     customerCancellationDues: getCustomerCancellationDues
     isForwardRequest: Kernel.Prelude.fromMaybe False isForwardRequest|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    totalRides: Kernel.Prelude.fromMaybe 0 totalRides|E
 
   toTType:
     merchantOperatingCityId: Just $ Kernel.Types.Id.getId merchantOperatingCityId|E
@@ -169,6 +172,7 @@ SearchRequestForDriver:
     customerCancellationDues: Kernel.Prelude.Just|I
     isForwardRequest: Kernel.Prelude.Just|I
     distanceUnit: Kernel.Prelude.Just|I
+    totalRides: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
@@ -219,4 +223,5 @@ SearchRequestForDriver:
   excludedDefaultQueries:
     - create
     - createMany
+
 
