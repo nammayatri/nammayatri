@@ -1,0 +1,60 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  Person: Domain.Types.Person
+  Text: Data.Text
+  Money: Kernel.Types.Common
+  PayoutStatus: Domain.Types.DailyStats
+  CreateOrderResp: Kernel.External.Payment.Juspay.Types.CreateOrder
+
+module: ReferalPayout
+
+types:
+  ReferralEarningsReq:
+    personId: Id Person
+    fromDate: Day
+    toDate: Day
+
+  ReferralEarningsRes:
+    totalReferralCount: Int
+    dailyEarnings : [DailyEarning]
+    vpaId: Maybe Text
+    orderId: Maybe Text
+    orderStatus: Maybe OrderStatus
+    referralRewardAmountPerRide: HighPrecMoney
+
+  DailyEarning:
+    earnings: HighPrecMoney
+    activatedItems: Int
+    earningDate: Day
+    referrals: Int
+    status: PayoutStatus
+    payoutOrderId: Maybe Text
+    payoutOrderStatus: Maybe Text
+
+  OrderStatus:
+    enum: "SuccessFul,Failed,Pending"
+
+apis:
+  # get API for referral earnings
+  - GET:
+      endpoint: /referral/earnings
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.ReferalPayout.ReferralEarningsReq
+      response:
+        type: API.Types.UI.ReferalPayout.ReferralEarningsRes
+
+  # post API to delete the existing payout vpa
+  - POST:
+      endpoint: /delete/vpa
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # get API for payout registration
+  - GET:
+      endpoint: /payout/registration
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: CreateOrderResp

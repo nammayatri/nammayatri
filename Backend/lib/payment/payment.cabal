@@ -36,9 +36,15 @@ library
       Lib.Payment.Storage.Beam.PaymentTransaction
       Lib.Payment.Storage.Queries.PaymentOrder
       Lib.Payment.Storage.Queries.PaymentTransaction
+      Lib.Payment.Domain.Types.PayoutOrders
+      Lib.Payment.Domain.Types.PayoutTransactions
       Lib.Payment.Domain.Types.Refunds
+      Lib.Payment.Storage.Beam.PayoutOrders
+      Lib.Payment.Storage.Beam.PayoutTransactions
       Lib.Payment.Storage.Beam.Refunds
       Lib.Payment.Storage.Queries.OrphanInstances.Refunds
+      Lib.Payment.Storage.Queries.PayoutOrders
+      Lib.Payment.Storage.Queries.PayoutTransactions
       Lib.Payment.Storage.Queries.Refunds
   other-modules:
       Paths_payment

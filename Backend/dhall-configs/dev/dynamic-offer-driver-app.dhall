@@ -204,6 +204,7 @@ let AllocatorJobType =
       | RetryDocumentVerification
       | SendManualPaymentLink
       | ScheduledRideNotificationsToDriver
+      | DriverReferralPayout
       >
 
 let jobInfoMapx =
@@ -226,6 +227,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.ScheduledRideNotificationsToDriver
         , mapValue = True
         }
+      , { mapKey = AllocatorJobType.DriverReferralPayout, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
