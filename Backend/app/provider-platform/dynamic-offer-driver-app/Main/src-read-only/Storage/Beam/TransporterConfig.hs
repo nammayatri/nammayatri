@@ -131,6 +131,7 @@ data TransporterConfigT f = TransporterConfigT
     orderAndNotificationStatusCheckTimeLimit :: B.C f Kernel.Types.Common.Seconds,
     overlayBatchSize :: B.C f Kernel.Prelude.Int,
     pastDaysRideCounter :: B.C f Kernel.Prelude.Int,
+    payoutBatchLimit :: B.C f Kernel.Prelude.Int,
     pickupLocThreshold :: B.C f Kernel.Types.Common.Meters,
     placeNameCacheExpiryDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     popupDelayToAddAsPenalty :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),

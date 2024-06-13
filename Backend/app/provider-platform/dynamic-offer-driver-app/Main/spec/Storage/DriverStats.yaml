@@ -31,11 +31,17 @@ DriverStats:
     isValidRating : Maybe Bool
     updatedAt : UTCTime
     favRiderCount : Int
+    totalPayoutEarnings: HighPrecMoney
+    totalValidActivatedRides: Int
+    totalReferralCounts: Int
 
   beamFields:
     totalEarnings:
       totalEarnings: Money
       totalEarningsAmount: Maybe HighPrecMoney
+    totalPayoutEarnings:
+      totalPayoutEarnings: Money
+      totalPayoutEarningsAmount: Maybe HighPrecMoney
 
     bonusEarned:
       bonusEarned: Money
@@ -66,6 +72,7 @@ DriverStats:
     totalDistance: Kernel.Types.Common.Meters $ GHC.Float.double2Int totalDistance|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit|E
     rating: Storage.Queries.Transformers.DriverStats.getRating totalRatings totalRatingScore|EM
+    totalPayoutEarnings: Kernel.Types.Common.mkAmountWithDefault totalPayoutEarningsAmount totalPayoutEarnings|E
 
   toTType:
     totalDistance: getTotalDistance
@@ -79,6 +86,8 @@ DriverStats:
     coinCovertedToCashLeft: Kernel.Prelude.Just|I
     totalCoinsConvertedCash: Kernel.Prelude.Just|I
     distanceUnit: Kernel.Prelude.Just|I
+    totalPayoutEarnings: Kernel.Prelude.roundToIntegral|I
+    totalPayoutEarningsAmount:  Kernel.Prelude.Just|I
 
   constraints:
     driverId: PrimaryKey
@@ -88,6 +97,21 @@ DriverStats:
 
     deleteById:
       kvFunction: deleteWithKV
+      where: driverId
+
+    updatePayoutEarningsByDriverId:
+      kvFunction: updateOneWithKV
+      params: [totalPayoutEarnings]
+      where: driverId
+
+    updateTotalValidRidesAndPayoutEarnings:
+      kvFunction: updateOneWithKV
+      params: [totalValidActivatedRides, totalPayoutEarnings]
+      where: driverId
+
+    updateTotalReferralCount:
+      kvFunction: updateOneWithKV
+      params: [totalReferralCounts]
       where: driverId
 
     # setMissedEarnings: -- beam Field checkUp DSL Fix needed
@@ -110,7 +134,11 @@ DriverStats:
     earningsMissed: "0"
     coinCovertedToCashLeft: "0"
     totalCoinsConvertedCash: "0"
-    favRiderCount: "0"
+    favRiderCount: "0"    
+    totalPayoutEarnings: "0.0"
+    totalValidActivatedRides: "0"
+    totalReferralCounts: "0"
+
 
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -29,8 +29,11 @@ data DriverStats = DriverStats
     totalEarnings :: Kernel.Types.Common.HighPrecMoney,
     totalRatingScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalRatings :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    totalPayoutEarnings :: Kernel.Types.Common.HighPrecMoney,
+    totalReferralCounts :: Kernel.Prelude.Int,
     totalRides :: Kernel.Prelude.Int,
     totalRidesAssigned :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    totalValidActivatedRides :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

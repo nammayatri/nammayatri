@@ -15,6 +15,7 @@
 module Domain.Action.Internal.DriverReferee where
 
 import Data.OpenApi (ToSchema)
+import Data.Time (utctDay)
 import qualified Domain.Types.DriverReferral as Domain
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.RiderDetails as DRD
@@ -27,10 +28,15 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
 import qualified SharedLogic.Merchant as SMerchant
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as DI
 import qualified Storage.Queries.DriverReferral as QDR
+import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderDetails as QRD
+import Utils.Common.CacUtils
 
 data RefereeLinkInfoReq = RefereeLinkInfoReq
   { referralCode :: Id Domain.DriverReferral,
@@ -61,6 +67,13 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
   currency <- maybe (pure INR) SMerchant.getCurrencyByMerchantOpCity driverInfo.merchantOperatingCityId
   unless (driverInfo.enabled) $
     throwError $ InvalidRequest "Driver is not enabled"
+  driverStats <- QDriverStats.findByPrimaryKey driverReferralLinkage.driverId >>= fromMaybeM (PersonNotFound driverReferralLinkage.driverId.getId)
+  QDriverStats.updateTotalReferralCount (driverStats.totalReferralCounts + 1) driverReferralLinkage.driverId
+  merchOpCityId <- maybe (QP.findById driverReferralLinkage.driverId >>= fromMaybeM (PersonNotFound (driverReferralLinkage.driverId.getId)) <&> (.merchantOperatingCityId)) pure driverInfo.merchantOperatingCityId
+  transporterConfig <- SCTC.findByMerchantOpCityId merchOpCityId (Just (DriverId (cast driverReferralLinkage.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchOpCityId.getId)
+  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  dailyStats <- QDailyStats.findByDriverIdAndDate driverReferralLinkage.driverId (utctDay localTime) >>= fromMaybeM (InvalidRequest "Daily Stats Not Found")
+  QDailyStats.updateReferralCount (dailyStats.referralCounts + 1) driverReferralLinkage.driverId (utctDay localTime)
   mbRiderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id
   _ <- case mbRiderDetails of
     Just _ -> QRD.updateReferralInfo numberHash merchant.id referralCode driverReferralLinkage.driverId

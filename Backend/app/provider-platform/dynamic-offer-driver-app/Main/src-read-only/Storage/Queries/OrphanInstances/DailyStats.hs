@@ -19,12 +19,18 @@ instance FromTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
     pure $
       Just
         Domain.Types.DailyStats.DailyStats
-          { currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
+          { activatedValidRides = activatedValidRides,
+            currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             driverId = Kernel.Types.Id.Id driverId,
             id = id,
             merchantLocalDate = merchantLocalDate,
             numRides = numRides,
+            payoutOrderId = payoutOrderId,
+            payoutOrderStatus = payoutOrderStatus,
+            payoutStatus = payoutStatus,
+            referralCounts = referralCounts,
+            referralEarnings = Kernel.Types.Common.mkAmountWithDefault referralEarningsAmount referralEarnings,
             totalDistance = totalDistance,
             totalEarnings = Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings,
             createdAt = createdAt,
@@ -34,12 +40,19 @@ instance FromTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
 instance ToTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
   toTType' (Domain.Types.DailyStats.DailyStats {..}) = do
     Beam.DailyStatsT
-      { Beam.currency = Kernel.Prelude.Just currency,
+      { Beam.activatedValidRides = activatedValidRides,
+        Beam.currency = Kernel.Prelude.Just currency,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = id,
         Beam.merchantLocalDate = merchantLocalDate,
         Beam.numRides = numRides,
+        Beam.payoutOrderId = payoutOrderId,
+        Beam.payoutOrderStatus = payoutOrderStatus,
+        Beam.payoutStatus = payoutStatus,
+        Beam.referralCounts = referralCounts,
+        Beam.referralEarnings = Kernel.Prelude.roundToIntegral referralEarnings,
+        Beam.referralEarningsAmount = Kernel.Prelude.Just referralEarnings,
         Beam.totalDistance = totalDistance,
         Beam.totalEarnings = Kernel.Prelude.roundToIntegral totalEarnings,
         Beam.totalEarningsAmount = Kernel.Prelude.Just totalEarnings,
