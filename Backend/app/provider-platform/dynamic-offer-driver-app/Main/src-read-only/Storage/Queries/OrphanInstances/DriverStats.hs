@@ -15,9 +15,11 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.DriverStats as Beam
 import Storage.Queries.Transformers.DriverStats
+import qualified Storage.Queries.Transformers.DriverStats
 
 instance FromTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
   fromTType' (Beam.DriverStatsT {..}) = do
+    rating' <- Storage.Queries.Transformers.DriverStats.getRating totalRatings totalRatingScore
     pure $
       Just
         Domain.Types.DriverStats.DriverStats
@@ -31,7 +33,7 @@ instance FromTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
             idleSince = idleSince,
             isValidRating = isValidRating,
             lateNightTrips = lateNightTrips,
-            rating = rating,
+            rating = rating',
             ridesCancelled = ridesCancelled,
             totalCoinsConvertedCash = Kernel.Prelude.fromMaybe 0 totalCoinsConvertedCash,
             totalDistance = Kernel.Types.Common.Meters $ GHC.Float.double2Int totalDistance,
@@ -58,7 +60,6 @@ instance ToTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
         Beam.idleSince = idleSince,
         Beam.isValidRating = isValidRating,
         Beam.lateNightTrips = lateNightTrips,
-        Beam.rating = rating,
         Beam.ridesCancelled = ridesCancelled,
         Beam.totalCoinsConvertedCash = Kernel.Prelude.Just totalCoinsConvertedCash,
         Beam.totalDistance = getTotalDistance totalDistance,

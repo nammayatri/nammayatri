@@ -48,14 +48,13 @@ DriverStats:
     currency:
       currency: Maybe Currency
 
+    rating: {}
+
   beamType:
     totalDistance: Double
     coinCovertedToCashLeft: Maybe HighPrecMoney
     totalCoinsConvertedCash: Maybe HighPrecMoney
     distanceUnit: Maybe DistanceUnit
-    totalRatings :  Maybe Int
-    totalRatingScore :  Maybe Int
-    isValidRating :  Maybe Bool
 
   fromTType:
     totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
@@ -66,6 +65,7 @@ DriverStats:
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
     totalDistance: Kernel.Types.Common.Meters $ GHC.Float.double2Int totalDistance|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit|E
+    rating: Storage.Queries.Transformers.DriverStats.getRating totalRatings totalRatingScore|EM
 
   toTType:
     totalDistance: getTotalDistance
@@ -116,3 +116,4 @@ DriverStats:
     - EXTRA_QUERY_FILE
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+

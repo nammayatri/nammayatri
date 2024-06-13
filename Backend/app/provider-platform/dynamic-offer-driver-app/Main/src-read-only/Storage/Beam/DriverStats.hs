@@ -25,7 +25,6 @@ data DriverStatsT f = DriverStatsT
     idleSince :: B.C f Kernel.Prelude.UTCTime,
     isValidRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     lateNightTrips :: B.C f Kernel.Prelude.Int,
-    rating :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     ridesCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalCoinsConvertedCash :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     totalDistance :: B.C f Kernel.Prelude.Double,

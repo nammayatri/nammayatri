@@ -45,7 +45,6 @@ updateByPrimaryKey (Domain.Types.DriverStats.DriverStats {..}) = do
       Se.Set Beam.idleSince idleSince,
       Se.Set Beam.isValidRating isValidRating,
       Se.Set Beam.lateNightTrips lateNightTrips,
-      Se.Set Beam.rating rating,
       Se.Set Beam.ridesCancelled ridesCancelled,
       Se.Set Beam.totalCoinsConvertedCash (Kernel.Prelude.Just totalCoinsConvertedCash),
       Se.Set Beam.totalDistance (getTotalDistance totalDistance),
