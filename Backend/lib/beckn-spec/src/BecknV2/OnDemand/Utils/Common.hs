@@ -20,10 +20,8 @@ import Data.Data (Data, gmapQ)
 import Data.Generics.Aliases (ext1Q)
 import qualified Data.Text as T
 import qualified Data.UUID as UUID
-import EulerHS.Prelude as EP
--- import Kernel.Prelude (intToNominalDiffTime)
-
-import Kernel.Prelude as KP
+import EulerHS.Prelude
+import Kernel.Prelude (intToNominalDiffTime, listToMaybe)
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Error
 import Kernel.Types.TimeRFC339 (convertRFC3339ToUTC)
@@ -31,13 +29,13 @@ import Kernel.Utils.Common
 import Text.Printf (printf)
 
 allNothing :: (Data d) => d -> Bool
-allNothing = not . EP.or . gmapQ (const True `ext1Q` isJust)
+allNothing = not . or . gmapQ (const True `ext1Q` isJust)
 
 getStartLocation :: [Spec.Stop] -> Maybe Spec.Stop
-getStartLocation = EP.find (\stop -> stop.stopType == Just (show Enums.START))
+getStartLocation = find (\stop -> stop.stopType == Just (show Enums.START))
 
 getDropLocation :: [Spec.Stop] -> Maybe Spec.Stop
-getDropLocation = EP.find (\stop -> stop.stopType == Just (show Enums.END))
+getDropLocation = find (\stop -> stop.stopType == Just (show Enums.END))
 
 getTransactionId :: (MonadFlow m) => Spec.Context -> m Text
 getTransactionId context = context.contextTransactionId <&> UUID.toText & fromMaybeM (InvalidRequest "Transaction Id not found")

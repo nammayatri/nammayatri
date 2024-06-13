@@ -6,7 +6,7 @@ imports:
 Location:
   tableName: location
 
-  derives: "Generic, Show, Eq, Kernel.External.Maps.HasCoordinates"
+  derives: "Generic, Show, Eq, Kernel.External.Maps.HasCoordinates, ToJSON, FromJSON, ToSchema"
 
   fields:
     id: Id Location

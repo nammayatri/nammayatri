@@ -305,14 +305,12 @@ mkBookingAPIDetails = \case
 
 makeFavouriteBookingAPIEntity :: Booking -> Ride -> FavouriteBookingAPIEntity
 makeFavouriteBookingAPIEntity booking ride = do
-  let money = (fromJust ride.totalFare)
-
   FavouriteBookingAPIEntity
     { id = booking.id,
       rideRating = ride.rideRating,
       fromLocation = ride.fromLocation,
       toLocation = ride.toLocation,
-      totalFare = Just money.amountInt,
+      totalFare = (.amountInt) <$> ride.totalFare,
       startTime = ride.rideStartTime
     }
 
