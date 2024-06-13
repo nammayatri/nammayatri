@@ -43,7 +43,6 @@ import Screens.RegistrationScreen.ComponentConfig (logoutPopUp)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Web.HTML.History (back)
-import Engineering.Helpers.Commons as EHC
 
 screen :: ST.PermissionsScreenState -> Screen Action ST.PermissionsScreenState ScreenOutput
 screen initialState =
@@ -78,11 +77,13 @@ view push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
+        , weight 1.0
         ][ PrestoAnim.animationSet[ Anim.fadeIn true] 
           $ headerView state push 
-          , linearLayout
+          , scrollView
             [ width MATCH_PARENT
-            , height $ V $ EHC.screenHeight unit
+            , weight 1.0
+            , height MATCH_PARENT
             ][ linearLayout
                 [ height MATCH_PARENT
                 , width MATCH_PARENT
@@ -160,7 +161,7 @@ titleAndDescriptionList item =
  linearLayout
     [ height WRAP_CONTENT
     , orientation VERTICAL
-    -- , weight 1.0
+    , weight 1.0
     ][  textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT

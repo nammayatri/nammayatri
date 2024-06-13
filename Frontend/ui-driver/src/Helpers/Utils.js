@@ -572,13 +572,13 @@ function getPayload(action) {
   const initiatePayload = Object.assign({}, window.__payload);
   if (action) innerPayload["action"] = action;
   initiatePayload["payload"] = innerPayload;
-  initiatePayload["service"] = "in.yatri.riderequest";
+  initiatePayload["service"] = "in.yatri.yatririderequest";
   return initiatePayload;
 }
 
 export const startRideRequestMApp = function () {
-  if (JOS && !top.mapps["in.yatri.riderequest"]) {
-    JOS.startApp("in.yatri.riderequest")(getPayload("initiate"))(null)();
+  if (JOS && !top.mapps["in.yatri.yatririderequest"]) {
+    JOS.startApp("in.yatri.yatririderequest")(getPayload("initiate"))(null)();
   } else {
     console.error("JOS Not Found")
   }

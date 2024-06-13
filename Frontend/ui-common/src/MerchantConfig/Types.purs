@@ -40,6 +40,7 @@ type CommonAppConfig = (
 type Colors = {
   black800 :: String
 , black900 :: String
+, green700 :: String
 , red :: String
 }
 

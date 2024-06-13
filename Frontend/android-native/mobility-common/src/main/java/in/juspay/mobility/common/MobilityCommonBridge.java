@@ -4876,6 +4876,11 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
+    public void uploadFile() {
+        uploadFile(false);
+    }
+
+    @JavascriptInterface
     public void uploadFile(boolean showCircularFrame) {
         if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
         mediaPlayer.uploadFile(storeCallBackOpenCamera, showCircularFrame);
@@ -4964,18 +4969,7 @@ public class MobilityCommonBridge extends HyperBridge {
             case IMAGE_PERMISSION_REQ_CODE:
                 Context context = bridgeComponents.getContext();
                 if ((ActivityCompat.checkSelfPermission(context, CAMERA) == PackageManager.PERMISSION_GRANTED)) {
-                    if (bridgeComponents.getActivity() != null) {
-                        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                        KeyValueStore.write(context, bridgeComponents.getSdkName(), context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
-                        Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
-                        takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
-                        Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
-                        chooseFromFile.setType("image/*");
-                        Intent chooser = Intent.createChooser(takePicture, context.getString(R.string.upload_image));
-                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
-                        bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
-                    }
+                    mediaPlayer.uploadFile(storeCallBackOpenCamera,mediaPlayer.getShowCircularFrame());
                 } else {
                     Toast.makeText(context, context.getString(R.string.please_allow_permission_to_capture_the_image), Toast.LENGTH_SHORT).show();
                 }

@@ -156,7 +156,9 @@ frenchSkyBlue400 :: Color
 frenchSkyBlue400 = "#a9cbff"
 
 green700 :: Color
-green700 = "#268C6E"
+green700 = 
+  let config = getAppConfig appConfig
+  in config.colors.green700
 
 blackLessTrans :: Color
 blackLessTrans = "#99000000"
