@@ -34,6 +34,7 @@ imports:
   FCMActions: Kernel.External.Notification.FCM.Types
   BookingStatus: Domain.Types.Booking
   FCMNotificationType: Kernel.External.Notification.FCM.Types
+  ServiceTierType: Domain.Types.ServiceTierType
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -790,6 +791,7 @@ TransporterConfig:
     fareRecomputeWeeklyExtraKmsThreshold: HighPrecMeters
     toNotifyDriverForExtraKmsLimitExceed: Bool
     createDocumentRequired: Maybe Bool
+    payoutBatchLimit: Int
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1066,6 +1068,7 @@ TransporterConfig:
     fareRecomputeDailyExtraKmsThreshold: "5000"
     fareRecomputeWeeklyExtraKmsThreshold: "20000"
     toNotifyDriverForExtraKmsLimitExceed: "True"
+    payoutBatchLimit: "10"
 
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -1205,3 +1208,37 @@ RideRelatedNotificationConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, timeDiffEvent]
+
+PayoutConfig:
+  tableName : payout_config
+  derives: "Generic,Show,ToJSON,FromJSON"
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    payoutRegistrationAmount: HighPrecMoney
+    referralRewardAmountPerRide: HighPrecMoney
+    timeDiff: NominalDiffTime
+    isPayoutEnabled: Bool
+    thresholdPayoutAmountPerPerson: HighPrecMoney
+    batchLimit: Int
+    vehicleServiceTier: Maybe ServiceTierType
+    vehicleVariant: Domain.Types.Vehicle.Variant
+  beamType:
+    timeDiff: Seconds
+  toTType:
+    timeDiff: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+  fromTType:
+    timeDiff: Kernel.Utils.Common.secondsToNominalDiffTime|I
+  default:
+    payoutRegistrationAmount: "1.0"
+    referralRewardAmountPerRide: "100.0"
+    timeDiff: "0"
+    isPayoutEnabled: "True"
+    thresholdPayoutAmountPerPerson: "1000.0"
+    batchLimit: "10"
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+  queries:
+    findByMerchantOperatingCityId:
+      kvFunction: findOneWithKV
+      where: merchantOperatingCityId

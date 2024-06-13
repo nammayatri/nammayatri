@@ -47,6 +47,7 @@ data DriverInformation = DriverInformation
     onRide :: Kernel.Prelude.Bool,
     payerVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentPending :: Kernel.Prelude.Bool,
+    payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     subscribed :: Kernel.Prelude.Bool,
@@ -98,12 +99,12 @@ data DriverSummary = DriverSummary
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirConditionedRestrictionType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AirConditionedRestrictionType))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverAutoPayStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverAutoPayStatus))
 
-$(mkHttpInstancesForEnum ''DriverAutoPayStatus)
+$(mkHttpInstancesForEnum (''DriverAutoPayStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverMode)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverMode))
 
-$(mkHttpInstancesForEnum ''DriverMode)
+$(mkHttpInstancesForEnum (''DriverMode))

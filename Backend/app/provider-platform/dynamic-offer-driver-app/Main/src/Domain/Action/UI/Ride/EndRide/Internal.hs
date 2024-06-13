@@ -43,6 +43,7 @@ import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import qualified Domain.Action.UI.Plan as Plan
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.CancellationCharges as DCC
+import Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
@@ -87,10 +88,12 @@ import SharedLogic.TollsDetector
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CancellationCharges as QCC
+import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
@@ -196,6 +199,7 @@ sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId = do
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   now <- getCurrentTime
   let shouldUpdateRideComplete =
+        -- TODO: add fraud checks for referral payout
         case minTripDistanceForReferralCfg of
           Just distance -> (metersToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenValidRide)) mbRiderDetails
           Nothing -> True
@@ -208,10 +212,29 @@ sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId = do
             let referralMessage = "Congratulations!"
             let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
             driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
+            updateReferralStats referredDriverId
             sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
+            -- notifyDriver 1 valid active ride completed by customer, 100 rupees reward
             logDebug "Driver Referral Coin Event"
             fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id merchantId merchantOpCityId (DCT.DriverToCustomerReferral ride.chargeableDistance)
           Nothing -> pure ()
+  where
+    updateReferralStats referredDriverId = do
+      payoutConfig <- CPC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (InternalError "Payout config not present")
+      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast referredDriverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      let referralRewardAmount = payoutConfig.referralRewardAmountPerRide
+      driverStats <- QDriverStats.findByPrimaryKey referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
+      QDriverStats.updateTotalValidRidesAndPayoutEarnings (driverStats.totalValidActivatedRides + 1) (driverStats.totalPayoutEarnings + referralRewardAmount) referredDriverId
+      localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+      mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
+      case mbDailyStats of
+        Just stats -> do
+          QDailyStats.updateReferralStatsByDriverId (stats.activatedValidRides + 1) (stats.referralEarnings + referralRewardAmount) DDS.Verifying referredDriverId (utctDay localTime)
+        Nothing -> do
+          id <- generateGUIDText
+          now <- getCurrentTime -- is it correct? creating entries with ride details here
+          let dailyStatsOfDriver' = DDS.DailyStats {id = id, driverId = referredDriverId, totalEarnings = fromMaybe 0.0 ride.fare, numRides = 1, totalDistance = fromMaybe 0 ride.chargeableDistance, merchantLocalDate = utctDay localTime, currency = ride.currency, distanceUnit = ride.distanceUnit, activatedValidRides = 1, referralEarnings = referralRewardAmount, referralCounts = 1, payoutStatus = DDS.Verifying, payoutOrderId = Nothing, payoutOrderStatus = Nothing, createdAt = now, updatedAt = now}
+          QDailyStats.create dailyStatsOfDriver'
 
 updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Ride.Ride -> m ()
 updateLeaderboardZScore merchantId merchantOpCityId ride = do

@@ -86,3 +86,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN forward_batchin
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_interoperable boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payout_vpa text ;
