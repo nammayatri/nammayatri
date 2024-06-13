@@ -125,6 +125,7 @@ data OneWaySearchReq = OneWaySearchReq
     isSpecialLocation :: Maybe Bool,
     startTime :: Maybe UTCTime,
     isReallocationEnabled :: Maybe Bool,
+    quotesUnifiedFlow :: Maybe Bool,
     sessionToken :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -137,6 +138,7 @@ data RentalSearchReq = RentalSearchReq
     startTime :: UTCTime,
     estimatedRentalDistance :: Meters,
     estimatedRentalDuration :: Seconds,
+    quotesUnifiedFlow :: Maybe Bool,
     isReallocationEnabled :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -151,6 +153,7 @@ data InterCitySearchReq = InterCitySearchReq
     startTime :: UTCTime,
     returnTime :: Maybe UTCTime,
     sessionToken :: Maybe Text,
+    quotesUnifiedFlow :: Maybe Bool,
     isReallocationEnabled :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -227,17 +230,18 @@ search ::
   Maybe Text ->
   Bool ->
   Flow SearchRes
-search personId req bundleVersion clientVersion clientConfigVersion clientId device isDashboardRequest = do
+search personId req bundleVersion clientVersion clientConfigVersion clientId device isDashboardRequest_ = do
   now <- getCurrentTime
-  let (riderPreferredOption, origin, roundTrip, stops, isSourceManuallyMoved, isSpecialLocation, startTime, returnTime, isReallocationEnabled) =
+  let (riderPreferredOption, origin, roundTrip, stops, isSourceManuallyMoved, isSpecialLocation, startTime, returnTime, isReallocationEnabled, quotesUnifiedFlow) =
         case req of
           OneWaySearch oneWayReq ->
-            (SearchRequest.OneWay, oneWayReq.origin, False, [oneWayReq.destination], oneWayReq.isSourceManuallyMoved, oneWayReq.isSpecialLocation, fromMaybe now oneWayReq.startTime, Nothing, oneWayReq.isReallocationEnabled)
+            (SearchRequest.OneWay, oneWayReq.origin, False, [oneWayReq.destination], oneWayReq.isSourceManuallyMoved, oneWayReq.isSpecialLocation, fromMaybe now oneWayReq.startTime, Nothing, oneWayReq.isReallocationEnabled, oneWayReq.quotesUnifiedFlow)
           RentalSearch rentalReq ->
-            (SearchRequest.Rental, rentalReq.origin, False, fromMaybe [] rentalReq.stops, rentalReq.isSourceManuallyMoved, rentalReq.isSpecialLocation, rentalReq.startTime, Nothing, rentalReq.isReallocationEnabled)
+            (SearchRequest.Rental, rentalReq.origin, False, fromMaybe [] rentalReq.stops, rentalReq.isSourceManuallyMoved, rentalReq.isSpecialLocation, rentalReq.startTime, Nothing, rentalReq.isReallocationEnabled, rentalReq.quotesUnifiedFlow)
           InterCitySearch interCityReq ->
-            (SearchRequest.InterCity, interCityReq.origin, interCityReq.roundTrip, fromMaybe [] interCityReq.stops, interCityReq.isSourceManuallyMoved, interCityReq.isSpecialLocation, interCityReq.startTime, interCityReq.returnTime, interCityReq.isReallocationEnabled)
+            (SearchRequest.InterCity, interCityReq.origin, interCityReq.roundTrip, fromMaybe [] interCityReq.stops, interCityReq.isSourceManuallyMoved, interCityReq.isSpecialLocation, interCityReq.startTime, interCityReq.returnTime, interCityReq.isReallocationEnabled, interCityReq.quotesUnifiedFlow)
 
+  let isDashboardRequest = isDashboardRequest_ || (fromMaybe False quotesUnifiedFlow)
   whenJust returnTime $ \rt -> do
     when (rt <= startTime) $ throwError (InvalidRequest "Return time should be greater than start time")
 

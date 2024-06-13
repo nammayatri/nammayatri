@@ -37,5 +37,5 @@ jobs:
           ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }} 
         run: |
-          chmod +x asset-store-script.sh 
-          ./asset-store-script.sh ${{ github.event.pull_request.head.ref }} ${{ secrets.PAT_TOKEN }}
+          chmod +x ../asset-store-script.sh 
+          ./../asset-store-script.sh ${{ github.event.pull_request.head.ref }} ${{ secrets.PAT_TOKEN }}

@@ -31,6 +31,7 @@ defaultSearchReq =
         isSpecialLocation = Nothing,
         isReallocationEnabled = Nothing,
         isDestinationManuallyMoved = Nothing,
+        quotesUnifiedFlow = Nothing,
         sessionToken = Nothing
       }
 
@@ -90,6 +91,7 @@ searchReqFromUpdatesList updList =
               isReallocationEnabled = Nothing,
               startTime = Nothing,
               isDestinationManuallyMoved = Nothing,
+              quotesUnifiedFlow = Nothing,
               sessionToken = Nothing
             }
    in (origin, destination, req)
@@ -106,6 +108,7 @@ mkSearchReqFromLocations origin destination =
               startTime = Nothing,
               isReallocationEnabled = Nothing,
               isDestinationManuallyMoved = Nothing,
+              quotesUnifiedFlow = Nothing,
               sessionToken = Nothing
             }
    in (origin, destination, req)

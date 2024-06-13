@@ -118,7 +118,7 @@ updateVersion dbClientVersion dbBundleVersion = do
       ) $ do
           let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
               requiredData = initialData{clientVersion = Just clientVersion, bundleVersion = Just bundleVersion}
-          resp <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
+          void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
           pure unit
   else pure unit
   where 

@@ -262,31 +262,34 @@ ticketStatusCallBack ::
   ( Esq.EsqDBReplicaFlow m r,
     BeamFlow m r
   ) =>
-  ShortId Merchant ->
-  Context.City ->
-  Identifier ->
   Common.TicketStatusCallBackReq ->
+  Identifier ->
   m APISuccess
-ticketStatusCallBack _merchantShortId _opCity identifier req = do
+ticketStatusCallBack req identifier = do
   issueReport <- QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
-  issueConfig <- CQI.findIssueConfig identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
-  mbIssueMessages <- mapM (`CQIM.findById` identifier) issueConfig.onKaptMarkIssueResMsgs
-  let issueMessageIds = mapMaybe ((.id) <$>) mbIssueMessages
-  now <- getCurrentTime
-  let updatedChats =
-        issueReport.chats
-          ++ map
-            ( \id ->
-                Chat
-                  { chatType = IssueMessage,
-                    chatId = id.getId,
-                    timestamp = now
-                  }
-            )
-            issueMessageIds
-  QIR.updateChats issueReport.id updatedChats
-  case req.status of
-    "Complete" -> QIR.updateIssueStatus req.ticketId RESOLVED
-    "Pending" -> QIR.updateIssueStatus req.ticketId PENDING_INTERNAL
-    _ -> throwError $ InvalidRequest ("Invalid ticket status " <> req.status <> " for ticket id " <> req.ticketId)
+  transformedStatus <- transformKaptureStatus req
+  when (transformedStatus == RESOLVED) $ do
+    issueConfig <- CQI.findIssueConfig identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
+    mbIssueMessages <- mapM (`CQIM.findById` identifier) issueConfig.onKaptMarkIssueResMsgs
+    let issueMessageIds = mapMaybe ((.id) <$>) mbIssueMessages
+    now <- getCurrentTime
+    let updatedChats =
+          issueReport.chats
+            ++ map
+              ( \id ->
+                  Chat
+                    { chatType = IssueMessage,
+                      chatId = id.getId,
+                      timestamp = now
+                    }
+              )
+              issueMessageIds
+    QIR.updateChats issueReport.id updatedChats
+  QIR.updateIssueStatus req.ticketId transformedStatus
   return Success
+
+transformKaptureStatus :: BeamFlow m r => Common.TicketStatusCallBackReq -> m IssueStatus
+transformKaptureStatus req = case req.status of
+  "Complete" -> return RESOLVED
+  "Pending" -> return PENDING_INTERNAL
+  _ -> throwError $ InvalidRequest ("Invalid ticket status " <> req.status <> " for ticket id " <> req.ticketId)
