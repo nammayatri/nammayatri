@@ -1413,7 +1413,7 @@ data STR = LETS_GET_STARTED
         | FINAL_FARE_EXCLUDES_TOLL 
         | PLEASE_COLLECT_SEPARATELY 
         | TOLL_CHARGES_MAYBE_APPLICABLE
-        | YOU_ARE_ALL_SET_TO_TAKE_RIDES
+        | YOU_ARE_ALL_SET_TO_TAKE_RIDES String
         | TOP_AC_DRIVER String
         | GO_TO_ADVANCED_RIDE
         | GET_ADVANCED_RIDE 
@@ -1471,3 +1471,18 @@ data STR = LETS_GET_STARTED
         | VIEW_BOOKING_PREF
         | REGISTER_YOUR_BIKE
         | BIKE_TAXI
+        | SELECT_FACILITIES
+        | FIRST_AID_KIT
+        | DRIVER_ACKNOWLEDGE
+        | BOOKING_PREFERENCE
+        | INSPECTION
+        | A_F
+        | BY_PROCEEDING_YOU_ACCEPT_FULL_RESPONSIBILITY
+        | A_C
+        | AMBULANCE
+        | NON_AC
+        | AC
+        | NO_OXYGEN
+        | OXYGEN
+        | VENTILATOR
+        | SELECT_ONE

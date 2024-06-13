@@ -434,7 +434,7 @@ vehicleRegistrationNumber state push =
               ][  textView
                   ([ width WRAP_CONTENT
                   , height WRAP_CONTENT
-                  , text ("Ambulance facilities")
+                  , text (getString A_F)
                   , color Color.greyTextColor
                   , margin (MarginVertical 10 10)
                   ] <> FontStyle.body3 TypoGraphy)
@@ -461,12 +461,12 @@ vehicleRegistrationNumber state push =
                     , padding (Padding 19 17 0 17)
                     , color Color.greyTextColor
                     , text state.props.input_data
-                    , textFromHtml $ if state.props.isvariant == "" then ("Select Facility") else case  state.props.isvariant of
-                                                                                                      "AMBULANCE_TAXI" -> "Non AC &#8226; No Oxygen"
-                                                                                                      "AMBULANCE_TAXI_OXY" -> "Non AC &#8226; Oxygen"
-                                                                                                      "AMBULANCE_AC" -> "AC &#8226; No Oxygen"
-                                                                                                      "AMBULANCE_AC_OXY" -> "AC &#8226; Oxygen"
-                                                                                                      "AMBULANCE_VENTILATOR" -> "Ventilator"
+                    , textFromHtml $ if state.props.isvariant == "" then (getString SELECT_ONE) else case  state.props.isvariant of
+                                                                                                      "AMBULANCE_TAXI" -> getString NON_AC <> "\x00B7" <> getString NO_OXYGEN
+                                                                                                      "AMBULANCE_TAXI_OXY" -> getString NON_AC <> "\x00B7" <> getString OXYGEN
+                                                                                                      "AMBULANCE_AC" -> getString AC <> "\x00B7" <> getString NO_OXYGEN
+                                                                                                      "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getString OXYGEN
+                                                                                                      "AMBULANCE_VENTILATOR" -> getString VENTILATOR
                                                                                                       _ -> "Other" 
                     , weight 4.0
                     , cornerRadius 6.0
@@ -524,11 +524,11 @@ facilityListView state push  =
             ][  textView $
                 [ accessibilityHint $ show variant <> " : Button"
                 , textFromHtml $ case variant of
-                                    "AMBULANCE_TAXI" -> "Non AC &#8226; No Oxygen"
-                                    "AMBULANCE_TAXI_OXY" -> "Non AC &#8226; Oxygen"
-                                    "AMBULANCE_AC" -> "AC &#8226; No Oxygen"
-                                    "AMBULANCE_AC_OXY" -> "AC &#8226; Oxygen"
-                                    "AMBULANCE_VENTILATOR" -> "Ventilator"
+                                    "AMBULANCE_TAXI" -> getString NON_AC <> "\x00B7" <> getString NO_OXYGEN
+                                    "AMBULANCE_TAXI_OXY" -> getString NON_AC <> "\x00B7" <> getString OXYGEN
+                                    "AMBULANCE_AC" -> getString AC <> "\x00B7" <> getString NO_OXYGEN
+                                    "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getString OXYGEN
+                                    "AMBULANCE_VENTILATOR" -> getString VENTILATOR
                                     _ -> "Other" 
 
                 , color Color.darkCharcoal
