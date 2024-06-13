@@ -76,6 +76,7 @@ DriverInformation:
     tollRelatedIssueCount: Maybe Int
     forwardBatchingEnabled: Bool
     isInteroperable: Bool
+    payoutVpa: Maybe Text
 
   default:
     active: "false"
@@ -202,4 +203,8 @@ DriverInformation:
     updateIsInteroperable:
       kvFunction: updateOneWithKV
       params: [isInteroperable]
+      where: driverId
+    updatePayoutVpa:
+      kvFunction: updateOneWithKV
+      params: [payoutVpa]
       where: driverId

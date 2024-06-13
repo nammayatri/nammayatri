@@ -20,11 +20,13 @@ module Domain.Action.UI.Payment
     getOrder,
     juspayWebhookHandler,
     pdnNotificationStatus,
+    castPayoutOrderStatus,
   )
 where
 
 import qualified Domain.Action.UI.Plan as ADPlan
 import Domain.Action.UI.Ride.EndRide.Internal
+import qualified Domain.Types.DailyStats as DS
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Invoice as INV
@@ -34,6 +36,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.Notification (Notification)
 import qualified Domain.Types.Notification as DNTF
+import qualified Domain.Types.PayoutOrders as DPO
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionConfig as DSC
@@ -44,6 +47,7 @@ import qualified Kernel.External.Payment.Interface as DPayments
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
+import qualified Kernel.External.Payment.Juspay.Types.Payout as Payout
 import qualified Kernel.External.Payment.Types as Payment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -69,6 +73,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
@@ -228,6 +233,22 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
       driverFee <- QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound driverFeeId.getId)
       driver <- B.runInReplica $ QP.findById driverFee.driverId >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
       processNotification driver.merchantOperatingCityId notification notificationStatus responseCode responseMessage driverFee driver True
+    Payment.PayoutOrderStatusResp {..} -> do
+      payoutOrder <- findByPayoutOrderId payoutOrderId >>= fromMaybeM (InternalError "PayoutOrder Not Found")
+      case payoutOrder.entityName of
+        Just DPO.DRIVER_DAILY_STATS -> do
+          whenJust payoutOrder.entityId $ \driverStatsId -> do
+            dailyStats <- QDailyStats.findById driverStatsId >>= fromMaybeM (InternalError "DriverStats Not Found")
+            Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
+              let dPayoutStatus = (castPayoutOrderStatus status)
+              when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus driverStatsId
+            fork "Update Payout Status and Transactions" $ do
+              driver <- B.runInReplica $ QP.findById dailyStats.driverId >>= fromMaybeM (PersonDoesNotExist dailyStats.driverId.getId)
+              let createPayoutOrderStatusReq = Payment.PayoutOrderStatusReq {orderId = payoutOrderId}
+                  createPayoutOrderStatusCall = Payment.payoutOrderStatus driver.merchantId driver.merchantOperatingCityId createPayoutOrderStatusReq
+              void $ DPayment.payoutStatusService driver.merchantId driver.id createPayoutOrderStatusReq createPayoutOrderStatusCall
+        _ -> pure () --Just MANUAL -> do
+      pure ()
     Payment.BadStatusResp -> pure ()
   pure Ack
   where
@@ -245,6 +266,21 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
         CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName driver.merchantOperatingCityId serviceName'
           >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName')
       return (invoices', serviceName', serviceConfig, driver)
+
+castPayoutOrderStatus :: Payout.PayoutOrderStatus -> DS.PayoutStatus
+castPayoutOrderStatus payoutOrderStatus =
+  case payoutOrderStatus of
+    Payout.SUCCESS -> DS.Success
+    Payout.FULFILLMENTS_SUCCESSFUL -> DS.Success
+    Payout.ERROR -> DS.Failed
+    Payout.FAILURE -> DS.Failed
+    Payout.FULFILLMENTS_FAILURE -> DS.Failed
+    Payout.CANCELLED -> DS.ManualReview
+    Payout.FULFILLMENTS_CANCELLED -> DS.ManualReview
+    _ -> DS.Processing
+
+payoutProcessingLockKey :: Text -> Text
+payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId
 
 processPayment ::
   ( MonadFlow m,
