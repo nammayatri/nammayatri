@@ -25,6 +25,7 @@ updateByPrimaryKey IssueCategory {..} =
       Set BeamIC.priority priority,
       Set BeamIC.categoryType categoryType,
       Set BeamIC.isActive isActive,
+      Set BeamIC.maxAllowedRideAge maxAllowedRideAge,
       Set BeamIC.createdAt createdAt,
       Set BeamIC.updatedAt updatedAt
     ]
@@ -36,10 +37,10 @@ findAllIssueTranslationWithSeCondition = findAllWithKV
 findAllIssueCategoryWithSeCondition :: BeamFlow m r => [Clause Postgres BeamIC.IssueCategoryT] -> OrderBy BeamIC.IssueCategoryT -> Maybe Int -> Maybe Int -> m [IssueCategory]
 findAllIssueCategoryWithSeCondition = findAllWithOptionsKV
 
-findAllByLanguage :: BeamFlow m r => Language -> m [(IssueCategory, Maybe IssueTranslation)]
-findAllByLanguage language = do
+findAllActiveByLanguage :: BeamFlow m r => Language -> m [(IssueCategory, Maybe IssueTranslation)]
+findAllActiveByLanguage language = do
   iTranslations <- findAllIssueTranslationWithSeCondition [Is BeamIT.language $ Eq language]
-  iCategorys <- findAllIssueCategoryWithSeCondition [Is BeamIC.category $ In (DomainIT.sentence <$> iTranslations)] (Asc BeamIC.priority) Nothing Nothing
+  iCategorys <- findAllIssueCategoryWithSeCondition [Is BeamIC.isActive $ Eq True] (Asc BeamIC.priority) Nothing Nothing
   pure $ foldl' (getIssueCategoryWithTranslations iTranslations) [] iCategorys
   where
     getIssueCategoryWithTranslations iTranslations dInfosWithTranslations iCategory =
@@ -69,14 +70,8 @@ instance FromTType' BeamIC.IssueCategory IssueCategory where
       Just
         IssueCategory
           { id = Id id,
-            category = category,
-            logoUrl = logoUrl,
-            priority = priority,
             merchantId = Id merchantId,
-            categoryType = categoryType,
-            isActive = isActive,
-            createdAt = createdAt,
-            updatedAt = updatedAt
+            ..
           }
 
 instance ToTType' BeamIC.IssueCategory IssueCategory where
@@ -88,6 +83,7 @@ instance ToTType' BeamIC.IssueCategory IssueCategory where
         BeamIC.priority = priority,
         BeamIC.merchantId = getId merchantId,
         BeamIC.categoryType = categoryType,
+        BeamIC.maxAllowedRideAge = maxAllowedRideAge,
         BeamIC.isActive = isActive,
         BeamIC.createdAt = createdAt,
         BeamIC.updatedAt = updatedAt

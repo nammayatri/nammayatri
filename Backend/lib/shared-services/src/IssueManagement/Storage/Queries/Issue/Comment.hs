@@ -27,9 +27,8 @@ instance FromTType' BeamC.Comment Comment where
           { id = Id id,
             issueReportId = Id issueReportId,
             authorId = Id authorId,
-            comment = comment,
             createdAt = T.localTimeToUTC T.utc createdAt,
-            merchantId = Id <$> merchantId
+            merchantId = Id <$> merchantId,
           }
 
 instance ToTType' BeamC.Comment Comment where

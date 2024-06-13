@@ -333,7 +333,9 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         vehicleServiceTierName = booking.vehicleServiceTierName,
         endOtp = ride.endOtp,
         mbDefaultServiceTierName = rideDetails.defaultServiceTierName,
-        rideCity = Just $ show city.city
+        rideCity = Just $ show city.city,
+        merchantOperatingCityId = Just ride.merchantOperatingCityId.getId,
+        rideCreatedAt = ride.createdAt
       }
 
 calculateLocations ::

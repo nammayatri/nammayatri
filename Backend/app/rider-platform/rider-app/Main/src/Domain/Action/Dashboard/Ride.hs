@@ -38,6 +38,8 @@ import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Booking as DTB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import Domain.Types.CancellationReason
+import Domain.Types.Estimate
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.Location (Location (..))
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
@@ -65,6 +67,8 @@ import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
+import qualified Storage.Queries.Estimate as QEst
+import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
@@ -335,6 +339,7 @@ rideInfo merchantId reqRideId = do
           return $ Just estimateBreakup
         Nothing -> return Nothing
     Nothing -> return Nothing
+  fareBreakup <- B.runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE
   unless (merchantId == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
   person <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
   mbBCReason <-
@@ -395,9 +400,40 @@ rideInfo merchantId reqRideId = do
         rideScheduledAt = booking.startTime,
         fareProductType = mkFareProductType booking.bookingDetails,
         endOtp = ride.endOtp,
-        estimateFareBP = map EstimateBP.transformEstimate' <$> estBreakup
+        estimateFareBP = map EstimateBP.transformEstimate' <$> estBreakup,
+        merchantOperatingCityId = getId <$> ride.merchantOperatingCityId,
+        fareBreakup = transformFareBreakup <$> fareBreakup,
+        estimatedDistance = distanceToHighPrecMeters <$> booking.estimatedDistance,
+        computedPrice = ride.totalFare <&> (.amount),
+        rideCreatedAt = ride.createdAt
       }
+transformEstimate :: CH.EstimateBreakup -> Common.EstimateBreakup
+transformEstimate estimate =
+  Common.EstimateBreakup
+    { Common.price =
+        Common.EstimateBreakupPrice
+          { Common.value =
+              PriceAPIEntity
+                { amount = CH.priceValue estimate,
+                  currency = CH.priceCurrency estimate
+                }
+          },
+      Common.title = CH.title estimate
+    }
 
+transformFareBreakup :: DFareBreakup.FareBreakup -> Common.FareBreakup
+transformFareBreakup DFareBreakup.FareBreakup {..} = do
+  Common.FareBreakup
+    { entityType = mkEntityType entityType,
+      id = cast id,
+      ..
+    }
+
+mkEntityType :: DFareBreakup.FareBreakupEntityType -> Common.FareBreakupEntityType
+mkEntityType = \case
+  DFareBreakup.BOOKING_UPDATE_REQUEST -> Common.BOOKING_UPDATE_REQUEST
+  DFareBreakup.BOOKING -> Common.BOOKING
+  DFareBreakup.RIDE -> Common.RIDE
 mkFareProductType :: DTB.BookingDetails -> Common.FareProductType
 mkFareProductType bookingDetails = case bookingDetails of
   DTB.OneWayDetails _ -> Common.ONE_WAY

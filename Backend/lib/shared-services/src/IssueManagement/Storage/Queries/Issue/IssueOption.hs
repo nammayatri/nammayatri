@@ -51,9 +51,9 @@ findAllByCategoryAndLanguage (Id issueCategoryId) language = do
       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iOption.option) iTranslations
        in dInfosWithTranslations <> if not (null iTranslations') then (\iTranslation'' -> (iOption, Just iTranslation'')) <$> iTranslations' else [(iOption, Nothing)]
 
-findAllByMessageAndLanguage :: BeamFlow m r => Id IssueMessage -> Language -> m [(IssueOption, Maybe IssueTranslation)]
-findAllByMessageAndLanguage (Id issueMessageId) language = do
-  iOptions <- findAllIssueOptionWithSeCondition [Is BeamIO.issueMessageId $ Eq $ Just issueMessageId] (Asc BeamIO.priority) Nothing Nothing
+findAllActiveByMessageAndLanguage :: BeamFlow m r => Id IssueMessage -> Language -> m [(IssueOption, Maybe IssueTranslation)]
+findAllActiveByMessageAndLanguage (Id issueMessageId) language = do
+  iOptions <- findAllIssueOptionWithSeCondition [Is BeamIO.issueMessageId $ Eq $ Just issueMessageId, Is BeamIO.isActive $ Eq True] (Asc BeamIO.priority) Nothing Nothing
   iTranslations <- findAllIssueTranslationWithSeCondition [And [Is BeamIT.language $ Eq language, Is BeamIT.sentence $ In (DomainIO.option <$> iOptions)]]
   pure $ foldl' (getIssueOptionsWithTranslations iTranslations) [] iOptions
   where
@@ -95,6 +95,7 @@ instance ToTType' BeamIO.IssueOption IssueOption where
         BeamIO.option = option,
         BeamIO.priority = priority,
         BeamIO.issueMessageId = issueMessageId,
+        BeamIO.restrictedVariants = restrictedVariants,
         BeamIO.label = label,
         BeamIO.merchantId = getId merchantId,
         BeamIO.isActive = isActive,
