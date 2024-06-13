@@ -150,6 +150,12 @@ updateDailyStats driverId merchantOpCityId ride = do
                 merchantLocalDate = utctDay localTime,
                 currency = ride.currency,
                 distanceUnit = ride.distanceUnit,
+                activatedValidRides = 0,
+                referralEarnings = 0.0,
+                referralCounts = 0,
+                payoutStatus = DDS.Verifying,
+                payoutOrderId = Nothing,
+                payoutOrderStatus = Nothing,
                 createdAt = now,
                 updatedAt = now
               }
@@ -196,6 +202,9 @@ createDriverStat currency distanceUnit driverId = do
             totalRatings = Just 0,
             totalRatingScore = Just 0,
             isValidRating = Just False,
+            totalPayoutEarnings = 0.0,
+            totalValidActivatedRides = 0,
+            totalReferralCounts = 0,
             updatedAt = now
           }
   _ <- DSQ.create driverStat

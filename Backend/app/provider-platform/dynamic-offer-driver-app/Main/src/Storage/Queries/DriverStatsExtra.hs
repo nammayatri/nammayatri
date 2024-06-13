@@ -47,6 +47,9 @@ createInitialDriverStats currency distanceUnit driverId = do
             totalRatings = Just 0,
             totalRatingScore = Just 0,
             isValidRating = Just False,
+            totalPayoutEarnings = 0.0,
+            totalValidActivatedRides = 0,
+            totalReferralCounts = 0,
             updatedAt = now
           }
   createWithKV dStats
