@@ -21,16 +21,19 @@ module IssueManagement.Storage.Beam.Issue.IssueConfig where
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import GHC.Generics (Generic)
+import qualified IssueManagement.Domain.Types.Issue.IssueConfig as DIC
 import IssueManagement.Tools.UtilsTH hiding (Generic)
 
 data IssueConfigT f = IssueConfigT
   { id :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     autoMarkIssueClosedDuration :: B.C f Double,
     onAutoMarkIssueClsMsgs :: B.C f [Text],
     onCreateIssueMsgs :: B.C f [Text],
     onIssueReopenMsgs :: B.C f [Text],
     onKaptMarkIssueResMsgs :: B.C f [Text],
-    merchantId :: B.C f Text
+    merchantId :: B.C f Text,
+    messageTransformationConfig :: B.C f (Maybe DIC.MessageTransformationConfig)
   }
   deriving (Generic, B.Beamable)
 

@@ -28,6 +28,7 @@ data IssueCategoryT f = IssueCategoryT
     priority :: B.C f Int,
     merchantId :: B.C f Text,
     categoryType :: B.C f IC.CategoryType,
+    maxAllowedRideAge :: B.C f (Maybe Seconds),
     isActive :: B.C f Bool,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime

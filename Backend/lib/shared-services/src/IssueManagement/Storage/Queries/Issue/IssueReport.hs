@@ -111,18 +111,13 @@ instance FromTType' BeamIR.IssueReport IssueReport where
             driverId = Id <$> driverId,
             rideId = Id <$> rideId,
             merchantOperatingCityId = Id <$> merchantOperatingCityId,
-            description = description,
-            assignee = assignee,
-            status = status,
             categoryId = Id categoryId,
             optionId = Id <$> optionId,
-            deleted = deleted,
             mediaFiles = Id <$> mediaFiles,
-            ticketId = ticketId,
             createdAt = T.localTimeToUTC T.utc createdAt,
             updatedAt = T.localTimeToUTC T.utc updatedAt,
-            chats = chats,
-            merchantId = Id <$> merchantId
+            merchantId = Id <$> merchantId,
+            ..
           }
 
 instance ToTType' BeamIR.IssueReport IssueReport where

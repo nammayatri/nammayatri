@@ -26,12 +26,13 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Logging
 
-findAllByLanguage :: BeamFlow m r => Language -> Identifier -> m [(IssueCategory, Maybe IssueTranslation)]
-findAllByLanguage language identifier =
+findAllActiveByLanguage :: BeamFlow m r => Language -> Identifier -> m [(IssueCategory, Maybe IssueTranslation)]
+findAllActiveByLanguage language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueCategoryByLanguageKey language identifier) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllIssueCategoryByLanguage language identifier /=<< Queries.findAllByLanguage language
+    Nothing -> cacheAllIssueCategoryByLanguage language identifier /=<< Queries.findAllActiveByLanguage language
 
 findById :: BeamFlow m r => Id IssueCategory -> Identifier -> m (Maybe IssueCategory)
 findById issueCategoryId identifier =
@@ -50,10 +51,16 @@ updateByPrimaryKey = Queries.updateByPrimaryKey
 
 --------- Caching logic for issue category by language -------------------
 
-clearIssueCategoryByLanguageCache :: (CacheFlow m r) => Language -> Identifier -> m ()
-clearIssueCategoryByLanguageCache language identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueCategoryByLanguageKey language identifier
+clearAllIssueCategoryByLanguageCache :: BeamFlow m r => Identifier -> m ()
+clearAllIssueCategoryByLanguageCache identifier = forM_ allLanguages $ \language ->
+  clearIssueCategoryByLanguageCache language identifier
 
-cacheAllIssueCategoryByLanguage :: (CacheFlow m r) => Language -> Identifier -> [(IssueCategory, Maybe IssueTranslation)] -> m ()
+clearIssueCategoryByLanguageCache :: BeamFlow m r => Language -> Identifier -> m ()
+clearIssueCategoryByLanguageCache language identifier = do
+  void $ logDebug ("VaibhavD : Clearing Following Key - " <> makeIssueCategoryByLanguageKey language identifier)
+  Hedis.withCrossAppRedis . Hedis.del $ makeIssueCategoryByLanguageKey language identifier
+
+cacheAllIssueCategoryByLanguage :: CacheFlow m r => Language -> Identifier -> [(IssueCategory, Maybe IssueTranslation)] -> m ()
 cacheAllIssueCategoryByLanguage language identifier issueCategoryTranslation = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueCategoryByLanguageKey language identifier) issueCategoryTranslation expTime
@@ -63,10 +70,10 @@ makeIssueCategoryByLanguageKey language identifier = show identifier <> "CachedQ
 
 --------- Caching logic for issue category by id -------------------
 
-clearIssueCategoryByIdCache :: (CacheFlow m r) => Id IssueCategory -> Identifier -> m ()
+clearIssueCategoryByIdCache :: CacheFlow m r => Id IssueCategory -> Identifier -> m ()
 clearIssueCategoryByIdCache issueCategoryId identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueCategoryByIdKey issueCategoryId identifier
 
-cacheIssueCategoryById :: (CacheFlow m r) => Id IssueCategory -> Identifier -> Maybe IssueCategory -> m ()
+cacheIssueCategoryById :: CacheFlow m r => Id IssueCategory -> Identifier -> Maybe IssueCategory -> m ()
 cacheIssueCategoryById issueCategoryId identifier issueCategory = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueCategoryByIdKey issueCategoryId identifier) issueCategory expTime
@@ -74,7 +81,11 @@ cacheIssueCategoryById issueCategoryId identifier issueCategory = do
 makeIssueCategoryByIdKey :: Id IssueCategory -> Identifier -> Text
 makeIssueCategoryByIdKey id identifier = show identifier <> "CachedQueries:IssueCategory:Id-" <> show id
 
---------- Caching logic for issue category by id -------------------
+--------- Caching logic for issue category by id and language -------------------
+
+clearAllIssueCategoryByIdAndLanguageCache :: CacheFlow m r => Id IssueCategory -> Identifier -> m ()
+clearAllIssueCategoryByIdAndLanguageCache issueCategoryId identifier = forM_ allLanguages $ \language ->
+  clearIssueCategoryByIdAndLanguageCache issueCategoryId language identifier
 
 clearIssueCategoryByIdAndLanguageCache :: (CacheFlow m r) => Id IssueCategory -> Language -> Identifier -> m ()
 clearIssueCategoryByIdAndLanguageCache issueCategoryId language identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueCategoryByIdAndLanguageKey issueCategoryId language identifier

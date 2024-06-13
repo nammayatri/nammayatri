@@ -231,7 +231,9 @@ data RideInfoRes = RideInfoRes
     lastStopLocation :: Maybe LocationAPIEntity,
     endOtp :: Maybe Text,
     mbDefaultServiceTierName :: Maybe Text,
-    rideCity :: Maybe Text
+    rideCity :: Maybe Text,
+    merchantOperatingCityId :: Maybe Text,
+    rideCreatedAt :: UTCTime
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -22,23 +22,24 @@ import IssueManagement.Storage.BeamFlow
 import qualified IssueManagement.Storage.Queries.Issue.IssueConfig as Queries
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 
-findIssueConfig :: BeamFlow m r => Identifier -> m (Maybe IssueConfig)
-findIssueConfig identifier =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueConfigKey identifier) >>= \case
+findByMerchantOpCityId :: BeamFlow m r => Id MerchantOperatingCity -> Identifier -> m (Maybe IssueConfig)
+findByMerchantOpCityId merchantOpCityId identifier =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueConfigKeyByMerchantOpCityId merchantOpCityId identifier) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllIssueConfig identifier /=<< Queries.findOne
+    Nothing -> cacheAllIssueConfig merchantOpCityId identifier /=<< Queries.findByMerchantOpCityId merchantOpCityId
 
 --------- Caching logic -------------------
 
-clearIssueConfigCache :: CacheFlow m r => Identifier -> m ()
-clearIssueConfigCache identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueConfigKey identifier
+clearIssueConfigCache :: CacheFlow m r => Id MerchantOperatingCity -> Identifier -> m ()
+clearIssueConfigCache merchantOpCityId identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueConfigKeyByMerchantOpCityId merchantOpCityId identifier
 
-cacheAllIssueConfig :: CacheFlow m r => Identifier -> Maybe IssueConfig -> m ()
-cacheAllIssueConfig identifier issueConfig = do
+cacheAllIssueConfig :: CacheFlow m r => Id MerchantOperatingCity -> Identifier -> Maybe IssueConfig -> m ()
+cacheAllIssueConfig merchantOpCityId identifier issueConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueConfigKey identifier) issueConfig expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueConfigKeyByMerchantOpCityId merchantOpCityId identifier) issueConfig expTime
 
-makeIssueConfigKey :: Identifier -> Text
-makeIssueConfigKey identifier = show identifier <> "CachedQueries:IssueConfig"
+makeIssueConfigKeyByMerchantOpCityId :: Id MerchantOperatingCity -> Identifier -> Text
+makeIssueConfigKeyByMerchantOpCityId merchantOpCityId identifier = show identifier <> "CachedQueries:IssueConfig:MerchantOperatingCityId-" <> show merchantOpCityId

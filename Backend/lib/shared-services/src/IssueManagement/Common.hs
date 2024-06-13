@@ -23,7 +23,7 @@ import Database.Beam.Backend
 import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField
 import EulerHS.Prelude hiding (id, state)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForEnumAndList)
 import Kernel.External.Encryption
 import Kernel.External.Types
 import Kernel.Prelude
@@ -123,14 +123,40 @@ data RideInfoRes = RideInfoRes
     driverName :: Text,
     driverPhoneNo :: Maybe Text,
     vehicleNo :: Text,
-    vehicleVariant :: Maybe Text,
+    vehicleVariant :: Maybe Variant,
     vehicleServiceTier :: Maybe Text,
     actualFare :: Maybe Money,
-    bookingStatus :: Maybe BookingStatus
+    bookingStatus :: Maybe BookingStatus,
+    merchantOperatingCityId :: Maybe Text,
+    estimatedDistance :: Maybe HighPrecMeters,
+    chargeableDistance :: Maybe HighPrecMeters,
+    estimatedFare :: HighPrecMoney,
+    computedPrice :: Maybe HighPrecMoney,
+    fareBreakup :: [FareBreakup],
+    rideCreatedAt :: UTCTime
   }
 
 data IssueStatus = OPEN | PENDING_INTERNAL | PENDING_EXTERNAL | RESOLVED | CLOSED | REOPENED | NOT_APPLICABLE
   deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON, ToParamSchema)
+
+data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
+
+data FareBreakup = FareBreakup
+  { amount :: Price,
+    description :: Text,
+    entityId :: Text,
+    entityType :: FareBreakupEntityType,
+    id :: Id FareBreakup
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data FareBreakupEntityType = BOOKING_UPDATE_REQUEST | BOOKING | RIDE
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
+
+$(mkHttpInstancesForEnum ''Variant)
+
+$(mkBeamInstancesForEnumAndList ''Variant)
 
 $(mkBeamInstancesForEnum ''IssueStatus)
 
@@ -173,6 +199,8 @@ instance FromBackendRow Postgres [Chat]
 data ChatDetail = ChatDetail
   { timestamp :: UTCTime,
     content :: Maybe Text,
+    title :: Maybe Text,
+    actionText :: Maybe Text,
     id :: Text,
     chatType :: MessageType,
     sender :: Sender,
@@ -189,6 +217,9 @@ data MerchantConfig = MerchantConfig
     counterPartyUrl :: BaseUrl,
     counterPartyApiKey :: Text
   }
+
+allLanguages :: [Language]
+allLanguages = [minBound .. maxBound]
 
 data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE
   deriving stock (Eq, Generic)

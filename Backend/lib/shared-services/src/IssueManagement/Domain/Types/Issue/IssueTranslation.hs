@@ -16,3 +16,10 @@ data IssueTranslation = IssueTranslation
     updatedAt :: UTCTime
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq)
+
+data DetailedTranslation = DetailedTranslation
+  { titleTranslation :: Maybe IssueTranslation,
+    contentTranslation :: Maybe IssueTranslation,
+    actionTranslation :: Maybe IssueTranslation
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, Eq)

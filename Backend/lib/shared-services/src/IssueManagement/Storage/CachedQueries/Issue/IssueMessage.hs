@@ -35,19 +35,19 @@ findById issueMessageId identifier =
     Just a -> pure a
     Nothing -> cacheIssueMessageById issueMessageId identifier /=<< Queries.findById issueMessageId
 
-findByIdAndLanguage :: BeamFlow m r => Id IssueMessage -> Language -> Identifier -> m (Maybe (IssueMessage, Maybe IssueTranslation))
+findByIdAndLanguage :: BeamFlow m r => Id IssueMessage -> Language -> Identifier -> m (Maybe (IssueMessage, DetailedTranslation))
 findByIdAndLanguage issueMessageId language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueMessageByIdAndLanguage issueMessageId language identifier) >>= \case
     Just a -> pure a
     Nothing -> cacheIssueMessageByIdAndLanguage issueMessageId language identifier /=<< Queries.findByIdAndLanguage issueMessageId language
 
-findAllByCategoryIdAndLanguage :: BeamFlow m r => Id IssueCategory -> Language -> Identifier -> m [(IssueMessage, Maybe IssueTranslation)]
+findAllByCategoryIdAndLanguage :: BeamFlow m r => Id IssueCategory -> Language -> Identifier -> m [(IssueMessage, DetailedTranslation)]
 findAllByCategoryIdAndLanguage issueCategoryId language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueMessageByLanguageAndCategory issueCategoryId language identifier) >>= \case
     Just a -> pure a
     Nothing -> cacheAllIssueMessageByCategoryIdAndLanguage issueCategoryId language identifier /=<< Queries.findAllByCategoryIdAndLanguage issueCategoryId language
 
-findAllByOptionIdAndLanguage :: BeamFlow m r => Id IssueOption -> Language -> Identifier -> m [(IssueMessage, Maybe IssueTranslation)]
+findAllByOptionIdAndLanguage :: BeamFlow m r => Id IssueOption -> Language -> Identifier -> m [(IssueMessage, DetailedTranslation)]
 findAllByOptionIdAndLanguage issueOptionId language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueMessageByLanguageAndOption issueOptionId language identifier) >>= \case
     Just a -> pure a
@@ -68,10 +68,15 @@ makeIssueMessageById issueMessageId identifier = show identifier <> "CachedQueri
 
 -- --------- Caching logic for issue message by id & language -------------------
 
+clearAllIssueMessageByIdAndLanguageCache :: CacheFlow m r => Id IssueMessage -> Identifier -> m ()
+clearAllIssueMessageByIdAndLanguageCache issueMessageId identifier =
+  forM_ allLanguages $ \language ->
+    clearIssueMessageByIdAndLanguageCache issueMessageId language identifier
+
 clearIssueMessageByIdAndLanguageCache :: CacheFlow m r => Id IssueMessage -> Language -> Identifier -> m ()
 clearIssueMessageByIdAndLanguageCache issueMessageId language identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueMessageByIdAndLanguage issueMessageId language identifier
 
-cacheIssueMessageByIdAndLanguage :: CacheFlow m r => Id IssueMessage -> Language -> Identifier -> Maybe (IssueMessage, Maybe IssueTranslation) -> m ()
+cacheIssueMessageByIdAndLanguage :: CacheFlow m r => Id IssueMessage -> Language -> Identifier -> Maybe (IssueMessage, DetailedTranslation) -> m ()
 cacheIssueMessageByIdAndLanguage issueMessageId language identifier issueMessageTranslation = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueMessageByIdAndLanguage issueMessageId language identifier) issueMessageTranslation expTime
@@ -81,10 +86,15 @@ makeIssueMessageByIdAndLanguage issueMessageId language identifier = show identi
 
 -- --------- Caching logic for issue message by issueCategoryId & language -------------------
 
+clearAllIssueMessageByCategoryIdAndLanguageCache :: CacheFlow m r => Id IssueCategory -> Identifier -> m ()
+clearAllIssueMessageByCategoryIdAndLanguageCache issueCategoryId identifier =
+  forM_ allLanguages $ \language ->
+    clearIssueMessageByCategoryIdAndLanguageCache issueCategoryId language identifier
+
 clearIssueMessageByCategoryIdAndLanguageCache :: CacheFlow m r => Id IssueCategory -> Language -> Identifier -> m ()
 clearIssueMessageByCategoryIdAndLanguageCache issueCategoryId language identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueMessageByLanguageAndCategory issueCategoryId language identifier
 
-cacheAllIssueMessageByCategoryIdAndLanguage :: CacheFlow m r => Id IssueCategory -> Language -> Identifier -> [(IssueMessage, Maybe IssueTranslation)] -> m ()
+cacheAllIssueMessageByCategoryIdAndLanguage :: CacheFlow m r => Id IssueCategory -> Language -> Identifier -> [(IssueMessage, DetailedTranslation)] -> m ()
 cacheAllIssueMessageByCategoryIdAndLanguage issueCategoryId language identifier issueMessageTranslation = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueMessageByLanguageAndCategory issueCategoryId language identifier) issueMessageTranslation expTime
@@ -94,10 +104,15 @@ makeIssueMessageByLanguageAndCategory issueCategoryId language identifier = show
 
 -- --------- Caching logic for issue message by issueOptionId & language -------------------
 
+clearAllIssueMessageByOptionIdAndLanguageCache :: CacheFlow m r => Id IssueOption -> Identifier -> m ()
+clearAllIssueMessageByOptionIdAndLanguageCache issueOptionId identifier =
+  forM_ allLanguages $ \language ->
+    clearIssueMessageByOptionIdAndLanguageCache issueOptionId language identifier
+
 clearIssueMessageByOptionIdAndLanguageCache :: CacheFlow m r => Id IssueOption -> Language -> Identifier -> m ()
 clearIssueMessageByOptionIdAndLanguageCache issueOptionId language identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueMessageByLanguageAndOption issueOptionId language identifier
 
-cacheAllIssueMessageByOptionIdAndLanguage :: CacheFlow m r => Id IssueOption -> Language -> Identifier -> [(IssueMessage, Maybe IssueTranslation)] -> m ()
+cacheAllIssueMessageByOptionIdAndLanguage :: CacheFlow m r => Id IssueOption -> Language -> Identifier -> [(IssueMessage, DetailedTranslation)] -> m ()
 cacheAllIssueMessageByOptionIdAndLanguage issueOptionId language identifier issueMessageTranslation = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueMessageByLanguageAndOption issueOptionId language identifier) issueMessageTranslation expTime

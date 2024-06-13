@@ -7,6 +7,7 @@ import IssueManagement.Domain.Types.Issue.IssueCategory
 import IssueManagement.Domain.Types.Issue.IssueMessage as DomainIM
 import IssueManagement.Domain.Types.Issue.IssueOption
 import IssueManagement.Domain.Types.Issue.IssueTranslation
+import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import qualified IssueManagement.Storage.Beam.Issue.IssueMessage as BeamIM
 import qualified IssueManagement.Storage.Beam.Issue.IssueTranslation as BeamIT
 import IssueManagement.Storage.BeamFlow
@@ -21,10 +22,15 @@ create = createWithKV
 updateByPrimaryKey :: BeamFlow m r => IssueMessage -> m ()
 updateByPrimaryKey IssueMessage {..} =
   updateWithKV
-    [ Set BeamIM.categoryId ((.getId) <$> categoryId),
-      Set BeamIM.optionId ((.getId) <$> optionId),
+    [ Set BeamIM.categoryId (getId <$> categoryId),
+      Set BeamIM.optionId (getId <$> optionId),
       Set BeamIM.priority priority,
       Set BeamIM.message message,
+      Set BeamIM.messageTitle messageTitle,
+      Set BeamIM.messageAction messageAction,
+      Set BeamIM.referenceCategoryId (getId <$> referenceCategoryId),
+      Set BeamIM.referenceOptionId (getId <$> referenceOptionId),
+      Set BeamIM.mediaFiles (getId <$> mediaFiles),
       Set BeamIM.createdAt createdAt,
       Set BeamIM.updatedAt updatedAt
     ]
@@ -39,36 +45,69 @@ findAllIssueMessageWithSeCondition = findAllWithOptionsKV
 findById :: BeamFlow m r => Id IssueMessage -> m (Maybe IssueMessage)
 findById issueMessageId = findOneWithKV [Is BeamIM.id $ Eq (getId issueMessageId)]
 
-findByIdAndLanguage :: BeamFlow m r => Id IssueMessage -> Language -> m (Maybe (IssueMessage, Maybe IssueTranslation))
+findByIdAndLanguage :: BeamFlow m r => Id IssueMessage -> Language -> m (Maybe (IssueMessage, DetailedTranslation))
 findByIdAndLanguage issueMessageId language = do
   iMessages <- findAllWithKV [Is BeamIM.id $ Eq (getId issueMessageId)]
-  iTranslations <- findAllIssueTranslationWithSeCondition [And [Is BeamIT.language $ Eq language, Is BeamIT.sentence $ In (DomainIM.message <$> iMessages)]]
+  iTranslations <- findAllIssueTranslationWithSeCondition $ translationClause iMessages language
   pure $ headMaybe $ foldl' (getIssueMessagesWithTranslations iTranslations) [] iMessages
   where
     getIssueMessagesWithTranslations iTranslations dInfosWithTranslations iMessage =
-      let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iMessage.message) iTranslations
-       in dInfosWithTranslations <> if not (null iTranslations') then (\iTranslation'' -> (iMessage, Just iTranslation'')) <$> iTranslations' else [(iMessage, Nothing)]
+      let detailedTranslation = mkDetailedTranslation iTranslations iMessage
+       in dInfosWithTranslations <> [(iMessage, detailedTranslation)]
     headMaybe dInfosWithTranslations' = if null dInfosWithTranslations' then Nothing else Just (head dInfosWithTranslations')
 
-findAllByCategoryIdAndLanguage :: BeamFlow m r => Id IssueCategory -> Language -> m [(IssueMessage, Maybe IssueTranslation)]
+findAllByCategoryIdAndLanguage :: BeamFlow m r => Id IssueCategory -> Language -> m [(IssueMessage, DetailedTranslation)]
 findAllByCategoryIdAndLanguage (Id issueCategoryId) language = do
   iMessages <- findAllIssueMessageWithSeCondition [Is BeamIM.categoryId $ Eq $ Just issueCategoryId] (Asc BeamIM.priority) Nothing Nothing
-  iTranslations <- findAllIssueTranslationWithSeCondition [And [Is BeamIT.language $ Eq language, Is BeamIT.sentence $ In (DomainIM.message <$> iMessages)]]
+  iTranslations <- findAllIssueTranslationWithSeCondition $ translationClause iMessages language
   pure $ foldl' (getIssueMessagesWithTranslations iTranslations) [] iMessages
   where
     getIssueMessagesWithTranslations iTranslations dInfosWithTranslations iMessage =
-      let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iMessage.message) iTranslations
-       in dInfosWithTranslations <> if not (null iTranslations') then (\iTranslation'' -> (iMessage, Just iTranslation'')) <$> iTranslations' else [(iMessage, Nothing)]
+      let detailedTranslation = mkDetailedTranslation iTranslations iMessage
+       in dInfosWithTranslations <> [(iMessage, detailedTranslation)]
 
-findAllByOptionIdAndLanguage :: BeamFlow m r => Id IssueOption -> Language -> m [(IssueMessage, Maybe IssueTranslation)]
+findAllByOptionIdAndLanguage :: BeamFlow m r => Id IssueOption -> Language -> m [(IssueMessage, DetailedTranslation)]
 findAllByOptionIdAndLanguage (Id issueOptionId) language = do
   iMessages <- findAllIssueMessageWithSeCondition [Is BeamIM.optionId $ Eq $ Just issueOptionId] (Asc BeamIM.priority) Nothing Nothing
-  iTranslations <- findAllIssueTranslationWithSeCondition [And [Is BeamIT.language $ Eq language, Is BeamIT.sentence $ In (DomainIM.message <$> iMessages)]]
+  iTranslations <- findAllIssueTranslationWithSeCondition $ translationClause iMessages language
   pure $ foldl' (getIssueMessagesWithTranslations iTranslations) [] iMessages
   where
     getIssueMessagesWithTranslations iTranslations dInfosWithTranslations iMessage =
-      let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iMessage.message) iTranslations
-       in dInfosWithTranslations <> if not (null iTranslations') then (\iTranslation'' -> (iMessage, Just iTranslation'')) <$> iTranslations' else [(iMessage, Nothing)]
+      let detailedTranslation = mkDetailedTranslation iTranslations iMessage
+       in dInfosWithTranslations <> [(iMessage, detailedTranslation)]
+
+translationClause :: [IssueMessage] -> Language -> [Clause Postgres BeamIT.IssueTranslationT]
+translationClause iMessages language =
+  [ And
+      [ Is BeamIT.language $ Eq language,
+        Or
+          [ Is BeamIT.sentence $ In (DomainIM.message <$> iMessages),
+            Is BeamIT.sentence $ In $ catMaybes (DomainIM.messageTitle <$> iMessages),
+            Is BeamIT.sentence $ In $ catMaybes (DomainIM.messageAction <$> iMessages)
+          ]
+      ]
+  ]
+
+updateMediaFiles :: BeamFlow m r => Id IssueMessage -> [Id DMF.MediaFile] -> m ()
+updateMediaFiles issueMessageId mediaFiles = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Set BeamIM.mediaFiles $ getId <$> mediaFiles,
+      Set BeamIM.updatedAt now
+    ]
+    [Is BeamIM.id $ Eq $ getId issueMessageId]
+
+mkDetailedTranslation :: [IssueTranslation] -> IssueMessage -> DetailedTranslation
+mkDetailedTranslation iTranslations issueMessage =
+  DetailedTranslation
+    { titleTranslation = findTranslation issueMessage.messageTitle,
+      contentTranslation = findTranslation (Just issueMessage.message),
+      actionTranslation = findTranslation issueMessage.messageAction
+    }
+  where
+    findTranslation :: Maybe Text -> Maybe IssueTranslation
+    findTranslation Nothing = Nothing
+    findTranslation (Just msg) = listToMaybe $ filter (\iTranslation -> iTranslation.sentence == msg) iTranslations
 
 instance FromTType' BeamIM.IssueMessage IssueMessage where
   fromTType' BeamIM.IssueMessageT {..} = do
@@ -78,10 +117,11 @@ instance FromTType' BeamIM.IssueMessage IssueMessage where
           { id = Id id,
             categoryId = Id <$> categoryId,
             optionId = Id <$> optionId,
-            message = message,
-            priority = priority,
-            label = label,
             merchantId = Id merchantId,
+            referenceCategoryId = Id <$> referenceCategoryId,
+            referenceOptionId = Id <$> referenceOptionId,
+            mediaFiles = Id <$> mediaFiles,
+            ..
           }
 
 instance ToTType' BeamIM.IssueMessage IssueMessage where
@@ -90,7 +130,12 @@ instance ToTType' BeamIM.IssueMessage IssueMessage where
       { BeamIM.id = getId id,
         BeamIM.categoryId = getId <$> categoryId,
         BeamIM.optionId = getId <$> optionId,
+        BeamIM.referenceCategoryId = getId <$> referenceCategoryId,
+        BeamIM.referenceOptionId = getId <$> referenceOptionId,
+        BeamIM.mediaFiles = getId <$> mediaFiles,
         BeamIM.message = message,
+        BeamIM.messageTitle = messageTitle,
+        BeamIM.messageAction = messageAction,
         BeamIM.priority = priority,
         BeamIM.merchantId = getId merchantId,
         BeamIM.label = label,
