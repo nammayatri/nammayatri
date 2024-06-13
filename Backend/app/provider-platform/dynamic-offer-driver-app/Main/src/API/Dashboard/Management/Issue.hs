@@ -121,7 +121,7 @@ issueFetchMedia :: ShortId DM.Merchant -> Context.City -> Text -> FlowHandler Te
 issueFetchMedia (ShortId merchantShortId) _opCity = withFlowHandlerAPI . DIssue.issueFetchMedia (ShortId merchantShortId)
 
 ticketStatusCallBack :: ShortId DM.Merchant -> Context.City -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
-ticketStatusCallBack (ShortId _merchantShortId) _opCity req = withFlowHandlerAPI $ DIssue.ticketStatusCallBack req Common.DRIVER
+ticketStatusCallBack (ShortId _merchantShortId) _opCity req = withFlowHandlerAPI $ DIssue.ticketStatusCallBack req dashboardIssueHandle Common.DRIVER
 
 createIssueCategory :: ShortId DM.Merchant -> Context.City -> Common.CreateIssueCategoryReq -> FlowHandler APISuccess
 createIssueCategory (ShortId merchantShortId) city req = withFlowHandlerAPI $ DIssue.createIssueCategory (ShortId merchantShortId) city req Common.DRIVER
@@ -139,4 +139,4 @@ upsertIssueMessage :: ShortId DM.Merchant -> Context.City -> Maybe (Id IssueMess
 upsertIssueMessage (ShortId merchantShortId) city mbIssueMessageId req = withFlowHandlerAPI $ DIssue.upsertIssueMessage (ShortId merchantShortId) city mbIssueMessageId req Common.DRIVER
 
 uploadIssueMessageMediaFiles :: ShortId DM.Merchant -> Context.City -> Common.IssueMessageMediaFileUploadListReq -> FlowHandler APISuccess
-uploadIssueMessageMediaFiles (ShortId merchantShortId) city req = withFlowHandlerAPI $ DIssue.uploadIssueMessageMediaFiles (ShortId merchantShortId) city req dashboardIssueHandle
+uploadIssueMessageMediaFiles (ShortId merchantShortId) city req = withFlowHandlerAPI $ DIssue.uploadIssueMessageMediaFiles (ShortId merchantShortId) city req dashboardIssueHandle Common.DRIVER

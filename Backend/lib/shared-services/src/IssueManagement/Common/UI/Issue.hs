@@ -169,7 +169,9 @@ data IssueCategoryRes = IssueCategoryRes
   { issueCategoryId :: Id IssueCategory,
     label :: Text,
     category :: Text,
-    logoUrl :: Text
+    logoUrl :: Text,
+    categoryType :: CategoryType,
+    maxAllowedRideAge :: Maybe Seconds
   }
   deriving (Generic, Show, ToJSON, ToSchema)
 
@@ -184,6 +186,7 @@ type IssueOptionAPI =
   MandatoryQueryParam "categoryId" (Id IssueCategory)
     :> QueryParam "optionId" (Id IssueOption)
     :> QueryParam "issueReportId" (Id IssueReport)
+    :> QueryParam "rideId" (Id Ride)
     :> QueryParam "language" Language
     :> Get '[JSON] IssueOptionListRes
 
@@ -197,6 +200,9 @@ data IssueOptionRes = IssueOptionRes
 data Message = Message
   { id :: Id IssueMessage,
     message :: Text,
+    messageTitle :: Maybe Text,
+    messageAction :: Maybe Text,
+    mediaFileUrls :: [Text],
     label :: Text
   }
   deriving (Generic, Show, ToJSON, ToSchema, Eq, FromJSON)

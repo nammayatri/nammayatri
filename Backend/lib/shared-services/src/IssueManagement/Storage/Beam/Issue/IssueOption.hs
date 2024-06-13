@@ -18,6 +18,7 @@ module IssueManagement.Storage.Beam.Issue.IssueOption where
 
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified IssueManagement.Common as Common
 import IssueManagement.Tools.UtilsTH hiding (label)
 
 data IssueOptionT f = IssueOptionT
@@ -29,6 +30,7 @@ data IssueOptionT f = IssueOptionT
     label :: B.C f (Maybe Text),
     merchantId :: B.C f Text,
     isActive :: B.C f Bool,
+    restrictedVariants :: B.C f [Common.Variant],
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

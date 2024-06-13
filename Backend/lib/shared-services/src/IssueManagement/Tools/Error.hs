@@ -107,9 +107,27 @@ instance IsBaseError IssueCategoryError where
 instance IsHTTPError IssueCategoryError where
   toErrorCode = \case
     IssueCategoryNotFound _ -> "ISSUE_CATEGORY_NOT_FOUND"
-    IssueCategoryDoNotExist _ -> "ISSUE_CATEGORY_DO_NOT_EXIST"
+    IssueCategoryDoNotExist _ -> "ISSUE_CATEGORY_DOES_NOT_EXIST"
   toHttpCode = \case
     IssueCategoryNotFound _ -> E500
     IssueCategoryDoNotExist _ -> E400
 
 instance IsAPIError IssueCategoryError
+
+newtype IssueConfigError
+  = IssueConfigNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''IssueConfigError
+
+instance IsBaseError IssueConfigError where
+  toMessage = \case
+    IssueConfigNotFound merchantOpCityId -> Just $ "IssueConfig with merchantOperatingCityId \"" <> show merchantOpCityId <> "\" not found."
+
+instance IsHTTPError IssueConfigError where
+  toErrorCode = \case
+    IssueConfigNotFound _ -> "ISSUE_CONFIG_NOT_FOUND"
+  toHttpCode = \case
+    IssueConfigNotFound _ -> E500
+
+instance IsAPIError IssueConfigError

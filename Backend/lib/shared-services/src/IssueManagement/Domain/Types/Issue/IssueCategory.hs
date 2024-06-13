@@ -17,6 +17,7 @@ data IssueCategory = IssueCategory
     merchantId :: Id Merchant,
     categoryType :: CategoryType,
     isActive :: Bool,
+    maxAllowedRideAge :: Maybe Seconds,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

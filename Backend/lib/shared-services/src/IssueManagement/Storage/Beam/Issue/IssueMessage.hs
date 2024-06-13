@@ -30,6 +30,11 @@ data IssueMessageT f = IssueMessageT
     priority :: B.C f Int,
     label :: B.C f (Maybe Text),
     merchantId :: B.C f Text,
+    referenceCategoryId :: B.C f (Maybe Text),
+    referenceOptionId :: B.C f (Maybe Text),
+    mediaFiles :: B.C f [Text],
+    messageTitle :: B.C f (Maybe Text),
+    messageAction :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
