@@ -17,6 +17,8 @@ import qualified Tools.Beam.UtilsTH
 data FRFSTicket = FRFSTicket
   { frfsTicketBookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicket.FRFSTicket,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),
     qrData :: Kernel.Prelude.Text,
@@ -24,8 +26,6 @@ data FRFSTicket = FRFSTicket
     status :: Domain.Types.FRFSTicket.FRFSTicketStatus,
     ticketNumber :: Kernel.Prelude.Text,
     validTill :: Kernel.Prelude.UTCTime,
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

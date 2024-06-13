@@ -44,8 +44,7 @@ onInit _ req = withFlowHandlerAPI $ do
     onInitReq <- ACL.buildOnInitReq req
     Redis.whenWithLockRedis (onInitLockKey onInitReq.messageId) 60 $ do
       (merchant, booking) <- DOnInit.validateRequest onInitReq
-      let merchantOperatingCityID = maybe "" (.getId) booking.merchantOperatingCityId
-      Metrics.finishMetrics Metrics.INIT merchant.name transaction_id merchantOperatingCityID
+      Metrics.finishMetrics Metrics.INIT merchant.name transaction_id booking.merchantOperatingCityId.getId
       fork "FRFS on_init processing" $ do
         Redis.whenWithLockRedis (onInitProcessingLockKey onInitReq.messageId) 60 $
           DOnInit.onInit onInitReq merchant booking

@@ -43,7 +43,7 @@ frfsStatusUpdate req = do
   mapM_
     ( \bookingId -> do
         booking <- B.runInReplica $ QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
-        merchantId <- booking.merchantId & fromMaybeM (InvalidRequest "Invalid merchant id")
+        let merchantId = booking.merchantId
         FRFSTicketBooking.getFrfsBookingStatus (Just booking.riderId, merchantId) bookingId
     )
     reqBookingIds

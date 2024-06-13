@@ -62,22 +62,21 @@ data DStation = DStation
 validateRequest :: DOnSearch -> Flow (Merchant, Search.FRFSSearch)
 validateRequest DOnSearch {..} = do
   search <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
-  merchantId <- search.merchantId & fromMaybeM (InternalError "MerchantId not found in search request") -- TODO: Make merchantId required
+  let merchantId = search.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return (merchant, search)
 
 onSearch ::
   DOnSearch ->
-  Merchant ->
   Search.FRFSSearch ->
   Flow ()
-onSearch onSearchReq merchant search = do
-  quotes <- traverse (mkQuotes onSearchReq search merchant) (onSearchReq.quotes)
+onSearch onSearchReq search = do
+  quotes <- traverse (mkQuotes onSearchReq search) (onSearchReq.quotes)
   QQuote.createMany quotes
   return ()
 
-mkQuotes :: DOnSearch -> Search.FRFSSearch -> Merchant -> DQuote -> Flow Quote.FRFSQuote
-mkQuotes dOnSearch search merchant DQuote {..} = do
+mkQuotes :: DOnSearch -> Search.FRFSSearch -> DQuote -> Flow Quote.FRFSQuote
+mkQuotes dOnSearch search DQuote {..} = do
   dStartStation <- getStartStation stations & fromMaybeM (InternalError "Start station not found")
   dEndStation <- getEndStation stations & fromMaybeM (InternalError "End station not found")
 
@@ -108,7 +107,7 @@ mkQuotes dOnSearch search merchant DQuote {..} = do
         Quote.toStationId = endStation.id,
         Quote.validTill,
         Quote.vehicleType,
-        Quote.merchantId = Just merchant.id,
+        Quote.merchantId = search.merchantId,
         Quote.merchantOperatingCityId = search.merchantOperatingCityId,
         Quote.partnerOrgId = search.partnerOrgId,
         Quote.partnerOrgTransactionId = search.partnerOrgTransactionId,

@@ -127,6 +127,8 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.finalPrice (Kernel.Prelude.fmap (.amount) finalPrice),
       Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
       Se.Set Beam.isBookingCancellable isBookingCancellable,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
       Se.Set Beam.paymentTxnId paymentTxnId,
@@ -145,8 +147,6 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.toStationId (Kernel.Types.Id.getId toStationId),
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleType vehicleType,
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -171,6 +171,8 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             fromStationId = Kernel.Types.Id.Id fromStationId,
             id = Kernel.Types.Id.Id id,
             isBookingCancellable = isBookingCancellable,
+            merchantId = Kernel.Types.Id.Id merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             partnerOrgId = Kernel.Types.Id.Id <$> partnerOrgId,
             partnerOrgTransactionId = Kernel.Types.Id.Id <$> partnerOrgTransactionId,
             paymentTxnId = paymentTxnId,
@@ -188,8 +190,6 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             toStationId = Kernel.Types.Id.Id toStationId,
             validTill = validTill,
             vehicleType = vehicleType,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -211,6 +211,8 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isBookingCancellable = isBookingCancellable,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.partnerOrgId = Kernel.Types.Id.getId <$> partnerOrgId,
         Beam.partnerOrgTransactionId = Kernel.Types.Id.getId <$> partnerOrgTransactionId,
         Beam.paymentTxnId = paymentTxnId,
@@ -229,8 +231,6 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.toStationId = Kernel.Types.Id.getId toStationId,
         Beam.validTill = validTill,
         Beam.vehicleType = vehicleType,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

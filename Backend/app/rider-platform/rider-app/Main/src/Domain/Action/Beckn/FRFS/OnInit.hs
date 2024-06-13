@@ -54,7 +54,7 @@ validateRequest :: DOnInit -> Flow (Merchant, FTBooking.FRFSTicketBooking)
 validateRequest DOnInit {..} = do
   _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   booking <- runInReplica $ QFRFSTicketBooking.findById (Id messageId) >>= fromMaybeM (BookingDoesNotExist messageId)
-  merchantId <- booking.merchantId & fromMaybeM (InternalError "MerchantId not found in booking") -- TODO: Make merchantId required
+  let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return (merchant, booking)
 
@@ -85,8 +85,8 @@ onInit onInitReq merchant booking_ = do
           { frfsTicketBookingId = booking.id,
             id = ticketBookingPaymentId,
             status = DFRFSTicketBookingPayment.PENDING,
-            merchantId = Just merchant.id,
-            merchantOperatingCityId = booking.merchantOperatingCityId,
+            merchantId = Just booking.merchantId,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
             createdAt = now,
             updatedAt = now,
             paymentOrderId = orderId
@@ -111,8 +111,8 @@ onInit onInitReq merchant booking_ = do
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing --- assigned in shared kernel
           }
-  mocId <- booking.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in booking")
-  let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchant.id
+  let mocId = booking.merchantOperatingCityId
+      commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchant.id
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
       createOrderCall = Payment.createOrder merchant.id mocId Nothing Payment.FRFSBooking
   mCreateOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall

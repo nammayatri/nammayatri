@@ -61,3 +61,9 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN customer_cancelled boolean 
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN partner_org_transaction_id character varying(36) ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN partner_org_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN merchant_operating_city_id SET NOT NULL;
+ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN merchant_id SET NOT NULL;

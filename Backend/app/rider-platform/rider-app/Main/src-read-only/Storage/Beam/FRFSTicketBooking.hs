@@ -30,6 +30,8 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     isBookingCancellable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentTxnId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -48,8 +50,6 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     toStationId :: B.C f Kernel.Prelude.Text,
     validTill :: B.C f Kernel.Prelude.UTCTime,
     vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

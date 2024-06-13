@@ -15,6 +15,8 @@ import Tools.Beam.UtilsTH
 data FRFSTicketT f = FRFSTicketT
   { frfsTicketBookingId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     qrData :: B.C f Kernel.Prelude.Text,
@@ -22,8 +24,6 @@ data FRFSTicketT f = FRFSTicketT
     status :: B.C f Domain.Types.FRFSTicket.FRFSTicketStatus,
     ticketNumber :: B.C f Kernel.Prelude.Text,
     validTill :: B.C f Kernel.Prelude.UTCTime,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
