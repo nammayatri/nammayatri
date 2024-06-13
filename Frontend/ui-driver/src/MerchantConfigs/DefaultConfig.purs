@@ -93,6 +93,9 @@ config =
   , showBookingOption : true
   , checkRCStatusForBookingOption : true
   , enableMultipleRC : true
+  , backgroundGradient :["#f4F7FF"]
+  , settingsBtnColor: "#0066FF"
+  , background :"#f4F7FF"
   }
   , waitTimeConfig : {
     enableWaitTime : true,
@@ -127,6 +130,7 @@ config =
         { isVisible : true,
           showNew : false
         }
+      , activeColor : "#000000"
     }
   , mapConfig : 
       { animationDuration : 500
@@ -602,6 +606,8 @@ config =
   , homeScreen:
       { specialRideOtpView: false
       , showGenderBanner: true
+      , offlineBtnColor: "#53BB6F"
+      , statsBackground :"#f4F7FF"
       , statusPills: fromHomogeneous $
           { "Offline":
               { background: defaultColors.red

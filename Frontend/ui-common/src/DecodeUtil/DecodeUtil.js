@@ -38,14 +38,14 @@ export const stringifyJSON = function (obj) {
 }
 
 export const toastWithLog = function (str) {
-  if (window.__OS == "IOS") {
-    // window.JBridge.toast(str); //remove once toast is fixed in iOS.
+  const JOSFlags = window.JOS.getJOSflags()
+  if (JOSFlags.isCUGUser || JOSFlags.isDevQa.isDevQa) {
+    if (window.__OS == "IOS") {
+      // window.JBridge.toast(str); //remove once toast is fixed in iOS.
+    } else {
+      window.JBridge.toast(str);
+    }
   }
-  
-  else if (window.JBridge.toaster)
-    window.JBridge.toaster(str);
-  else
-    window.JBridge.toast(str);
   console.error(str);
 };
 

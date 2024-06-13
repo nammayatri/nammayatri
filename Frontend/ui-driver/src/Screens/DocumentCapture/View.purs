@@ -287,7 +287,7 @@ ssnDetails push state =
 rightWrongView :: (Action -> Effect Unit) -> Boolean -> ST.DocumentCaptureScreenState -> forall w . PrestoDOM (Effect Unit) w
 rightWrongView push isRight state = 
   let imageNmae = sampleImage isRight state
-      isVehicleInspectionForm = state.data.docType == ST.VEHICLE_INSURANCE
+      isVehicleInspectionForm = state.data.docType /= ST.PROFILE_PHOTO
   in
   linearLayout
   [ width MATCH_PARENT
@@ -308,7 +308,7 @@ rightWrongView push isRight state =
         , height $ V if isRight then 80 else 100
         , imageWithFallback $ fetchImage FF_ASSET $ imageNmae
         ]
-      , textView 
+      , textView $
         [ height WRAP_CONTENT
         , width $ V 120
         , text $ getString CLICK_TO_PREVIEW
@@ -319,8 +319,7 @@ rightWrongView push isRight state =
         , gravity CENTER
         , background Color.purple100
         , visibility $ boolToVisibility $ isRight && isVehicleInspectionForm
-        , stroke $ "1," <> Color.purple100
-        ]
+        ] <>  FontStyle.captions TypoGraphy
       ]
   , linearLayout
     [ width MATCH_PARENT

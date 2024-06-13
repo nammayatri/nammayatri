@@ -29,9 +29,12 @@ window.getMerchantConfig = function () {
     "apiLoaderLottie": "primary_button_loader.json",
     "primaryButtonConfig" : {
       "loaderUrl" : "https://assets.moving.tech/beckn/mobilityredbus/user/lottie/primary_button_loader.json"
-    },
+     },
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
+    "colors" : {
+          "green700" : "#378C66"
+      },
     "showCorporateAddress" : true,
     "imageUploadOptional" : false,
     "BONUS_EARNED" : "true",
@@ -178,7 +181,8 @@ window.getMerchantConfig = function () {
         "notifications": {
           "isVisible": false,
           "showNew": false
-        }
+        },
+        "activeColor" : "#7D4BFF"
     }
     , "purpleRideConfig" : {
       "showPurpleVideos" : false,
@@ -210,6 +214,9 @@ window.getMerchantConfig = function () {
   , "profile" : {
     "showBookingOption" : false
   , "enableMultipleRC" : false
+  , "backgroundGradient" : ["#E0D1FF" , "#F9F6FF"]
+  , "background" : "#F9F6FF"
+  , "settingsBtnColor": "#7D4BFF"
   }
   , "waitTimeConfig" : {
     "thresholdDist" : 0.03,
@@ -220,7 +227,9 @@ window.getMerchantConfig = function () {
   , "primaryTextColor" : "#FFFFFF"
   , "primaryBackground" : "#7435FC"
   , "rideCompletedCardConfig" : {
-      "lottieQRAnim" : true
+      "lottieQRAnim" : true,
+      "topCardGradient" : ["#F2E2FF","#FAF5FF"],
+      "bottomBackground" : "#FFFFFF"
   }
   , "showPaymentDetails": false
   , "secondaryBackground" : "#11032F"
@@ -251,9 +260,14 @@ window.getMerchantConfig = function () {
       "collectVehicleDetails" : true
   }
   , "homeScreen": {
+          "offlineBtnColor" : "#7D4BFF",
+          "statsBackground" : "#F9F6FF",
           "statusPills": {
               "Silent": {
                   "background": "#7435FC"
+              },
+              "Online": {
+                  "background": "#378C66"
               }
           }
       }
