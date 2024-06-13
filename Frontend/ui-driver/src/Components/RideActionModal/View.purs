@@ -406,7 +406,7 @@ pickUpDistance push config =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , visibility $ boolToVisibility $ config.distance /= 0
+    , visibility $ boolToVisibility $ ( config.distance /= 0 && not (config.currentStage == RideStarted) )
     ]
     [ separator true
     , linearLayout
