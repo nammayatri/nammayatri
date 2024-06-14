@@ -580,7 +580,8 @@ makeFareParam (DFP.ProgressiveDetails DFP.FParamsProgressiveDetails {..}) =
       { deadKmFare = roundToIntegral deadKmFare,
         extraKmFare = roundToIntegral <$> extraKmFare,
         deadKmFareWithCurrency = PriceAPIEntity deadKmFare currency,
-        extraKmFareWithCurrency = flip PriceAPIEntity currency <$> extraKmFare
+        extraKmFareWithCurrency = flip PriceAPIEntity currency <$> extraKmFare,
+        rideDurationFareWithCurrency = flip PriceAPIEntity currency <$> rideDurationFare
       }
 makeFareParam (DFP.SlabDetails DFP.FParamsSlabDetails {..}) =
   Common.SlabDetails

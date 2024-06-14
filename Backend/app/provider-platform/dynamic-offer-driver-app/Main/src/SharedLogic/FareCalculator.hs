@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE BangPatterns #-}
 
 module SharedLogic.FareCalculator
   ( mkFareParamsBreakups,
@@ -28,6 +29,7 @@ where
 
 import qualified BecknV2.OnDemand.Enums as Enums
 import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant hiding (NightShiftChargeAPIEntity (..), Variant (..), WaitingChargeAPIEntity (..))
+import qualified Data.List as List
 import qualified Data.List.NonEmpty as NE
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import Domain.Types.Common
@@ -38,7 +40,7 @@ import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.ServiceTierType
 import Domain.Types.TransporterConfig (AvgSpeedOfVechilePerKm)
 import EulerHS.Prelude hiding (id, map, sum)
-import Kernel.Prelude
+import Kernel.Prelude as KP
 import Kernel.Utils.Common hiding (isTimeWithinBounds, mkPrice)
 
 mkFareParamsBreakups :: (HighPrecMoney -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
@@ -227,7 +229,7 @@ calculateFareParameters params = do
   id <- generateGUID
   let localTimeZoneSeconds = fromMaybe 19800 params.timeDiffFromUtc
   let isNightShiftChargeIncluded = if params.nightShiftOverlapChecking then Just $ isNightAllowanceApplicable fp.nightShiftBounds params.rideTime rideEndTime localTimeZoneSeconds else isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime
-      (baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
+      (debugLogs, baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
       (partOfNightShiftCharge, notPartOfNightShiftCharge, _) = countFullFareOfParamsDetails fareParametersDetails
       fullRideCost {-without govtCharges, serviceCharge, platformFee, waitingCharge, notPartOfNightShiftCharge and nightShift-} =
         baseFare
@@ -280,6 +282,7 @@ calculateFareParameters params = do
             currency = params.currency,
             ..
           }
+  KP.forM_ debugLogs $ logTagInfo "FareCalculator"
   logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""
   pure fareParams
   where
@@ -310,7 +313,8 @@ calculateFareParameters params = do
           extraDistanceFare = HighPrecMoney $ toRational extraDist * perExtraKmRate.getHighPrecMoney
           fareByDist = HighPrecMoney $ toRational (((max 0 (allowanceHours - defaultWaitTimeAtDestinationInHrs)) * kmPerPlannedExtraHour.getKilometers) + estimatedDistanceInKm) * perKmRate.getHighPrecMoney
 
-      ( baseFare,
+      ( [],
+        baseFare,
         nightShiftCharge,
         Nothing,
         DFParams.InterCityDetails $
@@ -343,7 +347,8 @@ calculateFareParameters params = do
       let extraPlannedKm = max 0 (estimatedDistanceInKm - (estimatedDurationInHr * includedKmPerHr.getKilometers))
           extraPlannedKmFare = HighPrecMoney $ toRational extraPlannedKm * plannedPerKmRate.getHighPrecMoney
           baseFare_ = HighPrecMoney (toRational estimatedDurationInHr * perHourCharge.getHighPrecMoney) + extraPlannedKmFare
-      ( baseFare_,
+      ( [],
+        baseFare_,
         nightShiftCharge,
         waitingChargeInfo,
         DFParams.RentalDetails $
@@ -362,8 +367,11 @@ calculateFareParameters params = do
       let mbExtraDistance =
             (fromMaybe 0 params.actualDistance) - baseDistance
               & (\dist -> if dist > 0 then Just dist else Nothing)
+          estimatedRideDurationInMins = ceiling $ fromIntegral @_ @Double $ (maybe 0 (.getSeconds) params.estimatedRideDuration) `div` 60
           mbExtraKmFare = processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections <$> mbExtraDistance
-      ( baseFare,
+          (rideDurationFare, debugLogs) = processFPProgressiveDetailsPerRideDurationMinFare perMinRateSections estimatedRideDurationInMins
+      ( debugLogs,
+        baseFare,
         nightShiftCharge,
         waitingChargeInfo,
         DFParams.ProgressiveDetails $
@@ -372,6 +380,7 @@ calculateFareParameters params = do
               ..
             }
         )
+
     processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections (extraDistance :: Meters) = do
       let sortedPerExtraKmFareSections = NE.sortBy (comparing (.startDistance)) perExtraKmRateSections
       processFPProgressiveDetailsPerExtraKmFare' sortedPerExtraKmFareSections extraDistance
@@ -387,8 +396,28 @@ calculateFareParameters params = do
                 + processFPProgressiveDetailsPerExtraKmFare' (bSection :| leftSections) (extraDistanceLeft - extraDistanceWithinSection)
         getPerExtraMRate perExtraKmRate = perExtraKmRate / 1000
 
+    processFPProgressiveDetailsPerRideDurationMinFare perMinRateSections rideDurationInMins = do
+      let sortedPerMinFareSections = List.sortBy (comparing (.rideDurationInMin)) perMinRateSections
+          fpDebugLogStr = "Sorted per min rate sections: " +|| sortedPerMinFareSections ||+ " for ride duration (in mins): " +|| rideDurationInMins ||+ ""
+
+      let rideDurationFare = HighPrecMoney $ processFPPDPerMinFare rideDurationInMins sortedPerMinFareSections
+          rideFareDebugLogStr = "Ride duration fare: " +|| rideDurationFare ||+ ""
+
+      (Just rideDurationFare, [fpDebugLogStr, rideFareDebugLogStr])
+      where
+        {- Sections for e.g.: (0, 5], (5, 15], (15, 30] -}
+        processFPPDPerMinFare 0 _ = 0.0 :: Rational
+        processFPPDPerMinFare _ [] = 0.0 :: Rational
+        processFPPDPerMinFare !remRideDuration [aSection] = toRational remRideDuration * aSection.perMinRate.amount.getHighPrecMoney
+        processFPPDPerMinFare !remRideDuration (aSection : bSection : remSections) =
+          let sectionDuration = bSection.rideDurationInMin - aSection.rideDurationInMin
+              rideDurationWithinSection = min sectionDuration remRideDuration
+              remFare = processFPPDPerMinFare (remRideDuration - rideDurationWithinSection) (bSection : remSections)
+           in toRational rideDurationWithinSection * aSection.perMinRate.amount.getHighPrecMoney + remFare
+
     processFPSlabsDetailsSlab DFP.FPSlabsDetailsSlab {..} = do
-      ( baseFare,
+      ( [],
+        baseFare,
         nightShiftCharge,
         waitingChargeInfo,
         DFParams.SlabDetails
@@ -472,7 +501,7 @@ calculateFareParameters params = do
 
 countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (HighPrecMoney, HighPrecMoney, HighPrecMoney)
 countFullFareOfParamsDetails = \case
-  DFParams.ProgressiveDetails det -> (fromMaybe 0.0 det.extraKmFare, det.deadKmFare, 0.0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
+  DFParams.ProgressiveDetails det -> (fromMaybe 0.0 det.extraKmFare, det.deadKmFare + fromMaybe 0.0 det.rideDurationFare, 0.0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
   DFParams.SlabDetails det -> (0.0, 0.0, fromMaybe 0.0 det.platformFee + fromMaybe 0.0 det.sgst + fromMaybe 0.0 det.cgst)
   DFParams.RentalDetails det -> (0.0, det.distBasedFare + det.timeBasedFare + det.deadKmFare, 0.0)
   DFParams.InterCityDetails det -> (0.0, det.pickupCharge + det.distanceFare + det.timeFare + det.extraDistanceFare + det.extraTimeFare, 0.0)

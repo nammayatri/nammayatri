@@ -26,6 +26,7 @@ import Sequelize as Se
 import Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as BeamFPPDP
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QueriesFPPDP
+import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection as QueriesFPMin
 
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m (Maybe Domain.FullFarePolicyProgressiveDetails)
 findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPPD.farePolicyId $ Se.Eq farePolicyId']
@@ -43,14 +44,16 @@ delete farePolicyId = do
 instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyProgressiveDetails where
   fromTType' farePolicyProgressiveDetails = do
     fullFPPDP <- QueriesFPPDP.findAll' (KTI.Id farePolicyProgressiveDetails.farePolicyId)
+    fullMinFP <- QueriesFPMin.findAll (KTI.Id farePolicyProgressiveDetails.farePolicyId)
     fPPDP <- fromMaybeM (InternalError "FromLocation not found") (NE.nonEmpty fullFPPDP)
-    pure . Just $ fromTTypeFarePolicyProgressiveDetails farePolicyProgressiveDetails fPPDP
+    pure . Just $ fromTTypeFarePolicyProgressiveDetails farePolicyProgressiveDetails fullMinFP fPPDP
 
 fromTTypeFarePolicyProgressiveDetails ::
   BeamFPPD.FarePolicyProgressiveDetails ->
+  [Domain.FPProgressiveDetailsPerMinRateSection] ->
   NonEmpty BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection ->
   Domain.FullFarePolicyProgressiveDetails
-fromTTypeFarePolicyProgressiveDetails BeamFPPD.FarePolicyProgressiveDetailsT {..} fPPDP =
+fromTTypeFarePolicyProgressiveDetails BeamFPPD.FarePolicyProgressiveDetailsT {..} fullMinFP fPPDP =
   ( KTI.Id farePolicyId,
     Domain.FPProgressiveDetails
       { baseDistance = baseDistance,
@@ -59,6 +62,7 @@ fromTTypeFarePolicyProgressiveDetails BeamFPPD.FarePolicyProgressiveDetailsT {..
         deadKmFare = mkAmountWithDefault deadKmFareAmount deadKmFare,
         currency = fromMaybe INR currency,
         distanceUnit = fromMaybe Meter distanceUnit,
+        perMinRateSections = fullMinFP,
         waitingChargeInfo =
           ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
             Domain.WaitingChargeInfo

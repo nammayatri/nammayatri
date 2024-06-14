@@ -26,6 +26,7 @@ data CacPrefix
   | GoHomeConfig
   | FarePolicyDriverExtraFeeBounds
   | FarePolicyProgressiveDetailsPerExtraKmRateSection
+  | FullFarePolicyProgressiveDetailsPerMinRateSection
   | FarePolicyProgressiveDetails
   | FarePolicySlabsDetailsSlab
   | FarePolicyRentalDetails
@@ -43,6 +44,7 @@ instance Show CacPrefix where
   show GoHomeConfig = "goHomeConfig:"
   show FarePolicyDriverExtraFeeBounds = "farePolicyDriverExtraFeeBounds:"
   show FarePolicyProgressiveDetailsPerExtraKmRateSection = "farePolicyProgressiveDetailsPerExtraKmRateSection:"
+  show FullFarePolicyProgressiveDetailsPerMinRateSection = "fullFarePolicyProgressiveDetailsPerMinRateSection:"
   show FarePolicyProgressiveDetails = "farePolicyProgressiveDetails:"
   show FarePolicySlabsDetailsSlab = "farePolicySlabsDetailsSlab:"
   show FarePolicyRentalDetails = "farePolicyRentalDetails:"
@@ -59,6 +61,7 @@ getTableName DriverIntelligentPoolConfig = "driver_intelligent_pool_config"
 getTableName GoHomeConfig = "go_home_config"
 getTableName FarePolicyDriverExtraFeeBounds = "fare_policy_driver_extra_fee_bounds"
 getTableName FarePolicyProgressiveDetailsPerExtraKmRateSection = "fare_policy_progressive_details_per_extra_km_rate_section"
+getTableName FullFarePolicyProgressiveDetailsPerMinRateSection = "full_fare_policy_progressive_details_per_min_rate_section"
 getTableName FarePolicyProgressiveDetails = "fare_policy_progressive_details"
 getTableName FarePolicySlabsDetailsSlab = "fare_policy_slabs_details_slab"
 getTableName FarePolicyRentalDetails = "fare_policy_rental_details"
