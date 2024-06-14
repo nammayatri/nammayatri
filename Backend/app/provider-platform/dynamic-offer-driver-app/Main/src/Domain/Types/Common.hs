@@ -19,6 +19,7 @@
 module Domain.Types.Common where
 
 import Control.Lens.Operators hiding ((.=))
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as List
@@ -28,10 +29,11 @@ import qualified Data.Text.Encoding as DT
 import Domain.Types.ServiceTierType
 import EulerHS.Prelude hiding (length)
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Utils.GenericPretty
 import Servant
 import qualified Text.Show
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForJSON)
 
 data UsageSafety = Safe | Unsafe
 
@@ -264,3 +266,57 @@ isDynamicOfferTrip _ = False
 isTollApplicable :: ServiceTierType -> Bool
 isTollApplicable AUTO_RICKSHAW = False
 isTollApplicable _ = True
+
+data NightShiftCharge
+  = ProgressiveNightShiftCharge Float
+  | ConstantNightShiftCharge HighPrecMoney
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+data WaitingChargeInfo = WaitingChargeInfo
+  { freeWaitingTime :: Minutes,
+    waitingCharge :: WaitingCharge
+  }
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+data WaitingCharge
+  = PerMinuteWaitingCharge HighPrecMoney
+  | ConstantWaitingCharge HighPrecMoney
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+$(mkBeamInstancesForJSON ''NightShiftCharge)
+$(mkBeamInstancesForJSON ''WaitingCharge)
+
+mkWaitingChargeInfo :: Common.WaitingChargeInfoAPIEntity -> WaitingChargeInfo
+mkWaitingChargeInfo Common.WaitingChargeInfoAPIEntity {..} =
+  WaitingChargeInfo
+    { waitingCharge = mkWaitingCharge waitingCharge,
+      ..
+    }
+
+getWaitingChargeInfoFields :: Common.WaitingChargeInfoAPIEntity -> [Maybe PriceAPIEntity]
+getWaitingChargeInfoFields Common.WaitingChargeInfoAPIEntity {..} = getWaitingChargeFields waitingCharge
+
+mkWaitingCharge :: Common.WaitingChargeAPIEntity -> WaitingCharge
+mkWaitingCharge (Common.PerMinuteWaitingCharge charge) = PerMinuteWaitingCharge charge
+mkWaitingCharge (Common.ConstantWaitingCharge charge) = ConstantWaitingCharge $ toHighPrecMoney charge
+mkWaitingCharge (Common.PerMinuteWaitingChargeWithCurrency charge) = PerMinuteWaitingCharge charge.amount
+mkWaitingCharge (Common.ConstantWaitingChargeWithCurrency charge) = ConstantWaitingCharge $ toHighPrecMoney charge.amount
+
+getWaitingChargeFields :: Common.WaitingChargeAPIEntity -> [Maybe PriceAPIEntity]
+getWaitingChargeFields (Common.PerMinuteWaitingCharge _) = []
+getWaitingChargeFields (Common.ConstantWaitingCharge _) = []
+getWaitingChargeFields (Common.PerMinuteWaitingChargeWithCurrency charge) = [Just charge]
+getWaitingChargeFields (Common.ConstantWaitingChargeWithCurrency charge) = [Just charge]
+
+mkNightShiftCharge :: Common.NightShiftChargeAPIEntity -> NightShiftCharge
+mkNightShiftCharge (Common.ProgressiveNightShiftCharge charge) = ProgressiveNightShiftCharge charge
+mkNightShiftCharge (Common.ConstantNightShiftCharge charge) = ConstantNightShiftCharge $ toHighPrecMoney charge
+mkNightShiftCharge (Common.ConstantNightShiftChargeWithCurrency charge) = ConstantNightShiftCharge charge.amount
+
+getNightShiftChargeFields :: Common.NightShiftChargeAPIEntity -> [Maybe PriceAPIEntity]
+getNightShiftChargeFields (Common.ProgressiveNightShiftCharge _) = []
+getNightShiftChargeFields (Common.ConstantNightShiftCharge _) = []
+getNightShiftChargeFields (Common.ConstantNightShiftChargeWithCurrency charge) = [Just charge]

@@ -15,8 +15,7 @@ where
 
 import Data.Aeson as DA
 import Data.List.NonEmpty as NE
-import Domain.Types.Common
-import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
+import Domain.Types.Common as DTC
 import Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffer as Reexport
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -33,8 +32,8 @@ data FPRentalDetailsD (s :: UsageSafety) = FPRentalDetails
     deadKmFare :: HighPrecMoney,
     maxAdditionalKmsLimit :: Kilometers,
     totalAdditionalKmsLimit :: Kilometers,
-    nightShiftCharge :: Maybe Domain.NightShiftCharge,
-    waitingChargeInfo :: Maybe Domain.WaitingChargeInfo
+    nightShiftCharge :: Maybe DTC.NightShiftCharge,
+    waitingChargeInfo :: Maybe DTC.WaitingChargeInfo
   }
   deriving (Generic, Show)
 

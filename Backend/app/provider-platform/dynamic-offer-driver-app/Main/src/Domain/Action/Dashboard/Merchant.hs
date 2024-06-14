@@ -60,6 +60,7 @@ import Data.Time (DayOfWeek (..))
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.MerchantServiceConfig as DMSC
 import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
+import qualified Domain.Types.Common as Common
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverIntelligentPoolConfig as DDIPC
@@ -927,9 +928,9 @@ updateFarePolicy _ _ farePolicyId req = do
       req.baseFareWithCurrency,
       req.deadKmFareWithCurrency
     ]
-      <> maybe [] FarePolicy.getWaitingChargeFields req.waitingCharge
-      <> maybe [] FarePolicy.getWaitingChargeInfoFields req.waitingChargeInfo
-      <> maybe [] FarePolicy.getNightShiftChargeFields req.nightShiftCharge
+      <> maybe [] Common.getWaitingChargeFields req.waitingCharge
+      <> maybe [] Common.getWaitingChargeInfoFields req.waitingChargeInfo
+      <> maybe [] Common.getNightShiftChargeFields req.nightShiftCharge
   updatedFarePolicy <- mkUpdatedFarePolicy farePolicy
   CQFP.update' updatedFarePolicy
   CQFP.clearCacheById farePolicyId
@@ -965,8 +966,8 @@ updateFarePolicy _ _ farePolicyId req = do
         { baseFare = fromMaybe baseFare $ (req.baseFareWithCurrency <&> (.amount)) <|> (toHighPrecMoney <$> req.baseFare),
           baseDistance = fromMaybe baseDistance $ distanceToMeters <$> req.baseDistanceWithUnit <|> req.baseDistance,
           deadKmFare = fromMaybe deadKmFare $ (req.deadKmFareWithCurrency <&> (.amount)) <|> (toHighPrecMoney <$> req.deadKmFare),
-          waitingChargeInfo = FarePolicy.mkWaitingChargeInfo <$> req.waitingChargeInfo <|> waitingChargeInfo,
-          nightShiftCharge = FarePolicy.mkNightShiftCharge <$> req.nightShiftCharge <|> nightShiftCharge,
+          waitingChargeInfo = Common.mkWaitingChargeInfo <$> req.waitingChargeInfo <|> waitingChargeInfo,
+          nightShiftCharge = Common.mkNightShiftCharge <$> req.nightShiftCharge <|> nightShiftCharge,
           ..
         }
 
@@ -1242,6 +1243,9 @@ upsertFarePolicy merchantShortId opCity req = do
             startDistance :: Meters <- readCSVField idx row.extraKmRateStartDistance "Extra Km Rate Start Distance"
             perExtraKmRate :: HighPrecMoney <- readCSVField idx row.perExtraKmRate "Per Extra Km Rate"
             let perExtraKmRateSections = NE.fromList [FarePolicy.FPProgressiveDetailsPerExtraKmRateSection {startDistance, distanceUnit, perExtraKmRate}]
+            -- TODO: Add support for per min rate sections in csv file
+            -- NOTE: Don't update fare_policy for any city via csv if have per min rate sections
+            let perMinRateSections = []
             return $ FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {nightShiftCharge = Just nightCharges, ..}
           _ -> throwError $ InvalidRequest "Fare Policy Type not supported"
 
