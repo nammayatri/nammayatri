@@ -48,6 +48,7 @@ import Constants as CS
 import Data.Int as DI
 import Data.Array as DA
 import Debug
+import MerchantConfig.Utils(getMerchant)
 
 screen :: ST.RateCardScreenState -> Screen Action ST.RateCardScreenState ScreenOutput
 screen initialState =

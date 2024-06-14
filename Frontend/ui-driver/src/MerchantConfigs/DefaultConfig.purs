@@ -25,6 +25,9 @@ config =
       showSavedCommission : false,
       lottieQRAnim : false
     }
+   , rateCardScreen : {
+      showYoutubeVideo : true
+    }
   , subscriptionConfig : {
     enableBlocking : false,
     completePaymentPopup : false,

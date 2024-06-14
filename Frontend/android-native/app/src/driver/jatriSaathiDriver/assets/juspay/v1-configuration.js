@@ -319,6 +319,9 @@ window.getMerchantConfig = function () {
   , "rideCompletedCardConfig" : {
       "lottieQRAnim" : true
   }
+  ,   "rateCardScreen" : {
+    "showYoutubeVideo" : false
+  }
   , "waitTimeConfig" : {
     "enableWaitTime" : false
   }

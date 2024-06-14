@@ -157,6 +157,7 @@ acCheckForDriversView push state =
                 , height $ V 32
                 , imageWithFallback $ fetchImage FF_ASSET "ny_ic_youtube"
                 , rippleColor Color.rippleShade
+                , visibility $ MP.boolToVisibility $ state.data.config.rateCardScreen.showYoutubeVideo
                 , padding $ Padding 0 5 5 5
                 ]
             ]

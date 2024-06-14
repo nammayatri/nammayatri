@@ -42,7 +42,8 @@ type AppConfigDriver a =
     chooseCity :: ChooseCityScreenConfig,
     safetyRide :: SafetyRideConfig,
     clientName :: String,
-    disableCrossVariantRCOnboarding :: Boolean
+    disableCrossVariantRCOnboarding :: Boolean,
+    rateCardScreen :: RateCardScreenConfig
     | a
   } 
 
@@ -257,4 +258,7 @@ type ChooseCityScreenConfig = {
 type SafetyRideConfig = {
   startTime :: String
 , endTime :: String
+}
+type RateCardScreenConfig = {
+  showYoutubeVideo :: Boolean
 }

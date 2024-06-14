@@ -421,6 +421,8 @@ manageVehicleItem state vehicle push =
       "ny_ic_sedan"
     else if category == ST.BikeCategory then
       "ny_ic_bike_side"
+    else if category == ST.AmbulanceCategory then
+      "ny_ic_ambulance_side"
     else
       "ny_ic_silhouette"
 
