@@ -153,8 +153,9 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
       notifyErrorToSupport person org.id merchantOpCityId driverPhone org.name ((.failureReason) <$> images)
       throwError (ImageValidationExceedLimit personId.getId)
 
-  when (any ((== Just Documents.VALID) . (.verificationStatus)) images) $ throwError $ DocumentAlreadyValidated (show imageType)
-  when (any ((== Just Documents.MANUAL_VERIFICATION_REQUIRED) . (.verificationStatus)) images) $ throwError $ DocumentUnderManualReview (show imageType)
+  -- WorkflowTransactionId is used only in case of hyperverge request
+  when (isJust workflowTransactionId && any ((== Just Documents.VALID) . (.verificationStatus)) images) $ throwError $ DocumentAlreadyValidated (show imageType)
+  when (isJust workflowTransactionId && any ((== Just Documents.MANUAL_VERIFICATION_REQUIRED) . (.verificationStatus)) images) $ throwError $ DocumentUnderManualReview (show imageType)
 
   imagePath <- createPath personId.getId merchantId.getId imageType
   void $ fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
