@@ -111,6 +111,7 @@ data ShareTicketInfoResp = ShareTicketInfoResp
     returnType :: DFRFSQuote.FRFSQuoteType,
     fromStation :: FRFSTypes.FRFSStationAPI,
     toStation :: FRFSTypes.FRFSStationAPI,
+    bookingPrice :: HighPrecMoney,
     partnerOrgTransactionId :: Maybe (Id PartnerOrgTransaction)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -308,7 +309,13 @@ shareTicketInfo ticketBookingId = do
 
   void $ bppStatusSync fromStation'.merchantId pOrgId city ticketBooking
 
-  pure $ ShareTicketInfoResp {returnType = ticketBooking._type, partnerOrgTransactionId = ticketBooking.partnerOrgTransactionId, ..}
+  pure $
+    ShareTicketInfoResp
+      { returnType = ticketBooking._type,
+        bookingPrice = ticketBooking.price.amount,
+        partnerOrgTransactionId = ticketBooking.partnerOrgTransactionId,
+        ..
+      }
   where
     mkTicketAPI DFT.FRFSTicket {..} = FRFSTypes.FRFSTicketAPI {..}
 
