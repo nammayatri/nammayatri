@@ -2320,7 +2320,7 @@ public class MobilityCommonBridge extends HyperBridge {
         try{
             isAnimationNeeded = mapRouteConfigObject != null && mapRouteConfigObject.optBoolean("isAnimation", false);
             
-            if(!isAnimationNeeded ){
+            if(!isAnimationNeeded || Utils.getDeviceRAM() <= 3){
                 if(polylineAnimationTimer != null){
                     polylineAnimationTimer.cancel();
                 }
