@@ -237,7 +237,12 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
             logError $ "Error while decrypting document number: " <> (verificationReq.documentNumber & unEncrypted . encrypted) <> " with err: " <> show err
             return []
           Right registrationNo -> do
-            if isJust $ find (\doc -> doc.registrationNo == registrationNo) processedVehicleDocuments
+            rcNoEnc <- encrypt registrationNo
+            rc <- RCQuery.findByCertificateNumberHash (rcNoEnc & hash)
+            isUnlinked <- case rc of
+              Just rc_ -> DRAQuery.findUnlinkedRC personId rc_.id
+              Nothing -> pure []
+            if (isJust $ find (\doc -> doc.registrationNo == registrationNo) processedVehicleDocuments) || not (null isUnlinked)
               then return []
               else do
                 documents <-
