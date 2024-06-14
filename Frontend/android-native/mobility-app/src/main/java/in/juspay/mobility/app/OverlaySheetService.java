@@ -613,7 +613,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 if (progressDialog == null || apiLoader == null) {
                     if (mediaPlayer != null) {
                         mediaPlayer.start();
-                        increaseVolume();
+                        if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                        if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")){
+                            increaseVolume();
+                        }
                     }
                 }
                 handler.post(() -> {
