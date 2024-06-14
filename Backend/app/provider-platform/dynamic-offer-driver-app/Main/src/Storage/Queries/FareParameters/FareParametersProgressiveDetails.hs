@@ -43,6 +43,7 @@ instance FromTType' BeamFPPD.FareParametersProgressiveDetails Domain.FullFarePar
           Domain.FParamsProgressiveDetails
             { deadKmFare = mkAmountWithDefault deadKmFareAmount deadKmFare,
               extraKmFare = mkAmountWithDefault extraKmFareAmount <$> extraKmFare,
+              rideDurationFare = rideDurationFare,
               currency = fromMaybe INR currency
             }
         )
@@ -55,5 +56,6 @@ instance ToTType' FareParametersProgressiveDetails Domain.FullFareParametersProg
         extraKmFare = roundToIntegral <$> Domain.extraKmFare fParamsProgressiveDetails,
         deadKmFareAmount = Just $ (Domain.deadKmFare :: Domain.FParamsProgressiveDetails -> HighPrecMoney) fParamsProgressiveDetails,
         extraKmFareAmount = Domain.extraKmFare fParamsProgressiveDetails,
+        rideDurationFare = Domain.rideDurationFare fParamsProgressiveDetails,
         currency = Just fParamsProgressiveDetails.currency
       }

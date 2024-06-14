@@ -48,6 +48,7 @@ data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | Slab
 data FParamsProgressiveDetails = FParamsProgressiveDetails
   { deadKmFare :: HighPrecMoney,
     extraKmFare :: Maybe HighPrecMoney,
+    rideDurationFare :: Maybe HighPrecMoney,
     currency :: Currency
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)

@@ -16,6 +16,9 @@
 module Domain.Types.FarePolicy.FarePolicyProgressiveDetails
   ( module Reexport,
     module Domain.Types.FarePolicy.FarePolicyProgressiveDetails,
+    WaitingChargeInfo (..),
+    NightShiftCharge (..),
+    WaitingCharge (..),
   )
 where
 
@@ -24,7 +27,7 @@ import Data.Aeson.Types
 import Data.List.NonEmpty
 import Domain.Types.Common
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as Reexport
-import Kernel.Beam.Lib.UtilsTH
+import Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection as Reexport
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 
@@ -33,31 +36,13 @@ data FPProgressiveDetailsD (s :: UsageSafety) = FPProgressiveDetails
     baseDistance :: Meters,
     distanceUnit :: DistanceUnit,
     perExtraKmRateSections :: NonEmpty (FPProgressiveDetailsPerExtraKmRateSectionD s),
+    perMinRateSections :: [FPProgressiveDetailsPerMinRateSection],
     deadKmFare :: HighPrecMoney,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
     nightShiftCharge :: Maybe NightShiftCharge,
     currency :: Currency
   }
   deriving (Generic, Show)
-
-data NightShiftCharge
-  = ProgressiveNightShiftCharge Float
-  | ConstantNightShiftCharge HighPrecMoney
-  deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
-
-data WaitingChargeInfo = WaitingChargeInfo
-  { freeWaitingTime :: Minutes,
-    waitingCharge :: WaitingCharge
-  }
-  deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
-
-data WaitingCharge
-  = PerMinuteWaitingCharge HighPrecMoney
-  | ConstantWaitingCharge HighPrecMoney
-  deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
 
 type FPProgressiveDetails = FPProgressiveDetailsD 'Safe
 
@@ -71,41 +56,19 @@ instance FromJSON (FPProgressiveDetailsD 'Safe)
 -- FIXME remove
 instance ToJSON (FPProgressiveDetailsD 'Safe)
 
-$(mkBeamInstancesForJSON ''NightShiftCharge)
-$(mkBeamInstancesForJSON ''WaitingCharge)
-
 -----------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------APIEntity--------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------
 
-mkWaitingChargeInfo :: Common.WaitingChargeInfoAPIEntity -> WaitingChargeInfo
-mkWaitingChargeInfo Common.WaitingChargeInfoAPIEntity {..} =
-  WaitingChargeInfo
-    { waitingCharge = mkWaitingCharge waitingCharge,
-      ..
-    }
-
-getWaitingChargeInfoFields :: Common.WaitingChargeInfoAPIEntity -> [Maybe PriceAPIEntity]
-getWaitingChargeInfoFields Common.WaitingChargeInfoAPIEntity {..} = getWaitingChargeFields waitingCharge
-
-mkWaitingCharge :: Common.WaitingChargeAPIEntity -> WaitingCharge
-mkWaitingCharge (Common.PerMinuteWaitingCharge charge) = PerMinuteWaitingCharge charge
-mkWaitingCharge (Common.ConstantWaitingCharge charge) = ConstantWaitingCharge $ toHighPrecMoney charge
-mkWaitingCharge (Common.PerMinuteWaitingChargeWithCurrency charge) = PerMinuteWaitingCharge charge.amount
-mkWaitingCharge (Common.ConstantWaitingChargeWithCurrency charge) = ConstantWaitingCharge $ toHighPrecMoney charge.amount
-
-getWaitingChargeFields :: Common.WaitingChargeAPIEntity -> [Maybe PriceAPIEntity]
-getWaitingChargeFields (Common.PerMinuteWaitingCharge _) = []
-getWaitingChargeFields (Common.ConstantWaitingCharge _) = []
-getWaitingChargeFields (Common.PerMinuteWaitingChargeWithCurrency charge) = [Just charge]
-getWaitingChargeFields (Common.ConstantWaitingChargeWithCurrency charge) = [Just charge]
-
-mkNightShiftCharge :: Common.NightShiftChargeAPIEntity -> NightShiftCharge
-mkNightShiftCharge (Common.ProgressiveNightShiftCharge charge) = ProgressiveNightShiftCharge charge
-mkNightShiftCharge (Common.ConstantNightShiftCharge charge) = ConstantNightShiftCharge $ toHighPrecMoney charge
-mkNightShiftCharge (Common.ConstantNightShiftChargeWithCurrency charge) = ConstantNightShiftCharge charge.amount
-
-getNightShiftChargeFields :: Common.NightShiftChargeAPIEntity -> [Maybe PriceAPIEntity]
-getNightShiftChargeFields (Common.ProgressiveNightShiftCharge _) = []
-getNightShiftChargeFields (Common.ConstantNightShiftCharge _) = []
-getNightShiftChargeFields (Common.ConstantNightShiftChargeWithCurrency charge) = [Just charge]
+data FPProgressiveDetailsAPIEntity = FPProgressiveDetailsAPIEntity
+  { baseFare :: Money,
+    baseFareWithCurrency :: PriceAPIEntity,
+    baseDistance :: Meters,
+    perExtraKmRateSections :: NonEmpty FPProgressiveDetailsPerExtraKmRateSectionAPIEntity,
+    perMinRateSections :: [FPProgressiveDetailsPerMinRateSectionAPIEntity],
+    deadKmFare :: Money,
+    deadKmFareWithCurrency :: PriceAPIEntity,
+    waitingChargeInfo :: Maybe Common.WaitingChargeInfoAPIEntity,
+    nightShiftCharge :: Maybe Common.NightShiftChargeAPIEntity
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

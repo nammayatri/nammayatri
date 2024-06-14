@@ -27,6 +27,7 @@ data FareParametersProgressiveDetailsT f = FareParametersProgressiveDetailsT
     extraKmFare :: B.C f (Maybe Money),
     deadKmFareAmount :: B.C f (Maybe HighPrecMoney),
     extraKmFareAmount :: B.C f (Maybe HighPrecMoney),
+    rideDurationFare :: B.C f (Maybe HighPrecMoney),
     currency :: B.C f (Maybe Currency)
   }
   deriving (Generic, B.Beamable)

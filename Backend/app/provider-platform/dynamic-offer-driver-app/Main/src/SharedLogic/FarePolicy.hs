@@ -11,6 +11,7 @@ module SharedLogic.FarePolicy where
 
 import BecknV2.OnDemand.Tags as Tags
 import Data.Coerce (coerce)
+import qualified Data.List as List
 import qualified Data.List.NonEmpty as NE
 import Data.Ord (comparing)
 import Data.Text as T hiding (find)
@@ -259,6 +260,10 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
 
           perExtraKmStepFareItems = mkPerExtraKmStepFareItem [] (toList perExtraKmFareSections) det.baseDistance.getMeters
 
+          perMinRateSections = List.sortBy (comparing (.rideDurationInMin)) det.perMinRateSections
+
+          perMinStepFareItems = mkPerMinStepFareItem [] perMinRateSections
+
           baseDistanceCaption = show Tags.BASE_DISTANCE
           baseDistanceBreakup = mkBreakupItem baseDistanceCaption (mkValue $ show det.baseDistance)
 
@@ -271,6 +276,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
       [baseDistanceBreakup, baseFareBreakup, pickupChargeBreakup]
         <> perExtraKmFareItems
         <> perExtraKmStepFareItems
+        <> perMinStepFareItems
         <> (waitingChargeBreakups det.waitingChargeInfo)
         <> (oldNightShiftChargeBreakups det.nightShiftCharge)
         <> (newNightShiftChargeBreakups det.nightShiftCharge)
@@ -287,6 +293,19 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
               perExtraKmStepFareCaption = show $ Tags.EXTRA_PER_KM_STEP_FARE startDistance (Just endDistance)
               perExtraKmStepFareItem = mkBreakupItem perExtraKmStepFareCaption (mkValue $ highPrecMoneyToText s1.perExtraKmRate)
           mkPerExtraKmStepFareItem (perExtraKmStepFareItems <> [perExtraKmStepFareItem]) (s2 : ss) baseDistance
+
+        mkPerMinStepFareItem perMinStepFareItems [] = perMinStepFareItems
+        mkPerMinStepFareItem perMinStepFareItems [fp1] = do
+          let sectionStartDuration = fp1.rideDurationInMin
+              perMinStepFareCaption = show $ Tags.PER_MIN_STEP_FARE sectionStartDuration Nothing
+              perMinStepFareItem = mkBreakupItem perMinStepFareCaption (mkValue $ highPrecMoneyToText fp1.perMinRate.amount)
+          perMinStepFareItems <> [perMinStepFareItem]
+        mkPerMinStepFareItem perMinStepFareItems (fp1 : fp2 : fps) = do
+          let sectionStartDuration = fp1.rideDurationInMin
+              sectionEndDuration = fp2.rideDurationInMin
+              perMinStepFareCaption = show $ Tags.PER_MIN_STEP_FARE sectionStartDuration (Just sectionEndDuration)
+              perMinStepFareItem = mkBreakupItem perMinStepFareCaption (mkValue $ highPrecMoneyToText fp1.perMinRate.amount)
+          mkPerMinStepFareItem (perMinStepFareItems <> [perMinStepFareItem]) (fp2 : fps)
 
     mkAdditionalSlabBreakups det = do
       let baseDistanceCaption = show Tags.BASE_DISTANCE

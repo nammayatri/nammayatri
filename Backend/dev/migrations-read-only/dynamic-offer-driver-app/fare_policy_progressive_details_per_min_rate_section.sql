@@ -1,0 +1,9 @@
+CREATE TABLE atlas_driver_offer_bpp.fare_policy_progressive_details_per_min_rate_section ();
+
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details_per_min_rate_section ADD COLUMN currency character varying(255) NOT NULL default 'INR';
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details_per_min_rate_section ADD COLUMN fare_policy_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details_per_min_rate_section ADD COLUMN per_min_rate double precision NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details_per_min_rate_section ADD COLUMN ride_duration_in_min integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details_per_min_rate_section ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details_per_min_rate_section ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details_per_min_rate_section ADD PRIMARY KEY ( fare_policy_id, ride_duration_in_min);

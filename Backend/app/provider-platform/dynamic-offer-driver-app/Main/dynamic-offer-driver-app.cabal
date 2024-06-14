@@ -260,6 +260,7 @@ library
       Domain.Types.FarePolicy.FarePolicyInterCityDetails
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection
       Domain.Types.FarePolicy.FarePolicyRentalDetails
       Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffer
       Domain.Types.FarePolicy.FarePolicySlabsDetails
@@ -374,6 +375,7 @@ library
       Storage.Cac.FarePolicy.FarePolicyInterCityDetails
       Storage.Cac.FarePolicy.FarePolicyProgressiveDetails
       Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection
       Storage.Cac.FarePolicy.FarePolicyRentalDetails
       Storage.Cac.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
       Storage.Cac.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
@@ -467,6 +469,7 @@ library
       Storage.Queries.FarePolicy.FarePolicyInterCityDetails
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection
       Storage.Queries.FarePolicy.FarePolicyRentalDetails
       Storage.Queries.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
@@ -629,6 +632,7 @@ library
       Domain.Types.FleetOwnerDocumentVerificationConfig
       Domain.Types.FleetOwnerInformation
       Domain.Types.FleetRCAssociation
+      Domain.Types.FullFarePolicyProgressiveDetailsPerMinRateSection
       Domain.Types.GoHomeConfig
       Domain.Types.IdfyVerification
       Domain.Types.Image
@@ -740,6 +744,7 @@ library
       Storage.Beam.FleetOwnerDocumentVerificationConfig
       Storage.Beam.FleetOwnerInformation
       Storage.Beam.FleetRCAssociation
+      Storage.Beam.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Beam.GoHomeConfig
       Storage.Beam.IdfyVerification
       Storage.Beam.Image
@@ -852,6 +857,7 @@ library
       Storage.Queries.FleetOwnerDocumentVerificationConfig
       Storage.Queries.FleetOwnerInformation
       Storage.Queries.FleetRCAssociation
+      Storage.Queries.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Queries.GoHomeConfig
       Storage.Queries.IdfyVerification
       Storage.Queries.Image
