@@ -47,6 +47,7 @@ type InputView =
   { padding :: Padding
   , height :: Length
   , gravity :: Gravity
+  , placeHolderColor :: String
   , canClearText :: Boolean 
   , isEditable :: Boolean  
   , isClickable :: Boolean

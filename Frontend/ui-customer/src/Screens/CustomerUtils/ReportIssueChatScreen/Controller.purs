@@ -54,6 +54,8 @@ import Timers
 import Effect.Uncurried 
 import Screens.ReportIssueChatScreen.ScreenData (ReportIssueChatScreenState, ReportIssueChatScreenEntryPoint(..))
 import Components.ServiceTierCard.View as ServiceTierCard
+import Helpers.Utils
+import Common.Types.App 
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -362,7 +364,7 @@ eval (RecordAudioModelAction RecordAudioModel.OnClickStop) state =
 
 eval (RecordAudioModelAction RecordAudioModel.OnClickDone) state =
   continueWithCmd state { data { recordAudioState { isUploading = true } } } [do
-    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "audio_upload_animation.json", lottieId = (getNewIDWithTag "audio_recording_done"), scaleType = "FIT_CENTER", speed = 1.0 }
+    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = (getGlobalCommonAssetsBaseUrl FunctionCall) <> "lotties/audio_upload_animation.json", lottieId = (getNewIDWithTag "audio_recording_done"), scaleType = "FIT_CENTER", speed = 1.0 }
     void $ pure $ clearTimerWithId state.props.timerId
     case state.data.recordAudioState.recordedFile of
       Just url -> do

@@ -31,10 +31,11 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App
 import Data.String (replaceAll, Pattern(..), Replacement(..))
 import Storage (getValueToLocalStore, KeyStore(..))
+import JBridge 
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
-  let enableFlexBox = not $ (os == "IOS" || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (getFlexBoxCompatibleVersion "")))
+  let enableFlexBox = isClassAvailable "com/google/android/flexbox/FlexboxLayout"
   in
   linearLayout
     [ height WRAP_CONTENT

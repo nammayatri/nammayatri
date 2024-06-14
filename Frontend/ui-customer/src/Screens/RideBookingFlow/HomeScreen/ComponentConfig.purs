@@ -1402,11 +1402,11 @@ confirmAndBookButtonConfig state =
   PrimaryButton.config
     { textConfig
       { text = getBtnTextWithTimer state
-      , color = Color.yellow900
+      , color = state.data.config.primaryTextColor
       , accessibilityHint = "Confirm And Book Button"
       }
     , id = "ConfirmAndBookButton"
-    , background = Color.black900
+    , background = state.data.config.primaryBackground
     , margin = MarginTop 16
     , enableRipple = true
     , rippleColor = Color.rippleShade
@@ -1725,6 +1725,8 @@ chooseVehicleConfig state = let
     , showEditButton = true
     , editBtnText = getString CHANGE
     , validTill = selectedEstimates.validTill
+    , selectedBG = spy "Selected BG at Home" state.data.config.estimateAndQuoteConfig.selectedBG
+    , selectedStroke = spy "Selected Stroke at home" state.data.config.estimateAndQuoteConfig.selectedStroke
     }
   in chooseVehicleConfig'
 

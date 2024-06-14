@@ -56,6 +56,7 @@ import Mobility.Prelude (boolToVisibility, capitalize)
 import PrestoDOM (BottomSheetState(..), Accessiblity(..), Gradient(..), Shadow(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, alignParentLeft, alignParentRight, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, shimmerFrameLayout, rippleColor, clipChildren, shadow, clipToPadding, rotation, horizontalScrollView, disableKeyboardAvoidance, scrollBarX, layoutGravity, nestedScrollView, lottieAnimationView)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, negate, (>), (<), (-), (*), bind, pure, discard, not, (&&), (||), (/=),(+), (+), void)
 import Presto.Core.Types.Language.Flow (doAff)
+import PrestoDOM 
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
@@ -73,6 +74,10 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, chatSuggestion)
 import JBridge(fromMetersToKm, getLayoutBounds, differenceBetweenTwoUTC)
 import Data.Int(toNumber, fromString)
 import MerchantConfig.Types (DriverInfoConfig)
+import Mobility.Prelude
+import Data.Maybe
+import Data.String as STR
+import Engineering.Helpers.Commons
 import Mobility.Prelude (boolToVisibility, capitalize)
 import Locale.Utils
 import Components.DriverInfoCard.Common.View
@@ -187,7 +192,7 @@ driverInfoViewSpecialZone :: forall w. (Action -> Effect Unit) -> DriverInfoCard
 driverInfoViewSpecialZone push state =
   let 
     currentCityConfig = HU.getCityConfig  state.data.config.cityConfig (show state.props.merchantCity)
-    brandingBannerViewVis = if currentCityConfig.iopConfig.enable then INVISIBLE else GONE
+    brandingBannerViewVis = if currentCityConfig.iopConfig.enable || state.data.config.driverInfoConfig.footerVisibility then INVISIBLE else GONE
   in 
   linearLayout
   [ width  MATCH_PARENT
@@ -649,7 +654,7 @@ driverInfoView push state =
   let tagConfig = specialZoneTagConfig state.props.zoneType.priorityTag
       rideStarted = not $ rideNotStarted state
       currentCityConfig = HU.getCityConfig  state.data.config.cityConfig (show state.props.merchantCity)
-      brandingBannerViewVis = if currentCityConfig.iopConfig.enable then INVISIBLE else GONE
+      brandingBannerViewVis = if currentCityConfig.iopConfig.enable  || state.data.config.driverInfoConfig.footerVisibility then INVISIBLE else GONE
   in
   linearLayout
   [ width MATCH_PARENT
@@ -825,8 +830,9 @@ distanceView push state = let
 
 brandingBannerView :: forall w. DriverInfoConfig -> Visibility -> Maybe String -> Boolean -> String -> PrestoDOM (Effect Unit) w
 brandingBannerView driverInfoConfig isVisible uid onUsRide providerName = 
-  let providerRideText = getString if onUsRide then GUARANTEED_RIDE else THIS_RIDE_FULFILLED_BY providerName
-      style = if onUsRide then FontStyle.captions else FontStyle.body3
+  let 
+    providerRideText = getString if onUsRide then GUARANTEED_RIDE else THIS_RIDE_FULFILLED_BY providerName
+    style = if onUsRide then FontStyle.captions else FontStyle.body3
   in 
     linearLayout
     [ width MATCH_PARENT
@@ -843,18 +849,26 @@ brandingBannerView driverInfoConfig isVisible uid onUsRide providerName =
        , background driverInfoConfig.footerBackgroundColor
        , padding $ Padding 12 12 12 (12+safeMarginBottom)
        ] <> if isJust uid then [id $ getNewIDWithTag $ fromMaybe "" uid] else [])
-       [ imageView
+       [
+        textView $ 
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , margin $ MarginRight 6
+          , text $ getString POWERED_BY 
+          , visibility $ boolToVisibility driverInfoConfig.footerVisibility
+          ] <> FontStyle.captions TypoGraphy
+        , imageView
           [ imageWithFallback $ driverInfoConfig.footerImageUrl
           , height $ V 20
           , width $ V 62
-          , margin $ MarginHorizontal 10 10
-          , visibility $ boolToVisibility $ onUsRide
+          , visibility $ boolToVisibility $ onUsRide || driverInfoConfig.footerVisibility
           ]
         , textView $ 
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , margin $ MarginLeft 5
+          , margin $ MarginLeft 6
           , text providerRideText
+          , visibility $ boolToVisibility $ not driverInfoConfig.footerVisibility
           ] <> style TypoGraphy
       ]
     ]
@@ -883,9 +897,8 @@ cancelRideLayout push state =
     ][ textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , color Color.black700
+      , color state.data.config.driverInfoConfig.cancelTextColor
       , textFromHtml $ "<u>" <> (getString CANCEL_RIDE) <> "</u>"
-      , alpha $ if (getMerchant FunctionCall) == MOBILITY_PM then 0.54 else 1.0
       ] <> FontStyle.body1 TypoGraphy
     ]
   ]

@@ -31,7 +31,7 @@ import Data.Maybe (fromMaybe, Maybe(..))
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, (<<<), ($), (==), (<>), (/=),(&&))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, orientation, padding, text, textSize, textView, width,visibility, id, accessibilityHint, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, orientation, padding, text, textSize, textView, width,visibility, id, accessibilityHint, accessibility, onBackPressed, onClick)
 import Screens.OnBoardingFlow.PermissionScreen.ComponentConfig (errorModalConfig, primaryButtonConfig, getLocationBlockerPopUpConfig)
 import Screens.PermissionScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -63,6 +63,7 @@ view push state =
   , width MATCH_PARENT
   , clickable true
   , visibility if (EHC.os == "IOS" && state.stage == ST.LOCATION_DISABLED) then GONE else VISIBLE
+  , onBackPressed push (const $ BackPressed)
   ][ linearLayout
      [ height MATCH_PARENT
      , width MATCH_PARENT
@@ -79,12 +80,14 @@ locationAccessPermissionView :: forall w. (Action -> Effect Unit) -> ST.Permissi
 locationAccessPermissionView push state = 
   let appName = fromMaybe state.appConfig.appData.name $ runFn3 DU.getAnyFromWindow "appName" Nothing Just
   in linearLayout
-    [ height MATCH_PARENT
+    ([ height MATCH_PARENT
     , width MATCH_PARENT
     , gravity CENTER
     , padding (Padding 16 16 16 (if EHC.safeMarginBottom == 0 then 24 else 0))
     , background Color.blackLessTrans
-    ][ linearLayout
+    ] <> if state.appConfig.permissionScreen.showGoback 
+    then [onClick push $ const $ BackPressed]
+    else [])[ linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
@@ -93,7 +96,7 @@ locationAccessPermissionView push state =
         , margin $ MarginHorizontal 20 20
         , cornerRadius 8.0
         , background Color.white900
-        ][  imageView
+        ]$[  imageView
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_location_permission_logo"
             , height $ V 235
             , width MATCH_PARENT
@@ -118,7 +121,18 @@ locationAccessPermissionView push state =
             , margin $ MarginBottom 15
             ]
           , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
-        ]
+        ]<> if state.appConfig.permissionScreen.showGoback then
+              [ textView $
+                [ text (getString GO_BACK_)
+                , width MATCH_PARENT
+                , height WRAP_CONTENT 
+                , color Color.black800
+                , margin (Margin 0 20 0 0)
+                , onClick push (const $ BackPressed)
+                , gravity CENTER
+                ] <> FontStyle.subHeading1 TypoGraphy
+              ]
+            else []
     ]
 
 buttonView :: forall w. (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w 
@@ -130,7 +144,7 @@ buttonView push state  =
   , alignParentBottom "true,-1"
   ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
   -- ,  textView $
-  --     [ text (getString DENY_ACCESS)
+  --     [ text (getString GO_BACK_)
   --     , width MATCH_PARENT
   --     , height WRAP_CONTENT 
   --     , color Color.black800

@@ -4,10 +4,340 @@ if (typeof __VERSION__ !== "undefined") {
   version = __VERSION__
 }
 
+const bangaloreConfig = {
+  "cityName": "Bangalore",
+  "cityCode": "std:080",
+  "iopConfig": {
+    "enable": false,
+    "autoSelectTime": 8
+  },
+  "estimateAndQuoteConfig": {
+    "showInfoIcon": true
+  },
+  "geoCodeConfig": {
+    "radius": 170000,
+    "strictBounds": true
+  },
+  "enableCabs": false,
+  "featureConfig": {
+    "enableCabBanner": true,
+    "showExploreCity": true
+  },
+  "referral": {
+    "domain": "https://nammayatri.in",
+    "customerAppId": "in.juspay.nammayatri"
+  },
+  "appLogo": "",
+  "dashboardUrl": "",
+  "appLogoLight": "",
+  "enableAcViews": true,
+  "enableRentals": false,
+  "enableIntercity": false,
+  "waitingChargeConfig": {
+    "auto": {
+      "freeMinutes": 3.0,
+      "perMinCharges": 1.5
+    },
+    "cabs": {
+      "freeMinutes": 5.0,
+      "perMinCharges": 1.0
+    }
+  }
+}
+
+
+const mySoreConfig = {
+  "cityName": "Mysore",
+  "cityCode": "std:0821",
+  "iopConfig": {
+    "enable": false,
+    "autoSelectTime": 8
+  },
+  "estimateAndQuoteConfig": {
+    "showInfoIcon": true
+  },
+  "geoCodeConfig": {
+    "radius": 170000,
+    "strictBounds": true
+  },
+  "enableCabs": false,
+  "featureConfig": {
+    "enableCabBanner": true,
+    "showExploreCity": false
+  },
+  "referral": {
+    "domain": "https://nammayatri.in",
+    "customerAppId": "in.juspay.nammayatri"
+  },
+  "appLogo": "",
+  "dashboardUrl": "",
+  "appLogoLight": "",
+  "enableAcViews": true,
+  "enableRentals": false,
+  "enableIntercity": false,
+  "waitingChargeConfig": {
+    "auto": {
+      "freeMinutes": 3.0,
+      "perMinCharges": 1.5
+    },
+    "cabs": {
+      "freeMinutes": 5.0,
+      "perMinCharges": 1.0
+    }
+  }
+}
+
+const tumakuruConfig = {
+  "cityName": "Tumakuru",
+  "cityCode": "std:0816",
+  "iopConfig": {
+    "enable": false,
+    "autoSelectTime": 8
+  },
+  "estimateAndQuoteConfig": {
+    "showInfoIcon": true
+  },
+  "geoCodeConfig": {
+    "radius": 170000,
+    "strictBounds": true
+  },
+  "enableCabs": false,
+  "featureConfig": {
+    "enableCabBanner": true,
+    "showExploreCity": false
+  },
+  "referral": {
+    "domain": "https://nammayatri.in",
+    "customerAppId": "in.juspay.nammayatri"
+  },
+  "appLogo": "",
+  "dashboardUrl": "",
+  "appLogoLight": "",
+  "enableAcViews": true,
+  "enableRentals": false,
+  "enableIntercity": false,
+  "waitingChargeConfig": {
+    "auto": {
+      "freeMinutes": 3.0,
+      "perMinCharges": 1.5
+    },
+    "cabs": {
+      "freeMinutes": 5.0,
+      "perMinCharges": 1.0
+    }
+  }
+}
+
+
+const chennaiConfig = {
+  "cityName": "Chennai",
+  "cityCode": "std:044",
+  "iopConfig": {
+    "enable": false,
+    "autoSelectTime": 8
+  },
+  "estimateAndQuoteConfig": {
+    "showInfoIcon": false
+  },
+  "geoCodeConfig": {
+    "radius": 170000,
+    "strictBounds": true
+  },
+  "enableCabs": true,
+  "featureConfig": {
+    "enableCabBanner": false,
+    "showExploreCity": false
+  },
+  "referral": {
+    "domain": "https://nammayatri.in",
+    "customerAppId": "in.juspay.nammayatri"
+  },
+  "appLogo": "",
+  "dashboardUrl": "",
+  "appLogoLight": "",
+  "enableAcViews": false,
+  "enableRentals": false,
+  "enableIntercity": false,
+  "waitingChargeConfig": {
+    "auto": {
+      "freeMinutes": 3.0,
+      "perMinCharges": 1.0
+    },
+    "cabs": {
+      "freeMinutes": 5.0,
+      "perMinCharges": 1.0
+    }
+  }
+}
+
+const hyderabadConfig = {
+  "cityName": "Hyderabad",
+  "cityCode": "std:040",
+  "iopConfig": {
+    "enable": false,
+    "autoSelectTime": 8
+  },
+  "estimateAndQuoteConfig": {
+    "showInfoIcon": true
+  },
+  "geoCodeConfig": {
+    "radius": 100000,
+    "strictBounds": false
+  },
+  "enableCabs": false,
+  "featureConfig": {
+    "enableCabBanner": false,
+    "showExploreCity": false
+  },
+  "referral": {
+    "domain": "https://www.manayatri.in",
+    "customerAppId": "in.mobility.manayatri"
+  },
+  "appLogo": "ic_namma_yatri_logo,https://assets.moving.tech/beckn/nammayatri/user/images/ic_namma_yatri_logo.png",
+  "dashboardUrl": "https://www.manayatri.in/open?source=in-app",
+  "appLogoLight": "ny_ic_logo_light_my,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_logo_light_my.png",
+  "enableAcViews": false,
+  "enableRentals": false,
+  "enableIntercity": false,
+  "waitingChargeConfig": {
+    "auto": {
+      "freeMinutes": 3.0,
+      "perMinCharges": 2.0
+    },
+    "cabs": {
+      "freeMinutes": 5.0,
+      "perMinCharges": 1.0
+    }
+  }
+}
+
+const kolkataConfig = {
+  "cityName": "Kolkata",
+  "cityCode": "std:033",
+  "iopConfig": {
+    "enable": false,
+    "autoSelectTime": 8
+  },
+  "estimateAndQuoteConfig": {
+    "showInfoIcon": true
+  },
+  "geoCodeConfig": {
+    "radius": 700000,
+    "strictBounds": true
+  },
+  "enableCabs": true,
+  "featureConfig": {
+    "enableCabBanner": true,
+    "showExploreCity": false
+  },
+  "referral": {
+    "domain": "https://www.yatrisathi.in",
+    "customerAppId": "in.juspay.jatrisaathi"
+  },
+  "appLogo": "",
+  "dashboardUrl": "",
+  "appLogoLight": "",
+  "enableAcViews": false,
+  "enableRentals": false,
+  "enableIntercity": true,
+  "waitingChargeConfig": {
+    "auto": {
+      "freeMinutes": 3.0,
+      "perMinCharges": 1.5
+    },
+    "cabs": {
+      "freeMinutes": 5.0,
+      "perMinCharges": 1.0
+    }
+  },
+}
+
+const delhiConfig =  {
+  "cityName": "Delhi",
+  "cityCode": "std:011",
+  "iopConfig": {
+    "enable": false,
+    "autoSelectTime": 8
+  },
+  "estimateAndQuoteConfig": {
+    "showInfoIcon": true
+  },
+  "geoCodeConfig": {
+    "radius": 100000,
+    "strictBounds": false
+  },
+  "enableCabs": false,
+  "featureConfig": {
+    "enableCabBanner": false,
+    "showExploreCity": false
+  },
+  "referral": {
+    "domain": "https://nammayatri.in",
+    "customerAppId": "in.juspay.nammayatri"
+  },
+  "appLogo": "",
+  "dashboardUrl": "",
+  "appLogoLight": "",
+  "enableAcViews": false,
+  "enableRentals": false,
+  "enableIntercity": false,
+  "waitingChargeConfig": {
+    "auto": {
+      "freeMinutes": 3.0,
+      "perMinCharges": 0.75
+    },
+    "cabs": {
+      "freeMinutes": 5.0,
+      "perMinCharges": 1.0
+    }
+  }
+}
+
+const kochiConfig = {
+  "cityName": "Kochi",
+  "cityCode": "std:0484",
+  "iopConfig": {
+    "enable": false,
+    "autoSelectTime": 8
+  },
+  "estimateAndQuoteConfig": {
+    "showInfoIcon": true
+  },
+  "geoCodeConfig": {
+    "radius": 100000,
+    "strictBounds": false
+  },
+  "enableCabs": false,
+  "featureConfig": {
+    "enableCabBanner": false,
+    "showExploreCity": false
+  },
+  "referral": {
+    "domain": "https://nammayatri.in",
+    "customerAppId": "in.juspay.nammayatri"
+  },
+  "appLogo": "",
+  "dashboardUrl": "",
+  "appLogoLight": "",
+  "enableAcViews": false,
+  "enableRentals": false,
+  "enableIntercity": false,
+  "waitingChargeConfig": {
+    "auto": {
+      "freeMinutes": 3.0,
+      "perMinCharges": 1.0
+    },
+    "cabs": {
+      "freeMinutes": 5.0,
+      "perMinCharges": 1.0
+    }
+  }
+}
+
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM"],
+    "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM", "WELCOME_TEXT"],
     "isReferralEnabled": "true",
     "showBookingPreference": "true",
     "showRateCard": "true",
@@ -101,7 +431,8 @@ window.getMerchantConfig = function () {
       "closeIcon" : "ny_ic_close_white,https://assets.juspay.in/beckn/mobilitypaytm/user/ny_ic_close_white.png",
       "footerVisibility" : true,
       "footerImageUrl" : "ic_namma_yatri_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_namma_yatri_logo.png",
-      "footerBackgroundColor" : "#FFFFFF"
+      "footerBackgroundColor" : "#FFFFFF",
+      "cancelTextColor" : "#80B2FF"
     },
     "quoteListModel": {
       "backgroundColor": "#012A72",
@@ -124,7 +455,7 @@ window.getMerchantConfig = function () {
     "profileCompletion": "#FFFFFF",
     "profileImage": "#012A72",
     "feedbackBackground": "#D3D3D3",
-    "sideBarList": ["MyRides", "Favorites", "HelpAndSupport", "Language", "About"],
+    "sideBarList": ["MyRides", "Favorites", "HelpAndSupport", "Language"],
     "rateCardColor": "#00B8F5",
     "nyBrandingVisibility": true,
     "fontType": "System",
@@ -141,12 +472,15 @@ window.getMerchantConfig = function () {
     "logs": ["JUSPAY"],
     "englishStrings": {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible."
+    , "WELCOME_TEXT": "Welcome",
     },
     "hindiStrings": {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "आपका स्थान हमारे सिस्टम को आस पास के सभी ऑटो को मैप करने में सहायता कर्ता है और आपको सबसे तेज सवारी प्रदान करता है"
+    , "WELCOME_TEXT": "स्वागत है"
     },
     "kannadaStrings": {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "ನಿಮ್ಮ ಸ್ಥಳವು ನಮ್ಮ ಸಿಸ್ಟಂ ಅನ್ನು ಆಟೋಗಳ ಮೂಲಕ ನಕ್ಷೆ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ ಮತ್ತು ನಿಮಗೆ ಸಾಧ್ಯವಿರುವ ವೇಗದ ಸವಾರಿಯನ್ನು ನೀಡುತ್ತದೆ."
+    , "WELCOME_TEXT": "ಸ್ವಾಗತ"
     },
     "languageList": [{
       "name": "English",
@@ -170,7 +504,7 @@ window.getMerchantConfig = function () {
       "imageUrl": "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
     },
     "terminateBtnConfig": {
-      "visibility": false,
+      "visibility": true,
       "title": "Paytm",
       "imageUrl": "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
     },
@@ -207,6 +541,9 @@ window.getMerchantConfig = function () {
       "enableEmergencyContacts": false,
       "enableReferral": false,
       "enableSupport": false,
+      "enableSafetyFlow" : false,
+      "enableAdditionalServices": false,
+      "enableEditDestination" : false
     }
     , "dashboard" : {
       "enable" : false
@@ -217,6 +554,9 @@ window.getMerchantConfig = function () {
     , "estimateAndQuoteConfig" :
       { "enableOnlyAuto" : true
         , "textColor" :  "#101010"
+        , "selectedBG" : "#E7F1F8"
+        , "selectedStroke" : "#00B8F5"
+        , "variantOrder" : ["AUTO_RICKSHAW", "BOOK_ANY"]
       }
     , "homeScreen" : {
       "primaryBackground" : "#012A72",
@@ -238,13 +578,10 @@ window.getMerchantConfig = function () {
           "y": 0.3,
           "blur": 3.0,
           "spread": 10.0
-        }
+        },
+        "color" : "#101010"
+      , "background" : "#FFFFFF"
       }
-    }
-    , "locationTagBar" : {
-      "cornerRadius" : 32.0
-      ,  "textColor" : "#54101010"
-      ,   "stroke" : "1,#13101010"
     }
     , "loaderConfig" : {
       "color" : "#00B8F5"
@@ -254,5 +591,6 @@ window.getMerchantConfig = function () {
       , "gradient" : []
       , "loaderUrl" : "https://assets.juspay.in/beckn/mobilitypaytm/user/lottie/Payments-Loader.json"
     }
+    , "cityConfig" : [bangaloreConfig, mySoreConfig, tumakuruConfig, chennaiConfig, hyderabadConfig, kolkataConfig, delhiConfig, kochiConfig]
   })
 }

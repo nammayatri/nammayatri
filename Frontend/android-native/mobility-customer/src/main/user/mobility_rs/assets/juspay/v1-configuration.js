@@ -26,8 +26,15 @@ window.getMerchantConfig = function () {
             "y": 0.3,
             "blur": 3.0,
             "spread": 10.0
-          }
+          },
+          "background" :  "#F6F6F6",
+          "color" : "#1D1D1D"
         }
+      },
+
+      "colors" : {
+        "black800" : "#454545",
+        "black900": "#1D1D1D"
       },
       "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "YOUR_FEEDBACK_HELPS_US"],
       "isReferralEnabled": "false",
@@ -224,8 +231,11 @@ window.getMerchantConfig = function () {
     , "features" : {
         "enableAutoReadOtp" : false
       , "enableLiveDashboard" : false
+      , "enableSafetyFlow" : false
     }
-    , "estimateAndQuoteConfig" : { "enableOnlyAuto" : true
+    , "estimateAndQuoteConfig" : { 
+      "enableOnlyAuto" : true
+    , "enableBookingPreference" : true
     }
     , "rideCompletedCardConfig" : {
         "topCard" : {

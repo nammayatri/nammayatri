@@ -10,6 +10,9 @@ import PrestoDOM (Margin(..))
 import Data.Maybe (Maybe(..))
 import Common.Types.App (RateCardType(..), FareList)
 import Common.Types.App as CT
+import MerchantConfig.Types
+import MerchantConfig.DefaultConfig as MD
+import ConfigProvider
 
 data Action
   = NoAction Config
@@ -65,6 +68,8 @@ type Config
     , validTill :: String
     , waitingTimeInfo :: CT.WaitingTimeInfo
     , showStroke :: Boolean
+    , selectedStroke :: String
+    , selectedBG :: String
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -123,4 +128,6 @@ config =
   , validTill : ""
   , waitingTimeInfo : { freeMinutes: "", charge: "" }
   , showStroke : true
+  , selectedStroke :  "#2194FF"
+  , selectedBG : "#f4F7FF"
   }

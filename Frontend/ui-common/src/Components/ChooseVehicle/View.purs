@@ -33,8 +33,8 @@ view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
   let
     isActiveIndex = config.index == config.activeIndex
-    stroke' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then "2," <> Color.blue800 else "1," <> Color.white900
-    background' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then Color.blue600 else Color.white900
+    stroke' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then "2," <> config.selectedStroke else "1," <> Color.white900
+    background' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then  config.selectedBG else Color.white900
     padding' = Padding 8 12 8 12
     isBookAny = config.vehicleVariant == "BOOK_ANY" && config.activeIndex == config.index
     selectedEstimateHeight = if config.selectedEstimateHeight == 0 then 72 else config.selectedEstimateHeight
@@ -186,10 +186,10 @@ variantsView push state =
                             , margin $ Margin 4 4 4 4
                             , cornerRadius 6.0
                             , shadow $ Shadow 0.0 1.0 4.0 0.0 Color.black12 shadowOpacity
-                            , stroke $ "1," <> (if isActiveIndex then Color.blue800 else Color.grey900)
+                            , stroke $ "1," <> (if isActiveIndex then state.selectedStroke else Color.grey900)
                             , clickable $ true
                             , alpha if isInActive then 0.5 else 1.0
-                            , background $ if isInActive then Color.grey900 else if isActiveIndex then Color.blue600 else Color.white900
+                            , background $ if isInActive then Color.grey900 else if isActiveIndex then state.selectedBG else Color.white900
                             , gravity CENTER
                             , onClick (\action -> if isInActive then do 
                                                      void $ pure $ JB.toast "Not available at this moment"

@@ -512,7 +512,8 @@ public class MobilityCommonBridge extends HyperBridge {
         lastLatitudeValue = !lat.equals("__failed") ? Double.parseDouble(lat) : lastLatitudeValue;
         lastLongitudeValue = !lon.equals("__failed") ? Double.parseDouble(lon) : lastLongitudeValue;
     }
-
+    
+    @JavascriptInterface
     public static boolean isClassAvailable(String className) {
         try {
             Class.forName(className);

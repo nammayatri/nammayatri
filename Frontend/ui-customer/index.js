@@ -3,6 +3,13 @@ import "core-js";
 import "presto-ui";
 import "regenerator-runtime/runtime";
 
+Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
+  return window.MobilityCustomerBridge[fnName];
+}).forEach(fnName => {
+  window.JBridge[fnName] = function () {
+    return window.MobilityCustomerBridge[fnName](...arguments);
+  };
+});
 window.events = {};
 try {
   if (typeof window.assetDownloadDuration === "number") {
@@ -342,8 +349,10 @@ window["onEvent'"] = function (_event, args) {
   } else if (_event == "onPause") {
     previousDateObject = new Date();
     window.onPause();
+    purescript.onEvent(_event)();
   } else if (_event == "onResume") {
     window.onResume();
+    purescript.onEvent(_event)();
     refreshFlow();
   } else if (_event == "onLocationChanged" && !(window.receiverFlag)) {
     purescript.onConnectivityEvent("LOCATION_DISABLED")();

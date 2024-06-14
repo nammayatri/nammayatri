@@ -30,7 +30,7 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, chatSuggestion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import JBridge (scrollToEnd, getLayoutBounds, getKeyInSharedPrefKeys)
+import JBridge 
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, show, ($), (&&), (-), (/), (<>), (==), (>), (*), (/=), (||), not, negate, (+), (<=), discard, void, (>=), (<), when)
@@ -425,7 +425,7 @@ chatComponent :: forall w. Config -> (Action -> Effect Unit) -> ChatComponent ->
 chatComponent state push config isLastItem receiver index =
   let message = getMessageFromKey state.suggestionKey config.message state.languageKey
       chatConfig = getChatConfig state config.sentBy isLastItem index
-      enableFlexBox = not $ (os == "IOS" || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (getFlexBoxCompatibleVersion "")))
+      enableFlexBox = isClassAvailable "com/google/android/flexbox/FlexboxLayout"
   in
   PrestoAnim.animationSet
     [ if config.sentBy == (getCurrentUser (state.userConfig.receiver /= "Driver")) then

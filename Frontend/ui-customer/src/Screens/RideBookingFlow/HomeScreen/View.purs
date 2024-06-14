@@ -455,7 +455,8 @@ view push state =
         , accessibility DISABLE
         , clickable true
         ]
-       [ relativeLayout
+       [terminateBtnView push state ,  
+        relativeLayout
             [ width MATCH_PARENT
             , weight 1.0
             , orientation VERTICAL
@@ -644,7 +645,7 @@ view push state =
 rideDetailsBottomView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideDetailsBottomView push state = 
   let 
-    brandingBannerVis = boolToVisibility $ state.data.currentCityConfig.iopConfig.enable
+    brandingBannerVis = boolToVisibility $ state.data.currentCityConfig.iopConfig.enable || state.data.config.driverInfoConfig.footerVisibility
     onUsRide = state.data.driverInfoCardState.providerType == CTP.ONUS
   in 
   relativeLayout [ 
@@ -738,7 +739,7 @@ rideCompletedCardView push state =
 
 disabilityPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 disabilityPopUpView push state = 
-  PopUpModal.view (push <<< DisabilityPopUpAC) (CommonComponentConfig.accessibilityPopUpConfig state.data.disability state.data.config.purpleRideConfig)
+  PopUpModal.view (push <<< DisabilityPopUpAC) (CommonComponentConfig.accessibilityPopUpConfig state.data.disability state.data.config.purpleRideConfig state.data.config.primaryTextColor state.data.config.primaryBackground)
 
 callSupportPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 callSupportPopUpView push state =
@@ -1122,7 +1123,6 @@ sosView push state =
         , background Color.white900
         , cornerRadius 20.0
         , onClick push $ const (if onUsRide then OpenEmergencyHelp else OpenOffUsSOS)
-        -- , clickable onUsRide -- need to remove once @Kavyashree's changes are megred
         , rippleColor Color.rippleShade
         , padding $ Padding 12 8 12 8
         ]
@@ -1147,7 +1147,6 @@ sosView push state =
           , margin $ MarginRight 8
           , accessibility DISABLE
           , onClick push $ const OpenEmergencyHelp
-          -- , clickable onUsRide -- need to remove once @Kavyashree's changes are megred
           ]
       , textView
           $ [ text $ getString SAFETY_CENTER
@@ -1397,6 +1396,40 @@ settingSideBarView push state =
     ]
     [ SettingSideBar.view (push <<< SettingSideBarActionController) (state.data.settingSideBar{appConfig = state.data.config}) ]
 
+terminateBtnView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+terminateBtnView push state = 
+  linearLayout[ 
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , background Color.white900
+  , orientation HORIZONTAL
+  , gravity LEFT
+  , visibility if state.data.config.terminateBtnConfig.visibility then VISIBLE else GONE
+  ][ 
+    linearLayout[ 
+      width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , margin $ MarginLeft 16
+    , padding $ Padding 6 6 6 6
+    , gravity CENTER_VERTICAL
+    , onClick push (const TerminateApp)
+    ][ 
+      imageView[
+        imageWithFallback state.data.config.terminateBtnConfig.imageUrl
+      , height $ V 20
+      , width $ V 20
+      , margin $ MarginRight 10
+      ]
+    , textView $ [ 
+        width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , gravity CENTER_VERTICAL
+      , text state.data.config.terminateBtnConfig.title
+      , color Color.black900
+      ]<> FontStyle.tags TypoGraphy
+    ]
+  ]
+
 homeScreenTopIconView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 homeScreenTopIconView push state =
   homeScreenAnimation TOP_BOTTOM
@@ -1408,38 +1441,7 @@ homeScreenTopIconView push state =
         , orientation VERTICAL
         , accessibility if (any (_ == state.props.currentStage) ) [RideRating, RideCompleted] then DISABLE_DESCENDANT else DISABLE
         ]
-        [ linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , background Color.white900
-            , orientation HORIZONTAL
-            , gravity LEFT
-            , visibility if state.data.config.terminateBtnConfig.visibility then VISIBLE else GONE
-            ]
-            [ linearLayout
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , margin $ MarginLeft 16
-                , padding $ Padding 6 6 6 6
-                , gravity CENTER_VERTICAL
-                , onClick push (const TerminateApp)
-                ]
-                [ imageView
-                    [ imageWithFallback state.data.config.terminateBtnConfig.imageUrl
-                    , height $ V 20
-                    , width $ V 20
-                    , margin $ MarginRight 10
-                    ]
-                , textView
-                    $ [ width WRAP_CONTENT
-                      , height WRAP_CONTENT
-                      , gravity CENTER_VERTICAL
-                      , text state.data.config.terminateBtnConfig.title
-                      , color Color.black900
-                      ]
-                    <> FontStyle.tags TypoGraphy
-                ]
-            ]
+        [ terminateBtnView push state
         , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
@@ -3003,6 +3005,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
             --   _ <- liftFlow $ runEffectFn9 drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
             --   void $ delay $ Milliseconds duration
             --   driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
+            void $ pure $ spy "TRACKING_ID" $ getValueToLocalStore TRACKING_ID 
+            void $ pure $ spy "TRACKING_ENABLED" $ getValueToLocalStore TRACKING_ENABLED
             if ((getValueToLocalStore TRACKING_ID) == trackingId) then do
               if (getValueToLocalStore TRACKING_ENABLED) == "False" then do
                 let srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker }
@@ -3491,12 +3495,6 @@ footerView push state =
         , color Color.black700
         ] <> FontStyle.h1 TypoGraphy
 
-      , linearLayout
-        [ height $ V 2
-        , width MATCH_PARENT
-        , background Color.grey800
-        , margin $ MarginVertical 24 24
-        ][]
       , linearLayout  
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
@@ -3562,42 +3560,23 @@ pickupLocationView push state =
             linearLayout
               [ width WRAP_CONTENT 
               , height WRAP_CONTENT
-              , gravity CENTER_VERTICAL
-              , disableClickFeedback true
-              , clickable $ not (state.props.currentStage == SearchLocationModel)
-              , visibility if not state.data.config.terminateBtnConfig.visibility then GONE
-                           else VISIBLE
-              , onClick push (const TerminateApp)
-              , margin $ MarginRight 8
-              , padding $ Padding 8 8 8 8 
-              , background $ state.data.config.terminateBtnConfig.backgroundColor
-              , cornerRadius 8.0
-              ]
-              [ imageView
-                  [ imageWithFallback state.data.config.terminateBtnConfig.imageUrl
-                  , height $ V 23
-                  , width $ V 23
-                  , visibility $ boolToVisibility state.data.config.terminateBtnConfig.visibility
-                  ]
-              ]
-          , linearLayout
-              [ width WRAP_CONTENT 
-              , height WRAP_CONTENT
-              , gravity CENTER_VERTICAL
+
               , disableClickFeedback true
               , clickable $ not (state.props.currentStage == SearchLocationModel)
               , onClick push $ const OpenSettings
-              , padding $ Padding 0 8 8 8 
+              , padding $ Padding 8 8 8 8 
               , background $ state.data.config.homeScreen.header.menuButtonBackground
               , cornerRadius 20.0
               , rippleColor Color.rippleShade
+              , gravity CENTER
               ]
               [ imageView
-                  [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_menu"
+                  [ imageWithFallback $ spy "menuDark" $ fetchImage FF_ASSET "ny_ic_menu_dark"
                   , height $ V 23
                   , width $ V 23
                   , accessibility if state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver then DISABLE else ENABLE
                   , accessibilityHint "Navigation : Button"
+                  , gravity CENTER
                   ]
               ] 
           
@@ -3617,8 +3596,9 @@ pickupLocationView push state =
                     [ text $ getString BOOK_YOUR_RIDE
                     , color $ state.data.config.homeScreen.header.titleColor
                     , width MATCH_PARENT
-                    , gravity CENTER
+                    , gravity CENTER_HORIZONTAL
                     , visibility $ if state.data.config.homeScreen.header.showLogo then GONE else VISIBLE
+                    , margin $ MarginRight 39
                     ] <> FontStyle.h3 TypoGraphy
                 ]
             , frameLayout
@@ -3679,7 +3659,7 @@ pickupLocationView push state =
                 , clickable $ state.props.isSrcServiceable
                 , alpha $ if state.props.isSrcServiceable then 1.0 else 0.5
                 , gravity CENTER_VERTICAL
-                , background Color.lightGreyBlue1
+                , background state.data.config.homeScreen.whereToButton.background 
                 , shadow $ getShadowFromConfig state.data.config.homeScreen.whereToButton.shadow
                 , cornerRadius $ 8.0 
                 , accessibility ENABLE
@@ -3695,7 +3675,7 @@ pickupLocationView push state =
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
                     , text $ getString WHERE_TO
-                    , color Color.yellow900
+                    , color state.data.config.homeScreen.whereToButton.color --Color.yellow900
                     , accessibility DISABLE
                     ] <> FontStyle.subHeading1 TypoGraphy
                   ]
