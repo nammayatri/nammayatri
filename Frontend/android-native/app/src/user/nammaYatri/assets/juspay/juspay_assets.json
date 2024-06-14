@@ -118,6 +118,7 @@
       "ic_pause" : true,
       "ic_phone" : true,
       "ic_play" : true,
+      "ic_policy_clock" : true,
       "ic_powered_by" : true,
       "ic_red_icon" : true,
       "ic_rental_variant_tag" : true,
