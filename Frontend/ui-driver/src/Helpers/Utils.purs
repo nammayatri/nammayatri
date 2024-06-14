@@ -970,3 +970,9 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.RENTALS -> "RENTALS"
   SA.INTERCITY -> "INTERCITY"
   SA.BIKE_TIER -> "BIKE"
+
+filterVariantForPlanListCall :: String -> String
+filterVariantForPlanListCall variant = 
+  case variant of
+    "BIKE" -> "BIKE"
+    _ -> "null"

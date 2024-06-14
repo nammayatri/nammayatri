@@ -654,7 +654,7 @@ onBoardingFlow = do
       registerationStepsAutos = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.autos) updatedGs.globalProps.onBoardingDocs
       registerationStepsBike = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.bikes) updatedGs.globalProps.onBoardingDocs
       checkAvailability field = maybe false (\(API.OnboardingDocsRes mbDoc) -> isJust (field mbDoc)) updatedGs.globalProps.onBoardingDocs
-      variantList = (if checkAvailability _.bikes then [ST.BikeCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else [])
+      variantList = filter (\item -> isNothing registrationState.data.allowedCategory || Just item == registrationState.data.allowedCategory) $ (if checkAvailability _.bikes then [ST.BikeCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else [])
       mismatchLogic vehicleDocument = (uiCurrentCategory == (RC.transformVehicleType $ Just vehicleDocument.userSelectedVehicleCategory)) && isJust vehicleDocument.verifiedVehicleCategory && (Just vehicleDocument.userSelectedVehicleCategory /= vehicleDocument.verifiedVehicleCategory)
       vehicleTypeMismatch = not registrationState.props.manageVehicle && any (\(API.VehicleDocumentItem item) -> mismatchLogic item) driverRegistrationResp.vehicleDocuments
       documentStatusList = mkStatusList (DriverRegistrationStatusResp driverRegistrationResp)
@@ -1186,6 +1186,7 @@ driverProfileFlow = do
   logField_ <- lift $ lift $ getLogFields
   modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{props{isRideActive = getValueToLocalStore IS_RIDE_ACTIVE == "true"} })
   action <- UI.driverProfileScreen
+  config <- getAppConfigFlowBT Constants.appConfig
   case action of
     GO_TO_HOME_FROM_PROFILE -> homeScreenFlow
     GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN -> referralFlow
@@ -1279,8 +1280,10 @@ driverProfileFlow = do
       pure $ setText (getNewIDWithTag "VehicleRegistrationNumber") ""
       pure $ setText (getNewIDWithTag "ReenterVehicleRegistrationNumber") ""
       deleteValueFromLocalStore ENTERED_RC
+      let vehicleCategory = if config.disableCrossVariantRCOnboarding then RC.getCategoryFromVariant (getValueToLocalStore VEHICLE_VARIANT) else Nothing
+          _ = spy "ADD_RC vehicleCategory" vehicleCategory
       modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState.addVehicleDetailsScreen)
-      modifyScreenState $ RegistrationScreenStateType (\regScreenState -> regScreenState{ props{manageVehicle = true, manageVehicleCategory = Nothing}, data { linkedRc = Nothing}})
+      modifyScreenState $ RegistrationScreenStateType (\regScreenState -> regScreenState{ props{manageVehicle = true, manageVehicleCategory = Nothing}, data { linkedRc = Nothing, allowedCategory = vehicleCategory}})
       onBoardingFlow
     SUBCRIPTION -> updateAvailableAppsAndGoToSubs
     GO_TO_CALL_DRIVER state -> do
@@ -3122,7 +3125,7 @@ subScriptionFlow = do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen{props{isEndRideModal = isEndRideModal}})
       subScriptionFlow
     GO_TO_MANAGE_PLAN state -> do
-      uiPlans <- Remote.getUiPlansBT "null"
+      uiPlans <- Remote.getUiPlansBT $ HU.filterVariantForPlanListCall $ getValueToLocalStore VEHICLE_VARIANT
       modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{ data { managePlanData { alternatePlans = alternatePlansTransformer uiPlans state}}, props {subView = ManagePlan, showShimmer = false}})
       subScriptionFlow
     GO_TO_FIND_HELP_CENTRE state -> do
@@ -3348,6 +3351,7 @@ updateDriverDataToStates = do
     }})
   setValueToLocalStore DRIVER_SUBSCRIBED $ show $ isJust getDriverInfoResp.autoPayStatus
   setValueToLocalStore VEHICLE_VARIANT linkedVehicle.variant
+  when (isJust linkedVehicle.category) $ setValueToLocalStore VEHICLE_CATEGORY $ fromMaybe "" linkedVehicle.category
   setValueToLocalStore NEGOTIATION_UNIT $ getNegotiationUnit linkedVehicle.variant appConfig.rideRequest.negotiationUnit
   setValueToLocalStore USER_NAME getDriverInfoResp.firstName
   setValueToLocalStore REFERRAL_CODE (fromMaybe "" getDriverInfoResp.referralCode)

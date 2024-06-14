@@ -123,7 +123,7 @@ loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre errorActio
           let (GetCurrentPlanResp resp) = resp'
           case resp.currentPlanDetails of
             Nothing -> do
-              uiPlans <- Remote.getUiPlans "null"
+              uiPlans <- Remote.getUiPlans $ HU.filterVariantForPlanListCall $ getValueToLocalStore VEHICLE_VARIANT
               case uiPlans of
                 Right plansResp -> doAff do liftEffect $ push $ loadPlans plansResp
                 Left err -> doAff do liftEffect $ push $ errorAction err

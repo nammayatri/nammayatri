@@ -340,6 +340,7 @@ window.getMerchantConfig = function () {
     "fiveStarCoinEvent" : true,
     "oneTwoStarCoinEvent" : true,
   }
+  , "disableCrossVariantRCOnboarding": true
   , "cityConfig" : [
     {
       "cityName" : "Kolkata",
