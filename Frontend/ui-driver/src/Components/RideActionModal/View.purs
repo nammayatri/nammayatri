@@ -487,7 +487,7 @@ durationText time =
   let seconds = Maybe.maybe 0 (\time -> abs $ runFn2 JB.differenceBetweenTwoUTC time (getCurrentUTC "")) time
       hours = seconds / 3600
       minutes = (seconds `mod` 3600) / 60
-  in (if hours > 0 then (show hours) <> ":" else "00:") <> (if minutes > 9 then show minutes else "0" <> show minutes) <> " Hr"
+  in (if hours > 0 then (show hours) <> ":" else "00:") <> (if minutes > 9 then show minutes else "0" <> show minutes) <> " hrs"
 
 
 rentalRideDescView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w

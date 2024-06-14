@@ -103,7 +103,7 @@ view push state =
       , width MATCH_PARENT
       ][  scrollView
           [ height MATCH_PARENT
-          , margin $ MarginBottom 70
+          , margin $ MarginBottom 100
           , width MATCH_PARENT
           ][  linearLayout
               [ height WRAP_CONTENT
