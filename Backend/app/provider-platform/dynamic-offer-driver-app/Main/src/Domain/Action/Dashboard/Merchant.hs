@@ -980,7 +980,7 @@ upsertFarePolicy merchantShortId opCity req = do
   logTagInfo "Updating Fare Policies for merchant: " (show merchant.id <> " and city: " <> show opCity)
   flatFarePolicies <- readCsv req.file
   logTagInfo "Read file: " (show flatFarePolicies)
-  farePolicyErrors <- (foldlM (processFarePolicyGroup merchantOpCity) [] . groupFarePolices) flatFarePolicies
+  (farePolicyErrors, _) <- (foldlM (processFarePolicyGroup merchantOpCity) ([], False) . groupFarePolices) flatFarePolicies
   return $
     Common.UpsertFarePolicyResp
       { unprocessedFarePolicies = farePolicyErrors,
@@ -1012,12 +1012,12 @@ upsertFarePolicy merchantShortId opCity req = do
       where
         fst5 (c, t, tr, a, tb, _) = (c, t, tr, a, tb)
 
-    processFarePolicyGroup :: DMOC.MerchantOperatingCity -> [Text] -> [(Context.City, DVST.ServiceTierType, DTC.TripCategory, SL.Area, TimeBound, FarePolicy.FarePolicy)] -> Flow [Text]
+    processFarePolicyGroup :: DMOC.MerchantOperatingCity -> ([Text], Bool) -> [(Context.City, DVST.ServiceTierType, DTC.TripCategory, SL.Area, TimeBound, FarePolicy.FarePolicy)] -> Flow ([Text], Bool)
     processFarePolicyGroup _ _ [] = throwError $ InvalidRequest "Empty Fare Policy Group"
-    processFarePolicyGroup merchantOpCity errors (x : xs) = do
+    processFarePolicyGroup merchantOpCity (errors, boundedAlreadyDeleted) (x : xs) = do
       let (city, vehicleServiceTier, tripCategory, area, timeBounds, firstFarePolicy) = x
       if (city /= opCity)
-        then return $ errors <> ["Can't process fare policy for different city: " <> show city <> ", please login with this city in dashboard"]
+        then return $ (errors <> ["Can't process fare policy for different city: " <> show city <> ", please login with this city in dashboard"], boundedAlreadyDeleted)
         else do
           let mergeFarePolicy newId FarePolicy.FarePolicy {..} = do
                 let remainingfarePolicies = map (\(_, _, _, _, _, fp) -> fp) xs
@@ -1047,10 +1047,17 @@ upsertFarePolicy merchantShortId opCity req = do
           finalFarePolicy <- mergeFarePolicy newId firstFarePolicy
           CQFP.create finalFarePolicy
           let merchanOperatingCityId = merchantOpCity.id
-          oldFareProducts <-
+          (oldFareProducts, updatedBoundedAlreadyDeleted) <-
             case timeBounds of
-              Unbounded -> maybeToList <$> CQFProduct.findUnboundedByMerchantVariantArea merchanOperatingCityId [DFareProduct.ALL] tripCategory vehicleServiceTier area
-              _ -> CQFProduct.findAllBoundedByMerchantVariantArea merchanOperatingCityId [DFareProduct.ALL] tripCategory vehicleServiceTier area
+              Unbounded -> do
+                fareProducts <- maybeToList <$> CQFProduct.findUnboundedByMerchantVariantArea merchanOperatingCityId [DFareProduct.ALL] tripCategory vehicleServiceTier area
+                return (fareProducts, boundedAlreadyDeleted)
+              _ ->
+                if boundedAlreadyDeleted
+                  then return ([], boundedAlreadyDeleted)
+                  else do
+                    fareProducts <- CQFProduct.findAllBoundedByMerchantVariantArea merchanOperatingCityId [DFareProduct.ALL] tripCategory vehicleServiceTier area
+                    return (fareProducts, True)
 
           oldFareProducts `forM_` \fp -> do
             CQFP.delete fp.farePolicyId
@@ -1063,7 +1070,7 @@ upsertFarePolicy merchantShortId opCity req = do
           CQFProduct.create fareProduct
           CQFProduct.clearCache fareProduct
 
-          return errors
+          return (errors, updatedBoundedAlreadyDeleted)
 
     makeFarePolicy :: Int -> FarePolicyCSVRow -> Flow (Context.City, DVST.ServiceTierType, DTC.TripCategory, SL.Area, TimeBound, FarePolicy.FarePolicy)
     makeFarePolicy idx row = do
