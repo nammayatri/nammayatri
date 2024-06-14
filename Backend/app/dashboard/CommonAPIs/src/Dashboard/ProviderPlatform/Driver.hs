@@ -76,7 +76,7 @@ data DriverEndpoint
   | UpdateDriverTagEndPoint
   | UpdateFleetOwnerEndPoint
   | SendFleetJoiningOtpEndPoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "DriverEndpoint"
 

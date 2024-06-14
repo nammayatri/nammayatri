@@ -37,6 +37,7 @@ library
       Domain.Action.Dashboard.Person
       Domain.Action.Dashboard.Registration
       Domain.Action.Dashboard.Roles
+      Domain.Action.Dashboard.Transaction
       Domain.Types.AccessMatrix
       Domain.Types.Merchant
       Domain.Types.MerchantAccess
@@ -133,7 +134,9 @@ library
     , esqueleto
     , euler-hs
     , http-types
+    , lens
     , mobility-core
+    , openapi3
     , persistent
     , persistent-postgresql
     , postgresql-simple

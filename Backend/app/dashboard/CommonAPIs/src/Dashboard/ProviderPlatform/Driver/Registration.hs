@@ -36,7 +36,7 @@ data DriverRegistrationEndpoint
   | VerifyAadhaarOtpEndpoint
   | UpdateDocumentEndpoint
   | AuthEndpoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "DriverRegistrationEndpoint"
 

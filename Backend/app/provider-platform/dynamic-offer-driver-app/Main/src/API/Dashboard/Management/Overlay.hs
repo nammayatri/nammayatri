@@ -30,7 +30,7 @@ data OverlayEndpoint
   = CreateOverlayEndpoint
   | DeleteOverlayEndpoint
   | ScheduleOverlayEndpoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "OverlayEndpoint"
 

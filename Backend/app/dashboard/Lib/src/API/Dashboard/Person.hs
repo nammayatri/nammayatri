@@ -14,11 +14,14 @@
 
 module API.Dashboard.Person where
 
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified Domain.Action.Dashboard.Person as DPerson
+import qualified Domain.Action.Dashboard.Transaction as DTransaction
 import Domain.Types.AccessMatrix
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
+import qualified Domain.Types.Transaction as DT
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
@@ -121,6 +124,16 @@ type API =
                :> QueryParam "releaseId" Text
                :> Get '[JSON] DPerson.GetProductSpecInfoResp
          )
+    :<|> "listTransactions"
+      :> DashboardAuth 'DASHBOARD_USER
+      :> QueryParam "searchString" Text
+      :> QueryParam "limit" Integer
+      :> QueryParam "offset" Integer
+      :> QueryParam "requestorId" (Id DP.Person)
+      :> QueryParam "driverId" (Id Common.Driver)
+      :> QueryParam "rideId" (Id Common.Ride)
+      :> QueryParam "endpoint" (DT.Endpoint)
+      :> Get '[JSON] DTransaction.ListTransactionRes
 
 handler :: BeamFlow' => FlowServer API
 handler =
@@ -142,8 +155,10 @@ handler =
              :<|> changePassword
              :<|> getAccessMatrix
          )
-    :<|> registerRelease
-    :<|> getProductSpecInfo
+    :<|> ( registerRelease
+             :<|> getProductSpecInfo
+         )
+    :<|> listTransactions
 
 listPerson :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> Maybe (Id DP.Person) -> FlowHandler DPerson.ListPersonRes
 listPerson tokenInfo mbSearchString mbLimit mbPersonId =
@@ -216,3 +231,7 @@ deletePerson tokenInfo personId =
 changeEnabledStatus :: BeamFlow' => TokenInfo -> Id DP.Person -> DPerson.ChangeEnabledStatusReq -> FlowHandler APISuccess
 changeEnabledStatus tokenInfo personId req =
   withFlowHandlerAPI' $ DPerson.changeEnabledStatus tokenInfo personId req
+
+listTransactions :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> Maybe (Id DP.Person) -> Maybe (Id Common.Driver) -> Maybe (Id Common.Ride) -> Maybe DT.Endpoint -> FlowHandler DTransaction.ListTransactionRes
+listTransactions tokenInfo mbSearchString mbLimit mbOffset mbRequestorId mbDriverId mbRideId mbEndpoint =
+  withFlowHandlerAPI' $ DTransaction.listTransactions tokenInfo mbSearchString mbLimit mbOffset mbRequestorId mbDriverId mbRideId mbEndpoint

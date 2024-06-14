@@ -29,7 +29,7 @@ import SharedLogic.Merchant
 import Storage.Beam.SystemConfigs ()
 
 data RideSearchEndPoint = SearchEndPoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "RideSearchEndPoint"
 

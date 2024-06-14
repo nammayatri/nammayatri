@@ -75,7 +75,7 @@ data MerchantEndpoint
   | DeleteSpecialLocationEndpoint
   | UpsertSpecialLocationGateEndpoint
   | DeleteSpecialLocationGateEndpoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "MerchantEndpoint"
 

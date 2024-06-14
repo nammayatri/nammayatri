@@ -80,6 +80,8 @@ dependencies:
   - servant-server
   - servant-client
   - servant-openapi3
+  - openapi3
+  - lens
   - persistent
   - persistent-postgresql
   - esqueleto
