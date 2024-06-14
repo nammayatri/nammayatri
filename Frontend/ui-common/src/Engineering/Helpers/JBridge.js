@@ -648,6 +648,14 @@ const drawRoute = function (data, style, trackColor, isActual, sourceMarkerConfi
     console.log("error in draw route", err);
   }
 }
+
+export const getDeviceID = function () {
+  if(window.JBridge.getDeviceID){
+    return window.JBridge.getDeviceID();
+  }else {
+    return "NO_DEVICE_ID";
+  }
+}
                    
 
 export const updateMarker = function (markerConfig) {

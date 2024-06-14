@@ -220,6 +220,7 @@ baseAppFlow gPayload callInitUI = do
   baseAppLogs
   liftFlowBT $ runEffectFn1 resetIdMap ""
   liftFlowBT $ resetAllTimers
+  let _ = spy "MediaDRM ID " $ JB.getDeviceID unit
   let
     showSplashScreen = fromMaybe false $ gPayload ^. _payload ^. _show_splash
   when callInitUI $ lift $ lift $ initUI -- TODO:: Can we move this to Main
