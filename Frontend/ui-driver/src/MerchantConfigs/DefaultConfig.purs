@@ -609,6 +609,7 @@ config =
   , endTime : "06:00:00"
   }
   , clientName : ""
+  , disableCrossVariantRCOnboarding : false
 }
 
 registrationConfig :: CTC.RegistrationConfig

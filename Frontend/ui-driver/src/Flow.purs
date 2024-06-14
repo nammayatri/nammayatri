@@ -1186,6 +1186,7 @@ driverProfileFlow = do
   logField_ <- lift $ lift $ getLogFields
   modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{props{isRideActive = getValueToLocalStore IS_RIDE_ACTIVE == "true"} })
   action <- UI.driverProfileScreen
+  config <- getAppConfigFlowBT Constants.appConfig
   case action of
     GO_TO_HOME_FROM_PROFILE -> homeScreenFlow
     GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN -> referralFlow
@@ -1279,8 +1280,9 @@ driverProfileFlow = do
       pure $ setText (getNewIDWithTag "VehicleRegistrationNumber") ""
       pure $ setText (getNewIDWithTag "ReenterVehicleRegistrationNumber") ""
       deleteValueFromLocalStore ENTERED_RC
+      let manageVehicleCategory = if config.disableCrossVariantRCOnboarding then RC.getCategoryFromVariant (getValueToLocalStore VEHICLE_VARIANT) else Nothing
       modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState.addVehicleDetailsScreen)
-      modifyScreenState $ RegistrationScreenStateType (\regScreenState -> regScreenState{ props{manageVehicle = true, manageVehicleCategory = Nothing}, data { linkedRc = Nothing}})
+      modifyScreenState $ RegistrationScreenStateType (\regScreenState -> regScreenState{ props{manageVehicle = true, manageVehicleCategory = manageVehicleCategory}, data { linkedRc = Nothing}})
       onBoardingFlow
     SUBCRIPTION -> updateAvailableAppsAndGoToSubs
     GO_TO_CALL_DRIVER state -> do
@@ -3348,6 +3350,7 @@ updateDriverDataToStates = do
     }})
   setValueToLocalStore DRIVER_SUBSCRIBED $ show $ isJust getDriverInfoResp.autoPayStatus
   setValueToLocalStore VEHICLE_VARIANT linkedVehicle.variant
+  when (isJust linkedVehicle.category) $ setValueToLocalStore VEHICLE_CATEGORY $ fromMaybe "" linkedVehicle.category
   setValueToLocalStore NEGOTIATION_UNIT $ getNegotiationUnit linkedVehicle.variant appConfig.rideRequest.negotiationUnit
   setValueToLocalStore USER_NAME getDriverInfoResp.firstName
   setValueToLocalStore REFERRAL_CODE (fromMaybe "" getDriverInfoResp.referralCode)
