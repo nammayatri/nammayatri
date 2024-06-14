@@ -813,6 +813,7 @@ rentalTripDetailsView config push =
   let rentalRowDetails = config.rentalRowDetails
       fareDiff = config.topCard.finalAmount - config.topCard.initialAmount
   in 
+    
     linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -858,6 +859,7 @@ rentalTripDetailsView config push =
       [ rentalTripRowView config push EstimatedFare
       , rentalTripRowView config push ExtraTimeFare
       , rentalTripRowView config push ExtraDistanceFare
+      , rentalTripRowView config push Surcharges
       , separatorView
       , rentalTripRowView config push TotalFare
       ]
@@ -882,6 +884,7 @@ rentalTripRowView config push description =
     , width MATCH_PARENT
     , orientation HORIZONTAL
     , margin $ MarginTop if description == EstimatedFare then 0 else 16
+    , visibility $ boolToVisibility (textConfig.actualValue /= "₹0")
     ] 
     [ textView $ [
         text $ textConfig.title
@@ -923,9 +926,11 @@ rentalTripRowView config push description =
             RideStartedAt -> mkRentalTextConfig rentalRowDetails.rideStartedAt rentalBookingData.rideStartedAt "" Color.black600
             RideEndedAt -> mkRentalTextConfig rentalRowDetails.rideEndedAt rentalBookingData.rideEndedAt "" Color.black600
             EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare ("₹" <> show config'.topCard.initialAmount) "" Color.black600
-            ExtraTimeFare -> mkRentalTextConfig rentalRowDetails.extraTimeFare ("₹" <> show (config'.topCard.finalAmount - config'.topCard.initialAmount)) "" Color.black600
+            ExtraTimeFare -> mkRentalTextConfig rentalRowDetails.extraTimeFare ("₹" <> show (ceil ( fromMaybe 0.0 (fromString rentalBookingData.extraTimeFare)))) "" Color.black600
             ExtraDistanceFare -> mkRentalTextConfig rentalRowDetails.extraDistanceFare ("₹" <> show (ceil ( fromMaybe 0.0 (fromString rentalBookingData.extraDistanceFare)))) "" Color.black600
             TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare ("₹" <> show config'.topCard.finalAmount) "" Color.black600
+            Surcharges -> mkRentalTextConfig rentalRowDetails.extraTimeFare ("₹" <> show (config'.topCard.finalAmount - config'.topCard.initialAmount)) "" Color.black600
+
             
       mkRentalTextConfig :: String -> String -> String -> String -> RentalTextConfig
       mkRentalTextConfig title' estimatedValue' actualValue' color' = { title: title', estimatedValue: estimatedValue', actualValue: actualValue', color: color'}
