@@ -56,8 +56,8 @@ data FleetOperationsAPIs = FleetOperationsAPIs
     setVehicleDriverRcStatusForFleet :: Id Driver.Driver -> Text -> Driver.RCStatusReq -> Euler.EulerClient APISuccess,
     updateFleetOwnerInfo :: Id Driver.Driver -> Driver.UpdateFleetOwnerInfoReq -> Euler.EulerClient APISuccess,
     getFleetOwnerInfo :: Id Driver.Driver -> Euler.EulerClient Driver.FleetOwnerInfoRes,
-    sendFleetJoiningOtp :: Text -> Registration.AuthReq -> Euler.EulerClient APISuccess,
-    verifyFleetJoiningOtp :: Text -> Driver.VerifyFleetJoiningOtpReq -> Euler.EulerClient APISuccess,
+    sendFleetJoiningOtp :: Text -> Registration.AuthReq -> Euler.EulerClient Registration.AuthRes,
+    verifyFleetJoiningOtp :: Text -> Maybe Text -> Driver.VerifyFleetJoiningOtpReq -> Euler.EulerClient APISuccess,
     listDriverRidesForFleet :: Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe Day -> Maybe Text -> Euler.EulerClient DARide.DriverRideListRes
   }
 

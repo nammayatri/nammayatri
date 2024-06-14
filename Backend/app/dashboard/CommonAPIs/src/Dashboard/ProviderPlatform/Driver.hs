@@ -24,6 +24,7 @@ import Dashboard.Common as Reexport
 import qualified Dashboard.ProviderPlatform.Driver.Registration as Registration
 import Data.Aeson
 import Kernel.External.Maps.Types
+import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Storage.Esqueleto (derivePersistField)
@@ -1334,18 +1335,20 @@ type SendFleetJoiningOtpAPI =
   "fleet"
     :> "sendJoiningOtp"
     :> ReqBody '[JSON] Registration.AuthReq
-    :> Post '[JSON] APISuccess
+    :> Post '[JSON] Registration.AuthRes
 
 type VerifyFleetJoiningOtpAPI =
   "fleet"
     :> "verifyJoiningOtp"
+    :> QueryParam "authId" Text
     :> ReqBody '[JSON] VerifyFleetJoiningOtpReq
     :> Post '[JSON] APISuccess
 
 data VerifyFleetJoiningOtpReq = VerifyFleetJoiningOtpReq
   { mobileCountryCode :: Text,
     mobileNumber :: Text,
-    otp :: Text
+    otp :: Text,
+    deviceToken :: Maybe FCMRecipientToken
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

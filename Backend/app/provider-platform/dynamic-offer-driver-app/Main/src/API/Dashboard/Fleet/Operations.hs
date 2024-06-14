@@ -207,13 +207,14 @@ type SendFleetJoiningOtpAPI =
     :> "driver"
     :> "sendJoiningOtp"
     :> ReqBody '[JSON] Common.AuthReq
-    :> Post '[JSON] APISuccess
+    :> Post '[JSON] Common.AuthRes
 
 type VerifyFleetJoiningOtpAPI =
   Capture "fleetOwnerId" Text
     :> "fleet"
     :> "driver"
     :> "verifyJoiningOtp"
+    :> QueryParam "authId" Text
     :> ReqBody '[JSON] Common.VerifyFleetJoiningOtpReq
     :> Post '[JSON] APISuccess
 
@@ -299,11 +300,11 @@ updateFleetOwnerInfo merchantShortId opCity driverId req = withFlowHandlerAPI $ 
 getFleetOwnerInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler Common.FleetOwnerInfoRes
 getFleetOwnerInfo merchantShortId opCity driverId = withFlowHandlerAPI $ DDriver.getFleetOwnerInfo merchantShortId opCity driverId
 
-sendFleetJoiningOtp :: ShortId DM.Merchant -> Context.City -> Text -> Common.AuthReq -> FlowHandler APISuccess
+sendFleetJoiningOtp :: ShortId DM.Merchant -> Context.City -> Text -> Common.AuthReq -> FlowHandler Common.AuthRes
 sendFleetJoiningOtp merchantShortId opCity fleetOwnerName req = withFlowHandlerAPI $ Fleet.sendFleetJoiningOtp merchantShortId opCity fleetOwnerName req
 
-verifyFleetJoiningOtp :: ShortId DM.Merchant -> Context.City -> Text -> Common.VerifyFleetJoiningOtpReq -> FlowHandler APISuccess
-verifyFleetJoiningOtp merchantShortId opCity fleetOwnerId req = withFlowHandlerAPI $ Fleet.verifyFleetJoiningOtp merchantShortId opCity fleetOwnerId req
+verifyFleetJoiningOtp :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Common.VerifyFleetJoiningOtpReq -> FlowHandler APISuccess
+verifyFleetJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId req = withFlowHandlerAPI $ Fleet.verifyFleetJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId req
 
 listDriverRidesForFleet :: ShortId DM.Merchant -> Context.City -> Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe Day -> Maybe Text -> FlowHandler DARide.DriverRideListRes
 listDriverRidesForFleet _ _ driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId = withFlowHandlerAPI $ DARide.listDriverRides driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId

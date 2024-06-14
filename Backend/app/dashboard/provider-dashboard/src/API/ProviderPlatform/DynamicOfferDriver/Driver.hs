@@ -955,7 +955,7 @@ getFleetOwnerInfo merchantShortId opCity apiTokenInfo driverId =
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
     Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.getFleetOwnerInfo) driverId
 
-sendFleetJoiningOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Registration.AuthReq -> FlowHandler APISuccess
+sendFleetJoiningOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Registration.AuthReq -> FlowHandler Registration.AuthRes
 sendFleetJoiningOtp merchantShortId opCity apiTokenInfo req =
   withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
@@ -963,11 +963,11 @@ sendFleetJoiningOtp merchantShortId opCity apiTokenInfo req =
     let dashboardUserName = person.firstName <> " " <> person.lastName
     Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.sendFleetJoiningOtp) dashboardUserName req
 
-verifyFleetJoiningOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.VerifyFleetJoiningOtpReq -> FlowHandler APISuccess
-verifyFleetJoiningOtp merchantShortId opCity apiTokenInfo req =
+verifyFleetJoiningOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Common.VerifyFleetJoiningOtpReq -> FlowHandler APISuccess
+verifyFleetJoiningOtp merchantShortId opCity apiTokenInfo mbAuthId req =
   withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.verifyFleetJoiningOtp) apiTokenInfo.personId.getId req
+    Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.verifyFleetJoiningOtp) apiTokenInfo.personId.getId mbAuthId req
 
 listDriverRidesForFleet :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe DT.Day -> Maybe Text -> FlowHandler DARide.DriverRideListRes
 listDriverRidesForFleet merchantShortId opCity apiTokenInfo driverId mbLimit mbOffset mbOnlyActive mbStatus mbDate mbFleetOwnerId =
