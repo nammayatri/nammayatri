@@ -833,10 +833,10 @@ rentalTripDetailsView config push =
       , orientation VERTICAL
       ] 
       [ 
-      --   rentalTripRowView config push RideTime
-      -- , rentalTripRowView config push RideDistance
-      -- , separatorView
-      rentalTripRowView config push RideStartedAt
+        rentalTripRowView config push RideTime
+      , rentalTripRowView config push RideDistance
+      , separatorView
+      , rentalTripRowView config push RideStartedAt
       , rentalTripRowView config push RideEndedAt
       ]
     , textView $
@@ -881,7 +881,7 @@ rentalTripRowView config push description =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation HORIZONTAL
-    , margin $ MarginTop if (description == RideStartedAt || description == EstimatedFare) then 0 else 16
+    , margin $ MarginTop if description == EstimatedFare then 0 else 16
     ] 
     [ textView $ [
         text $ textConfig.title
@@ -918,8 +918,8 @@ rentalTripRowView config push description =
             rentalRowDetails = config'.rentalRowDetails
         in
           case description' of
-            RideTime -> mkRentalTextConfig rentalRowDetails.rideTime (" / " <> show rentalBookingData.baseDuration <> "hr") (Utils.formatMinIntoHoursMins rentalBookingData.finalDuration) (showRedOrBlackColor ((rentalBookingData.finalDuration / 60) > rentalBookingData.baseDuration))
-            RideDistance -> mkRentalTextConfig rentalRowDetails.rideDistance "" (show rentalBookingData.finalDistance <> "km") (showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance))
+            RideTime -> mkRentalTextConfig rentalRowDetails.rideTime (" / " <> show rentalBookingData.baseDuration <> "hr") ( if rentalBookingData.finalDuration == 0 then "0 hr" else Utils.formatMinIntoHoursMins rentalBookingData.finalDuration) (showRedOrBlackColor ((rentalBookingData.finalDuration / 60) > rentalBookingData.baseDuration))
+            RideDistance -> mkRentalTextConfig rentalRowDetails.rideDistance "" (show rentalBookingData.finalDistance <> " km") (showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance))
             RideStartedAt -> mkRentalTextConfig rentalRowDetails.rideStartedAt rentalBookingData.rideStartedAt "" Color.black600
             RideEndedAt -> mkRentalTextConfig rentalRowDetails.rideEndedAt rentalBookingData.rideEndedAt "" Color.black600
             EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare ("₹" <> show config'.topCard.initialAmount) "" Color.black600

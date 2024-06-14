@@ -643,13 +643,14 @@ getTripDetailsState (RideBookingRes ride) state = do
       startTime = fromMaybe "" rideDetails.rideStartTime
       (RideBookingAPIDetails bookingDetails) = ride.bookingDetails
       rideType = getFareProductType bookingDetails.fareProductType
+      stopLocation = if rideType == FPT.RENTAL then _stopLocation else _toLocation
   state {
     data {
       tripId = rideDetails.shortRideId,
       date = (convertUTCtoISC (ride.createdAt) "ddd, Do MMM"),
       time = (convertUTCtoISC (fromMaybe (ride.createdAt) ride.rideStartTime ) "h:mm A"),
       source= decodeAddress (Booking ride.fromLocation),
-      destination= (decodeAddress (Booking (fromMaybe dummyBookingDetails (ride.bookingDetails ^._contents^._toLocation)))),
+      destination= (decodeAddress (Booking (fromMaybe dummyBookingDetails (ride.bookingDetails ^._contents^.stopLocation)))),
       rating= (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _rideRating)),
       driverName =((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _driverName) ,
       totalAmount = ("₹ " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _computedPrice))),

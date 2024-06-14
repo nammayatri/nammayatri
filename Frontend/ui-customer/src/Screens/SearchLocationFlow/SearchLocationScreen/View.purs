@@ -373,7 +373,7 @@ currentLocationView push state = let
     , visibility viewVisibility
     ]
     [ imageView
-        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_source_dot"
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET (if state.props.actionType == AddingStopAction then "ny_ic_blue_dot" else "ny_ic_source_dot")
         , height $ V 16
         , width $ V 16
         , gravity CENTER_VERTICAL
