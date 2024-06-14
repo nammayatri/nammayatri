@@ -789,6 +789,7 @@ library
       Storage.Beam.VehicleServiceTier
       Storage.Beam.Volunteer
       Storage.Beam.WhiteListOrg
+      Storage.CachedQueries.InterCityTravelCities
       Storage.Queries.AadhaarCard
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify

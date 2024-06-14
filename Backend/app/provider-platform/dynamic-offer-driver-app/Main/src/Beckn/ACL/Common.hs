@@ -189,7 +189,7 @@ mkFulfillmentType = \case
   DCT.OneWay DCT.OneWayRideOtp -> "RIDE_OTP"
   DCT.RideShare DCT.RideOtp -> "RIDE_OTP"
   DCT.Rental _ -> "RENTAL"
-  DCT.InterCity _ -> "INTER_CITY"
+  DCT.InterCity _ _ -> "INTER_CITY"
   _ -> "DELIVERY"
 
 tfContact :: Maybe Text -> Maybe Spec.Contact

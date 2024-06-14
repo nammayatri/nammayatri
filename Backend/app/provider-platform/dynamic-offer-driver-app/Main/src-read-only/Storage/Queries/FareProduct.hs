@@ -52,21 +52,6 @@ findAllUnboundedFareProductForArea merchantOperatingCityId area timeBounds enabl
         ]
     ]
 
-findAllUnboundedFareProductForVariants ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Lib.Types.SpecialLocation.Area -> Domain.Types.Common.TripCategory -> Domain.Types.TimeBound.TimeBound -> Kernel.Prelude.Bool -> [Domain.Types.FareProduct.SearchSource] -> m [Domain.Types.FareProduct.FareProduct])
-findAllUnboundedFareProductForVariants merchantOperatingCityId area tripCategory timeBounds enabled searchSource = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.area $ Se.Eq area,
-          Se.Is Beam.tripCategory $ Se.Eq tripCategory,
-          Se.Is Beam.timeBounds $ Se.Eq timeBounds,
-          Se.Is Beam.enabled $ Se.Eq enabled,
-          Se.Is Beam.searchSource $ Se.In searchSource
-        ]
-    ]
-
 findUnboundedByMerchantOpCityIdVariantArea ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Lib.Types.SpecialLocation.Area -> Domain.Types.Common.TripCategory -> Domain.Types.ServiceTierType.ServiceTierType -> Domain.Types.TimeBound.TimeBound -> Kernel.Prelude.Bool -> [Domain.Types.FareProduct.SearchSource] -> m (Maybe Domain.Types.FareProduct.FareProduct))

@@ -143,6 +143,15 @@ InterCityTravelCities:
       where:
         and: [merchantId, state]
 
+  cachedQueries:
+    findByMerchantIdAndState:
+      returnType: Array
+      withCrossAppRedis: true
+      queryType: FindAndCache
+      dbQuery: findByMerchantAndState
+      dbQueryParams: [merchantId, state]
+      keyParams: [merchantId, state]
+
 ValueAddNP:
   tableName: value_add_np
 

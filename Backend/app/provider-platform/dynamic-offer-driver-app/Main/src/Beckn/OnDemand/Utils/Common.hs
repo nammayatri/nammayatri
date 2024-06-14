@@ -223,7 +223,7 @@ mkFulfillmentType = \case
   DCT.OneWay DCT.OneWayRideOtp -> show Enums.RIDE_OTP
   DCT.RideShare DCT.RideOtp -> show Enums.RIDE_OTP
   DCT.Rental _ -> show Enums.RENTAL
-  DCT.InterCity _ -> show Enums.INTER_CITY
+  DCT.InterCity _ _ -> show Enums.INTER_CITY
   _ -> show Enums.DELIVERY
 
 rationaliseMoney :: Money -> Text
@@ -1031,7 +1031,7 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
     mapToFulfillmentType (DTC.OneWay DTC.OneWayRideOtp) = show Enums.RIDE_OTP
     mapToFulfillmentType (DTC.RideShare DTC.RideOtp) = show Enums.RIDE_OTP
     mapToFulfillmentType (DTC.Rental _) = show Enums.RENTAL
-    mapToFulfillmentType (DTC.InterCity _) = show Enums.INTER_CITY
+    mapToFulfillmentType (DTC.InterCity _ _) = show Enums.INTER_CITY
     mapToFulfillmentType _ = show Enums.RIDE_OTP -- backward compatibility
 
 convertBookingToPricing :: DVST.VehicleServiceTier -> DBooking.Booking -> Pricing

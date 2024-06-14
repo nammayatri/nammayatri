@@ -87,7 +87,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
             Left _ -> cancelRideTransactionForNonReallocation Nothing (Just searchTry.estimateId)
         else cancelRideTransactionForNonReallocation Nothing (Just searchTry.estimateId)
     DTC.Rental DTC.OnDemandStaticOffer -> reallocateStaticOffer now
-    DTC.InterCity DTC.OneWayOnDemandStaticOffer -> reallocateStaticOffer now
+    DTC.InterCity DTC.OneWayOnDemandStaticOffer _ -> reallocateStaticOffer now
     _ -> cancelRideTransactionForNonReallocation Nothing Nothing
   where
     reallocateStaticOffer now = do

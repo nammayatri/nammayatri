@@ -35,9 +35,9 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data UsageSafety = Safe | Unsafe
 
-data TripCategory = OneWay OneWayMode | Rental RentalMode | RideShare RideShareMode | InterCity OneWayMode | CrossCity OneWayMode
+data TripCategory = OneWay OneWayMode | Rental RentalMode | RideShare RideShareMode | InterCity OneWayMode (Maybe Text) | CrossCity OneWayMode (Maybe Text)
   deriving stock (Eq, Ord, Generic)
-  deriving anyclass (FromJSON, PrettyShow, ToJSON, ToSchema)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data TripOption = TripOption
   { schedule :: UTCTime,
@@ -85,8 +85,10 @@ instance Show TripCategory where
   show (OneWay s) = "OneWay_" <> show s
   show (Rental s) = "Rental_" <> show s
   show (RideShare s) = "RideShare_" <> show s
-  show (InterCity s) = "InterCity_" <> show s
-  show (CrossCity s) = "CrossCity_" <> show s
+  show (InterCity s Nothing) = "InterCity_" <> show s
+  show (InterCity s (Just city)) = "InterCity_" <> show s <> "_" <> show city
+  show (CrossCity s Nothing) = "CrossCity_" <> show s
+  show (CrossCity s (Just city)) = "CrossCity_" <> show s <> "_" <> show city
 
 instance ToParamSchema TripCategory where
   toParamSchema _ =
@@ -128,13 +130,33 @@ instance Read TripCategory where
                  | r1 <- stripPrefix "RideShare_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
-            ++ [ (InterCity v1, r2)
+            ++ [ (InterCity v1 Nothing, r3)
                  | r1 <- stripPrefix "InterCity_" r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
+                   (v1, r2) <- readsPrec (app_prec + 1) r1,
+                   r3 <- [r2]
                ]
-            ++ [ (CrossCity v1, r2)
+            ++ [ (InterCity v1 (Just v2), r4)
+                 | r1 <- stripPrefix "InterCity_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1,
+                   let m = case r2 of
+                         ('_' : rest) -> Just rest
+                         _ -> Nothing,
+                   Just r3 <- [m],
+                   (v2, r4) <- readsPrec (app_prec + 1) r3
+               ]
+            ++ [ (CrossCity v1 Nothing, r3)
                  | r1 <- stripPrefix "CrossCity_" r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
+                   (v1, r2) <- readsPrec (app_prec + 1) r1,
+                   r3 <- [r2]
+               ]
+            ++ [ (CrossCity v1 (Just v2), r4)
+                 | r1 <- stripPrefix "CrossCity_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1,
+                   let m = case r2 of
+                         ('_' : rest) -> Just rest
+                         _ -> Nothing,
+                   Just r3 <- [m],
+                   (v2, r4) <- readsPrec (app_prec + 1) r3
                ]
       )
     where
@@ -156,7 +178,7 @@ isRideOtpBooking _ = False
 -- Move it to configs later if required
 isEndOtpRequired :: TripCategory -> Bool
 isEndOtpRequired (Rental _) = True
-isEndOtpRequired (InterCity _) = True
+isEndOtpRequired (InterCity _ _) = True
 isEndOtpRequired _ = False
 
 -- Move it to configs later if required
@@ -184,13 +206,13 @@ isFixedNightCharge tripCategory = isRentalTrip tripCategory || isInterCityTrip t
 
 isInterCityTrip :: TripCategory -> Bool
 isInterCityTrip tripCategory = case tripCategory of
-  InterCity _ -> True
+  InterCity _ _ -> True
   _ -> False
 
 isDynamicOfferTrip :: TripCategory -> Bool
 isDynamicOfferTrip (OneWay OneWayOnDemandDynamicOffer) = True
-isDynamicOfferTrip (CrossCity OneWayOnDemandDynamicOffer) = True
-isDynamicOfferTrip (InterCity OneWayOnDemandDynamicOffer) = True
+isDynamicOfferTrip (CrossCity OneWayOnDemandDynamicOffer _) = True
+isDynamicOfferTrip (InterCity OneWayOnDemandDynamicOffer _) = True
 isDynamicOfferTrip _ = False
 
 isTollApplicable :: ServiceTierType -> Bool

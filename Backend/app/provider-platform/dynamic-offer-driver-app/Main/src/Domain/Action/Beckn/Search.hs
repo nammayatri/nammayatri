@@ -73,6 +73,7 @@ import SharedLogic.TollsDetector
 import Storage.Cac.DriverPoolConfig as CDP
 import Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
+import qualified Storage.CachedQueries.InterCityTravelCities as CQITC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -250,10 +251,10 @@ handler ValidatedDSearchReq {..} sReq = do
     processPolicy buildEstimateHelper buildQuoteHelper fp (estimates, quotes) =
       case fp.tripCategory of
         DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> (buildEstimateHelper False) fp >>= \est -> pure (est : estimates, quotes)
-        DTC.CrossCity DTC.OneWayOnDemandDynamicOffer -> (buildEstimateHelper False) fp >>= \est -> pure (est : estimates, quotes)
-        DTC.InterCity DTC.OneWayOnDemandDynamicOffer -> (buildEstimateHelper False) fp >>= \est -> pure (est : estimates, quotes)
+        DTC.CrossCity DTC.OneWayOnDemandDynamicOffer _ -> (buildEstimateHelper False) fp >>= \est -> pure (est : estimates, quotes)
+        DTC.InterCity DTC.OneWayOnDemandDynamicOffer _ -> (buildEstimateHelper False) fp >>= \est -> pure (est : estimates, quotes)
         DTC.Rental _ -> (buildQuoteHelper True) fp >>= \quote -> pure (estimates, quote : quotes)
-        DTC.InterCity _ -> (buildQuoteHelper True) fp >>= \quote -> pure (estimates, quote : quotes)
+        DTC.InterCity _ _ -> (buildQuoteHelper True) fp >>= \quote -> pure (estimates, quote : quotes)
         _ -> (buildQuoteHelper False) fp >>= \quote -> pure (estimates, quote : quotes)
 
     buildDSearchResp fromLocation toLocation specialLocationTag searchMetricsMVar quotes estimates specialLocationName = do
@@ -572,12 +573,12 @@ validateRequest merchantId sReq = do
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
   let (distanceUnit, merchantOpCityId) = (merchantOpCity.distanceUnit, merchantOpCity.id)
   transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id sReq.transactionId))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
-  (isInterCity, isCrossCity) <-
+  (isInterCity, isCrossCity, destinationTravelCityName) <-
     case sReq.dropLocation of
       Just dropLoc -> do
-        destinationCityState <- getDestinationCity merchant dropLoc -- This checks for destination serviceability too
+        (destinationCityState, mbDestinationTravelCityName) <- getDestinationCity merchant dropLoc -- This checks for destination serviceability too
         if destinationCityState.city == sourceCity.city && destinationCityState.city /= Context.AnyCity
-          then return (False, False)
+          then return (False, False, Nothing)
           else do
             mbMerchantState <- CQMS.findByMerchantIdAndState merchant.id sourceCity.state
             let allowedStates = maybe [sourceCity.state] (.allowedDestinationStates) mbMerchantState
@@ -585,17 +586,17 @@ validateRequest merchantId sReq = do
             if destinationCityState.state `elem` allowedStates
               then do
                 if destinationCityState.city `elem` transporterConfig.crossTravelCities
-                  then return (True, True)
-                  else return (True, False)
+                  then return (True, True, mbDestinationTravelCityName)
+                  else return (True, False, mbDestinationTravelCityName)
               else throwError (RideNotServiceableInState $ show destinationCityState.state)
-      Nothing -> pure (False, False)
+      Nothing -> pure (False, False, Nothing)
 
   now <- getCurrentTime
-  let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity
+  let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity destinationTravelCityName
   return ValidatedDSearchReq {..}
 
-getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> DTC.TripOption
-getPossibleTripOption now tConf dsReq isInterCity isCrossCity = do
+getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Maybe Text -> DTC.TripOption
+getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelCityName = do
   let (schedule, isScheduled) =
         if tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
           then (dsReq.pickupTime, True)
@@ -607,11 +608,11 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity = do
               then do
                 if isCrossCity
                   then do
-                    [DTC.CrossCity DTC.OneWayOnDemandStaticOffer, DTC.Rental DTC.OnDemandStaticOffer]
-                      <> (if not isScheduled then [DTC.CrossCity DTC.OneWayRideOtp, DTC.CrossCity DTC.OneWayOnDemandDynamicOffer, DTC.Rental DTC.RideOtp] else [])
+                    [DTC.CrossCity DTC.OneWayOnDemandStaticOffer destinationTravelCityName]
+                      <> (if not isScheduled then [DTC.CrossCity DTC.OneWayRideOtp destinationTravelCityName, DTC.CrossCity DTC.OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
                   else do
-                    [DTC.InterCity DTC.OneWayOnDemandStaticOffer, DTC.Rental DTC.OnDemandStaticOffer]
-                      <> (if not isScheduled then [DTC.InterCity DTC.OneWayRideOtp, DTC.InterCity DTC.OneWayOnDemandDynamicOffer, DTC.Rental DTC.RideOtp] else [])
+                    [DTC.InterCity DTC.OneWayOnDemandStaticOffer destinationTravelCityName]
+                      <> (if not isScheduled then [DTC.InterCity DTC.OneWayRideOtp destinationTravelCityName, DTC.InterCity DTC.OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
               else do
                 [DTC.OneWay DTC.OneWayOnDemandStaticOffer, DTC.Rental DTC.OnDemandStaticOffer]
                   <> (if not isScheduled then [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer, DTC.Rental DTC.RideOtp] else [])
@@ -660,21 +661,26 @@ getNearestOperatingAndSourceCity merchant pickupLatLong = do
           let operatingCityState = CityState {city = g.city, state = g.state}
           return $ NearestOperatingAndSourceCity {nearestOperatingCity = operatingCityState, sourceCity = operatingCityState}
 
-getDestinationCity :: DM.Merchant -> LatLong -> Flow CityState
+getDestinationCity :: DM.Merchant -> LatLong -> Flow (CityState, Maybe Text)
 getDestinationCity merchant dropLatLong = do
   let geoRestriction = merchant.geofencingConfig.destination
   case geoRestriction of
-    Unrestricted -> return CityState {city = merchant.city, state = merchant.state}
+    Unrestricted -> return (CityState {city = merchant.city, state = merchant.state}, Nothing)
     Regions regions -> do
       geoms <- B.runInReplica $ QGeometry.findGeometriesContaining dropLatLong regions
       case filter (\geom -> geom.city /= Context.AnyCity) geoms of
         [] ->
           find (\geom -> geom.city == Context.AnyCity) geoms & \case
-            Just anyCityGeom -> return CityState {city = anyCityGeom.city, state = anyCityGeom.state}
+            Just anyCityGeom -> do
+              interTravelCities <- CQITC.findByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters dropLatLong (LatLong m.lat m.lng), m.cityName))
+              operatingCities <- CQMOC.findAllByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters dropLatLong m.location, show m.city))
+              let cities = interTravelCities <> operatingCities
+              let mbNearestCity = snd <$> (listToMaybe $ sortBy (comparing fst) cities)
+              return (CityState {city = anyCityGeom.city, state = anyCityGeom.state}, mbNearestCity)
             Nothing -> do
               logError $ "No geometry found for dropLatLong: " <> show dropLatLong <> " for regions: " <> show regions
               throwError RideNotServiceable
-        (g : _) -> return CityState {city = g.city, state = g.state}
+        (g : _) -> return (CityState {city = g.city, state = g.state}, Just $ show g.city)
 
 buildSearchReqLocation :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.Location
 buildSearchReqLocation merchantId merchantOpCityId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do
