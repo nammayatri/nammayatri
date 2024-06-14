@@ -741,11 +741,11 @@ primaryButtonRequestRideConfig :: Config -> String -> PrimaryButton.Config
 primaryButtonRequestRideConfig config id' = PrimaryButton.config
   { textConfig
     { text = title
-    , color = Color.yellow900
+    , color = (getAppConfig appConfig).primaryTextColor
     , accessibilityHint = "Confirm Button to Proceed With " <> name
     }
   , id = id'
-  , background = Color.black900
+  , background = (getAppConfig appConfig).primaryBackground
   , margin = Margin 0 16 0 15
   , enableRipple = not disableButton
   , alpha = if disableButton then 0.5 else 1.0

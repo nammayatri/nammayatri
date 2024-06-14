@@ -484,7 +484,7 @@ getAssetLink lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/user/images/"
   YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/user/images/"
   YATRI -> "https://" <> assetDomain <> "/beckn/yatri/user/images/"
-  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/user/"
+  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/user/images/"
   PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/user/images/"
   MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/mobilityredbus/user/images/"
 
@@ -493,9 +493,9 @@ getCommonAssetLink lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/nammayatricommon/images/"
   YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/jatrisaathicommon/images/"
   YATRI -> "https://" <> assetDomain <> "/beckn/yatri/yatricommon/images/"
-  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/mobilitypaytmcommon/"
-  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
-  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/mobilityredbus/mobilityredbuscommon/"
+  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/mobilitypaytmcommon/images/"
+  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/images/"
+  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/mobilityredbus/mobilityredbuscommon/images/"
 
 getAssetsBaseUrl :: LazyCheck -> String
 getAssetsBaseUrl lazy = case (getMerchant lazy) of
@@ -505,6 +505,9 @@ getAssetsBaseUrl lazy = case (getMerchant lazy) of
   MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/user/"
   PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/user/"
   MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/mobilityredbus/user/"
+
+getGlobalCommonAssetsBaseUrl :: LazyCheck -> String
+getGlobalCommonAssetsBaseUrl lazy = "https://" <> assetDomain <> "/beckn/common/common/"
 
 fetchImage :: FetchImageFrom -> String -> String
 fetchImage fetchImageFrom imageName = do

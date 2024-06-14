@@ -68,6 +68,7 @@ config =
     , crossIcon : "ny_ic_close_white,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_close_white.png"
     , enableRateCard: true
     , clearTextImage: "ny_ic_close_grey"
+    , placeHolderColor: "#9899a1"
     }
   , driverInfoConfig : 
     { ratingTextColor: "#454545"
@@ -89,6 +90,7 @@ config =
     , footerVisibility : false
     , footerImageUrl : "ic_namma_yatri_logo,https://assets.moving.tech/beckn/nammayatri/user/images/ic_namma_yatri_logo.png"
     , footerBackgroundColor : "#FFFFFF"
+    , cancelTextColor : "#6D7280"
     }
   , ratingConfig : 
     { secondaryButtonTextColor : "#2C2F3A"
@@ -177,7 +179,7 @@ config =
       , variantInfo : {
         hatchback : {
           name : "Hatchback",
-          image : "ny_ic_hatchback,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_hatchback-2.png",
+          image : "ny_ic_hatchback,https://assets.moving.tech/beckn/nammayatri/user/images/ic_hatchback_ac.png",
           leftViewImage : "ny_ic_hatchback_left_view,"
           },
         taxiPlus : {
@@ -217,6 +219,8 @@ config =
       , textColor: "#6D7280"
       , showInfoIcon : true 
       , genericLoaderLottie : "https://assets.moving.tech/beckn/nammayatri/user/lottie/ny_ic_generic_loader.json"
+      , selectedBG : "#f4F7FF"
+      , selectedStroke : "#2194FF"
       }
   , customerTip : {
       auto : true,
@@ -317,6 +321,9 @@ config =
       physicalImpairmentVideo : "",
       hearingImpairmentVideo : ""
     }
+  , permissionScreen : {
+      showGoback : true
+    }
   , homeScreen: {
       primaryBackground : "#2C2F3A",
       isServiceablePopupFullScreen : false,
@@ -343,7 +350,9 @@ config =
           blur: 4.0,
           spread: 2.0,
           opacity : 0.3
-        }
+        },
+        background : "#383B46",
+        color : "#FCC32C"
       },
       showAdditionalServicesNew : true
     }

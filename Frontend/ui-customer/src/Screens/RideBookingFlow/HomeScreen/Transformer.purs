@@ -587,6 +587,8 @@ getEstimates (EstimateAPIEntity estimate) estimates index isFareRange count acti
       , availableServices = availableServices
       , selectedServices = selectedServices
       , validTill = estimate.validTill
+      , selectedBG = (getAppConfig appConfig).estimateAndQuoteConfig.selectedBG
+      , selectedStroke = (getAppConfig appConfig).estimateAndQuoteConfig.selectedStroke
       }
 
 mapServiceTierName :: String -> Maybe Boolean -> Maybe String -> Maybe String

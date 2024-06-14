@@ -81,9 +81,13 @@ type AppConfigCustomer a =
   , enableBookAny :: Boolean
   , acPopupConfig :: AcPopupConfig
   , showCheckoutRentalBanner :: Boolean
+  , permissionScreen :: PermissionScreenConfig
   | a
   }
 
+type PermissionScreenConfig = {
+  showGoback :: Boolean
+}
 type ReferalConfig = {
   domain :: String,
   customerAppId :: String
@@ -139,6 +143,7 @@ type DriverInfoConfig = {
 , footerVisibility :: Boolean
 , footerImageUrl :: String
 , footerBackgroundColor :: String
+, cancelTextColor :: String
 }
 
 type SearchLocationConfig = {
@@ -164,6 +169,7 @@ type SearchLocationConfig = {
 , showChargeDesc :: Boolean
 , enableRateCard :: Boolean
 , clearTextImage :: String
+, placeHolderColor :: String
 }
 
 type QuoteListConfig = {
@@ -235,6 +241,8 @@ type EstimateAndQuoteConfig = {
   showInfoIcon :: Boolean,
   variantInfo :: VariantConfig,
   genericLoaderLottie :: String
+, selectedBG :: String 
+, selectedStroke :: String
 }
 
 type CustomerTip = {
@@ -349,7 +357,9 @@ type HomeScreenHeader = {
 
 type WhereToButton = {
   margin :: MarginConfig,
-  shadow :: ShadowConfig
+  shadow :: ShadowConfig,
+  background :: String,
+  color :: String
 }
 
 type MarginConfig = {

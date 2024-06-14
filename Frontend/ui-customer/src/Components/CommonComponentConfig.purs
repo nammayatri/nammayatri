@@ -29,8 +29,8 @@ type ContentConfig =
    }
 
 
-accessibilityPopUpConfig :: Mb.Maybe ST.DisabilityT -> PurpleRideConfig -> PopUpModal.Config
-accessibilityPopUpConfig selectedDisability purpleRideConfig = 
+accessibilityPopUpConfig :: Mb.Maybe ST.DisabilityT -> PurpleRideConfig -> String -> String -> PopUpModal.Config
+accessibilityPopUpConfig selectedDisability purpleRideConfig btnTextColor btnBackgroundColor = 
    let 
      config = PopUpModal.config
      popupData = getAccessibilityPopupData selectedDisability purpleRideConfig
@@ -50,8 +50,8 @@ accessibilityPopUpConfig selectedDisability purpleRideConfig =
          , gravity = LEFT},
          option1 {
            text = getString GOT_IT
-         , background = Color.black900
-         , color = Color.yellow900
+         , background = btnBackgroundColor
+         , color = btnTextColor
          },
          option2 {
            visibility = false

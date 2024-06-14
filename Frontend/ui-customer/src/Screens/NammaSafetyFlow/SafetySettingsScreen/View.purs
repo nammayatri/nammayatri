@@ -51,6 +51,7 @@ import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState, GlobalState(..))
+import JBridge
 
 
 screen :: NammaSafetyScreenState -> Screen Action NammaSafetyScreenState ScreenOutput
@@ -220,7 +221,9 @@ callPoliceView state push text' =
 
 featuresViewOffUs :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 featuresViewOffUs state push =
-  let merchant = spaceSeparatedPascalCase $ show (getMerchant FunctionCall) -- Need to check other merchants and update logic
+  let 
+    merchant = spaceSeparatedPascalCase $ show (getMerchant FunctionCall) -- Need to check other merchants and update logic
+    enableFlexBox = isClassAvailable "com/google/android/flexbox/FlexboxLayout"
   in
   linearLayout
     [ width MATCH_PARENT

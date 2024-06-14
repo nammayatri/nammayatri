@@ -222,7 +222,7 @@ inputTextField push config =
           , selectAllOnFocus true
           , singleLine true
           , hint config.inputTextConfig.placeHolder
-          , hintColor $ Color.blueGrey
+          , hintColor config.placeHolderColor
           , pattern "[^\n]*,255"
           , id $ getNewIDWithTag $ config.inputTextConfig.id
           , onChange (\action -> do 

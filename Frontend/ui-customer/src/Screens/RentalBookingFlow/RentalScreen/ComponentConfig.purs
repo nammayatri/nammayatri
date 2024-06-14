@@ -172,6 +172,7 @@ mapInputViewConfig state =
       , fontStyle : if isSelectPackageStage then FontStyle.body6 LanguageStyle else FontStyle.subHeading2 LanguageStyle
       , gravity : if isSelectPackageStage then LEFT else CENTER_HORIZONTAL
       , inputTextConfig : item
+      , placeHolderColor : Color.blueGrey
       }
 
     inputTextConfigArray :: Boolean -> Array (InputView.InputTextConfig)

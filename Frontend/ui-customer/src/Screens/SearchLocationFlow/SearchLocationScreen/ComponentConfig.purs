@@ -282,6 +282,7 @@ mapInputViewConfig state isEditable =
          , prefixImageVisibility : GONE 
          , prefixImageConfig : InputView.dummyImageConfig
          }
+      , placeHolderColor : Color.blueGrey
       }
 
     inputViewArray state = 

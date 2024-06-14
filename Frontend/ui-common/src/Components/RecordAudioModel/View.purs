@@ -36,6 +36,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Mobility.Prelude (boolToVisibility)
 import PrestoDOM.Elements.Keyed as Keyed 
 import Data.Tuple (Tuple(..))
+import Helpers.Utils
 
 view :: forall w. (Action -> Effect Unit) -> RecordAudioModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -102,7 +103,7 @@ audioRecordingAnimationView push state =
                   , id $ getNewIDWithTag "recordAnimation"
                   , afterRender
                       ( \action -> do
-                          void $ pure $ startLottieProcess lottieAnimationConfig { rawJson = "record_audio_animation.json", lottieId = (getNewIDWithTag "recordAnimation"), scaleType = "FIT_CENTER", speed = 1.0 }
+                          void $ pure $ startLottieProcess lottieAnimationConfig { rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/record_audio_animation.json", lottieId = (getNewIDWithTag "recordAnimation"), scaleType = "FIT_CENTER", speed = 1.0 }
                           pure unit
                       )
                       (const NoAction)

@@ -320,6 +320,7 @@ sliderConfig = {
   bgColor : Color.black,
   bgAlpha : 50
 }
+foreign import isClassAvailable :: String -> Boolean
 
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
 setMapPadding = runEffectFn4 setMapPaddingImpl

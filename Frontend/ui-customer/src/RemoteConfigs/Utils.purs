@@ -1,7 +1,7 @@
 module RemoteConfig.Utils where
 
 import Prelude
-import DecodeUtil (decodeForeignObject, parseJSON)
+import DecodeUtil (decodeForeignObject, parseJSON, decodeForeignAny)
 import Foreign (Foreign)
 import Foreign.Index (readProp)
 import Common.RemoteConfig (fetchRemoteConfigString, getCityBasedConfig, defaultRemoteConfig)
@@ -18,17 +18,18 @@ import RemoteConfig.Types
 import Data.Array as DA
 import Locale.Utils(getLanguageLocale)
 import Constants (languageKey)
+import DecodeUtil
 
 safetyVideoConfigData :: String -> String -> Array SafetyVideoConfig
 safetyVideoConfigData city language = do
     let config = fetchRemoteConfigString ("safety_videos_" <> language)
-        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
+        value = decodeForeignAny (parseJSON config) $ defaultRemoteConfig []
     getCityBasedConfig value city
 
 safetyBannerVideoConfigData :: String -> String -> Array SafetyVideoConfig
 safetyBannerVideoConfigData city language = do
     let config = fetchRemoteConfigString ("safety_banner_videos_" <> language)
-        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
+        value = decodeForeignAny (parseJSON config) $ defaultRemoteConfig []
     getCityBasedConfig value city
 
 pickupInstructions :: String -> String -> String -> Array PickupInstructions
@@ -58,7 +59,7 @@ getFamousDestinations city = do
         config = if not $ DS.null langConfig
                    then langConfig 
                    else fetchRemoteConfigString "famous_destinations_en"
-        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
+        value = decodeForeignAny (parseJSON config) $ defaultRemoteConfig []
     getCityBasedConfig value city
   where
     getLanguage lang = 

@@ -76,7 +76,7 @@ screen initialState =
             (FetchIssueListResp issueListResponse) <- Remote.fetchIssueListBT language
             lift $ lift $ doAff do liftEffect $ push $ FetchIssueListApiCall issueListResponse.issues
           else pure unit
-          when (initialState.data.source == "") $ lift $ lift $  getPastRides RideBookingListAPIResponseAction push initialState
+          when (initialState.data.bookingId == "") $ lift $ lift $  getPastRides RideBookingListAPIResponseAction push initialState
         pure $ pure unit
       )
   ]
