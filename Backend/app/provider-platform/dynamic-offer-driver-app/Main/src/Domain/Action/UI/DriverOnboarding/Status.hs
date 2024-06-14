@@ -462,7 +462,7 @@ checkIfUnderProgress docType driverId onboardingTryLimit = do
         let latestImage = head images
         if latestImage.verificationStatus == Just Documents.INVALID
           then return (INVALID, extractImageFailReason latestImage.failureReason)
-          else return (NO_DOC_AVAILABLE, Nothing)
+          else return (MANUAL_VERIFICATION_REQUIRED, Nothing)
 
 extractImageFailReason :: Maybe DriverOnboardingError -> Maybe Text
 extractImageFailReason imageError =
