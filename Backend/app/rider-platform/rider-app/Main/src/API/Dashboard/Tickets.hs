@@ -23,7 +23,7 @@ import Storage.Beam.SystemConfigs ()
 
 data TicketBookingEndpoint
   = VerifyBookingDetails
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "TicketBookingEndpoint"
 

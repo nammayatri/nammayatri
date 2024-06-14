@@ -16,6 +16,7 @@
 
 module API.Dashboard.RideBooking.Frontend where
 
+import Data.OpenApi
 import qualified Domain.Action.UI.Frontend as DFrontend
 import qualified Domain.Types.Person as DP
 import Environment
@@ -30,7 +31,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Person as QP
 
 data RideNotifyEventEndPoint = NotifyEventEndPoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "RideNotifyEventEndPoint"
 

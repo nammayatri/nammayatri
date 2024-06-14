@@ -17,6 +17,7 @@
 module API.Dashboard.RideBooking.Booking where
 
 import qualified API.UI.Booking as UB
+import Data.OpenApi
 import qualified Domain.Action.UI.Booking as DBooking
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.API as DB
@@ -32,7 +33,7 @@ import SharedLogic.Merchant
 import Storage.Beam.SystemConfigs ()
 
 data RideBookingEndPoint = RideStatusEndPoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "RideBookingEndPoint"
 

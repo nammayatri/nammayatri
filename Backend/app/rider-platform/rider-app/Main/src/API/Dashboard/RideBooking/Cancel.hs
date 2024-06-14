@@ -17,6 +17,7 @@
 module API.Dashboard.RideBooking.Cancel where
 
 import qualified Beckn.ACL.Cancel as ACL
+import Data.OpenApi
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Merchant as DM
@@ -33,7 +34,7 @@ import SharedLogic.Merchant
 import Storage.Beam.SystemConfigs ()
 
 data RideCancelEndPoint = RideBookingCancelEndPoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "RideCancelEndPoint"
 

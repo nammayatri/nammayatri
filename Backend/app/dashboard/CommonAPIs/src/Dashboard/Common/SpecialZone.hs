@@ -28,6 +28,6 @@ data SpecialZoneEndpoint
   = CreateSpecialZoneEndpoint
   | UpdateSpecialZoneEndpoint
   | DeleteSpecialZoneEndpoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "SpecialZoneEndpoint"

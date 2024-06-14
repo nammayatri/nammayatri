@@ -44,7 +44,7 @@ data MessageEndpoint
   | MessageInfoEndpoint
   | MessageDeliveryInfoEndpoint
   | MessageReceiverListEndpoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "MessageEndpoint"
 

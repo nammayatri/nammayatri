@@ -37,7 +37,7 @@ data RegistrationEndPoint
   | RegistrationVerifyEndPoint
   | RegistrationResendEndPoint
   | RegistrationLogoutEndPoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "RegistrationEndPoint"
 

@@ -34,7 +34,7 @@ data CustomerEndpoint
   | UnblockCustomerEndpoint
   | CustomerCancellationDuesSyncEndpoint
   | UpdateSafetyCenterEndpoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "CustomerEndpoint"
 

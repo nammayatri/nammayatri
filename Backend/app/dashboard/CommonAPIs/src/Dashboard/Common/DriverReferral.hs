@@ -34,7 +34,7 @@ import Servant
 data ReferralEndpoint
   = ReferralProgramUpdateOpsPasswordEndpoint
   | ReferralProgramLinkEndpoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "ReferralEndpoint"
 

@@ -31,7 +31,7 @@ import SharedLogic.Merchant
 import Storage.Beam.SystemConfigs ()
 
 data RideConfirmEndPoint = ConfirmEndPoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "RideConfirmEndPoint"
 
