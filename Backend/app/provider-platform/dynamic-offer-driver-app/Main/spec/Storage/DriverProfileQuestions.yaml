@@ -18,10 +18,10 @@ DriverProfileQuestions:
     merchantOperatingCityId : Id MerchantOperatingCity
 
   default:
-    expertAt: '[]'
-    pledges: '[]'
-    whyNY: '[]'
-    aspirations: '[]'
+    expertAt: "'{}'"
+    pledges: "'{}'"
+    whyNY: "'{}'"
+    aspirations: "'{}'"
 
   constraints:
     driverId : PrimaryKey
