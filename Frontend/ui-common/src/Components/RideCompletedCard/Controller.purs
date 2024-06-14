@@ -99,7 +99,7 @@ data RideCompletedElements = BANNER | QR_VIEW | NO_VPA_VIEW | BADGE_CARD | DRIVE
 derive instance genericRideCompletedElements :: Generic RideCompletedElements _
 instance eqRideCompletedElements :: Eq RideCompletedElements where eq = genericEq
 
-data RentalRowView = RideTime | RideDistance | RideStartedAt | RideEndedAt | EstimatedFare | ExtraTimeFare | ExtraDistanceFare | TotalFare
+data RentalRowView = RideTime | RideDistance | RideStartedAt | RideEndedAt | EstimatedFare | ExtraTimeFare | ExtraDistanceFare | TotalFare | Surcharges
 
 derive instance genericRentalRowView :: Generic RentalRowView _
 instance eqRentalRowView :: Eq RentalRowView where eq = genericEq

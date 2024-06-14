@@ -375,7 +375,7 @@ otpAndWaitView push state =
            , cornerRadius if os == "IOS" then 20.0 else 32.0
            , background Color.white900
            , clickable true
-           , onClick push $ const $ if state.props.isRateCardAvailable then WaitingInfo else NoAction
+           , onClick push $ const $ if state.props.isRateCardAvailable || state.data.fareProductType == FPT.RENTAL then WaitingInfo else NoAction
            , gravity CENTER
            , accessibility DISABLE
            , margin $ Margin 6 8 8 8
@@ -396,7 +396,7 @@ otpAndWaitView push state =
                , accessibility DISABLE
                , margin $ MarginRight 4
                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
-               , visibility $ boolToVisibility state.props.isRateCardAvailable 
+               , visibility $ boolToVisibility $ state.props.isRateCardAvailable || state.data.fareProductType == FPT.RENTAL 
                ]
            , waitTimeView push state
            ])]
