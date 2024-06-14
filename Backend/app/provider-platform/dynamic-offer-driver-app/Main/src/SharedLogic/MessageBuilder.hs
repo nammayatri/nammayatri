@@ -33,6 +33,8 @@ module SharedLogic.MessageBuilder
     addBroadcastMessageToKafka,
     BuildFleetJoiningMessageReq (..),
     buildFleetJoiningMessage,
+    BuildDownloadAppMessageReq (..),
+    buildFleetJoinAndDownloadAppMessage,
   )
 where
 
@@ -213,3 +215,16 @@ buildFleetJoiningMessage merchantOperatingCityId req = do
     merchantMessage.message
       & T.replace (templateText "fleetOwnerName") req.fleetOwnerName
       & T.replace (templateText "otp") req.otp
+
+newtype BuildDownloadAppMessageReq = BuildDownloadAppMessageReq
+  { fleetOwnerName :: Text
+  }
+
+buildFleetJoinAndDownloadAppMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildDownloadAppMessageReq -> m Text
+buildFleetJoinAndDownloadAppMessage merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOpCityIdAndMessageKey merchantOperatingCityId DMM.FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE))
+  return $
+    merchantMessage.message
+      & T.replace (templateText "fleetOwnerName") req.fleetOwnerName
