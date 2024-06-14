@@ -278,34 +278,29 @@ rentalPolicyInfoConfig state = let
       accessibilityHint = getEN RENTAL_POLICY,
       textStyle = FontStyle.Heading1
     }
-  , primaryText {
-      text = getString $ RENTAL_INFO_POLICY_DESC (show 10) ,
-      padding = Padding 16 16 0 16,
-      textStyle = FontStyle.ParagraphText,
-      color = Color.black700,
-      accessibilityHint = getEN RENTAL_POLICY_DESC
-    }
   , secondaryText {
       text = getString RENTAL_POLICY_DESC_1,
       visibility = VISIBLE,
-      padding = Padding 16 16 0 0,
+      padding = Padding 16 16 16 16,
       color = Color.black700,
       textStyle = FontStyle.ParagraphText,
       width = MATCH_PARENT,
       accessibilityHint = getEN RENTAL_POLICY_DESC_1
     }
   , imageConfig {
-      imageUrl = fetchImage FF_ASSET "ny_ic_policy",
+      imageUrl = fetchImage FF_COMMON_ASSET "ic_policy_clock",
       height = V 130,
       width = V 130,
       padding = Padding 0 2 2 0,
       visibility = VISIBLE
     }
+  , bulletPoints = [(getString $ RENTAL_INFO_POLICY_DESC (show 10)),(getString RENTAL_INFO_POLICY_DESC_)]
   , infoImageConfig {
       imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_rental_hourly_charge",
       height = V 118,
       width = MATCH_PARENT,
-      visibility = VISIBLE
+      visibility = VISIBLE,
+      margin = MarginVertical 20 20
   }
   , buttonConfig {
       text = getString GOT_IT,
