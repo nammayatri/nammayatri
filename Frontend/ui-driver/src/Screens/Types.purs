@@ -1845,7 +1845,8 @@ type RidePreference = {
   priority :: Int,
   rateCardData :: Maybe Common.BreakupList,
   perKmRate :: Maybe Number,
-  farePolicyHour :: Maybe API.FarePolicyHour
+  farePolicyHour :: Maybe API.FarePolicyHour,
+  currency :: Maybe Common.Currency
 }
 
 type BookingOptionsScreenProps = {
@@ -2727,7 +2728,7 @@ type RateCardScreenState = {
 type RateCardScreenData = {
   ridePreferences :: Array RidePreference,
   rateCard :: Common.RateCard,
-  cityConfig :: CityConfig
+  config :: AppConfig
 }
 
 type RateCardScreenProps = {

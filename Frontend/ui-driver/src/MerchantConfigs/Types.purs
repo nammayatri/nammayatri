@@ -9,6 +9,8 @@ type AppConfigDriver a =
   {
     primaryTextColor :: String,
     primaryBackground :: String,
+    primaryGradientColor :: Array String,
+    primaryToggleBackground :: String,
     secondaryBackground :: String,
     languageList :: Array Language,
     popupBackground :: String,

@@ -1816,7 +1816,8 @@ bookingOptionsFlow = do
           priority : fromMaybe 0 item.priority,
           rateCardData : Nothing,
           perKmRate : Nothing,
-          farePolicyHour : Nothing
+          farePolicyHour : Nothing,
+          currency : Nothing
         }
       )
 

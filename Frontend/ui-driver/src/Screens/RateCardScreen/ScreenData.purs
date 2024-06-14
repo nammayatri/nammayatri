@@ -2,6 +2,7 @@
 module Screens.RateCardScreen.ScreenData where
 
 import Prelude
+import ConfigProvider
 import Screens.Types(RateCardScreenState)
 import ConfigProvider
 import Screens.BookingOptionsScreen.ScreenData as BOP

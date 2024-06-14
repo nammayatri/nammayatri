@@ -12,6 +12,8 @@ config :: AppConfig
 config =
   { primaryTextColor: "#FCC32C"
   , primaryBackground: "#2C2F3A"
+  , primaryGradientColor: ["#E2EAFF", "#F5F8FF"]
+  , primaryToggleBackground : "#2194FF"
   , languageList:
       [ { name: "English", value: "EN_US", subtitle: "" }
       , { name: "ಕನ್ನಡ", value: "KN_IN", subtitle: "Kannada" }
