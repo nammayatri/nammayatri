@@ -20,6 +20,7 @@ module Tools.Verification
     extractRCImage,
     extractDLImage,
     validateFaceImage,
+    verifySdkResp,
   )
 where
 
@@ -36,6 +37,7 @@ import Kernel.External.Verification as Reexport hiding
     validateImage,
     verifyDLAsync,
     verifyRC,
+    verifySdkResp,
   )
 import qualified Kernel.External.Verification as Verification
 import Kernel.External.Verification.Interface.InternalScripts
@@ -96,6 +98,14 @@ extractDLImage ::
   ExtractDLImageReq ->
   m ExtractDLImageResp
 extractDLImage = runWithServiceConfig Verification.extractDLImage (.verificationService)
+
+verifySdkResp ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  VerifySdkDataReq ->
+  m VerifySdkDataResp
+verifySdkResp = runWithServiceConfig Verification.verifySdkResp (.sdkVerificationService)
 
 runWithServiceConfig ::
   ServiceFlow m r =>

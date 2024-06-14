@@ -18,10 +18,16 @@ import Storage.Queries.OrphanInstances.DriverPanCard
 
 -- Extra code goes here --
 
-findByPanNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> m (Maybe DriverPanCard)
-findByPanNumber panNumber = do
+findUnInvalidByPanNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> m (Maybe DriverPanCard)
+findUnInvalidByPanNumber panNumber = do
   panNumberHash <- getDbHash panNumber
-  findOneWithKV [Se.Is Beam.panCardNumberHash $ Se.Eq panNumberHash]
+  listToMaybe
+    <$> findAllWithKV
+      [ Se.And
+          [ Se.Is Beam.panCardNumberHash $ Se.Eq panNumberHash,
+            Se.Is Beam.verificationStatus $ Se.Not $ Se.Eq Documents.INVALID
+          ]
+      ]
 
 findByPanNumberAndNotInValid :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe DriverPanCard)
 findByPanNumberAndNotInValid personId = do

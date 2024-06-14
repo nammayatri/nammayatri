@@ -327,6 +327,9 @@ Image:
       kvFunction: updateOneWithKV
       params: [documentExpiry]
       where: id
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
   extraOperations:
     - EXTRA_QUERY_FILE
   domainInstance:
