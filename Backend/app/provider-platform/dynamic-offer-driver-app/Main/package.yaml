@@ -121,7 +121,7 @@ dependencies:
   - lens-aeson
   - http-client-tls
   - http-conduit
-
+  - split
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie

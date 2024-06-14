@@ -92,6 +92,7 @@ types:
     consentTimestamp: Maybe UTCTime
     validationStatus: Maybe ValidationStatus
     verifiedBy: Maybe VerifiedBy
+    transactionId: Maybe Text
   GetLiveSelfieResp:
     recordType: NewType
     image: Text
@@ -105,6 +106,7 @@ types:
     consent: Bool
     consentTimestamp: UTCTime
     validationStatus: ValidationStatus
+    transactionId: Text
   BankAccountLinkResp:
     chargesEnabled: Bool
     detailsSubmitted: Bool
