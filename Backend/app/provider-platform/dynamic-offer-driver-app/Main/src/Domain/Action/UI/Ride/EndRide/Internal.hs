@@ -133,10 +133,10 @@ endRideTransaction ::
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
-  QRide.updateStatus ride.id Ride.COMPLETED
   QRB.updateStatus booking.id SRB.COMPLETED
   whenJust mbFareParams QFare.create
   QRide.updateAll ride.id ride
+  QRide.updateStatus ride.id Ride.COMPLETED
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   QDriverStats.updateIdleTime driverId
   QDriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
