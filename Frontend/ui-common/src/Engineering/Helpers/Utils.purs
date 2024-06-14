@@ -347,6 +347,7 @@ fetchLanguage currLang = case currLang of
                   "HI_IN" -> "hi"
                   "KN_IN" -> "kn"
                   "TA_IN" -> "ta"
+                  "TE_IN" -> "te"
                   _       -> "en"
 
 handleUpdatedTerms :: String -> Effect Unit
