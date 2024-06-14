@@ -807,6 +807,7 @@ public class NotificationUtils {
                 for ( int i = 0 ; i < jsonArray.length() ; i ++){
                     if (jsonArray.getString(i).equals(buildModel)){
                         modelNotSupported = true;
+                        firebaseLogEventWithParams(context, "overlay_skipped","","");
                         break;
                     }
                 }
