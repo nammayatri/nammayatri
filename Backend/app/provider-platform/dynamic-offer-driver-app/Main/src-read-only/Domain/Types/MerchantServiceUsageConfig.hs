@@ -46,6 +46,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     rectifyDistantPointsFailure :: Kernel.External.Maps.Types.MapsService,
     retryBankAccountLink :: Kernel.External.Payment.Types.PaymentService,
+    sdkVerificationService :: Kernel.External.Verification.Types.VerificationService,
     sendSearchRequestToDriver :: [Kernel.External.Notification.Types.NotificationService],
     smsProvidersPriorityList :: [Kernel.External.SMS.Types.SmsService],
     snapToRoad :: Kernel.External.Maps.Types.MapsService,

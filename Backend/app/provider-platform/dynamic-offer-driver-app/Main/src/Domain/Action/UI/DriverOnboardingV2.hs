@@ -6,8 +6,13 @@ module Domain.Action.UI.DriverOnboardingV2 where
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as APITypes
 import qualified AWS.S3 as S3
+import qualified Control.Monad.Extra as CME
+import Data.List (intercalate, reverse)
+import Data.List.Split (splitOn)
+import Data.Maybe
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
+import Data.Time (UTCTime, defaultTimeLocale, formatTime, parseTimeM)
 import qualified Data.Time as DT
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Types.AadhaarCard
@@ -36,7 +41,8 @@ import Kernel.Beam.Functions
 import qualified Kernel.External.BackgroundVerification.Interface as BackgroundVerification
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
-import Kernel.External.Types (Language (..))
+import Kernel.External.Types (Language (..), ServiceFlow)
+import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.Prelude
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
@@ -74,6 +80,7 @@ import Tools.Auth
 import qualified Tools.BackgroundVerification as BackgroundVerificationT
 import Tools.Error
 import qualified Tools.Payment as TPayment
+import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
 
 stringToPrice :: Currency -> Text -> Maybe Price
@@ -458,15 +465,16 @@ postDriverRegisterPancard ::
 postDriverRegisterPancard (mbPersonId, merchantId, merchantOpCityId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  when (isJust req.validationStatus) $ checkIfGenuineReq req
   getImage req.imageId1 personId ------- Just checking whether the image exists or not
   let verificationStatus = maybe Documents.PENDING Image.convertValidationStatusToVerificationStatus req.validationStatus
-  mbPanInfo <- QDPC.findByPanNumber req.panNumber
+  mbPanInfo <- QDPC.findUnInvalidByPanNumber req.panNumber
   whenJust mbPanInfo $ \panInfo -> do
-    when (panInfo.driverId /= personId) $
-      throwError PanAlreadyLinked
-    when (panInfo.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
+    when (panInfo.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $ do
+      ImageQuery.deleteById req.imageId1
       throwError $ DocumentUnderManualReview "PAN"
-    when (panInfo.verificationStatus == Documents.VALID) $
+    when (panInfo.verificationStatus == Documents.VALID) $ do
+      ImageQuery.deleteById req.imageId1
       throwError $ DocumentAlreadyValidated "PAN"
   QDPC.upsertPanRecord =<< buildPanCard merchantId person req verificationStatus (Just merchantOpCityId)
   return Success
@@ -477,6 +485,26 @@ postDriverRegisterPancard (mbPersonId, merchantId, merchantOpCityId) req = do
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId.getId)
       unless (imageMetadata.imageType == DTO.PanCard) $
         throwError (ImageInvalidType (show DTO.PanCard) (show imageMetadata.imageType))
+
+    checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> m ()
+    checkIfGenuineReq API.Types.UI.DriverOnboardingV2.DriverPanReq {..} = do
+      (txnId, valStatus) <- CME.fromMaybeM (Image.throwValidationError (Just imageId1) Nothing (Just "Cannot find necessary data for SDK response!!!!")) (return $ (,) <$> transactionId <*> validationStatus)
+      hvResp <- Verification.verifySdkResp merchantId merchantOpCityId (VI.VerifySdkDataReq txnId)
+      (respTxnId, respStatus, respUserDetails) <- CME.fromMaybeM (Image.throwValidationError (Just imageId1) Nothing (Just "Invalid data recieved while validating data.")) (return $ (,,) <$> hvResp.transactionId <*> hvResp.status <*> hvResp.userDetails)
+      when (respTxnId /= txnId) $ void $ Image.throwValidationError (Just imageId1) Nothing Nothing
+      when (Image.convertHVStatusToValidationStatus respStatus /= valStatus) $ void $ Image.throwValidationError (Just imageId1) Nothing Nothing
+      case respUserDetails of
+        VI.HVPanFlow (VI.PanFlow {..}) -> do
+          panNum <- CME.fromMaybeM (Image.throwValidationError (Just imageId1) Nothing (Just "PAN number not found in SDK validation response even though it's compulsory for Pan")) (return pan)
+          when (panNumber /= panNum) $ void $ Image.throwValidationError (Just imageId1) Nothing Nothing
+          when (nameOnCard /= name) $ void $ Image.throwValidationError (Just imageId1) Nothing Nothing
+          when (isJust dateOfBirth && (formatUTCToDateString <$> dateOfBirth) /= (T.unpack <$> dob)) $ do
+            logDebug $ "date of Birth and dob is : " <> show ((formatUTCToDateString <$> dateOfBirth)) <> " " <> show dob
+            void $ Image.throwValidationError (Just imageId1) Nothing Nothing
+        _ -> void $ Image.throwValidationError (Just imageId1) Nothing Nothing
+      where
+        formatUTCToDateString :: UTCTime -> String
+        formatUTCToDateString utcTime = formatTime defaultTimeLocale "%d-%m-%Y" utcTime
 
 buildPanCard ::
   Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
@@ -529,9 +557,10 @@ postDriverRegisterAadhaarCard ::
     API.Types.UI.DriverOnboardingV2.AadhaarCardReq ->
     Environment.Flow APISuccess
   )
-postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.AadhaarCardReq {..} = do
+postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) req@API.Types.UI.DriverOnboardingV2.AadhaarCardReq {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   prevTry <- QAadhaarCard.findByPrimaryKey personId
+  checkIfGenuineReq req
   whenJust prevTry $ \aadhaarEntity -> do
     when (aadhaarEntity.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
       throwError $ DocumentUnderManualReview "Aadhaar"
@@ -554,6 +583,19 @@ postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) 
             driverImagePath = Nothing,
             ..
           }
+    checkIfGenuineReq :: ServiceFlow m r => API.Types.UI.DriverOnboardingV2.AadhaarCardReq -> m ()
+    checkIfGenuineReq aadhaarReq = do
+      hvResp <- Verification.verifySdkResp merchantId merchantOperatingCityId (VI.VerifySdkDataReq aadhaarReq.transactionId)
+      (respTxnId, respStatus, respUserDetails) <- CME.fromMaybeM (Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId (Just "Invalid data recieved while validating data.")) (return $ (,,) <$> hvResp.transactionId <*> hvResp.status <*> hvResp.userDetails)
+      when (respTxnId /= aadhaarReq.transactionId) $ void $ Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId Nothing
+      when (Image.convertHVStatusToValidationStatus respStatus /= aadhaarReq.validationStatus) $ void $ Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId Nothing
+      case respUserDetails of
+        VI.HVAadhaarFlow (hvRespDetails) -> do
+          when (aadhaarReq.maskedAadhaarNumber /= hvRespDetails.idNumber) $ void $ Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId Nothing
+          when (aadhaarReq.nameOnCard /= hvRespDetails.fullName) $ void $ Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId Nothing
+          when (aadhaarReq.dateOfBirth /= hvRespDetails.dob) $ void $ Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId Nothing
+          when (aadhaarReq.address /= hvRespDetails.address) $ void $ Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId Nothing
+        _ -> void $ Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId Nothing
 
 getDriverRegisterBankAccountLink ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

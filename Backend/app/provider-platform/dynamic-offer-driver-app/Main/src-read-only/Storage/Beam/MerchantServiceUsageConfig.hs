@@ -45,6 +45,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     rectifyDistantPointsFailure :: B.C f Kernel.External.Maps.Types.MapsService,
     retryBankAccountLink :: B.C f Kernel.External.Payment.Types.PaymentService,
+    sdkVerificationService :: B.C f Kernel.External.Verification.Types.VerificationService,
     sendSearchRequestToDriver :: B.C f [Kernel.External.Notification.Types.NotificationService],
     smsProvidersPriorityList :: B.C f [Kernel.External.SMS.Types.SmsService],
     snapToRoad :: B.C f Kernel.External.Maps.Types.MapsService,

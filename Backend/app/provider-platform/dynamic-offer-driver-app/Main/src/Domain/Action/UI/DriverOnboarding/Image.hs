@@ -31,6 +31,7 @@ import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Verification.Interface as VI
 import Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Documents as Documents
@@ -120,9 +121,10 @@ validateImage ::
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ImageValidateRequest ->
   Flow ImageValidateResponse
-validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {..} = do
+validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateRequest {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantId = person.merchantId
+  when (isJust validationStatus && imageType == DVC.ProfilePhoto) $ checkIfGenuineReq merchantId req
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
 
   let rcDependentDocuments = [DVC.VehiclePUC, DVC.VehiclePermit, DVC.VehicleInsurance, DVC.VehicleFitnessCertificate]
@@ -191,6 +193,33 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
 
       unless (maybe False (60 <) detectedImage.confidence) $
         throwImageError id_ ImageLowQuality
+
+    checkIfGenuineReq :: Id DM.Merchant -> ImageValidateRequest -> Flow ()
+    checkIfGenuineReq merchantId request = do
+      (txnId, valStatus) <- fromMaybeM (InvalidRequest "Cannot find necessary data for SDK response!!!!") ((,) <$> request.workflowTransactionId <*> request.validationStatus)
+      hvResp <- Verification.verifySdkResp merchantId merchantOpCityId (VI.VerifySdkDataReq txnId)
+      (respTxnId, respStatus, respUserDetails) <- fromMaybeM (InvalidRequest "Invalid data recieved while validating data.") ((,,) <$> hvResp.transactionId <*> hvResp.status <*> hvResp.userDetails)
+      when (respTxnId /= txnId) $ void $ throwValidationError Nothing Nothing Nothing
+      when (convertHVStatusToValidationStatus respStatus /= valStatus) $ void $ throwValidationError Nothing Nothing Nothing
+      case respUserDetails of
+        VI.HVSelfieFlow (VI.SelfieFlow _) -> return ()
+        _ -> void $ throwValidationError Nothing Nothing Nothing
+
+convertHVStatusToValidationStatus :: Text -> Domain.ValidationStatus
+convertHVStatusToValidationStatus status =
+  case status of
+    "auto_approved" -> Domain.AUTO_APPROVED
+    "auto_declined" -> Domain.AUTO_DECLINED
+    "needs_review" -> Domain.NEEDS_REVIEW
+    "manually_declined" -> Domain.DECLINED
+    "manually_approved" -> Domain.APPROVED
+    _ -> Domain.DECLINED
+
+throwValidationError :: (EsqDBFlow m r, CacheFlow m r) => Maybe (Id Domain.Image) -> Maybe (Id Domain.Image) -> Maybe Text -> m a
+throwValidationError imgId1 imgId2 msg = do
+  whenJust (imgId1) Query.deleteById
+  whenJust (imgId2) Query.deleteById
+  throwError $ InvalidRequest $ fromMaybe "Invalid Data !!!!!" msg
 
 convertValidationStatusToVerificationStatus :: Domain.ValidationStatus -> Documents.VerificationStatus
 convertValidationStatusToVerificationStatus = \case
