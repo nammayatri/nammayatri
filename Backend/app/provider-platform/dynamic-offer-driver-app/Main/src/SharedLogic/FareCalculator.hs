@@ -18,6 +18,7 @@ module SharedLogic.FareCalculator
     fareSum,
     pureFareSum,
     perRideKmFareParamsSum,
+    getPerMinuteRate,
     CalculateFareParametersParams (..),
     calculateFareParameters,
     isNightShift,
@@ -41,6 +42,7 @@ import Domain.Types.ServiceTierType
 import Domain.Types.TransporterConfig (AvgSpeedOfVechilePerKm)
 import EulerHS.Prelude hiding (id, map, sum)
 import Kernel.Prelude as KP
+import qualified Kernel.Types.Price as Price
 import Kernel.Utils.Common hiding (isTimeWithinBounds, mkPrice)
 
 mkFareParamsBreakups :: (HighPrecMoney -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
@@ -191,6 +193,13 @@ perRideKmFareParamsSum fareParams = do
     + notPartOfNightShiftCharge
     + fromMaybe 0.0 fareParams.nightShiftCharge
     + fromMaybe 0.0 fareParams.congestionCharge
+
+getPerMinuteRate :: FareParameters -> Maybe PriceAPIEntity
+getPerMinuteRate fareParams = do
+  case fareParams.fareParametersDetails of
+    DFParams.ProgressiveDetails det -> do
+      mkPriceAPIEntity . Price.mkPrice (Just det.currency) <$> det.rideDurationFare
+    _ -> Nothing
 
 data CalculateFareParametersParams = CalculateFareParametersParams
   { farePolicy :: FullFarePolicy,
@@ -367,9 +376,9 @@ calculateFareParameters params = do
       let mbExtraDistance =
             (fromMaybe 0 params.actualDistance) - baseDistance
               & (\dist -> if dist > 0 then Just dist else Nothing)
-          estimatedRideDurationInMins = ceiling $ fromIntegral @_ @Double $ (maybe 0 (.getSeconds) params.estimatedRideDuration) `div` 60
+          mbEstimatedRideDurationInMins = ceiling . (fromIntegral @_ @Double) . (`div` 60) . (.getSeconds) <$> params.estimatedRideDuration
           mbExtraKmFare = processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections <$> mbExtraDistance
-          (rideDurationFare, debugLogs) = processFPProgressiveDetailsPerRideDurationMinFare perMinRateSections estimatedRideDurationInMins
+          (mbRideDurationFare, debugLogs) = maybe (Nothing, []) (processFPProgressiveDetailsPerRideDurationMinFare perMinRateSections) mbEstimatedRideDurationInMins
       ( debugLogs,
         baseFare,
         nightShiftCharge,
@@ -377,6 +386,7 @@ calculateFareParameters params = do
         DFParams.ProgressiveDetails $
           DFParams.FParamsProgressiveDetails
             { extraKmFare = mbExtraKmFare,
+              rideDurationFare = mbRideDurationFare,
               ..
             }
         )

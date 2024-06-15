@@ -4138,15 +4138,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1720101721,
-        "narHash": "sha256-vO0BRVlzfSX8ce68dNvVaUUrRscuUFJUtpr5LRNq404=",
+        "lastModified": 1719955063,
+        "narHash": "sha256-UdsTalVbmtr0ngOPDysUYlIjbqcTvIi7AVF3tHQb4oM=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "99250d51f645bda402af35b7f1281241195a0656",
+        "rev": "594a852a2605d5158303962ee87ae25f8f0d791a",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/feat/time-based-farepolicy",
         "repo": "shared-kernel",
         "type": "github"
       }

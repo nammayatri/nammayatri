@@ -6,7 +6,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/backend/feat/time-based-farepolicy";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

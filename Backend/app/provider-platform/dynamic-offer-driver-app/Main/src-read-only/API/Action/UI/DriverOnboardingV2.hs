@@ -36,6 +36,9 @@ type API =
       :> "rateCard"
       :> QueryParam "distance" Kernel.Types.Common.Meters
       :> QueryParam
+           "durationInMin"
+           Kernel.Types.Common.Minutes
+      :> QueryParam
            "vehicleServiceTier"
            Domain.Types.ServiceTierType.ServiceTierType
       :> Get
@@ -148,10 +151,11 @@ getDriverRateCard ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Maybe Kernel.Types.Common.Meters ->
+    Kernel.Prelude.Maybe Kernel.Types.Common.Minutes ->
     Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType ->
     Environment.FlowHandler [API.Types.UI.DriverOnboardingV2.RateCardResp]
   )
-getDriverRateCard a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRateCard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getDriverRateCard a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRateCard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postDriverUpdateAirCondition ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
