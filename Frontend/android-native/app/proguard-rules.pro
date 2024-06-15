@@ -42,3 +42,4 @@
      public void println(**);
  }
  -dontwarn in.juspay.hypertrident.TridentBridge
+ -dontwarn dalvik.system.ZipPathValidator
