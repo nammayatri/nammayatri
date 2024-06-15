@@ -28,8 +28,6 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as Plan
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.ServiceTierType as DSTT
-import qualified Domain.Types.Vehicle as DV
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
@@ -222,8 +220,6 @@ data DriverReferralPayoutJobData = DriverReferralPayoutJobData
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     toScheduleNextPayout :: Bool,
     statusForRetry :: DS.PayoutStatus
-    -- vehicleVariants :: [DV.Variant],
-    -- vehicleServiceTiers :: Maybe [DSTT.ServiceTierType]
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

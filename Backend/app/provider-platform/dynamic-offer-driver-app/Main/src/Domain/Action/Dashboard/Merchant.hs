@@ -105,7 +105,7 @@ import qualified Lib.Queries.SpecialLocationGeom as QSLG
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.SpecialLocation as SL
-import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData)
+import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, DriverReferralPayoutJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DriverFee as SDF
 import qualified SharedLogic.DriverPool.Types as DriverPool
@@ -322,6 +322,13 @@ schedulerTrigger merchantShortId _ req = do
           case jobData' of
             Just jobData -> do
               createJobIn @_ @'BadDebtCalculation diffTimeS maxShards (jobData :: BadDebtCalculationJobData)
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        Just Common.ReferralPayoutTrigger -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe DriverReferralPayoutJobData
+          case jobData' of
+            Just jobData -> do
+              createJobIn @_ @'DriverReferralPayout diffTimeS maxShards (jobData :: DriverReferralPayoutJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"

@@ -6,7 +6,7 @@ imports:
   UTCTime: Kernel.Prelude
   Text: Data.Text
   Money: Kernel.Types.Common
-  PayoutOrderStatus: Kernel.External.Payment.Juspay.Types.Payout
+  PayoutOrderStatus: Kernel.External.Payout.Juspay.Types.Payout
 
 DailyStats:
   tableName: daily_stats
@@ -65,7 +65,7 @@ DailyStats:
     activatedValidRides: "0"
     referralEarnings: "0.0"
     referralCounts: "0"
-    payoutStatus: "Verifying"
+    payoutStatus: "'Verifying'"
 
   excludedFields: [merchantOperatingCityId, merchantId]
 

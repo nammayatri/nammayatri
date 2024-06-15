@@ -79,7 +79,13 @@ data DriverFeeStatus
   | MANUAL_REVIEW_NEEDED
   deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
-data FeeType = MANDATE_REGISTRATION | RECURRING_INVOICE | RECURRING_EXECUTION_INVOICE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
+data FeeType
+  = MANDATE_REGISTRATION
+  | RECURRING_INVOICE
+  | RECURRING_EXECUTION_INVOICE
+  | PAYOUT_REGISTRATION
+  | ONE_TIME_SECURITY_DEPOSIT
+  deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
 data PlatformFee = PlatformFee {cgst :: Kernel.Types.Common.HighPrecMoney, currency :: Kernel.Types.Common.Currency, fee :: Kernel.Types.Common.HighPrecMoney, sgst :: Kernel.Types.Common.HighPrecMoney}
   deriving (Generic, Eq, Show)

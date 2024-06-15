@@ -437,6 +437,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         customerReferralCode = Nothing,
         deviceId = Nothing,
         blockedCount = Just 0,
+        deviceId = Nothing,
         registeredViaPartnerOrgId = mbPartnerOrgId,
         customerPaymentId = Nothing,
         defaultPaymentMethodId = Nothing,

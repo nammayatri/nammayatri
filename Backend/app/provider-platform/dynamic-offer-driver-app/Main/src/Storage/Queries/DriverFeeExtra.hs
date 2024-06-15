@@ -827,3 +827,20 @@ getLastDayOfMonth :: UTCTime -> Day
 getLastDayOfMonth now = do
   let (year, month, _) = toGregorian (utctDay now)
   addDays (-1) $ fromGregorian year month 1
+
+findAllByStatusAndDriverIdWithServiceNameFeetype ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Person ->
+  [Domain.DriverFeeStatus] ->
+  Domain.FeeType ->
+  ServiceNames ->
+  m [DriverFee]
+findAllByStatusAndDriverIdWithServiceNameFeetype (Id driverId) driverFeeStatus feeType serviceName = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.feeType $ Se.In [feeType],
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.status $ Se.In driverFeeStatus,
+          Se.Is BeamDF.driverId $ Se.Eq driverId
+        ]
+    ]

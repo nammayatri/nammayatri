@@ -51,12 +51,6 @@ mandateNotificationStatus = runWithServiceConfigAndName Payment.mandateNotificat
 mandateExecution :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.MandateExecutionReq -> m Payment.MandateExecutionRes
 mandateExecution = runWithServiceConfigAndName Payment.mandateExecution
 
-createPayoutOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.CreatePayoutOrderReq -> m Payment.CreatePayoutOrderResp
-createPayoutOrder = runWithServiceConfigAndName Payment.createPayoutOrder
-
-payoutOrderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.PayoutOrderStatusReq -> m Payment.CreatePayoutOrderResp
-payoutOrderStatus = runWithServiceConfigAndName Payment.payoutOrderStatus -- PENDING: these needs to be handled -- Already Added JuspayPayout Config type in Kernel
-
 runWithServiceConfigAndName ::
   ServiceFlow m r =>
   (Payment.PaymentServiceConfig -> req -> m resp) ->
