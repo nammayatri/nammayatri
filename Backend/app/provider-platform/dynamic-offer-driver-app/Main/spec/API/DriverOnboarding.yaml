@@ -7,7 +7,6 @@ imports:
   APISuccess: Kernel.Types.APISuccess
   Centesimal: Kernel.Types.Common
   UTCTime: Kernel.Prelude
-  Image: Domain.Types.Image
   Person: Domain.Types.Person
   PriceAPIEntity: Kernel.Types.Common
   Money: Kernel.Types.Common
@@ -16,6 +15,7 @@ imports:
   VerifiedBy: Domain.Types.DriverPanCard
   SelfieFetchStatus: Domain.Types.Image
   BaseUrl: Servant.Client.Core
+  Minutes: Kernel.Types.Common
 
 module: DriverOnboardingV2
 types:
@@ -129,6 +129,7 @@ apis:
       query:
         vehicleServiceTier: ServiceTierType
         distance: Meters
+        durationInMin: Minutes
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: '[RateCardResp]'
