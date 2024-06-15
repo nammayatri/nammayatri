@@ -119,6 +119,7 @@ jobs:
           GOOGLE_SERVICES_SECRET: ${{ secrets.GOOGLE_SERVICES_SECRET }}
       
       - name: Update bools for dynamic assets
+        run : |
           echo "$DYNAMIC_ASSETS" > bools.xml.b64
           base64 -d -i bools.xml.b64 > app/src/dev/res/values/bools.xml
           base64 -d -i bools.xml.b64 > app/src/main/res/values/bools.xml
