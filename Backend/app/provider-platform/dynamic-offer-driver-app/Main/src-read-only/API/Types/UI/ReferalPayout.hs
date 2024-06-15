@@ -7,11 +7,9 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Data.Time.Calendar
 import qualified Domain.Types.DailyStats
-import qualified Domain.Types.Person
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
@@ -27,9 +25,6 @@ data DailyEarning = DailyEarning
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data OrderStatus = SuccessFul | Failed | Pending deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
-
-data ReferralEarningsReq = ReferralEarningsReq {fromDate :: Data.Time.Calendar.Day, personId :: Kernel.Types.Id.Id Domain.Types.Person.Person, toDate :: Data.Time.Calendar.Day}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data ReferralEarningsRes = ReferralEarningsRes
   { dailyEarnings :: [API.Types.UI.ReferalPayout.DailyEarning],
