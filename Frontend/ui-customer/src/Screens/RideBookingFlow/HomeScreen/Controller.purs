@@ -1296,7 +1296,7 @@ eval OnResumeCallback state =
           true  -> do
             let findingQuotesProgress = 1.0 - (toNumber secondsLeft)/(toNumber (getSearchExpiryTime true))
             if secondsLeft > 0 then
-              void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
+              void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/progress_loader_line.json", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
             else pure unit
           false -> pure unit
         case flowWithoutOffers WithoutOffers of
@@ -1309,12 +1309,12 @@ eval OnResumeCallback state =
           _ -> continue state
       "QuoteList" -> do
         let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime true))
-        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
+        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/progress_loader_line.json", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
         continue state
       "RideAccepted" | (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) -> exit $ Retry state
       "ConfirmingQuotes" -> do
         let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime false))
-        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
+        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson =(getAssetsBaseUrl FunctionCall) <> "lottie/progress_loader_line.json", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
         continue state
       _ -> continue state
 
@@ -2473,7 +2473,6 @@ eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryBut
   let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
       customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
   _ <- pure $ clearTimerWithId state.props.timerId
-  void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), scaleType="CENTER_CROP"}
   let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH, onlyPrimaryText = true}
   let newState = state{ props{rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }, findingRidesAgain = true ,searchExpire = (getSearchExpiryTime true), currentStage = TryAgain, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 0 (customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex, isTipSelected = true } }, data{nearByDrivers = Nothing}}
   _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
@@ -2726,7 +2725,7 @@ eval (GetQuotesList (SelectListRes resp)) state = do
               else pure unit
               let newState = state{data{quoteListModelState = quoteListModelState },props{isSearchLocation = NoView, isSource = Nothing,currentStage = QuoteList}}
               if isLocalStageOn QuoteList then do
-                let updatedState = if isTipEnabled state then tipEnabledState newState{props{isPopUp = TipsPopUp, findingQuotesProgress = 0.0}} else newState{props{isPopUp = ConfirmBack, findingQuotesProgress = 0.0}}
+                let updatedState = if isTipEnabled state then tipEnabledState newState{props{isPopUp = TipsPopUp  ,findingQuotesProgress = 0.0}} else newState{props{isPopUp = ConfirmBack}}
                 logInfo "retry_finding_quotes" ( "QuoteList : Current Stage: " <> (show newState.props.currentStage) <> " LOCAL_STAGE : " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id:" <> state.props.estimateId)
                 exit $ GetSelectList updatedState
               else if(state.props.selectedQuote == Nothing && (getValueToLocalStore AUTO_SELECTING) /= "CANCELLED_AUTO_ASSIGN") then do
