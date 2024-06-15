@@ -187,10 +187,11 @@ let jobInfoMapx =
 let cacConfig =
       { host = "http://localhost:8080"
       , interval = 10
-      , tenant = "dev"
+      , tenant = "test"
       , retryConnection = False
       , cacExpTime = +86400
       , enablePolling = True
+      , enableCac = False
       }
 
 let cacTenants = [ "dev", "test" ]
@@ -201,6 +202,7 @@ let superPositionConfig =
       , tenants = [ "dev", "test" ]
       , retryConnection = False
       , enablePolling = True
+      , enableSuperPosition = False
       }
 
 let kafkaClickhouseCfg =

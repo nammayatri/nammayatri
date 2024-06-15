@@ -233,6 +233,7 @@ let cacConfig =
       , retryConnection = False
       , cacExpTime = +86400
       , enablePolling = True
+      , enableCac = False
       }
 
 let cacTenants = [ "dev", "test" ]
@@ -243,6 +244,7 @@ let superPositionConfig =
       , tenants = [ "dev", "test" ]
       , retryConnection = False
       , enablePolling = True
+      , enableSuperPosition = False
       }
 
 let maxMessages

@@ -60,15 +60,6 @@ import System.Environment (lookupEnv)
 import Tools.Metrics
 import TransactionLogs.Types
 
-data SuperPositionConfig = SuperPositionConfig
-  { host :: String,
-    interval :: Natural,
-    tenants :: [String],
-    retryConnection :: Bool,
-    enablePolling :: Bool
-  }
-  deriving (Generic, FromDhall)
-
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
@@ -140,7 +131,7 @@ data AppCfg = AppCfg
     _version :: Text,
     cacConfig :: KTC.CacConfig,
     cacTenants :: [String],
-    superPositionConfig :: SuperPositionConfig,
+    superPositionConfig :: KTC.SuperPositionConfig,
     maxStraightLineRectificationThreshold :: HighPrecMeters,
     singleBatchProcessingTempDelay :: NominalDiffTime,
     ondcTokenMap :: M.Map KeyConfig TokenConfig,
@@ -224,7 +215,7 @@ data AppEnv = AppEnv
     _version :: Text,
     cacConfig :: KTC.CacConfig,
     cacTenants :: [String],
-    superPositionConfig :: SuperPositionConfig,
+    superPositionConfig :: KTC.SuperPositionConfig,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
