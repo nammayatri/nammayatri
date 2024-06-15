@@ -206,6 +206,7 @@ library
       Domain.Action.UI.OnMessage
       Domain.Action.UI.OrgAdmin
       Domain.Action.UI.Payment
+      Domain.Action.UI.Payout
       Domain.Action.UI.Performance
       Domain.Action.UI.Person
       Domain.Action.UI.PlaceNameCache
@@ -552,6 +553,7 @@ library
       Tools.Notifications
       Tools.Payment
       Tools.PaymentNudge
+      Tools.Payout
       Tools.SMS
       Tools.Ticket
       Tools.Verification

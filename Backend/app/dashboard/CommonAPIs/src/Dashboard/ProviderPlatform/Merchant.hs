@@ -852,7 +852,7 @@ data SchedulerTriggerReq = SchedulerTriggerReq
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data JobName = BadDebtCalculationTrigger | DriverFeeCalculationTrigger | SendManualPaymentLinkTrigger
+data JobName = BadDebtCalculationTrigger | DriverFeeCalculationTrigger | SendManualPaymentLinkTrigger | ReferralPayoutTrigger
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

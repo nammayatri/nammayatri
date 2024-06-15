@@ -792,6 +792,8 @@ TransporterConfig:
     fareRecomputeWeeklyExtraKmsThreshold: HighPrecMeters
     toNotifyDriverForExtraKmsLimitExceed: Bool
     payoutBatchLimit: Int
+    updatePayoutStatusBatchSize: Int
+    lastNdaysToCheckForPayoutOrderStatus: Int
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1069,6 +1071,8 @@ TransporterConfig:
     fareRecomputeWeeklyExtraKmsThreshold: "20000"
     toNotifyDriverForExtraKmsLimitExceed: "True"
     payoutBatchLimit: "10"
+    updatePayoutStatusBatchSize: "20"
+    lastNdaysToCheckForPayoutOrderStatus: "2"
 
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -1215,14 +1219,18 @@ PayoutConfig:
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
-    payoutRegistrationAmount: HighPrecMoney
     referralRewardAmountPerRide: HighPrecMoney
     timeDiff: NominalDiffTime
     isPayoutEnabled: Bool
     thresholdPayoutAmountPerPerson: HighPrecMoney
     batchLimit: Int
-    vehicleServiceTier: Maybe ServiceTierType
     vehicleVariant: Domain.Types.Vehicle.Variant
+    maxRetryCount: Int
+    payoutRegistrationFee: HighPrecMoney
+    payoutRegistrationCgst: HighPrecMoney
+    payoutRegistrationSgst: HighPrecMoney
+    remark: Text
+    orderType: Text
   beamType:
     timeDiff: Seconds
   toTType:
@@ -1232,13 +1240,22 @@ PayoutConfig:
   default:
     payoutRegistrationAmount: "1.0"
     referralRewardAmountPerRide: "100.0"
-    timeDiff: "0"
-    isPayoutEnabled: "True"
+    timeDiff: "86400"
+    isPayoutEnabled: "False"
     thresholdPayoutAmountPerPerson: "1000.0"
     batchLimit: "10"
+    maxRetryCount: "5"
+    payoutRegistrationFee: "1.0"
+    payoutRegistrationCgst: "0"
+    payoutRegistrationSgst: "0"
+    remark: "'Referral Reward From Nammayatri'"
+    orderType: "'FULFILL_ONLY'"
   constraints:
     merchantOperatingCityId: PrimaryKey
+    vehicleVariant: PrimaryKey
   queries:
-    findByMerchantOperatingCityId:
-      kvFunction: findOneWithKV
-      where: merchantOperatingCityId
+    findByMerchantOpCityIdAndIsPayoutEnabled:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, isPayoutEnabled]
+

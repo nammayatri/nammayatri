@@ -16,11 +16,13 @@ module Domain.Action.Internal.DriverReferee where
 
 import Data.OpenApi (ToSchema)
 import Data.Time (utctDay)
+import qualified Domain.Action.UI.Payout as DAP
 import qualified Domain.Types.DriverReferral as Domain
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.RiderDetails as DRD
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (encrypt, getDbHash)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.App
 import Kernel.Types.Error
@@ -73,7 +75,8 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchOpCityId (Just (DriverId (cast driverReferralLinkage.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   dailyStats <- QDailyStats.findByDriverIdAndDate driverReferralLinkage.driverId (utctDay localTime) >>= fromMaybeM (InvalidRequest "Daily Stats Not Found")
-  QDailyStats.updateReferralCount (dailyStats.referralCounts + 1) driverReferralLinkage.driverId (utctDay localTime)
+  Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverReferralLinkage.driverId.getId) 3 3 $ do
+    QDailyStats.updateReferralCount (dailyStats.referralCounts + 1) driverReferralLinkage.driverId (utctDay localTime)
   mbRiderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id
   _ <- case mbRiderDetails of
     Just _ -> QRD.updateReferralInfo numberHash merchant.id referralCode driverReferralLinkage.driverId

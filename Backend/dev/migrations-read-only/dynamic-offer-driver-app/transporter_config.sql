@@ -174,3 +174,13 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN payout_batch_li
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_toll_crossed_notifications boolean NOT NULL default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN update_payout_status_batch_size integer NOT NULL default 20;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN last_ndays_to_check_for_payout_order_status integer NOT NULL default 2;
