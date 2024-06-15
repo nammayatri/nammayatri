@@ -611,6 +611,7 @@ type MarkerConfig = {
   , useSourcePoint :: Boolean
   , useDestPoints :: Boolean
   , usePosition :: Boolean
+  , useMarkerSize :: Boolean
   , animationConfig :: AnimationConfig
   , anchorV :: Number
   , anchorU :: Number
@@ -639,6 +640,7 @@ defaultMarkerConfig = {
   , anchorV : 0.5
   , anchorU : 0.5
   , markerSize : 90.0
+  , useMarkerSize : false
   , useSourcePoint : false
   , useDestPoints : true
   , usePosition : false
@@ -828,12 +830,12 @@ type RouteConfig = {
   mapRouteConfig :: MapRouteConfig,
   startMarkerConfig :: MarkerConfig,
   endMarkerConfig :: MarkerConfig,
-  stopMarkerConfig :: MarkerConfig,
+  stopMarkerConfigs :: Array MarkerConfig,
   routeKey :: String
 }
 
-mkRouteConfig :: Locations -> MarkerConfig -> MarkerConfig -> Maybe MarkerConfig -> String -> String -> Boolean -> RouteKeysType -> MapRouteConfig -> RouteConfig
-mkRouteConfig normalRoute startMarkerConfig endMarkerConfig mbStopMarkerConfig routeType style isActual key mapRouteConfig = 
+mkRouteConfig :: Locations -> MarkerConfig -> MarkerConfig -> Maybe (Array MarkerConfig) -> String -> String -> Boolean -> RouteKeysType -> MapRouteConfig -> RouteConfig
+mkRouteConfig normalRoute startMarkerConfig endMarkerConfig mbStopMarkerConfigs routeType style isActual key mapRouteConfig = 
   routeConfig{
     locations = normalRoute,
     routeType = routeType,
@@ -842,7 +844,7 @@ mkRouteConfig normalRoute startMarkerConfig endMarkerConfig mbStopMarkerConfig r
     mapRouteConfig = mapRouteConfig,
     startMarkerConfig = startMarkerConfig,
     endMarkerConfig = endMarkerConfig,
-    stopMarkerConfig = fromMaybe defaultMarkerConfig mbStopMarkerConfig, 
+    stopMarkerConfigs = fromMaybe [] mbStopMarkerConfigs, 
     routeKey = show key
   }
 
@@ -864,7 +866,7 @@ routeConfig = {
   mapRouteConfig : defaultMapRouteConfig,
   startMarkerConfig : defaultMarkerConfig,
   endMarkerConfig : defaultMarkerConfig,
-  stopMarkerConfig : defaultMarkerConfig,
+  stopMarkerConfigs : [],
   routeKey : show DEFAULT
 }
 

@@ -107,6 +107,7 @@ import Mobility.Prelude
 import Resource.Constants as RC
 import Data.Function.Uncurried (runFn3)
 import Screens.HomeScreen.PopUpConfig as PopUpConfig
+import Control.Alt ((<|>))
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -228,10 +229,15 @@ screen initialState (GlobalState globalState) =
                                           else "10000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "20.0"
 
-                                when (initialState.data.activeRide.tripType /= ST.Rental) $ void $ push RemoveChat
-                                when (initialState.data.activeRide.tripType == ST.Rental && not initialState.props.chatcallbackInitiated) $ do
+                                let advancedRideId = case initialState.data.advancedRideData of
+                                                        Just advancedRideData -> Just advancedRideData.id
+                                                        Nothing -> Nothing
+                                                        
+                                when (initialState.data.activeRide.tripType /= ST.Rental && isNothing advancedRideId) $ void $ push RemoveChat
+                                when ((initialState.data.activeRide.tripType == ST.Rental || isJust advancedRideId) && not initialState.props.chatcallbackInitiated) $ do
+                                  let rideId = fromMaybe "" (advancedRideId <|> Just initialState.data.activeRide.id)
                                   _ <- JB.clearChatMessages
-                                  _ <- JB.storeCallBackMessageUpdated push initialState.data.activeRide.id "Driver" UpdateMessages AllChatsLoaded
+                                  _ <- JB.storeCallBackMessageUpdated push rideId "Driver" UpdateMessages AllChatsLoaded
                                   _ <- JB.storeCallBackOpenChatScreen push OpenChatScreen
                                   _ <- JB.startChatListenerService
                                   _ <- pure $ JB.scrollOnResume push ScrollToBottom
