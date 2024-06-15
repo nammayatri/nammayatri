@@ -80,10 +80,11 @@ let healthCheckAppCfg =
 let cacConfig =
       { host = "http://localhost:8080"
       , interval = 10
-      , tenant = "dev"
+      , tenant = "test"
       , retryConnection = False
       , cacExpTime = +86400
       , enablePolling = True
+      , enableCac = False
       }
 
 in  { hedisCfg

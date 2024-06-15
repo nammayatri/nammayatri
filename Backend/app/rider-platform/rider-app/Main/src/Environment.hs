@@ -59,7 +59,6 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler.Types
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
-import Numeric.Natural
 import SharedLogic.GoogleTranslate
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
@@ -69,15 +68,6 @@ import System.Environment as SE
 import Tools.Metrics
 import Tools.Streaming.Kafka
 import TransactionLogs.Types
-
-data SuperPositionConfig = SuperPositionConfig
-  { host :: String,
-    interval :: Natural,
-    tenants :: [String],
-    retryConnection :: Bool,
-    enablePolling :: Bool
-  }
-  deriving (Generic, FromDhall)
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -145,7 +135,7 @@ data AppCfg = AppCfg
     collectRouteData :: Bool,
     cacConfig :: CF.CacConfig,
     cacTenants :: [String],
-    superPositionConfig :: SuperPositionConfig,
+    superPositionConfig :: CF.SuperPositionConfig,
     ondcTokenMap :: M.Map KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
     isMetroTestTransaction :: Bool
@@ -221,7 +211,7 @@ data AppEnv = AppEnv
     hotSpotExpiry :: Seconds,
     cacConfig :: CF.CacConfig,
     cacTenants :: [String],
-    superPositionConfig :: SuperPositionConfig,
+    superPositionConfig :: CF.SuperPositionConfig,
     collectRouteData :: Bool,
     shouldLogRequestId :: Bool,
     requestId :: Maybe Text,

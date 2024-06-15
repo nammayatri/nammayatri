@@ -57,20 +57,22 @@ import "utils" Utils.Common.Events as UE
 
 createCAC :: AppCfg -> IO ()
 createCAC appCfg = do
-  cacStatus <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacTenants appCfg.cacConfig.enablePolling
-  case cacStatus of
-    0 -> CM.startCACPolling appCfg.cacTenants
-    _ -> do
-      -- logError "CAC client failed to start"
-      threadDelay 1000000
-      B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
-  superPositionStatus <- CM.initSuperPositionClient appCfg.superPositionConfig.host (fromIntegral appCfg.superPositionConfig.interval) appCfg.superPositionConfig.tenants appCfg.superPositionConfig.enablePolling
-  case superPositionStatus of
-    0 -> CM.runSuperPositionPolling appCfg.superPositionConfig.tenants
-    _ -> do
-      -- logError "CAC super position client failed to start"
-      threadDelay 1000000
-      B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
+  when appCfg.cacConfig.enableCac $ do
+    cacStatus <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacTenants appCfg.cacConfig.enablePolling
+    case cacStatus of
+      0 -> CM.startCACPolling appCfg.cacTenants
+      _ -> do
+        -- logError "CAC client failed to start"
+        threadDelay 1000000
+        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
+  when appCfg.superPositionConfig.enableSuperPosition $ do
+    superPositionStatus <- CM.initSuperPositionClient appCfg.superPositionConfig.host (fromIntegral appCfg.superPositionConfig.interval) appCfg.superPositionConfig.tenants appCfg.superPositionConfig.enablePolling
+    case superPositionStatus of
+      0 -> CM.runSuperPositionPolling appCfg.superPositionConfig.tenants
+      _ -> do
+        -- logError "CAC super position client failed to start"
+        threadDelay 1000000
+        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
 
 runRiderApp :: (AppCfg -> AppCfg) -> IO ()
 runRiderApp configModifier = do
@@ -117,11 +119,7 @@ runRiderApp' appCfg = do
           try QMerchant.loadAllBaps
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allSubscriberIds = map ((.bapId) &&& (.bapUniqueKeyId)) allBaps
-        if (length kvConfigs.useCAC > 0) || kvConfigs.useCACForFrontend
-          then do
-            _ <- liftIO $ createCAC appCfg
-            logInfo "Starting rider app using configs from CAC."
-          else logInfo "Starting rider app using configs from DB."
+        _ <- liftIO $ createCAC appCfg
         -- Load FRFS BAPs
         frfsBap <-
           try QBecknConfig.findAll
