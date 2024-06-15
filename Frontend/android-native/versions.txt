@@ -1,2 +1,2 @@
-customer, 124, 3.0.3
+customer, 130, 2.5.0
 driver, 118, 3.0.0

@@ -37,37 +37,37 @@ else:
 
 ########################################## To update Bools.XML ##########################################
 # Define the paths to the bools.xml files
-xml_file_paths = ["app/src/main/res/values/bools.xml", "app/src/dev/res/values/bools.xml"]
+# xml_file_paths = ["app/src/main/res/values/bools.xml", "app/src/dev/res/values/bools.xml"]
 
-# Iterate over each XML file
-for xml_file_path in xml_file_paths:
-    # Check if the file exists
-    if os.path.exists(xml_file_path):
-        # Parse the XML file
-        tree = ET.parse(xml_file_path)
-        root = tree.getroot()
+# # Iterate over each XML file
+# for xml_file_path in xml_file_paths:
+#     # Check if the file exists
+#     if os.path.exists(xml_file_path):
+#         # Parse the XML file
+#         tree = ET.parse(xml_file_path)
+#         root = tree.getroot()
 
-        # Find the <bool> element with the name "local_assets"
-        # for bool_element in root.findall("./bool[@name='local_assets']"):
-        #     # Set the text of the <bool> element to "false"
-        #     bool_element.text = "false"
-        for bool_element in root.findall("./bool"):
-            bool_name = bool_element.get("name")
-            if bool_name in ["local_assets", "use_local_assets"]:
-                # Set the text of the <bool> element to "false"
-                bool_element.text = "false"
+#         # Find the <bool> element with the name "local_assets"
+#         # for bool_element in root.findall("./bool[@name='local_assets']"):
+#         #     # Set the text of the <bool> element to "false"
+#         #     bool_element.text = "false"
+#         for bool_element in root.findall("./bool"):
+#             bool_name = bool_element.get("name")
+#             if bool_name in ["local_assets", "use_local_assets"]:
+#                 # Set the text of the <bool> element to "false"
+#                 bool_element.text = "false"
 
-        # Write the modified XML back to the file
-        tree.write(xml_file_path, encoding="utf-8", xml_declaration=True)
-        print(f"Modified {xml_file_path}")
+#         # Write the modified XML back to the file
+#         tree.write(xml_file_path, encoding="utf-8", xml_declaration=True)
+#         print(f"Modified {xml_file_path}")
 
-        with open(xml_file_path, "r", encoding="utf-8") as f:
-            modified_content = f.read()
-            print(f"Modified content of {xml_file_path}:")
-            print(modified_content)
-    else:
-        print(f"File {xml_file_path} not found.")
-        sys.exit(1)
+#         with open(xml_file_path, "r", encoding="utf-8") as f:
+#             modified_content = f.read()
+#             print(f"Modified content of {xml_file_path}:")
+#             print(modified_content)
+#     else:
+#         print(f"File {xml_file_path} not found.")
+#         sys.exit(1)
 
 
 
