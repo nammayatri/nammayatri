@@ -17,21 +17,21 @@ jobs:
             fastlane_cm: NY
             key_alias: KEYSTORE_KEY_ALIAS
             local_properties: LOCAL_PROPERTIES 
-            config_path: app/src/user/nammaYatri/assets
+            config_path: app/src/user/nammaYatri/assets/juspay
             config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriconsumer/android/cug/config.json'
           - name: ManaYatri
             keystore: ANDROID_KEYSTORE_FILE_MY 
             fastlane_cm: MY
             key_alias: KEYSTORE_KEY_ALIAS_MY
             local_properties: LOCAL_PROPERTIES_MY 
-            config_path: app/src/user/manaYatri/assets
+            config_path: app/src/user/manaYatri/assets/juspay
             config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriconsumer/android/cug/config.json'
           - name: Yatri
             keystore: ANDROID_KEYSTORE_FILE_Y 
             fastlane_cm: Y
             key_alias: KEYSTORE_KEY_ALIAS_Y
             local_properties: LOCAL_PROPERTIES_Y 
-            config_path: app/src/user/yatri/assets
+            config_path: app/src/user/yatri/assets/juspay
             config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriconsumer/android/cug/config.json'
           # Add more variants as needed
     defaults:
@@ -117,6 +117,13 @@ jobs:
           base64 -d -i google-services.json.b64 > app/google-services.json
         env:
           GOOGLE_SERVICES_SECRET: ${{ secrets.GOOGLE_SERVICES_SECRET }}
+      
+      - name: Update bools for dynamic assets
+          echo "$DYNAMIC_ASSETS" > bools.xml.b64
+          base64 -d -i bools.xml.b64 > app/src/dev/res/values/bools.xml
+          base64 -d -i bools.xml.b64 > app/src/main/res/values/bools.xml
+        env:
+          DYNAMIC_ASSETS: ${{ secrets.DYNAMIC_ASSETS }}
 
       - name: Create Local Properties
         run : |
