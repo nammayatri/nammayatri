@@ -40,6 +40,8 @@ data InvoicePaymentMode
   | AUTOPAY_INVOICE
   | MANDATE_SETUP_INVOICE
   | CASH_COLLECTED_INVOICE
+  | PAYOUT_REGISTRATION_INVOICE
+  | ONE_TIME_SECURITY_INVOICE
   deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
 data InvoiceStatus = ACTIVE_INVOICE | INACTIVE | SUCCESS | FAILED | EXPIRED | CLEARED_BY_YATRI_COINS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)

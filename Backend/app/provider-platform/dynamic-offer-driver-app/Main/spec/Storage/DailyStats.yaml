@@ -6,10 +6,14 @@ imports:
   UTCTime: Kernel.Prelude
   Text: Data.Text
   Money: Kernel.Types.Common
+  PayoutOrderStatus: Kernel.External.Payment.Juspay.Types.Payout
 
 DailyStats:
   tableName: daily_stats
-  derives: "Generic,Show"
+  derives: "Generic,Show,ToJSON,FromJSON"
+  types:
+    PayoutStatus:
+      enum: "Verifying,Processing,Success,Failed,ManualReview"
   fields:
     id : Text
     driverId : Id Person
@@ -19,6 +23,12 @@ DailyStats:
     totalDistance : Meters
     distanceUnit : DistanceUnit
     merchantLocalDate : Day
+    activatedValidRides: Int
+    referralEarnings: HighPrecMoney
+    referralCounts: Int
+    payoutStatus: PayoutStatus
+    payoutOrderId: Maybe Text
+    payoutOrderStatus: Maybe PayoutOrderStatus
 
   beamType:
     distanceUnit: Maybe DistanceUnit
@@ -29,21 +39,33 @@ DailyStats:
       totalEarningsAmount: Maybe HighPrecMoney
     currency:
       currency: Maybe Currency
+    referralEarnings:
+      referralEarnings: Money
+      referralEarningsAmount: Maybe HighPrecMoney
 
   fromTType:
     totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    referralEarnings: Kernel.Types.Common.mkAmountWithDefault referralEarningsAmount referralEarnings|E
 
   toTType:
     totalEarnings: Kernel.Prelude.roundToIntegral|I
     totalEarningsAmount:  Kernel.Prelude.Just|I
     currency: Kernel.Prelude.Just|I
     distanceUnit: Kernel.Prelude.Just|I
+    referralEarnings: Kernel.Prelude.roundToIntegral|I
+    referralEarningsAmount: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
+
+  default:
+    activatedValidRides: "0"
+    referralEarnings: "0.0"
+    referralCounts: "0"
+    payoutStatus: "Verifying"
 
   excludedFields: [merchantOperatingCityId, merchantId]
 
@@ -53,11 +75,39 @@ DailyStats:
       where:
         and: [driverId, merchantLocalDate]
 
+    findAllByDateAndPayoutStatus:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [merchantLocalDate, payoutStatus]
+
     updateByDriverId:
       kvFunction: updateOneWithKV
       params: [totalEarnings, numRides, totalDistance]
       where:
         and: [driverId, merchantLocalDate]
+
+    updateReferralStatsByDriverId:
+      kvFunction: updateOneWithKV
+      params: [activatedValidRides, referralEarnings, payoutStatus]
+      where:
+        and: [driverId, merchantLocalDate]
+
+    updateReferralCount:
+      kvFunction: updateOneWithKV
+      params: [referralCounts]
+      where:
+        and: [driverId, merchantLocalDate]
+
+    updatePayoutStatusById:
+      kvFunction: updateOneWithKV
+      params: [payoutStatus]
+      where: id
+
+    # updatePayoutOrderIdAndStatus:
+    #   kvFunction: updateOneWithKV
+    #   params: [payoutOrderId, payoutOrderStatus]
+    #   where:
+    #     and: [driverId, merchantLocalDate]
 
   extraOperations:
     - EXTRA_QUERY_FILE

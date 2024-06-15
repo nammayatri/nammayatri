@@ -75,6 +75,7 @@ DriverInformation:
     hasAdvanceBooking: Bool
     tollRelatedIssueCount: Maybe Int
     forwardBatchingEnabled: Bool
+    payoutVpa: Maybe Text
 
   default:
     active: "false"
@@ -193,4 +194,8 @@ DriverInformation:
     updateForwardBatchingEnabled:
       kvFunction: updateOneWithKV
       params: [forwardBatchingEnabled]
+      where: driverId
+    updatePayoutVpa:
+      kvFunction: updateOneWithKV
+      params: [payoutVpa]
       where: driverId

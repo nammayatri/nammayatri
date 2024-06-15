@@ -99,9 +99,11 @@ getServiceNameConfigJSON = \case
     AadhaarVerification.GridlineConfig cfg -> (Domain.AadhaarVerificationService AadhaarVerification.Gridline, toJSON cfg)
   Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> (Domain.PaymentService Payment.Juspay, toJSON cfg)
+    Payment.JuspayPayoutConfig cfg -> (Domain.PaymentService Payment.JuspayPayout, toJSON cfg)
     Payment.StripeConfig cfg -> (Domain.PaymentService Payment.Stripe, toJSON cfg)
   Domain.MetroPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> (Domain.MetroPaymentService Payment.Juspay, toJSON cfg)
+    Payment.JuspayPayoutConfig cfg -> (Domain.MetroPaymentService Payment.JuspayPayout, toJSON cfg)
     Payment.StripeConfig cfg -> (Domain.MetroPaymentService Payment.Stripe, toJSON cfg)
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)

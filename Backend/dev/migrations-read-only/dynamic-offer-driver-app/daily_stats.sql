@@ -26,3 +26,22 @@ ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN currency character var
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN distance_unit character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN referral_earnings_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN referral_earnings integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN referral_counts integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN payout_status text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN payout_order_status text ;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN payout_order_id text ;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN activated_valid_rides integer NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ALTER COLUMN referral_earnings SET DEFAULT 0.0;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ALTER COLUMN referral_counts SET DEFAULT 0;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ALTER COLUMN payout_status SET DEFAULT Verifying;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ALTER COLUMN activated_valid_rides SET DEFAULT 0;

@@ -28,3 +28,19 @@ ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_ratings integer
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_rating_score integer ;
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN rating text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN is_valid_rating boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_valid_activated_rides integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_referral_counts integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_payout_earnings_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_payout_earnings integer NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ALTER COLUMN total_valid_activated_rides SET DEFAULT 0;
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ALTER COLUMN total_referral_counts SET DEFAULT 0;
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ALTER COLUMN total_payout_earnings SET DEFAULT 0.0;
