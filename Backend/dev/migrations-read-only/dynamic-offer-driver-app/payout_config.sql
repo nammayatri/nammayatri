@@ -31,3 +31,22 @@ ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN vehicle_service_tier
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.payout_config ALTER COLUMN vehicle_service_tier DROP NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_config ALTER COLUMN is_payout_enabled SET DEFAULT False;
+ALTER TABLE atlas_driver_offer_bpp.payout_config DROP CONSTRAINT payout_config_pkey;
+ALTER TABLE atlas_driver_offer_bpp.payout_config ADD PRIMARY KEY ( merchant_operating_city_id, vehicle_service_tier, vehicle_variant);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_config DROP COLUMN vehicle_service_tier;
+ALTER TABLE atlas_driver_offer_bpp.payout_config DROP CONSTRAINT payout_config_pkey;
+ALTER TABLE atlas_driver_offer_bpp.payout_config ADD PRIMARY KEY ( merchant_operating_city_id, vehicle_variant);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN max_retry_count integer NOT NULL default 5;

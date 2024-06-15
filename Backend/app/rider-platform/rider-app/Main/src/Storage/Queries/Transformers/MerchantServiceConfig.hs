@@ -36,8 +36,10 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> valueToMaybe configJSON
     Domain.NotificationService Notification.GRPC -> Domain.NotificationServiceConfig . Notification.GRPCConfig <$> valueToMaybe configJSON
     Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
+    Domain.PaymentService Payment.JuspayPayout -> Domain.PaymentServiceConfig . Payment.JuspayPayoutConfig <$> valueToMaybe configJSON
     Domain.PaymentService Payment.Stripe -> Domain.PaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
     Domain.MetroPaymentService Payment.Juspay -> Domain.MetroPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
+    Domain.MetroPaymentService Payment.JuspayPayout -> Domain.MetroPaymentServiceConfig . Payment.JuspayPayoutConfig <$> valueToMaybe configJSON
     Domain.MetroPaymentService Payment.Stripe -> Domain.MetroPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
     Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
 

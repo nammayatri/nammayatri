@@ -71,6 +71,7 @@ runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName re
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig vsc -> func vsc req
+    DMSC.PayoutServiceConfig vsc -> func vsc req
     DMSC.RentalPaymentServiceConfig vsc -> func vsc req
     _ -> throwError $ InternalError "Unknown Service Config"
 

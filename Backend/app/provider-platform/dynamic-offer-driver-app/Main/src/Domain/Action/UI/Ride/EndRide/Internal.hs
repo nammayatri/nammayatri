@@ -214,7 +214,7 @@ sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId = do
             let referralMessage = "Congratulations!"
             let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
             driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
-            updateReferralStats referredDriverId
+            fork "Updating Stats of Driver : " $ updateReferralStats referredDriverId
             sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
             -- notifyDriver 1 valid active ride completed by customer, 100 rupees reward
             logDebug "Driver Referral Coin Event"
@@ -222,7 +222,8 @@ sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId = do
           Nothing -> pure ()
   where
     updateReferralStats referredDriverId = do
-      payoutConfig <- CPC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (InternalError "Payout config not present")
+      vehicle <- QV.findById referredDriverId >>= fromMaybeM (DriverWithoutVehicle referredDriverId.getId)
+      payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicle.variant >>= fromMaybeM (InternalError "Payout config not present")
       transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast referredDriverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       let referralRewardAmount = payoutConfig.referralRewardAmountPerRide
       driverStats <- QDriverStats.findByPrimaryKey referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)

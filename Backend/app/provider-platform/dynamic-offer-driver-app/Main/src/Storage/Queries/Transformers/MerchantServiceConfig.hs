@@ -48,6 +48,10 @@ getConfigJSON = \case
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.JuspayPayoutConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
+  Domain.PayoutServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> toJSON cfg
+    Payment.JuspayPayoutConfig cfg -> toJSON cfg
+    Payment.StripeConfig cfg -> toJSON cfg
   Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.JuspayPayoutConfig cfg -> toJSON cfg
@@ -88,6 +92,10 @@ getServiceName = \case
     Payment.JuspayConfig _ -> Domain.PaymentService Payment.Juspay
     Payment.JuspayPayoutConfig _ -> Domain.PaymentService Payment.Juspay
     Payment.StripeConfig _ -> Domain.PaymentService Payment.Stripe
+  Domain.PayoutServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> Domain.PaymentService Payment.Juspay
+    Payment.JuspayPayoutConfig _ -> Domain.PaymentService Payment.Juspay
+    Payment.StripeConfig _ -> Domain.PaymentService Payment.Stripe
   Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> Domain.RentalPaymentService Payment.Juspay
     Payment.JuspayPayoutConfig _ -> Domain.RentalPaymentService Payment.Juspay
@@ -120,8 +128,13 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.CallService Call.Knowlarity -> Left "No Config Found For Knowlarity."
   Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> eitherValue configJSON
   Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
+  Domain.PaymentService Payment.JuspayPayout -> Domain.PaymentServiceConfig . Payment.JuspayPayoutConfig <$> eitherValue configJSON
   Domain.PaymentService Payment.Stripe -> Domain.PaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
+  Domain.PayoutService Payment.Juspay -> Domain.PayoutServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
+  Domain.PayoutService Payment.JuspayPayout -> Domain.PayoutServiceConfig . Payment.JuspayPayoutConfig <$> eitherValue configJSON
+  Domain.PayoutService Payment.Stripe -> Domain.PayoutServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
   Domain.RentalPaymentService Payment.Juspay -> Domain.RentalPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
+  Domain.RentalPaymentService Payment.JuspayPayout -> Domain.RentalPaymentServiceConfig . Payment.JuspayPayoutConfig <$> eitherValue configJSON -- TODO: remove or handle this
   Domain.RentalPaymentService Payment.Stripe -> Domain.RentalPaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
   Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> eitherValue configJSON

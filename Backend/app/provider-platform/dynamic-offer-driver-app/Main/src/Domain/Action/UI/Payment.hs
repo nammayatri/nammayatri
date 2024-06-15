@@ -29,6 +29,7 @@ import Domain.Action.UI.Ride.EndRide.Internal
 import qualified Domain.Types.DailyStats as DS
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
@@ -36,7 +37,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.Notification (Notification)
 import qualified Domain.Types.Notification as DNTF
-import qualified Domain.Types.PayoutOrders as DPO
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionConfig as DSC
@@ -62,6 +62,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
+import qualified Lib.Payment.Storage.Queries.PayoutOrders as QPayoutOrder
 import Lib.SessionizerMetrics.Types.Event
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
@@ -234,20 +235,30 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
       driver <- B.runInReplica $ QP.findById driverFee.driverId >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
       processNotification driver.merchantOperatingCityId notification notificationStatus responseCode responseMessage driverFee driver True
     Payment.PayoutOrderStatusResp {..} -> do
-      payoutOrder <- findByPayoutOrderId payoutOrderId >>= fromMaybeM (InternalError "PayoutOrder Not Found")
+      payoutOrder <- QPayoutOrder.findById (Id payoutOrderId) >>= fromMaybeM (InternalError "PayoutOrder Not Found")
       case payoutOrder.entityName of
-        Just DPO.DRIVER_DAILY_STATS -> do
+        Just DPayment.DRIVER_DAILY_STATS -> do
+          -- combine these functions
           whenJust payoutOrder.entityId $ \driverStatsId -> do
-            dailyStats <- QDailyStats.findById driverStatsId >>= fromMaybeM (InternalError "DriverStats Not Found")
+            dailyStats <- QDailyStats.findByPrimaryKey driverStatsId >>= fromMaybeM (InternalError "DriverStats Not Found")
             Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
-              let dPayoutStatus = (castPayoutOrderStatus status)
+              let dPayoutStatus = castPayoutOrderStatus payoutStatus
               when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus driverStatsId
-            fork "Update Payout Status and Transactions" $ do
+            fork "Update Payout Status and Transactions for DailyStats" $ do
               driver <- B.runInReplica $ QP.findById dailyStats.driverId >>= fromMaybeM (PersonDoesNotExist dailyStats.driverId.getId)
               let createPayoutOrderStatusReq = Payment.PayoutOrderStatusReq {orderId = payoutOrderId}
-                  createPayoutOrderStatusCall = Payment.payoutOrderStatus driver.merchantId driver.merchantOperatingCityId createPayoutOrderStatusReq
-              void $ DPayment.payoutStatusService driver.merchantId driver.id createPayoutOrderStatusReq createPayoutOrderStatusCall
-        _ -> pure () --Just MANUAL -> do
+                  serviceName = DEMSC.PayoutService Payment.JuspayPayout
+                  createPayoutOrderStatusCall = Payment.payoutOrderStatus driver.merchantId driver.merchantOperatingCityId serviceName
+              void $ DPayment.payoutStatusService (cast driver.merchantId) (cast driver.id) createPayoutOrderStatusReq createPayoutOrderStatusCall
+        Just DPayment.MANUAL -> do
+          whenJust payoutOrder.entityId $ \driverId -> do
+            fork "Update Payout Status and Transactions for Manual Payout" $ do
+              driver <- B.runInReplica $ QP.findById (Id driverId) >>= fromMaybeM (PersonDoesNotExist driverId)
+              let createPayoutOrderStatusReq = Payment.PayoutOrderStatusReq {orderId = payoutOrderId}
+                  serviceName = DEMSC.PayoutService Payment.JuspayPayout
+                  createPayoutOrderStatusCall = Payment.payoutOrderStatus driver.merchantId driver.merchantOperatingCityId serviceName
+              void $ DPayment.payoutStatusService (cast driver.merchantId) (cast driver.id) createPayoutOrderStatusReq createPayoutOrderStatusCall
+        _ -> pure ()
       pure ()
     Payment.BadStatusResp -> pure ()
   pure Ack

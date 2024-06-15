@@ -4139,8 +4139,8 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1718264872,
-        "narHash": "sha256-HMz0sCLDYHL20PycDl9AbdkiFQe/XPHbMW36gfgZUuk=",
+        "lastModified": 1718357062,
+        "narHash": "sha256-hih51qn6NIe6MPqYygTelP2pUBAqxchXGw13lPGqT5c=",
         "path": "/Users/prashant.singh/Desktop/shared-kernel",
         "type": "path"
       },

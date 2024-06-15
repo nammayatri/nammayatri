@@ -64,9 +64,11 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     Notification.GRPCConfig _ -> NotificationService Notification.GRPC
   PaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> PaymentService Payment.Juspay
+    Payment.JuspayPayoutConfig _ -> PaymentService Payment.JuspayPayout
     Payment.StripeConfig _ -> PaymentService Payment.Stripe
   MetroPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> MetroPaymentService Payment.Juspay
+    Payment.JuspayPayoutConfig _ -> MetroPaymentService Payment.JuspayPayout
     Payment.StripeConfig _ -> MetroPaymentService Payment.Stripe
   IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture

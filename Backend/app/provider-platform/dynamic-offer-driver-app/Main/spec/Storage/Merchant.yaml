@@ -1211,8 +1211,8 @@ PayoutConfig:
     isPayoutEnabled: Bool
     thresholdPayoutAmountPerPerson: HighPrecMoney
     batchLimit: Int
-    vehicleServiceTier: Maybe ServiceTierType
     vehicleVariant: Domain.Types.Vehicle.Variant
+    maxRetryCount: Int
   beamType:
     timeDiff: Seconds
   toTType:
@@ -1223,12 +1223,16 @@ PayoutConfig:
     payoutRegistrationAmount: "1.0"
     referralRewardAmountPerRide: "100.0"
     timeDiff: "0"
-    isPayoutEnabled: "True"
+    isPayoutEnabled: "False"
     thresholdPayoutAmountPerPerson: "1000.0"
     batchLimit: "10"
+    maxRetryCount: "5"
   constraints:
     merchantOperatingCityId: PrimaryKey
+    vehicleVariant: PrimaryKey
   queries:
-    findByMerchantOperatingCityId:
-      kvFunction: findOneWithKV
-      where: merchantOperatingCityId
+    findByMerchantOpCityIdAndIsPayoutEnabled:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, isPayoutEnabled]
+
