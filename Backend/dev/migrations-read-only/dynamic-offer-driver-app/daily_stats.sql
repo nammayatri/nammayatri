@@ -43,5 +43,9 @@ ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN activated_valid_rides 
 
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ALTER COLUMN referral_earnings SET DEFAULT 0.0;
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ALTER COLUMN referral_counts SET DEFAULT 0;
-ALTER TABLE atlas_driver_offer_bpp.daily_stats ALTER COLUMN payout_status SET DEFAULT Verifying;
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ALTER COLUMN activated_valid_rides SET DEFAULT 0;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ALTER COLUMN payout_status SET DEFAULT 'Verifying';

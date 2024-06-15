@@ -61,11 +61,13 @@ import Domain.Types.TransporterConfig
 import EulerHS.Prelude hiding (elem, foldr, id, length, mapM_, null)
 import GHC.Float (double2Int)
 import GHC.Num.Integer (integerFromInt, integerToInt)
+import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude hiding (forM_, whenJust)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common hiding (getCurrentTime)
 import Kernel.Types.Id
@@ -155,7 +157,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
 
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
 
-  sendReferralFCM ride booking.providerId mbRiderDetails booking.merchantOperatingCityId
+  sendReferralFCM ride booking.providerId mbRiderDetails booking.merchantOperatingCityId thresholdConfig
   updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
   DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride}
   let currency = booking.currency
@@ -187,6 +189,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
 sendReferralFCM ::
   ( CacheFlow m r,
     EsqDBFlow m r,
+    EncFlow m r,
     Esq.EsqDBReplicaFlow m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
   ) =>
@@ -194,8 +197,9 @@ sendReferralFCM ::
   Id Merchant ->
   Maybe RD.RiderDetails ->
   Id DMOC.MerchantOperatingCity ->
+  TransporterConfig ->
   m ()
-sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId = do
+sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId transporterConfig = do
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   now <- getCurrentTime
   let shouldUpdateRideComplete =
@@ -212,16 +216,19 @@ sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId = do
             let referralMessage = "Congratulations!"
             let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
             driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
-            updateReferralStats referredDriverId
+            unencryptedMobileNumber <- decrypt riderDetails.mobileNumber
+            mobileNumberHash <- getDbHash unencryptedMobileNumber
+            isValidRideForPayout <- fraudChecksForReferralPayout mobileNumberHash riderDetails.mobileCountryCode
+            when isValidRideForPayout $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId
             sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
-            -- notifyDriver 1 valid active ride completed by customer, 100 rupees reward
+            -- TODO: notifyDriver (for referral reward)
             logDebug "Driver Referral Coin Event"
             fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id merchantId merchantOpCityId (DCT.DriverToCustomerReferral ride.chargeableDistance)
           Nothing -> pure ()
   where
     updateReferralStats referredDriverId = do
-      payoutConfig <- CPC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (InternalError "Payout config not present")
-      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast referredDriverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      vehicle <- QV.findById referredDriverId >>= fromMaybeM (DriverWithoutVehicle referredDriverId.getId)
+      payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicle.variant >>= fromMaybeM (InternalError "Payout config not present")
       let referralRewardAmount = payoutConfig.referralRewardAmountPerRide
       driverStats <- QDriverStats.findByPrimaryKey referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
       QDriverStats.updateTotalValidRidesAndPayoutEarnings (driverStats.totalValidActivatedRides + 1) (driverStats.totalPayoutEarnings + referralRewardAmount) referredDriverId
@@ -229,12 +236,19 @@ sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId = do
       mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
       case mbDailyStats of
         Just stats -> do
-          QDailyStats.updateReferralStatsByDriverId (stats.activatedValidRides + 1) (stats.referralEarnings + referralRewardAmount) DDS.Verifying referredDriverId (utctDay localTime)
+          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey referredDriverId.getId) 3 3 $ do
+            QDailyStats.updateReferralStatsByDriverId (stats.activatedValidRides + 1) (stats.referralEarnings + referralRewardAmount) DDS.Verifying referredDriverId (utctDay localTime)
         Nothing -> do
           id <- generateGUIDText
-          now <- getCurrentTime -- is it correct? creating entries with ride details here
+          now <- getCurrentTime
           let dailyStatsOfDriver' = DDS.DailyStats {id = id, driverId = referredDriverId, totalEarnings = fromMaybe 0.0 ride.fare, numRides = 1, totalDistance = fromMaybe 0 ride.chargeableDistance, merchantLocalDate = utctDay localTime, currency = ride.currency, distanceUnit = ride.distanceUnit, activatedValidRides = 1, referralEarnings = referralRewardAmount, referralCounts = 1, payoutStatus = DDS.Verifying, payoutOrderId = Nothing, payoutOrderStatus = Nothing, createdAt = now, updatedAt = now}
           QDailyStats.create dailyStatsOfDriver'
+
+    fraudChecksForReferralPayout mobileNumberHash mobileCountryCode = do
+      availablePersonWithNumber <- SQP.findAllMerchantIdByPhoneNo mobileCountryCode mobileNumberHash
+      return $ null availablePersonWithNumber
+
+    payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId
 
 updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Ride.Ride -> m ()
 updateLeaderboardZScore merchantId merchantOpCityId ride = do

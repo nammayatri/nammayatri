@@ -26,6 +26,7 @@ module Lib.Payment.Domain.Action
     createPaymentIntentService,
     createPayoutService,
     payoutStatusService,
+    payoutStatusUpdates,
   )
 where
 
@@ -38,7 +39,10 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Payment.Juspay.Types (RefundStatus (REFUND_PENDING))
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
-import qualified Kernel.External.Payment.Juspay.Types.Payout as Payout
+import qualified Kernel.External.Payout.Interface as PT
+import qualified Kernel.External.Payout.Interface.Types as Payout
+import qualified Kernel.External.Payout.Juspay.Types as Juspay
+import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value, isNothing)
 import qualified Kernel.Storage.Hedis as Redis
@@ -239,7 +243,6 @@ createPaymentIntentService merchantId personId rideId rideShortIdText createPaym
             createdAt = now,
             updatedAt = now
           }
-
 
 -- create order -----------------------------------------------------
 
@@ -448,32 +451,6 @@ orderStatusService personId orderId orderStatusCall = do
         transactionUUID
       mapM_ updateRefundStatus refunds
       return $ PaymentStatus {status = transactionStatus, bankErrorCode = orderTxn.bankErrorCode, bankErrorMessage = orderTxn.bankErrorMessage, isRetried = isRetriedOrder, isRetargeted = isRetargetedOrder, retargetLink = retargetPaymentLink, refunds = refunds}
-    -- Payment.PayoutOrderStatusResp {..} -> pure () -- remove from kernel if not required
-    --   let orderTxn =
-    --         OrderTxn
-    --           { mandateStartDate = Nothing,
-    --             mandateEndDate = Nothing,
-    --             mandateId = Nothing,
-    --             mandateFrequency = Nothing,
-    --             mandateMaxAmount = Nothing,
-    --             mandateStatus = Nothing,
-    --             isRetried = Nothing,
-    --             isRetargeted = Nothing,
-    --             retargetLink = Nothing,
-    --             ..
-    --           }
-    --   maybe
-    --     (updateOrderTransaction order orderTxn Nothing)
-    --     ( \transactionUUID' ->
-    --         Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn Nothing -- updateOrderTransaction ? req or not?
-    --     )
-    --     transactionUUID
-    --   return $
-    --     PayoutPaymentStatus
-    --       { status = orderStatusResp.payoutStatus,
-    --         orderId = orderStatusResp.payoutOrderId,
-    --         accountDetailsType = Nothing
-    --       }
     _ -> throwError $ InternalError "Unexpected Order Status Response."
 
 data OrderTxn = OrderTxn
@@ -751,11 +728,11 @@ createPayoutService ::
   Maybe Text ->
   Maybe EntityName ->
   Text ->
-  Payment.CreatePayoutOrderReq ->
-  (Payment.CreatePayoutOrderReq -> m Payment.CreatePayoutOrderResp) ->
-  m (Maybe Payment.CreatePayoutOrderResp)
+  PT.CreatePayoutOrderReq ->
+  (PT.CreatePayoutOrderReq -> m PT.CreatePayoutOrderResp) ->
+  m (Maybe PT.CreatePayoutOrderResp)
 createPayoutService merchantId _personId mbEntityId mbEntityName city createPayoutOrderReq createPayoutOrderCall = do
-  mbExistingPayoutOrder <- QPayoutOrder.findById (Id createPayoutOrderReq.orderId)
+  mbExistingPayoutOrder <- QPayoutOrder.findByOrderId createPayoutOrderReq.orderId
   case mbExistingPayoutOrder of
     Nothing -> do
       createPayoutOrderResp <- createPayoutOrderCall createPayoutOrderReq -- api call
@@ -779,9 +756,10 @@ createPayoutService merchantId _personId mbEntityId mbEntityName city createPayo
             entityId = mbEntityId,
             entityName = mbEntityName,
             status = resp.status,
-            accountDetailsType = show <$> ((.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< resp.fulfillments), --- for now only one fullfillment supported
+            accountDetailsType = (.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< resp.fulfillments, --- for now only one fullfillment supported
             vpa = Just req.customerVpa,
             customerEmail = req.customerEmail,
+            lastStatusCheckedAt = Nothing,
             createdAt = now,
             updatedAt = now
           }
@@ -792,23 +770,22 @@ payoutStatusService ::
   ) =>
   Id Merchant ->
   Id Person ->
-  Payment.PayoutOrderStatusReq ->
-  (Payment.PayoutOrderStatusReq -> m Payment.CreatePayoutOrderResp) ->
+  PT.PayoutOrderStatusReq ->
+  (PT.PayoutOrderStatusReq -> m PT.PayoutOrderStatusResp) ->
   m PayoutPaymentStatus
 payoutStatusService _merchantId _personId createPayoutOrderStatusReq createPayoutOrderStatusCall = do
-  _ <- QPayoutOrder.findById (Id createPayoutOrderStatusReq.orderId) >>= fromMaybeM (PayoutOrderNotFound (createPayoutOrderStatusReq.orderId)) -- validation
-  let payoutOrderStatusReq = Payment.PayoutOrderStatusReq {orderId = createPayoutOrderStatusReq.orderId}
-  -- now <- getCurrentTime
+  _ <- QPayoutOrder.findByOrderId createPayoutOrderStatusReq.orderId >>= fromMaybeM (PayoutOrderNotFound (createPayoutOrderStatusReq.orderId)) -- validation
+  let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = createPayoutOrderStatusReq.orderId}
   statusResp <- createPayoutOrderStatusCall payoutOrderStatusReq -- api call
   payoutStatusUpdates statusResp.status createPayoutOrderStatusReq.orderId (Just statusResp)
   pure $ PayoutPaymentStatus {status = statusResp.status, orderId = statusResp.orderId, accountDetailsType = show <$> ((.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< statusResp.fulfillments)}
 
-payoutStatusUpdates :: (EncFlow m r, BeamFlow m r) => Payout.PayoutOrderStatus -> Text -> Maybe Payment.CreatePayoutOrderResp -> m () -- correct the import names
+payoutStatusUpdates :: (EncFlow m r, BeamFlow m r) => Payout.PayoutOrderStatus -> Text -> Maybe PT.PayoutOrderStatusResp -> m ()
 payoutStatusUpdates status_ orderId statusResp = do
-  _ <- QPayoutOrder.findById (Id orderId) >>= fromMaybeM (PayoutOrderNotFound orderId) -- validation
+  order <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
   QPayoutOrder.updatePayoutOrderStatus status_ orderId
   case statusResp of
-    Just Payment.CreatePayoutOrderResp {orderId = _orderPayoutId, status = _status, ..} -> do
+    Just Payout.CreatePayoutOrderResp {orderId = _orderPayoutId, status = _status, ..} -> do
       let txns = (.transactions) =<< listToMaybe =<< fulfillments
           mbTxn = listToMaybe <$> sortBy (comparing (.updatedAt)) =<< txns
       case mbTxn of
@@ -822,7 +799,7 @@ payoutStatusUpdates status_ orderId statusResp = do
               let payoutTransaction =
                     PT.PayoutTransactions
                       { id = uuid,
-                        merchantId = "",
+                        merchantId = order.merchantId,
                         payoutOrderId = Id orderId,
                         transactionRef = transactionRef,
                         gateWayRefId = gatewayRefId,
