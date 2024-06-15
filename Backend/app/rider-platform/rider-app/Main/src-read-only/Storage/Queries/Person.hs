@@ -133,6 +133,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.customerReferralCode customerReferralCode,
       Se.Set Beam.defaultPaymentMethodId defaultPaymentMethodId,
       Se.Set Beam.description description,
+      Se.Set Beam.deviceId deviceId,
       Se.Set Beam.deviceToken deviceToken,
       Se.Set Beam.emailEncrypted (email <&> unEncrypted . (.encrypted)),
       Se.Set Beam.emailHash (email <&> (.hash)),

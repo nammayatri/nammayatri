@@ -36,6 +36,7 @@ library
       Lib.Payment.Storage.Beam.PaymentTransaction
       Lib.Payment.Storage.Queries.PaymentOrder
       Lib.Payment.Storage.Queries.PaymentTransaction
+      Lib.Payment.Storage.Queries.PayoutOrdersExtra
       Lib.Payment.Domain.Types.PayoutOrders
       Lib.Payment.Domain.Types.PayoutTransactions
       Lib.Payment.Domain.Types.Refunds

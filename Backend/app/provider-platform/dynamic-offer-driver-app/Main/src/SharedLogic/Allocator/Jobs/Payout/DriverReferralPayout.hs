@@ -14,20 +14,20 @@
 
 module SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout where
 
-import qualified Data.Aeson as A
-import qualified Data.Text as T
-import Data.Time (utctDay)
-import Domain.Action.UI.Call
-import qualified Domain.Types.CallStatus as SCS
+import Data.Time (addDays, utctDay)
+import qualified Domain.Action.UI.Payout as DAP
 import qualified Domain.Types.DailyStats as DS
+import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.Merchant
+import Domain.Types.MerchantOperatingCity
 import Domain.Types.PayoutConfig
-import Domain.Types.Person
-import qualified Kernel.External.Payment.Interface as Juspay
-import Kernel.External.Types (Language (..), SchedulerFlow)
+import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Payout.Interface as Juspay
+import qualified Kernel.External.Payout.Types as PT
+import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
-import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -35,27 +35,24 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
+import Storage.Beam.Payment ()
 import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
-import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
-import qualified Storage.CachedQueries.Merchant.Overlay as CMO
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
-import qualified Storage.Queries.Booking as QB
-import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.DriverReferral as QDR
-import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Person as QPerson
-import Tools.Error
-import Utils.Common.Cac.KeyNameConstants
+import qualified Storage.Queries.Vehicle as QV
+import qualified Tools.Payout as TP
 
 sendDriverReferralPayoutJobData ::
   ( EncFlow m r,
     CacheFlow m r,
     MonadFlow m,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     SchedulerFlow r
   ) =>
   Job 'DriverReferralPayout ->
@@ -66,85 +63,109 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
       merchantId = jobData.merchantId
       statusForRetry = jobData.statusForRetry
       toScheduleNextPayout = jobData.toScheduleNextPayout
-  payoutConfigList <- CPC.findByMerchantOpCityIdAndIsPayoutEnabled merchantOpCityId True >>= fromMaybeM (InternalError "Payout config not present")
-  -- for_ vehicleVariants $ \variant -> do
-  -- payoutConfigsList <- CPC.findAllPayoutConfig
+  payoutConfigList <- CPC.findByMerchantOpCityIdAndIsPayoutEnabled merchantOpCityId True
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc -- use payoutConfig.timeDiff
-  dailyStatsForEveryDriverList <- QDailyStats.findAllByDateAndPayoutStatus transporterConfig.payoutBatchLimit 0 (utctDay localTime) statusForRetry -- handle
-  if null dailyStatsForEveryDriverList
-    then return Complete
+  let reschuleTimeDiff = listToMaybe payoutConfigList <&> (.timeDiff)
+  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let lastDay = addDays (-1) (utctDay localTime)
+  dailyStatsForEveryDriverList <- QDailyStats.findAllByDateAndPayoutStatus (Just transporterConfig.payoutBatchLimit) (Just 0) lastDay statusForRetry
+  if null dailyStatsForEveryDriverList || null payoutConfigList
+    then do
+      when toScheduleNextPayout $ do
+        case reschuleTimeDiff of
+          Just timeDiff' -> do
+            maxShards <- asks (.maxShards)
+            createJobIn @_ @'DriverReferralPayout timeDiff' maxShards $
+              DriverReferralPayoutJobData
+                { merchantId = merchantId,
+                  merchantOperatingCityId = merchantOpCityId,
+                  toScheduleNextPayout = toScheduleNextPayout,
+                  statusForRetry = statusForRetry
+                }
+          Nothing -> pure ()
+      return Complete
     else do
       for_ dailyStatsForEveryDriverList $ \executionData -> do
-        fork ("processing Payout for DriverId : " <> executionData.driverId.id.getId) $ do
-          callPayout executionData merchantId merchantOpCityId payoutConfigList
-      ReSchedule <$> getRescheduledTime transporterConfig
-  -- forM_ dailyStatsForEveryDriverList (callPayout merchantId merchantOpCityId)
-  -- when toScheduleNextPayout $ PENDING: Reschedule the job
-  pure Complete
+        fork ("processing Payout for DriverId : " <> executionData.driverId.getId) $ do
+          callPayout merchantId (cast merchantOpCityId) executionData payoutConfigList statusForRetry
+      ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
 
 callPayout ::
   ( EncFlow m r,
     CacheFlow m r,
     MonadFlow m,
+    EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     SchedulerFlow r
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
   DS.DailyStats ->
+  [PayoutConfig] ->
+  DS.PayoutStatus ->
   m ()
-callPayout merchantId merchantOpCityId DS.DailyStats {..} = do
-  QDailyStats.updatePayoutStatusById DS.Processing id
-  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  dInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-
-  uid <- generateGUID
-  case dInfo.payoutVpa of
-    Just vpa -> do
-      let entityName = DLP.DRIVER_DAILY_STATS
-      let createPayoutOrderReq =
-            Juspay.CreatePayoutOrderReq
-              { orderId = uid,
-                amount = referralEarnings,
-                customerPhone = person.mobileNumber,
-                customerEmail = person.email,
-                customerId = "",
-                orderType = "",
-                remark = "Referral Reward From Nammayatri",
-                customerName = person.firstName,
-                customerVpa = vpa
-              }
-      if referralEarnings <= payoutConfig.thresholdPayoutAmountPerPerson
-        then do
-          let createPayoutOrderCall = Payment.payoutOrderStatus merchantId merchantOpCityId createPayoutOrderReq
-          mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService merchantId driverId entityName id "city" createPayoutOrderReq createPayoutOrderCall -- PENDING: handle this and below errorCatchAndHandle
-          errorCatchAndHandle driverId mbPayoutOrderResp subscriptionConfigs endTime now (\_ -> QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName (Just endTime) driverId serviceName)
-          whenJust mbPayoutOrderResp $ \payoutOrderResp -> do
-            -- when payoutOrderResp.status == Juspay.FULFILLMENTS_SUCCESSFUL $
-            QDailyStats.updatePayoutStatusById (castPayoutOrderStatus payoutOrderResp.status) id --DS.Success id
-        else do
-          -- update entityName to manual
-          QDailyStats.updatePayoutStatusById DS.ManualReview id
-      pure ()
+callPayout merchantId merchantOpCityId DS.DailyStats {..} payoutConfigList statusForRetry = do
+  vehicle <- QV.findById driverId >>= fromMaybeM (VehicleNotFound driverId.getId)
+  let vehicleVariant = vehicle.variant
+  let payoutConfig' = find (\payoutConfig -> payoutConfig.vehicleVariant == vehicleVariant) payoutConfigList
+  case payoutConfig' of
+    Just payoutConfig -> do
+      uid <- generateGUID
+      person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      dInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      merchantOperatingCity <- CQMOC.findById (cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+      case dInfo.payoutVpa of
+        Just vpa -> do
+          Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 3 $ do
+            QDailyStats.updatePayoutStatusById DS.Processing id
+          phoneNo <- mapM decrypt person.mobileNumber
+          let entityName = DLP.DRIVER_DAILY_STATS
+              createPayoutOrderReq =
+                Juspay.CreatePayoutOrderReq
+                  { orderId = uid,
+                    amount = referralEarnings,
+                    customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
+                    customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail
+                    customerId = driverId.getId,
+                    orderType = payoutConfig.orderType,
+                    remark = payoutConfig.remark,
+                    customerName = person.firstName,
+                    customerVpa = vpa
+                  }
+          if referralEarnings <= payoutConfig.thresholdPayoutAmountPerPerson
+            then do
+              logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show referralEarnings <> " | orderId: " <> show uid
+              let serviceName = DEMSC.PayoutService PT.Juspay
+                  createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOpCityId serviceName
+              mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (cast driverId) (Just id) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+              errorCatchAndHandle id driverId.getId mbPayoutOrderResp payoutConfig statusForRetry (\_ -> pure ())
+            else do
+              Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 3 $ do
+                QDailyStats.updatePayoutStatusById DS.ManualReview id
+          pure ()
+        Nothing -> pure ()
     Nothing -> pure ()
 
 errorCatchAndHandle ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig) =>
-  Id Driver ->
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  Text ->
+  Text ->
   Either SomeException a ->
   PayoutConfig ->
-  UTCTime ->
-  UTCTime ->
+  DS.PayoutStatus ->
   (a -> m ()) ->
   m ()
-errorCatchAndHandle driverId resp' payoutConfig endTime _ function = do
+errorCatchAndHandle dailyStatsId driverId resp' payoutConfig statusForRetry function = do
   case resp' of
     Left _ -> do
-      eligibleForRetryInNextBatch <- isEligibleForRetryInNextBatch (mkManualLinkErrorTrackingByDriverIdKey driverId) payoutConfig.maxRetryCount
+      eligibleForRetryInNextBatch <- isEligibleForRetryInNextBatch (mkManualLinkErrorTrackingByDailyStatsIdKey dailyStatsId) payoutConfig.maxRetryCount
       if eligibleForRetryInNextBatch
-        then return ()
-        else pure () -- change
+        then Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId) 3 3 $ do
+          QDailyStats.updatePayoutStatusById statusForRetry dailyStatsId
+        else do
+          let status = if statusForRetry == DS.ManualReview then DS.Processing else DS.ManualReview
+          Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId) 3 3 $ do
+            QDailyStats.updatePayoutStatusById status dailyStatsId
     Right resp -> function resp
 
 isEligibleForRetryInNextBatch :: (MonadFlow m, CacheFlow m r) => Text -> Int -> m Bool
@@ -160,11 +181,8 @@ isEligibleForRetryInNextBatch key maxCount = do
       return True
     else return False
 
-mkManualLinkErrorTrackingByDriverIdKey :: Id Driver -> Text
-mkManualLinkErrorTrackingByDriverIdKey driverId = "ErrorRetryCountFor:DriverId:" <> driverId.getId
+mkManualLinkErrorTrackingByDailyStatsIdKey :: Text -> Text
+mkManualLinkErrorTrackingByDailyStatsIdKey dailyStatsId = "ErrCntPayout:DsId:" <> dailyStatsId
 
-getsetManualLinkErrorTrackingKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Maybe Int)
-getsetManualLinkErrorTrackingKey driverId = Hedis.get (mkManualLinkErrorTrackingByDriverIdKey driverId)
-
-getRescheduledTime :: MonadTime m => TransporterConfig -> m UTCTime
-getRescheduledTime tc = addUTCTime tc.mandateExecutionRescheduleInterval <$> getCurrentTime
+getRescheduledTime :: (MonadFlow m) => NominalDiffTime -> m UTCTime
+getRescheduledTime gap = addUTCTime gap <$> getCurrentTime

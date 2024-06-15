@@ -2,8 +2,8 @@ imports:
   UTCTime: Kernel.Prelude
   ShortId: Kernel.Types.Id
   HighPrecMoney: Kernel.Types.Common
-  PayoutOrderStatus : Kernel.External.Payment.Juspay.Types.Payout
-  AccountDetailsType : Kernel.External.Payment.Juspay.Types.Payout
+  PayoutOrderStatus : Kernel.External.Payout.Juspay.Types.Payout
+  AccountDetailsType : Kernel.External.Payout.Juspay.Types.Payout
   EntityName : Lib.Payment.Domain.Types.Common
 
 PayoutOrders:
@@ -16,12 +16,13 @@ PayoutOrders:
     city : Text
     amount : HighPrecMoney
     status : PayoutOrderStatus
-    accountDetailsType : Maybe Text # add instance of AccountDetailsType in kernel
+    accountDetailsType : Maybe AccountDetailsType
     entityId : Maybe Text
     entityName : Maybe EntityName
     vpa : Maybe Text
     mobileNo : Text
     customerEmail : Text
+    lastStatusCheckedAt : Maybe UTCTime
     createdAt : UTCTime
     updatedAt : UTCTime
   sqlType:
@@ -39,6 +40,12 @@ PayoutOrders:
     findByOrderId:
       kvFunction: findOneWithKV
       where: orderId
+    findAllByEntityNameAndEntityIds:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - eq: [entityName]
+          - in: [entityId]
     updatePayoutOrderStatus:
       kvFunction: updateOneWithKV
       params: [status]

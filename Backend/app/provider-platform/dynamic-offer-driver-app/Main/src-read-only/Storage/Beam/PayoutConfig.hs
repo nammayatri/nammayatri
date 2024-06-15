@@ -6,7 +6,6 @@
 module Storage.Beam.PayoutConfig where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -17,13 +16,17 @@ import Tools.Beam.UtilsTH
 data PayoutConfigT f = PayoutConfigT
   { batchLimit :: B.C f Kernel.Prelude.Int,
     isPayoutEnabled :: B.C f Kernel.Prelude.Bool,
+    maxRetryCount :: B.C f Kernel.Prelude.Int,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    payoutRegistrationAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    orderType :: B.C f Kernel.Prelude.Text,
+    payoutRegistrationCgst :: B.C f Kernel.Types.Common.HighPrecMoney,
+    payoutRegistrationFee :: B.C f Kernel.Types.Common.HighPrecMoney,
+    payoutRegistrationSgst :: B.C f Kernel.Types.Common.HighPrecMoney,
     referralRewardAmountPerRide :: B.C f Kernel.Types.Common.HighPrecMoney,
+    remark :: B.C f Kernel.Prelude.Text,
     thresholdPayoutAmountPerPerson :: B.C f Kernel.Types.Common.HighPrecMoney,
     timeDiff :: B.C f Kernel.Types.Common.Seconds,
-    vehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType),
     vehicleVariant :: B.C f Domain.Types.Vehicle.Variant,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
@@ -31,11 +34,11 @@ data PayoutConfigT f = PayoutConfigT
   deriving (Generic, B.Beamable)
 
 instance B.Table PayoutConfigT where
-  data PrimaryKey PayoutConfigT f = PayoutConfigId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = PayoutConfigId . merchantOperatingCityId
+  data PrimaryKey PayoutConfigT f = PayoutConfigId (B.C f Kernel.Prelude.Text) (B.C f Domain.Types.Vehicle.Variant) deriving (Generic, B.Beamable)
+  primaryKey = PayoutConfigId <$> merchantOperatingCityId <*> vehicleVariant
 
 type PayoutConfig = PayoutConfigT Identity
 
-$(enableKVPG ''PayoutConfigT ['merchantOperatingCityId] [])
+$(enableKVPG ''PayoutConfigT ['merchantOperatingCityId, 'vehicleVariant] [])
 
 $(mkTableInstances ''PayoutConfigT "payout_config")

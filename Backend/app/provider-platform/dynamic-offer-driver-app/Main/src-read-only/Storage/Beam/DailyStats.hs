@@ -10,7 +10,7 @@ import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import qualified Domain.Types.DailyStats
 import Kernel.External.Encryption
-import qualified Kernel.External.Payment.Juspay.Types.Payout
+import qualified Kernel.External.Payout.Juspay.Types.Payout
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -25,7 +25,7 @@ data DailyStatsT f = DailyStatsT
     merchantLocalDate :: B.C f Data.Time.Calendar.Day,
     numRides :: B.C f Kernel.Prelude.Int,
     payoutOrderId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    payoutOrderStatus :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.Payout.PayoutOrderStatus),
+    payoutOrderStatus :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus),
     payoutStatus :: B.C f Domain.Types.DailyStats.PayoutStatus,
     referralCounts :: B.C f Kernel.Prelude.Int,
     referralEarnings :: B.C f Kernel.Types.Common.Money,

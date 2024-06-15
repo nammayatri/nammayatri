@@ -169,3 +169,13 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN distance_unit c
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN payout_batch_limit integer NOT NULL default 10;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN update_payout_status_batch_size integer NOT NULL default 20;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN last_ndays_to_check_for_payout_order_status integer NOT NULL default 2;

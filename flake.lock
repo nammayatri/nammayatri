@@ -4139,12 +4139,10 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1719222589,
-        "narHash": "sha256-q71M2F5v4bah7qKFtGDIKrTKnV7Jb65UYPICkzitaIE=",
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "rev": "b8fe154c7a8a7236b8d12a11ff20d8f7d5fedeff",
-        "type": "github"
+        "lastModified": 1719311095,
+        "narHash": "sha256-8mpV8UgUP07dEJdRzkd/WCboitRu/HJXIziROBYWe1Y=",
+        "path": "/Users/prashant.singh/Desktop/shared-kernel",
+        "type": "path"
       },
       "original": {
         "path": "/Users/prashant.singh/Desktop/shared-kernel",

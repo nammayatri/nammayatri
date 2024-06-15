@@ -8,7 +8,7 @@ import Data.Aeson
 import qualified Data.Text
 import qualified Data.Time.Calendar
 import qualified Domain.Types.Person
-import qualified Kernel.External.Payment.Juspay.Types.Payout
+import qualified Kernel.External.Payout.Juspay.Types.Payout
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -23,7 +23,7 @@ data DailyStats = DailyStats
     merchantLocalDate :: Data.Time.Calendar.Day,
     numRides :: Kernel.Prelude.Int,
     payoutOrderId :: Kernel.Prelude.Maybe Data.Text.Text,
-    payoutOrderStatus :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.Payout.PayoutOrderStatus,
+    payoutOrderStatus :: Kernel.Prelude.Maybe Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus,
     payoutStatus :: Domain.Types.DailyStats.PayoutStatus,
     referralCounts :: Kernel.Prelude.Int,
     referralEarnings :: Kernel.Types.Common.HighPrecMoney,

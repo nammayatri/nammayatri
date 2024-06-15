@@ -20,3 +20,8 @@ ALTER TABLE atlas_driver_offer_bpp.payout_orders ADD PRIMARY KEY ( id, order_id)
 
 ALTER TABLE atlas_driver_offer_bpp.payout_orders ADD COLUMN entity_name text ;
 ALTER TABLE atlas_driver_offer_bpp.payout_orders ADD COLUMN entity_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_orders ADD COLUMN last_status_checked_at timestamp with time zone ;

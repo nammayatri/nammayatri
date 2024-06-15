@@ -23,12 +23,14 @@ import Data.OpenApi
 import qualified Domain.Action.UI.DriverOnboarding.HyperVergeWebhook as HyperVergeResultWebhook
 import qualified Domain.Action.UI.DriverOnboarding.IdfyWebhook as DriverOnboarding
 import qualified Domain.Action.UI.Payment as Payment
+import qualified Domain.Action.UI.Payout as Payout
 import qualified Domain.Action.UI.SafetyWebhook as SafetyWebhook
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Plan as Plan
 import Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Payment.Juspay.Webhook as Juspay
+import qualified Kernel.External.Payout.Juspay.Webhook as JuspayPayout
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -71,6 +73,15 @@ type MainAPI =
              :> SafetyWebhook.SafetyWebhookAPI
          )
     :<|> HyperVergeResultWebhook.HyperVergeResultWebhookAPI
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> JuspayPayout.JuspayPayoutWebhookAPI
+         )
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> QueryParam "city" Context.City
+             :> QueryParam "serviceName" Plan.ServiceNames
+             :> "v2"
+             :> JuspayPayout.JuspayPayoutWebhookAPI
+         )
     :<|> Dashboard.API -- TODO :: Needs to be deprecated
     :<|> Dashboard.APIV2
     :<|> Internal.API
@@ -89,6 +100,8 @@ mainServer =
     :<|> juspayWebhookHandlerV2
     :<|> safetyWebhookHandler
     :<|> hyperVergeResultWebhookHandler
+    :<|> juspayPayoutWebhookHandler
+    :<|> juspayPayoutWebhookHandlerV2
     :<|> Dashboard.handler
     :<|> Dashboard.handlerV2
     :<|> Internal.handler
@@ -178,3 +191,21 @@ hyperVergeResultWebhookHandler ::
   FlowHandler AckResponse
 hyperVergeResultWebhookHandler =
   withFlowHandlerAPI . HyperVergeResultWebhook.hyperVergeResultWebhookHandler
+
+juspayPayoutWebhookHandler ::
+  ShortId DM.Merchant ->
+  BasicAuthData ->
+  Value ->
+  FlowHandler AckResponse
+juspayPayoutWebhookHandler merchantShortId secret value' =
+  withFlowHandlerAPI $ Payout.juspayPayoutWebhookHandler merchantShortId Nothing Nothing secret value'
+
+juspayPayoutWebhookHandlerV2 ::
+  ShortId DM.Merchant ->
+  Maybe Context.City ->
+  Maybe Plan.ServiceNames ->
+  BasicAuthData ->
+  Value ->
+  FlowHandler AckResponse
+juspayPayoutWebhookHandlerV2 merchantShortId mbOpCity mbServiceName secret value' =
+  withFlowHandlerAPI $ Payout.juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName secret value'

@@ -79,3 +79,8 @@ ALTER TABLE atlas_app.person ADD COLUMN customer_payment_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person ADD COLUMN default_payment_method_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN device_id text ;
