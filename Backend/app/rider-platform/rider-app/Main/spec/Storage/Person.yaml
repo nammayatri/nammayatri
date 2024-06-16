@@ -13,6 +13,7 @@ imports:
   Device: Kernel.Types.Version
   DeviceType: Kernel.Types.Version
   PartnerOrganization: Domain.Types.PartnerOrganization
+  CustomerId: Kernel.External.Payment.Interface.Types
 
 Person:
   tableName: person
@@ -92,6 +93,7 @@ Person:
     backendAppVersion : Maybe Text
     blockedCount : Maybe Int
     registeredViaPartnerOrgId : Maybe (Id PartnerOrganization)
+    customerPaymentId : Maybe CustomerId
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -278,6 +280,11 @@ Person:
     findPersonByCustomerReferralCode:
       kvFunction: findOneWithKV
       where: customerReferralCode
+
+    updateCustomerPaymentId:
+      kvFunction: updateWithKV
+      params: [customerPaymentId]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE

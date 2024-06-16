@@ -12,6 +12,7 @@ import qualified Kernel.External.AadhaarVerification
 import qualified Kernel.External.Call.Types
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Notification.Types
+import qualified Kernel.External.Payment.Types
 import qualified Kernel.External.SMS.Types
 import qualified Kernel.External.Ticket.Types
 import qualified Kernel.External.Whatsapp.Types
@@ -22,8 +23,15 @@ import qualified Tools.Beam.UtilsTH
 data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   { aadhaarVerificationService :: Kernel.External.AadhaarVerification.AadhaarVerificationService,
     autoComplete :: Kernel.External.Maps.Types.MapsService,
+    capturePaymentIntent :: Kernel.External.Payment.Types.PaymentService,
+    createEphemeralKeys :: Kernel.External.Payment.Types.PaymentService,
+    createPaymentCustomer :: Kernel.External.Payment.Types.PaymentService,
+    createPaymentIntent :: Kernel.External.Payment.Types.PaymentService,
+    createSetupIntent :: Kernel.External.Payment.Types.PaymentService,
     createdAt :: Kernel.Prelude.UTCTime,
+    deleteCard :: Kernel.External.Payment.Types.PaymentService,
     enableDashboardSms :: Kernel.Prelude.Bool,
+    getCardList :: Kernel.External.Payment.Types.PaymentService,
     getDistances :: Kernel.External.Maps.Types.MapsService,
     getDistancesForCancelRide :: Kernel.External.Maps.Types.MapsService,
     getExophone :: Kernel.External.Call.Types.CallService,
@@ -39,6 +47,8 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     notifyPerson :: Kernel.External.Notification.Types.NotificationService,
     smsProvidersPriorityList :: [Kernel.External.SMS.Types.SmsService],
     snapToRoad :: Kernel.External.Maps.Types.MapsService,
+    updateAmountInPaymentIntent :: Kernel.External.Payment.Types.PaymentService,
+    updatePaymentMethodInIntent :: Kernel.External.Payment.Types.PaymentService,
     updatedAt :: Kernel.Prelude.UTCTime,
     useFraudDetection :: Kernel.Prelude.Bool,
     whatsappProvidersPriorityList :: [Kernel.External.Whatsapp.Types.WhatsappService]

@@ -17,6 +17,7 @@ imports:
   Version: Kernel.Types.Version
   LatLong: Kernel.External.Maps
   Confidence: Kernel.Types.Confidence
+  PaymentIntentId: Kernel.External.Payment.Interface.Types
 
 Ride:
   tableName: ride
@@ -106,6 +107,7 @@ Ride:
     backendAppVersion: Maybe Text
     safetyCheckStatus: Maybe Bool
     showDriversPreviousRideDropLoc: Bool
+    paymentIntentId: Maybe PaymentIntentId
     tollConfidence: Maybe Confidence
 
   sqlType:

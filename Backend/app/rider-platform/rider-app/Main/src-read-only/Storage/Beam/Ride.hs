@@ -10,6 +10,7 @@ import qualified Domain.Types.Ride
 import qualified Domain.Types.VehicleServiceTier
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
+import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -51,6 +52,7 @@ data RideT f = RideT
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     otp :: B.C f Kernel.Prelude.Text,
+    paymentIntentId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentIntentId),
     rideEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     rideRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     rideStartTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

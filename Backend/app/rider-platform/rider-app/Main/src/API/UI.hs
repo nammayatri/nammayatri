@@ -26,6 +26,7 @@ import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FavouriteDriver as FavouriteDriver
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Invoice as Invoice
+import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
 import qualified API.Action.UI.TicketService as TicketService
@@ -69,6 +70,7 @@ type API =
     :> ( Get '[JSON] Text
            :<|> Registration.API
            :<|> Profile.API
+           :<|> RidePayment.API
            :<|> Payment.API
            :<|> Search.API
            :<|> Select.API
@@ -116,6 +118,7 @@ handler =
   pure "App is UP"
     :<|> Registration.handler
     :<|> Profile.handler
+    :<|> RidePayment.handler
     :<|> Payment.handler
     :<|> Search.handler
     :<|> Select.handler

@@ -8,6 +8,7 @@ import qualified Data.Time
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.External.Whatsapp.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -58,6 +59,13 @@ updateAverageRating totalRatings totalRatingScore isValidRating id = do
 
 updateBlockedState :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateBlockedState blocked id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.blocked blocked, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateCustomerPaymentId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateCustomerPaymentId customerPaymentId id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.customerPaymentId customerPaymentId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateDeviceToken :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateDeviceToken deviceToken id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.deviceToken deviceToken, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -114,6 +122,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currentCity (Kernel.Prelude.Just currentCity),
+      Se.Set Beam.customerPaymentId customerPaymentId,
       Se.Set Beam.customerReferralCode customerReferralCode,
       Se.Set Beam.description description,
       Se.Set Beam.deviceToken deviceToken,

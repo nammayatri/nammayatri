@@ -23,3 +23,20 @@ ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN updated_at timest
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN use_fraud_detection boolean NOT NULL default False;
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN whatsapp_providers_priority_list text[] NOT NULL;
 ALTER TABLE atlas_app.merchant_service_usage_config ADD PRIMARY KEY ( merchant_operating_city_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN update_payment_method_in_intent text NOT NULL default 'Stripe';
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN update_amount_in_payment_intent text NOT NULL default 'Stripe';
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_card_list text NOT NULL default 'Stripe';
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN create_setup_intent text NOT NULL default 'Stripe';
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN create_payment_intent text NOT NULL default 'Stripe';
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN create_payment_customer text NOT NULL default 'Stripe';
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN create_ephemeral_keys text NOT NULL default 'Stripe';
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN capture_payment_intent text NOT NULL default 'Stripe';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN delete_card text NOT NULL default 'Stripe';
