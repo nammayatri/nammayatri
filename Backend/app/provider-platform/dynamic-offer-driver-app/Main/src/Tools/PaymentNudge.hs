@@ -129,7 +129,7 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
 
     makeOfferReq date paymentMode_ plan driver = do
       now <- getCurrentTime
-      let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = plan.maxAmount, currency = Payment.INR}
+      let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = plan.maxAmount, currency = INR}
           customerReq = Payment.OfferCustomer {customerId = driver.id.getId, email = driver.email, mobile = Nothing}
       return
         Payment.OfferListReq

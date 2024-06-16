@@ -197,7 +197,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           offers = appliedOfferIds,
           customerId = driverId.getId,
           amount = due,
-          currency = PaymentInterface.INR,
+          currency = INR,
           planId = plan.id.getId,
           registrationDate,
           dutyDate = dutyDate,
@@ -254,7 +254,7 @@ processRestFee paymentMode DriverFee {..} subscriptionConfig = do
 
 makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Int -> TransporterConfig -> Payment.OfferListReq
 makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transporterConfig = do
-  let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = totalFee, currency = Payment.INR} -- add UDFs
+  let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = totalFee, currency = INR} -- add UDFs
       customerReq = Payment.OfferCustomer {customerId = driver.id.getId, email = driver.email, mobile = Nothing}
   Payment.OfferListReq
     { order = offerOrder,

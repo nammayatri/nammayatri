@@ -38,7 +38,7 @@ data PaymentOrderT f = PaymentOrderT
     returnUrl :: B.C f (Maybe Text),
     action :: B.C f (Maybe Text),
     amount :: B.C f HighPrecMoney, -- FIXME Kernel.Types.Common.Price
-    currency :: B.C f Payment.Currency, -- FIXME Kernel.Types.Common.Price
+    currency :: B.C f Currency, -- FIXME Kernel.Types.Common.Price
     status :: B.C f Payment.TransactionStatus,
     webPaymentLink :: B.C f (Maybe Text),
     iframePaymentLink :: B.C f (Maybe Text),

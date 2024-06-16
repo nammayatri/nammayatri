@@ -34,7 +34,7 @@ data PaymentTransaction = PaymentTransaction
     orderId :: Id PaymentOrder,
     merchantId :: Id Merchant,
     amount :: HighPrecMoney,
-    currency :: Payment.Currency,
+    currency :: Currency,
     dateCreated :: Maybe UTCTime,
     statusId :: Int,
     status :: Payment.TransactionStatus,

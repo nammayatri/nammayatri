@@ -34,7 +34,7 @@ data PaymentTransactionT f = PaymentTransactionT
     orderId :: B.C f Text,
     merchantId :: B.C f Text,
     amount :: B.C f HighPrecMoney, -- FIXME Kernel.Types.Common.Price
-    currency :: B.C f Payment.Currency, -- FIXME Kernel.Types.Common.Price
+    currency :: B.C f Currency, -- FIXME Kernel.Types.Common.Price
     dateCreated :: B.C f (Maybe UTCTime),
     statusId :: B.C f Int,
     status :: B.C f Payment.TransactionStatus,
