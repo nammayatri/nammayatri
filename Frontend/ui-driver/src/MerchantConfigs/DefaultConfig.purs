@@ -574,10 +574,14 @@ config =
       minCoinSliderValue : 250,
       maxCoinSliderValue : 2500,
       stepFunctionForCoinConversion : 250,
+      twoRidesCompletedThresholdForCoins : "2+",
+      fiveRidesCompletedThresholdForCoins : "5+",
       numOfRideThresholdForCoins : "8+",
       leaderBoardThresholdForCoins : "+500",
       customerReferralCoins : "+200",
-      eightPlusRidesCoins : "+25",
+      twoPlusRidesCoins : "+10",
+      fivePlusRidesCoins : "+40",
+      eightPlusRidesCoins : "+50",
       purpleRideCoins : "+5",
       rideCompletedCoins : "+1",
       fiveStarRatingCoins : "+1",
@@ -587,6 +591,8 @@ config =
       howToEarnYatriCoinFAQ : "",
       howToRedeemYatriCoinFAQ : "",
       rideCompletedCoinEvent : false,
+      twoRideCoinEvent : false,
+      fiveRideCoinEvent : false,
       eightRideCoinEvent : false,
       prupleRideCoinEvent : false,
       bookingCancelCoinEvent : false,
@@ -595,6 +601,7 @@ config =
       driverToCustomerRefCoinEvent : false,
       coinConversionPopupLottie : "",
       driverToCustomerRefPopupEndDate : "",
+      monsoonOfferDate : "",
       coinsValidTill : 150
   }
   , inAppKeyboardModalConfig : {

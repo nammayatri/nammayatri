@@ -1401,6 +1401,9 @@ eval (CoinEarnedPopupAC PopUpModal.OnButton1Click) state = do
   case state.props.coinPopupType of
     ST.REFER_AND_EARN_COIN -> updateAndExit newState $ GoToReferralScreen
     ST.CONVERT_COINS_TO_CASH -> updateAndExit newState $ EarningsScreen newState true 
+    ST.EIGHT_RIDE_COMPLETED -> updateAndExit newState $ EarningsScreen newState true 
+    ST.TWO_RIDE_COMPLETED -> updateAndExit newState $ EarningsScreen newState true 
+    ST.FIVE_RIDE_COMPLETED -> updateAndExit newState $ EarningsScreen newState true 
     _ -> continue newState
 
 eval (CoinEarnedPopupAC PopUpModal.OptionWithHtmlClick) state = do
@@ -1739,13 +1742,15 @@ updateCoinPopupLocalStoreVal state = do
         ST.TWO_MORE_RIDES -> popupInfo { twoMoreRides = getCurrentUTC "" }
         ST.ONE_MORE_RIDE -> popupInfo { oneMoreRide = getCurrentUTC "" }
         ST.EIGHT_RIDE_COMPLETED -> popupInfo { eightRideCompleted = getCurrentUTC "" }
+        ST.FIVE_RIDE_COMPLETED -> popupInfo { fiveRideCompleted = getCurrentUTC "" }
+        ST.TWO_RIDE_COMPLETED -> popupInfo { twoRideCompleted = getCurrentUTC "" }
         ST.REFER_AND_EARN_COIN -> popupInfo { referAndEarnCoin = getCurrentUTC "" }
         ST.CONVERT_COINS_TO_CASH -> popupInfo { convertCoinsToCash = getCurrentUTC "" }
         _ -> popupInfo
   void $ pure $ setValueToCache "COIN_EARNED_POPUP_TYPE" newPopupInfo stringifyJSON
 
 getCoinPopupStatus :: String -> ST.CoinEarnedPopupTypeShown
-getCoinPopupStatus key = decodeForeignAny (parseJSON (getKeyInSharedPrefKeys key)) {rideMoreEarnCoin : "" , twoMoreRides : "", oneMoreRide : "", eightRideCompleted : "", referAndEarnCoin : "", convertCoinsToCash : ""}
+getCoinPopupStatus key = decodeForeignAny (parseJSON (getKeyInSharedPrefKeys key)) {rideMoreEarnCoin : "" , twoMoreRides : "", oneMoreRide : "", eightRideCompleted : "", fiveRideCompleted : "", twoRideCompleted : "", referAndEarnCoin : "", convertCoinsToCash : ""}
 
 fetchStageFromRideStatus :: ST.ActiveRide -> ST.HomeScreenStage
 fetchStageFromRideStatus activeRide = 
