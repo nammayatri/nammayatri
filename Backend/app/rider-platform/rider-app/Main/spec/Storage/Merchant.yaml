@@ -26,6 +26,8 @@ imports:
   BookingStatus: Domain.Types.Extra.Booking
   Language: Kernel.External.Types
   Category: Kernel.External.Notification.Interface.Types
+  PaymentService: Kernel.External.Payment.Types
+
 Merchant:
   derives: "Generic,Show,'UsageSafety"
 
@@ -282,6 +284,15 @@ MerchantServiceUsageConfig:
     useFraudDetection: Bool
     enableDashboardSms: Bool
     getExophone: CallService
+    createPaymentCustomer: PaymentService
+    createEphemeralKeys: PaymentService
+    getCardList: PaymentService
+    createPaymentIntent: PaymentService
+    updatePaymentMethodInIntent: PaymentService
+    capturePaymentIntent: PaymentService
+    updateAmountInPaymentIntent: PaymentService
+    createSetupIntent: PaymentService
+    deleteCard: PaymentService
     updatedAt: UTCTime
     createdAt: UTCTime
 
@@ -324,7 +335,15 @@ MerchantServiceUsageConfig:
     useFraudDetection: "False"
     issueTicketService: "'Kapture'"
     getExophone: "'Exotel'"
-
+    createPaymentCustomer: "'Stripe'"
+    createEphemeralKeys: "'Stripe'"
+    getCardList: "'Stripe'"
+    createPaymentIntent: "'Stripe'"
+    updatePaymentMethodInIntent: "'Stripe'"
+    capturePaymentIntent: "'Stripe'"
+    updateAmountInPaymentIntent: "'Stripe'"
+    createSetupIntent: "'Stripe'"
+    deleteCard: "'Stripe'"
 
 MerchantPaymentMethod:
   derives: "Generic,'UsageSafety"

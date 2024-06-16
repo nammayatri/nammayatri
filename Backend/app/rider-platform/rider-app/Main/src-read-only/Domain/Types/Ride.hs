@@ -13,6 +13,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleServiceTier
 import qualified Domain.Types.VehicleVariant
 import qualified Kernel.External.Maps
+import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Confidence
@@ -52,6 +53,7 @@ data Ride = Ride
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     otp :: Kernel.Prelude.Text,
+    paymentIntentId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentIntentId,
     rideEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     rideRating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rideStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

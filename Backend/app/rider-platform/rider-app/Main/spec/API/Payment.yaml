@@ -1,0 +1,52 @@
+imports:
+  CustomerCardListResp: Kernel.External.Payment.Interface.Types
+  CustomerId: Kernel.External.Payment.Interface.Types
+  PaymentMethodId: Kernel.External.Payment.Interface.Types
+  APISuccess: Kernel.Types.APISuccess
+  Ride: Domain.Types.Ride
+
+module: RidePayment
+types:
+  SetupIntentResponse:
+    setupIntentClientSecret: Text
+    customerId: CustomerId
+    ephemeralKey: Text
+  PaymentIntentResponse:
+    paymentIntentClientSecret: Text
+    customerId: CustomerId
+    ephemeralKey: Text
+apis:
+  - GET:
+      endpoint: /payment/methods
+      auth: TokenAuth
+      response:
+        type: CustomerCardListResp
+  - GET:
+      endpoint: /payment/intent/setup
+      auth: TokenAuth
+      response:
+        type: SetupIntentResponse
+  - GET:
+      endpoint: /payment/intent/payment
+      auth: TokenAuth
+      response:
+        type: PaymentIntentResponse
+  - POST:
+      endpoint: /payment/{rideId}/method/{paymentMethodId}/update
+      params:
+        rideId: Id Ride
+        paymentMethodId: PaymentMethodId
+      response:
+        type: APISuccess
+  - DELETE:
+      endpoint: /payment/methods/{paymentMethodId}/delete
+      params:
+        paymentMethodId: PaymentMethodId
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /payment/{rideId}/addTip
+      params:
+        rideId: Id Ride
+      response:
+        type: APISuccess

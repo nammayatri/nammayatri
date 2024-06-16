@@ -69,3 +69,8 @@ ALTER TABLE atlas_app.person ADD COLUMN blocked_count integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person ADD COLUMN registered_via_partner_org_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN customer_payment_id text ;

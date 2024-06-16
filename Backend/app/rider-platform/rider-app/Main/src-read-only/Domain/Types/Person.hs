@@ -12,6 +12,7 @@ import qualified Domain.Types.PartnerOrganization
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
+import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.External.Whatsapp.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
@@ -34,6 +35,7 @@ data PersonE e = Person
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     createdAt :: Kernel.Prelude.UTCTime,
     currentCity :: Kernel.Types.Beckn.Context.City,
+    customerPaymentId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId,
     customerReferralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     deviceToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -105,6 +107,7 @@ instance EncryptedItem Person where
           clientSdkVersion = clientSdkVersion entity,
           createdAt = createdAt entity,
           currentCity = currentCity entity,
+          customerPaymentId = customerPaymentId entity,
           customerReferralCode = customerReferralCode entity,
           description = description entity,
           deviceToken = deviceToken entity,
@@ -168,6 +171,7 @@ instance EncryptedItem Person where
             clientSdkVersion = clientSdkVersion entity,
             createdAt = createdAt entity,
             currentCity = currentCity entity,
+            customerPaymentId = customerPaymentId entity,
             customerReferralCode = customerReferralCode entity,
             description = description entity,
             deviceToken = deviceToken entity,

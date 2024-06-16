@@ -12,6 +12,7 @@ import qualified Kernel.External.Call.Types
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Notification.Types
+import qualified Kernel.External.Payment.Types
 import qualified Kernel.External.SMS.Types
 import qualified Kernel.External.Ticket.Types
 import qualified Kernel.External.Whatsapp.Types
@@ -22,8 +23,15 @@ import Tools.Beam.UtilsTH
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
   { aadhaarVerificationService :: B.C f Kernel.External.AadhaarVerification.AadhaarVerificationService,
     autoComplete :: B.C f Kernel.External.Maps.Types.MapsService,
+    capturePaymentIntent :: B.C f Kernel.External.Payment.Types.PaymentService,
+    createEphemeralKeys :: B.C f Kernel.External.Payment.Types.PaymentService,
+    createPaymentCustomer :: B.C f Kernel.External.Payment.Types.PaymentService,
+    createPaymentIntent :: B.C f Kernel.External.Payment.Types.PaymentService,
+    createSetupIntent :: B.C f Kernel.External.Payment.Types.PaymentService,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
+    deleteCard :: B.C f Kernel.External.Payment.Types.PaymentService,
     enableDashboardSms :: B.C f Kernel.Prelude.Bool,
+    getCardList :: B.C f Kernel.External.Payment.Types.PaymentService,
     getDistances :: B.C f Kernel.External.Maps.Types.MapsService,
     getDistancesForCancelRide :: B.C f Kernel.External.Maps.Types.MapsService,
     getExophone :: B.C f Kernel.External.Call.Types.CallService,
@@ -39,6 +47,8 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     notifyPerson :: B.C f Kernel.External.Notification.Types.NotificationService,
     smsProvidersPriorityList :: B.C f [Kernel.External.SMS.Types.SmsService],
     snapToRoad :: B.C f Kernel.External.Maps.Types.MapsService,
+    updateAmountInPaymentIntent :: B.C f Kernel.External.Payment.Types.PaymentService,
+    updatePaymentMethodInIntent :: B.C f Kernel.External.Payment.Types.PaymentService,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     useFraudDetection :: B.C f Kernel.Prelude.Bool,
     whatsappProvidersPriorityList :: B.C f [Kernel.External.Whatsapp.Types.WhatsappService]

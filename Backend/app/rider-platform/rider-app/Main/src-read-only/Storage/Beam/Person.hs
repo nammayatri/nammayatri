@@ -11,6 +11,7 @@ import qualified Domain.Types.Person
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import qualified Kernel.External.Maps
+import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.External.Whatsapp.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -32,6 +33,7 @@ data PersonT f = PersonT
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currentCity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City),
+    customerPaymentId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId),
     customerReferralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     deviceToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
