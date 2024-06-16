@@ -3515,8 +3515,10 @@ updateBannerAndPopupFlags = do
     hsState = allState.homeScreen
     coinPopupType_ = case allState.homeScreen.data.totalValidRidesOfDay of
                       8 -> checkPopupShowToday ST.EIGHT_RIDE_COMPLETED appConfig hsState
-                      7 -> checkPopupShowToday ST.ONE_MORE_RIDE appConfig hsState
-                      6 -> checkPopupShowToday ST.TWO_MORE_RIDES appConfig hsState
+                      -- 7 -> checkPopupShowToday ST.ONE_MORE_RIDE appConfig hsState  these will  be enabled after monsoon offer of coin
+                      -- 6 -> checkPopupShowToday ST.TWO_MORE_RIDES appConfig hsState
+                      5 -> checkPopupShowToday ST.FIVE_RIDE_COMPLETED appConfig hsState
+                      2 -> checkPopupShowToday ST.TWO_RIDE_COMPLETED appConfig hsState
                       _ -> rideAndEarnPopup
 
     coinPopupType__ = if (coinPopupType_ == ST.NO_COIN_POPUP) then (checkPopupShowToday ST.CONVERT_COINS_TO_CASH appConfig hsState) else coinPopupType_

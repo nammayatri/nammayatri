@@ -2259,7 +2259,20 @@ coinEarnedPopup state =
         , isClickable = true
       }
       , dismissPopup = true
+      , popUpHeaderConfig {
+        gravity = CENTER
+        , visibility = boolToVisibility $ popupConfig.headerTextVisibility || popupConfig.subHeadingTextVisibility
+        , headingText {
+          text = popupConfig.headerText
+          , visibility = boolToVisibility popupConfig.headerTextVisibility
+        }
+        , subHeadingText {
+          text = popupConfig.subHeadingText
+          , visibility = boolToVisibility popupConfig.subHeadingTextVisibility
+          , textStyle = SubHeading1
+        }
       }
+    }
 
 type CoinEarnedPopupConfig = 
   { primaryText :: String
@@ -2270,71 +2283,55 @@ type CoinEarnedPopupConfig =
   , optionWithHtmlVisibility :: Boolean
   , coverImageConfig :: String
   , coverLottieConfig :: String
+  , headerText :: String
+  , subHeadingText :: String
+  , headerTextVisibility :: Boolean
+  , subHeadingTextVisibility :: Boolean
+  }
+
+defaultCoinPopupConfig :: CoinEarnedPopupConfig
+defaultCoinPopupConfig = 
+  { primaryText: ""
+  , secondaryText: ""
+  , secondaryTextVisibility: false
+  , option1: ""
+  , optionWithHtml: ""
+  , optionWithHtmlVisibility: false
+  , coverImageConfig: ""
+  , coverLottieConfig: ""
+  , headerText: ""
+  , subHeadingText: ""
+  , headerTextVisibility: false
+  , subHeadingTextVisibility: false
+  }
+
+createCoinPopupConfig :: String -> String -> Boolean -> String -> String -> Boolean -> String -> String -> String -> String -> Boolean -> Boolean -> CoinEarnedPopupConfig
+createCoinPopupConfig primary secondary secondaryVis opt1 optHtml optHtmlVis coverImg coverLottie header subHead headerVis subHeadVis =
+  { primaryText: primary
+  , secondaryText: secondary
+  , secondaryTextVisibility: secondaryVis
+  , option1: opt1
+  , optionWithHtml: optHtml
+  , optionWithHtmlVisibility: optHtmlVis
+  , coverImageConfig: coverImg
+  , coverLottieConfig: coverLottie
+  , headerText: header
+  , subHeadingText: subHead
+  , headerTextVisibility: headerVis
+  , subHeadingTextVisibility: subHeadVis
   }
 
 getCoinEarnedPopupConfig :: ST.HomeScreenState -> CoinEarnedPopupConfig
 getCoinEarnedPopupConfig state = case state.props.coinPopupType of
-  ST.RIDE_MORE_EARN_COIN ->
-    { primaryText: getString RIDE_MORE_AND_EARN_COINS
-    , secondaryText: getString TAKE_MORE_RIDES_TO_EARN_MORE_COINS_AND_CONVERT_IT_TO_SUBSCRIPTION_DISCOUNTS
-    , secondaryTextVisibility: true
-    , option1: getString OKAY
-    , optionWithHtml: getString CHECK_YATRI_COINS
-    , optionWithHtmlVisibility: true
-    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_ride_more_earn_more"
-    , coverLottieConfig: ""
-    }
-  ST.TWO_MORE_RIDES ->
-    { primaryText: getString TWO_MORE_RIDES_TO_GO
-    , secondaryText: getString $ TAKE_TWO_MORE_RIDES_TO_EARN_COINS $ state.data.config.coinsConfig.eightPlusRidesCoins
-    , secondaryTextVisibility: true
-    , option1: getString OKAY
-    , optionWithHtml: ""
-    , optionWithHtmlVisibility: false
-    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_two_more_rides"
-    , coverLottieConfig: ""
-    }
-  ST.ONE_MORE_RIDE ->
-    { primaryText: getString ONE_MORE_RIDE_TO_GO
-    , secondaryText: getString $ TAKE_ONE_MORE_RIDE_TO_EARN_COINS $ state.data.config.coinsConfig.eightPlusRidesCoins
-    , secondaryTextVisibility: true
-    , option1: getString OKAY
-    , optionWithHtml: ""
-    , optionWithHtmlVisibility: false
-    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_one_more_ride"
-    , coverLottieConfig: ""
-    }
-  ST.EIGHT_RIDE_COMPLETED ->
-    { primaryText: getString CONGRATULATIONS <> "🎉"
-    , secondaryText: getString $ YOU_HAVE_EARNED_COINS_FOR_COMPLETING_EIGHT_RIDES $ state.data.config.coinsConfig.eightPlusRidesCoins 
-    , secondaryTextVisibility: true
-    , option1: getString OKAY
-    , optionWithHtml: getString CHECK_YATRI_COINS
-    , optionWithHtmlVisibility: true
-    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_eight_rides_completed"
-    , coverLottieConfig: ""
-    }
-  ST.REFER_AND_EARN_COIN -> 
-    { primaryText: getString $ REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_COINS "REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_COINS"
-    , secondaryText: ""
-    , secondaryTextVisibility: false
-    , option1: getString REFER_NOW
-    , optionWithHtml: getString LATER
-    , optionWithHtmlVisibility: true
-    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_refer_and_earn_coin"
-    , coverLottieConfig: ""
-    }
-  ST.CONVERT_COINS_TO_CASH -> 
-    { primaryText: getString CONVERT_YOUR_COINS_TO_DISCOUNT
-    , secondaryText: getString CONVERT_YOUR_COINS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION
-    , secondaryTextVisibility: true
-    , option1: getString CONVERT_NOW
-    , optionWithHtml: getString LATER
-    , optionWithHtmlVisibility: true
-    , coverImageConfig: ""
-    , coverLottieConfig: state.data.config.coinsConfig.coinConversionPopupLottie
-    }
-  _ -> { primaryText: "", secondaryText: "", secondaryTextVisibility: false, option1: "", optionWithHtml: "", optionWithHtmlVisibility: false, coverImageConfig: HU.fetchImage HU.FF_ASSET "", coverLottieConfig: ""}
+  ST.RIDE_MORE_EARN_COIN -> createCoinPopupConfig (getString RIDE_MORE_AND_EARN_COINS) (getString TAKE_MORE_RIDES_TO_EARN_MORE_COINS_AND_CONVERT_IT_TO_SUBSCRIPTION_DISCOUNTS) true (getString OKAY) (getString CHECK_YATRI_COINS) true (HU.fetchImage HU.FF_ASSET "ny_ic_ride_more_earn_more") "" "" "" false false
+  ST.TWO_MORE_RIDES -> createCoinPopupConfig (getString TWO_MORE_RIDES_TO_GO) (getString $ TAKE_TWO_MORE_RIDES_TO_EARN_COINS $ state.data.config.coinsConfig.eightPlusRidesCoins) true (getString OKAY) "" false (HU.fetchImage HU.FF_ASSET "ny_ic_two_more_rides") "" "" "" false false
+  ST.ONE_MORE_RIDE -> createCoinPopupConfig (getString ONE_MORE_RIDE_TO_GO) (getString $ TAKE_ONE_MORE_RIDE_TO_EARN_COINS $ state.data.config.coinsConfig.eightPlusRidesCoins) true (getString OKAY) "" false (HU.fetchImage HU.FF_ASSET "ny_ic_one_more_ride") "" "" "" false false
+  ST.EIGHT_RIDE_COMPLETED -> createCoinPopupConfig (getString RIDE_MORE_EARN_MORE) (getString LIMITED_TIME_OFFER_UNTIL_JUNE_30) true (getString CHECK_YATRI_COINS) (getString CHECK_YATRI_COINS) false (HU.fetchImage HU.FF_ASSET "ny_ic_eight_rides_completed") "" (getString CONGRATULATIONS <> "🎉") "" true false
+  ST.FIVE_RIDE_COMPLETED -> createCoinPopupConfig (getString ONLY_3_MORE_RIDES_FOR_100_COINS) (getString LIMITED_TIME_OFFER_UNTIL_JUNE_30) true (getString CHECK_YATRI_COINS) (getString CHECK_YATRI_COINS) false (HU.fetchImage HU.FF_ASSET "ny_ic_five_rides_completed") "" (getString CONGRATULATIONS <> "🎉") (getString YOU_GOT_50_COINS) true true
+  ST.TWO_RIDE_COMPLETED -> createCoinPopupConfig (getString ONLY_3_MORE_RIDES_FOR_50_COINS) (getString LIMITED_TIME_OFFER_UNTIL_JUNE_30) true (getString CHECK_YATRI_COINS) (getString CHECK_YATRI_COINS) false (HU.fetchImage HU.FF_ASSET "ny_ic_two_rides_completed") "" (getString CONGRATULATIONS <> "🎉") (getString YOU_GOT_10_COINS) true true
+  ST.REFER_AND_EARN_COIN -> createCoinPopupConfig (getString $ REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_COINS "REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_COINS") "" false (getString REFER_NOW) (getString LATER) true (HU.fetchImage HU.FF_ASSET "ny_ic_refer_and_earn_coin") "" "" "" false false
+  ST.CONVERT_COINS_TO_CASH -> createCoinPopupConfig (getString CONVERT_YOUR_COINS_TO_DISCOUNT) (getString CONVERT_YOUR_COINS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION) true (getString CONVERT_NOW) (getString LATER) true "" (state.data.config.coinsConfig.coinConversionPopupLottie) "" "" false false
+  _ -> defaultCoinPopupConfig
 
 isAcWorkingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 isAcWorkingPopupConfig state = PopUpModal.config {

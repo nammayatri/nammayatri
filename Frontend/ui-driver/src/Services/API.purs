@@ -3565,6 +3565,8 @@ data DriverCoinsFunctionType
   | BookingCancellation
   | CustomerReferral
   | DriverReferral
+  | TwoRidesCompleted
+  | FiveRidesCompleted
   | EightPlusRidesInOneDay
   | PurpleRideCompleted
   | LeaderBoardTopFiveHundred

@@ -221,9 +221,13 @@ type CoinsConfig = {
   minCoinSliderValue :: Int,
   maxCoinSliderValue :: Int,
   stepFunctionForCoinConversion :: Int,
+  twoRidesCompletedThresholdForCoins :: String,
+  fiveRidesCompletedThresholdForCoins :: String,
   numOfRideThresholdForCoins :: String,
   leaderBoardThresholdForCoins :: String,
   customerReferralCoins :: String,
+  twoPlusRidesCoins :: String,
+  fivePlusRidesCoins :: String,
   eightPlusRidesCoins :: String,
   purpleRideCoins :: String,
   rideCompletedCoins :: String,
@@ -234,6 +238,8 @@ type CoinsConfig = {
   howToEarnYatriCoinFAQ :: String,
   howToRedeemYatriCoinFAQ :: String,
   rideCompletedCoinEvent :: Boolean,
+  twoRideCoinEvent :: Boolean,
+  fiveRideCoinEvent :: Boolean,
   eightRideCoinEvent :: Boolean,
   prupleRideCoinEvent :: Boolean,
   bookingCancelCoinEvent :: Boolean,
@@ -242,6 +248,7 @@ type CoinsConfig = {
   driverToCustomerRefCoinEvent :: Boolean,
   coinConversionPopupLottie :: String,
   driverToCustomerRefPopupEndDate :: String,
+  monsoonOfferDate :: String,
   coinsValidTill :: Int
 }
 

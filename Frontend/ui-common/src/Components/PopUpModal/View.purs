@@ -145,7 +145,7 @@ view push state =
             , gravity state.popUpHeaderConfig.headingText.gravity
             , text state.popUpHeaderConfig.headingText.text
             , visibility state.popUpHeaderConfig.headingText.visibility
-            ] <> (FontStyle.h2 LanguageStyle)
+            ] <> (FontStyle.getFontStyle state.popUpHeaderConfig.headingText.textStyle LanguageStyle)
          , textView $
             [ width MATCH_PARENT
             , height WRAP_CONTENT
@@ -154,7 +154,7 @@ view push state =
             , gravity state.popUpHeaderConfig.subHeadingText.gravity
             , text state.popUpHeaderConfig.subHeadingText.text
             , visibility state.popUpHeaderConfig.subHeadingText.visibility
-            ] <> (FontStyle.tags LanguageStyle)
+            ] <> (FontStyle.getFontStyle state.popUpHeaderConfig.subHeadingText.textStyle LanguageStyle)
         ],
         imageView 
             [  width state.popUpHeaderConfig.imageConfig.width
@@ -162,6 +162,7 @@ view push state =
                 , imageWithFallback state.popUpHeaderConfig.imageConfig.imageUrl
                 , margin state.popUpHeaderConfig.imageConfig.margin
                 , cornerRadii (Corners (parseConerRadius state.cornerRadius) false true false false)
+                , visibility state.popUpHeaderConfig.imageConfig.visibility
             ]
         ] 
         ,    linearLayout

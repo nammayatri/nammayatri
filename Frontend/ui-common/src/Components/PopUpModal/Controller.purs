@@ -621,7 +621,7 @@ config = {
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 20),
       visibility : VISIBLE,
-      textStyle : ParagraphText,
+      textStyle : Tags,
       accessibilityHint : "", 
       suffixImage : {
         visibility : GONE

@@ -2751,7 +2751,7 @@ type UpdateRouteSrcDestConfig = {
   destination :: String
 }
 
-data CoinEarnedPopupType = RIDE_MORE_EARN_COIN | TWO_MORE_RIDES | ONE_MORE_RIDE | EIGHT_RIDE_COMPLETED | REFER_AND_EARN_COIN | CONVERT_COINS_TO_CASH | NO_COIN_POPUP
+data CoinEarnedPopupType = RIDE_MORE_EARN_COIN | TWO_MORE_RIDES | ONE_MORE_RIDE | TWO_RIDE_COMPLETED | FIVE_RIDE_COMPLETED | EIGHT_RIDE_COMPLETED | REFER_AND_EARN_COIN | CONVERT_COINS_TO_CASH | NO_COIN_POPUP
 
 derive instance genericCoinEarnedPopupType :: Generic CoinEarnedPopupType _
 instance showCoinEarnedPopupType :: Show CoinEarnedPopupType where show = genericShow
@@ -2761,6 +2761,8 @@ type CoinEarnedPopupTypeShown = {
   rideMoreEarnCoin :: String,
   twoMoreRides :: String,
   oneMoreRide :: String,
+  twoRideCompleted :: String,
+  fiveRideCompleted :: String,
   eightRideCompleted :: String,
   referAndEarnCoin :: String,
   convertCoinsToCash :: String

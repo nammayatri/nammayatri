@@ -40,6 +40,8 @@ getEventName state event bulkUploadTitle = case event of
   API.BookingCancellation -> getString RIDE_CANCELLATION
   API.CustomerReferral -> getString CUSTOMER_REFERRAL
   API.DriverReferral -> getString DRIVER_REFERRAL
+  API.TwoRidesCompleted -> state.data.config.coinsConfig.twoRidesCompletedThresholdForCoins <> getString RIDES_IN_A_DAY
+  API.FiveRidesCompleted -> state.data.config.coinsConfig.fiveRidesCompletedThresholdForCoins <> getString RIDES_IN_A_DAY
   API.EightPlusRidesInOneDay -> state.data.config.coinsConfig.numOfRideThresholdForCoins <> getString RIDES_IN_A_DAY
   API.PurpleRideCompleted -> getString PURPLE_RIDE_COMPLETED
   API.LeaderBoardTopFiveHundred -> getString TOP <> " " <> state.data.config.coinsConfig.leaderBoardThresholdForCoins <> " " <> getString IN_WEEKLY_LEADERBOARD
@@ -78,8 +80,16 @@ checkPopupShowToday popupType appConfig hsState = do
       isAutoRicksaw = RC.getCategoryFromVariant vehicleVariant == Just ST.AutoCategory
   case popupType of
     ST.EIGHT_RIDE_COMPLETED ->
-      if isPopupShownToday coinPopupInfo.eightRideCompleted && checkCoinIsEnabled && appConfig.coinsConfig.eightRideCoinEvent && isAutoRicksaw
+      if isPopupShownToday coinPopupInfo.eightRideCompleted && checkCoinIsEnabled && appConfig.coinsConfig.eightRideCoinEvent && isAutoRicksaw && (not isDateGreaterThan appConfig.coinsConfig.monsoonOfferDate)
         then ST.EIGHT_RIDE_COMPLETED
+        else ST.NO_COIN_POPUP
+    ST.FIVE_RIDE_COMPLETED ->
+      if isPopupShownToday coinPopupInfo.fiveRideCompleted && checkCoinIsEnabled && appConfig.coinsConfig.fiveRideCoinEvent && isAutoRicksaw && (not isDateGreaterThan appConfig.coinsConfig.monsoonOfferDate)
+        then ST.FIVE_RIDE_COMPLETED
+        else ST.NO_COIN_POPUP
+    ST.TWO_RIDE_COMPLETED ->
+      if isPopupShownToday coinPopupInfo.twoRideCompleted && checkCoinIsEnabled && appConfig.coinsConfig.twoRideCoinEvent && isAutoRicksaw && (not isDateGreaterThan appConfig.coinsConfig.monsoonOfferDate)
+        then ST.TWO_RIDE_COMPLETED
         else ST.NO_COIN_POPUP
     ST.ONE_MORE_RIDE ->
       if isPopupShownToday coinPopupInfo.oneMoreRide && checkCoinIsEnabled && appConfig.coinsConfig.eightRideCoinEvent && isAutoRicksaw
