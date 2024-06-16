@@ -995,6 +995,7 @@ getFR stringKey =
         CONNECTION_REFUSED -> " Connexion rejetée"
         TIMEOUT -> "TEMPS MORT"
         RIDE_MORE_AND_EARN_COINS -> "Faites plus de trajets et gagnez des pièces"
+        RIDE_MORE_EARN_MORE -> "Voyagez plus, gagnez plus !"
         TAKE_MORE_RIDES_TO_EARN_MORE_COINS_AND_CONVERT_IT_TO_SUBSCRIPTION_DISCOUNTS -> "Les pièces peuvent être utilisées pour obtenir des réductions sur les frais d'abonnement."
         CHECK_YATRI_COINS -> "Vérifiez les pièces Yatri"
         TWO_MORE_RIDES_TO_GO -> "Deux trajets de plus à faire"

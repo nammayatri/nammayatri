@@ -94,7 +94,55 @@ view push state =
         , accessibility DISABLE
         , clickable true
         ]
-        [ linearLayout
+        [ linearLayout 
+        [  width state.popUpHeaderConfig.width
+            , height state.popUpHeaderConfig.width
+            , margin state.popUpHeaderConfig.margin
+            , gravity state.popUpHeaderConfig.gravity
+            , visibility state.popUpHeaderConfig.visibility
+            , cornerRadii (Corners (parseConerRadius state.cornerRadius) true true false false)
+            , padding state.popUpHeaderConfig.padding
+            , background state.popUpHeaderConfig.backgroundColor
+            , orientation if state.popUpHeaderConfig.orientation == "VERTICAL" then VERTICAL else HORIZONTAL  -----HORIZONTAL
+        ]   
+        [ 
+            linearLayout
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , cornerRadii (Corners (parseConerRadius state.cornerRadius) true true false false)
+            , orientation VERTICAL
+            , background state.popUpHeaderConfig.backgroundColor
+            , weight 1.0
+            ]
+        [textView $
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , margin state.popUpHeaderConfig.headingText.margin
+            , color state.popUpHeaderConfig.headingText.color
+            , gravity state.popUpHeaderConfig.headingText.gravity
+            , text state.popUpHeaderConfig.headingText.text
+            , visibility state.popUpHeaderConfig.headingText.visibility
+            ] <> (FontStyle.getFontStyle state.popUpHeaderConfig.headingText.textStyle LanguageStyle)
+         , textView $
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , margin state.popUpHeaderConfig.subHeadingText.margin
+            , color state.popUpHeaderConfig.subHeadingText.color
+            , gravity state.popUpHeaderConfig.subHeadingText.gravity
+            , text state.popUpHeaderConfig.subHeadingText.text
+            , visibility state.popUpHeaderConfig.subHeadingText.visibility
+            ] <> (FontStyle.getFontStyle state.popUpHeaderConfig.subHeadingText.textStyle LanguageStyle)
+        ],
+        imageView 
+            [  width state.popUpHeaderConfig.imageConfig.width
+                , height state.popUpHeaderConfig.imageConfig.height
+                , imageWithFallback state.popUpHeaderConfig.imageConfig.imageUrl
+                , margin state.popUpHeaderConfig.imageConfig.margin
+                , cornerRadii (Corners (parseConerRadius state.cornerRadius) false true false false)
+                , visibility state.popUpHeaderConfig.imageConfig.visibility
+            ]
+        ] 
+        ,    linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity CENTER
@@ -456,6 +504,13 @@ view push state =
         videoType = videoType,
         videoId = videoId
         }
+
+parseConerRadius :: Corners -> Number
+parseConerRadius corners =
+    let rd = case corners of
+                Corners radius _ _ _ _ -> radius
+                Corner radius -> radius
+    in rd 
 
 tipsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 tipsView push state = 

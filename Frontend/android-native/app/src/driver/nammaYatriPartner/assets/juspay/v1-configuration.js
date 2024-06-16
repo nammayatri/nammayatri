@@ -653,11 +653,14 @@ window.getMerchantConfig = function () {
     "whatAreYatriCoinFAQ" : "https://www.youtube.com/shorts/vt_Z4wu4otY",
     "howToEarnYatriCoinFAQ" : "https://www.youtube.com/shorts/teQyPdP1fRc",
     "howToRedeemYatriCoinFAQ" : "https://www.youtube.com/shorts/dU3XxAisGjo",
+    "twoRideCoinEvent" : true,
+    "fiveRideCoinEvent" : true,
     "eightRideCoinEvent" : true,
     "prupleRideCoinEvent" : true,
     "driverToCustomerRefCoinEvent" : true,
     "coinConversionPopupLottie" : "ny_coin_conversion.json",
-    "driverToCustomerRefPopupEndDate" : "2024-06-01T00:00:00"
+    "driverToCustomerRefPopupEndDate" : "2024-06-01T00:00:00",
+    "monsoonOfferDate" : "2024-07-01T00:00:00"
   }
   , "dashboard" : {
         "enable" : true,

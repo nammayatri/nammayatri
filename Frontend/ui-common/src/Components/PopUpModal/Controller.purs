@@ -40,6 +40,21 @@ data Action = OnButton1Click
             | TipsViewActionController TipsView.Action
             | OnCoverImageClick
 
+type PopUpHeaderConfig = { 
+    height :: Length
+  , width :: Length
+  , margin :: Margin
+  , padding :: Padding
+  , visibility :: Visibility
+  , backgroundColor :: String
+  , cornerRadius :: Number
+  , orientation :: String
+  , headingText :: TextConfig
+  , subHeadingText :: TextConfig
+  , imageConfig :: ImageConfig
+  , gravity :: Gravity
+}
+
 type Config = {
     primaryText :: TextConfig,
     customerTipArray :: Array String,
@@ -84,8 +99,9 @@ type Config = {
     isTipEnabled :: Boolean,
     isVisible :: Boolean,
     isTipPopup :: Boolean,
-    coverLottieConfig :: LottieConfig,
-    showRetry :: Boolean
+    popUpHeaderConfig :: PopUpHeaderConfig,
+    coverLottieConfig :: LottieConfig
+    -- showRetry :: Boolean
 }
 
 type CoverMediaConfig = {
@@ -207,6 +223,77 @@ config :: Config
 config = {
   optionButtonOrientation: "HORIZONTAL"
   , activeIndex : 1
+  , popUpHeaderConfig : {
+      height : V 0,
+      width : MATCH_PARENT,
+      margin : (Margin 0 0 0 0),
+      padding : (Padding 0 0 0 0),
+      visibility : GONE,
+      backgroundColor : Color.white900,
+      cornerRadius : 0.0,
+      orientation : "VERTICAL",
+      headingText : {
+      text : "Text1",
+      color : Color.black800,
+      gravity : CENTER,
+      padding : (Padding 0 0 0 0),
+      margin : (Margin 0 0 0 0),
+      visibility : VISIBLE,
+      textStyle : Heading2,
+      accessibilityHint : "", 
+      suffixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      },
+      prefixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      }
+    },
+    subHeadingText :{
+      text : "",
+      color : Color.textSecondary,
+      gravity : CENTER,
+      padding : (Padding 16 0 16 0),
+      margin : (Margin 0 20 0 20),
+      visibility : VISIBLE,
+      textStyle : ParagraphText,
+      accessibilityHint : "", 
+      suffixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      },
+      prefixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      }
+    },
+    imageConfig : {
+      visibility : GONE
+      , imageUrl : ""
+      , height : (V 0)
+      , width : (V 0)
+      , margin : (Margin 0 0 0 0)
+      , padding : (Padding 0 0 0 0)
+    },
+    gravity : CENTER
+  }
   , customerTipAvailable : false
   , backgroundClickable : true
   , customerTipArray : []
