@@ -3847,6 +3847,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     JSONObject jsonObject = new JSONObject(configObj);
                     float minProgress = Float.parseFloat(jsonObject.getString("minProgress"));
                     float maxProgress = Float.parseFloat(jsonObject.getString("maxProgress"));
+                    float progress = (float)jsonObject.optDouble("progress", 0.0);
                     minProgress = minProgress >= maxProgress ? 0.0f : minProgress;
                     String scaleType = jsonObject.getString("scaleType");
                     boolean repeat = Boolean.parseBoolean(jsonObject.getString("repeat"));
@@ -3884,6 +3885,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     animationView.setRepeatCount(repeat ? ValueAnimator.INFINITE : 0);
                     animationView.setSpeed(speed);
                     animationView.setMinAndMaxProgress(minProgress, maxProgress);
+                    animationView.setProgress(progress);
                     animationView.setScaleType(getScaleTypes(scaleType));
                     animationView.playAnimation();
                 } catch (Exception e) {

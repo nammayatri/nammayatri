@@ -346,6 +346,7 @@ type LottieAnimationConfig = {
   , scaleType :: String
   , minProgress :: Number
   , maxProgress :: Number
+  , progress :: Number
   , forceToUseRemote :: Boolean
   , cacheEnabled :: Boolean
 }
@@ -359,6 +360,7 @@ lottieAnimationConfig = {
   , scaleType : "DEFAULT"
   , minProgress : 0.0
   , maxProgress : 1.0
+  , progress : 0.0
   , forceToUseRemote : false
   , cacheEnabled : true
 }
