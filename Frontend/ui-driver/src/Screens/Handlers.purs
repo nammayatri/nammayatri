@@ -19,7 +19,6 @@ import Screens.AboutUsScreen.Handler (aboutUsScreen) as UI
 import Screens.AddVehicleDetailsScreen.Handler (addVehicleDetails) as UI
 import Screens.AppUpdatePopUpScreen.Handler (handleAppUpdatePopUp) as UI
 import Screens.ApplicationStatusScreen.Handler (applicationStatus) as UI
-import Screens.BankDetailScreen.Handler (bankDetail) as UI
 import Screens.ChooseLanguageScreen.Handler (chooseLanguage) as UI
 import Screens.DriverDetailsScreen.Handler (driverDetailsScreen) as UI
 import Screens.DriverProfileScreen.Handler (driverProfileScreen) as UI
@@ -68,3 +67,5 @@ import Screens.EarningsScreen.Weekly.Handler (earningScreenWeeklyV2) as UI
 import Screens.EarningsScreen.Daily.Handler (earningScreenDailyV2) as UI
 import Screens.EarningsScreen.History.Handler (earningsHistoryFlow) as UI
 import Screens.RateCardScreen.RateCardBottomScreen (showRateCard) as UI
+import Screens.DeleteAccountScreen.Handler (deleteAccountScreen) as UI
+import Screens.BankDetailsScreen.Handler (bankDetailsScreen) as UI

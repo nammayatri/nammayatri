@@ -129,6 +129,7 @@ import Data.Ord (abs)
 import DecodeUtil
 import LocalStorage.Cache (getValueFromCache, setValueToCache)
 import Services.API
+import Presto.Core.Types.API (ErrorResponse)
 
 
 instance showAction :: Show Action where
@@ -303,12 +304,15 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToNewStop ST.HomeScreenState
                     | UpdateAirConditioned ST.HomeScreenState Boolean
                     | GoToBookingPreferences ST.HomeScreenState
+                    | GoToBankingWebView ST.HomeScreenState
                     | UpdateRouteOnStageSwitch ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
             | ScreenClick
             | BookingOptions
+            | BankDetailsWebView
+            | HideBankDetailsWebView String
             | Notification String
             | ChangeStatus Boolean
             | GoOffline Boolean
@@ -435,6 +439,7 @@ data Action = NoAction
             | AccessibilityHeaderAction
             | PopUpModalInterOperableAction PopUpModal.Action
             | UpdateSpecialZoneList
+            | BankDetailsStatusCheckAPI (Either ErrorResponse BankAccountStatusResp)
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -473,6 +478,10 @@ eval (AccountBlockedAC PopUpModal.OnButton1Click) state = do
   continue state
 
 eval BookingOptions state = exit $ GoToBookingPreferences state  
+
+eval BankDetailsWebView state = exit  $ GoToBankingWebView state
+
+eval (HideBankDetailsWebView val) state = continue state { data {bankDetails { showBankDetailsWebView = false}}} 
 
 eval UpdateBanner state = do
   if state.data.bannerData.bannerScrollState == "1" then continue state
@@ -562,6 +571,11 @@ eval BackPressed state = do
   else if state.data.driverGotoState.goToPopUpType /= ST.NO_POPUP_VIEW then continue state { data { driverGotoState { goToPopUpType = ST.NO_POPUP_VIEW }}} 
   else if state.props.showContactSupportPopUp then continue state {props {showContactSupportPopUp = false}}
   else if state.props.accountBlockedPopup then continue state {props {accountBlockedPopup = false}}
+  else if state.data.bankDetails.showBankDetailsWebView then do
+    continueWithCmd state [do
+      _ <- pure $ JB.goBackPrevWebPage (getNewIDWithTag "bankDetailsWebView")
+      pure NoAction
+    ]
   else if state.props.vehicleNSPopup then continue state { props { vehicleNSPopup = false}}
   else if state.props.specialZoneProps.specialZonePopup then continue state { props { specialZoneProps{specialZonePopup = false} }}
   else if state.props.bgLocationPopup then continue state { props { bgLocationPopup = false}}
@@ -1231,6 +1245,11 @@ eval (SwitchDriverStatus status) state =
 
 eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline)
 eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Silent)
+
+eval (BankDetailsStatusCheckAPI resp)  state = 
+  case resp of 
+    Right obj -> continue state {data {bankDetails {callStatusAPI = false, bankChargesEnabled = true}}}
+    Left _ ->  exit $ DriverAvailabilityStatus state{ data {bankDetails{ callStatusAPI = false, bankChargesEnabled = false}}, props{silentPopUpView = false}} ST.Offline
 
 eval GoToProfile state =  do
   _ <- pure $ setValueToLocalNativeStore PROFILE_DEMO "false"

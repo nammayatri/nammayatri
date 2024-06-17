@@ -126,3 +126,4 @@ driverProfileScreen = do
                                                 , vehicleSelected = driverDetailsScreen.data.vehicleSelected
                                                 , profileImg = driverDetailsScreen.data.profileImg}})
       App.BackT $ App.NoBack <$> pure (GO_HOME updatedState)
+    BankDetails ->  App.BackT $ App.NoBack <$> (pure GO_TO_BANK_DETAILS)

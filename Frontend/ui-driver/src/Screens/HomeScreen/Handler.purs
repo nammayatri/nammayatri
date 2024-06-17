@@ -180,3 +180,6 @@ homeScreen = do
     GoToBookingPreferences updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_BOOKING_PREFERENCES)
+    GoToBankingWebView state -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> state)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_BANKING_WEBVIEW state)

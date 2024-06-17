@@ -81,7 +81,7 @@ import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import Helpers.Pooling (delay)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shadow, clipChildren, textFromHtml)
-import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor)
+import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor, webView, url)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
@@ -126,7 +126,12 @@ screen initialState (GlobalState globalState) =
           _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
           when (initialState.data.activeRide.tripType == ST.Rental) $ void $ JB.storeCallBackImageUpload push CallBackImageUpload
           when (initialState.data.activeRide.tripType == ST.Rental) $ void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
-                    
+
+          when initialState.data.bankDetails.callStatusAPI $ do
+            void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+              resp <- Remote.getBankAccountStatus
+              liftFlow $ push $ BankDetailsStatusCheckAPI resp
+              
           when (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do              
               (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
@@ -359,6 +364,7 @@ view push state =
       , if state.props.currentStage == RideAccepted && state.data.activeRide.hasToll && state.props.toll.showTollChargePopup then PopUpModal.view (push <<< TollChargesPopUpAC) (PopUpConfig.tollChargesIncluded state) else dummyTextView
       , if state.props.currentStage == RideCompleted && state.data.endRideData.tollAmbigous && state.props.toll.showTollChargeAmbigousPopup then PopUpModal.view (push <<< TollChargesAmbigousPopUpAC) (PopUpConfig.finalFareExcludesToll state) else dummyTextView
       , if state.props.showInterOperablePopUp then interOperableInfoPopUpView push state else dummyTextView
+      , if state.data.bankDetails.showBankDetailsWebView then showBankDetailsWebView push state else dummyTextView
   ]
   where 
     showPopups = (DA.any (_ == true )
@@ -373,6 +379,28 @@ view push state =
     onRide = DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted]
     showEnterOdometerReadingModalView = state.props.isOdometerReadingsRequired && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
     isCar = (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.CarCategory
+
+showBankDetailsWebView :: forall w. (Action -> Effect Unit) -> ST.HomeScreenState -> PrestoDOM (Effect Unit) w
+showBankDetailsWebView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , background Color.grey800
+    , visibility VISIBLE
+    , afterRender
+        ( \action -> do
+            JB.initialWebViewSetUp push (getNewIDWithTag "bankDetailsWebView") HideBankDetailsWebView
+            pure unit
+        )
+        (const NoAction)
+    ]
+    [ webView
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , id $ getNewIDWithTag "bankDetailsWebView"
+        , url "https://www.google.com"
+        ]
+    ]
 
 interOperableInfoPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 interOperableInfoPopUpView push state =
@@ -688,6 +716,41 @@ bookingPreferenceNavView push state =
     ]
   ]
 
+bankDetailsEntryView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+bankDetailsEntryView push state =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , clipChildren false
+  ]
+  [linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER_VERTICAL
+    , padding $ Padding 12 12 12 12
+    , margin $ Margin 16 16 16 16
+    , onClick push $ const BankDetailsWebView
+    , background Color.white900
+    , rippleColor Color.rippleShade
+    , stroke $ "1," <> Color.grey900
+    , shadow $ Shadow 0.1 2.0 10.0 15.0 Color.greyBackDarkColor 0.5
+    , cornerRadius 8.0
+    ][
+      textView
+      $ [ text $ getString BANK_DETAILS
+        , color Color.black900
+        , weight 1.0
+        , textSize FontSize.a_16
+        , fontStyle $ FontStyle.semiBold LanguageStyle
+        ]
+      , imageView
+        [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_arrow_right"
+        , height $ V 18
+        , width $ V 18
+        ]
+    ]
+  ]
+
 specialPickupZone :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 specialPickupZone push state = 
   linearLayout
@@ -988,10 +1051,97 @@ sourceUnserviceableView push state =
           ErrorModal.view (push <<< ErrorModalActionController) (sourceUnserviceableConfig state)
         ]
 
+-- offlineView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+-- offlineView push state =
+--   let showGoInYellow = state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.paymentState.driverBlocked || (state.data.paymentState.totalPendingManualDues > state.data.subsRemoteConfig.high_due_warning_limit) || not state.data.isVehicleSupported
+--   in
+--   linearLayout
+--   [ width MATCH_PARENT
+--   , height MATCH_PARENT
+--   , gravity BOTTOM
+--   , background Color.black9000
+--   , visibility $ boolToVisibility $ state.props.driverStatusSet == Offline && not state.data.paymentState.blockedDueToPayment
+--   ][ relativeLayout
+--       [ height $ V 300
+--       , width MATCH_PARENT
+--       ][ linearLayout
+--           [ height $ V if not state.data.bankDetails.bankChargesEnabled then 435  else if isBookingPreferenceVisible then 340 else 280 --V 320
+--           , width MATCH_PARENT
+--           , gravity CENTER_HORIZONTAL
+--           -- ,background Color.red
+--           ][ lottieAnimationView
+--               [ id (EHC.getNewIDWithTag "RippleGoOnlineLottie")
+--               , afterRender (\_-> do
+--                               void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "rippling_online_effect.json", lottieId = (EHC.getNewIDWithTag "RippleGoOnlineLottie"), speed = 1.0 }
+--                             )(const NoAction)
+--               , height WRAP_CONTENT
+--               , width MATCH_PARENT
+--               ]
+--           ]
+--       , linearLayout
+--         [ height $ V 200
+--         , width MATCH_PARENT
+--         , alignParentBottom "true,-1"
+--         -- , background Color.yellow900
+--         ][ linearLayout
+--             [ height $ V if not $ state.data.bankDetails.bankChargesEnabled then 205 else if isBookingPreferenceVisible then 205 else 140 --300
+--             , width MATCH_PARENT
+--             , orientation VERTICAL
+--             , background Color.white900
+--             , PP.cornerRadii $ PTD.Corners 40.0 true true false false
+--             -- , margin $ MarginTop 20
+--             , padding $ PaddingTop 60
+--             ][
+--               textView $
+--               [
+--                 height WRAP_CONTENT
+--               , width MATCH_PARENT
+--               , gravity CENTER_HORIZONTAL
+--               , text $  if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then getString GO_ONLINE_PROMPT_PAYMENT_PENDING
+--                                  else if state.data.paymentState.driverBlocked then getString GO_ONLINE_PROMPT_SUBSCRIBE
+--                                  else if not state.data.bankDetails.bankChargesEnabled then "You are currently offline\nTo go online, please fill in your bank details"
+--                                  else getString GO_ONLINE_PROMPT
+
+--               ] <> FontStyle.paragraphText TypoGraphy
+--               -- , if state.data.linkedVehicleCategory /= "AUTO_RICKSHAW" && state.props.driverStatusSet == ST.Offline then bookingPreferenceNavView push state else 
+--               , if state.data.bankDetails.bankChargesEnabled then bookingPreferenceNavView push state else bankDetailsEntryView push state
+--             ]
+--         ]
+--     , linearLayout
+--         [ height $ V 300
+--         , width MATCH_PARENT
+--         , gravity CENTER
+--         , alignParentBottom "true,-1"
+--         -- , background Color.purple
+--         ][ linearLayout
+--             [ height $ V 250
+--             , width WRAP_CONTENT
+--             ][ linearLayout
+--                 [ height $ V 135
+--                 , width $ V 135
+--                 , cornerRadius 68.0
+--                 , background if showGoInYellow then Color.yellowText else state.data.config.homeScreen.offlineBtnColor
+--                 , onClick  push  (const $ SwitchDriverStatus Online)
+--                 , rippleColor Color.rippleShade
+--                 ][ textView
+--                     [ height $ V 135
+--                     , width $ V 135
+--                     , gravity CENTER
+--                     , text $ getString GO_ONLINE
+--                     , textSize FontSize.a_32
+--                     , fontStyle $ FontStyle.bold LanguageStyle
+--                     , color Color.white900
+--                     ]
+--                 ]
+--           ]
+--       ]
+--     ]
+--   ]
+--   where
+--     isBookingPreferenceVisible = state.data.linkedVehicleCategory /= "AUTO_RICKSHAW" && state.props.driverStatusSet == ST.Offline
+
 offlineView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 offlineView push state =
-  let showGoInYellow = state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.paymentState.driverBlocked || (state.data.paymentState.totalPendingManualDues > state.data.subsRemoteConfig.high_due_warning_limit) || not state.data.isVehicleSupported
-  in
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
@@ -999,77 +1149,88 @@ offlineView push state =
   , background Color.black9000
   , visibility $ boolToVisibility $ state.props.driverStatusSet == Offline && not state.data.paymentState.blockedDueToPayment
   ][ relativeLayout
-      [ height $ V 280
+      [ height $ V if isBookingPreferenceVisible then 420 else if isBankDetailsView then 340 else 280
       , width MATCH_PARENT
-      ][ linearLayout
-          [ height $ V if isBookingPreferenceVisible then 340 else 280
-          , width MATCH_PARENT
-          , gravity CENTER_HORIZONTAL
-          ][ lottieAnimationView
-              [ id (EHC.getNewIDWithTag "RippleGoOnlineLottie")
-              , afterRender (\_-> do
-                              void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "rippling_online_effect.json", lottieId = (EHC.getNewIDWithTag "RippleGoOnlineLottie"), speed = 1.0 }
-                            )(const NoAction)
-              , height WRAP_CONTENT
-              , width MATCH_PARENT
-              ]
-          ]
-      , linearLayout
-        [ height $ V 140
+      ][ 
+      goWaveLottieView
+    , descriptionView
+    , goTextView
+    ]
+  ]
+  where
+    showGoInYellow = state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.paymentState.driverBlocked || (state.data.paymentState.totalPendingManualDues > state.data.subsRemoteConfig.high_due_warning_limit) || not state.data.isVehicleSupported
+    isBookingPreferenceVisible =  state.data.linkedVehicleCategory /= "AUTO_RICKSHAW" && state.props.driverStatusSet == ST.Offline
+    isBankDetailsView = spy "isBankDetailsView" $ not $ state.data.bankDetails.bankChargesEnabled
+    enbleBtn = state.data.bankDetails.bankChargesEnabled
+
+    goWaveLottieView = 
+      linearLayout
+        [ height $ V if isBookingPreferenceVisible then 420 else if isBankDetailsView then 340 else 280
+        , width MATCH_PARENT
+        , gravity CENTER_HORIZONTAL
+        ][ lottieAnimationView
+            [ id (EHC.getNewIDWithTag "RippleGoOnlineLottie")
+            , afterRender (\_-> do
+                            void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "rippling_online_effect.json", lottieId = (EHC.getNewIDWithTag "RippleGoOnlineLottie"), speed = 1.0 }
+                          )(const NoAction)
+            , height WRAP_CONTENT
+            , width MATCH_PARENT
+            ]
+        ]
+    
+    descriptionView = 
+      linearLayout
+        [ height $ V 200
         , width MATCH_PARENT
         , alignParentBottom "true,-1"
-        ][ linearLayout
-            [ height $ V if isBookingPreferenceVisible then 205 else 140
-            , width MATCH_PARENT
+         , width MATCH_PARENT
             , gravity BOTTOM
             , orientation VERTICAL
             , background Color.white900
             , PP.cornerRadii $ PTD.Corners 40.0 true true false false
-            ][
-              textView $
-              [
-                height WRAP_CONTENT
-              , width MATCH_PARENT
-              , gravity CENTER_HORIZONTAL
-              , text $ getString if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then GO_ONLINE_PROMPT_PAYMENT_PENDING
-                                 else if state.data.paymentState.driverBlocked then GO_ONLINE_PROMPT_SUBSCRIBE
-                                 else GO_ONLINE_PROMPT
-              , margin $ MarginBottom if isBookingPreferenceVisible then 0 else 10
-              ] <> FontStyle.paragraphText TypoGraphy
-              , if isBookingPreferenceVisible then bookingPreferenceNavView push state else dummyTextView
-            ]
+        ][ 
+          textView $
+          [
+            height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER_HORIZONTAL
+          , text $ if isBankDetailsView then "You are currently offline.\nTo go online, please fill in your bank details" else getString if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then GO_ONLINE_PROMPT_PAYMENT_PENDING
+                              else if state.data.paymentState.driverBlocked then GO_ONLINE_PROMPT_SUBSCRIBE
+                              else GO_ONLINE_PROMPT
+          , margin $ MarginBottom if isBookingPreferenceVisible || isBankDetailsView then 0 else 10
+          ] <> FontStyle.paragraphText TypoGraphy
+          , if isBankDetailsView then bankDetailsEntryView push state else if isBookingPreferenceVisible then bookingPreferenceNavView push state else dummyTextView
         ]
-    , linearLayout
-        [ height $ V 245
+
+    goTextView =
+      linearLayout
+        [ height $ V $ if isBankDetailsView then 275 else 245 
         , width MATCH_PARENT
-        , gravity CENTER
+        , gravity CENTER_HORIZONTAL
         , alignParentBottom "true,-1"
-        ][ linearLayout
-            [ height $ V 205
-            , width WRAP_CONTENT
-            ][ linearLayout
-                [ height $ V 135
-                , width $ V 135
-                , cornerRadius 68.0
-                , background if showGoInYellow then Color.yellowText else state.data.config.homeScreen.offlineBtnColor
-                , onClick  push  (const $ SwitchDriverStatus Online)
-                , rippleColor Color.rippleShade
-                ][ textView
-                    [ height $ V 135
-                    , width $ V 135
-                    , gravity CENTER
-                    , text $ getString GO_ONLINE
-                    , textSize FontSize.a_32
-                    , fontStyle $ FontStyle.bold LanguageStyle
-                    , color Color.white900
-                    ]
-                ]
+        ][ 
+          linearLayout
+          [ height $ V 135
+          , width $ V 135
+          , cornerRadius 68.0
+          , background if showGoInYellow then Color.yellowText else state.data.config.homeScreen.offlineBtnColor
+          , onClick  push  $ const $ SwitchDriverStatus Online
+          , rippleColor Color.rippleShade
+          , clickable enbleBtn
+          ][ textView
+              [ height $ V 135
+              , width $ V 135
+              , gravity CENTER
+              , text $ getString GO_ONLINE
+              , textSize FontSize.a_32
+              , fontStyle $ FontStyle.bold LanguageStyle
+              , color Color.white900
+              ]
           ]
       ]
-    ]
-  ]
-  where
-    isBookingPreferenceVisible = state.data.linkedVehicleCategory /= "AUTO_RICKSHAW" && state.props.driverStatusSet == ST.Offline
+
+      
+
 
 popupModelSilentAsk :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 popupModelSilentAsk push state =

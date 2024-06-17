@@ -541,23 +541,6 @@ type EnterMobileNumberScreenStateProps = {
   mobileNumberEditFocused :: Boolean
 }
 
---------------------------------------------------------------- BankDetailScreenState -----------------------------------------------------------------------------
-type BankDetailScreenState = {
-  data :: BankDetailScreenStateData,
-  props :: BankDetailScreenStateProps
-}
-
-type BankDetailScreenStateData =  {
-  beneficiaryNumber :: String,
-  ifsc :: String
-}
-
-type BankDetailScreenStateProps =  {
-  openRegistrationModal :: Boolean,
-  inputData :: String,
-  isBeneficiaryMatching :: Boolean
-}
-
 -------------------------------------------------------EnterOTPScreenState ------------------------------
 type EnterOTPScreenState = {
   data :: EnterOTPScreenStateData,
@@ -950,7 +933,16 @@ type HomeScreenData =  {
   cityConfig :: CityConfig,
   earningPerKmWithCurrency :: Common.Price, 
   totalEarningsOfDayWithCurrency :: Common.Price,
-  bonusEarnedWithCurrency :: Common.Price
+  bonusEarnedWithCurrency :: Common.Price,
+  bankDetails :: BankDetails
+}
+
+type BankDetails = {
+  bankChargesEnabled :: Boolean,
+  showBankDetailsWebView :: Boolean,
+  accountLink :: Maybe String,
+  accountLinkExpiryTime :: String
+, callStatusAPI:: Boolean
 }
 
 type BannerCarousalData = {
@@ -2324,7 +2316,7 @@ instance standardEncodeHomeScreenPopUpTypes :: StandardEncode HomeScreenPopUpTyp
 instance decodeHomeScreenPopUpTypes :: Decode HomeScreenPopUpTypes where decode = defaultDecode
 instance encodeHomeScreenPopUpTypes  :: Encode HomeScreenPopUpTypes where encode = defaultEncode
 
-data MenuOptions = DRIVER_PRESONAL_DETAILS |DRIVER_BANK_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BOOKING_OPTIONS | REFER | APP_INFO_SETTINGS | LIVE_STATS_DASHBOARD | GO_TO_LOCATIONS | DOCUMENTS | DELETE_ACCOUNT
+data MenuOptions = DRIVER_PRESONAL_DETAILS |DRIVER_BANK_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BOOKING_OPTIONS | REFER | APP_INFO_SETTINGS | LIVE_STATS_DASHBOARD | GO_TO_LOCATIONS | DOCUMENTS | DELETE_ACCOUNT | BANK_DETAILS
 derive instance genericMenuoptions :: Generic MenuOptions _
 instance eqMenuoptions :: Eq MenuOptions where eq = genericEq
 

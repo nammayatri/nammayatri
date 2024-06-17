@@ -151,6 +151,7 @@ initData =
       , prevLatLon: Nothing
       , noOfLocations: 0
       , isVehicleSupported: true
+      , bankDetails : initialBankDetails
       , earningPerKmWithCurrency : dummyPrice 
       , totalEarningsOfDayWithCurrency : dummyPrice
       , bonusEarnedWithCurrency : dummyPrice
@@ -306,3 +307,12 @@ dummyRideData = {
       , bapName : ""
       , bookingFromOtherPlatform : false
       }
+
+initialBankDetails :: BankDetails
+initialBankDetails = {
+  bankChargesEnabled : false
+, showBankDetailsWebView: false
+, accountLink : Nothing
+, accountLinkExpiryTime : ""
+, callStatusAPI: true
+}

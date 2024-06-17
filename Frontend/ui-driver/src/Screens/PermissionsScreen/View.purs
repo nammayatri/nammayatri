@@ -94,7 +94,7 @@ view push state =
       ,  linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
-          , visibility if state.props.logoutModalView then GONE else VISIBLE
+          , visibility VISIBLE
           ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
     ]<> if state.props.logoutModalView then [logoutPopupModal push state] else []
 

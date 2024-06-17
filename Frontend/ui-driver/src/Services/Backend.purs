@@ -1611,3 +1611,34 @@ mkSocialProfileUpdate state =
     , mobileCountryCode : Just config.defaultCountryCodeConfig.countryCode
     , mobileNumber : state.data.mobileNumber
     }
+
+----------------------------------------Get Bank Account Detials------------------------------------------------------------
+getBankAccountLink :: Flow GlobalState (Either ErrorResponse BankAccountLinkResp)
+getBankAccountLink  = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.bankAccountLink  "") unwrapResponse $ callAPI headers BankAccountLinkReq
+  where
+    unwrapResponse x = x
+
+getBankAccountLinkBT :: FlowBT String BankAccountLinkResp
+getBankAccountLinkBT = do
+  headers <- getHeaders' "" false
+  withAPIResultBT (EP.bankAccountLink "") identity errorHandler (lift $ lift $ callAPI headers BankAccountLinkReq)
+  where 
+    errorHandler (ErrorPayload errorPayload) =  do
+      BackT $ pure GoBack
+
+------------------------------------------Get Bank Accout Status API----------------------------------------------------------
+getBankAccountStatus :: Flow GlobalState (Either ErrorResponse BankAccountStatusResp)
+getBankAccountStatus  = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.bankAccountStatus  "") unwrapResponse $ callAPI headers BankAccountStatusReq
+  where
+    unwrapResponse x = x
+
+getBankAccountStatusBT :: FlowBT String BankAccountStatusResp
+getBankAccountStatusBT = do
+  headers <- getHeaders' "" false
+  withAPIResultBT (EP.bankAccountStatus "") identity errorHandler (lift $ lift $ callAPI headers BankAccountStatusReq)
+  where 
+    errorHandler (ErrorPayload errorPayload) =  BackT $ pure GoBack

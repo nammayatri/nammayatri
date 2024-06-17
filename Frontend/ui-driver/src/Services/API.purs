@@ -5002,3 +5002,59 @@ instance standardEncodeSocialProfileUpdateRes :: StandardEncode SocialProfileUpd
 instance showSocialProfileUpdateRes :: Show SocialProfileUpdateRes where show = genericShow
 instance decodeSocialProfileUpdateRes :: Decode SocialProfileUpdateRes where decode = defaultDecode
 instance encodeSocialProfileUpdateRes :: Encode SocialProfileUpdateRes where encode = defaultEncode
+
+---------------------------------------------------- Bank Account Link  ---------------------------------------------------------------------------
+
+data BankAccountLinkReq = BankAccountLinkReq 
+
+data BankAccountLinkResp = BankAccountLinkResp {
+  chargesEnabled :: Boolean
+, detailsSubmitted :: Boolean
+, accountLink :: String
+, accountLinkStatus :: String
+, accountLinkExpiry :: String
+}
+
+instance makeBankAccountLink :: RestEndpoint BankAccountLinkReq BankAccountLinkResp where
+ makeRequest reqBody headers = defaultMakeRequest GET (EP.bankAccountLink "") headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericBankAccountLinkReq :: Generic BankAccountLinkReq _
+instance standardEncodeBankAccountLinkReq :: StandardEncode BankAccountLinkReq where standardEncode _ = standardEncode {}
+instance showBankAccountLinkReq :: Show BankAccountLinkReq where show = genericShow
+instance decodeBankAccountLinkReq :: Decode BankAccountLinkReq where decode = defaultDecode
+instance encodeBankAccountLinkReq :: Encode BankAccountLinkReq where encode = defaultEncode
+
+derive instance genericBankAccountLinkResp :: Generic BankAccountLinkResp _
+instance standardEncodeBankAccountLinkResp :: StandardEncode BankAccountLinkResp where standardEncode (BankAccountLinkResp resp) = standardEncode resp
+instance showBankAccountLinkResp :: Show BankAccountLinkResp where show = genericShow
+instance decodeBankAccountLinkResp :: Decode BankAccountLinkResp where decode = defaultDecode
+instance encodeBankAccountLinkResp :: Encode BankAccountLinkResp where encode = defaultEncode
+
+---------------------------------------------------- Bank Account Status  ---------------------------------------------------------------------------
+
+data BankAccountStatusReq = BankAccountStatusReq
+
+data BankAccountStatusResp = BankAccountStatusResp {
+  chargesEnabled :: Boolean
+, detailsSubmitted :: Boolean
+}
+
+instance makeBankAccountStatus :: RestEndpoint BankAccountStatusReq BankAccountStatusResp where
+ makeRequest reqBody headers = defaultMakeRequest GET (EP.bankAccountStatus "") headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericBankAccountStatusReq :: Generic BankAccountStatusReq _
+instance standardEncodeBankAccountStatusReq :: StandardEncode BankAccountStatusReq where standardEncode _ = standardEncode {}
+instance showBankAccountStatusReq :: Show BankAccountStatusReq where show = genericShow
+instance decodeBankAccountStatusReq :: Decode BankAccountStatusReq where decode = defaultDecode
+instance encodeBankAccountStatusReq :: Encode BankAccountStatusReq where encode = defaultEncode
+
+derive instance genericBankAccountStatusResp :: Generic BankAccountStatusResp _
+instance standardEncodeBankAccountStatusResp :: StandardEncode BankAccountStatusResp where standardEncode (BankAccountStatusResp resp) = standardEncode resp
+instance showBankAccountStatusResp :: Show BankAccountStatusResp where show = genericShow
+instance decodeBankAccountStatusResp :: Decode BankAccountStatusResp where decode = defaultDecode
+instance encodeBankAccountStatusResp :: Encode BankAccountStatusResp where encode = defaultEncode
+

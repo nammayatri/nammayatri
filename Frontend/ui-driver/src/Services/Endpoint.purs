@@ -367,3 +367,9 @@ socialLogin _ = (getBaseUrl "") <> "/social/login"
 
 updateSocialProfile :: String -> String
 updateSocialProfile _ = (getBaseUrl "") <> "/social/update/profile"
+
+bankAccountLink :: String -> String
+bankAccountLink _ = (getBaseUrl "") <> "/driver/register/bankAccount/link"
+
+bankAccountStatus :: String -> String
+bankAccountStatus _ = (getBaseUrl "") <> "/driver/register/bankAccount/status"
