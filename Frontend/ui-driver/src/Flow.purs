@@ -1433,6 +1433,19 @@ driverProfileFlow = do
       setValueToLocalStore ENTERED_RC rcNumber
       modifyScreenState $ RegistrationScreenStateType (\regScreenState -> regScreenState{ props{manageVehicle = true, manageVehicleCategory = Just vehicleCategory }, data { linkedRc = Nothing}})
       onBoardingFlow
+    
+    GO_TO_BANK_DETAILS -> do
+      resp <- lift $ lift $ Remote.getBankAccountStatus API.BankAccountStatusReq
+      case resp of
+        Right respObj -> bankDetailsScreen
+        Left errorPayload -> do
+          driverProfileFlow
+
+bankDetailsScreen :: FlowBT String Unit 
+bankDetailsScreen = do
+  screenOutput <- UI.bankDetailsScreen
+  case screenOutput of 
+    _ -> driverProfileFlow
 
 documentDetailsScreen :: FlowBT String Unit
 documentDetailsScreen = do
@@ -2761,6 +2774,24 @@ homeScreenFlow = do
         Left _ -> do
           pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
       homeScreenFlow
+    GO_TO_BANKING_WEBVIEW state -> do 
+      resp <-  lift $ lift $ Remote.getBankAccountLink API.BankAccountLinkReq
+      case resp of
+        Right (API.BankAccountLinkResp obj)-> do
+          modifyScreenState $ HomeScreenStateType (\state -> state{
+            data {
+              bankDetails {
+                accountLink = Just obj.accountLink
+              , accountLinkExpiryTime = obj.accountLinkExpiry 
+              , showBankDetailsWebView = true
+              }
+            }
+          })
+          homeScreenFlow 
+        Left err -> do 
+          pure $ toast $ getString SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
+          homeScreenFlow
+      
   homeScreenFlow
 
 categoryTransformer :: Array Category -> String -> Array CategoryListType 

@@ -68,7 +68,7 @@ import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shadow, clipChildren)
-import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor)
+import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor, webView, url)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
@@ -326,6 +326,7 @@ view push state =
       , if state.props.currentStage == RideCompleted then RideCompletedCard.view (getRideCompletedConfig state) (push <<< RideCompletedAC) else dummyTextView -- 
       , if state.props.showRideRating then RatingCard.view (push <<< RatingCardAC) (getRatingCardConfig state) else dummyTextView
       , if state.props.showAcWorkingPopup == Just true then isAcWorkingPopupView push state else dummyTextView
+      , if state.data.bankDetails.showBankDetailsWebView then showBankDetailsWebView push state else dummyTextView
   ]
   where 
     showPopups = (DA.any (_ == true )
@@ -444,6 +445,42 @@ bookingPreferenceNavView push state =
       ],
       textView
       $ [ text $ getString BOOKING_OPTIONS
+        , color Color.black900
+        , weight 1.0
+        , textSize FontSize.a_16
+        , fontStyle $ FontStyle.semiBold LanguageStyle
+        ]
+      , imageView
+        [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_arrow_right"
+        , height $ V 18
+        , width $ V 18
+        ]
+    ]
+  ]
+
+bankDetailsEntryView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+bankDetailsEntryView push state =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , color Color.red
+  , clipChildren false
+  ]
+  [linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER_VERTICAL
+    , padding $ Padding 12 12 12 12
+    , margin $ Margin 16 16 16 16
+    , onClick push $ const BankDetailsWebView
+    , background Color.white900
+    , rippleColor Color.rippleShade
+    , stroke $ "1," <> Color.grey900
+    , shadow $ Shadow 0.1 2.0 10.0 15.0 Color.greyBackDarkColor 0.5
+    , cornerRadius 8.0
+    ][
+      textView
+      $ [ text $ getString BANK_DETAILS
         , color Color.black900
         , weight 1.0
         , textSize FontSize.a_16
@@ -764,12 +801,14 @@ offlineView push state =
   , background Color.black9000
   , visibility $ boolToVisibility $ state.props.driverStatusSet == Offline && not state.data.paymentState.blockedDueToPayment
   ][ relativeLayout
-      [ height $ V 280
+      [ height $ V 300
       , width MATCH_PARENT
+      -- , background Color.green900
       ][ linearLayout
-          [ height $ V 340
+          [ height $ V 320
           , width MATCH_PARENT
           , gravity CENTER_HORIZONTAL
+          -- ,background Color.red
           ][ lottieAnimationView
               [ id (EHC.getNewIDWithTag "RippleGoOnlineLottie")
               , afterRender (\_-> do
@@ -780,16 +819,18 @@ offlineView push state =
               ]
           ]
       , linearLayout
-        [ height $ V 140
+        [ height $ V 200
         , width MATCH_PARENT
         , alignParentBottom "true,-1"
+        -- , background Color.yellow900
         ][ linearLayout
-            [ height $ V 205
+            [ height $ V 300
             , width MATCH_PARENT
-            , gravity BOTTOM
             , orientation VERTICAL
             , background Color.white900
             , PP.cornerRadii $ PTD.Corners 40.0 true true false false
+            -- , margin $ MarginTop 20
+            , padding $ PaddingTop 60
             ][
               textView $
               [
@@ -798,18 +839,19 @@ offlineView push state =
               , gravity CENTER_HORIZONTAL
               , text $ getString if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then GO_ONLINE_PROMPT_PAYMENT_PENDING
                                  else if state.data.paymentState.driverBlocked then GO_ONLINE_PROMPT_SUBSCRIBE
-                                 else GO_ONLINE_PROMPT
+                                 else GO_ONLINE_PROMPT_SUBSCRIBE
               ] <> FontStyle.paragraphText TypoGraphy
-              , if state.data.linkedVehicleCategory /= "AUTO_RICKSHAW" && state.props.driverStatusSet == ST.Offline then bookingPreferenceNavView push state else dummyTextView
+            , if state.data.bankDetails.bankChargesEnabled then bookingPreferenceNavView push state else bankDetailsEntryView push state
             ]
         ]
     , linearLayout
-        [ height $ V 245
+        [ height $ V 300
         , width MATCH_PARENT
         , gravity CENTER
         , alignParentBottom "true,-1"
+        -- , background Color.purple
         ][ linearLayout
-            [ height $ V 205
+            [ height $ V 250
             , width WRAP_CONTENT
             ][ linearLayout
                 [ height $ V 135
@@ -832,6 +874,28 @@ offlineView push state =
       ]
     ]
   ]
+
+showBankDetailsWebView :: forall w. (Action -> Effect Unit) -> ST.HomeScreenState -> PrestoDOM (Effect Unit) w
+showBankDetailsWebView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , background Color.grey800
+    , visibility VISIBLE
+    , afterRender
+        ( \action -> do
+            JB.initialWebViewSetUp push (getNewIDWithTag "bankDetailsWebView") HideBankDetailsWebView
+            pure unit
+        )
+        (const NoAction)
+    ]
+    [ webView
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , id $ getNewIDWithTag "bankDetailsWebView"
+        , url "https://www.google.com"
+        ]
+    ]
 
 popupModelSilentAsk :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 popupModelSilentAsk push state =

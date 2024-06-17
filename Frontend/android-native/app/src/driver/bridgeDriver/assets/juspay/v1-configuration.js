@@ -232,18 +232,18 @@ window.getMerchantConfig = function () {
         }
   , "enterMobileNumberScreen" : {
         "headerBackground": "#11032F"
-      , "emailAuth" : true
+      , "emailAuth" : false
       }
   , "defaultCountryCodeConfig" : {
       "countryName" : "UnitedStates"
-    , "countryCode"  : "+1"
+    , "countryCode"  : "+91"
     , "countryShortCode" : "US"
     }
   , "flowConfig" : {
       "chooseCity" : {
         "runFlow" : false,
         "directAuth" : true,
-        "defCity" : "Minneapolis",
+        "defCity" : "Bangalore",
         "useDefault" : true
       }
   }

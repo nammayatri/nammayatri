@@ -201,6 +201,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | SubscriptionScreen
                     | GoToDriverSavedLocationScreen DriverProfileScreenState
                     | GoToPendingVehicle DriverProfileScreenState String ST.VehicleCategory
+                    | BankDetails
 
 data Action = BackPressed
             | NoAction
@@ -329,6 +330,7 @@ eval (OptionClick optionIndex) state = do
     LIVE_STATS_DASHBOARD -> continue state {props {showLiveDashboard = true}}
     DELETE_ACCOUNT -> exit $ DeleteAccount state
     DOCUMENTS -> exit DocumentsFlow --TODO
+    BANK_DETAILS -> exit BankDetails 
 
 eval (UpiQrRendered id) state = do
   continueWithCmd state [ do
@@ -596,6 +598,7 @@ getTitle menuOption =
     GO_TO_LOCATIONS -> getString STR.GOTO_LOCATIONS
     DELETE_ACCOUNT -> getString STR.DEL_ACCOUNT
     DOCUMENTS -> "Documents"--getString STR.DOCUMENTS
+    BANK_DETAILS -> "Bank Details"
 
 getDowngradeOptionsSelected :: SA.GetDriverInfoResp -> Array VehicleP
 getDowngradeOptionsSelected (SA.GetDriverInfoResp driverInfoResponse) =
@@ -666,6 +669,7 @@ optionList state =
         , { menuOptions: DRIVER_LOGOUT, icon: fetchImage FF_ASSET "ny_ic_logout_grey" }
         ]
       )
+    <> ([{menuOptions : BANK_DETAILS, icon: fetchImage FF_ASSET "ny_ic_logout_grey"}])
 
 updateLanguageList :: DriverProfileScreenState -> Array String -> Array CheckBoxOptions
 updateLanguageList state language =

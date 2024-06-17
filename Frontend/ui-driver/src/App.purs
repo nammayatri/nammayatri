@@ -30,7 +30,7 @@ import Screens.AcknowledgementScreen.ScreenData as AcknowledgementScreenData
 import Screens.AddVehicleDetailsScreen.ScreenData as AddVehicleDetailsScreenData
 import Screens.AppUpdatePopUpScreen.ScreenData as AppUpdatePopUpScreenData
 import Screens.ApplicationStatusScreen.ScreenData as ApplicationStatusScreenData
-import Screens.BankDetailScreen.ScreenData as BankDetailScreenData
+import Screens.BankDetailsScreen.ScreenData as BankDetailScreenData
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import Screens.ChooseCityScreen.ScreenData as ChooseCityScreenData
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
@@ -93,7 +93,7 @@ newtype GlobalState = GlobalState {
   , rideHistoryScreen :: RideHistoryScreenState
   , rideSelectionScreen :: RideSelectionScreenState
   , reportIssueChatScreen :: ReportIssueChatScreenState
-  , bankDetailsScreen :: BankDetailScreenState
+  , bankDetailsScreen :: BankDetailScreenData.BankDetailsScreenState
   , driverDetailsScreen :: DriverDetailsScreenState
   , vehicleDetailsScreen :: VehicleDetailsScreenState
   , aboutUsScreen :: AboutUsScreenState
@@ -211,7 +211,7 @@ data ScreenType =
   | SelectLanguageScreenStateType (SelectLanguageScreenState -> SelectLanguageScreenState)
   | HelpAndSupportScreenStateType (HelpAndSupportScreenState -> HelpAndSupportScreenState)
   | WriteToUsScreenStateType (WriteToUsScreenState -> WriteToUsScreenState)
-  | BankDetailScreenStateType (BankDetailScreenState -> BankDetailScreenState)
+  | BankDetailScreenStateType (BankDetailScreenData.BankDetailsScreenState ->BankDetailScreenData.BankDetailsScreenState)
   | HomeScreenStateType (HomeScreenState -> HomeScreenState)
   | RideHistoryScreenStateType (RideHistoryScreenState -> RideHistoryScreenState)
   | RideSelectionScreenStateType (RideSelectionScreenState -> RideSelectionScreenState)
@@ -312,6 +312,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | SAVED_LOCATIONS_SCREEN
                                     | GO_HOME DriverProfileScreenState
                                     | VIEW_PENDING_VEHICLE String VehicleCategory
+                                    | GO_TO_BANK_DETAILS
 
 
 data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState
@@ -420,6 +421,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | UPDATE_SPECIAL_LOCATION_LIST
                           | UPDATE_AIR_CONDITIONED Boolean
                           | GO_TO_BOOKING_PREFERENCES
+                          | GO_TO_BANKING_WEBVIEW HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

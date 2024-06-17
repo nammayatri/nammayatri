@@ -189,6 +189,7 @@ initData =
       , prevLatLon: Nothing
       , noOfLocations: 0
       , isVehicleSupported: true
+      , bankDetails : initialBankDetails
       }
   , props:
       { isFreeRide: false
@@ -273,3 +274,12 @@ dummyDriverRideStats =
     , coinBalance: 0
     , totalEarningsOfDayPerKm : Nothing
     }
+
+
+initialBankDetails :: BankDetails
+initialBankDetails = {
+  bankChargesEnabled : false
+, showBankDetailsWebView: false
+, accountLink : Nothing
+, accountLinkExpiryTime : ""
+}
