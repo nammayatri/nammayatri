@@ -61,14 +61,20 @@ getCacMetricErrorFromDB tableName = do
     GoHomeConfig -> "go_home_config_from_db_parse_error"
     _ -> "empty_db_parse_error"
 
+getTextValue :: Value -> Text
+getTextValue = \case
+  String x -> x
+  obj -> Text.pack $ show obj
+
 pushCacDataToKafka :: (MonadFlow m, EsqDBFlow m r) => Maybe CacKey -> [(CacContext, Value)] -> Int -> (String -> [(Text, Value)] -> Int -> IO Value) -> String -> CacPrefix -> m ()
 pushCacDataToKafka stickeyKey context toss getVariants tenant key' = do
   enableKafka <- liftIO $ Se.lookupEnv "CAC_PUSH_TO_KAFKA"
   when (isJust stickeyKey && enableKafka == Just "True") do
     let context' = DBF.first show <$> context
+    let context'' = DBF.second getTextValue <$> context
     variantIds <- liftIO $ getVariants tenant context' toss
     let key = fromJust stickeyKey
-    let cacData = CACData (getKeyValue key) (getKeyValue key) (Text.pack (show context)) (Text.pack (show key')) (Text.pack (show variantIds))
+    let cacData = CACData (getKeyValue key) (getKeyName key) (Text.pack (show context'')) (Text.pack (show key')) (getTextValue variantIds)
     fork "push cac data to kafka" $ pushToKafka cacData "cac-data" ""
 
 getConfigListFromCac :: (CacheFlow m r, EsqDBFlow m r, FromJSON a, ToJSON a) => [(CacContext, Value)] -> String -> Int -> CacPrefix -> String -> m (Maybe [a])
@@ -141,7 +147,7 @@ getConfigFromCACCommon context stickyId fromCactyp cpf = do
         pure Nothing
     )
     ( \res' -> do
-        pushCacDataToKafka stickyId context toss CM.getVariants' cacConfig.tenant cpf
+        when isExp $ pushCacDataToKafka stickyId context toss CM.getVariants' cacConfig.tenant cpf
         pure $ Just res'
     )
     config
