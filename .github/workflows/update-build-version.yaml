@@ -36,6 +36,15 @@ jobs:
     - name: Run Python script to update version
       run: python updateVersion.py ${{ github.event.inputs.app_type }}
 
+    - name: Set commit message based on app_type
+      id: set-commit-message
+      run: |
+        if [ "${{ github.event.inputs.app_type }}" == "driver" ]; then
+          echo "::set-output name=commit_message::[RELEASE-APK-DRIVER] Initiating apk generation"
+        else
+          echo "::set-output name=commit_message::[RELEASE-APK] Initiating apk generation"
+        fi
+
     # - name: Commit changes
     #   run: |
     #     git config --global user.name 'GitHub Actions'
@@ -58,4 +67,4 @@ jobs:
         title: "[BOT]Update versionCode and versionName"
         body: "Automated pull request to update versionCode and versionName."
         delete-branch: true
-        commit-message: "[RELEASE-APK] Initiating apk generation"
+        commit-message: "${{ steps.set-commit-message.outputs.commit_message }}"

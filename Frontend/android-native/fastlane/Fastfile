@@ -18,6 +18,9 @@ default_platform(:android)
 flavors = ["nyUserProd"]
 flavorsMY = ["myUserProd"]
 flavorsY = ["yatriUserProd"]
+flavorsYP = ["yatriDriverProd"]
+flavoursNYP = ["nyDriverProd"]
+flavorsMYP = ["myDriverProd"]
 
 platform :android do
   desc "Runs all the tests"
@@ -29,9 +32,6 @@ platform :android do
   lane :beta do
     gradle(task: "clean assembleRelease")
     crashlytics
-  
-    # sh "your_script.sh"
-    # You can also use other beta testing services here
   end
 
   desc "Deploy a new version to the Google Play"
@@ -43,15 +43,6 @@ platform :android do
   desc "List Apps"
   lane :release_ny do
     flavors.each { |flavor|
-      # gradle(
-      #   task: 'clean assemble' + flavor + 'Release',
-      #   properties: {
-      #     'android.injected.signing.store.file' => 'xxx',
-      #     'android.injected.signing.store.password' => 'xxx',
-      #     'android.injected.signing.key.alias' => 'xxx',
-      #     'android.injected.signing.key.password' => 'xxx'
-      #   }
-      # )
   
       # Generate AAB
       gradle(
@@ -73,25 +64,11 @@ platform :android do
         timeout: 600
       )
     }
-  
-    # Print app metadata
-    # metadata = lane_context[SharedValues::APP_METADATA]
-    # UI.message("App metadata: #{metadata}")
   end
 
   desc "List Apps1"
   lane :release_my do
     flavorsMY.each { |flavor|
-      # gradle(
-      #   task: 'clean assemble' + flavor + 'Release',
-      #   properties: {
-      #     'android.injected.signing.store.file' => 'xxx',
-      #     'android.injected.signing.store.password' => 'xxx',
-      #     'android.injected.signing.key.alias' => 'xxx',
-      #     'android.injected.signing.key.password' => 'xxx'
-      #   }
-      # )
-  
       # Generate AAB
       gradle(
         task: 'bundle' + flavor + 'Release'
@@ -112,25 +89,11 @@ platform :android do
         timeout: 600
       )
     }
-  
-    # Print app metadata
-    # metadata = lane_context[SharedValues::APP_METADATA]
-    # UI.message("App metadata: #{metadata}")
   end
 
   desc "List Apps2"
   lane :release_y do
     flavorsY.each { |flavor|
-      # gradle(
-      #   task: 'clean assemble' + flavor + 'Release',
-      #   properties: {
-      #     'android.injected.signing.store.file' => 'xxx',
-      #     'android.injected.signing.store.password' => 'xxx',
-      #     'android.injected.signing.key.alias' => 'xxx',
-      #     'android.injected.signing.key.password' => 'xxx'
-      #   }
-      # )
-  
       # Generate AAB
       gradle(
         task: 'bundle' + flavor + 'Release'
@@ -151,10 +114,81 @@ platform :android do
         timeout: 600
       )
     }
+  end
+
+  desc "Yatri Partner Release"
+  lane :release_yp do
+    flavorsYP.each { |flavor|
+      # Generate AAB
+      gradle(
+        task: 'bundle' + flavor + 'Release'
+      )
   
-    # Print app metadata
-    # metadata = lane_context[SharedValues::APP_METADATA]
-    # UI.message("App metadata: #{metadata}")
+      # Supply metadata and AAB to Google Play
+      supply(
+        track: 'internal',
+        json_key: 'play_config.json',
+        package_name: 'net.openkochi.yatripartner',
+        metadata_path: 'fastlane/metadata/',
+        aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "yatriDriver-prod" + "-release.aab",
+        skip_upload_apk: true,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_changelogs: true,
+        skip_upload_screenshots: true,
+        timeout: 600
+      )
+    }
+  end
+
+  desc "Namma Yatri Partner Release"
+  lane :release_nyp do
+    flavoursNYP.each { |flavor|
+      # Generate AAB
+      gradle(
+        task: 'bundle' + flavor + 'Release'
+      )
+  
+      # Supply metadata and AAB to Google Play
+      supply(
+        track: 'internal',
+        json_key: 'play_config.json',
+        package_name: 'in.juspay.nammayatripartner',
+        metadata_path: 'fastlane/metadata/',
+        aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "nyDriver-prod" + "-release.aab",
+        skip_upload_apk: true,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_changelogs: true,
+        skip_upload_screenshots: true,
+        timeout: 600
+      )
+    }
+  end
+
+  desc "Manayatri Partner Release"
+  lane :release_myp do
+    flavorsMYP.each { |flavor|
+      # Generate AAB
+      gradle(
+        task: 'bundle' + flavor + 'Release'
+      )
+  
+      # Supply metadata and AAB to Google Play
+      supply(
+        track: 'internal',
+        json_key: 'play_config.json',
+        package_name: 'in.mobility.manayatripartner',
+        metadata_path: 'fastlane/metadata/',
+        aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "myDriver-prod" + "-release.aab",
+        skip_upload_apk: true,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_changelogs: true,
+        skip_upload_screenshots: true,
+        timeout: 600
+      )
+    }
   end
 
 end
