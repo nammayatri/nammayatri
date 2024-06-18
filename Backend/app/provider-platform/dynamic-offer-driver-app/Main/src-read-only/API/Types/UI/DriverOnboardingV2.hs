@@ -27,6 +27,7 @@ data AadhaarCardReq = AadhaarCardReq
     dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     maskedAadhaarNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    transactionId :: Kernel.Prelude.Text,
     validationStatus :: API.Types.UI.DriverOnboardingV2.ValidationStatus
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -74,6 +75,7 @@ data DriverPanReq = DriverPanReq
     imageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     panNumber :: Kernel.Prelude.Text,
+    transactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     validationStatus :: Kernel.Prelude.Maybe API.Types.UI.DriverOnboardingV2.ValidationStatus,
     verifiedBy :: Kernel.Prelude.Maybe Domain.Types.DriverPanCard.VerifiedBy
   }

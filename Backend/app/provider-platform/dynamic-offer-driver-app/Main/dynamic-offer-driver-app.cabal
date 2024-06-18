@@ -1055,6 +1055,7 @@ library
     , singletons
     , singletons-th
     , special-zone-a
+    , split
     , stm
     , string-conversions
     , template-haskell
@@ -1172,6 +1173,7 @@ executable dynamic-offer-driver-app-exe
     , shared-services
     , singletons
     , singletons-th
+    , split
     , stm
     , string-conversions
     , template-haskell

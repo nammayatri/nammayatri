@@ -451,6 +451,7 @@ MerchantServiceUsageConfig:
     createBankAccount: PaymentService
     retryBankAccountLink: PaymentService
     getBankAccount: PaymentService
+    sdkVerificationService: VerificationService
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -494,6 +495,7 @@ MerchantServiceUsageConfig:
     createBankAccount: "'Stripe'"
     retryBankAccountLink: "'Stripe'"
     getBankAccount: "'Stripe'"
+    sdkVerificationService: "'HyperVerge'"
 
   queries:
     findByMerchantOpCityId:
