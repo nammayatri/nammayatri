@@ -24,6 +24,7 @@ module SharedLogic.CallBAP
     sendQuoteRepetitionUpdateToBAP,
     sendTollCrossedUpdateToBAP,
     sendUpdateEditDestToBAP,
+    sendUpdateEditDestErrToBAP,
     sendNewMessageToBAP,
     sendDriverOffer,
     callOnConfirmV2,
@@ -669,6 +670,33 @@ sendUpdateEditDestToBAP booking ride bookingUpdateReqDetails newDestination curr
     retryConfig <- asks (.shortDurationRetryCfg)
     sUpdateEditDestToBAP <- ACL.buildOnUpdateMessageV2 merchant booking (Just bookingUpdateReqDetails.bapBookingUpdateRequestId) sUpdateEditDestToBAPReq
     void $ callOnUpdateV2 sUpdateEditDestToBAP retryConfig merchant.id
+
+sendUpdateEditDestErrToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  Text ->
+  Text ->
+  Text ->
+  m ()
+sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId errorCode errorMessage = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  when isValueAddNP $ do
+    merchant <-
+      CQM.findById booking.providerId
+        >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+    let errorObject = DOU.DErrorObject {..}
+    retryConfig <- asks (.shortDurationRetryCfg)
+    updateEditDestErrToBAP <- ACL.buildOnUpdateError merchant booking (Just bapBookingUpdateRequestId) errorObject
+    void $ callOnUpdateV2 updateEditDestErrToBAP retryConfig merchant.id
 
 sendSafetyAlertToBAP ::
   ( CacheFlow m r,

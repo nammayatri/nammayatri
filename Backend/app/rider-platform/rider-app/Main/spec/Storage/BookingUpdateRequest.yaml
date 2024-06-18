@@ -11,6 +11,9 @@ BookingUpdateRequest:
     BookingUpdateRequestStatus:
       enum: "SOFT,CONFIRM"
       derive: "HttpInstance"
+    ErrorObj:
+      errorCode: Text
+      errorMessage: Text
 
   beamInstance: MakeTableInstancesWithTModifier []
 
@@ -26,6 +29,7 @@ BookingUpdateRequest:
     currentPointLon : Maybe Double
     oldEstimatedFare : HighPrecMoney
     oldEstimatedDistance : Maybe HighPrecMeters
+    errorObj : Maybe ErrorObj
     distanceUnit : DistanceUnit
     createdAt: UTCTime
     updatedAt: UTCTime
@@ -35,11 +39,19 @@ BookingUpdateRequest:
   beamType:
     distanceUnit: Maybe DistanceUnit
 
+  beamFields:
+    errorObj:
+      errorCode: Maybe Text
+      errorMessage: Maybe Text
+
   fromTType:
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    errorObj: Domain.Types.BookingUpdateRequest.ErrorObj <$> errorCode <*> errorMessage|E
 
   toTType:
     distanceUnit: Kernel.Prelude.Just|I
+    errorCode: (.errorCode) <$> errorObj|E
+    errorMessage: (.errorMessage) <$> errorObj|E
 
 
   constraints:
@@ -62,4 +74,8 @@ BookingUpdateRequest:
     updateStatusById:
       kvFunction: updateOneWithKV
       params: [status, updatedAt]
+      where: id
+    updateErrorObjById:
+      kvFunction: updateOneWithKV
+      params: [errorObj, updatedAt]
       where: id

@@ -45,21 +45,28 @@ buildOnUpdateReqV2 req = do
   ContextV2.validateContext Context.ON_UPDATE $ req.onUpdateReqContext
   transactionId <- Utils.getTransactionId req.onUpdateReqContext
   messageId <- Utils.getMessageId req.onUpdateReqContext
-  handleErrorV2 req $ \message -> do
+  handleErrorV2 req messageId $ \message -> do
     parseEventV2 transactionId messageId message.confirmReqMessageOrder
 
 handleErrorV2 ::
   (MonadFlow m) =>
   Spec.OnUpdateReq ->
+  Text ->
   (Spec.ConfirmReqMessage -> m DOnUpdate.OnUpdateReq) ->
   m (Maybe DOnUpdate.OnUpdateReq)
-handleErrorV2 req action = do
-  onUpdMsg <- req.onUpdateReqMessage & fromMaybeM (InvalidRequest "message not present in on_update request.")
-  case req.onUpdateReqError of
-    Nothing -> Just <$> action onUpdMsg
-    Just err -> do
-      logTagError "on_update req" $ "on_update error: " <> show err
-      pure Nothing
+handleErrorV2 req messageId action = do
+  case req.onUpdateReqMessage of
+    Just onUpdMsg -> Just <$> action onUpdMsg
+    Nothing -> case req.onUpdateReqError of
+      Just err -> do
+        logTagError "on_update req" $ "on_update error: " <> show err
+        case (err.errorMessage, err.errorCode) of
+          (Just errorMessage, Just errorCode) ->
+            return $ Just $ DOnUpdate.OUEditDestError DOnUpdate.EditDestErrorReq {messageId, errorMessage, errorCode}
+          (_, _) -> pure Nothing
+      Nothing -> do
+        logTagError "on_update req" "on_update message object is not present without any error."
+        pure Nothing
 
 parseEventV2 :: (MonadFlow m, CacheFlow m r) => Text -> Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
 parseEventV2 transactionId messageId order = do

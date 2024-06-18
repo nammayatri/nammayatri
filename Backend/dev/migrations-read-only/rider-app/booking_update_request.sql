@@ -21,3 +21,15 @@ ALTER TABLE atlas_app.booking_update_request ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking_update_request ADD COLUMN distance_unit character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking_update_request ADD COLUMN error_obj text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking_update_request ADD COLUMN error_message text ;
+ALTER TABLE atlas_app.booking_update_request ADD COLUMN error_code text ;
+ALTER TABLE atlas_app.booking_update_request DROP COLUMN error_obj;

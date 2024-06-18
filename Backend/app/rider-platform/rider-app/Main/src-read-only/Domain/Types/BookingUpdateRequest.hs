@@ -20,6 +20,7 @@ data BookingUpdateRequest = BookingUpdateRequest
     currentPointLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     currentPointLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
+    errorObj :: Kernel.Prelude.Maybe Domain.Types.BookingUpdateRequest.ErrorObj,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     estimatedFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     id :: Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest,
@@ -35,6 +36,8 @@ data BookingUpdateRequest = BookingUpdateRequest
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data BookingUpdateRequestStatus = SOFT | CONFIRM deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+data ErrorObj = ErrorObj {errorCode :: Kernel.Prelude.Text, errorMessage :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingUpdateRequestStatus)
 

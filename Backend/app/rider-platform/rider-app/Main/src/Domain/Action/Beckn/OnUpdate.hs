@@ -31,6 +31,7 @@ module Domain.Action.Beckn.OnUpdate
     ValidatedOnUpdateReq (..),
     EditDestSoftUpdateReq (..),
     EditDestConfirmUpdateReq (..),
+    EditDestErrorReq (..),
     TollCrossedEventReq (..),
   )
 where
@@ -97,6 +98,7 @@ data OnUpdateReq
   | OUEditDestSoftUpdateReq EditDestSoftUpdateReq
   | OUEditDestConfirmUpdateReq EditDestConfirmUpdateReq
   | OUTollCrossedEventReq TollCrossedEventReq
+  | OUEditDestError EditDestErrorReq
 
 data ValidatedOnUpdateReq
   = OUValidatedRideAssignedReq Common.ValidatedRideAssignedReq
@@ -114,11 +116,25 @@ data ValidatedOnUpdateReq
   | OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq
   | OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq
   | OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq
+  | OUValidatedEditDestError ValidatedEditDestErrorReq
 
 data BookingReallocationReq = BookingReallocationReq
   { bppBookingId :: Id DRB.BPPBooking,
     bppRideId :: Id DRide.BPPRide,
     reallocationSource :: DBCR.CancellationSource
+  }
+
+data EditDestErrorReq = EditDestErrorReq
+  { errorMessage :: Text,
+    errorCode :: Text,
+    messageId :: Text
+  }
+
+data ValidatedEditDestErrorReq = ValidatedEditDestErrorReq
+  { errorMessage :: Text,
+    errorCode :: Text,
+    bookingUpdateReqDetails :: DBUR.BookingUpdateRequest,
+    bookingUpdateReqId :: Id DBUR.BookingUpdateRequest
   }
 
 data EditDestSoftUpdateReq = EditDestSoftUpdateReq
@@ -383,6 +399,8 @@ onUpdate = \case
     merchantPN <- CPN.findByMerchantOpCityIdAndMessageKey booking.merchantOperatingCityId "TOLL_CROSSED" >>= fromMaybeM (MerchantPNNotFound booking.merchantOperatingCityId.getId "TOLL_CROSSED")
     let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
     TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
+  OUValidatedEditDestError ValidatedEditDestErrorReq {..} -> do
+    QBUR.updateErrorObjById (Just DBUR.ErrorObj {..}) bookingUpdateReqId
 
 validateRequest ::
   ( CacheFlow m r,
@@ -470,6 +488,9 @@ validateRequest = \case
     booking <- QEBooking.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId - " <> transactionId)
     person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
     return $ OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..}
+  OUEditDestError EditDestErrorReq {..} -> do
+    bookingUpdateReqDetails <- runInReplica $ QBUR.findById (Id messageId) >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with Id:-" <> messageId)
+    return $ OUValidatedEditDestError ValidatedEditDestErrorReq {bookingUpdateReqId = Id messageId, ..}
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>

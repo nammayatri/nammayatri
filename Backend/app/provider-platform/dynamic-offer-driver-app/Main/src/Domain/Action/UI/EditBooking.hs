@@ -28,6 +28,7 @@ import qualified SharedLogic.LocationMapping as SLM
 import SharedLogic.Ride
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QR
 import Tools.Auth
@@ -42,17 +43,20 @@ postEditResult ::
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
 postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {..} = do
-  _ <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
+  driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   now <- getCurrentTime
   bookingUpdateReq <- B.runInReplica $ QBUR.findById bookingUpdateReqId >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with id:" <> bookingUpdateReqId.getId)
   when (bookingUpdateReq.status /= USER_CONFIRMED) $ throwError $ InvalidRequest "BookingUpdateRequest is not in USER_CONFIRMED state"
   when (bookingUpdateReq.validTill < now) $ throwError $ InvalidRequest "BookingUpdateRequest is expired"
+  booking <- QB.findById bookingUpdateReq.bookingId >>= fromMaybeM (BookingDoesNotExist bookingUpdateReq.bookingId.getId)
   if action == ACCEPT
     then do
+      hasAdvancedRide <- QDI.findById driverId <&> maybe False (.hasAdvanceBooking)
+      when hasAdvancedRide $
+        CallBAP.sendUpdateEditDestErrToBAP booking bookingUpdateReq.bapBookingUpdateRequestId "Trip Update Request Not Available" "Driver has an upcoming ride near your drop location. "
       QBUR.updateStatusById DRIVER_ACCEPTED bookingUpdateReqId
       dropLocMapping <- QLM.getLatestEndByEntityId bookingUpdateReqId.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateReqId: " <> bookingUpdateReqId.getId)
       dropLocMapBooking <- SLM.buildDropLocationMapping dropLocMapping.locationId bookingUpdateReq.bookingId.getId DLM.BOOKING (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
-      booking <- QB.findById bookingUpdateReq.bookingId >>= fromMaybeM (BookingDoesNotExist bookingUpdateReq.bookingId.getId)
       ride <- QR.findActiveByRBId bookingUpdateReq.bookingId >>= fromMaybeM (InternalError $ "Ride not found for bookingId: " <> bookingUpdateReq.bookingId.getId)
       dropLocMapRide <- SLM.buildDropLocationMapping dropLocMapping.locationId ride.id.getId DLM.RIDE (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
       QLM.create dropLocMapBooking
@@ -67,5 +71,6 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
       CallBAP.sendUpdateEditDestToBAP booking ride bookingUpdateReq Nothing Nothing OU.CONFIRM_UPDATE
       return Success
     else do
+      CallBAP.sendUpdateEditDestErrToBAP booking bookingUpdateReq.bapBookingUpdateRequestId "Trip Update Request Declined" "Request was declined by your driver. Kindly check with them offline before requesting again."
       QBUR.updateStatusById DRIVER_REJECTED bookingUpdateReqId
       return Success
