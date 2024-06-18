@@ -1175,7 +1175,7 @@ getFR stringKey =
         FINAL_FARE_DESCRIPTION -> "Le tarif final sera basé sur la durée réelle du trajet arrondie à l'heure suivante ou la durée du trajet sélectionnée (selon laquelle est la plus élevée)."
         EXCESS_DISTANCE_CHARGE_DESCRIPTION charges -> "Le dépassement de distance sera facturé à " <> charges
         ADDITIONAL_CHARGES_DESCRIPTION -> "Le tarif final sera basé sur la durée et la distance réelle du voyage"
-        PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "Les frais de stationnement et les péages ne sont pas inclus. Veuillez les payer séparément au conducteur."
+        PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "Les frais de parking, les péages et autres surcharges ne sont pas inclus. Veuillez les payer séparément au chauffeur."
         NIGHT_TIME_FEE_DESCRIPTION -> "Des frais de nuit de {} seront facturés si votre trajet commence/se termine à n'importe quel moment entre 22h et 5h"
         CHOOSE_YOUR_RENTAL_RIDE -> "Choisissez votre trajet de location"
         FIRST_STOP_OPTIONAL -> "Premier arrêt (facultatif)"
@@ -1248,7 +1248,7 @@ getFR stringKey =
         RENTAL_CHARGES -> "Frais de location"
         RENTAL_INFO_POLICY_DESC inclusiveKms -> " " <> inclusiveKms <> " km pour chaque heure de location sont inclus dans votre forfait."
         RENTAL_INFO_POLICY_DESC_ -> "Si la distance de base n'est pas suffisante, vous pouvez choisir d'ajouter des kilomètres supplémentaires et économiser sur les coûts supplémentaires."
-        RENTAL_SCREEN_EXPLAINER -> "Vous pouvez choisir d'ajouter plus de distance à votre forfait."
+        RENTAL_SCREEN_EXPLAINER -> "Vous pouvez ajouter des kilomètres supplémentaires à un tarif réduit dès maintenant. De cette façon, vous pouvez éviter des frais plus élevés pour la distance supplémentaire utilisée plus tard."
         INSTANT -> "Instantanée"
         COMING_SOON -> "À venir!"
         CANCEL_SCHEDULED_RIDE -> "Annuler le trajet programmé"

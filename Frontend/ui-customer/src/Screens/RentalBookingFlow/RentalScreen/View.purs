@@ -441,13 +441,13 @@ getDataFromDescType descriptionType state =
         EstimatedCharges -> {
           title : getString ESTIMATED_CHARGES,
           subHeadings : [
-            { title : getString ESTIMATED_BASE_FARE <> ": <b>" <> selectedQuote.quoteDetails.price <> "</b>" , description : getString ADDITIONAL_CHARGES_DESCRIPTION},
-            { title : getString TOLL_CHARGES <> ": <b> " <> getString WILL_BE_ADDED_TO_FINAL_FARE <> " </b>", description : getString TOLL_CHARGES_DESCRIPTION}
+            { title : getString ESTIMATED_FARE <> ": <b>" <> selectedQuote.quoteDetails.price <> "</b>" , description : getString ADDITIONAL_CHARGES_DESCRIPTION}
           ]
         }
         AdditionalCharges -> {
           title : getString ADDITIONAL_CHARGES,
           subHeadings : [
+            { title : getString TOLL_CHARGES <> ": <b> " <> getString WILL_BE_ADDED_TO_FINAL_FARE <> " </b>", description : getString TOLL_CHARGES_DESCRIPTION},
             { title : getString PARKING_AND_OTHER_CHARGES , description : getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED},
             { title : getString NIGHT_TIME_FEES , description : getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> state.data.rentalBookingData.nightCharge}
           ]

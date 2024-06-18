@@ -2983,7 +2983,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
 
               trackingType = case Tuple (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) hasCurrentLocAndPrevDropLoc of
                                 Tuple true true -> ADVANCED_RIDE_TRACKING
-                                Tuple false true -> RIDE_TRACKING
+                                Tuple false _ -> RIDE_TRACKING
                                 _ -> DRIVER_TRACKING
 
               markers = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city trackingType state.data.fareProductType
@@ -4068,7 +4068,7 @@ suggestedDestinationCard push state index suggestion =
     , background Color.white900
     , gravity CENTER_VERTICAL
     , cornerRadius 16.0
-    , onClick push $ const (SuggestedDestinationClicked suggestion)
+    , onClick push $ const (SuggestedDestinationClicked suggestion false)
     , accessibilityHint $ "Trip to" <> suggestion.title <> suggestion.subTitle 
     , rippleColor Color.rippleShade
     ][ linearLayout
@@ -4813,7 +4813,7 @@ exploreCityCard push state index locationItem =
     , width $ V 160
     , orientation VERTICAL
     , margin $ MarginRight 12
-    , onClick push $ const $ SuggestedDestinationClicked locationItem
+    , onClick push $ const $ SuggestedDestinationClicked locationItem true
     , accessibilityHint $ "Go to " <> locationItem.title
     ][ imageView
         [ imageUrl locationItem.postfixImageUrl
