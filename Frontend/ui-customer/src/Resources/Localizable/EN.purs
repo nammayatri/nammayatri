@@ -1174,7 +1174,7 @@ getEN stringKey =
         FINAL_FARE_DESCRIPTION -> "Final fare will be based on the actual trip duration rounded up to the next hour or the trip duration selected (whichever is higher)."
         EXCESS_DISTANCE_CHARGE_DESCRIPTION charges -> "Excess distance will be charged at " <> charges
         ADDITIONAL_CHARGES_DESCRIPTION -> "Final fare will be based on the actual trip duration and distance"
-        PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "Parking fees and other surcharges are not included. Please pay those separately to the driver."
+        PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "Parking fees , toll charges and other surcharges are not included. Please pay those separately to the driver."
         NIGHT_TIME_FEE_DESCRIPTION -> "A flat night time fee of {} will be charged if your ride starts/ends anytime between 10:00 PM and 5:00 AM"
         CHOOSE_YOUR_RENTAL_RIDE -> "Choose Your Rental Ride"
         FIRST_STOP_OPTIONAL -> "First Stop (Optional)"
@@ -1248,7 +1248,7 @@ getEN stringKey =
         RENTAL_CHARGES -> "Rental Charges"
         RENTAL_INFO_POLICY_DESC inclusiveKms -> " " <> inclusiveKms <> " kms for each hour of rental booking is included in your package."
         RENTAL_INFO_POLICY_DESC_ -> "If the base distance is not sufficient, You can choose to add additional kilometers and save on extra costs."
-        RENTAL_SCREEN_EXPLAINER -> "You can choose to add more distance to your package. "
+        RENTAL_SCREEN_EXPLAINER -> "You can add extra kilometers at a discounted rate during booking. This way, you can avoid higher charges for additional distance used later."
         INSTANT -> "Instant"
         COMING_SOON -> "Coming Soon"
         CANCEL_SCHEDULED_RIDE -> "Cancel Scheduled Ride"

@@ -888,7 +888,7 @@ data Action = NoAction
             | Scroll Number
             | WhereToClick 
             | ShowMoreSuggestions 
-            | SuggestedDestinationClicked LocationListItemState
+            | SuggestedDestinationClicked LocationListItemState Boolean
             | RepeatRideCountDown Int String String
             | StopRepeatRideTimer 
             | OpenLiveDashboard
@@ -2270,10 +2270,10 @@ eval (PredictionClickedAction (LocationListItemController.OnClick item)) state =
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_prediction_list_item"
   locationSelected item false state{data{source = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source}, props{isSource = Just false}} (state.props.currentStage == EditingDestinationLoc) 
 
-eval (SuggestedDestinationClicked item) state = do
+eval (SuggestedDestinationClicked item isFamousDest) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_sd_list_item"
   let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.SuggestedDestination" "true"
-  locationSelected item true state{props{isSource = Just false, rideSearchProps{sessionId = generateSessionId unit}, suggestedRideFlow = true}, data{source = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source, nearByPickUpPoints = [], polygonCoordinates = ""}} false
+  locationSelected item (not isFamousDest) state{props{isSource = Just false, rideSearchProps{sessionId = generateSessionId unit}, suggestedRideFlow = true}, data{source = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source, nearByPickUpPoints = [], polygonCoordinates = ""}} false
 
 eval (PredictionClickedAction (LocationListItemController.FavClick item)) state = do
   if (length state.data.savedLocations >= 20) then do

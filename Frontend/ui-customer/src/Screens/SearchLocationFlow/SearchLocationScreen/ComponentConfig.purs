@@ -441,8 +441,7 @@ rentalRateCardConfig state =
             visibility = VISIBLE
           }
         , additionalStrings = [
-          {key : "TOLL_CHARGES", val : "<b>Applicable toll charges will be added at the end of the ride.</b>"}
-          , {key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getVarString NIGHT_TIME_FEE_DESCRIPTION $ DA.singleton $ currency <> (show selectedQuote.fareDetails.nightShiftCharge))}
+            {key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getVarString NIGHT_TIME_FEE_DESCRIPTION $ DA.singleton $ currency <> (show selectedQuote.fareDetails.nightShiftCharge))}
           , {key : "APPLICABLE_WAITING_CHARGES" , val : "Applicable waiting charges will be added to your final fare."}
           , {key : "PARKING_FEES_AND_TOLLS_NOT_INCLUDED", val : (getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED)}
           ]
@@ -450,11 +449,11 @@ rentalRateCardConfig state =
             {key : ("Base Rental Fare (incl. " <> show (state.data.rideDetails.rideDistance - extraDistance)  <> " km & " <> show state.data.rideDetails.rideDuration <> " hrs)"), val : (currency <> show (state.data.rideDetails.rideDuration * selectedQuote.fareDetails.perHourCharge))}
             ] <> 
             (if extraDistance > 0 then 
-              [{key : "Add on fare for " <> show ( extraDistance) <> " km", val : (currency <> show (extraDistance * selectedQuote.fareDetails.plannedPerKmRate))}] 
+              [{key : "Fare for additional distance (" <> show ( extraDistance) <> " kms) added in the package", val : (currency <> show (extraDistance * selectedQuote.fareDetails.plannedPerKmRate))}] 
               else [] )
             <> 
-            [ {key : "Extra distance fare", val : (currency <> show selectedQuote.fareDetails.perExtraKmRate <> "/km")}
-              , {key : "Extra time fare", val : (currency <> show selectedQuote.fareDetails.perExtraMinRate <> "/min")}
+            [ {key : "Fare for distance above " <> (show state.data.rideDetails.rideDistance) <> " kms", val : (currency <> show selectedQuote.fareDetails.perExtraKmRate <> "/km")}
+              , {key : "Time fare above " <> (show state.data.rideDetails.rideDuration) <> " hrs", val : (currency <> show selectedQuote.fareDetails.perExtraMinRate <> "/min")}
             ] 
             <> 
             (case selectedQuote.fareDetails.tollCharges of

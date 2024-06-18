@@ -429,7 +429,6 @@ public class MobilityCommonBridge extends HyperBridge {
     public static Timer getPolyLineTimer(String mapKey, String polyLineKey) {
         Hashtable<String, Timer> polyLineEntries = polylineAnimationTimers != null ? polylineAnimationTimers.get(mapKey) : null;
         Timer polyLineAnimationTimer = polyLineEntries != null ? polyLineEntries.get(polyLineKey) : null;
-        if(polyLineEntries != null){ polylineAnimationTimers.put(mapKey,new Hashtable<>());}
         return polyLineAnimationTimer;
     }
 
@@ -2355,8 +2354,9 @@ public class MobilityCommonBridge extends HyperBridge {
 
             if(polylineAnimationTimer!=null){
                 polylineAnimationTimer.cancel();
+            } else {
+                polylineAnimationTimer = new Timer();
             }
-            polylineAnimationTimer = new Timer();
 
             polylineAnimationTimer.schedule(new TimerTask() {
                 private float drawDone = 0;

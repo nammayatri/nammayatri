@@ -299,7 +299,7 @@ rentalPolicyInfoConfig state = let
       imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_rental_hourly_charge",
       height = V 118,
       width = MATCH_PARENT,
-      visibility = VISIBLE,
+      visibility = GONE,
       margin = MarginVertical 20 20
   }
   , buttonConfig {

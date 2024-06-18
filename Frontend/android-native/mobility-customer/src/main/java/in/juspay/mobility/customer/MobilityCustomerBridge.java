@@ -196,7 +196,10 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         path.add(tempPoint);
                     }
                     Marker currMarker = (Marker) markers.get(src);
-                    currMarker.setTitle("Vehicle Icon On Map");
+                    if (currMarker != null)
+                        {
+                            currMarker.setTitle("Vehicle Icon On Map");
+                        }
                     Marker destMarker = (Marker) markers.get(dest);
                     String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
                     MarkerConfig markerConfig = new MarkerConfig();
@@ -220,10 +223,13 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                                     overlayPolylines.remove();
                                 }
                                 polyline.remove();
-                                polylineDataPoints.setPolyline(null);
-                                polylineDataPoints.setOverlayPolylines(null);
+                                if(polylineDataPoints != null)
+                                {
+                                    polylineDataPoints.setPolyline(null);
+                                    polylineDataPoints.setOverlayPolylines(null);
+                                }
                                 setPolyLineDataByMapInstance(pureScriptID, polylineKey, polylineDataPoints);
-                                currMarker.setAnchor(0.5f, 0);
+                                if(currMarker != null) {currMarker.setAnchor(0.5f, 0);}
                                 mapUpdate.isMapMoved = false;
                                 mapUpdate.isMapIdle = true;
                                 animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, zoomLevel, ZoomType.ZOOM);
