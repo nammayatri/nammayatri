@@ -60,13 +60,19 @@ getCacMetricErrorFromDB tableName = do
     GoHomeConfig -> "go_home_config_from_db_parse_error"
     _ -> "empty_db_parse_error"
 
+getTextValue :: Value -> Text
+getTextValue = \case
+  String x -> x
+  obj -> Text.pack $ show obj
+
 pushCacDataToKafka :: EsqDBFlow m r => Maybe CacKey -> [(CacContext, Value)] -> Int -> (String -> [(Text, Value)] -> Int -> IO Value) -> String -> CacPrefix -> m ()
 pushCacDataToKafka stickeyKey context toss getVariants tenant key' = do
   when (isJust stickeyKey) do
     let context' = DBF.first show <$> context
+    let context'' = DBF.second getTextValue <$> context
     variantIds <- liftIO $ getVariants tenant context' toss
     let key = fromJust stickeyKey
-    let cacData = CACData (getKeyValue key) (getKeyValue key) (Text.pack (show context)) (Text.pack (show key')) (Text.pack (show variantIds))
+    let cacData = CACData (getKeyValue key) (getKeyName key) (Text.pack (show context'')) (Text.pack (show key')) (getTextValue variantIds)
     pushToKafka cacData "cac-data" ""
 
 getConfigListFromCac :: (CacheFlow m r, EsqDBFlow m r, FromJSON a, ToJSON a) => [(CacContext, Value)] -> String -> Int -> CacPrefix -> String -> m (Maybe [a])
