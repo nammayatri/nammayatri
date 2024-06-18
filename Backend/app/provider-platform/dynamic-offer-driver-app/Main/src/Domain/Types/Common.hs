@@ -18,7 +18,7 @@
 
 module Domain.Types.Common where
 
-import Control.Lens.Operators
+import Control.Lens.Operators hiding ((.=))
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as List
@@ -37,7 +37,48 @@ data UsageSafety = Safe | Unsafe
 
 data TripCategory = OneWay OneWayMode | Rental RentalMode | RideShare RideShareMode | InterCity OneWayMode (Maybe Text) | CrossCity OneWayMode (Maybe Text)
   deriving stock (Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving anyclass (ToSchema)
+
+-- This is done to handle backward compatibility, as UI is expected "content" to be a string but due to multiple in InterCity and CrossCity, it got changed into an array
+instance ToJSON TripCategory where
+  toJSON (OneWay mode) =
+    object
+      [ "tag" .= ("OneWay" :: Text),
+        "content" .= mode
+      ]
+  toJSON (Rental mode) =
+    object
+      [ "tag" .= ("Rental" :: Text),
+        "content" .= mode
+      ]
+  toJSON (RideShare mode) =
+    object
+      [ "tag" .= ("RideShare" :: Text),
+        "content" .= mode
+      ]
+  toJSON (InterCity mode text) =
+    object
+      [ "tag" .= ("InterCity" :: Text),
+        "content" .= mode,
+        "content2" .= text
+      ]
+  toJSON (CrossCity mode text) =
+    object
+      [ "tag" .= ("CrossCity" :: Text),
+        "content" .= mode,
+        "content2" .= text
+      ]
+
+instance FromJSON TripCategory where
+  parseJSON = withObject "TripCategory" $ \v -> do
+    tag <- v .: "tag"
+    case tag of
+      "OneWay" -> OneWay <$> v .: "content"
+      "Rental" -> Rental <$> v .: "content"
+      "RideShare" -> RideShare <$> v .: "content"
+      "InterCity" -> InterCity <$> v .: "content" <*> v .: "content2"
+      "CrossCity" -> CrossCity <$> v .: "content" <*> v .: "content2"
+      _ -> fail $ "Unknown tag: " ++ tag
 
 data TripOption = TripOption
   { schedule :: UTCTime,
