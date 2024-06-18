@@ -1278,7 +1278,7 @@ getEN stringKey =
         WAS_RIDE_SAFE_DESC -> "Was your ride satisfactorily safe and\nworry-free?"
         WAS_DRIVER_HELPFUL -> "Did the driver offer assistance?"
         WAS_DRIVER_HELPFUL_DESC -> "Was your driver understanding\nof your needs?"
-        COLLECT_TOLL_SEP -> "Please collect it separately from customer <b>only if a toll was crossed</b>"
+        COLLECT_TOLL_SEP -> "Please pay it separately to the driver <b>only if a toll was crossed</b>"
         FINAL_FARE_EXCLUDES_TOLL -> "Final fare excludes toll charges"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "Toll charges may be applicable"
         METRO_BANNER_TITLE appName -> "Book metro tickets with \n" <> appName <> " Now!"
