@@ -360,6 +360,8 @@ data BecknTag
   | DRIVER_TRACKING_URL
   | DRIVER_ACCOUNT_ID
   | DRIVER_ALTERNATE_NUMBER
+  | IS_ALREADY_FAVOURITE
+  | FAVOURITE_COUNT
   | -- Driver arrived info tags
     ARRIVAL_TIME
   | -- Ride distance details tags

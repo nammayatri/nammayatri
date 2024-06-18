@@ -87,8 +87,10 @@ data DEditDestinationUpdateReq = DEditDestinationUpdateReq
     updateType :: UpdateType
   }
 
-newtype DTollCrossedBuildReq = DTollCrossedBuildReq
-  { bookingDetails :: BookingDetails
+data DTollCrossedBuildReq = DTollCrossedBuildReq
+  { bookingDetails :: BookingDetails,
+    isAlreadyFav :: Bool,
+    favCount :: Int
   }
 
 data UpdateType = SOFT_UPDATE | CONFIRM_UPDATE

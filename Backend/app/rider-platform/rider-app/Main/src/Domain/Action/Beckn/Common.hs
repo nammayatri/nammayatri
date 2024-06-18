@@ -99,6 +99,8 @@ data RideAssignedReq = RideAssignedReq
     isFreeRide :: Bool,
     driverAccountId :: Maybe Payment.AccountId,
     previousRideEndPos :: Maybe LatLong,
+    isAlreadyFav :: Bool,
+    favCount :: Int,
     fareBreakups :: Maybe [DFareBreakup],
     driverTrackingUrl :: Maybe BaseUrl
   }
@@ -120,7 +122,9 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
     previousRideEndPos :: Maybe LatLong,
     booking :: DRB.Booking,
     fareBreakups :: Maybe [DFareBreakup],
-    driverTrackingUrl :: Maybe BaseUrl
+    driverTrackingUrl :: Maybe BaseUrl,
+    isAlreadyFav :: Bool,
+    favCount :: Int
   }
 
 data RideStartedReq = RideStartedReq
@@ -224,8 +228,8 @@ data DFareBreakup = DFareBreakup
     description :: Text
   }
 
-buildRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => ValidatedRideAssignedReq -> Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> DRide.RideStatus -> Bool -> m DRide.Ride
-buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now status isFreeRide = do
+buildRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => ValidatedRideAssignedReq -> Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> DRide.RideStatus -> Bool -> Bool -> Int -> m DRide.Ride
+buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now status isFreeRide isAlreadyFav favCount = do
   guid <- generateGUID
   shortId <- generateShortId
   deploymentVersion <- asks (.version)
@@ -282,6 +286,8 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
         driverAlternateNumber = driverAlternateNumber',
         vehicleAge = req.vehicleAge,
         cancellationFeeIfCancelled = Nothing,
+        isAlreadyFav = Just isAlreadyFav,
+        favCount = Just favCount,
         ..
       }
 
@@ -349,7 +355,7 @@ rideAssignedReqHandler req = do
     assignRideUpdate req' mbMerchant booking rideStatus now = do
       let BookingDetails {..} = req'.bookingDetails
       let fareParams = fromMaybe [] req'.fareBreakups
-      ride <- buildRide req' mbMerchant booking req'.bookingDetails req'.previousRideEndPos now rideStatus req'.isFreeRide
+      ride <- buildRide req' mbMerchant booking req'.bookingDetails req'.previousRideEndPos now rideStatus req'.isFreeRide req'.isAlreadyFav req'.favCount
       let applicationFeeAmountBreakups = ["INSURANCE_CHARGE", "CARD_CHARGES_ON_FARE", "CARD_CHARGES_FIXED"]
       let applicationFeeAmount = sum $ map (.amount.amount) $ filter (\fp -> fp.description `elem` applicationFeeAmountBreakups) fareParams
       whenJust req'.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do

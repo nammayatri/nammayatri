@@ -115,6 +115,7 @@ import qualified Storage.Queries.IdfyVerification as QIV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRD
+import Storage.Queries.RiderDriverCorrelation as SQR
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
@@ -320,6 +321,12 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
   let image = join (eitherToMaybe resp)
   isDriverBirthDay <- maybe (return False) (checkIsDriverBirthDay mbTransporterConfig) driverInfo.driverDob
   isFreeRide <- maybe (return False) (checkIfRideBySpecialDriver ride.driverId) mbTransporterConfig
+  isAlreadyFav <- do
+    isAlreadyFav' <- SQR.checkRiderFavDriver (fromMaybe "" booking.riderId) ride.driverId True
+    case isAlreadyFav' of
+      Just _ -> pure True
+      Nothing -> pure False
+  let favCount = driverStats.favRiderCount
   driverAccountId <-
     if ride.onlinePayment && isValueAddNP
       then do
@@ -895,6 +902,8 @@ sendTollCrossedUpdateToBAP (Just booking) (Just ride) driver driverStats vehicle
     bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
     let bookingDetails = ACL.BookingDetails {..}
         tollCrossedUpdateBuildReq = ACL.TollCrossedBuildReq ACL.DTollCrossedBuildReq {..}
+        isAlreadyFav = False
+        favCount = 0
     tollCrossedMsg <- ACL.buildOnUpdateMessageV2 merchant booking Nothing tollCrossedUpdateBuildReq
     retryConfig <- asks (.shortDurationRetryCfg)
     void $ callOnUpdateV2 tollCrossedMsg retryConfig merchant.id

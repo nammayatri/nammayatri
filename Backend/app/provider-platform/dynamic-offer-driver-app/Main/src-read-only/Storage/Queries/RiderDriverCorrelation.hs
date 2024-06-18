@@ -23,6 +23,18 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation] -> m ())
 createMany = traverse_ create
 
+checkRiderFavDriver ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation))
+checkRiderFavDriver riderDetailId driverId favourite = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.riderDetailId $ Se.Eq (Kernel.Types.Id.getId riderDetailId),
+          Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
+          Se.Is Beam.favourite $ Se.Eq favourite
+        ]
+    ]
+
 findByRiderIdAndDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation))

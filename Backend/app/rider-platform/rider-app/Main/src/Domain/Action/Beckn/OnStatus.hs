@@ -333,6 +333,8 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       driverAlternateNumber = driverAlternateNumber'
       onlinePayment = maybe False (.onlinePayment) mbMerchant
       cancellationFeeIfCancelled = Nothing
+      isAlreadyFav = Just False
+      favCount = Just 0
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::

@@ -101,4 +101,6 @@ handler transporterId req = do
       let isDriverBirthDay = False
       let isFreeRide = False
       let driverAccountId = Nothing
+      let isAlreadyFav = False
+      let favCount = 0
       pure $ RideAssignedReq DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
