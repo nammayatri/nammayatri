@@ -380,7 +380,7 @@ screen initialState =
                   void $ pure $ setValueToLocalStore LOCAL_STAGE (show ConfirmingEditDestinationLoc)
                   void $ pure $ setValueToLocalStore EDIT_DEST_POLLING_ID (getNewTrackingId unit)
                   let pollingCount = if any ( _ == getValueToLocalStore EDIT_DEST_POLLING_COUNT) ["_failed", "(null)"] then INT.round getEditDestPollingCount else INT.round (fromMaybe getEditDestPollingCount (NUM.fromString (getValueToLocalStore EDIT_DEST_POLLING_COUNT)))
-                  void $ launchAff $ flowRunner defaultGlobalState $ getEditLocResults (getValueToLocalStore EDIT_DEST_POLLING_ID) GetEditLocResult pollingCount (fromMaybe 1000.0 (NUM.fromString (getValueToLocalStore EDIT_DEST_POLLING_INTERVAL))) push initialState
+                  void $ launchAff $ flowRunner defaultGlobalState $ getEditLocResults (getValueToLocalStore EDIT_DEST_POLLING_ID) GetEditLocResult BackPressed pollingCount (fromMaybe 2000.0 (NUM.fromString (getValueToLocalStore EDIT_DEST_POLLING_INTERVAL))) push initialState
               TryAgain -> do
                 logStatus "find_estimate" ("searchId : " <> initialState.props.searchId)
                 estimatesPolling <- runEffectFn1 getValueFromIdMap "EstimatePolling"
@@ -2841,8 +2841,8 @@ getQuotesPolling pollingId action retryAction count duration push state = do
         _ <- pure $ updateLocalStage QuoteList
         doAff do liftEffect $ push $ action response
 
-getEditLocResults :: forall action. String -> (GetEditLocResultResp -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
-getEditLocResults pollingId action count duration push state = do
+getEditLocResults :: forall action. String -> (GetEditLocResultResp -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
+getEditLocResults pollingId action exitAction count duration push state = do
   when (pollingId == (getValueToLocalStore EDIT_DEST_POLLING_ID) && (isLocalStageOn ConfirmingEditDestinationLoc)) $ do
     internetCondition <- liftFlow $ isInternetAvailable unit
     when (internetCondition && state.props.bookingUpdateRequestId /= Nothing)  $ do
@@ -2857,12 +2857,14 @@ getEditLocResults pollingId action count duration push state = do
               doAff do liftEffect $ push $ action response
             else do
               void $ delay $ Milliseconds duration
-              getEditLocResults pollingId action (usableCount - 1) duration push state
+              getEditLocResults pollingId action exitAction (usableCount - 1) duration push state
           Left err -> do
             void $ delay $ Milliseconds duration
-            getEditLocResults pollingId action (usableCount - 1) duration push state
+            getEditLocResults pollingId action exitAction (usableCount - 1) duration push state
       else do
         void $ pure $ setValueToLocalStore FINDING_EDIT_LOC_RESULTS "false"
+        void $ pure $ toast "SOMETHING WENT WRONG. PLEASE TRY AGAIN LATER"
+        doAff do liftEffect $ push $ exitAction
 
 -- Polling for IOP estimates
 getEstimatePolling :: forall action. String -> (GetQuotesRes -> Int -> action) -> action  -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit

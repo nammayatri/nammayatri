@@ -1148,7 +1148,7 @@ homeScreenFlow = do
           case resp of
             Right (APISuccessResp resp) -> do
               void $ pure $ toast $ "Please wait while we confirm with your driver"
-              lift $ lift $ liftFlow $ JB.showInAppNotification $ JB.inAppNotificationPayload{title = "Update Request sent to Driver", message = "Please wait for driver to accept your request.", channelId = "EditDest", showLoader = true, durationInMilliSeconds = 30000}
+              lift $ lift $ liftFlow $ JB.showInAppNotification $ JB.inAppNotificationPayload{title = "Update Request sent to Driver", message = "Please wait for driver to accept your request.", channelId = "EditDest", showLoader = false, durationInMilliSeconds = 15000}
             Left (err) -> do
               void $ pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         Nothing -> void $ pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
