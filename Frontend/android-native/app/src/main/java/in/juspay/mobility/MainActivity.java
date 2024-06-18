@@ -139,7 +139,6 @@ public class MainActivity extends AppCompatActivity {
     private Future<JSONObject> driverInfoFutureTask;
     private Future<JSONObject> preInitFutureTask;
     private JSONObject preInitFutureTaskResult = null;
-    private MobilityRemoteConfigs remoteConfigs;
     long onCreateTimeStamp = 0;
     private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
 
@@ -371,7 +370,6 @@ public class MainActivity extends AppCompatActivity {
         context = getApplicationContext();
         sharedPref = context.getSharedPreferences(this.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
         activity = this;
-        remoteConfigs = new MobilityRemoteConfigs(false, true);
 
         Log.i("APP_PERF", "FORKED_INIT_TASKS_AND_APIS : " + System.currentTimeMillis());        
 
