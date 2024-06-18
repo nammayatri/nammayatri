@@ -2047,7 +2047,7 @@ checkIfVolunteerSMSSendingLimitExceeded volunteerId limitConfig channel = do
   let limit = case limitConfig of
         Nothing -> 500
         Just config -> getLimitAccordingToChannel config channel
-  (currentLimit :: Int) <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkVolunteerSMSSendingLimitKey volunteerId channel) windowLimit
+  (currentLimit :: Int) <- fromIntegral <$> SWC.getCurrentWindowCount (mkVolunteerSMSSendingLimitKey volunteerId channel) windowLimit
   when (currentLimit >= limit) $ throwError (VolunteerMessageSendingLimitExceeded (show channel)) -- the limit is counted from 0
 
 incrementVolunteerSMSSendingCount :: (CacheFlow m r, MonadFlow m) => Text -> MediaChannel -> m ()
@@ -2058,7 +2058,7 @@ checkIfDriverSMSReceivingLimitExceeded driverId limitConfig channel = do
   let limit = case limitConfig of
         Nothing -> 10
         Just config -> getLimitAccordingToChannel config channel
-  (currentLimit :: Int) <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkDriverSMSRecevingLimitKey driverId channel) windowLimit
+  (currentLimit :: Int) <- fromIntegral <$> SWC.getCurrentWindowCount (mkDriverSMSRecevingLimitKey driverId channel) windowLimit
   when (currentLimit >= limit) $ throwError (DriverMessageReceivingLimitExceeded (show channel)) -- the limit is counted from 0
 
 incrementDriverSMSReceivingCount :: (CacheFlow m r, MonadFlow m) => Text -> MediaChannel -> m ()
