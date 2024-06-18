@@ -613,7 +613,6 @@ public class MainActivity extends AppCompatActivity {
         NotificationUtils.createNotificationChannel(this, NotificationUtils.RIDE_STARTED);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.CANCELLED_PRODUCT);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_HAS_REACHED);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.TRIP_FINISHED);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.SOS_TRIGGERED);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.SOS_RESOLVED);
     }

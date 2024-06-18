@@ -85,7 +85,6 @@ public class NotificationUtils {
     public static final String ALLOCATION_TYPE = "NEW_RIDE_AVAILABLE";
     public static final String CANCELLED_PRODUCT = "CANCELLED_PRODUCT_NEW";
     public static final String DRIVER_ASSIGNMENT = "DRIVER_ASSIGNMENT_NEW";
-    public static final String TRIP_FINISHED = "TRIP_FINISHED_NEW";
     public static final String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT_NEW";
     public static final String RIDE_STARTED = "RIDE_STARTED_NEW";
     public static final String NO_VARIANT = "NO_VARIANT";
@@ -476,9 +475,7 @@ public class NotificationUtils {
                 notificationType.equals(MyFirebaseMessagingService.NotificationTypes.DRIVER_ASSIGNMENT) ||
                 notificationType.equals(MyFirebaseMessagingService.NotificationTypes.REALLOCATE_PRODUCT)) {
             channelId = notificationType + "_NEW";
-        } else if (MyFirebaseMessagingService.NotificationTypes.TRIP_FINISHED.equals(notificationType) && disabilityName.equals("BLIND_LOW_VISION")){
-            channelId = TRIP_FINISHED;
-        }
+        } 
         else {
             channelId = GENERAL_NOTIFICATION;
         }
@@ -517,8 +514,6 @@ public class NotificationUtils {
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/raw/ride_started");
             } else if (notificationType.equals(MyFirebaseMessagingService.NotificationTypes.CANCELLED_PRODUCT) || notificationType.equals(MyFirebaseMessagingService.NotificationTypes.REALLOCATE_PRODUCT)){
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/raw/cancel_notification_sound");
-             } else if (notificationType.equals(MyFirebaseMessagingService.NotificationTypes.TRIP_FINISHED) && disabilityName.equals("BLIND_LOW_VISION")){
-                notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/raw/ride_completed_talkback");
             } else if (notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_TRIGGERED)){
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/raw/ny_ic_sos_danger");
             } else if (notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_RESOLVED)){
@@ -550,6 +545,9 @@ public class NotificationUtils {
         if (MyFirebaseMessagingService.NotificationTypes.TRIP_FINISHED.equals(notificationType)) {
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
             if (key.equals("USER")){
+                if(disabilityName.equals("BLIND_LOW_VISION")) {
+                    startMediaPlayer(context, R.raw.ride_completed_talkback, false);
+                }
                 Utils.logEvent("ny_user_ride_completed", context);
                 String rideTaken = sharedPref.getString("HAS_TAKEN_FIRST_RIDE", "false");
                 if(rideTaken.equals("false")){
@@ -664,11 +662,6 @@ public class NotificationUtils {
                         channel.setName("Driver Arrived");
                         channel.setDescription("Used to notify when driver has arrived");
                         break;
-                    case TRIP_FINISHED:
-                        soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/raw/ride_completed_talkback");
-                        channel.setName("Ride Completed");
-                        channel.setDescription("Used to notify when ride is completed");
-                        break;
                     case SOS_TRIGGERED:
                         soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/raw/ny_ic_sos_danger");
                         channel.setName("SOS Triggered");
@@ -710,7 +703,6 @@ public class NotificationUtils {
 
                 switch (channel_Id) {
                     case RIDE_STARTED:
-                    case TRIP_FINISHED:
                     case DRIVER_HAS_REACHED:
                     case CANCELLED_PRODUCT:
                     case DRIVER_QUOTE_INCOMING:
