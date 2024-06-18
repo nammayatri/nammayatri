@@ -1278,7 +1278,7 @@ getFR stringKey =
         WAS_RIDE_SAFE_DESC -> "Votre trajet était-il suffisamment sûr et\nsans souci ?"
         WAS_DRIVER_HELPFUL -> "Le chauffeur a-t-il proposé de l'aide ?"
         WAS_DRIVER_HELPFUL_DESC -> "Votre chauffeur a-t-il compris vos besoins\net et y a-t-il répondu pendant le trajet ?"
-        COLLECT_TOLL_SEP -> "Veuillez le récupérer séparément auprès du client <b>uniquement si un péage a été franchi</b>"
+        COLLECT_TOLL_SEP -> "Veuillez le payer séparément au conducteur <b>uniquement si un péage a été franchi</b>"
         FINAL_FARE_EXCLUDES_TOLL -> "Le tarif final exclut les frais de péage"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "Des frais de péage peuvent être applicables"
         METRO_BANNER_TITLE appName -> "Réservez des billets de métro avec \n" <> appName <> " maintenant !"

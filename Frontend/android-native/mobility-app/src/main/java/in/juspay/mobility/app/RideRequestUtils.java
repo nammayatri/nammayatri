@@ -624,8 +624,9 @@ public class RideRequestUtils {
         double baseFare = model.getBaseFare() + model.getOfferedPrice() - model.getTollCharges();
         float dist = model.getDistanceToBeCovFloat()/1000;
         String rate = RideRequestUtils.getUptoDecStr((float) (baseFare/dist), 1);
-        String currency = model.getCurrency();;
-        holder.rateText.setText("Rate: " + currency + rate +"/km");
+        String currency = model.getCurrency();
+        String rateVal = dist > 0 ? (currency + rate) + "/km" : "NA";
+        holder.rateText.setText("Rate: " + rateVal);
     }
 
     public static void updateRentalView(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
@@ -757,6 +758,15 @@ public class RideRequestUtils {
                 model.setButtonIncreasePriceClickable(false);
                 model.setButtonDecreasePriceAlpha(1.0f);
                 model.setButtonDecreasePriceClickable(true);
+            } else { // enable both buttons
+                model.setButtonDecreasePriceAlpha(1.0f);
+                model.setButtonDecreasePriceClickable(true);
+                model.setButtonDecreasePriceAlpha(1.0f);
+                model.setButtonDecreasePriceClickable(true);
+                model.setButtonIncreasePriceAlpha(1.0f);
+                model.setButtonIncreasePriceClickable(true);
+                model.setButtonIncreasePriceAlpha(1.0f);
+                model.setButtonIncreasePriceClickable(true);
             }
         });
     }

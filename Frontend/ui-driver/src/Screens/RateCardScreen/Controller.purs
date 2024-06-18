@@ -72,7 +72,9 @@ instance loggableAction :: Loggable Action where
 
 eval :: Action -> RateCardScreenState -> Eval Action ScreenOutput RateCardScreenState
 
-eval BackClick state = exit $ Back state
+eval BackClick state = 
+  if state.props.showRateCard then continue state { props { showRateCard = false}}
+  else exit $ Back state
 
 eval (PrimaryButtonAC PrimaryButton.OnClick) state = continueWithCmd state [ pure $ BackClick ]
 
@@ -80,7 +82,7 @@ eval (SliderCallback val) state = continue state { props { sliderVal = val, slid
 
 eval (DebounceCallBack _ _) state = updateAndExit state $ UpdatePrice state state.props.sliderVal
 
-eval (ChangeSlider increment) state = continueWithCmd state [do 
+eval (ChangeSlider increment) state = continueWithCmd state { props { sliderLoading = true }} [do 
     let val = if increment then state.props.sliderVal + state.props.incrementUnit else state.props.sliderVal - state.props.incrementUnit
         isSliderValueValid = val <= state.props.sliderMaxValue && val >= state.props.sliderMinValue
     if isSliderValueValid then do 

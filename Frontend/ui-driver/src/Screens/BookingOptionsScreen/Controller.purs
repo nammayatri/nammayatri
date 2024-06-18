@@ -69,6 +69,7 @@ data ScreenOutput
 eval :: Action -> BookingOptionsScreenState -> Eval Action ScreenOutput BookingOptionsScreenState
 eval BackPressed state = 
   if state.props.acExplanationPopup then continue state { props { acExplanationPopup = false } }
+  else if state.props.showRateCard then continue state { props { showRateCard = false }}
   else exit $ GoBack state
 eval (ToggleRidePreference service) state = 
   if service.isUsageRestricted then do
