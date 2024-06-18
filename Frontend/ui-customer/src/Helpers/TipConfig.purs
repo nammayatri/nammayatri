@@ -38,7 +38,8 @@ getTipConfig variant = do
     Bangalore -> bangaloreConfig variant
     Hyderabad -> hyderabadConfig variant
     Chennai   -> chennaiConfig variant
-    _ -> defaultTipConfig variant
+    Delhi     -> delhiConfig variant
+    _         -> defaultTipConfig variant
 
 mkTipConfig :: Array Int -> TipConfig
 mkTipConfig customerTipArrayWithValues = {
@@ -76,6 +77,12 @@ hyderabadConfig variant =
 
 chennaiConfig :: String -> TipConfig
 chennaiConfig variant = 
+  case variant of
+    "BOOK_ANY" -> mkTipConfig []
+    _ -> mkTipConfig [0, 10, 20, 30]
+
+delhiConfig :: String -> TipConfig
+delhiConfig variant =
   case variant of
     "BOOK_ANY" -> mkTipConfig []
     _ -> mkTipConfig [0, 10, 20, 30]
