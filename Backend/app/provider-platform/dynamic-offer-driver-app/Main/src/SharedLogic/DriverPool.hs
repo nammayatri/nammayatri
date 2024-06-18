@@ -110,9 +110,6 @@ mkTotalRidesKey driverId = "driver-offer:DriverPool:Total-Rides:DriverId-" <> dr
 mkRideCancelledKey :: Text -> Text
 mkRideCancelledKey driverId = "driver-offer:DriverPool:Ride-cancelled:DriverId-" <> driverId
 
-mkOldRatioKey :: Text -> Text -> Text
-mkOldRatioKey driverId ratioType = "driver-offer:DriverPool:" <> ratioType <> ":DriverId-" <> driverId
-
 mkAvailableTimeKey :: Text -> Text
 mkAvailableTimeKey driverId = "driver-offer:DriverPool:Available-Time:DriverId-" <> driverId
 
@@ -261,8 +258,7 @@ getTotalQuotesSent ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   m Int
-getTotalQuotesSent merchantOpCityId driverId =
-  sum . catMaybes <$> (Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantOpCityId $ SWC.getCurrentWindowValues (mkTotalQuotesKey driverId.getId))
+getTotalQuotesSent merchantOpCityId driverId = fmap fromIntegral . Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantOpCityId $ SWC.getCurrentWindowCount (mkTotalQuotesKey driverId.getId)
 
 getLatestAcceptanceRatio ::
   ( EsqDBFlow m r,
@@ -272,7 +268,7 @@ getLatestAcceptanceRatio ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   m Double
-getLatestAcceptanceRatio merchantOpCityId driverId = Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantOpCityId $ SWC.getLatestRatio (getId driverId) mkQuotesAcceptedKey mkTotalQuotesKey (mkOldRatioKey "AcceptanceRatio")
+getLatestAcceptanceRatio merchantOpCityId driverId = Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantOpCityId $ SWC.getLatestRatio (getId driverId) mkQuotesAcceptedKey mkTotalQuotesKey
 
 incrementTotalRidesCount ::
   ( Redis.HedisFlow m r,
@@ -292,7 +288,7 @@ getTotalRidesCount ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   m Int
-getTotalRidesCount merchantOpCityId driverId = sum . catMaybes <$> (Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.getCurrentWindowValues (mkTotalRidesKey driverId.getId))
+getTotalRidesCount merchantOpCityId driverId = fmap fromIntegral . Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.getCurrentWindowCount (mkTotalRidesKey driverId.getId)
 
 incrementCancellationCount ::
   ( Redis.HedisFlow m r,
@@ -312,7 +308,7 @@ getLatestCancellationRatio' ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   m Double
-getLatestCancellationRatio' merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.getLatestRatio driverId.getId mkRideCancelledKey mkTotalRidesKey (mkOldRatioKey "CancellationRatio")
+getLatestCancellationRatio' merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.getLatestRatio driverId.getId mkRideCancelledKey mkTotalRidesKey
 
 getLatestCancellationRatio ::
   ( EsqDBFlow m r,
@@ -352,7 +348,7 @@ getQuotesCount ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   m a
-getQuotesCount merchantOpCityId driverId = sum . catMaybes <$> (Redis.withCrossAppRedis . withMinQuotesToQualifyIntelligentPoolWindowOption merchantOpCityId $ SWC.getCurrentWindowValues (mkQuotesCountKey driverId.getId))
+getQuotesCount merchantOpCityId driverId = fmap fromIntegral . Redis.withCrossAppRedis . withMinQuotesToQualifyIntelligentPoolWindowOption merchantOpCityId $ SWC.getCurrentWindowCount (mkQuotesCountKey driverId.getId)
 
 isThresholdRidesCompleted ::
   ( CacheFlow m r,

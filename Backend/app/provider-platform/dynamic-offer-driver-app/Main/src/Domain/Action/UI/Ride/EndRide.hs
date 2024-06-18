@@ -516,7 +516,7 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
       expirationPeriodForDay <- DC.getExpirationSeconds thresholdConfig.timeDiffFromUtc
       let (dailyExtraKmsKey, weeklyExtraKmsKey) = makeDailyAndWeeklyExtraKmsKey ride.driverId.getId
       prevDailyExtraKms <- Redis.get dailyExtraKmsKey
-      prevWeeklyExtraKms <- sum . catMaybes <$> SWC.getCurrentWindowValues weeklyExtraKmsKey SlidingWindowOptions {period = 7, periodType = Days}
+      prevWeeklyExtraKms <- fromIntegral <$> SWC.getCurrentWindowCount weeklyExtraKmsKey SlidingWindowOptions {period = 7, periodType = Days}
       let dailyExtraKms = fromMaybe 0 prevDailyExtraKms + distanceDiff
           weeklyExtraKms = (prevWeeklyExtraKms :: HighPrecMeters) + distanceDiff
       Redis.setExp dailyExtraKmsKey dailyExtraKms expirationPeriodForDay
