@@ -22,6 +22,7 @@ instance FromTType' BeamIC.IssueConfig IssueConfig where
             onAutoMarkIssueClsMsgs = Id <$> onAutoMarkIssueClsMsgs,
             onIssueReopenMsgs = Id <$> onIssueReopenMsgs,
             onKaptMarkIssueResMsgs = Id <$> onKaptMarkIssueResMsgs,
+            merchantId = Id merchantId,
             ..
           }
 
@@ -33,5 +34,6 @@ instance ToTType' BeamIC.IssueConfig IssueConfig where
         BeamIC.onAutoMarkIssueClsMsgs = show <$> onAutoMarkIssueClsMsgs,
         BeamIC.onIssueReopenMsgs = show <$> onIssueReopenMsgs,
         BeamIC.onKaptMarkIssueResMsgs = show <$> onKaptMarkIssueResMsgs,
+        BeamIC.merchantId = getId merchantId,
         ..
       }

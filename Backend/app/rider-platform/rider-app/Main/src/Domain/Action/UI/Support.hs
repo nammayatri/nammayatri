@@ -95,7 +95,7 @@ type SendIssueRes = APISuccess
 sendIssue :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> SendIssueReq -> m SendIssueRes
 sendIssue (personId, merchantId) request = do
   runRequestValidation validateSendIssueReq request
-  newIssue <- buildDBIssue personId request
+  newIssue <- buildDBIssue personId request merchantId
   Queries.create newIssue
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -141,8 +141,8 @@ safetyCheckSupport (personId, merchantId) req = do
             rideDescription = Just rideDesc
           }
 
-buildDBIssue :: MonadFlow m => Id Person.Person -> SendIssueReq -> m DIssue.Issue
-buildDBIssue (Id customerId) SendIssueReq {..} = do
+buildDBIssue :: MonadFlow m => Id Person.Person -> SendIssueReq -> Id Merchant.Merchant -> m DIssue.Issue
+buildDBIssue (Id customerId) SendIssueReq {..} merchantId = do
   issueId <- L.generateGUID
   time <- getCurrentTime
   return $
@@ -157,7 +157,8 @@ buildDBIssue (Id customerId) SendIssueReq {..} = do
         status = Domain.OPEN,
         nightSafety = fromMaybe False nightSafety,
         createdAt = time,
-        updatedAt = time
+        updatedAt = time,
+        merchantId
       }
 
 mkTicket :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DIssue.Issue -> Person.Person -> Maybe Text -> Text -> Text -> m Ticket.CreateTicketReq

@@ -28,7 +28,8 @@ data IssueMessageT f = IssueMessageT
     optionId :: B.C f (Maybe Text),
     message :: B.C f Text,
     priority :: B.C f Int,
-    label :: B.C f (Maybe Text)
+    label :: B.C f (Maybe Text),
+    merchantId :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 

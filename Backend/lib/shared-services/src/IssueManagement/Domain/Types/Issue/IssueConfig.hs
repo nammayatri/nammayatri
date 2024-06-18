@@ -1,6 +1,7 @@
 module IssueManagement.Domain.Types.Issue.IssueConfig where
 
 import EulerHS.Prelude hiding (id)
+import IssueManagement.Common
 import IssueManagement.Domain.Types.Issue.IssueMessage
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -11,6 +12,7 @@ data IssueConfig = IssueConfig
     onAutoMarkIssueClsMsgs :: [Id IssueMessage],
     onCreateIssueMsgs :: [Id IssueMessage],
     onIssueReopenMsgs :: [Id IssueMessage],
-    onKaptMarkIssueResMsgs :: [Id IssueMessage]
+    onKaptMarkIssueResMsgs :: [Id IssueMessage],
+    merchantId :: Id Merchant
   }
   deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, ToSchema)

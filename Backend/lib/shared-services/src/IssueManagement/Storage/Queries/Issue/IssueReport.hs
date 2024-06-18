@@ -121,7 +121,8 @@ instance FromTType' BeamIR.IssueReport IssueReport where
             ticketId = ticketId,
             createdAt = T.localTimeToUTC T.utc createdAt,
             updatedAt = T.localTimeToUTC T.utc updatedAt,
-            chats = chats
+            chats = chats,
+            merchantId = Id merchantId
           }
 
 instance ToTType' BeamIR.IssueReport IssueReport where
@@ -143,5 +144,6 @@ instance ToTType' BeamIR.IssueReport IssueReport where
         BeamIR.ticketId = ticketId,
         BeamIR.createdAt = T.utcToLocalTime T.utc createdAt,
         BeamIR.updatedAt = T.utcToLocalTime T.utc updatedAt,
-        BeamIR.chats = chats
+        BeamIR.chats = chats,
+        BeamIR.merchantId = getId merchantId
       }

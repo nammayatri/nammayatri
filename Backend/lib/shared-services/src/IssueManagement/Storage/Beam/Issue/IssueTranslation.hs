@@ -26,7 +26,8 @@ data IssueTranslationT f = IssueTranslationT
   { id :: B.C f Text,
     sentence :: B.C f Text,
     translation :: B.C f Text,
-    language :: B.C f Language
+    language :: B.C f Language,
+    merchantId :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 

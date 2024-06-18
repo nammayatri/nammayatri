@@ -24,7 +24,8 @@ data IssueCategoryT f = IssueCategoryT
   { id :: B.C f Text,
     category :: B.C f Text,
     logoUrl :: B.C f Text,
-    priority :: B.C f Int
+    priority :: B.C f Int,
+    merchantId :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 

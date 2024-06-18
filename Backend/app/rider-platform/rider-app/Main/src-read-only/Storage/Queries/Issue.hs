@@ -33,6 +33,7 @@ updateByPrimaryKey (Domain.Types.Issue.Issue {..}) = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.customerId (Kernel.Types.Id.getId customerId),
       Se.Set Beam.description description,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.nightSafety nightSafety,
       Se.Set Beam.reason reason,
       Se.Set Beam.status status,

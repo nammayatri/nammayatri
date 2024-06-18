@@ -55,7 +55,8 @@ instance FromTType' BeamIC.IssueCategory IssueCategory where
           { id = Id id,
             category = category,
             logoUrl = logoUrl,
-            priority = priority
+            priority = priority,
+            merchantId = Id merchantId
           }
 
 instance ToTType' BeamIC.IssueCategory IssueCategory where
@@ -64,5 +65,6 @@ instance ToTType' BeamIC.IssueCategory IssueCategory where
       { BeamIC.id = getId id,
         BeamIC.category = category,
         BeamIC.logoUrl = logoUrl,
-        BeamIC.priority = priority
+        BeamIC.priority = priority,
+        BeamIC.merchantId = getId merchantId
       }
