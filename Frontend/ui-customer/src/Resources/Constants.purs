@@ -212,12 +212,12 @@ getFaresList fares chargeableRideDistance =
           price = item.amountWithCurrency
           in
           { fareType : item.description
-          , price : currency <> " " <> 
-            (show $ case item.description of 
-              "BASE_FARE" -> price.amount + getMerchSpecBaseFare fares
-              "SGST" -> (price.amount * 2.0) + getFareFromArray fares "FIXED_GOVERNMENT_RATE"
-              "WAITING_OR_PICKUP_CHARGES" -> price.amount + getPlatformFeeIfIncluded fares
-              _ -> price.amount)
+          , price :(currency <> " " <> 
+            (case item.description of 
+              "BASE_FARE" -> parseFloat (price.amount + getMerchSpecBaseFare fares) 1
+              "SGST" -> parseFloat ((price.amount * 2.0) + getFareFromArray fares "FIXED_GOVERNMENT_RATE") 1
+              "WAITING_OR_PICKUP_CHARGES" -> parseFloat (price.amount + getPlatformFeeIfIncluded fares) 1
+              _ -> parseFloat price.amount 1))
           , title : case item.description of
                       "BASE_FARE" -> (getEN BASE_FARES) -- <> if chargeableRideDistance == "0 m" then "" else " (" <> chargeableRideDistance <> ")"
                       "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE
