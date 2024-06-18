@@ -5,6 +5,7 @@
 module Domain.Types.Issue where
 
 import Data.Aeson
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.Quote
 import qualified IssueManagement.Common
@@ -19,6 +20,7 @@ data Issue = Issue
     customerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     description :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.Issue.Issue,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     nightSafety :: Kernel.Prelude.Bool,
     reason :: Kernel.Prelude.Text,
     status :: IssueManagement.Common.IssueStatus,

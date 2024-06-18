@@ -26,7 +26,8 @@ data CommentT f = CommentT
     issueReportId :: B.C f Text,
     authorId :: B.C f Text,
     comment :: B.C f Text,
-    createdAt :: B.C f LocalTime
+    createdAt :: B.C f LocalTime,
+    merchantId :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 

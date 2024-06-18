@@ -203,8 +203,9 @@ issueUpdate ::
   Id DIR.IssueReport ->
   ServiceHandle m ->
   Common.IssueUpdateByUserReq ->
+  Id Merchant ->
   m APISuccess
-issueUpdate merchantShortId opCity issueReportId issueHandle req = do
+issueUpdate merchantShortId opCity issueReportId issueHandle req merchantId = do
   unless (isJust req.status || isJust req.assignee) $
     throwError $ InvalidRequest "Empty request, no fields to update."
   issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
@@ -223,7 +224,8 @@ issueUpdate merchantShortId opCity issueReportId issueHandle req = do
               issueReportId,
               authorId = cast req.userId,
               comment = "Assignee Updated : " <> assignee,
-              createdAt = now
+              createdAt = now,
+              merchantId
             }
 
 issueAddComment ::
@@ -235,8 +237,9 @@ issueAddComment ::
   Id DIR.IssueReport ->
   ServiceHandle m ->
   Common.IssueAddCommentByUserReq ->
+  Id Merchant ->
   m APISuccess
-issueAddComment merchantShortId opCity issueReportId issueHandle req = do
+issueAddComment merchantShortId opCity issueReportId issueHandle req merchantId = do
   issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
   _ <- QC.create =<< mkComment
@@ -251,7 +254,8 @@ issueAddComment merchantShortId opCity issueReportId issueHandle req = do
             issueReportId,
             comment = req.comment,
             authorId = cast req.userId,
-            createdAt = now
+            createdAt = now,
+            merchantId
           }
 
 issueFetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m r) => ShortId Merchant -> Text -> m Text

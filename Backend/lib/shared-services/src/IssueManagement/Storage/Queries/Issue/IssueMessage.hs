@@ -65,7 +65,8 @@ instance FromTType' BeamIM.IssueMessage IssueMessage where
             optionId = Id <$> optionId,
             message = message,
             priority = priority,
-            label = label
+            label = label,
+            merchantId = Id merchantId
           }
 
 instance ToTType' BeamIM.IssueMessage IssueMessage where
@@ -76,5 +77,6 @@ instance ToTType' BeamIM.IssueMessage IssueMessage where
         BeamIM.optionId = getId <$> optionId,
         BeamIM.message = message,
         BeamIM.priority = priority,
-        label = label
+        label = label,
+        BeamIM.merchantId = getId merchantId
       }

@@ -31,7 +31,8 @@ instance FromTType' BeamIT.IssueTranslation IssueTranslation where
           { id = Id id,
             sentence = sentence,
             translation = translation,
-            language = language
+            language = language,
+            merchantId = Id merchantId
           }
 
 instance ToTType' BeamIT.IssueTranslation IssueTranslation where
@@ -40,5 +41,6 @@ instance ToTType' BeamIT.IssueTranslation IssueTranslation where
       { id = getId id,
         sentence = sentence,
         translation = translation,
-        language = language
+        language = language,
+        merchantId = getId merchantId
       }

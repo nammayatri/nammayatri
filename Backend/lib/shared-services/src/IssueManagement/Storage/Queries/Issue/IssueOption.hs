@@ -69,7 +69,8 @@ instance FromTType' BeamIO.IssueOption IssueOption where
             option = option,
             priority = priority,
             issueMessageId = issueMessageId,
-            label = label
+            label = label,
+            merchantId = Id merchantId
           }
 
 instance ToTType' BeamIO.IssueOption IssueOption where
@@ -80,5 +81,6 @@ instance ToTType' BeamIO.IssueOption IssueOption where
         BeamIO.option = option,
         BeamIO.priority = priority,
         BeamIO.issueMessageId = issueMessageId,
-        BeamIO.label = label
+        BeamIO.label = label,
+        BeamIO.merchantId = getId merchantId
       }

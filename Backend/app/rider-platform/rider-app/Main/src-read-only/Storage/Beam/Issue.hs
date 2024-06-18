@@ -19,6 +19,7 @@ data IssueT f = IssueT
     customerId :: B.C f Kernel.Prelude.Text,
     description :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
     nightSafety :: B.C f Kernel.Prelude.Bool,
     reason :: B.C f Kernel.Prelude.Text,
     status :: B.C f IssueManagement.Common.IssueStatus,

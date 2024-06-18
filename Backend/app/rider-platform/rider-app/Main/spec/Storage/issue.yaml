@@ -19,6 +19,7 @@ Issue:
     nightSafety : Bool
     createdAt : UTCTime
     updatedAt : UTCTime
+    merchantId : Id Merchant
 
   excludedFields: [merchantId, merchantOperatingCityId]
 

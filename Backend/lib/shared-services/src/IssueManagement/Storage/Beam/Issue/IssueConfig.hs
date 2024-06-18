@@ -29,7 +29,8 @@ data IssueConfigT f = IssueConfigT
     onAutoMarkIssueClsMsgs :: B.C f [Text],
     onCreateIssueMsgs :: B.C f [Text],
     onIssueReopenMsgs :: B.C f [Text],
-    onKaptMarkIssueResMsgs :: B.C f [Text]
+    onKaptMarkIssueResMsgs :: B.C f [Text],
+    merchantId :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 
