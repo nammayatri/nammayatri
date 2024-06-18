@@ -89,6 +89,22 @@ elif param == "Y":
     url = "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriconsumer/android/cug/config.json"
     appName = "in.yatri.consumer"
     print(f"URL Y :::::: " + url)
+elif param == "NYP":
+    # Default URL if no match is found
+    url = "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json"
+    appName = "in.yatri.provider"
+    print(f"URL NYP :::::: " + url)
+elif param == "MYP":
+    # Default URL if no match is found
+    url = "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json"
+    appName = "in.yatri.provider"
+    print(f"URL MYP :::::: " + url)
+elif param == "YP":
+    # Default URL if no match is found
+    url = "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriprovider/android/cug/config.json"
+    appName = "in.yatri.provider"
+    print(f"URL YP :::::: " + url)
+
 
 # Define the directory to save the config files
 directory = 'configs'
@@ -110,9 +126,9 @@ response = requests.get(url)
 if response.status_code == 200:
     data = response.json()
     # Check if the specified app exists in the JSON data
-    if appName in data['live']['assets']:
+    if appName in data['new']['assets']:
         # Get the URL for the configuration file
-        config_url = data['live']['assets'][appName].get('configuration')
+        config_url = data['new']['assets'][appName].get('configuration')
         
         # If the URL exists, download the configuration file
         if config_url:
@@ -143,9 +159,9 @@ if response.status_code == 200:
             sys.exit(1)
     
     # Check if the specified package exists in the JSON data
-    if appName in data['live']['package']:
+    if appName in data['new']['package']:
         # Get the URL for the package file
-        package_url = data['live']['package'].get(appName)
+        package_url = data['new']['package'].get(appName)
         
         # If the URL exists, download the package file
         if package_url:

@@ -1,4 +1,4 @@
-name: Release (Production - Customer)
+name: Release (Production - Driver)
 
 on:
   push:
@@ -7,32 +7,32 @@ on:
 
 jobs:
   deploy:
-    if: "contains(github.event.head_commit.message, '[RELEASE-APK]')"
+    if: "contains(github.event.head_commit.message, '[RELEASE-APK-DRIVER]')"
     runs-on: ubuntu-latest
     strategy:
       matrix:
         variant:
-          - name: NammaYatri
-            keystore: ANDROID_KEYSTORE_FILE
-            fastlane_cm: NY
-            key_alias: KEYSTORE_KEY_ALIAS
-            local_properties: LOCAL_PROPERTIES 
-            config_path: app/src/user/nammaYatri/assets/juspay
-            config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriconsumer/android/cug/config.json'
+          - name: NammaYatriPartner
+            keystore: ANDROID_KEYSTORE_FILE_NYP
+            fastlane_cm: NYP
+            key_alias: KEYSTORE_KEY_ALIAS_NYP
+            local_properties: LOCAL_PROPERTIES_NYP
+            config_path: app/src/driver/nammaYatriPartner/assets/juspay
+            config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json'
           - name: ManaYatri
-            keystore: ANDROID_KEYSTORE_FILE_MY 
-            fastlane_cm: MY
-            key_alias: KEYSTORE_KEY_ALIAS_MY
-            local_properties: LOCAL_PROPERTIES_MY 
-            config_path: app/src/user/manaYatri/assets/juspay
-            config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriconsumer/android/cug/config.json'
+            keystore: ANDROID_KEYSTORE_FILE_MYP
+            fastlane_cm: MYP
+            key_alias: KEYSTORE_KEY_ALIAS_MYP
+            local_properties: LOCAL_PROPERTIES_MYP
+            config_path: app/src/driver/manaYatriPartner/assets/juspay
+            config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json'
           - name: Yatri
-            keystore: ANDROID_KEYSTORE_FILE_Y 
-            fastlane_cm: Y
-            key_alias: KEYSTORE_KEY_ALIAS_Y
-            local_properties: LOCAL_PROPERTIES_Y 
-            config_path: app/src/user/yatri/assets/juspay
-            config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriconsumer/android/cug/config.json'
+            keystore: ANDROID_KEYSTORE_FILE_YP
+            fastlane_cm: YP
+            key_alias: KEYSTORE_KEY_ALIAS_YP
+            local_properties: LOCAL_PROPERTIES_YP
+            config_path: app/src/driver/yatriPartner/assets/juspay
+            config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriprovider/android/cug/config.json'
           # Add more variants as needed
     defaults:
       run:
@@ -151,7 +151,7 @@ jobs:
       - name: Increment Version for the app
         run: |
           git stash
-          python updateLocalVersion.py customer
+          python updateLocalVersion.py driver
       
       - name: Create Pull Request
         id: create_pr
