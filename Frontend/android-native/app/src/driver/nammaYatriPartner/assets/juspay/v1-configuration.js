@@ -715,6 +715,9 @@ window.getMerchantConfig = function () {
         "mapImage" : "ny_ic_kochi_map",
         "cityCode" : "std:0484",
         "showSubscriptions" : true,
+        "enableAdvancedBooking": false,
+        "advancedRidePopUpYoutubeLink": "",
+        "callDriverInfoPost": false, 
         "cityLat" : 9.931233,
         "cityLong" : 76.267303,
         "supportNumber" : "",
@@ -743,6 +746,7 @@ window.getMerchantConfig = function () {
       },
       "waitingCharges" : 1.50,
       "waitingChargesConfig" : defWaitingChargesConfig,
+      "rateCardConfig": defRateCardConfig,
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_black"
