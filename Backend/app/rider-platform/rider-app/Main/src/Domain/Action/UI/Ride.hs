@@ -230,6 +230,8 @@ editLocation rideId (_, merchantId) req = do
 
   let bookingId = ride.bookingId
   booking <- B.runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
+  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
+  when (not isValueAddNP) $ throwError (InvalidRequest "Edit location is not supported for non value add NP")
   case (req.origin, req.destination) of
     (Just pickup, _) -> do
       when (ride.status /= SRide.NEW) do
@@ -359,6 +361,7 @@ buildbookingUpdateRequest booking = do
         oldEstimatedFare = booking.estimatedFare.amount,
         oldEstimatedDistance = distanceToHighPrecMeters <$> booking.estimatedDistance,
         totalDistance = Nothing,
+        errorObj = Nothing,
         travelledDistance = Nothing,
         distanceUnit = booking.distanceUnit
       }

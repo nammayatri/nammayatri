@@ -42,6 +42,11 @@ data OnUpdateBuildReq
   | EditDestinationUpdate DEditDestinationUpdateReq
   | TollCrossedBuildReq DTollCrossedBuildReq
 
+data DErrorObject = DErrorObject
+  { errorCode :: Text,
+    errorMessage :: Text
+  }
+
 newtype DStopArrivedBuildReq = DStopArrivedBuildReq
   { bookingDetails :: BookingDetails
   }

@@ -31,6 +31,18 @@ findById ::
   (Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest))
 findById id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
+updateErrorObjById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.BookingUpdateRequest.ErrorObj -> Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m ())
+updateErrorObjById errorObj id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.errorCode ((.errorCode) <$> errorObj),
+      Se.Set Beam.errorMessage ((.errorMessage) <$> errorObj),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateMultipleById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m ())
@@ -66,6 +78,8 @@ updateByPrimaryKey (Domain.Types.BookingUpdateRequest.BookingUpdateRequest {..})
       Se.Set Beam.currentPointLat currentPointLat,
       Se.Set Beam.currentPointLon currentPointLon,
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
+      Se.Set Beam.errorCode ((.errorCode) <$> errorObj),
+      Se.Set Beam.errorMessage ((.errorMessage) <$> errorObj),
       Se.Set Beam.estimatedDistance estimatedDistance,
       Se.Set Beam.estimatedFare estimatedFare,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -89,6 +103,7 @@ instance FromTType' Beam.BookingUpdateRequest Domain.Types.BookingUpdateRequest.
             currentPointLat = currentPointLat,
             currentPointLon = currentPointLon,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
+            errorObj = Domain.Types.BookingUpdateRequest.ErrorObj <$> errorCode <*> errorMessage,
             estimatedDistance = estimatedDistance,
             estimatedFare = estimatedFare,
             id = Kernel.Types.Id.Id id,
@@ -110,6 +125,8 @@ instance ToTType' Beam.BookingUpdateRequest Domain.Types.BookingUpdateRequest.Bo
         Beam.currentPointLat = currentPointLat,
         Beam.currentPointLon = currentPointLon,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
+        Beam.errorCode = (.errorCode) <$> errorObj,
+        Beam.errorMessage = (.errorMessage) <$> errorObj,
         Beam.estimatedDistance = estimatedDistance,
         Beam.estimatedFare = estimatedFare,
         Beam.id = Kernel.Types.Id.getId id,
