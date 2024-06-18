@@ -34,6 +34,11 @@ RiderDriverCorrelation:
       where:
         and: [riderDetailId, favourite]
 
+    checkRiderFavDriver:
+      kvFunction: findOneWithKV
+      where:
+        and: [riderDetailId, driverId, favourite]
+
     updateFavouriteDriverForRider:
       kvFunction: updateOneWithKV
       params: [favourite, updatedAt]

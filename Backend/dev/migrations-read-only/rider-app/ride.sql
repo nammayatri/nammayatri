@@ -120,3 +120,19 @@ ALTER TABLE atlas_app.ride ADD COLUMN cancellation_fee_if_cancelled double preci
 
 ALTER TABLE atlas_app.ride ADD COLUMN driver_alternate_number_hash bytea ;
 ALTER TABLE atlas_app.ride ADD COLUMN driver_alternate_number_encrypted text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN is_already_fav boolean ;
+ALTER TABLE atlas_app.ride ADD COLUMN fav_count integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ALTER COLUMN is_already_fav SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ALTER COLUMN is_already_fav DROP NOT NULL;

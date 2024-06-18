@@ -37,6 +37,9 @@ data BookingAPIEntity = BookingAPIEntity
     ticketCreatedAt :: Maybe UTCTime,
     updatedAt :: UTCTime,
     createdAt :: UTCTime
+    -- ,
+    -- isAlreadyFav :: Bool,
+    -- favCount :: Maybe Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 

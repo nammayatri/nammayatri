@@ -79,7 +79,9 @@ data RideAssignedInfo = RideAssignedInfo
     vehicleNumber :: Text,
     vehicleColor :: Maybe Text,
     vehicleModel :: Text,
-    fareParams :: Maybe [DCommon.DFareBreakup]
+    fareParams :: Maybe [DCommon.DFareBreakup],
+    isAlreadyFav :: Bool,
+    favCount :: Int
   }
 
 data ValidatedOnConfirmReq
