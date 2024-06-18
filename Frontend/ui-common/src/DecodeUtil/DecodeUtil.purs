@@ -43,11 +43,15 @@ decodeForeignObject :: forall a. Decode (Record a) => Foreign -> (Record a) -> (
 decodeForeignObject object defaultObject = maybe (defaultObject) identity $ decodeForeignObjImpl object defaultObject
 
 decodeForeignObjImpl :: forall a. Decode (Record a) => Foreign -> (Record a) -> Maybe (Record a)
-decodeForeignObjImpl object defaultObject = case runExcept $ decode object of
-  Right decodedObj -> Just decodedObj
-  Left err -> case (head $ toList err) of
-    Nothing -> Just defaultObject
-    Just item -> decodeForeignObjImpl (handleForeignError item object defaultObject Nothing) defaultObject
+decodeForeignObjImpl object defaultObject = 
+  let hello = spy "This is the config" object
+      hello2 = spy "This is the config2" defaultObject
+  in
+  case runExcept $ decode object of
+    Right decodedObj -> Just decodedObj
+    Left err -> case (head $ toList err) of
+      Nothing -> Just defaultObject
+      Just item -> decodeForeignObjImpl (handleForeignError item object defaultObject Nothing) defaultObject
 
 handleForeignError :: forall a b. Decode (Record a) => ForeignError -> Foreign -> (Record a) -> Maybe String -> Foreign
 handleForeignError error object defaultObject mbKey = case error of

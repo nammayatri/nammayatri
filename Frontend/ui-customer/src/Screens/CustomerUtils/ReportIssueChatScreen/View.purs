@@ -86,13 +86,18 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ReportIssueChatScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  screenAnimation
+  relativeLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , onBackPressed push $ const BackPressed
+  , afterRender push $ const AfterRender
+  , padding $ PaddingTop EHC.safeMarginTop 
+  , background Color.white900
+  , onClick push $ const NoAction
+  ][ screenAnimation
     $ frameLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
-        , onBackPressed push $ const BackPressed
-        , afterRender push $ const AfterRender
-        , padding $ PaddingTop EHC.safeMarginTop 
         ]
         ( [ linearLayout
               [ height MATCH_PARENT
@@ -136,6 +141,7 @@ view push state =
           ]
             <> if state.props.showViewImageModel then [ viewImageModel state push ] else []
         )
+  ]
 
 -------------------------------------------------- headerLayout --------------------------
 headerLayout :: ReportIssueChatScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w

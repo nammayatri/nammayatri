@@ -86,41 +86,48 @@ view
   -> ST.HelpAndSupportScreenState
   -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation $
   relativeLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , onBackPressed push $ const BackPressed
-    , afterRender push (const AfterRender)
-    , background Color.white900
-    ]([linearLayout
-     [height MATCH_PARENT
-     , width MATCH_PARENT
-     , orientation VERTICAL
-     , visibility $ boolToVisibility $ state.data.issueListType == ST.HELP_AND_SUPPORT_SCREEN_MODAL
-     ]
-      [ headerLayout state push
-        , scrollView
-          [ height MATCH_PARENT
-          , width MATCH_PARENT
-          , scrollBarY false
-          ] [ linearLayout
-               [ height MATCH_PARENT
-               , width MATCH_PARENT
-               , orientation VERTICAL
-               ] [ testRideRequestView state push
-                 , reportAnIssueHeader state push (getString REPORT_AN_ISSUE)
-                 , recentRideDetails state push
-                 , reportAnIssueHeader state push (getString MORE_OPTIONS)
-                 , allOtherTopics state push
-               ]
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , background Color.white900
+  , onClick push $ const NoAction
+  ][  Anim.screenAnimation $
+      relativeLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , onBackPressed push $ const BackPressed
+        , afterRender push (const AfterRender)
+        , background Color.white900
+        ]([linearLayout
+        [height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , visibility $ boolToVisibility $ state.data.issueListType == ST.HELP_AND_SUPPORT_SCREEN_MODAL
+        ]
+          [ headerLayout state push
+            , scrollView
+              [ height MATCH_PARENT
+              , width MATCH_PARENT
+              , scrollBarY false
+              ] [ linearLayout
+                  [ height MATCH_PARENT
+                  , width MATCH_PARENT
+                  , orientation VERTICAL
+                  ] [ testRideRequestView state push
+                    , reportAnIssueHeader state push (getString REPORT_AN_ISSUE)
+                    , recentRideDetails state push
+                    , reportAnIssueHeader state push (getString MORE_OPTIONS)
+                    , allOtherTopics state push
+                  ]
+              ]
           ]
-       ]
-   ,  if (state.data.issueListType /= ST.HELP_AND_SUPPORT_SCREEN_MODAL) then issueListModal push state else dummyTextView
-   , if state.props.enableDummyPopup then testRideConfirmation push state else linearLayout[][]
-   ])
+      ,  if (state.data.issueListType /= ST.HELP_AND_SUPPORT_SCREEN_MODAL) then issueListModal push state else dummyTextView
+      , if state.props.enableDummyPopup then testRideConfirmation push state else linearLayout[][]
+      ])
+  ]
 
+  
 
 
 -------------------------------------------------- headerLayout --------------------------

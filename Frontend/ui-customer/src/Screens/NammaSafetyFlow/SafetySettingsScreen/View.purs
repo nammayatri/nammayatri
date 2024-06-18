@@ -106,13 +106,13 @@ checkAndStatus push state = do
 
 view :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  screenAnimation
-    $ relativeLayout
+        relativeLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , onBackPressed push $ const BackPressed
+        , onClick push $ const NoAction
         ]
-        [ linearLayout
+        [   screenAnimation $ linearLayout
             [ height MATCH_PARENT
             , width MATCH_PARENT
             , orientation VERTICAL
@@ -574,7 +574,7 @@ toggleSwitchView isActive visibility' action push =
     , accessibilityHint $ if isActive then "Toggle Button Enabled" else "toggle button disabled"
     ]
     [ imageView
-        [ imageUrl if isActive then "ny_ic_switch_active" else "ny_ic_switch_inactive"
+        [ imageWithFallback $ fetchImage FF_ASSET $ if isActive then "ny_ic_switch_active" else "ny_ic_switch_inactive"
         , width $ V 40
         , height $ V 24
         ]

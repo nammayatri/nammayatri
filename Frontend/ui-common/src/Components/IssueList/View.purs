@@ -16,7 +16,7 @@ module Components.IssueList.View where
 
 import Components.IssueView as IssueView
 import Prelude (Unit, const, map, ($), (/), (==), (<>), (<<<), (<))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, gravity, height, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, scrollView, onBackPressed, afterRender, imageWithFallback, rippleColor, cornerRadius)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, gravity, height, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, scrollView, onBackPressed, afterRender, imageWithFallback, rippleColor, cornerRadius, relativeLayout)
 import Effect (Effect)
 import Styles.Colors as Color
 import Font.Style as FontStyle
@@ -30,18 +30,24 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 view :: forall w. (Action -> Effect Unit) -> IssueListFlowState -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation
-    $ linearLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
-        , orientation VERTICAL
-        , afterRender push (const AfterRender)
-        , background $ Color.white900
-        ]
-        [ headerLayout state push
-        , issueDetailView push state
-        ]
+  linearLayout
+  [ width $ MATCH_PARENT
+  , height $ MATCH_PARENT
+  , background Color.white900
+  , onClick push $ const NoAction
+  , afterRender push (const AfterRender)
+  ][  Anim.screenAnimation
+      $ linearLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
+          , orientation VERTICAL
+          , background $ Color.white900
+          ]
+          [ headerLayout state push
+          , issueDetailView push state
+          ]
+  ]
 
 headerLayout :: IssueListFlowState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 headerLayout state push =

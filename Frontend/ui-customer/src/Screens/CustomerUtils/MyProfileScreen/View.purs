@@ -84,6 +84,13 @@ screen initialState =
 
 view :: forall w . (Action -> Effect Unit) -> ST.MyProfileScreenState -> PrestoDOM (Effect Unit) w
 view push state =
+  relativeLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.white900
+  , onBackPressed push (const BackPressed state)
+  , onClick push $ const NoAction
+  ][
     Anim.screenAnimation $
       frameLayout
       ([ height MATCH_PARENT
@@ -96,6 +103,7 @@ view push state =
             , width MATCH_PARENT
             , orientation VERTICAL
             , onBackPressed push (const BackPressed state)
+            , onClick push $ const NoAction
             , afterRender push (const AfterRender)
             , padding (PaddingBottom (EHC.safeMarginBottom))
             , margin $ MarginBottom if state.props.updateProfile then 16 else 0
@@ -119,6 +127,7 @@ view push state =
               , gravity BOTTOM
               ][  PopUpModal.view (push <<< AccessibilityPopUpAC) (CommonComponentConfig.accessibilityPopUpConfig state.data.disabilityOptions.selectedDisability state.data.config.purpleRideConfig)] ]
               else [])
+  ]
 
 updateButtonView :: forall w. ST.MyProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 updateButtonView state push = 

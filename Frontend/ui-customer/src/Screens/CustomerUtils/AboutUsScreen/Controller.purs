@@ -42,23 +42,20 @@ instance loggableAction :: Loggable Action where
       GenericHeaderController.SuffixImgOnClick -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "generic_header_action" "forward_icon"
     TermsAndConditions -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "in_screen" "t_&_c"
     PrivacyPolicy -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "in_screen" "privacy_policy"
+    NoAction -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "in_screen" "no_action"
 
 data Action = GenericHeaderActionController GenericHeaderController.Action
             | BackPressed
             | TermsAndConditions
             | AfterRender
             | PrivacyPolicy
+            | NoAction
 
 data ScreenOutput = GoToHomeScreen
 eval :: Action -> AboutUsScreenState -> Eval Action ScreenOutput AboutUsScreenState
 
 eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
 
-eval BackPressed state = 
-  if isParentView FunctionCall 
-    then do 
-      void $ pure $ emitTerminateApp Nothing true
-      continue state
-    else exit $ GoToHomeScreen
+eval BackPressed state = exit $ GoToHomeScreen
 
 eval _ state = update state

@@ -59,7 +59,7 @@ import Data.Function.Uncurried (runFn2)
 import Locale.Utils
 import Screens.HelpAndSupportScreen.Transformer
 import Screens.HelpAndSupportScreen.ScreenData (HelpAndSupportScreenState)
-
+import Debug(spy)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -170,8 +170,8 @@ instance loggableAction :: Loggable Action where
           IssueViewController.CallSupportCenter -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "CallSupportCenter"
         IssueListController.BackPressed -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "back_press"
         IssueListController.AfterRender -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "screen" "after_render"
-
-      -- _ -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "on_click_done"
+        IssueListController.NoAction -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "screen" "no_action"
+      _ -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "on_click_done"
 
 data Action = BackPressed Boolean
             | SourceToDestinationActionController SourceToDestination.Action
@@ -199,6 +199,7 @@ data Action = BackPressed Boolean
             | SelectRide CategoryListType
             | OpenChat CategoryListType
             | IssueScreenModal IssueList.Action
+            | NoAction
 
 data ScreenOutput = GoBack HelpAndSupportScreenState
                   | GoToSupportScreen String HelpAndSupportScreenState
@@ -215,23 +216,39 @@ data ScreenOutput = GoBack HelpAndSupportScreenState
 eval :: Action -> HelpAndSupportScreenState -> Eval Action ScreenOutput HelpAndSupportScreenState
 
 eval (BackPressed _ ) state = 
-  if state.data.issueListType == REPORTED_ISSUES_MODAL || state.data.issueListType == RESOLVED_ISSUES_MODAL then continue state {data {issueListType = HELP_AND_SUPPORT_SCREEN_MODAL}}
-  else if state.props.isCallConfirmation then continue state{props{isCallConfirmation = false}}
-  else if state.data.accountStatus == CONFIRM_REQ then continue state{data{accountStatus = ACTIVE}}
-  else if state.data.accountStatus == DEL_REQUESTED then updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome state
-  else if state.props.showDeleteAccountView then continue state{props {showDeleteAccountView = false}}
-  else 
+  let hell = spy "This is the backpressed state" "in help and support section"
+  in
+  if state.data.issueListType == REPORTED_ISSUES_MODAL || state.data.issueListType == RESOLVED_ISSUES_MODAL then do
+    let hello = spy "I am here" "inside  backpressed" 
+    continueWithCmd state {data {issueListType = HELP_AND_SUPPORT_SCREEN_MODAL}} [do pure NoAction]
+  else if state.props.isCallConfirmation then do
+    let hello = spy "I am here" "inside  second backpressed" 
+    continue state{props{isCallConfirmation = false}}
+  else if state.data.accountStatus == CONFIRM_REQ then do
+    let hello = spy "I am here" "inside  thrid backpressed" 
+    continue state{data{accountStatus = ACTIVE}}
+  else if state.data.accountStatus == DEL_REQUESTED then do
+    let hello = spy "I am here" "inside  fourth backpressed" 
+    updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome state
+  else if state.props.showDeleteAccountView then do
+    let hello = spy "I am here" "inside fifth backpressed" 
+    continue state{props {showDeleteAccountView = false}}
+  else do
+    let hello = spy "I am here" "inside sixth backpressed" 
     if isParentView FunctionCall 
       then do 
+        let hello = spy "I am here" "inside seventh backpressed" 
         void $ pure $ emitTerminateApp Nothing true
         continue state
-      else exit $ GoBack state
+      else do
+        let hello = spy "I am here" "inside eighth backpressed"
+        exit $ GoBack state
 
 eval ContactUs state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_help_and_support_email"
   exit $ GoToSupportScreen state.data.bookingId state
 
-eval (IssueScreenModal (IssueListController.IssueViewAction (IssueViewController.IssueClick selectedIssue))) state = exit $ GoToOldChatScreen selectedIssue state
+eval (IssueScreenModal (IssueListController.IssueViewAction (IssueViewController.IssueClick selectedIssue))) state = continue state {data {issueListType = HELP_AND_SUPPORT_SCREEN_MODAL}}
 eval (IssueScreenModal (IssueListController.BackPressed)) state = exit $ GoToHelpAndSupportScreen state {data {issueListType = HELP_AND_SUPPORT_SCREEN_MODAL}}
 
 eval (SelectRide selectedCategory) state = exit $ GoToRideSelectionScreen selectedCategory state

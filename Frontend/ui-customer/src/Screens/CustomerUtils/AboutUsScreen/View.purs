@@ -59,6 +59,7 @@ view push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
+    , onClick push $ const NoAction
     , onBackPressed push (const BackPressed) 
     , background Color.white900
     , padding if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom) else (Padding 0 0 0 10)

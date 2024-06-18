@@ -55,6 +55,7 @@ import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState, FlowBT)
 import Services.FlowCache as FlowCache
 import Engineering.Helpers.BackTrack
+import Debug(spy)
 
 screen :: ST.SavedLocationScreenState -> GlobalState -> Screen Action ST.SavedLocationScreenState ScreenOutput
 screen initialState st =
@@ -67,72 +68,87 @@ screen initialState st =
         pure $ pure unit
           )
   ]
-  , eval
+ , eval:
+      \action state -> do
+        let
+          _ = spy "SavedLocationScreen action " action
+        let
+          _ = spy "SavedLocationScreen state " state
+        eval action state
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.SavedLocationScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation $ relativeLayout
+  linearLayout
   [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , background Color.white900
-  , afterRender (\action -> do
-                    _ <- push action
-                    pure unit
-                    ) (const AfterRender)
-  , orientation VERTICAL
-  , padding $ Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 24 else EHC.safeMarginBottom)
-  , onBackPressed push $ const BackPressed state.props.showDeleteLocationModel
-  ]([  linearLayout
-      [ height MATCH_PARENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , accessibility if (state.props.showDeleteLocationModel) then DISABLE_DESCENDANT else DISABLE 
-      ][GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-    , if (not state.data.config.nyBrandingVisibility) then 
-        linearLayout
-        [ height $ V 1
+    , width MATCH_PARENT
+    , background Color.white900
+    , afterRender (\action -> do
+                      _ <- push action
+                      pure unit
+                      ) (const AfterRender)
+    , orientation VERTICAL
+    , padding $ Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 24 else EHC.safeMarginBottom)
+    , onBackPressed push $ const BackPressed state.props.showDeleteLocationModel
+  ][ Anim.screenAnimation $ relativeLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , background Color.white900
+    , orientation VERTICAL
+    , onClick push $ const NoAction
+    ]([  linearLayout
+        [ height MATCH_PARENT
         , width MATCH_PARENT
-        , background Color.greySmoke
-        ][]
-      else
-        linearLayout[][]
-    , frameLayout
-      [ height MATCH_PARENT
-      , width MATCH_PARENT
-      ][  relativeLayout
-          [ height MATCH_PARENT
+        , orientation VERTICAL
+        , onClick push $ const NoAction
+        , accessibility if (state.props.showDeleteLocationModel) then DISABLE_DESCENDANT else DISABLE 
+        ][GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+      , if (not state.data.config.nyBrandingVisibility) then 
+          linearLayout
+          [ height $ V 1
           , width MATCH_PARENT
-          , orientation VERTICAL
-          ][  linearLayout
-              [ height MATCH_PARENT
-              , width MATCH_PARENT
-              , orientation VERTICAL
-              ][ savedLocationsView push state
-                ]
-            , linearLayout
-              [ height WRAP_CONTENT
-              , width MATCH_PARENT
-              , orientation HORIZONTAL
-              , background Color.white900
-              , alignParentBottom "true,-1"
-              , visibility if (DA.length state.data.savedLocations )/= 0 && state.props.apiRespReceived then VISIBLE else GONE
-              ][  PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state) ]
-            ]
-        , linearLayout
-          [ height MATCH_PARENT
-          , width MATCH_PARENT
-          , visibility if (DA.length state.data.savedLocations )== 0 && state.props.apiRespReceived then VISIBLE else GONE
-          ][  ErrorModal.view (push <<< ErrorModalAC) (errorModalConfig state )]
+          , background Color.greySmoke
+          ][]
+        else
+          linearLayout[][]
+      , frameLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        ][  relativeLayout
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            ][  linearLayout
+                [ height MATCH_PARENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                ][ savedLocationsView push state
+                  ]
+              , linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , orientation HORIZONTAL
+                , background Color.white900
+                , alignParentBottom "true,-1"
+                , visibility if (DA.length state.data.savedLocations )/= 0 && state.props.apiRespReceived then VISIBLE else GONE
+                ][  PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state) ]
+              ]
+          , linearLayout
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , visibility if (DA.length state.data.savedLocations )== 0 && state.props.apiRespReceived then VISIBLE else GONE
+            ][  ErrorModal.view (push <<< ErrorModalAC) (errorModalConfig state )]
+          ]
         ]
-      ]
-      
-    ] <>  [linearLayout
-          [ width MATCH_PARENT
-          , height MATCH_PARENT
-          , background Color.lightBlack900
-          , visibility if (state.props.showDeleteLocationModel) then VISIBLE else GONE
-          ][ PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state )]])
+        
+      ] <>  [linearLayout
+            [ width MATCH_PARENT
+            , height MATCH_PARENT
+            , background Color.lightBlack900
+            , visibility if (state.props.showDeleteLocationModel) then VISIBLE else GONE
+            ][ PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state )]])
+  ]
+  
 
 savedLocationsView :: forall w.(Action -> Effect Unit) -> ST.SavedLocationScreenState -> PrestoDOM (Effect Unit) w
 savedLocationsView push state =
@@ -196,6 +212,8 @@ getSavedLocationsList :: forall action. (SavedLocationsListRes -> action) -> (ac
 getSavedLocationsList action push state = do
   void $ lift $ lift $ EHU.toggleLoader true
   (SavedLocationsListRes savedLocationResp ) <- FlowCache.updateAndFetchSavedLocations false
+  let hello = spy "This is it" "what's now1"
   void $ lift $ lift $ EHU.toggleLoader false
+  let hello = spy "This is it" "what's now"
   liftFlowBT $ push $ action ( SavedLocationsListRes savedLocationResp)
   pure unit

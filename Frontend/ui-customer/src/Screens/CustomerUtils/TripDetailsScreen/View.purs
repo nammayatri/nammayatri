@@ -61,7 +61,7 @@ screen initialState =
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
-view push state =
+view push state = 
   Anim.screenAnimation $ linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -70,20 +70,27 @@ view push state =
   , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
   , onBackPressed push $ const BackPressed
   , afterRender push $ const AfterRender
-  ][ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
-  , scrollView
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    ][ linearLayout
-      [ height WRAP_CONTENT
+  , onClick push $ const NoAction
+  ][  Anim.screenAnimation $ linearLayout
+      [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , padding $ PaddingVertical 16 16
-      , gravity CENTER_VERTICAL
-      ][tripDetailsLayout state push
-      , reportIssueView state push
+      , background Color.white900
+      ][ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+      , scrollView
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        ][ linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , padding $ PaddingVertical 16 16
+          , gravity CENTER_VERTICAL
+          ][tripDetailsLayout state push
+          , reportIssueView state push
+          ]
+        ]
       ]
-    ]
   ]
 
 providerDetails :: forall w. ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -477,6 +484,8 @@ reportIssueView state push =
 
 allTopicsView :: forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> Array CategoryListType -> PrestoDOM (Effect Unit) w
 allTopicsView state push topicList = 
+  let hello = spy "categories List" topicList
+  in
   PrestoAnim.animationSet ([] <>
     if EHC.os == "IOS" then
       [ Anim.fadeIn state.props.reportIssue 

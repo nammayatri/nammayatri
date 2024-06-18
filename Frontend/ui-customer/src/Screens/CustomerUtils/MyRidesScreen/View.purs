@@ -76,7 +76,7 @@ screen initialState listItemm =
 
 view :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.MyRidesScreenState -> PrestoDOM (Effect Unit) w
 view listItemm push state =
-  Anim.screenAnimation $ linearLayout
+  linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , background Color.white900
@@ -84,7 +84,8 @@ view listItemm push state =
   , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
   , onBackPressed push $ const BackPressed
   , afterRender push (const AfterRender)
-  ][  linearLayout
+  , onClick push $ const NoAction
+  ][  Anim.screenAnimation $ linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL

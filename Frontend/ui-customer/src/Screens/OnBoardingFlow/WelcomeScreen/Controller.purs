@@ -1,7 +1,7 @@
 module Screens.OnBoardingFlow.WelcomeScreen.Controller where
 
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import JBridge (minimizeApp, firebaseLogEvent)
+import JBridge (minimizeApp, firebaseLogEvent, backToReactNativeApp)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import Prelude (class Show, bind, pure, ($))
 import PrestoDOM (Eval, update, continue, exit)
@@ -30,8 +30,9 @@ data ScreenOutput = MobileNumberScreen
 
 eval :: Action -> WelcomeScreenState -> Eval Action ScreenOutput WelcomeScreenState
 eval BackPressed state = do 
-    _ <- pure $ minimizeApp ""
-    continue state
+    -- _ <- pure $ minimizeApp ""
+    _ <- pure $ backToReactNativeApp ""
+    exit MobileNumberScreen
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_get_started"

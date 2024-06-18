@@ -139,6 +139,7 @@ foreign import animateCamera :: Number -> Number -> Number -> String -> Effect U
 foreign import moveCameraWithoutAnimation :: Number -> Number -> Number -> String -> Effect Unit
 -- foreign import moveCamera :: Number -> Number -> Number -> Number -> Effect Unit
 foreign import minimizeApp    :: String -> Unit
+foreign import backToReactNativeApp :: String -> Unit
 foreign import toast          :: String -> Unit
 foreign import restartApp :: Unit -> Effect Unit
 -- Deprecated

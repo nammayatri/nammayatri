@@ -36,6 +36,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Mobility.Prelude (boolToVisibility)
 import PrestoDOM.Elements.Keyed as Keyed 
 import Data.Tuple (Tuple(..))
+import Debug(spy)
 
 view :: forall w. (Action -> Effect Unit) -> RecordAudioModelState -> PrestoDOM (Effect Unit) w
 view push state =

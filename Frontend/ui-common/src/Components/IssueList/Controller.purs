@@ -26,6 +26,7 @@ import Components.IssueView.Controller as IssueViewController
 
 data Action =  BackPressed 
               | AfterRender 
+              | NoAction
               | IssueViewAction IssueViewController.Action
 
 type IssueListFlowState = {

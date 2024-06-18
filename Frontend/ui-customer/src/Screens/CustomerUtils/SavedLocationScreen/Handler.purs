@@ -26,6 +26,7 @@ import Types.App (FlowBT, GlobalState(..), SAVED_LOCATION_SCREEN_OUTPUT(..))
 import ModifyScreenState (modifyScreenState)
 import Storage (setValueToLocalStore,KeyStore(..))
 import Types.App(ScreenType(..))
+import Debug (spy)
 
 savedLocationScreen :: FlowBT String SAVED_LOCATION_SCREEN_OUTPUT
 savedLocationScreen = do 
@@ -38,5 +39,7 @@ savedLocationScreen = do
     DeleteLocation tagName -> App.BackT $ App.NoBack <$> (pure $ DELETE_LOCATION tagName)
     EditLocation cardState -> App.BackT $ App.BackPoint <$> (pure $ EDIT_LOCATION cardState)
     GoBack -> do
+     let hello = spy "I am here" " okay"
      _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"
+     let hello2 = spy "I am here" " okay2"
      App.BackT $ App.NoBack <$> (pure $ GO_BACK_FROM_SAVED_LOCATION)

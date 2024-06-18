@@ -56,60 +56,65 @@ view ::
   forall w.
   (Action -> Effect Unit) -> ST.InvoiceScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation
-    $ linearLayout
-        [ height MATCH_PARENT
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , background Color.white900
+  , padding $ Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 then 24 else EHC.safeMarginBottom)
+  , onBackPressed push (const BackPressed)
+  , afterRender push (const AfterRender)
+  , onClick push $ const NoAction
+  ][Anim.screenAnimation $ linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , background Color.white900
+    ]
+    [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+    , linearLayout
+        [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , background Color.white900
-        , padding $ Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 then 24 else EHC.safeMarginBottom)
-        , onBackPressed push (const BackPressed)
-        , afterRender push (const AfterRender)
-        , onClick push $ const NoAction
+        , padding (Padding 16 20 16 0)
+        , background Color.blue600
+        , margin (MarginBottom 12)
         ]
-        [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+        [ rideDateAndTimeView state
+        , totalAmountView state
         , linearLayout
-            [ height WRAP_CONTENT
+            [ height $ V 1
             , width MATCH_PARENT
-            , orientation VERTICAL
-            , padding (Padding 16 20 16 0)
-            , background Color.blue600
-            , margin (MarginBottom 12)
-            ]
-            [ rideDateAndTimeView state
-            , totalAmountView state
-            , linearLayout
-                [ height $ V 1
-                , width MATCH_PARENT
-                , background Color.grey900
-                , margin (Margin 0 20 0 20)
-                ]
-                []
-            , amountBreakupView state
-            ]
-        , linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , orientation VERTICAL
-            ]
-            ( map
-                ( \item ->
-                    linearLayout
-                      [ height WRAP_CONTENT
-                      , width MATCH_PARENT
-                      , padding (Padding 16 6 16 6)
-                      ]
-                      [ localTextView item Color.black650 ]
-                )
-                (referenceList state)
-            )
-        , linearLayout
-            [ width MATCH_PARENT
-            , weight 1.0
+            , background Color.grey900
+            , margin (Margin 0 20 0 20)
             ]
             []
-        , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
+        , amountBreakupView state
         ]
+    , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        ]
+        ( map
+            ( \item ->
+                linearLayout
+                  [ height WRAP_CONTENT
+                  , width MATCH_PARENT
+                  , padding (Padding 16 6 16 6)
+                  ]
+                  [ localTextView item Color.black650 ]
+            )
+            (referenceList state)
+        )
+    , linearLayout
+        [ width MATCH_PARENT
+        , weight 1.0
+        ]
+        []
+    , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
+    ]
+  ]
 
 referenceList :: ST.InvoiceScreenState -> Array String
 referenceList state =

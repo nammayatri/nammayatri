@@ -88,11 +88,12 @@ screen initialState =
 
 view :: forall w . (Action -> Effect Unit) -> HelpAndSupportScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation $
  relativeLayout
  [  height MATCH_PARENT
   , width MATCH_PARENT
- ]$[linearLayout
+  , onBackPressed push $ const BackPressed state.props.isCallConfirmation
+  , background Color.white900
+ ]$[ Anim.screenAnimation $ linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL

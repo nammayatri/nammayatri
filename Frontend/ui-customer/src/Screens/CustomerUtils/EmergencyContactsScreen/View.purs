@@ -53,12 +53,17 @@ screen initialState listItemm =
 
 view :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
 view listItemm push state =
-  screenAnimation
+  relativeLayout[
+    height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.white900
+  , onBackPressed push (const BackPressed)
+  , onClick push $ const NoAction
+  ][  screenAnimation
     $ relativeLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , onBackPressed push (const BackPressed)
         , background Color.white900
         , padding if os == "IOS" then (Padding 0 safeMarginTop 0 marginBottom) else (Padding 0 0 0 0)
         , gravity CENTER
@@ -94,12 +99,14 @@ view listItemm push state =
           ]
             <> if state.props.showInfoPopUp then [ removeContactPopUpView push state ] else [ emptyTextView state ]
         )
-        where
-          marginBottom = if state.props.showContactList 
-                            then 0 
-                         else if safeMarginBottom == 0 && os == "IOS" 
-                            then 16 
-                         else safeMarginBottom
+  ]
+
+  where
+    marginBottom = if state.props.showContactList 
+                      then 0 
+                    else if safeMarginBottom == 0 && os == "IOS" 
+                      then 16 
+                    else safeMarginBottom
 
 ------------------------ EmptyTextView ---------------------------
 emptyTextView :: forall w. EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
