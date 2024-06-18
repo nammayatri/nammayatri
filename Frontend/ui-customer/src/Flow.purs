@@ -3107,9 +3107,7 @@ savedLocationFlow = do
             )
       addNewAddressScreenFlow "edit Location"
     GO_BACK_FROM_SAVED_LOCATION -> do
-      let hello = spy "This is flow " "we need to react here"
       void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
-      let hello = spy "This is flow " "we need to react here2"
       homeScreenFlow
   pure unit
 
