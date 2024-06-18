@@ -743,7 +743,7 @@ homeScreenFlow = do
 
       diffInSeconds = (INT.toNumber $ fromMaybe 0 $ head $ filter (\item -> item >= 0) $ sort $ map (\date -> EHC.compareUTCDate date.rideStartTime currTime) bookingTimeList)
 
-    famousDestinations = fetchFamousDestinations FunctionCall
+      famousDestinations = fetchFamousDestinations FunctionCall
     modifyScreenState
       $ HomeScreenStateType
           ( \homeScreen ->
@@ -870,95 +870,95 @@ homeScreenFlow = do
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = SearchLocationModel } })
               currentFlowStatus
 
-    EDIT_DESTINATION_SOFT state -> do
-      resp <- lift $ lift $ HelpersAPI.callApi $ Remote.makeEditLocationRequest state.data.driverInfoCardState.rideId state.props.destinationLat state.props.destinationLong state.data.destinationAddress
-      case resp of
-        Right (EditLocationRes editDestinationSoftResp) -> do
-          if (editDestinationSoftResp.bookingUpdateRequestId == Nothing) then do
-            void $ pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+      EDIT_DESTINATION_SOFT state -> do
+        resp <- lift $ lift $ HelpersAPI.callApi $ Remote.makeEditLocationRequest state.data.driverInfoCardState.rideId state.props.destinationLat state.props.destinationLong state.data.destinationAddress
+        case resp of
+          Right (EditLocationRes editDestinationSoftResp) -> do
+            if (editDestinationSoftResp.bookingUpdateRequestId == Nothing) then do
+              void $ pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{destination = state.data.driverInfoCardState.destination, destinationAddress = state.data.driverInfoCardState.destinationAddress}, props{destinationLat = state.data.driverInfoCardState.destinationLat, destinationLong = state.data.driverInfoCardState.destinationLng}})
+              setValueToLocalStore TRACKING_DRIVER "False"
+              checkRideStatus true
+              else do
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingEditDestinationLoc, bookingUpdateRequestId = editDestinationSoftResp.bookingUpdateRequestId}})
+          Left (err) -> do
+            void $ pure $ toast (decodeError err.response.errorMessage "errorMessage")
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{destination = state.data.driverInfoCardState.destination, destinationAddress = state.data.driverInfoCardState.destinationAddress}, props{destinationLat = state.data.driverInfoCardState.destinationLat, destinationLong = state.data.driverInfoCardState.destinationLng}})
             setValueToLocalStore TRACKING_DRIVER "False"
             checkRideStatus true
-            else do
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingEditDestinationLoc, bookingUpdateRequestId = editDestinationSoftResp.bookingUpdateRequestId}})
-        Left (err) -> do
-          void $ pure $ toast (decodeError err.response.errorMessage "errorMessage")
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{destination = state.data.driverInfoCardState.destination, destinationAddress = state.data.driverInfoCardState.destinationAddress}, props{destinationLat = state.data.driverInfoCardState.destinationLat, destinationLong = state.data.driverInfoCardState.destinationLng}})
-          setValueToLocalStore TRACKING_DRIVER "False"
-          checkRideStatus true
-      homeScreenFlow
-    
-    EDIT_DEST_BACKPRESSED ->  do
-      (GlobalState globalState) <- getState
-      let state = globalState.homeScreen
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{destination = state.data.driverInfoCardState.destination, destinationAddress = state.data.driverInfoCardState.destinationAddress}, props{destinationLat = state.data.driverInfoCardState.destinationLat, destinationLong = state.data.driverInfoCardState.destinationLng}})
-      setValueToLocalStore TRACKING_DRIVER "False"
-      checkRideStatus true
-      homeScreenFlow
-
-    EDIT_LOCATION_SELECTED item addToRecents -> do
-      void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
-      void $ lift $ lift $ toggleLoader true
-      (GlobalState newState) <- getState
-      let
-        state = newState.homeScreen
-      (GetPlaceNameResp destinationDetailResp) <- getPlaceNameResp (item.title <> ", " <> item.subTitle) state.props.destinationPlaceId state.props.destinationLat state.props.destinationLong (if state.props.isSource == Just true then dummyLocationListItemState else item)
-      let
-        (PlaceName destinationDetailResponse) = (fromMaybe HomeScreenData.dummyLocationName (destinationDetailResp !! 0))
-
-        (LatLong destinationLocation) = (destinationDetailResponse.location)
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { destinationLat = destinationLocation.lat, destinationLong = destinationLocation.lon } })
-      (GlobalState updatedState) <- getState
-      let
-        bothLocationChangedState = updatedState.homeScreen { props { hotSpot { selectedSpot = Nothing, centroidPoint = Nothing } } }
-
-      (ServiceabilityRes destServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq bothLocationChangedState.props.destinationLat bothLocationChangedState.props.destinationLong) DESTINATION
-      let
-        destServiceable = destServiceabilityResp.serviceable
-      when (addToRecents)
-        $ do
-            addLocationToRecents item bothLocationChangedState true destServiceabilityResp.serviceable
-            fetchAndModifyLocationLists bothLocationChangedState.data.savedLocations
-      (GlobalState globalState) <- getState
-      let
-        updateScreenState = globalState.homeScreen
-
-        recentList =
-          updateLocListWithDistance
-            updateScreenState.data.recentSearchs.predictionArray
-            updateScreenState.props.sourceLat
-            updateScreenState.props.sourceLong
-            true
-            state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
-      if ((not destServiceable) && (updateScreenState.props.destinationLat /= 0.0 && updateScreenState.props.destinationLat /= -0.1) && (updateScreenState.props.destinationLong /= 0.0 && bothLocationChangedState.props.destinationLong /= -0.1)) then do
-        if (getValueToLocalStore LOCAL_STAGE == "HomeScreen") then do
-          _ <- pure $ toast (getString STR.LOCATION_UNSERVICEABLE)
-          pure unit
-        else
-          pure unit
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState { props { isDestServiceable = false, isRideServiceable = false, isSource = Just false, isSrcServiceable = true }, data { recentSearchs { predictionArray = recentList } } })
         homeScreenFlow
-      else
-        modifyScreenState
-          $ HomeScreenStateType
-              ( \homeScreen ->
-                  updateScreenState
-                    { props
-                      { isRideServiceable = true
-                      , isSrcServiceable = true
-                      , isDestServiceable = true
-                      }
-                    , data
-                      { recentSearchs
-                        { predictionArray =
-                          recentList
+      
+      EDIT_DEST_BACKPRESSED ->  do
+        (GlobalState globalState) <- getState
+        let state = globalState.homeScreen
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{destination = state.data.driverInfoCardState.destination, destinationAddress = state.data.driverInfoCardState.destinationAddress}, props{destinationLat = state.data.driverInfoCardState.destinationLat, destinationLong = state.data.driverInfoCardState.destinationLng}})
+        setValueToLocalStore TRACKING_DRIVER "False"
+        checkRideStatus true
+        homeScreenFlow
+
+      EDIT_LOCATION_SELECTED item addToRecents -> do
+        void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
+        void $ lift $ lift $ toggleLoader true
+        (GlobalState newState) <- getState
+        let
+          state = newState.homeScreen
+        (GetPlaceNameResp destinationDetailResp) <- getPlaceNameResp (item.title <> ", " <> item.subTitle) state.props.destinationPlaceId state.props.destinationLat state.props.destinationLong (if state.props.isSource == Just true then dummyLocationListItemState else item)
+        let
+          (PlaceName destinationDetailResponse) = (fromMaybe HomeScreenData.dummyLocationName (destinationDetailResp !! 0))
+
+          (LatLong destinationLocation) = (destinationDetailResponse.location)
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { destinationLat = destinationLocation.lat, destinationLong = destinationLocation.lon } })
+        (GlobalState updatedState) <- getState
+        let
+          bothLocationChangedState = updatedState.homeScreen { props { hotSpot { selectedSpot = Nothing, centroidPoint = Nothing } } }
+
+        (ServiceabilityRes destServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq bothLocationChangedState.props.destinationLat bothLocationChangedState.props.destinationLong) DESTINATION
+        let
+          destServiceable = destServiceabilityResp.serviceable
+        when (addToRecents)
+          $ do
+              addLocationToRecents item bothLocationChangedState true destServiceabilityResp.serviceable
+              fetchAndModifyLocationLists bothLocationChangedState.data.savedLocations
+        (GlobalState globalState) <- getState
+        let
+          updateScreenState = globalState.homeScreen
+
+          recentList =
+            updateLocListWithDistance
+              updateScreenState.data.recentSearchs.predictionArray
+              updateScreenState.props.sourceLat
+              updateScreenState.props.sourceLong
+              true
+              state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
+        if ((not destServiceable) && (updateScreenState.props.destinationLat /= 0.0 && updateScreenState.props.destinationLat /= -0.1) && (updateScreenState.props.destinationLong /= 0.0 && bothLocationChangedState.props.destinationLong /= -0.1)) then do
+          if (getValueToLocalStore LOCAL_STAGE == "HomeScreen") then do
+            _ <- pure $ toast (getString STR.LOCATION_UNSERVICEABLE)
+            pure unit
+          else
+            pure unit
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState { props { isDestServiceable = false, isRideServiceable = false, isSource = Just false, isSrcServiceable = true }, data { recentSearchs { predictionArray = recentList } } })
+          homeScreenFlow
+        else
+          modifyScreenState
+            $ HomeScreenStateType
+                ( \homeScreen ->
+                    updateScreenState
+                      { props
+                        { isRideServiceable = true
+                        , isSrcServiceable = true
+                        , isDestServiceable = true
+                        }
+                      , data
+                        { recentSearchs
+                          { predictionArray =
+                            recentList
+                          }
                         }
                       }
-                    }
-              )
+                )
 
-      editDestinationFlow
-    EDIT_LOCATION_DEST_SELECTED -> editDestinationFlow
+        editDestinationFlow
+      EDIT_LOCATION_DEST_SELECTED -> editDestinationFlow
       LOCATION_SELECTED item addToRecents -> do
         void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- TODO : Handlde Loader in IOS Side
         void $ lift $ lift $ toggleLoader true
@@ -1174,23 +1174,23 @@ homeScreenFlow = do
                   )
         homeScreenFlow
 
-    CONFIRM_FARE state -> do
-      void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- TODO : Handlde Loader in IOS Side
-      void $ lift $ lift $ toggleLoader true
-      case state.props.bookingUpdateRequestId of
-        Just id -> do
-          resp <- lift $ lift $ HelpersAPI.callApi $ Remote.makeEditLocResultConfirmReq id
-          case resp of
-            Right (APISuccessResp resp) -> do
-              void $ pure $ toast $ "Please wait while we confirm with your driver"
-              lift $ lift $ liftFlow $ JB.showInAppNotification $ JB.inAppNotificationPayload{title = "Update Request sent to Driver", message = "Please wait for driver to accept your request.", channelId = "EditDest", showLoader = true, durationInMilliSeconds = 30000}
-            Left (err) -> do
-              void $ pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
-        Nothing -> void $ pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{destination = state.data.driverInfoCardState.destination, destinationAddress = state.data.driverInfoCardState.destinationAddress}, props{destinationLat = state.data.driverInfoCardState.destinationLat, destinationLong = state.data.driverInfoCardState.destinationLng}})
-      setValueToLocalStore TRACKING_DRIVER "False"
-      checkRideStatus true
-      homeScreenFlow
+      CONFIRM_FARE state -> do
+        void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- TODO : Handlde Loader in IOS Side
+        void $ lift $ lift $ toggleLoader true
+        case state.props.bookingUpdateRequestId of
+          Just id -> do
+            resp <- lift $ lift $ HelpersAPI.callApi $ Remote.makeEditLocResultConfirmReq id
+            case resp of
+              Right (APISuccessResp resp) -> do
+                void $ pure $ toast $ "Please wait while we confirm with your driver"
+                lift $ lift $ liftFlow $ JB.showInAppNotification $ JB.inAppNotificationPayload{title = "Update Request sent to Driver", message = "Please wait for driver to accept your request.", channelId = "EditDest", showLoader = true, durationInMilliSeconds = 30000}
+              Left (err) -> do
+                void $ pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+          Nothing -> void $ pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{destination = state.data.driverInfoCardState.destination, destinationAddress = state.data.driverInfoCardState.destinationAddress}, props{destinationLat = state.data.driverInfoCardState.destinationLat, destinationLong = state.data.driverInfoCardState.destinationLng}})
+        setValueToLocalStore TRACKING_DRIVER "False"
+        checkRideStatus true
+        homeScreenFlow
 
       GET_QUOTES state -> do
         setValueToLocalStore AUTO_SELECTING "false"
@@ -1228,26 +1228,19 @@ homeScreenFlow = do
         logStatus "setting_price" ""
         void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
         updateLocalStage SettingPrice
-        let
-          sourceSpecialTagIcon = zoneLabelIcon state.props.zoneType.sourceTag
-
-          destSpecialTagIcon = zoneLabelIcon state.props.zoneType.destinationTag
-
-          srcMarker = (normalRoute "").srcMarker
-
-          destMarker = (normalRoute "").destMarker
+        let sourceSpecialTagIcon = zoneLabelIcon state.props.zoneType.sourceTag
+            destSpecialTagIcon = zoneLabelIcon state.props.zoneType.destinationTag
+            srcMarker = (normalRoute "").srcMarker
+            destMarker = (normalRoute "").destMarker
         case state.props.routeEndPoints of
           Just points -> do
-            let
-              sourceAddress =
-                if state.props.isSpecialZone && not (DS.null state.props.defaultPickUpPoint) then
-                  state.props.defaultPickUpPoint
-                else
-                  state.data.source
-
-              sourceMarkerConfig = JB.defaultMarkerConfig { markerId = srcMarker, pointerIcon = srcMarker, primaryText = sourceAddress, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = sourceSpecialTagIcon, position { lat = points.source.lat, lng = points.source.lng } }
-
-              destMarkerConfig = JB.defaultMarkerConfig { markerId = destMarker, pointerIcon = destMarker, primaryText = points.destination.place, labelImage = destSpecialTagIcon, position { lat = points.destination.lat, lng = points.destination.lng } }
+            let sourceAddress = if state.props.isSpecialZone && not (DS.null state.props.defaultPickUpPoint)
+                                  then state.props.defaultPickUpPoint
+                                  else state.data.source
+            push <- lift $ lift $ liftFlow $ getPushFn Nothing "HomeScreen"
+            let callback = runFn2 EHC.getMarkerCallback push MarkerLabelOnClick 
+                sourceMarkerConfig = JB.defaultMarkerConfig{ markerId = srcMarker, pointerIcon = srcMarker, shortTitle = (runFn3 splitString sourceAddress "," 2), primaryText = sourceAddress, secondaryText = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, labelImage = defaultMarkerImageConfig{image = sourceSpecialTagIcon}, position{ lat = points.source.lat, lng = points.source.lng }, labelActionImage = defaultMarkerImageConfig{image = "ny_ic_chevron_right_black_2", height = markerArrowSize, width = markerArrowSize}, markerCallback = callback, labelMaxWidth = estimateLabelMaxWidth, labelMaxLines = 2, labelTextSize = 11}
+                destMarkerConfig = JB.defaultMarkerConfig{ markerId = destMarker, pointerIcon = destMarker, shortTitle = (runFn3 splitString points.destination.place "," 2), primaryText = points.destination.place, labelImage = defaultMarkerImageConfig{image = destSpecialTagIcon}, position{ lat = points.destination.lat, lng = points.destination.lng }, labelActionImage = defaultMarkerImageConfig{image = "ny_ic_chevron_right_black_2", height = markerArrowSize, width = markerArrowSize}, markerCallback = callback, labelMaxWidth = estimateLabelMaxWidth, labelMaxLines = 2, labelTextSize = 11, anchorV = 1.0}
             lift $ lift $ liftFlow $ updateMarker sourceMarkerConfig
             lift $ lift $ liftFlow $ updateMarker destMarkerConfig
           Nothing -> pure unit
@@ -2593,14 +2586,13 @@ rideSearchFlow flowType = do
                 srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker, shortTitle = (runFn3 splitString finalState.data.source "," 2), primaryText = finalState.data.source, labelActionImage = defaultMarkerImageConfig{image = "ny_ic_chevron_right_black_2", height = markerArrowSize, width = markerArrowSize}, labelMaxWidth = estimateLabelMaxWidth, markerCallback = callback, labelMaxLines = 2, labelTextSize = 11}
 
                 destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, shortTitle = (runFn3 splitString finalState.data.destination "," 2), primaryText = finalState.data.destination, labelActionImage = defaultMarkerImageConfig{image = "ny_ic_chevron_right_black_2", height = markerArrowSize, width = markerArrowSize}, labelMaxWidth = estimateLabelMaxWidth, markerCallback = callback, labelMaxLines = 2, labelTextSize = 11}
-            routeResponse <- Remote.drawMapRoute finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong srcMarkerConfig destMarkerConfig "NORMAL" rideSearchRes.routeInfo "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig)
-            case rideSearchRes.routeInfo of
-              Just (Route response) -> do
-                let
-                  distance = if response.distance < 1000 then toStringJSON (response.distance) <> " m" else parseFloat (INT.toNumber (response.distance) / 1000.0) 2 <> " km"
+              routeResponse <- Remote.drawMapRoute finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong srcMarkerConfig destMarkerConfig "NORMAL" rideSearchRes.routeInfo "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig)
+              case rideSearchRes.routeInfo of
+                Just (Route response) -> do
+                  let
+                    distance = if response.distance < 1000 then toStringJSON (response.distance) <> " m" else parseFloat (INT.toNumber (response.distance) / 1000.0) 2 <> " km"
 
                     duration = (show (response.duration / 60)) <> " min"
-
                     Snapped points = response.points
                   case head points, last points of
                     Just (LatLong source), Just (LatLong dest) -> do
