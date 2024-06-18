@@ -37,4 +37,14 @@ cacheCoinConfig eventType merchantOpCityId coinsConfig = do
   Hedis.setExp (makeCoinConfigKey eventType merchantOpCityId) coinsConfig expTime
 
 makeCoinConfigKey :: DCT.DriverCoinsEventType -> Id DMOC.MerchantOperatingCity -> Text
-makeCoinConfigKey eventType merchantOpCityId = "CQ:CC:MOCId-" <> merchantOpCityId.getId <> "-EventType-" <> show eventType
+makeCoinConfigKey eventType merchantOpCityId =
+  "CQ:CC:MOCId-" <> merchantOpCityId.getId <> "-EventType-"
+    <> case eventType of
+      DCT.Rating {} -> "Rating"
+      DCT.EndRide {} -> "EndRide"
+      DCT.Cancellation {} -> "Cancellation"
+      DCT.DriverToCustomerReferral {} -> "DriverToCustomerReferral"
+      DCT.CustomerToDriverReferral {} -> "CustomerToDriverReferral"
+      DCT.LeaderBoard -> "LeaderBoard"
+      DCT.Training -> "Training"
+      DCT.BulkUploadEvent -> "BulkUploadEvent"
