@@ -1382,7 +1382,8 @@ eval (RideCompletedAC RideCompletedCard.HelpAndSupportAC) state = exit $ GoToHel
 
 eval (RideCompletedAC RideCompletedCard.GoToSOS) state = exit $ GoToNammaSafety state true false 
 
-eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = 
+eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = do
+  void $ pure $ toggleBtnLoader "SkipButton" false
   if state.data.rideCompletedData.issueReportData.respondedValidIssues  && state.data.rideCompletedData.issueReportData.showIssueBanners then do
     let 
       negativeResp = filter (\issueResp -> issueResp.selectedYes == Just false) state.data.rideCompletedData.issueReportData.customerResponse
@@ -1409,8 +1410,7 @@ eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButt
         }
       }
     
-    if priorityIssue == CTP.NoIssue then do
-      void $ pure $ toggleBtnLoader "" false
+    if priorityIssue == CTP.NoIssue then
       continue ratingUpdatedState 
     else 
       exit $ GoToIssueReportChatScreenWithIssue ratingUpdatedState priorityIssue
