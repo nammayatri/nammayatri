@@ -36,6 +36,7 @@ import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (encrypt)
+import Kernel.External.Encryption
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
@@ -282,6 +283,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
   shortId <- generateShortId
   now <- getCurrentTime
   let fromLocation = booking.fromLocation
+      driverNumber = driverMobileNumber
       toLocation = case booking.bookingDetails of
         DB.OneWayDetails details -> Just details.toLocation
         DB.RentalDetails _ -> Nothing
@@ -289,6 +291,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
         DB.OneWaySpecialZoneDetails details -> Just details.toLocation
         DB.InterCityDetails details -> Just details.toLocation
         DB.AmbulanceDetails details -> Just details.toLocation
+  mobileNumberHash <- getDbHash driverNumber
   let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditLocationAttemptsThreshold) mbMerchant
   let allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
   driverPhoneNumber' <- encrypt driverMobileNumber

@@ -62,6 +62,7 @@ data RideE e = Ride
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     onlinePayment :: Kernel.Prelude.Bool,
+    mobileNumberHash :: Kernel.External.Encryption.DbHash,
     otp :: Kernel.Prelude.Text,
     paymentDone :: Kernel.Prelude.Bool,
     rideEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
