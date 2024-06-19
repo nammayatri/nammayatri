@@ -398,6 +398,7 @@ type RentalRowConfig = {
   , totalFare :: String
   , rideDetailsTitle :: String
   , fareUpdateTitle :: String
+  , surcharges :: String
 }
 
 dummyRentalRowConfig :: RentalRowConfig
@@ -412,6 +413,7 @@ dummyRentalRowConfig = {
   , totalFare : ""
   , rideDetailsTitle : ""
   , fareUpdateTitle : ""
+  , surcharges : ""
 }
 
 dummyRentalBookingConfig :: RentalBookingConfig

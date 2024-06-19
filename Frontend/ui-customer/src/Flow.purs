@@ -5365,72 +5365,8 @@ rentalScreenFlow = do
   (GlobalState currentState) <- getState
   action <- lift $ lift $ runScreen $ UI.rentalScreen currentState.rentalScreen
   case action of
-    RentalScreenController.DoRentalSearch state -> do
-      let
-        dropLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.dropLoc
-
-        pickupLoc = state.data.pickUpLoc
-      (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq (fromMaybe 0.0 pickupLoc.lat) (fromMaybe 0.0 pickupLoc.lon)) ORIGIN
-      -- if (isJust sourceServiceabilityResp.specialLocation) then do
-      --   modifyScreenState $ RentalScreenStateType (\_ -> state {data {currentStage = RENTAL_SELECT_PACKAGE}, props{showPrimaryButton = true, showPopUpModal = true}})
-      --   rentalScreenFlow 
-      -- else do  
-      if false && state.data.pickUpLoc.address == (getString STR.CURRENT_LOCATION) then do
-        let
-          placeLat = fromMaybe 0.0 state.data.pickUpLoc.lat
-
-          placeLon = fromMaybe 0.0 state.data.pickUpLoc.lon
-
-          currTextField = SearchLocPickup
-        { pickUpPoints, locServiceable, city, geoJson, specialLocCategory } <- getServiceability placeLat placeLon currTextField
-        let
-          focussedField = show currTextField
-        if locServiceable then do
-          liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = placeLat, lon = placeLon, geoJson = geoJson, points = pickUpPoints }
-          modifyScreenState
-            $ SearchLocationScreenStateType
-                ( \slsScreen ->
-                    slsScreen
-                      { props { locUnserviceable = false, searchLocStage = ConfirmLocationStage }
-                      , data { srcLoc = Just state.data.pickUpLoc, latLonOnMap = state.data.pickUpLoc, confirmLocCategory = getZoneType specialLocCategory }
-                      }
-                )
-          searchLocationFlow
-        else do
-          modifyScreenState $ SearchLocationScreenStateType (\state -> state { props { searchLocStage = PredictionsStage, locUnserviceable = true } })
-          void $ lift $ lift $ toggleLoader false
-          searchLocationFlow
-      else do
-        void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- TODO : Handlde Loader in IOS Side
-        void $ lift $ lift $ toggleLoader true
-        srcFullAddress <- getPlaceName (fromMaybe 0.0 state.data.pickUpLoc.lat) (fromMaybe 0.0 state.data.pickUpLoc.lon) HomeScreenData.dummyLocation true
-        destFullAddress <- getPlaceName (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) HomeScreenData.dummyLocation true
-        let
-          currentTime = runFn2 EHC.getUTCAfterNSecondsImpl (EHC.getCurrentUTC "") 60 -- TODO-codex :: Delay, need to check if this is the correct way
-
-          isTimeAheadOfCurrent = unsafePerformEffect $ runEffectFn2 compareDate (state.data.startTimeUTC) currentTime
-
-          newState = if state.data.startTimeUTC == "" || not isTimeAheadOfCurrent then state { data { startTimeUTC = currentTime } } else state
-
-          address = maybe "" (\(PlaceName address) -> address.formattedAddress) srcFullAddress
-
-          destAddress = maybe "" (\(PlaceName address) -> address.formattedAddress) destFullAddress
-
-          rideDate = convertUTCtoISC newState.data.startTimeUTC "D" <> " " <> convertUTCtoISC newState.data.startTimeUTC "MMMM" <> " " <> convertUTCtoISC newState.data.startTimeUTC "YYYY"
-
-          rideTime = convertUTCtoISC newState.data.startTimeUTC "HH" <> ":" <> convertUTCtoISC newState.data.startTimeUTC "mm"
-
-          srcMarkerConfig = defaultMarkerConfig { pointerIcon = "ny_ic_auto_map" }
-
-          destMarkerConfig = defaultMarkerConfig { pointerIcon = "src_marker" }
-        (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.mkRentalSearchReq (fromMaybe 0.0 newState.data.pickUpLoc.lat) (fromMaybe 0.0 newState.data.pickUpLoc.lon) (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) (encodeAddress address [] Nothing (fromMaybe 0.0 state.data.pickUpLoc.lat) (fromMaybe 0.0 state.data.pickUpLoc.lon)) (encodeAddress destAddress [] Nothing (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon)) newState.data.startTimeUTC (newState.data.rentalBookingData.baseDistance * 1000) (newState.data.rentalBookingData.baseDuration * 60 * 60))
-        modifyScreenState $ RentalScreenStateType (\rentalScreen -> state { data { searchId = rideSearchRes.searchId } })
-        modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData { data { srcLoc = Just newState.data.pickUpLoc { address = address }, destLoc = state.data.dropLoc, route = rideSearchRes.routeInfo, rideDetails { searchId = rideSearchRes.searchId, rideDistance = state.data.rentalBookingData.baseDistance, rideDuration = state.data.rentalBookingData.baseDuration, rideScheduledDate = rideDate, rideScheduledTime = rideTime, rideScheduledTimeUTC = newState.data.startTimeUTC } }, props { searchLocStage = ChooseYourRide } })
-        void $ lift $ lift $ toggleLoader false
-        (App.BackT $ App.BackPoint <$> pure unit)
-          >>= ( \_ -> do
-                searchLocationFlow
-            )
+    RentalScreenController.DoRentalSearch state -> findRentalEstimates state
+      
     RentalScreenController.GoToHomeScreen state maybeInvalidBookingDetail -> do
       updateInvalidBookingPopUpConfig maybeInvalidBookingDetail
       -- when (isJust maybeInvalidBookingDetail) do 
@@ -5545,8 +5481,8 @@ rentalScreenFlow = do
         Left err -> do
           let _ = spy "inside (decodeError err.response.errorMessage errorCode)" (decodeError err.response.errorMessage "errorCode")
           if ((decodeError err.response.errorMessage "errorCode") == "INVALID_REQUEST" && DS.contains (Pattern "Quote expired") (decodeError err.response.errorMessage "errorMessage")) then do
-            void $ pure $ toast "Quote Expired, Please schedule a ride again"
-            modifyScreenState $ RentalScreenStateType (\_ -> updatedState { data { currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = [] } })
+            void $ pure $ toast (getString STR.QUOTES_EXPIRY_ERROR_AND_FETCH_AGAIN)
+            findRentalEstimates updatedState
             rentalScreenFlow
           else do
             void $ pure $ toast "A Ride is already scheduled. Please Choose another time."
@@ -5555,6 +5491,72 @@ rentalScreenFlow = do
       modifyScreenState $ RentalScreenStateType (\_ -> updatedState)
       rentalScreenFlow
     _ -> pure unit
+
+
+
+findRentalEstimates :: RentalScreenState -> FlowBT String Unit
+findRentalEstimates state = do
+      let
+        dropLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.dropLoc
+        pickupLoc = state.data.pickUpLoc
+      (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq (fromMaybe 0.0 pickupLoc.lat) (fromMaybe 0.0 pickupLoc.lon)) ORIGIN
+      if false && state.data.pickUpLoc.address == (getString STR.CURRENT_LOCATION) then do
+        let
+          placeLat = fromMaybe 0.0 state.data.pickUpLoc.lat
+
+          placeLon = fromMaybe 0.0 state.data.pickUpLoc.lon
+
+          currTextField = SearchLocPickup
+        { pickUpPoints, locServiceable, city, geoJson, specialLocCategory } <- getServiceability placeLat placeLon currTextField
+        let
+          focussedField = show currTextField
+        if locServiceable then do
+          liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = placeLat, lon = placeLon, geoJson = geoJson, points = pickUpPoints }
+          modifyScreenState
+            $ SearchLocationScreenStateType
+                ( \slsScreen ->
+                    slsScreen
+                      { props { locUnserviceable = false, searchLocStage = ConfirmLocationStage }
+                      , data { srcLoc = Just state.data.pickUpLoc, latLonOnMap = state.data.pickUpLoc, confirmLocCategory = getZoneType specialLocCategory }
+                      }
+                )
+          searchLocationFlow
+        else do
+          modifyScreenState $ SearchLocationScreenStateType (\state -> state { props { searchLocStage = PredictionsStage, locUnserviceable = true } })
+          void $ lift $ lift $ toggleLoader false
+          searchLocationFlow
+      else do
+        void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- TODO : Handlde Loader in IOS Side
+        void $ lift $ lift $ toggleLoader true
+        srcFullAddress <- getPlaceName (fromMaybe 0.0 state.data.pickUpLoc.lat) (fromMaybe 0.0 state.data.pickUpLoc.lon) HomeScreenData.dummyLocation true
+        destFullAddress <- getPlaceName (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) HomeScreenData.dummyLocation true
+        let
+          currentTime = runFn2 EHC.getUTCAfterNSecondsImpl (EHC.getCurrentUTC "") 60 -- TODO-codex :: Delay, need to check if this is the correct way
+
+          isTimeAheadOfCurrent = unsafePerformEffect $ runEffectFn2 compareDate (state.data.startTimeUTC) currentTime
+
+          newState = if state.data.startTimeUTC == "" || not isTimeAheadOfCurrent then state { data { startTimeUTC = currentTime } } else state
+
+          address = maybe "" (\(PlaceName address) -> address.formattedAddress) srcFullAddress
+
+          destAddress = maybe "" (\(PlaceName address) -> address.formattedAddress) destFullAddress
+
+          rideDate = convertUTCtoISC newState.data.startTimeUTC "D" <> " " <> convertUTCtoISC newState.data.startTimeUTC "MMMM" <> " " <> convertUTCtoISC newState.data.startTimeUTC "YYYY"
+
+          rideTime = convertUTCtoISC newState.data.startTimeUTC "HH" <> ":" <> convertUTCtoISC newState.data.startTimeUTC "mm"
+
+          srcMarkerConfig = defaultMarkerConfig { pointerIcon = "ny_ic_auto_map" }
+
+          destMarkerConfig = defaultMarkerConfig { pointerIcon = "src_marker" }
+        (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.mkRentalSearchReq (fromMaybe 0.0 newState.data.pickUpLoc.lat) (fromMaybe 0.0 newState.data.pickUpLoc.lon) (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) (encodeAddress address [] Nothing (fromMaybe 0.0 state.data.pickUpLoc.lat) (fromMaybe 0.0 state.data.pickUpLoc.lon)) (encodeAddress destAddress [] Nothing (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon)) newState.data.startTimeUTC (newState.data.rentalBookingData.baseDistance * 1000) (newState.data.rentalBookingData.baseDuration * 60 * 60))
+        modifyScreenState $ RentalScreenStateType (\rentalScreen -> state { data { searchId = rideSearchRes.searchId } })
+        modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData { data { srcLoc = Just newState.data.pickUpLoc { address = address }, destLoc = state.data.dropLoc, route = rideSearchRes.routeInfo, rideDetails { searchId = rideSearchRes.searchId, rideDistance = state.data.rentalBookingData.baseDistance, rideDuration = state.data.rentalBookingData.baseDuration, rideScheduledDate = rideDate, rideScheduledTime = rideTime, rideScheduledTimeUTC = newState.data.startTimeUTC } }, props { searchLocStage = ChooseYourRide } })
+        void $ lift $ lift $ toggleLoader false
+        (App.BackT $ App.BackPoint <$> pure unit)
+          >>= ( \_ -> do
+                searchLocationFlow
+            )
+
 
 enterRideSearchFLow :: FlowBT String Unit
 enterRideSearchFLow = do

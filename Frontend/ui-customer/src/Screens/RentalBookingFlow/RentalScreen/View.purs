@@ -413,7 +413,7 @@ fareBreakUpItemView push state item showSeparator =
                 , textView $ 
                   [ width WRAP_CONTENT
                   , height WRAP_CONTENT
-                  , text $ subHeading.description
+                  , textFromHtml $ subHeading.description
                   , color Color.black700
                   ] <> FontStyle.paragraphText TypoGraphy
                 ]) item.subHeadings
@@ -447,7 +447,6 @@ getDataFromDescType descriptionType state =
         AdditionalCharges -> {
           title : getString ADDITIONAL_CHARGES,
           subHeadings : [
-            { title : getString TOLL_CHARGES <> ": <b> " <> getString WILL_BE_ADDED_TO_FINAL_FARE <> " </b>", description : getString TOLL_CHARGES_DESCRIPTION},
             { title : getString PARKING_AND_OTHER_CHARGES , description : getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED},
             { title : getString NIGHT_TIME_FEES , description : getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> state.data.rentalBookingData.nightCharge}
           ]

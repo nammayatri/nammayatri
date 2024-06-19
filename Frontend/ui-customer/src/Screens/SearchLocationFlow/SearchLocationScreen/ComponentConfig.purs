@@ -449,11 +449,11 @@ rentalRateCardConfig state =
             {key : ("Base Rental Fare (incl. " <> show (state.data.rideDetails.rideDistance - extraDistance)  <> " km & " <> show state.data.rideDetails.rideDuration <> " hrs)"), val : (currency <> show (state.data.rideDetails.rideDuration * selectedQuote.fareDetails.perHourCharge))}
             ] <> 
             (if extraDistance > 0 then 
-              [{key : "Fare for additional distance (" <> show ( extraDistance) <> " kms) added in the package", val : (currency <> show (extraDistance * selectedQuote.fareDetails.plannedPerKmRate))}] 
+              [{key : "Fare for additional distance (" <> show ( extraDistance) <> " kms)", val : (currency <> show (extraDistance * selectedQuote.fareDetails.plannedPerKmRate))}] 
               else [] )
             <> 
             [ {key : "Fare for distance above " <> (show state.data.rideDetails.rideDistance) <> " kms", val : (currency <> show selectedQuote.fareDetails.perExtraKmRate <> "/km")}
-              , {key : "Time fare above " <> (show state.data.rideDetails.rideDuration) <> " hrs", val : (currency <> show selectedQuote.fareDetails.perExtraMinRate <> "/min")}
+              , {key : "Fare for usage above " <> (show state.data.rideDetails.rideDuration) <> " hrs", val : (currency <> show selectedQuote.fareDetails.perExtraMinRate <> "/min")}
             ] 
             <> 
             (case selectedQuote.fareDetails.tollCharges of
