@@ -9,6 +9,7 @@ import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.External.AadhaarVerification.Types
+import qualified Kernel.External.BackgroundVerification.Types
 import qualified Kernel.External.Call
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Notification.Types
@@ -24,6 +25,7 @@ import qualified Tools.Beam.UtilsTH
 data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   { aadhaarVerificationService :: Kernel.External.AadhaarVerification.Types.AadhaarVerificationService,
     autoComplete :: Kernel.External.Maps.Types.MapsService,
+    backgroundVerification :: Kernel.External.BackgroundVerification.Types.BackgroundVerificationService,
     createBankAccount :: Kernel.External.Payment.Types.PaymentService,
     createdAt :: Kernel.Prelude.UTCTime,
     driverBackgroundVerificationService :: Kernel.External.Verification.Types.DriverBackgroundVerificationService,

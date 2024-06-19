@@ -50,6 +50,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
         Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig
           { aadhaarVerificationService = aadhaarVerificationService,
             autoComplete = autoComplete,
+            backgroundVerification = backgroundVerification,
             createBankAccount = createBankAccount,
             createdAt = createdAt,
             driverBackgroundVerificationService = driverBackgroundVerificationService,
@@ -85,6 +86,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
     Beam.MerchantServiceUsageConfigT
       { Beam.aadhaarVerificationService = aadhaarVerificationService,
         Beam.autoComplete = autoComplete,
+        Beam.backgroundVerification = backgroundVerification,
         Beam.createBankAccount = createBankAccount,
         Beam.createdAt = createdAt,
         Beam.driverBackgroundVerificationService = driverBackgroundVerificationService,

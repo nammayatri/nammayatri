@@ -828,6 +828,7 @@ castVerificationStatus = \case
   Documents.VALID -> Common.VALID
   Documents.MANUAL_VERIFICATION_REQUIRED -> Common.MANUAL_VERIFICATION_REQUIRED
   Documents.INVALID -> Common.INVALID
+  Documents.UNAUTHORIZED -> Common.UNAUTHORIZED
 
 ---------------------------------------------------------------------
 deleteDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess

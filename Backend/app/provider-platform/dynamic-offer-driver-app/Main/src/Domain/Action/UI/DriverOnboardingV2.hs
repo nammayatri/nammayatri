@@ -11,6 +11,7 @@ import qualified Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Types.AadhaarCard
+import Domain.Types.BackgroundVerification
 import Domain.Types.Common
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DTO
@@ -32,6 +33,7 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Prelude
 import Kernel.Beam.Functions
+import qualified Kernel.External.BackgroundVerification.Interface as BackgroundVerification
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (Language (..))
@@ -56,6 +58,7 @@ import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
+import qualified Storage.Queries.BackgroundVerification as QBV
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
@@ -68,6 +71,7 @@ import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import Tools.Auth
+import qualified Tools.BackgroundVerification as BackgroundVerificationT
 import Tools.Error
 import qualified Tools.Payment as TPayment
 import Utils.Common.Cac.KeyNameConstants
@@ -367,6 +371,80 @@ postDriverRegisterSsn (mbPersonId, _, _) API.Types.UI.DriverOnboardingV2.SSNReq 
           ssn = ssn',
           verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
           rejectReason = Nothing
+        }
+
+postDriverBackgroundVerification ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+postDriverBackgroundVerification (mbPersonId, merchantId, merchantOpCityId) = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
+  driverSsn <- runInReplica $ QDriverSSN.findByDriverId personId >>= fromMaybeM (DriverSSNNotFound personId.getId)
+  merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
+  mbDriverLicense <- runInReplica $ QDL.findByDriverId personId
+  ssn <- decrypt driverSsn.ssn
+  mbBackgroundVerification <- QBV.findByDriverId personId
+  candidateId <-
+    case mbBackgroundVerification of
+      Just backgroundVerification -> return backgroundVerification.candidateId
+      Nothing -> do
+        candidate <- BackgroundVerificationT.createCandidate merchantId merchantOpCityId =<< buildCreateCandidateReq person driverInfo merchantOpCity mbDriverLicense ssn
+        return candidate.id
+  invitation <- BackgroundVerificationT.createInvitation merchantId merchantOpCityId $ buildCreateInvitationReq merchantOpCity ssn candidateId
+  QBV.upsert =<< buildBackgroundVerification personId candidateId invitation
+  return Success
+  where
+    buildBackgroundVerification personId candidateId invitation = do
+      now <- getCurrentTime
+      return $
+        BackgroundVerification
+          { candidateId = candidateId,
+            driverId = personId,
+            invitationId = invitation.id,
+            invitationUrl = invitation.invitationUrl,
+            reportId = Nothing,
+            invitationStatus = Documents.PENDING,
+            reportStatus = Documents.PENDING,
+            expiresAt = invitation.expiresAt,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOpCityId,
+            createdAt = now,
+            updatedAt = now
+          }
+
+    buildCreateCandidateReq person driverInfo merchantOpCity mbDriverLicense ssn = do
+      email <- person.email & fromMaybeM (DriverEmailNotFound person.id.getId)
+      mobileNumber <- mapM decrypt person.mobileNumber
+      mbDriverLicenseNumber <- mapM decrypt ((.licenseNumber) <$> mbDriverLicense)
+      return $
+        BackgroundVerification.CreateCandidateReq
+          { email = email,
+            ssn = ssn,
+            firstName = person.firstName,
+            middleName = Nothing,
+            lastName = person.lastName,
+            phone = mobileNumber,
+            dob = driverInfo.driverDob,
+            workLocationCountry = merchantOpCity.country,
+            workLocationState = merchantOpCity.state,
+            workLocationCity = merchantOpCity.city,
+            driverLicenseNumber = mbDriverLicenseNumber,
+            driverLicenseState = Nothing,
+            zipCode = Nothing
+          }
+
+    buildCreateInvitationReq merchantOpCity ssn candidateId =
+      BackgroundVerification.CreateInvitationReqI
+        { candidateId = candidateId,
+          ssn = ssn,
+          workLocationCountry = merchantOpCity.country,
+          workLocationState = merchantOpCity.state,
+          workLocationCity = merchantOpCity.city
         }
 
 postDriverRegisterPancard ::

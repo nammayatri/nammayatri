@@ -349,7 +349,7 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate,BackgroundVerification"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix"
   fields:
@@ -695,6 +695,42 @@ AadhaarCard:
     updateDriverImagePath:
       kvFunction: updateOneWithKV
       params: [driverImagePath]
+      where: driverId
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+BackgroundVerification:
+  tableName: background_verification
+  fields:
+    driverId: Id Person
+    candidateId: Text
+    invitationId: Text
+    invitationUrl: BaseUrl
+    reportId: Maybe Text
+    expiresAt: UTCTime
+    invitationStatus: VerificationStatus
+    reportStatus: VerificationStatus
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+  constraints:
+    driverId: PrimaryKey
+  beamType:
+    invitationUrl: Text
+  toTType:
+    invitationUrl: showBaseUrl|I
+  fromTType:
+    invitationUrl: parseBaseUrl|MI
+  queries:
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where: driverId
+    updateInvitationStatus:
+      kvFunction: updateOneWithKV
+      params: [invitationStatus]
+      where: driverId
+    updateReportStatus:
+      kvFunction: updateOneWithKV
+      params: [reportStatus]
       where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE
