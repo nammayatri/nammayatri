@@ -2519,6 +2519,9 @@ homeScreenFlow = do
         "RIDE_REQUESTED"    -> do
           void $ updateStage $ HomeScreenStage RideRequested
           homeScreenFlow
+        "TRIP_STARTED" -> do 
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {chatcallbackInitiated = false}})
+          homeScreenFlow
         _                   -> homeScreenFlow
     REFRESH_HOME_SCREEN_FLOW -> do
       void $ pure $ removeAllPolylines ""

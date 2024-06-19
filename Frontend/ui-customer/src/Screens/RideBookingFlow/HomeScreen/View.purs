@@ -334,19 +334,9 @@ screen initialState =
                 when (not initialState.props.chatcallbackInitiated && initialState.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE) $ do
                   -- @TODO need to revert once apk update is done
                   --when (initialState.data.driverInfoCardState.providerType == CTP.ONUS) $ void $ JB.showInAppNotification JB.inAppNotificationPayload{title = "Showing Approximate Location", message = "Driver locations of other providers are only approximate", channelId = "ApproxLoc", showLoader = true}
-                  startChatSerivces push initialState.data.driverInfoCardState.bppRideId "Customer" false
+                  startChatServices push initialState.data.driverInfoCardState.bppRideId "Customer" false
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               RideStarted -> do
-                -- _ <- pure $ enableMyLocation false
-                --   _ <- clearChatMessages
-                --   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
-                --   _ <- storeCallBackOpenChatScreen push OpenChatScreen
-                --   _ <- startChatListenerService
-                --   _ <- pure $ scrollOnResume push ScrollToBottom
-                --   push InitializeChat
-                --   pure unit
-                -- else
-                --   pure unit
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
@@ -357,8 +347,8 @@ screen initialState =
                   pure unit
                 let isRental = initialState.data.fareProductType == FPT.RENTAL
                 case initialState.data.contactList of
-                  Nothing -> if (isRental && initialState.props.chatcallbackInitiated) then pure unit else void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ updateEmergencyContacts push initialState
-                  Just contacts -> if (isRental && not initialState.props.chatcallbackInitiated) then startChatSerivces push initialState.data.driverInfoCardState.bppRideId "Customer" false else  validateAndStartChat contacts push initialState
+                  Nothing -> if initialState.props.chatcallbackInitiated then pure unit else void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ updateEmergencyContacts push initialState
+                  Just contacts -> if not initialState.props.chatcallbackInitiated then startChatServices push initialState.data.driverInfoCardState.bppRideId "Customer" false else  validateAndStartChat contacts push initialState
                 when (initialState.data.fareProductType /= FPT.RENTAL) $ do 
                   void $ push RemoveChat
                 pure unit
@@ -4510,7 +4500,7 @@ computeIssueReportBanners push = do
 updateEmergencyContacts :: (Action -> Effect Unit) -> HomeScreenState -> FlowBT String Unit
 updateEmergencyContacts push state = do
   if state.data.fareProductType == FPT.RENTAL && not state.props.chatcallbackInitiated 
-    then liftFlowBT $ startChatSerivces push state.data.driverInfoCardState.bppRideId "Customer" false 
+    then liftFlowBT $ startChatServices push state.data.driverInfoCardState.bppRideId "Customer" false 
     else do
       contacts <- getFormattedContacts
       void $ liftFlowBT $ push (UpdateContacts contacts)
@@ -4523,11 +4513,11 @@ validateAndStartChat contacts push state = do
     then push RemoveChat
     else do
       push $ UpdateChatWithEM true
-      if (not $ state.props.chatcallbackInitiated) then startChatSerivces push state.data.driverInfoCardState.rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) true else pure unit
+      if (not $ state.props.chatcallbackInitiated) then startChatServices push state.data.driverInfoCardState.rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) true else pure unit
 
 
-startChatSerivces ::  (Action -> Effect Unit) -> String -> String -> Boolean -> Effect Unit
-startChatSerivces push rideId chatUser rideStarted = do
+startChatServices ::  (Action -> Effect Unit) -> String -> String -> Boolean -> Effect Unit
+startChatServices push rideId chatUser rideStarted = do
   void $ pure $ spy "Inside startChatServices" "sdfjhgiub"
   void $ clearChatMessages
   void $ storeCallBackMessageUpdated push rideId chatUser UpdateMessages AllChatsLoaded
