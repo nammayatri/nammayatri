@@ -395,6 +395,7 @@
             android:textColor="@color/Black700"
             android:textFontWeight="400"
             android:textStyle="italic"
+            android:paddingHorizontal="5px"
             android:textSize="16px" />
     </LinearLayout>
 </LinearLayout>
