@@ -146,10 +146,11 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
     Just driverLicense -> do
       unless (driverLicense.driverId == personId) $ throwImageError imageId1 DLAlreadyLinked
       unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
-      when (driverLicense.verificationStatus == Documents.INVALID) $ throwError DLInvalid
       when (driverLicense.verificationStatus == Documents.VALID) $ throwError DLAlreadyUpdated
       if documentVerificationConfig.doStrictVerifcation
-        then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard req.vehicleCategory
+        then do
+          when (driverLicense.verificationStatus == Documents.INVALID) $ throwError DLInvalid
+          verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard req.vehicleCategory
         else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnCard dateOfIssue
     Nothing -> do
       mDriverDL <- Query.findByDriverId personId
