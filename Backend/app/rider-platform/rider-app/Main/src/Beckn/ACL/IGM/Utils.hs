@@ -151,6 +151,11 @@ mapRating (Just Common.ACCEPT) (Just Common.THUMBS_UP) = Just $ show Spec.THUMBS
 mapRating (Just Common.ACCEPT) (Just Common.THUMBS_DOWN) = Just $ show Spec.THUMBS_DOWN
 mapRating _ _ = Nothing
 
+mapCustomerResponseToAction :: Maybe Common.CustomerResponse -> Text
+mapCustomerResponseToAction (Just Common.ACCEPT) = show Spec.CLOSE
+mapCustomerResponseToAction (Just Common.ESCALATE) = show Spec.ESCALATE
+mapCustomerResponseToAction _ = show Spec.OPEN_ISSUE
+
 data BppData = BppData
   { bppId :: Text,
     bppUri :: Text
