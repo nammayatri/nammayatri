@@ -998,3 +998,33 @@ notifyFirstRideEvent personId vehicleCategory = do
           [ "Congratulations! You have taken your first ride with us."
           ]
   notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+
+notifyOnTripUpdate ::
+  ServiceFlow m r =>
+  SRB.Booking ->
+  SRide.Ride ->
+  Text ->
+  Text ->
+  m ()
+notifyOnTripUpdate booking ride title body = do
+  let personId = booking.riderId
+      rideId = ride.id
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.TRIP_UPDATED merchantOperatingCityId
+  let notificationSound = maybe (Just "default") NSC.defaultSound notificationSoundFromConfig
+  let notificationData =
+        Notification.NotificationReq
+          { category = Notification.TRIP_UPDATED,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product rideId.getId (),
+            body,
+            title,
+            dynamicParams = EmptyDynamicParam,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing,
+            sound = notificationSound
+          }
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData

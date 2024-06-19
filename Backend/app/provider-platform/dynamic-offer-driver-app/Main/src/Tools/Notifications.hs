@@ -705,7 +705,7 @@ sendUpdateLocOverlay merchantOpCityId person req@FCM.FCMOverlayReq {..} entityDa
           fcmEntityType = FCM.Person,
           fcmEntityIds = person.id.getId,
           fcmEntityData = Just entityData,
-          fcmNotificationJSON = FCM.createAndroidNotification notifTitle body notifType Nothing,
+          fcmNotificationJSON = FCM.createAndroidNotification notifTitle body notifType (Just "driver_trip_update_pop_up.mp3"),
           fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification req,
           fcmNotificationId = Nothing
         }
