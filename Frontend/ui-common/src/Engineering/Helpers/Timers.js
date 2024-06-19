@@ -138,6 +138,8 @@ export const resetAllTimers = function () {
   })
 }
 export const rideDurationTimerImpl = (startingTime, interval, timerId, cb, action) => {
+  const startTimeInMinutes = Math.floor(startingTime / 60);
+  const remainingSeconds = 60 - (startingTime - (startTimeInMinutes * 60));
   if (window.__OS == "IOS") {
     if (JBridge.startCountUpTimerV2) {
       const callbackIOS = callbackMapper.map(function (timerID, sec) {
@@ -147,7 +149,7 @@ export const rideDurationTimerImpl = (startingTime, interval, timerId, cb, actio
         const timeInHHMMFormat = hours + " : " + minutes;
         cb(action(timerID)(timeInHHMMFormat)(mins))();
       });
-      const updatedStartingTime = startingTime * 60;
+      const updatedStartingTime = startTimeInMinutes * 60;
       JBridge.startCountUpTimerV2(updatedStartingTime.toString(), interval, timerId, callbackIOS);
     }
     else if (JBridge.startCountUpTimer) {
@@ -158,7 +160,7 @@ export const rideDurationTimerImpl = (startingTime, interval, timerId, cb, actio
         const timeInHHMMFormat = hours + " : " + minutes;
         cb(action(timerID)(timeInHHMMFormat)(mins))();
       });
-      JBridge.startCountUpTimer(startingTime.toString(), callbackIOS);
+      JBridge.startCountUpTimer(startTimeInMinutes.toString(), callbackIOS);
     }
   } else {
     if (activeTimers[timerId] != undefined) {
@@ -176,13 +178,21 @@ export const rideDurationTimerImpl = (startingTime, interval, timerId, cb, actio
         cb(action(keyId)(timeInHHMMFormat)(timer.time))();
       }
     }
-    const timerID = instantGetTimer(handler, timerId, interval * (60000));
-    const timer = {
-      time: startingTime,
-      id: timerID,
-      timerInterval: parseInt(interval)
-    }
-    activeTimers[timerId] = timer;
-    handler(timerId);
+
+    let remainingTimeID = setTimeout(function() {
+      const timerID = instantGetTimer(handler, timerId, interval * (60000));
+      const timer = {
+        time: startTimeInMinutes,
+        id: timerID,
+        timerInterval: parseInt(interval)
+      }
+      activeTimers[timerId] = timer;
+      handler(timerId);
+    }, remainingSeconds * 1000);
+
+    const hours = getTwoDigitsNumber(Math.floor(startTimeInMinutes / 60));
+    const minutes = getTwoDigitsNumber(Math.floor((startTimeInMinutes - (hours * 60))));
+    const timeInHHMMFormat = hours + " : " + minutes;
+    cb(action(remainingTimeID)(timeInHHMMFormat)(startTimeInMinutes))();
   }
 }
