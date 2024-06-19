@@ -295,7 +295,8 @@ public class WidgetService extends Service {
                     //onClick Listener for rideRequest
                     silentRideRequest.setOnClickListener(view -> {
                         if (data != null && entity_payload != null) {
-                            NotificationUtils.showAllocationNotification(getApplicationContext(), data, entity_payload, "");
+                            String requestSource =  intent != null && (intent.hasExtra("requestSource")) ? intent.getStringExtra("requestSource") : "";
+                            NotificationUtils.showAllocationNotification(getApplicationContext(), data, entity_payload, requestSource);
                             silentRideRequest.setVisibility(View.GONE);
                             progressBar.setVisibility(View.GONE);
                             dismissRequest.setVisibility(View.GONE);

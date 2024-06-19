@@ -180,12 +180,12 @@ public class GRPCNotificationService extends Service implements NotificationList
                 RideRequestUtils.addRideReceivedEvent(entity_payload, null, null, "ride_request_fcm_received", this);
                 if (sharedPref.getString("DISABLE_WIDGET", "null").equals("true") && sharedPref.getString("REMOVE_CONDITION", "false").equals("false")) {
                     if (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))
-                        NotificationUtils.showRR(this, entity_payload, payload, "GRPC");
+                        NotificationUtils.showRR(this, entity_payload, payload, NotificationUtils.RequestSource.GRPC);
                     else {
                         RideRequestUtils.addRideReceivedEvent(entity_payload, null, null, "ride_request_ignored", this);
                         NotificationUtils.firebaseLogEventWithParams(this, "ride_ignored", "payload", entity_payload.toString());
                     }
-                } else NotificationUtils.showRR(this, entity_payload, payload, "GRPC");
+                } else NotificationUtils.showRR(this, entity_payload, payload, NotificationUtils.RequestSource.GRPC);
             }
 
         } catch (JSONException e) {
