@@ -17,7 +17,7 @@ module Domain.Action.Beckn.IGM.IssueStatus where
 import Domain.Types.IGMConfig
 import qualified Domain.Types.IGMIssue as DIGM
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
 import Environment
 import qualified IGM.Enums as Spec
 import Kernel.Prelude

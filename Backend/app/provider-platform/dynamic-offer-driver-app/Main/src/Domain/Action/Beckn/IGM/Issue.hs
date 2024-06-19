@@ -19,7 +19,7 @@ import Domain.Types.Booking
 import Domain.Types.IGMConfig
 import qualified Domain.Types.IGMIssue as DIGM
 import Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
 import Environment
 import qualified IGM.Enums as Spec
 import qualified IssueManagement.Common.UI.Issue as Common
@@ -133,7 +133,7 @@ openBecknIssue dIssue@ValidatedDIssue {..} = do
   QIGM.create igmIssue
   mbOption <- QIO.findByIGMIssueSubCategory issueSubCategory
   let optionId = mbOption <&> (.id)
-      description = maybe "No description provided" (. option) mbOption
+      description = maybe "No description provided" (.option) mbOption
   let issueReport = Common.IssueReportReq (Just $ cast ride.id) [] optionId category.id description Nothing (Just True)
   void $ Common.createIssueReport (cast ride.driverId, cast dIssue.merchant.id) Nothing issueReport driverIssueHandle Common.DRIVER (Just issueId)
   pure $
