@@ -58,6 +58,7 @@ data PaymentOrderT f = PaymentOrderT
     mandateEndDate :: B.C f (Maybe UTCTime),
     bankErrorCode :: B.C f (Maybe Text),
     bankErrorMessage :: B.C f (Maybe Text),
+    serviceProvider :: B.C f (Maybe Payment.PaymentService),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

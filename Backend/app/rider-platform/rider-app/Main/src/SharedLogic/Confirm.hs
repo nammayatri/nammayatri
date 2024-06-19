@@ -265,6 +265,7 @@ buildBooking searchRequest mbEstimateId mbFulfillmentId quote fromLoc mbToLoc ex
         vehicleServiceTierType = quote.vehicleServiceTierType,
         vehicleServiceTierSeatingCapacity = quote.vehicleServiceTierSeatingCapacity,
         vehicleServiceTierAirConditioned = quote.vehicleServiceTierAirConditioned,
+        isAirConditioned = quote.isAirConditioned,
         serviceTierShortDesc = quote.serviceTierShortDesc,
         clientBundleVersion = quote.clientBundleVersion,
         clientSdkVersion = quote.clientSdkVersion,

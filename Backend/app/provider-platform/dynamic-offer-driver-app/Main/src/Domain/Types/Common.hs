@@ -39,45 +39,45 @@ data TripCategory = OneWay OneWayMode | Rental RentalMode | RideShare RideShareM
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (ToSchema)
 
--- This is done to handle backward compatibility, as UI is expected "content" to be a string but due to multiple in InterCity and CrossCity, it got changed into an array
+-- This is done to handle backward compatibility, as UI is expected "contents" to be a string but due to multiple in InterCity and CrossCity, it got changed into an array
 instance ToJSON TripCategory where
   toJSON (OneWay mode) =
     object
       [ "tag" .= ("OneWay" :: Text),
-        "content" .= mode
+        "contents" .= mode
       ]
   toJSON (Rental mode) =
     object
       [ "tag" .= ("Rental" :: Text),
-        "content" .= mode
+        "contents" .= mode
       ]
   toJSON (RideShare mode) =
     object
       [ "tag" .= ("RideShare" :: Text),
-        "content" .= mode
+        "contents" .= mode
       ]
   toJSON (InterCity mode text) =
     object
       [ "tag" .= ("InterCity" :: Text),
-        "content" .= mode,
-        "content2" .= text
+        "contents" .= mode,
+        "city" .= text
       ]
   toJSON (CrossCity mode text) =
     object
       [ "tag" .= ("CrossCity" :: Text),
-        "content" .= mode,
-        "content2" .= text
+        "contents" .= mode,
+        "city" .= text
       ]
 
 instance FromJSON TripCategory where
   parseJSON = withObject "TripCategory" $ \v -> do
     tag <- v .: "tag"
     case tag of
-      "OneWay" -> OneWay <$> v .: "content"
-      "Rental" -> Rental <$> v .: "content"
-      "RideShare" -> RideShare <$> v .: "content"
-      "InterCity" -> InterCity <$> v .: "content" <*> v .: "content2"
-      "CrossCity" -> CrossCity <$> v .: "content" <*> v .: "content2"
+      "OneWay" -> OneWay <$> v .: "contents"
+      "Rental" -> Rental <$> v .: "contents"
+      "RideShare" -> RideShare <$> v .: "contents"
+      "InterCity" -> InterCity <$> v .: "contents" <*> v .: "city"
+      "CrossCity" -> CrossCity <$> v .: "contents" <*> v .: "city"
       _ -> fail $ "Unknown tag: " ++ tag
 
 data TripOption = TripOption

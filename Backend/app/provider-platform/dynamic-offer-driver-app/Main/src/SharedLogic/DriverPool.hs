@@ -594,7 +594,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           variant = nearestGoHomeDrivers.variant,
           serviceTier = nearestGoHomeDrivers.serviceTier,
           serviceTierDowngradeLevel = nearestGoHomeDrivers.serviceTierDowngradeLevel,
-          airConditioned = nearestGoHomeDrivers.airConditioned,
+          isAirConditioned = nearestGoHomeDrivers.isAirConditioned,
           lat = nearestGoHomeDrivers.lat,
           lon = nearestGoHomeDrivers.lon,
           mode = nearestGoHomeDrivers.mode,

@@ -93,6 +93,7 @@ data Pricing = Pricing
     currency :: Currency,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
+    isAirConditioned :: Maybe Bool,
     specialLocationName :: Maybe Text
   }
 
@@ -661,8 +662,8 @@ mkArrivalTimeTagGroupV2 arrivalTime' =
         }
     ]
 
-mkVehicleTags :: Maybe Double -> Maybe [Spec.TagGroup]
-mkVehicleTags vehicleServiceTierAirConditioned' =
+mkVehicleTags :: Maybe Double -> Maybe Bool -> Maybe [Spec.TagGroup]
+mkVehicleTags vehicleServiceTierAirConditioned' isAirConditioned =
   vehicleServiceTierAirConditioned' <&> \vehicleServiceTierAirConditioned ->
     [ Spec.TagGroup
         { tagGroupDisplay = Just True,
@@ -685,6 +686,17 @@ mkVehicleTags vehicleServiceTierAirConditioned' =
                             descriptorShortDesc = Nothing
                           },
                     tagValue = Just $ show vehicleServiceTierAirConditioned
+                  },
+                Spec.Tag
+                  { tagDisplay = Just True,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.IS_AIR_CONDITIONED_VEHICLE,
+                            descriptorName = Just "isAirConditionedVehicle",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = show <$> isAirConditioned
                   }
               ]
         }
@@ -1006,7 +1018,8 @@ convertEstimateToPricing specialLocationName (DEst.Estimate {..}, serviceTier, m
       vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
-      vehicleServiceTierAirConditioned = serviceTier.airConditioned,
+      vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
+      isAirConditioned = serviceTier.isAirConditioned,
       ..
     }
 
@@ -1024,7 +1037,8 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
       vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
-      vehicleServiceTierAirConditioned = serviceTier.airConditioned,
+      vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
+      isAirConditioned = serviceTier.isAirConditioned,
       ..
     }
   where

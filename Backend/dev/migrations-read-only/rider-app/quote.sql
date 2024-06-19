@@ -63,3 +63,8 @@ ALTER TABLE atlas_app.quote ADD COLUMN vehicle_service_tier_air_conditioned doub
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.quote ADD COLUMN special_location_name text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN is_air_conditioned boolean ;

@@ -364,6 +364,7 @@ data BookingAPIEntity = BookingAPIEntity
     vehicleServiceTierName :: Text,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
+    isAirConditioned :: Maybe Bool,
     estimatedDistance :: Maybe Meters,
     maxEstimatedDistance :: Maybe HighPrecMeters,
     estimatedFare :: HighPrecMoney,
@@ -739,7 +740,7 @@ buildDriverEntityRes (person, driverInfo, driverStats) = do
         cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
         let mbDefaultServiceTierItem = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
         let checIfACWorking' =
-              case mbDefaultServiceTierItem >>= (.airConditioned) of
+              case mbDefaultServiceTierItem >>= (.airConditionedThreshold) of
                 Nothing -> False
                 Just acThreshold -> do
                   (fromMaybe 0 driverInfo.airConditionScore) <= acThreshold

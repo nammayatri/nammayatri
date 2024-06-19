@@ -67,6 +67,13 @@ updateCustomerPaymentId customerPaymentId id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.customerPaymentId customerPaymentId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateDefaultPaymentMethodId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDefaultPaymentMethodId defaultPaymentMethodId id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.defaultPaymentMethodId defaultPaymentMethodId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateDeviceToken :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateDeviceToken deviceToken id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.deviceToken deviceToken, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -124,6 +131,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.currentCity (Kernel.Prelude.Just currentCity),
       Se.Set Beam.customerPaymentId customerPaymentId,
       Se.Set Beam.customerReferralCode customerReferralCode,
+      Se.Set Beam.defaultPaymentMethodId defaultPaymentMethodId,
       Se.Set Beam.description description,
       Se.Set Beam.deviceToken deviceToken,
       Se.Set Beam.emailEncrypted (email <&> unEncrypted . (.encrypted)),

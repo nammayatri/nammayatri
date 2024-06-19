@@ -76,3 +76,8 @@ ALTER TABLE atlas_app.booking ADD COLUMN special_location_name text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN estimate_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN is_air_conditioned boolean ;

@@ -212,7 +212,8 @@ data Tag
   | -- Toll related info tags
     TOLL_CONFIDENCE
   | -- Vehicle Air Conditioned info tag
-    IS_AIR_CONDITIONED
+    IS_AIR_CONDITIONED -- deprecated
+  | IS_AIR_CONDITIONED_VEHICLE
   | IS_FORWARD_BATCH_ENABLED
   | -- rating tags
     RIDER_PHONE_NUMBER

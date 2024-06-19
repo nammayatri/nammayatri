@@ -33,7 +33,7 @@ data NearestDriversResult = NearestDriversResult
     variant :: DV.Variant,
     serviceTier :: DVST.ServiceTierType,
     serviceTierDowngradeLevel :: Int,
-    airConditioned :: Maybe Double,
+    isAirConditioned :: Maybe Bool,
     lat :: Double,
     lon :: Double,
     mode :: Maybe DriverInfo.DriverMode,
@@ -108,4 +108,4 @@ getNearestDrivers cityServiceTiers serviceTiers fromLocLatLong radiusMeters merc
       where
         mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
-          Just $ NearestDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.airConditioned location.lat location.lon info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice person.backendConfigVersion person.backendAppVersion
+          Just $ NearestDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.isAirConditioned location.lat location.lon info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice person.backendConfigVersion person.backendAppVersion

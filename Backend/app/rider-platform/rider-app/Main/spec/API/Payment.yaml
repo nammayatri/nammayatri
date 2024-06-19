@@ -15,12 +15,15 @@ types:
     paymentIntentClientSecret: Text
     customerId: CustomerId
     ephemeralKey: Text
+  PaymentMethodsResponse:
+    recordType: NewType
+    list: CustomerCardListResp
 apis:
   - GET:
       endpoint: /payment/methods
       auth: TokenAuth
       response:
-        type: CustomerCardListResp
+        type: PaymentMethodsResponse
   - GET:
       endpoint: /payment/intent/setup
       auth: TokenAuth

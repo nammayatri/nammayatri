@@ -66,3 +66,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN payment_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN distance_unit character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_air_conditioned boolean ;

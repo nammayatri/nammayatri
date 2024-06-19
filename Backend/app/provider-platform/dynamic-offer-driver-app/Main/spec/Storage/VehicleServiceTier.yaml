@@ -15,7 +15,8 @@ VehicleServiceTier:
     shortDescription: Maybe Text
     longDescription: Maybe Text
     seatingCapacity: Maybe Int
-    airConditioned: Maybe Double
+    airConditionedThreshold: Maybe Double
+    isAirConditioned: Maybe Bool
     oxygen: Maybe Double
     ventilator: Maybe Int
     luggageCapacity: Maybe Int

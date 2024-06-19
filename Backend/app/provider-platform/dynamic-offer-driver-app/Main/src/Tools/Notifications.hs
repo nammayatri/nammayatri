@@ -869,7 +869,7 @@ notifyOnRideStarted ::
   m ()
 notifyOnRideStarted ride = do
   let personId = ride.driverId
-      isAirConditioned = maybe False (>= 0.0) ride.vehicleServiceTierAirConditioned
+      isAirConditioned = fromMaybe False ride.isAirConditioned
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
       title =

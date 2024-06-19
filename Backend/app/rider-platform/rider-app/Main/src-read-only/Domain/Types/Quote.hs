@@ -36,6 +36,7 @@ data Quote = Quote
     estimatedPickupDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedTotalFare :: Kernel.Types.Common.Price,
     id :: Kernel.Types.Id.Id Domain.Types.Quote.Quote,
+    isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isBlockedRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isCustomerPrefferedSearchRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     itemId :: Kernel.Prelude.Text,

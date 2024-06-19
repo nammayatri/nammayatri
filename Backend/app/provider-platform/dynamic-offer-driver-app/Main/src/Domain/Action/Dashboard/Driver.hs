@@ -744,7 +744,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
       vehicle
   let serviceTierACThresholds =
         map
-          (\DVST.VehicleServiceTier {..} -> airConditioned)
+          (\DVST.VehicleServiceTier {..} -> airConditionedThreshold)
           (filter (\v -> maybe False (\veh -> veh.variant `elem` v.allowedVehicleVariant) vehicle) cityVehicleServiceTiers)
   let isACAllowedForDriver = checkIfACAllowedForDriver info (catMaybes serviceTierACThresholds)
   let isVehicleACWorking = maybe False (\v -> v.airConditioned /= Just False) vehicle

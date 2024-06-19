@@ -224,6 +224,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         enableFrequentLocationUpdates = enableFrequentLocationUpdates,
         vehicleServiceTierSeatingCapacity = booking.vehicleServiceTierSeatingCapacity,
         vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned,
+        isAirConditioned = booking.isAirConditioned,
         clientSdkVersion = driver.clientSdkVersion,
         clientBundleVersion = driver.clientBundleVersion,
         clientDevice = driver.clientDevice,

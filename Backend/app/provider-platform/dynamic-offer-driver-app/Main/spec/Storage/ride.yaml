@@ -87,7 +87,8 @@ Ride:
     tollConfidence: Maybe Confidence
     enableFrequentLocationUpdates: Maybe Bool
     vehicleServiceTierSeatingCapacity: Maybe Int
-    vehicleServiceTierAirConditioned: Maybe Double
+    vehicleServiceTierAirConditioned: Maybe Double # deprecated
+    isAirConditioned: Maybe Bool
     rideEndedBy: Maybe RideEndedBy
     clientSdkVersion: Maybe Version
     clientBundleVersion: Maybe Version

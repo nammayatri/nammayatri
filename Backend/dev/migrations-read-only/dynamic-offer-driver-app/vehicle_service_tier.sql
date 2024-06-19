@@ -46,3 +46,9 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN auto_selected
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN ventilator integer ;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN oxygen double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN is_air_conditioned boolean ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN air_conditioned_threshold double precision ;

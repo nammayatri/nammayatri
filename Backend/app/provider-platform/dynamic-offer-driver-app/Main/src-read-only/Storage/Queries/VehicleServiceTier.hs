@@ -47,11 +47,12 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.airConditioned airConditioned,
+    [ Se.Set Beam.airConditionedThreshold airConditionedThreshold,
       Se.Set Beam.allowedVehicleVariant allowedVehicleVariant,
       Se.Set Beam.autoSelectedVehicleVariant autoSelectedVehicleVariant,
       Se.Set Beam.defaultForVehicleVariant defaultForVehicleVariant,
       Se.Set Beam.driverRating driverRating,
+      Se.Set Beam.isAirConditioned isAirConditioned,
       Se.Set Beam.longDescription longDescription,
       Se.Set Beam.luggageCapacity luggageCapacity,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -74,12 +75,13 @@ instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehi
     pure $
       Just
         Domain.Types.VehicleServiceTier.VehicleServiceTier
-          { airConditioned = airConditioned,
+          { airConditionedThreshold = airConditionedThreshold,
             allowedVehicleVariant = allowedVehicleVariant,
             autoSelectedVehicleVariant = autoSelectedVehicleVariant,
             defaultForVehicleVariant = defaultForVehicleVariant,
             driverRating = driverRating,
             id = Kernel.Types.Id.Id id,
+            isAirConditioned = isAirConditioned,
             longDescription = longDescription,
             luggageCapacity = luggageCapacity,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -99,12 +101,13 @@ instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehi
 instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.VehicleServiceTier where
   toTType' (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = do
     Beam.VehicleServiceTierT
-      { Beam.airConditioned = airConditioned,
+      { Beam.airConditionedThreshold = airConditionedThreshold,
         Beam.allowedVehicleVariant = allowedVehicleVariant,
         Beam.autoSelectedVehicleVariant = autoSelectedVehicleVariant,
         Beam.defaultForVehicleVariant = defaultForVehicleVariant,
         Beam.driverRating = driverRating,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.isAirConditioned = isAirConditioned,
         Beam.longDescription = longDescription,
         Beam.luggageCapacity = luggageCapacity,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,

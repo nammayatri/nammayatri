@@ -35,6 +35,7 @@ data PersonT f = PersonT
     currentCity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City),
     customerPaymentId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId),
     customerReferralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    defaultPaymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     deviceToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     emailEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

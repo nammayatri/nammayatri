@@ -182,6 +182,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
                       tollNames = tollNames'
                     },
             vehicleServiceTierAirConditioned = estimate.vehicleServiceTierAirConditioned,
+            isAirConditioned = estimate.isAirConditioned,
             vehicleServiceTierSeatingCapacity = estimate.vehicleServiceTierSeatingCapacity,
             specialLocationName = estimate.specialLocationName,
             ..

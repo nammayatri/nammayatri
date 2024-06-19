@@ -41,13 +41,14 @@ getPaymentMethods ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Environment.Flow CustomerCardListResp
+    Environment.Flow API.Types.UI.RidePayment.PaymentMethodsResponse
   )
 getPaymentMethods (mbPersonId, _) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   customerPaymentId <- getCustomerPaymentId person
-  Payment.getCardList person.merchantId person.merchantOperatingCityId customerPaymentId -- TODO: Add pagination, do we need to store the card details in our DB?
+  resp <- Payment.getCardList person.merchantId person.merchantOperatingCityId customerPaymentId -- TODO: Add pagination, do we need to store the card details in our DB?
+  return $ API.Types.UI.RidePayment.PaymentMethodsResponse {list = resp}
 
 getPaymentIntentSetup ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -107,8 +108,8 @@ postPaymentMethodUpdate ::
 postPaymentMethodUpdate (mbPersonId, _) rideId newPaymentMethodId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  paymentIntentId <- ride.paymentIntentId & fromMaybeM (InternalError $ "No payment intent found for the ride " <> rideId.getId)
+  _ <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  let paymentIntentId = "" -- fix later ride.paymentIntentId & fromMaybeM (InternalError $ "No payment intent found for the ride " <> rideId.getId)
   Payment.updatePaymentMethodInIntent person.merchantId person.merchantOperatingCityId paymentIntentId newPaymentMethodId
   return Success
 

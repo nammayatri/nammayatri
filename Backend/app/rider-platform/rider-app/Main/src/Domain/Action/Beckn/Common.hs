@@ -295,8 +295,9 @@ rideAssignedReqHandler req = do
             driversPreviousRideDropLoc = previousRideEndPos,
             showDriversPreviousRideDropLoc = isJust previousRideEndPos,
             tollConfidence = Nothing,
-            paymentIntentId = Nothing,
             distanceUnit = booking.distanceUnit,
+            driverAccountId = Nothing,
+            paymentDone = False,
             ..
           }
     notifyRideRelatedNotificationOnEvent booking ride now timeDiffEvent = do

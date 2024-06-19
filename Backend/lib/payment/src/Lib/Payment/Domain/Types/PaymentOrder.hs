@@ -53,6 +53,7 @@ data PaymentOrderE e = PaymentOrder
     mandateEndDate :: Maybe UTCTime,
     bankErrorMessage :: Maybe Text,
     bankErrorCode :: Maybe Text,
+    serviceProvider :: Payment.PaymentService,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

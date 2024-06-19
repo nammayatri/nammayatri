@@ -85,6 +85,7 @@ Estimate:
     vehicleServiceTierType : VehicleServiceTierType
     vehicleServiceTierSeatingCapacity : Maybe Int
     vehicleServiceTierAirConditioned : Maybe Double
+    isAirConditioned: Maybe Bool
     itemId : Text
     tripTerms : Maybe TripTerms
     estimateBreakupList : "[EstimateBreakup]"

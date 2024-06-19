@@ -74,3 +74,8 @@ ALTER TABLE atlas_app.person ADD COLUMN registered_via_partner_org_id character 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person ADD COLUMN customer_payment_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN default_payment_method_id text ;

@@ -144,7 +144,7 @@ checkAndUpdateAirConditioned :: Bool -> Bool -> Id Person -> [DVST.VehicleServic
 checkAndUpdateAirConditioned isDashboard isAirConditioned personId cityVehicleServiceTiers = do
   driverInfo <- runInReplica $ DIQuery.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
-  let serviceTierACThresholds = map (\DVST.VehicleServiceTier {..} -> airConditioned) (filter (\v -> vehicle.variant `elem` v.allowedVehicleVariant) cityVehicleServiceTiers)
+  let serviceTierACThresholds = map (\DVST.VehicleServiceTier {isAirConditioned = _a, ..} -> airConditionedThreshold) (filter (\v -> vehicle.variant `elem` v.allowedVehicleVariant) cityVehicleServiceTiers)
 
   when (isAirConditioned && not (checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds))) $ do
     when (driverInfo.acUsageRestrictionType == DI.ToggleNotAllowed) $
@@ -167,7 +167,7 @@ incrementDriverAcUsageRestrictionCount :: [DVST.VehicleServiceTier] -> Id Person
 incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers personId = do
   driverInfo <- DIQuery.findById personId >>= fromMaybeM DriverInfoNotFound
   driver <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  let mbMaxACUsageRestrictionThreshold = safeMaximum . mapMaybe (\DVST.VehicleServiceTier {..} -> airConditioned) $ cityVehicleServiceTiers
+  let mbMaxACUsageRestrictionThreshold = safeMaximum . mapMaybe (\DVST.VehicleServiceTier {..} -> airConditionedThreshold) $ cityVehicleServiceTiers
   let airConditionScore = (fromMaybe 0 driverInfo.airConditionScore) + 1
   if maybe False (airConditionScore >) mbMaxACUsageRestrictionThreshold
     then do

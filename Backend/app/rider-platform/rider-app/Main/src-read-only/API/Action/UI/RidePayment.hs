@@ -21,16 +21,16 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "payment" :> "methods" :> Get ('[JSON]) Kernel.External.Payment.Interface.Types.CustomerCardListResp :<|> TokenAuth :> "payment" :> "intent" :> "setup"
+  ( TokenAuth :> "payment" :> "methods" :> Get '[JSON] API.Types.UI.RidePayment.PaymentMethodsResponse :<|> TokenAuth :> "payment" :> "intent" :> "setup"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.SetupIntentResponse
       :<|> TokenAuth
       :> "payment"
       :> "intent"
       :> "payment"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.PaymentIntentResponse
       :<|> TokenAuth
       :> "payment"
@@ -43,7 +43,7 @@ type API =
            Kernel.External.Payment.Interface.Types.PaymentMethodId
       :> "update"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "payment"
@@ -53,7 +53,7 @@ type API =
            Kernel.External.Payment.Interface.Types.PaymentMethodId
       :> "delete"
       :> Delete
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "payment"
@@ -62,19 +62,14 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
       :> "addTip"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
 handler = getPaymentMethods :<|> getPaymentIntentSetup :<|> getPaymentIntentPayment :<|> postPaymentMethodUpdate :<|> deletePaymentMethodsDelete :<|> postPaymentAddTip
 
-getPaymentMethods ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Environment.FlowHandler Kernel.External.Payment.Interface.Types.CustomerCardListResp
-  )
+getPaymentMethods :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler API.Types.UI.RidePayment.PaymentMethodsResponse)
 getPaymentMethods a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.getPaymentMethods (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 getPaymentIntentSetup :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler API.Types.UI.RidePayment.SetupIntentResponse)

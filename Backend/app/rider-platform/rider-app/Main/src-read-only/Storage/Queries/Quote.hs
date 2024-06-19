@@ -54,6 +54,7 @@ updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
       Se.Set Beam.estimatedFare ((.amount) estimatedFare),
       Se.Set Beam.estimatedPickupDuration estimatedPickupDuration,
       Se.Set Beam.estimatedTotalFare ((.amount) estimatedTotalFare),
+      Se.Set Beam.isAirConditioned isAirConditioned,
       Se.Set Beam.isBlockedRoute isBlockedRoute,
       Se.Set Beam.isCustomerPrefferedSearchRoute isCustomerPrefferedSearchRoute,
       Se.Set Beam.itemId itemId,

@@ -96,6 +96,7 @@ data QuoteAPIEntity = QuoteAPIEntity
     specialLocationTag :: Maybe Text,
     agencyCompletedRidesCount :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
+    isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     createdAt :: UTCTime,
     isValueAddNP :: Bool,

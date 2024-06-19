@@ -111,3 +111,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN vehicle_service_tier_name tex
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN distance_unit character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN is_air_conditioned boolean ;

@@ -8,3 +8,5 @@ SELECT m.merchant_id, m.id, 'Payment_Stripe',
     , 'url','dummyUrl'
   )
 FROM atlas_app.merchant_operating_city m where m.id in (select id from atlas_app.merchant_operating_city where city = 'Kochi');
+
+ALTER TABLE atlas_app.payment_order add column service_provider text default 'Juspay';

@@ -29,8 +29,8 @@ selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected driverStats driv
       let _seatingCapacityCheck = compareNumber vehicle.capacity vehicleServiceTier.seatingCapacity
           luggageCapacityCheck = compareNumber vehicle.luggageCapacity vehicleServiceTier.luggageCapacity
           airConditionedCheck =
-            (compareNumber vehicleServiceTier.airConditioned driverInfo.airConditionScore)
-              && (isNothing vehicleServiceTier.airConditioned || vehicle.airConditioned /= Just False)
+            (compareNumber vehicleServiceTier.airConditionedThreshold driverInfo.airConditionScore)
+              && (isNothing vehicleServiceTier.airConditionedThreshold || vehicle.airConditioned /= Just False)
           driverRatingCheck = compareNumber driverStats.rating vehicleServiceTier.driverRating
           vehicleRatingCheck = compareNumber vehicle.vehicleRating vehicleServiceTier.vehicleRating
 

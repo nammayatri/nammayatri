@@ -149,7 +149,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 vehicleVariant = dpRes.variant,
                 vehicleServiceTier = tripQuoteDetail.vehicleServiceTier,
                 vehicleServiceTierName = Just tripQuoteDetail.vehicleServiceTierName,
-                airConditioned = (> 0.0) <$> dpRes.airConditioned,
+                airConditioned = dpRes.isAirConditioned,
                 actualDistanceToPickup = dpwRes.actualDistanceToPickup,
                 straightLineDistanceToPickup = dpRes.distanceToPickup,
                 durationToPickup = dpwRes.actualDurationToPickup,

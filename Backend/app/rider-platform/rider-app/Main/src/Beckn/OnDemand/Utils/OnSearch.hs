@@ -101,6 +101,16 @@ getVehicleServiceTierAirConditioned provider item = do
       Just val -> readMaybe (T.unpack val)
       _ -> Nothing
 
+getIsAirConditioned :: MonadFlow m => Spec.Provider -> Spec.Item -> m (Maybe Bool)
+getIsAirConditioned provider item = do
+  let vehicleServiceTierAirConditioned = do
+        fulfillmentId <- item.itemFulfillmentIds >>= listToMaybe
+        fulfillment <- provider.providerFulfillments >>= find (\fulf -> fulf.fulfillmentId == Just fulfillmentId)
+        getTagV2' Tag.VEHICLE_INFO Tag.IS_AIR_CONDITIONED_VEHICLE (fulfillment.fulfillmentTags)
+  case vehicleServiceTierAirConditioned of
+    Nothing -> return Nothing
+    Just airConditioned -> return $ (readMaybe (T.unpack airConditioned) :: Maybe Bool)
+
 getEstimatedFare :: MonadFlow m => Spec.Item -> Currency -> m Price
 getEstimatedFare item currency = do
   price <- item.itemPrice & fromMaybeM (InvalidRequest "Missing Price")

@@ -15,12 +15,13 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data VehicleServiceTier = VehicleServiceTier
-  { airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+  { airConditionedThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     allowedVehicleVariant :: [Domain.Types.Vehicle.Variant],
     autoSelectedVehicleVariant :: [Domain.Types.Vehicle.Variant],
     defaultForVehicleVariant :: [Domain.Types.Vehicle.Variant],
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleServiceTier.VehicleServiceTier,
+    isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     longDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

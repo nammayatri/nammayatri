@@ -87,7 +87,7 @@ tfProviderFulfillments res pricing = do
       fulfillmentId_ = Just pricing.pricingId
       fulfillmentState_ = Nothing
       fulfillmentStops_ = Beckn.OnDemand.Utils.Common.mkStops res.fromLocation res.toLocation
-      fulfillmentTags_ = Beckn.OnDemand.Utils.Common.mkVehicleTags pricing.vehicleServiceTierAirConditioned
+      fulfillmentTags_ = Beckn.OnDemand.Utils.Common.mkVehicleTags pricing.vehicleServiceTierAirConditioned pricing.isAirConditioned
       fulfillmentType_ = Just pricing.fulfillmentType
       fulfillmentVehicle_ = tfVehicle pricing
   BecknV2.OnDemand.Types.Fulfillment {fulfillmentAgent = fulfillmentAgent_, fulfillmentCustomer = fulfillmentCustomer_, fulfillmentId = fulfillmentId_, fulfillmentState = fulfillmentState_, fulfillmentStops = fulfillmentStops_, fulfillmentTags = fulfillmentTags_, fulfillmentType = fulfillmentType_, fulfillmentVehicle = fulfillmentVehicle_}

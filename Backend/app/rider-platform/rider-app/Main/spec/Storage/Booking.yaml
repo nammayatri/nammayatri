@@ -171,6 +171,7 @@ Booking:
     vehicleServiceTierType: VehicleServiceTierType|NoRelation
     vehicleServiceTierSeatingCapacity: Maybe Int
     vehicleServiceTierAirConditioned: Maybe Double
+    isAirConditioned: Maybe Bool
     bookingDetails: BookingDetails
     tripTerms: Maybe TripTerms
     merchantId: Id Merchant

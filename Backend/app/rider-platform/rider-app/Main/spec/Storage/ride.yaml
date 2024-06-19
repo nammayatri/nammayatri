@@ -18,6 +18,7 @@ imports:
   LatLong: Kernel.External.Maps
   Confidence: Kernel.Types.Confidence
   PaymentIntentId: Kernel.External.Payment.Interface.Types
+  AccountId: Kernel.External.Payment.Interface.Types
 
 Ride:
   tableName: ride
@@ -107,7 +108,8 @@ Ride:
     backendAppVersion: Maybe Text
     safetyCheckStatus: Maybe Bool
     showDriversPreviousRideDropLoc: Bool
-    paymentIntentId: Maybe PaymentIntentId
+    paymentDone: Bool
+    driverAccountId: Maybe AccountId
     tollConfidence: Maybe Confidence
 
   sqlType:
@@ -176,6 +178,7 @@ Ride:
     driversPreviousRideDropLoc: Storage.Queries.Extra.Transformers.Ride.mkLatLong|I
     showDriversPreviousRideDropLoc: Kernel.Prelude.fromMaybe False showDriversPreviousRideDropLoc|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    paymentDone: Kernel.Prelude.fromMaybe True paymentDone|E
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -194,10 +197,10 @@ Ride:
     clientOsType: clientDevice <&> (.deviceType)|E
     clientOsVersion: clientDevice <&> (.deviceVersion)|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
-
     driversPreviousRideDropLat: Kernel.Prelude.fmap (.lat)|I
     driversPreviousRideDropLon: Kernel.Prelude.fmap (.lon)|I
     showDriversPreviousRideDropLoc: Kernel.Prelude.Just showDriversPreviousRideDropLoc|E
+    paymentDone: Kernel.Prelude.Just paymentDone|E
   beamType:
     fare: Maybe HighPrecMoney
     totalFare: Maybe HighPrecMoney
@@ -207,6 +210,7 @@ Ride:
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
     showDriversPreviousRideDropLoc : Maybe Bool
+    paymentDone: Maybe Bool
 
   constraints:
     id: PrimaryKey
@@ -227,6 +231,10 @@ Ride:
     findRideByRideShortId:
       kvFunction: findOneWithKV
       where: shortId
+    markPaymentDone:
+      kvFunction: updateOneWithKV
+      params: [paymentDone]
+      where: id
   excludedDefaultQueries:
     - create
     - createMany

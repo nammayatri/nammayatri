@@ -14,6 +14,7 @@ imports:
   DeviceType: Kernel.Types.Version
   PartnerOrganization: Domain.Types.PartnerOrganization
   CustomerId: Kernel.External.Payment.Interface.Types
+  PaymentMethodId: Kernel.External.Payment.Interface.Types
 
 Person:
   tableName: person
@@ -94,6 +95,7 @@ Person:
     blockedCount : Maybe Int
     registeredViaPartnerOrgId : Maybe (Id PartnerOrganization)
     customerPaymentId : Maybe CustomerId
+    defaultPaymentMethodId: Maybe PaymentMethodId
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -284,6 +286,11 @@ Person:
     updateCustomerPaymentId:
       kvFunction: updateWithKV
       params: [customerPaymentId]
+      where: id
+
+    updateDefaultPaymentMethodId:
+      kvFunction: updateWithKV
+      params: [defaultPaymentMethodId]
       where: id
 
   extraOperations:

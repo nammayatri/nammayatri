@@ -268,19 +268,20 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
   let personLangauge = fromMaybe ENGLISH person.language
 
   let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction False driverStats driverInfo vehicle cityVehicleServiceTiers
-  let serviceTierACThresholds = map (\(VehicleServiceTier {..}, _) -> airConditioned) driverVehicleServiceTierTypes
+  let serviceTierACThresholds = map (\(VehicleServiceTier {..}, _) -> airConditionedThreshold) driverVehicleServiceTierTypes
   let isACCheckEnabledForCity = any isJust serviceTierACThresholds
   let isACAllowedForDriver = checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
   let isACWorkingForVehicle = vehicle.airConditioned /= Just False
   let isACWorking = isACAllowedForDriver && isACWorkingForVehicle
   let tierOptions =
         driverVehicleServiceTierTypes <&> \(VehicleServiceTier {..}, usageRestricted) -> do
-          let isNonACDefault = isACCheckEnabledForCity && not isACWorking && isNothing airConditioned
+          let isNonACDefault = isACCheckEnabledForCity && not isACWorking && isNothing airConditionedThreshold
           API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier
             { isSelected = (serviceTierType `elem` vehicle.selectedServiceTiers) || isNonACDefault,
               isDefault = (vehicle.variant `elem` defaultForVehicleVariant) || isNonACDefault,
               isUsageRestricted = Just usageRestricted,
               priority = Just priority,
+              airConditioned = airConditionedThreshold,
               ..
             }
 
