@@ -330,7 +330,7 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
                 _ -> False
            in isJust maybeRide || isJust otpCode || isconfirmedRentalRideOrIntercityBooking
 
-findAllByRiderIdAndDriverNumber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> Text -> m [Ride]
+findAllByRiderIdAndDriverNumber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> DbHash -> m [Ride]
 findAllByRiderIdAndDriverNumber (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driverNumber = do
   let isOnlyActive = Just True == mbOnlyActive
   let limit' = maybe 10 fromIntegral mbLimit
@@ -347,7 +347,7 @@ findAllByRiderIdAndDriverNumber (Id personId) mbLimit mbOffset mbOnlyActive mbBo
       (Se.Desc BeamB.createdAt)
       (Just limit')
       (Just offset')
-  findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId . DRB.id <$> bookings, Se.Is BeamR.driverMobileNumber $ Se.Eq driverNumber]] (Se.Desc BeamR.createdAt) (Just limit') (Just offset')
+  findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId . DRB.id <$> bookings, Se.Is BeamR.mobileNumberHash $ Se.Eq driverNumber]] (Se.Desc BeamR.createdAt) (Just limit') (Just offset')
 
 findAllBookingsOfRides :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Ride] -> m [Booking]
 findAllBookingsOfRides rides = findAllWithKV [Se.Is BeamB.id $ Se.In $ getId . (.bookingId) <$> rides]

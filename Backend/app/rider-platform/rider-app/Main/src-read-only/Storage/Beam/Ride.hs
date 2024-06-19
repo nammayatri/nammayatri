@@ -65,6 +65,7 @@ data RideT f = RideT
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     onlinePayment :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    mobileNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     otp :: B.C f Kernel.Prelude.Text,
     paymentDone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     rideEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

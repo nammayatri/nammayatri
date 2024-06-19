@@ -136,3 +136,8 @@ ALTER TABLE atlas_app.ride ALTER COLUMN is_already_fav SET NOT NULL;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ALTER COLUMN is_already_fav DROP NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN mobile_number_hash text NOT NULL;

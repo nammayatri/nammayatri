@@ -35,6 +35,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Beam.Functions as B
+import Kernel.External.Encryption
 import Kernel.External.Encryption (decrypt, encrypt)
 import Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (SchedulerFlow)
@@ -231,8 +232,8 @@ data DFareBreakup = DFareBreakup
     description :: Text
   }
 
-buildRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => ValidatedRideAssignedReq -> Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> DRide.RideStatus -> Bool -> Bool -> Int -> m DRide.Ride
-buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now status isFreeRide isAlreadyFav favCount = do
+buildRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => ValidatedRideAssignedReq -> Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> DRide.RideStatus -> Bool -> Bool -> Int -> DbHash -> m DRide.Ride
+buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now status isFreeRide isAlreadyFav favCount mobileNumberHash = do
   guid <- generateGUID
   shortId <- generateShortId
   deploymentVersion <- asks (.version)
@@ -358,7 +359,9 @@ rideAssignedReqHandler req = do
     assignRideUpdate req' mbMerchant booking rideStatus now = do
       let BookingDetails {..} = req'.bookingDetails
       let fareParams = fromMaybe [] req'.fareBreakups
-      ride <- buildRide req' mbMerchant booking req'.bookingDetails req'.previousRideEndPos now rideStatus req'.isFreeRide req'.isAlreadyFav req'.favCount
+      let driverNumber = req'.bookingDetails.driverMobileNumber
+      let mobileNumberHash <- getDbHash driverNumber
+      ride <- buildRide req' mbMerchant booking req'.bookingDetails req'.previousRideEndPos now rideStatus req'.isFreeRide req'.isAlreadyFav req'.favCount mobileNumberHash
       let applicationFeeAmountBreakups = ["INSURANCE_CHARGE", "CARD_CHARGES_ON_FARE", "CARD_CHARGES_FIXED"]
       let applicationFeeAmount = sum $ map (.amount.amount) $ filter (\fp -> fp.description `elem` applicationFeeAmountBreakups) fareParams
       whenJust req'.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do

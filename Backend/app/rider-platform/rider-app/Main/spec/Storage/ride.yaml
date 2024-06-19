@@ -20,7 +20,7 @@ imports:
   Confidence: Kernel.Types.Confidence
   PaymentIntentId: Kernel.External.Payment.Interface.Types
   AccountId: Kernel.External.Payment.Interface.Types
-  Months: Kernel.Types.Time
+  Months: Kernel.Types.Time  
   DbHash: Kernel.External.Encryption
 
 Ride:
@@ -88,10 +88,11 @@ Ride:
     driverAccountId: Maybe AccountId
     onlinePayment: Bool
     tollConfidence: Maybe Confidence
-    cancellationFeeIfCancelled: Maybe HighPrecMoney
+    cancellationFeeIfCancelled: Maybe HighPrecMoney  
     isAlreadyFav: Maybe Bool
     favCount: Maybe Int
-
+    mobileNumberHash: DbHash
+    
   sqlType:
     allowedEditLocationAttempts: int
     allowedEditPickupLocationAttempts: int
