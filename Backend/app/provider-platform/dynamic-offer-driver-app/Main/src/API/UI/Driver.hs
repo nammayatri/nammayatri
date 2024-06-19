@@ -212,7 +212,8 @@ type API =
              :> TokenAuth
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
-             :> QueryParam "day" Day
+             :> QueryParam "from" Day
+             :> QueryParam "to" Day
              :> QueryParam "tripCategory" DTC.TripCategory
              :> Get '[JSON] DDriver.ScheduledBookingRes
            :<|> "accept"
@@ -355,8 +356,8 @@ getDownloadInvoiceData (personId, merchantId, merchantOpCityId) fromDate = withF
 getDummyRideRequest :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 getDummyRideRequest = withFlowHandlerAPI . DDriver.getDummyRideRequest
 
-listScheduledBookings :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Integer -> Maybe Integer -> Maybe Day -> Maybe DTC.TripCategory -> FlowHandler DDriver.ScheduledBookingRes
-listScheduledBookings (personId, merchantId, merchantOpCityId) mbLimit mbOffset mbDay mbTripCategory = withFlowHandlerAPI $ DDriver.listScheduledBookings (personId, merchantId, merchantOpCityId) mbLimit mbOffset mbDay mbTripCategory
+listScheduledBookings :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Integer -> Maybe Integer -> Maybe Day -> Maybe Day -> Maybe DTC.TripCategory -> FlowHandler DDriver.ScheduledBookingRes
+listScheduledBookings (personId, merchantId, merchantOpCityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory = withFlowHandlerAPI $ DDriver.listScheduledBookings (personId, merchantId, merchantOpCityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory
 
 acceptScheduledBooking :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe (Id DC.Client) -> Id DRB.Booking -> FlowHandler APISuccess
 acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId = withFlowHandlerAPI $ DDriver.acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId

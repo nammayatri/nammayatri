@@ -1918,16 +1918,17 @@ listScheduledBookings ::
   Maybe Integer ->
   Maybe Integer ->
   Maybe Day ->
+  Maybe Day ->
   Maybe DTC.TripCategory ->
   m ScheduledBookingRes
-listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbDay mbTripCategory = do
+listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory = do
   transporterConfig <- SCTC.findByMerchantOpCityId cityId Nothing >>= fromMaybeM (TransporterConfigNotFound cityId.getId)
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
   driverInfo <- runInReplica $ QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
   driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
   let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverStats driverInfo vehicle cityServiceTiers))
-  scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbDay DRB.NEW mbTripCategory availableServiceTiers True cityId transporterConfig.timeDiffFromUtc
+  scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay DRB.NEW mbTripCategory availableServiceTiers True cityId transporterConfig.timeDiffFromUtc
   bookings <- mapM buildBookingAPIEntityFromBooking scheduledBookings
   return (ScheduledBookingRes bookings)
   where
