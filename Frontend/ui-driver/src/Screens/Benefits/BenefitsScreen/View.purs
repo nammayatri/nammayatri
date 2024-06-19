@@ -128,8 +128,8 @@ referralScreenInnerBody push state =
   [ width $ MATCH_PARENT
   , height $ WRAP_CONTENT
   , orientation VERTICAL
-  ]([  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
-  ,   linearLayout
+  ]([ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+   ,  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , margin $ Margin 16 0 16 12
@@ -138,7 +138,7 @@ referralScreenInnerBody push state =
       [ if shouldShowReferral state then driverReferralCode push state else dummyView
       , rideLeaderBoardView push state
       ]
-  ,   learnAndEarnShimmerView push state
+   ,  learnAndEarnShimmerView push state
   ] <> if not (null state.data.moduleList.completed) || not (null state.data.moduleList.remaining) then [learnAndEarnView push state] else [])
 
 tabView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
@@ -307,24 +307,53 @@ driverReferralCode push state =
                 ]
             ]
         ]
-    , linearLayout
-        [ width MATCH_PARENT
-        , height $ V 1
-        , background config.separatorColor
-        , margin $ MarginTop 10
-        ]
-        []
-    , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , margin $ MarginTop 10
-        ]
-        [ referralCountView false (getString REFERRED) (show state.data.totalReferredCustomers) (state.props.driverReferralType == CUSTOMER) push REFERRED_CUSTOMERS_POPUP
-        , referralCountView true config.infoText (show activatedCount) true push config.popupType
-        ]
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , margin $ MarginTop 16
+        , cornerRadius 8.0
+        , background "#CC80B2FF"
+        , gravity CENTER_VERTICAL
+        , onClick push $ const $ GoToCustomerReferralTracker
+        ][ relativeLayout
+           [ height MATCH_PARENT
+           , width MATCH_PARENT
+           ][ linearLayout
+              [ height MATCH_PARENT
+              , width MATCH_PARENT
+              , padding $ PaddingHorizontal 8 8
+              , gravity CENTER_VERTICAL
+              ][imageView
+                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_star_black"
+                , height $ V 15
+                , width $ V 12
+                , margin $ MarginRight 4
+                ]
+              , textView $ 
+                [ height WRAP_CONTENT 
+                , text $ getString REFERRAL_BONUS_TRACKER 
+                , color Color.black900
+                , gravity CENTER_VERTICAL
+                , padding $ PaddingVertical 12 12
+                , lineHeight "18"
+                ] <> FontStyle.body6 TypoGraphy
+              , linearLayout [weight 1.0, height MATCH_PARENT][]
+              , linearLayout
+                [ height MATCH_PARENT
+                , width WRAP_CONTENT
+                , gravity CENTER_VERTICAL
+                ][ imageView
+                    [ height $ V 16
+                    , width $ V 16
+                    , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_black_900"
+                    ]
+                ]
+              ]
+            , shineAnimation state
+          ]
+       ]
     ]
   where
-  activatedCount = if state.props.driverReferralType == DRIVER then state.data.totalReferredDrivers else state.data.totalActivatedCustomers
 
   config = if state.props.driverReferralType == DRIVER then driverReferralConfig else customerReferralConfig
 
@@ -350,54 +379,38 @@ driverReferralCode push state =
         , referralDomain : appConfigs.appData.website
         }
 
-referralCountView :: forall w. Boolean -> String -> String -> Boolean -> (Action -> Effect Unit) -> ReferralInfoPopType -> PrestoDOM (Effect Unit) w
-referralCountView showStar text' count visibility' push popupType =
+shineAnimation :: forall w . BenefitsScreenState -> PrestoDOM (Effect Unit) w
+shineAnimation state =
   linearLayout
-    [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , gravity CENTER_VERTICAL
-    , weight 1.0
-    , visibility $ boolToVisibility visibility'
-    ]
-    [ linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , gravity CENTER_VERTICAL
-        ]
-        [ imageView
-            $ [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_star_black"
-              , height $ V 13
-              , width $ V 13
-              , margin $ MarginRight 4
-              , visibility $ boolToVisibility showStar
-              ]
-        , textView
-            $ [ height WRAP_CONTENT
-              , text text'
-              , color Color.black800
-              ]
-            <> FontStyle.tags TypoGraphy
-        , imageView
-            $ [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_black"
-              , height $ V 14
-              , width $ V 14
-              , margin $ Margin 4 2 0 0
-              , onClick push $ const $ ShowReferedInfo popupType
-              , padding $ PaddingBottom 2
-              ]
-        ]
-    , textView
-        $ [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , text count
-          , color Color.black800
-          , weight 1.0
-          , gravity countGravity
-          ]
-        <> FontStyle.body6 TypoGraphy
-    ]
-  where
-  countGravity = if showStar then RIGHT else CENTER
+  [ height $ MATCH_PARENT
+  , width $ WRAP_CONTENT
+  , gravity CENTER_VERTICAL
+  , cornerRadius 16.0
+  , clipChildren true
+  , clipToPadding true
+  ][ PrestoAnim.animationSet [ Anim.shimmerAnimation (-100) ((screenWidth unit) + 100) 2500] $ 
+     linearLayout
+     [ width $ V (screenWidth unit)
+     , height $ MATCH_PARENT
+     , gravity CENTER_VERTICAL
+     ][linearLayout
+       [ width $ V 10
+       , height MATCH_PARENT
+       , background Color.transparentWhite
+       , rotation 20.0
+       , cornerRadius 2.0
+       , margin $ MarginHorizontal 10 8
+       ][]
+     , linearLayout
+       [ width $ V 5
+       , height MATCH_PARENT
+       , background Color.transparentWhite
+       , rotation 20.0
+       , cornerRadius 2.0
+       , margin $ MarginRight 20
+       ][]
+     ]
+  ]
 
 appQRCodeView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 appQRCodeView push state =
@@ -745,3 +758,51 @@ statusPillView push state status pillMargin =
       "PENDING" -> {text : getString PENDING_STR_C, textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle,  cornerRadius : 16.0, shouldImageBeVisible : false, pillBackgroundColor : Color.orange900, pillImage : ""}
       "NEW" -> {text : getString NEW_C, textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle, cornerRadius : 16.0, shouldImageBeVisible : false, pillBackgroundColor : Color.blue800, pillImage : ""}
       _ -> {text : "", textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle, shouldImageBeVisible : false,  cornerRadius : 16.0, pillBackgroundColor : Color.white900, pillImage : ""}
+
+-- customerReferralInfo :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
+-- customerReferralInfo push state = 
+--   linearLayout
+--   [ height WRAP_CONTENT
+--   , width MATCH_PARENT
+--   , margin $ Margin 16 24 16 8
+--   , padding $ Padding 16 6 6 6
+--   , background "#E4EFFF"
+--   , cornerRadius 12.0
+--   ][ linearLayout 
+--      [ height MATCH_PARENT
+--      , width $ V $ ((screenWidth unit) - 144)
+--      , gravity CENTER_VERTICAL
+--      , orientation VERTICAL
+--      ][ textView $ 
+--         [ text $ "₹100 CREDITED! Earn ₹100 for every customer referral"
+--         , color "#005AD5"
+--         ] <> FontStyle.body29 TypoGraphy
+--       , linearLayout
+--         [ height WRAP_CONTENT
+--         , width WRAP_CONTENT
+--         , cornerRadius 14.0
+--         , padding $ Padding 12 2 12 2
+--         , background "#005AD5"
+--         , margin $ MarginTop 8
+--         , gravity CENTER
+--         ][ imageView
+--             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_youtube_white"
+--             , height $ V 11
+--             , width $ V 15
+--             , margin $ MarginRight 4
+--             , gravity CENTER
+--             ]
+--           , textView $ 
+--             [ text $ getString WATCH_NOW
+--             , color "#F2FFEE"
+--             ] <> FontStyle.body27 TypoGraphy
+--         ] 
+--      ]
+--     , linearLayout[weight 1.0, height WRAP_CONTENT][]
+--     , imageView 
+--       [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_customer_referral_info"
+--       , height $ V 84
+--       , width $ V 84
+--       , margin $ MarginLeft 6
+--       ]
+--   ]

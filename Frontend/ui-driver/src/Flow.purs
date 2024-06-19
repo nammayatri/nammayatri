@@ -115,6 +115,8 @@ import Screens.PaymentHistoryScreen.Transformer (buildTransactionDetails)
 import Screens.PopUpScreen.Controller (transformAllocationData)
 import Screens.RegistrationScreen.Controller (getStatusValue)
 import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
+import Screens.CustomerReferralTrackerScreen.Handler (customerReferralTrackerScreen) as UI
+import Screens.CustomerReferralTrackerScreen.Controller (mapSummaryListWithWeeklyEarnings)
 import Screens.ReportIssueChatScreen.ScreenData (initData) as ReportIssueScreenData
 import Screens.RideHistoryScreen.Transformer (getPaymentHistoryItemList)
 import Screens.RideSelectionScreen.Handler (rideSelection) as UI
@@ -124,7 +126,7 @@ import Screens.DriverEarningsScreen.Transformer (checkPopupShowToday, isPopupSho
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, UpdateRouteSrcDestConfig(..), KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..))
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
-import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp))
+import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..))
 import Services.API as API
 import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
@@ -133,7 +135,7 @@ import Engineering.Helpers.Events as Events
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore)
 import Timers (clearTimerWithId)
-import Types.App (LMS_QUIZ_SCREEN_OUTPUT(..), LMS_VIDEO_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), BENEFITS_SCREEN_OUTPUT(..))
+import Types.App (LMS_QUIZ_SCREEN_OUTPUT(..), LMS_VIDEO_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), BENEFITS_SCREEN_OUTPUT(..), CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT(..))
 import Types.App as TA
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import ConfigProvider
@@ -233,6 +235,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
       isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
       liftFlowBT $ Events.endMeasuringDuration "Flow.initialFlow"
       liftFlowBT $ markPerformance "INITIAL_FLOW_END"
+      customerReferralTrackerFlow
       if isTokenValid regToken then do
         checkRideAndInitiate event driverInfoResponse
       else if not config.flowConfig.chooseCity.runFlow then
@@ -2234,6 +2237,7 @@ homeScreenFlow = do
     GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN -> do
       liftFlowBT $ logEvent logField_ "ny_driver_rankings"
       referralFlow
+    GO_TO_CUSTOMER_REFERRAL_TRACKER state -> customerReferralTrackerFlow
     DRIVER_AVAILABILITY_STATUS state status -> do
       void $ lift $ lift $ loaderText (getString PLEASE_WAIT) if status == Online then (getString SETTING_YOU_ONLINE) else if status == Silent then (getString SETTING_YOU_SILENT) else (getString SETTING_YOU_OFFLINE)
       void $ lift $ lift $ toggleLoader true
@@ -3702,6 +3706,67 @@ benefitsScreenFlow = do
                               else cachedSelectedLanguage
       modifyScreenState $ LmsVideoScreenStateType (\lmsVideoScreen -> lmsVideoScreen { props {selectedLanguage = selectedLanguage, selectedModule = state.props.selectedModule}})
       lmsVideoScreenFlow
+    CUSTOMER_REFERRAL_TRACKER_NAV -> customerReferralTrackerFlow
+
+customerReferralTrackerFlow :: FlowBT String Unit 
+customerReferralTrackerFlow = do 
+  liftFlowBT $ runEffectFn1 initiatePP unit
+
+  (GlobalState globalState) <- getState
+  appConfig <- getAppConfigFlowBT Constants.appConfig
+  logField_ <- lift $ lift $ getLogFields
+  let customerReferralTrackerScreenState = globalState.customerReferralTrackerScreen
+  modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTracker -> customerReferralTracker{data{config = appConfig}})
+  customerReferralTrackerScreenAction <- UI.customerReferralTrackerScreen
+  case customerReferralTrackerScreenAction of
+    REFRESH_TRACKING_SCREEN state -> do 
+      (GetRidesSummaryListResp rideSummaryResp) <- Remote.getRideSummaryListReqBT [convertUTCtoISC  state.props.date "YYYY-MM-DD"]
+      let currPayoutHistory = mapSummaryListWithWeeklyEarnings rideSummaryResp.list
+      modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTracker -> customerReferralTracker{data{currPayoutHistory = currPayoutHistory}, props {showShimmer = false}})
+      customerReferralTrackerFlow
+    ADD_UPI_FLOW state -> addUPIFlow
+    _ -> customerReferralTrackerFlow
+
+addUPIFlow :: FlowBT String Unit 
+addUPIFlow = do 
+  liftFlowBT $ initiatePaymentPage
+  response <- lift $ lift $ Remote.subscribePlan "a35ffc7c-de0d-4dcc-83a8-e36a5a29cc1d"
+  case response of
+    Right (SubscribePlanResp listResp) -> do
+      let (CreateOrderRes orderResp) = listResp.orderResp
+          (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
+          (PayPayload innerpayload) = sdk_payload.payload
+          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getLanguageLocale languageKey)) }
+          sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
+      lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
+      void $ paymentPageUI sdkPayload
+      pure $ toggleBtnLoader "" false
+      orderStatus <- lift $ lift $ Remote.paymentOrderStatus listResp.orderId
+      case orderStatus of
+        Right (OrderStatusRes statusResp) ->
+          case statusResp.status of
+            PS.CHARGED -> do
+                setUPIPaymentStatus Success
+            PS.AUTHORIZATION_FAILED -> setUPIPaymentStatus Failed
+            PS.AUTHENTICATION_FAILED -> setUPIPaymentStatus Failed
+            PS.JUSPAY_DECLINED -> setUPIPaymentStatus Failed
+            PS.NEW -> pure unit
+            PS.PENDING_VBV -> setUPIPaymentStatus Pending
+            _ -> setUPIPaymentStatus Pending
+        Left err -> setUPIPaymentStatus Pending
+    Left (errorPayload) -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+  customerReferralTrackerFlow
+
+setUPIPaymentStatus :: PaymentStatus -> FlowBT String Unit
+setUPIPaymentStatus paymentStatus = do
+  (GlobalState globalState) <- getState
+  case paymentStatus of
+    Success -> do 
+      modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTracker -> customerReferralTracker)
+    Failed -> do
+      modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTracker -> customerReferralTracker)
+    Pending -> modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTracker -> customerReferralTracker)
+    Scheduled -> pure unit
 
 referralFlow :: FlowBT String Unit
 referralFlow = do

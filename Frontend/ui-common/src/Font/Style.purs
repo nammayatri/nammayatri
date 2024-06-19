@@ -406,6 +406,24 @@ body28 typography = [
   , lineHeight "40"
 ]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
 
+body29 ::  LazyCheck -> forall properties. (Array (Prop properties))
+body29 typography = [
+  textSize FontSize.a_13
+  , lineHeight "16"
+]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
+
+body30 ::  LazyCheck -> forall properties. (Array (Prop properties))
+body30 typography = [
+  textSize FontSize.a_20
+  , lineHeight "26" 
+]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
+
+body31 ::  LazyCheck ->  forall properties. (Array (Prop properties))
+body31 typography = [
+  textSize FontSize.a_8 
+  , lineHeight "10"
+]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 500]
+
 h0 :: LazyCheck -> forall properties. (Array (Prop properties))
 h0 typography = [
   textSize FontSize.a_24
