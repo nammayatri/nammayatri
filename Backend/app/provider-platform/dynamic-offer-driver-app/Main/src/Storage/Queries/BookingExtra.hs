@@ -77,16 +77,16 @@ findByTransactionIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => T
 findByTransactionIdAndStatus txnId status =
   findOneWithKV [Se.And [Se.Is BeamB.transactionId $ Se.Eq txnId, Se.Is BeamB.status $ Se.Eq status]]
 
-findByStatusTripCatSchedulingAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Integer -> Maybe Integer -> Maybe DT.Day -> BookingStatus -> Maybe DTC.TripCategory -> [DVST.ServiceTierType] -> Bool -> Id DMOC.MerchantOperatingCity -> Seconds -> m [Booking]
-findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbDay status mbTripCategory serviceTiers isScheduled (Id merchanOperatingCityId) timeDiffFromUtc = do
+findByStatusTripCatSchedulingAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Integer -> Maybe Integer -> Maybe DT.Day -> Maybe DT.Day -> BookingStatus -> Maybe DTC.TripCategory -> [DVST.ServiceTierType] -> Bool -> Id DMOC.MerchantOperatingCity -> Seconds -> m [Booking]
+findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay status mbTripCategory serviceTiers isScheduled (Id merchanOperatingCityId) timeDiffFromUtc = do
   let limitVal = maybe 5 fromInteger mbLimit
       offsetVal = maybe 0 fromInteger mbOffset
-  (from, to) <- case mbDay of
-    Just day -> pure (DT.UTCTime (DT.addDays (-1) day) (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)), DT.UTCTime day (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)))
-    Nothing -> do
-      now <- getLocalCurrentTime timeDiffFromUtc
-      let day_ = DT.utctDay now
-      pure (DT.UTCTime (DT.addDays (-1) day_) (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)), DT.UTCTime day_ (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)))
+  now <- getCurrentTime
+  (from, to) <- case (mbFromDay, mbToDay) of
+    (Just fromDay, Just toDay) -> pure (DT.UTCTime (DT.addDays (-1) fromDay) (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)), DT.UTCTime toDay (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)))
+    (Just fromDay, Nothing) -> pure (DT.UTCTime (DT.addDays (-1) fromDay) (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)), now)
+    (Nothing, Just toDay) -> pure (DT.UTCTime (DT.fromGregorian 2020 1 1) 0, DT.UTCTime toDay (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)))
+    (Nothing, Nothing) -> pure (DT.UTCTime (DT.fromGregorian 2020 1 1) 0, now)
   findAllWithOptionsKV
     [ Se.And $
         [ Se.Is BeamB.startTime $ Se.GreaterThanOrEq from,
