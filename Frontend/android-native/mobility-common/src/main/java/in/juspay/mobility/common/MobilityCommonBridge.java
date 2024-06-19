@@ -184,15 +184,20 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -268,6 +273,8 @@ public class MobilityCommonBridge extends HyperBridge {
     CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
     private int lastFocusedEditView;
     private int lastFocusedEditText;
+
+    private Queue<String> callbackQueue = new LinkedList<>();
     // Others
     private LottieAnimationView animationView;
     protected Method[] methods = null;
@@ -494,6 +501,22 @@ public class MobilityCommonBridge extends HyperBridge {
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
         client = LocationServices.getFusedLocationProviderClient(bridgeComponents.getContext());
+        if (isLocationPermissionEnabled()){
+            client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
+                    .addOnSuccessListener( location -> {
+                        JSONObject currLoc = new JSONObject();
+                        try {
+                            currLoc.put("lat", location.getLatitude());
+                            currLoc.put("lon", location.getLongitude());
+                        } catch (JSONException e) {
+                            currLoc = null;
+                        }
+
+                        String command = String.format("window[\"onEvent'\"]('%s','%s')", "onLocationFetch", currLoc.toString());
+                        callbackQueue.add(command);
+                    });
+        }
+
         receivers = new Receivers(bridgeComponents);
         receivers.initReceiver();
         callBack = this::callImageUploadCallBack;
@@ -528,6 +551,15 @@ public class MobilityCommonBridge extends HyperBridge {
         } catch (Exception ignored) {
         }
         return false;
+    }
+
+    @JavascriptInterface
+    public void emptyCallbackQueue() {
+        while (!callbackQueue.isEmpty()) {
+            if (bridgeComponents.getJsCallback() != null){
+                bridgeComponents.getJsCallback().addJsToWebView(callbackQueue.poll());
+            }
+        }
     }
 
     @Override
@@ -709,9 +741,8 @@ public class MobilityCommonBridge extends HyperBridge {
     @SuppressLint("MissingPermission")
     protected void updateLastKnownLocation(String callback, boolean animate, final String zoomType, boolean shouldFallBack) {
         if (!isLocationPermissionEnabled()) return;
-        if (bridgeComponents.getActivity() != null) {
             client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
-                    .addOnSuccessListener(bridgeComponents.getActivity(), location -> {
+                    .addOnSuccessListener( location -> {
                         if (location != null) {
                             Double lat = location.getLatitude();
                             Double lng = location.getLongitude();
@@ -748,7 +779,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             sendDefaultLocationCallback(callback);
                         }
                     })
-                    .addOnFailureListener(bridgeComponents.getActivity(), e -> {
+                    .addOnFailureListener( e -> {
                         Log.e(LOCATION, "Current position not known");
                         if (shouldFallBack) {
                             getLastKnownLocationFromClientFallback(callback, animate);
@@ -756,7 +787,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             sendDefaultLocationCallback(callback);
                         }
                     });
-        }
+
     }
 
     private void sendDefaultLocationCallback(@Nullable String callback) {

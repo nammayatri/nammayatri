@@ -9,10 +9,12 @@
 
 package in.juspay.mobility;
 
+import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static in.juspay.mobility.BuildConfig.MERCHANT_TYPE;
 import static in.juspay.mobility.app.Utils.minimizeApp;
 import static in.juspay.mobility.app.Utils.setCleverTapUserProp;
 
+import android.Manifest;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -46,6 +48,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.work.WorkManager;
 
@@ -58,7 +61,11 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.android.gms.maps.MapsInitializer;
+import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.android.play.core.appupdate.AppUpdateManager;
 import com.google.android.play.core.install.model.AppUpdateType;
 import com.google.android.play.core.install.model.UpdateAvailability;
@@ -90,6 +97,7 @@ import java.util.Vector;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -138,6 +146,7 @@ public class MainActivity extends AppCompatActivity {
     ShowNotificationCallBack inappCallBack;
     private Future<JSONObject> driverInfoFutureTask;
     private Future<JSONObject> preInitFutureTask;
+    private JSONObject currentLocationRes = new JSONObject();
     private JSONObject preInitFutureTaskResult = null;
     long onCreateTimeStamp = 0;
     private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
@@ -360,6 +369,22 @@ public class MainActivity extends AppCompatActivity {
                 return results;
     }
 
+    protected void getCurrentLocationFlow() {
+        if (ActivityCompat.checkSelfPermission(this, ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return;
+        FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(this);
+        CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
+                .addOnSuccessListener(location -> {
+                    if (location != null) {
+                        try {
+                            currentLocationRes.put("lat",location.getLatitude());
+                            currentLocationRes.put("lon",location.getLongitude());
+                        } catch (JSONException e) {
+                            currentLocationRes = null;
+                        }
+                    }});
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     @AddTrace(name = "onCreateTrace", enabled = true /* optional */)
@@ -373,10 +398,10 @@ public class MainActivity extends AppCompatActivity {
 
         Log.i("APP_PERF", "FORKED_INIT_TASKS_AND_APIS : " + System.currentTimeMillis());        
 
-        boolean isPerfEnabled = false;
+        boolean isPerfEnabled = false, isPerfEnabledCustomer = false;
         try{
             isPerfEnabled = remoteConfigs.getBoolean("perf_enabled");
-
+            isPerfEnabledCustomer = remoteConfigs.getBoolean("perf_enabled_customer");
             Log.i("PERF", "Fetched from remote config - perf enabled : " + isPerfEnabled);
 
         }catch(Exception e){
@@ -385,12 +410,17 @@ public class MainActivity extends AppCompatActivity {
             FirebaseCrashlytics.getInstance().recordException(exception);            
         }
 
+        if(isPerfEnabledCustomer){
+            ExecutorService currentLocExecuter = Executors.newSingleThreadExecutor();
+            currentLocExecuter.execute(() -> getCurrentLocationFlow());
+        }
+
         if(isPerfEnabled) {
             preInitFutureTask = Executors.newSingleThreadExecutor().submit(this::preInitFlow);
             driverInfoFutureTask = Executors.newSingleThreadExecutor().submit(this::getDriverInfoFlow);
         } else {
             preInitFutureTaskResult = preInitFlow();
-        }     
+        }
 
         initApp();
 
@@ -713,6 +743,7 @@ public class MainActivity extends AppCompatActivity {
                             innerPayload.put("view_param", viewParam);
                             innerPayload.put("deepLinkJSON", deepLinkJSON);
                             innerPayload.put("driverInfoResponse", driverInfoResponse);
+                            innerPayload.put("currentLocation", currentLocationRes);
 
                             if (getIntent() != null)
                                 setNotificationData(innerPayload, getIntent());
@@ -783,7 +814,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-        Log.i("APP_PERF", "INIT_HYPER_SERVICE_END : " + String.valueOf(System.currentTimeMillis()));
+        Log.i("APP_PERF", "INIT_HYPER_SERVICE_END : " + System.currentTimeMillis());
     }
 
     public void showAlertForUpdate() {
