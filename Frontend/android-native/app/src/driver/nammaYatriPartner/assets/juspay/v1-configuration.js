@@ -751,6 +751,363 @@ window.getMerchantConfig = function () {
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_black"
       }
+      },
+      {
+        "cityName" : "Trichy",
+        "mapImage" : "ny_ic_tamilnadu_map",
+        "cityCode" : "std:0431",
+        "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
+        "cityLat" : 10.80942,
+        "cityLong" : 78.693486,
+        "supportNumber" : "08069724899",
+        "languageKey" : "TA_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : false,
+        "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image_old",
+        "registration" : {
+            "supportWAN" : "917483117936",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : true,
+          "variantList" : [],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
+        },
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      },
+      "waitingCharges" : 1.00,
+      "waitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 1.0
+        }
+      },
+      "rateCardConfig" : defRateCardConfig,
+      "assets" :{
+        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
+      }
+      },
+      {
+        "cityName" : "Thanjavur",
+        "mapImage" : "ny_ic_tamilnadu_map",
+        "cityCode" : "std:04362",
+        "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
+        "cityLat" : 10.778442,
+        "cityLong" : 79.133848,
+        "supportNumber" : "08069724899",
+        "languageKey" : "TA_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : false,
+        "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image_old",
+        "registration" : {
+            "supportWAN" : "917483117936",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : true,
+          "variantList" : [],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
+        },
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      },
+      "waitingCharges" : 1.00,
+      "waitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 1.0
+        }
+      },
+      "rateCardConfig" : defRateCardConfig,
+      "assets" :{
+        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
+      }
+      },
+      {
+        "cityName" : "Salem",
+        "mapImage" : "ny_ic_tamilnadu_map",
+        "cityCode" : "std:0427",
+        "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
+        "cityLat" : 11.656077,
+        "cityLong" : 78.14412,
+        "supportNumber" : "08069724899",
+        "languageKey" : "TA_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : false,
+        "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image_old",
+        "registration" : {
+            "supportWAN" : "917483117936",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : true,
+          "variantList" : [],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
+        },
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      },
+      "waitingCharges" : 1.00,
+      "waitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 1.0
+        }
+      },
+      "rateCardConfig" : defRateCardConfig,
+      "assets" :{
+        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
+      }
+      },
+      {
+        "cityName" : "Tirunelveli",
+        "mapImage" : "ny_ic_tamilnadu_map",
+        "cityCode" : "std:0462",
+        "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
+        "cityLat" : 8.723441,
+        "cityLong" : 77.740959,
+        "supportNumber" : "08069724899",
+        "languageKey" : "TA_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : false,
+        "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image_old",
+        "registration" : {
+            "supportWAN" : "917483117936",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : true,
+          "variantList" : [],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
+        },
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      },
+      "waitingCharges" : 1.00,
+      "waitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 1.0
+        }
+      },
+      "rateCardConfig" : defRateCardConfig,
+      "assets" :{
+        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
+      }
+      },
+      {
+        "cityName" : "Hosur",
+        "mapImage" : "ny_ic_tamilnadu_map",
+        "cityCode" : "std:04344",
+        "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
+        "cityLat" : 12.738274,
+        "cityLong" : 77.82293,
+        "supportNumber" : "08069724899",
+        "languageKey" : "TA_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : false,
+        "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image_old",
+        "registration" : {
+            "supportWAN" : "917483117936",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : true,
+          "variantList" : [],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
+        },
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      },
+      "waitingCharges" : 1.00,
+      "waitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 1.0
+        }
+      },
+      "rateCardConfig" : defRateCardConfig,
+      "assets" :{
+        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
+      }
+      },
+      {
+        "cityName" : "Madurai",
+        "mapImage" : "ny_ic_tamilnadu_map",
+        "cityCode" : "std:0452",
+        "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
+        "cityLat" : 9.920995,
+        "cityLong" : 78.121278,
+        "supportNumber" : "08069724899",
+        "languageKey" : "TA_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : false,
+        "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image_old",
+        "registration" : {
+            "supportWAN" : "917483117936",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : true,
+          "variantList" : [],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
+        },
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      },
+      "waitingCharges" : 1.00,
+      "waitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 1.0
+        }
+      },
+      "rateCardConfig" : defRateCardConfig,
+      "assets" :{
+        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
+      }
+      },
+      {
+        "cityName" : "Vellore",
+        "mapImage" : "ny_ic_tamilnadu_map",
+        "cityCode" : "std:0416",
+        "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
+        "cityLat" : 12.929078,
+        "cityLong" : 79.126577,
+        "supportNumber" : "08069724899",
+        "languageKey" : "TA_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : false,
+        "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image_old",
+        "registration" : {
+            "supportWAN" : "917483117936",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : true,
+          "variantList" : [],
+          "enableCabsSubscriptionView" : true,
+          "staticViewPlans" : staticSubscriptionConfig
+        },
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      },
+      "waitingCharges" : 1.00,
+      "waitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 1.0
+        }
+      },
+      "rateCardConfig" : defRateCardConfig,
+      "assets" :{
+        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
+      }
       }
   ]
   , "coinsConfig" : {
