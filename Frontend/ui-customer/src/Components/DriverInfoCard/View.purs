@@ -44,7 +44,7 @@ import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, safeMarginBottom, screenWidth, getCurrentUTC, getUTCAfterNSeconds, convertUTCtoISC, getUTCAfterNSecondsImpl)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode, getDefaultPixelSize)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), userCommonAssetBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode, getDefaultPixelSize)
 import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig)
 import Helpers.Utils (parseFloat)
 import JBridge (fromMetersToKm, getLayoutBounds)
@@ -961,7 +961,7 @@ airportPickupView push state directionText =
         , id $ getNewIDWithTag "WalkingLottie"
         , margin $ MarginRight 4
         , onAnimationEnd (\action -> do
-          void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {speed = 1.0, rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/walk_anim.json", lottieId = getNewIDWithTag "WalkingLottie", repeat = true}
+          void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {speed = 1.0, rawJson = userCommonAssetBaseUrl <> "lottie/walk_anim.json", lottieId = getNewIDWithTag "WalkingLottie", repeat = true}
           push action
           ) (const NoAction)
         ]

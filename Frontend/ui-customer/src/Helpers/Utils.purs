@@ -506,6 +506,9 @@ getAssetsBaseUrl lazy = case (getMerchant lazy) of
   PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/user/"
   MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/mobilityredbus/user/"
 
+userCommonAssetBaseUrl :: String
+userCommonAssetBaseUrl = "https://" <> assetDomain <> "/beckn/common/user/"
+
 fetchImage :: FetchImageFrom -> String -> String
 fetchImage fetchImageFrom imageName = do
   if imageName  == "" then ","

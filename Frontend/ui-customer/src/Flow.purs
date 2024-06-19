@@ -2173,7 +2173,7 @@ homeScreenFlow = do
         flowRouter IssueReportChatScreenFlow
     GOTO_PICKUP_INSTRUCTIONS state lat lon gateName locationName -> do
       let pickupInstructions = RC.pickupInstructions locationName gateName $ fetchLanguage $ getLanguageLocale languageKey
-      if (null pickupInstructions || os == "IOS") then do
+      if (null pickupInstructions) then do
         void $ pure $ openNavigation lat lon "WALK"
         homeScreenFlow
       else do
