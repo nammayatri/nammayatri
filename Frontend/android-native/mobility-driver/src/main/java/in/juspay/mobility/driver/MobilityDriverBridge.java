@@ -343,6 +343,11 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
     @JavascriptInterface
+    public boolean isNonOverlayDevice(){
+        return NotificationUtils.overlayFeatureNotAvailable(bridgeComponents.getContext());
+    }
+
+    @JavascriptInterface
     public void checkOverlayPermission() {
         System.out.println("CommonJsInterface checkOverlayPermission()");
         if (!Settings.canDrawOverlays(bridgeComponents.getContext())) {

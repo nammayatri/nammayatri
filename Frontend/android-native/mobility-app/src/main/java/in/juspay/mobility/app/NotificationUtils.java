@@ -78,6 +78,11 @@ import in.juspay.mobility.common.services.TLSSocketFactory;
 
 public class NotificationUtils {
 
+    public static class RequestSource {
+        public static final String FCM = "FCM";
+        public static final String GRPC = "GRPC";
+    }
+
     private static final String LOG_TAG = "LocationServices";
     private static final String TAG = "NotificationUtils";
     public static final String GENERAL_NOTIFICATION = "GENERAL_NOTIFICATION_NEW";
@@ -746,14 +751,15 @@ public class NotificationUtils {
         sharedPref.edit().putString(context.getString(R.string.RIDE_STATUS), context.getString(R.string.NEW_RIDE_AVAILABLE)).apply();
         boolean activityBasedChecks = Arrays.asList("onPause", "onDestroy").contains(sharedPref.getString("ACTIVITY_STATUS", "null"));
         boolean useWidgetService = (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && activityBasedChecks) || useSilentFCMForForwardBatch;
-        if (useWidgetService) {
-             NotificationUtils.startWidgetService(context, null, payload, entity_payload);
+        boolean widgetCheckForNonOverlay = useWidgetService && !NotificationUtils.overlayFeatureNotAvailable(context);
+        if (widgetCheckForNonOverlay) {
+             NotificationUtils.startWidgetService(context, null, payload, entity_payload, source);
         } else {
             NotificationUtils.showAllocationNotification(context, payload, entity_payload, source);
         }
     }
 
-    public static void startWidgetService(Context context, String widgetMessage, JSONObject data, JSONObject payload) {
+    public static void startWidgetService(Context context, String widgetMessage, JSONObject data, JSONObject payload, String source) {
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         Intent widgetService = new Intent(context, WidgetService.class);
         String key = context.getString(R.string.service);
@@ -764,6 +770,7 @@ public class NotificationUtils {
             widgetService.putExtra(context.getResources().getString(R.string.WIDGET_MESSAGE), widgetMessage);
             widgetService.putExtra("payload", payload != null ? payload.toString() : null);
             widgetService.putExtra("data", data != null ? data.toString() : null);
+            widgetService.putExtra("requestSource", source);
             widgetService.putExtra("isForwardRequest", useSilentFCMForForwardBatch);
             try {
                 context.startService(widgetService);
