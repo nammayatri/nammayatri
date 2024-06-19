@@ -52,24 +52,27 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
   if action == ACCEPT
     then do
       hasAdvancedRide <- QDI.findById driverId <&> maybe False (.hasAdvanceBooking)
-      when hasAdvancedRide $
-        CallBAP.sendUpdateEditDestErrToBAP booking bookingUpdateReq.bapBookingUpdateRequestId "Trip Update Request Not Available" "Driver has an upcoming ride near your drop location. "
-      QBUR.updateStatusById DRIVER_ACCEPTED bookingUpdateReqId
-      dropLocMapping <- QLM.getLatestEndByEntityId bookingUpdateReqId.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateReqId: " <> bookingUpdateReqId.getId)
-      dropLocMapBooking <- SLM.buildDropLocationMapping dropLocMapping.locationId bookingUpdateReq.bookingId.getId DLM.BOOKING (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
-      ride <- QR.findActiveByRBId bookingUpdateReq.bookingId >>= fromMaybeM (InternalError $ "Ride not found for bookingId: " <> bookingUpdateReq.bookingId.getId)
-      dropLocMapRide <- SLM.buildDropLocationMapping dropLocMapping.locationId ride.id.getId DLM.RIDE (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
-      QLM.create dropLocMapBooking
-      QLM.create dropLocMapRide
-      routeInfo :: RouteInfo <- Redis.get (bookingRequestKeySoftUpdate booking.id.getId) >>= fromMaybeM (InternalError $ "BookingRequestRoute not found for bookingId: " <> booking.id.getId)
-      multipleRoutes :: Maybe [RouteAndDeviationInfo] <- Redis.safeGet $ multipleRouteKeySoftUpdate booking.id.getId
-      Redis.setExp (searchRequestKey booking.transactionId) routeInfo 3600
-      whenJust multipleRoutes $ \allRoutes -> do
-        Redis.setExp (multipleRouteKey booking.transactionId) allRoutes 3600
-      let estimatedDistance = highPrecMetersToMeters <$> bookingUpdateReq.estimatedDistance
-      QB.updateMultipleById bookingUpdateReq.estimatedFare bookingUpdateReq.maxEstimatedDistance estimatedDistance bookingUpdateReq.fareParamsId.getId bookingUpdateReq.bookingId
-      CallBAP.sendUpdateEditDestToBAP booking ride bookingUpdateReq Nothing Nothing OU.CONFIRM_UPDATE
-      return Success
+      if hasAdvancedRide
+        then do
+          CallBAP.sendUpdateEditDestErrToBAP booking bookingUpdateReq.bapBookingUpdateRequestId "Trip Update Request Not Available" "Driver has an upcoming ride near your drop location. "
+          throwError $ InvalidRequest "You have an upcoming ride near your current drop location."
+        else do
+          QBUR.updateStatusById DRIVER_ACCEPTED bookingUpdateReqId
+          dropLocMapping <- QLM.getLatestEndByEntityId bookingUpdateReqId.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateReqId: " <> bookingUpdateReqId.getId)
+          dropLocMapBooking <- SLM.buildDropLocationMapping dropLocMapping.locationId bookingUpdateReq.bookingId.getId DLM.BOOKING (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
+          ride <- QR.findActiveByRBId bookingUpdateReq.bookingId >>= fromMaybeM (InternalError $ "Ride not found for bookingId: " <> bookingUpdateReq.bookingId.getId)
+          dropLocMapRide <- SLM.buildDropLocationMapping dropLocMapping.locationId ride.id.getId DLM.RIDE (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
+          QLM.create dropLocMapBooking
+          QLM.create dropLocMapRide
+          routeInfo :: RouteInfo <- Redis.get (bookingRequestKeySoftUpdate booking.id.getId) >>= fromMaybeM (InternalError $ "BookingRequestRoute not found for bookingId: " <> booking.id.getId)
+          multipleRoutes :: Maybe [RouteAndDeviationInfo] <- Redis.safeGet $ multipleRouteKeySoftUpdate booking.id.getId
+          Redis.setExp (searchRequestKey booking.transactionId) routeInfo 3600
+          whenJust multipleRoutes $ \allRoutes -> do
+            Redis.setExp (multipleRouteKey booking.transactionId) allRoutes 3600
+          let estimatedDistance = highPrecMetersToMeters <$> bookingUpdateReq.estimatedDistance
+          QB.updateMultipleById bookingUpdateReq.estimatedFare bookingUpdateReq.maxEstimatedDistance estimatedDistance bookingUpdateReq.fareParamsId.getId bookingUpdateReq.bookingId
+          CallBAP.sendUpdateEditDestToBAP booking ride bookingUpdateReq Nothing Nothing OU.CONFIRM_UPDATE
+          return Success
     else do
       CallBAP.sendUpdateEditDestErrToBAP booking bookingUpdateReq.bapBookingUpdateRequestId "Trip Update Request Declined" "Request was declined by your driver. Kindly check with them offline before requesting again."
       QBUR.updateStatusById DRIVER_REJECTED bookingUpdateReqId

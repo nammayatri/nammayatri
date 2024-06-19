@@ -312,7 +312,9 @@ updateMultipleById estimatedFare estimatedTotalFare mbEstimatedDistance bookingI
     [ Se.Set BeamB.estimatedFare estimatedFare,
       Se.Set BeamB.estimatedTotalFare estimatedTotalFare,
       Se.Set BeamB.estimatedDistance $ distanceToHighPrecMeters <$> mbEstimatedDistance,
+      Se.Set BeamB.distance $ distanceToHighPrecMeters <$> mbEstimatedDistance,
       Se.Set BeamB.estimatedDistanceValue estimatedDistanceValue,
+      Se.Set BeamB.distanceValue estimatedDistanceValue,
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]

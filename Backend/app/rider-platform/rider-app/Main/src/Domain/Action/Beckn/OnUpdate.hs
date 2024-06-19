@@ -134,7 +134,9 @@ data ValidatedEditDestErrorReq = ValidatedEditDestErrorReq
   { errorMessage :: Text,
     errorCode :: Text,
     bookingUpdateReqDetails :: DBUR.BookingUpdateRequest,
-    bookingUpdateReqId :: Id DBUR.BookingUpdateRequest
+    bookingUpdateReqId :: Id DBUR.BookingUpdateRequest,
+    booking :: DRB.Booking,
+    ride :: DRide.Ride
   }
 
 data EditDestSoftUpdateReq = EditDestSoftUpdateReq
@@ -395,12 +397,15 @@ onUpdate = \case
     QLM.create dropLocMap
     estimatedFare <- bookingUpdateRequest.estimatedFare & fromMaybeM (InternalError "Estimated fare not found for bookingUpdateRequestId")
     QRB.updateMultipleById estimatedFare estimatedFare (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) bookingUpdateRequest.bookingId
+    Notify.notifyOnTripUpdate booking ride "Destination and Fare Updated" "Your edit request was accepted by your driver!"
   OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..} -> do
     merchantPN <- CPN.findByMerchantOpCityIdAndMessageKey booking.merchantOperatingCityId "TOLL_CROSSED" >>= fromMaybeM (MerchantPNNotFound booking.merchantOperatingCityId.getId "TOLL_CROSSED")
     let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
     TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
   OUValidatedEditDestError ValidatedEditDestErrorReq {..} -> do
-    QBUR.updateErrorObjById (Just DBUR.ErrorObj {..}) bookingUpdateReqId
+    if bookingUpdateReqDetails.status == DBUR.SOFT
+      then QBUR.updateErrorObjById (Just DBUR.ErrorObj {..}) bookingUpdateReqId
+      else Notify.notifyOnTripUpdate booking ride errorCode errorMessage
 
 validateRequest ::
   ( CacheFlow m r,
@@ -490,6 +495,8 @@ validateRequest = \case
     return $ OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..}
   OUEditDestError EditDestErrorReq {..} -> do
     bookingUpdateReqDetails <- runInReplica $ QBUR.findById (Id messageId) >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with Id:-" <> messageId)
+    booking <- runInReplica $ QRB.findById bookingUpdateReqDetails.bookingId >>= fromMaybeM (BookingDoesNotExist $ "bookingUpdateReq bookingId:- " <> bookingUpdateReqDetails.bookingId.getId)
+    ride <- runInReplica $ QRide.findByRBId bookingUpdateReqDetails.bookingId >>= fromMaybeM (RideDoesNotExist $ " with bookingUpdateReq bookingId:- " <> bookingUpdateReqDetails.bookingId.getId)
     return $ OUValidatedEditDestError ValidatedEditDestErrorReq {bookingUpdateReqId = Id messageId, ..}
 
 mkBookingCancellationReason ::
