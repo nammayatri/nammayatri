@@ -78,6 +78,7 @@ module Domain.Action.Dashboard.Driver
     castVehicleVariant,
     updateFleetOwnerInfo,
     getFleetOwnerInfo,
+    linkRCWithDriverForFleet,
   )
 where
 
@@ -136,7 +137,6 @@ import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Documents as Documents
-import qualified Kernel.Types.Documents as KTD
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
@@ -1046,7 +1046,7 @@ setVehicleDriverRcStatusForFleet merchantShortId opCity reqDriverId fleetOwnerId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId personId fleetOwnerId True
-  when (isNothing isFleetDriver) $ throwError (InvalidRequest "Driver is not the  part of this fleet")
+  when (isNothing isFleetDriver) $ throwError DriverNotPartOfFleet
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
@@ -1329,9 +1329,9 @@ fleetUnlinkVehicle merchantShortId fleetOwnerId reqDriverId vehicleNo = do
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
   isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId personId fleetOwnerId True
   case isFleetDriver of
-    Nothing -> throwError (InvalidRequest "Driver is not part of this fleet, add this driver to the fleet before unlinking a vehicle with them")
+    Nothing -> throwError DriverNotPartOfFleet
     Just fleetDriver -> do
-      unless fleetDriver.isActive $ throwError (InvalidRequest "Driver is not active with this fleet, add this driver to the fleet before unlinking  a vehicle linked with him")
+      unless fleetDriver.isActive $ throwError DriverNotActiveWithFleet
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
   DomainRC.deactivateCurrentRC personId
@@ -1815,7 +1815,7 @@ updateByPhoneNumber merchantShortId _ phoneNumber req = do
   driver <- QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
   res <- QAadhaarCard.findByPrimaryKey driver.id
   case res of
-    Just _ -> QAadhaarCard.findByPhoneNumberAndUpdate (Just req.driverName) (Just req.driverGender) (Just req.driverDob) (Just aadhaarNumberHash) (bool KTD.INVALID KTD.VALID req.isVerified) driver.id
+    Just _ -> QAadhaarCard.findByPhoneNumberAndUpdate (Just req.driverName) (Just req.driverGender) (Just req.driverDob) (Just aadhaarNumberHash) (bool Documents.INVALID Documents.VALID req.isVerified) driver.id
     Nothing -> do
       aadhaarEntity <- AVD.mkAadhaar merchant.id driver.merchantOperatingCityId driver.id req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) Nothing True Nothing
       QAadhaarCard.create aadhaarEntity
@@ -2258,3 +2258,27 @@ getFleetOwnerInfo _ _ driverId = do
     makeFleetOwnerInfoRes :: Maybe Text -> DFOI.FleetOwnerInformation -> Flow Common.FleetOwnerInfoRes
     makeFleetOwnerInfoRes panNumber DFOI.FleetOwnerInformation {..} = do
       return $ Common.FleetOwnerInfoRes {panNumber = panNumber, fleetType = show fleetType, ..}
+
+linkRCWithDriverForFleet :: ShortId DM.Merchant -> Context.City -> Text -> Common.LinkRCWithDriverForFleetReq -> Flow APISuccess
+linkRCWithDriverForFleet merchantShortId opCity fleetOwnerId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  phoneNumberHash <- getDbHash req.driverMobileNumber
+  let mobileCountryCode = fromMaybe mobileIndianCode req.driverMobileCountryCode
+  driver <- QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneNumberHash merchant.id DP.DRIVER >>= fromMaybeM (DriverNotFound req.driverMobileNumber)
+  let merchantId = driver.merchantId
+  unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist driver.id.getId)
+  rc <- RCQuery.findLastVehicleRCWrapper req.vehicleRegistrationNumber >>= fromMaybeM (RCNotFound req.vehicleRegistrationNumber)
+  when (isNothing rc.fleetOwnerId || (isJust rc.fleetOwnerId && rc.fleetOwnerId /= Just fleetOwnerId)) $ throwError VehicleNotPartOfFleet
+  unless (rc.verificationStatus == Documents.VALID) $ throwError (InvalidRequest "Cannot link to driver because Rc is not valid")
+  isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId True
+  case isFleetDriver of
+    Nothing -> throwError DriverNotPartOfFleet
+    Just fleetDriver -> do
+      unless fleetDriver.isActive $ throwError DriverNotActiveWithFleet
+  now <- getCurrentTime
+  mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId driver.id rc.id now
+  when (isNothing mbAssoc) $ do
+    driverRCAssoc <- makeRCAssociation driver.merchantId driver.merchantOperatingCityId driver.id rc.id (convertTextToUTC (Just "2099-12-12"))
+    QRCAssociation.create driverRCAssoc
+  return Success

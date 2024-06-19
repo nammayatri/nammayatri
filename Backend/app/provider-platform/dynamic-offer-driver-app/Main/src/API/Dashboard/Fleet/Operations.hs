@@ -53,6 +53,7 @@ type API =
            :<|> SendFleetJoiningOtpAPI
            :<|> VerifyFleetJoiningOtpAPI
            :<|> ListDriverRidesForFleetAPI
+           :<|> LinkRCWithDriverForFleetAPI
        )
 
 -----------------------------------
@@ -230,6 +231,13 @@ type ListDriverRidesForFleetAPI =
     :> QueryParam "fleetOwnerId" Text
     :> Get '[JSON] DARide.DriverRideListRes
 
+type LinkRCWithDriverForFleetAPI =
+  "fleet"
+    :> "linkRCWithDriver"
+    :> Capture "fleetOwnerId" Text
+    :> ReqBody '[JSON] Common.LinkRCWithDriverForFleetReq
+    :> Post '[JSON] APISuccess
+
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city =
   addVehicleForFleet merchantId city
@@ -251,6 +259,7 @@ handler merchantId city =
     :<|> sendFleetJoiningOtp merchantId city
     :<|> verifyFleetJoiningOtp merchantId city
     :<|> listDriverRidesForFleet merchantId city
+    :<|> linkRCWithDriverForFleet merchantId city
 
 addVehicleForFleet :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Text -> Common.AddVehicleReq -> FlowHandler APISuccess
 addVehicleForFleet merchantShortId opCity phoneNo mbMobileCountryCode fleetOwnerId = withFlowHandlerAPI . DDriver.addVehicleForFleet merchantShortId opCity phoneNo mbMobileCountryCode fleetOwnerId
@@ -308,3 +317,6 @@ verifyFleetJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId req = withFlo
 
 listDriverRidesForFleet :: ShortId DM.Merchant -> Context.City -> Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe Day -> Maybe Text -> FlowHandler DARide.DriverRideListRes
 listDriverRidesForFleet _ _ driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId = withFlowHandlerAPI $ DARide.listDriverRides driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId
+
+linkRCWithDriverForFleet :: ShortId DM.Merchant -> Context.City -> Text -> Common.LinkRCWithDriverForFleetReq -> FlowHandler APISuccess
+linkRCWithDriverForFleet merchantShortId opCity fleetOwnerId req = withFlowHandlerAPI $ DDriver.linkRCWithDriverForFleet merchantShortId opCity fleetOwnerId req

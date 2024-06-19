@@ -1354,3 +1354,21 @@ data VerifyFleetJoiningOtpReq = VerifyFleetJoiningOtpReq
 
 instance HideSecrets VerifyFleetJoiningOtpReq where
   hideSecrets = identity
+
+--------- Link RC With Driver For Fleet ------------
+
+type LinkRCWithDriverForFleetAPI =
+  "fleet"
+    :> "linkRCWithDriver"
+    :> ReqBody '[JSON] LinkRCWithDriverForFleetReq
+    :> Post '[JSON] APISuccess
+
+data LinkRCWithDriverForFleetReq = LinkRCWithDriverForFleetReq
+  { driverMobileCountryCode :: Maybe Text,
+    driverMobileNumber :: Text,
+    vehicleRegistrationNumber :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+instance HideSecrets LinkRCWithDriverForFleetReq where
+  hideSecrets = identity

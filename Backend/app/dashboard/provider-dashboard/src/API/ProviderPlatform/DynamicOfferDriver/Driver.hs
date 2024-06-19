@@ -125,6 +125,7 @@ type API =
            :<|> SendFleetJoiningOtpAPI
            :<|> VerifyFleetJoiningOtpAPI
            :<|> ListDriverRidesForFleetAPI
+           :<|> LinkRCWithDriverForFleetAPI
        )
 
 type DriverDocumentsInfoAPI =
@@ -399,6 +400,10 @@ type ListDriverRidesForFleetAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'FLEET 'LIST_DRIVER_RIDES
     :> Fleet.ListDriverRidesForFleetAPI
 
+type LinkRCWithDriverForFleetAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'FLEET 'LINK_RC_WITH_DRIVER
+    :> Common.LinkRCWithDriverForFleetAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   driverDocuments merchantId city
@@ -469,6 +474,7 @@ handler merchantId city =
     :<|> sendFleetJoiningOtp merchantId city
     :<|> verifyFleetJoiningOtp merchantId city
     :<|> listDriverRidesForFleet merchantId city
+    :<|> linkRCWithDriverForFleet merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -974,3 +980,9 @@ listDriverRidesForFleet merchantShortId opCity apiTokenInfo driverId mbLimit mbO
   withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
     Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.listDriverRidesForFleet) driverId mbLimit mbOffset mbOnlyActive mbStatus mbDate mbFleetOwnerId
+
+linkRCWithDriverForFleet :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.LinkRCWithDriverForFleetReq -> FlowHandler APISuccess
+linkRCWithDriverForFleet merchantShortId opCity apiTokenInfo req =
+  withFlowHandlerAPI' $ do
+    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+    Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.linkRCWithDriverForFleet) apiTokenInfo.personId.getId req

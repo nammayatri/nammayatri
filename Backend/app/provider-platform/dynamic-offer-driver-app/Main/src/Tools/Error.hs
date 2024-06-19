@@ -784,6 +784,9 @@ instance IsAPIError SubscriptionError
 data FleetErrors
   = FleetOwnerVehicleMismatchError Text
   | VehicleBelongsToAnotherFleet
+  | VehicleNotPartOfFleet
+  | DriverNotPartOfFleet
+  | DriverNotActiveWithFleet
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''FleetErrors
@@ -792,14 +795,23 @@ instance IsBaseError FleetErrors where
   toMessage = \case
     FleetOwnerVehicleMismatchError fleetOwnerId -> Just $ "Vehicle does not belong to fleet owner with id " <> show fleetOwnerId
     VehicleBelongsToAnotherFleet -> Just "Vehicle is already part of another fleet"
+    VehicleNotPartOfFleet -> Just "Vehicle is not part of any fleet"
+    DriverNotPartOfFleet -> Just "Driver is not part of the fleet"
+    DriverNotActiveWithFleet -> Just "Driver is not active with the fleet"
 
 instance IsHTTPError FleetErrors where
   toErrorCode = \case
     FleetOwnerVehicleMismatchError _ -> "FLEET_OWNER_AND_VEHICLE_MISMATCH"
     VehicleBelongsToAnotherFleet -> "FLEET_OWNER_AND_VEHICLE_MISMATCH"
+    VehicleNotPartOfFleet -> "VEHICLE_NOT_PART_OF_FLEET"
+    DriverNotPartOfFleet -> "DRIVER_NOT_PART_OF_FLEET"
+    DriverNotActiveWithFleet -> "DRIVER_NOT_ACTIVE_WITH_FLEET"
   toHttpCode = \case
     FleetOwnerVehicleMismatchError _ -> E400
     VehicleBelongsToAnotherFleet -> E400
+    VehicleNotPartOfFleet -> E400
+    DriverNotPartOfFleet -> E400
+    DriverNotActiveWithFleet -> E400
 
 instance IsAPIError FleetErrors
 
