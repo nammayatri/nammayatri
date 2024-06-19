@@ -1169,7 +1169,7 @@ ratingCardViewState state =
   { data:
       state.data.rideRatingState
         { rating = state.data.ratingViewState.selectedRating
-        , feedbackList = state.data.rideRatingState.feedbackList
+        , feedbackList = state.data.rideRatingState.feedbackList        
         }
   , feedbackPillData: customerFeedbackPillData state
   , primaryButtonConfig:
@@ -1196,6 +1196,9 @@ ratingCardViewState state =
   , accessibility: ENABLE
   , closeImgVisible: GONE
   , driverImage : fetchImage FF_ASSET if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then "ic_new_avatar" else "ic_driver_avatar_cab"
+  , isAlreadyFav : state.data.driverInfoCardState.isAlreadyFav
+  , favCount : state.data.driverInfoCardState.favCount
+  , driverName : state.data.driverInfoCardState.driverName
   }
 
 getRateYourRideString :: String -> String -> String

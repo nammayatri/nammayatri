@@ -59,6 +59,7 @@ initData = {
     , previousCurrentLocations : {pastCurrentLocations:[]}
     , selectList : []
     , quoteListModelState : []
+    , favDriver : false
     , driverInfoCardState : dummyDriverInfo
     , rideRatingState : dummyPreviousRiderating
     , settingSideBar : dummySettingBar
@@ -413,6 +414,7 @@ dummyPreviousRiderating :: RatingCard
 dummyPreviousRiderating = {
   rideId : ""
 , rating : 0
+, favDriver : false
 , driverName : ""
 , finalAmount : 0
 , rideStartTime : ""
@@ -479,6 +481,9 @@ dummyDriverInfo =
   , driversPreviousRideDropLocLon : Nothing
   , spLocationName : Nothing
   , addressWard : Nothing
+  , favDriver : false
+  , isAlreadyFav : Just false 
+  , favCount : Just 0
   }
 
 dummySettingBar :: SettingSideBarState
@@ -602,7 +607,9 @@ dummyRideBooking = RideBookingRes
   tollConfidence : Nothing,
   driversPreviousRideDropLocLat : Nothing,
   driversPreviousRideDropLocLon : Nothing,
-  specialLocationName : Nothing
+  specialLocationName : Nothing,
+  isAlreadyFav : Just false,
+  favCount : Just 0
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails

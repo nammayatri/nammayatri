@@ -30,6 +30,7 @@ data Action = NoAction
             | Rating Int
             | FeedbackChanged String
             | SelectPill String String
+            | Favourite
 
 type RatingCardConfig = 
   { data :: RatingCardData
@@ -43,12 +44,16 @@ type RatingCardConfig =
   , accessibility :: Accessiblity
   , closeImgVisible :: Visibility
   , driverImage :: String
+  , isAlreadyFav :: Maybe Boolean
+  , favCount :: Maybe Int
+  , driverName :: String
   }
 
 type RatingCardData =
   {
     rating :: Int
   , driverName :: String
+  , favDriver :: Boolean
   , rideId :: String
   , finalAmount :: Int
   , rideStartTime :: String
@@ -86,12 +91,16 @@ ratingCardConfig = {
   accessibility : DISABLE,
   closeImgVisible : GONE
 , driverImage : ""
+, isAlreadyFav : Just false
+, favCount : Just 0
+, driverName : ""
 }
 
 
 dummyPreviousRiderating :: RatingCardData
 dummyPreviousRiderating = {
   rideId : ""
+, favDriver : false
 , rating : 0
 , driverName : ""
 , finalAmount : 0

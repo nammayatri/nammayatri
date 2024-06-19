@@ -212,4 +212,7 @@ mockDriverInfo =
   , driversPreviousRideDropLocLon : Nothing
   , spLocationName : Nothing
   , addressWard : Nothing
+  , favDriver: false
+  , isAlreadyFav : Just false
+  , favCount : Just 0
   }

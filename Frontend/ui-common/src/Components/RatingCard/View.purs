@@ -189,6 +189,7 @@ editTextView state push =
 
 ------------------------starRatingView--------------------------
 
+-- Change the view to show thumbs up / down and push 5 / 1 as ratings respectively
 starRatingView :: forall w . RatingCardConfig -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 starRatingView state push =
   linearLayout

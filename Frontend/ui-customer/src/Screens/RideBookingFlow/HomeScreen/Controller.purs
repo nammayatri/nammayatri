@@ -1957,6 +1957,9 @@ eval (OnIconClick autoAssign) state = do
 eval PreferencesDropDown state = do
   continue state { data { showPreferences = not state.data.showPreferences}}
 
+eval (RatingCardAC (RatingCard.Favourite)) state = do 
+  continue state { data { rideRatingState { favDriver = not state.data.favDriver}} }
+
 eval (RatingCardAC (RatingCard.Rating index)) state = do
   let feedbackListArr = if index == state.data.rideRatingState.rating then state.data.rideRatingState.feedbackList else []
   continue state { data { rideRatingState { rating = index , feedbackList = feedbackListArr}, ratingViewState { selectedRating = index} } }
@@ -1966,6 +1969,7 @@ eval (RatingCardAC (RatingCard.SelectPill feedbackItem id)) state = do
       filterFeedbackList = filter (\item -> length item.answer > 0) newFeedbackList
   continue state { data { rideRatingState {  feedbackList = filterFeedbackList} } }
 
+-- This will be changed to show the favourite driver card if the rating is 5 and the Favourite action has been pushed
 eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = updateAndExit state $ SubmitRating state
 
 eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.NoAction)) state = continue state
@@ -3574,6 +3578,7 @@ getEstimateId esimates config =
 dummyRideRatingState :: RatingCard
 dummyRideRatingState = {
   rating              : 0,
+  favDriver           : false,
   driverName          : "",
   rideId              :  "",
   finalAmount         : 0,

@@ -214,6 +214,9 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , driversPreviousRideDropLocLon : resp.driversPreviousRideDropLocLon
       , spLocationName : resp.specialLocationName
       , addressWard : bookingLocationAPIEntity.ward
+      , favDriver : false
+      , isAlreadyFav : resp.isAlreadyFav
+      , favCount : resp.favCount
       }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity

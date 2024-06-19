@@ -1016,7 +1016,9 @@ newtype RideBookingRes = RideBookingRes {
   vehicleServiceTierType :: Maybe String,
   tollConfidence :: Maybe CTA.Confidence,
   driversPreviousRideDropLocLat :: Maybe Number,
-  driversPreviousRideDropLocLon :: Maybe Number
+  driversPreviousRideDropLocLon :: Maybe Number,
+  isAlreadyFav :: Maybe Boolean,
+  favCount :: Maybe Int
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {

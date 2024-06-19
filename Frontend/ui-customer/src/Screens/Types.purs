@@ -586,6 +586,7 @@ type HomeScreenState =
 type HomeScreenStateData =
   {
     suggestedAmount :: Int
+  , favDriver :: Boolean
   , finalAmount :: Int
   , startedAt :: String
   , endedAt :: String
@@ -1288,11 +1289,15 @@ type DriverInfoCard =
   , driversPreviousRideDropLocLon :: Maybe Number
   , spLocationName :: Maybe String
   , addressWard :: Maybe String
+  , favDriver :: Boolean
+  , isAlreadyFav :: Maybe Boolean
+  , favCount :: Maybe Int
   }
 
 type RatingCard =
   {
     rideId :: String
+  , favDriver :: Boolean
   , rating :: Int
   , driverName :: String
   , finalAmount :: Int
