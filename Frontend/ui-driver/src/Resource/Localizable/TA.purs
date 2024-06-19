@@ -1327,6 +1327,7 @@ getTA stringKey =
         CAPTURE_DOC_DESC_3 -> "கீழே காட்டப்பட்டுள்ளபடி குறிக்கப்பட்ட பகுதியில் {} ஐ சரியாக பொருத்தவும்"
         UPLOAD_DOC -> "{} பதிவேற்றவும்"
         REGISTER_YOUR_CAR -> "உங்கள் காரைப் பதிவு செய்யுங்கள்"
+        REGISTER_YOUR_AMBULANCE -> "உங்கள் அருந்தேலி பதிவு செய்யவும்"
         REGISTER_YOUR_AUTO -> "உங்கள் ஆட்டோவைப் பதிவுசெய்க"
         DO_YOU_WANT_TO_CHANGE_VT -> "வாகனத்தின் வகையை மாற்ற விரும்புகிறீர்களா?"
         YES_CHANGE_VEHICLE -> "ஆம், வாகனத்தை மாற்று"

@@ -621,11 +621,19 @@ public class RideRequestUtils {
     @SuppressLint("SetTextI18n")
     public static void updateRateView(SheetAdapter.SheetViewHolder holder, SheetModel model) {
         double baseFare = model.getBaseFare() + model.getOfferedPrice() - model.getTollCharges();
-        float dist = model.getDistanceToBeCovFloat()/1000;
-        String rate = RideRequestUtils.getUptoDecStr((float) (baseFare/dist), 1);
-        String currency = model.getCurrency();;
-        holder.rateText.setText("Rate: " + currency + rate +"/km");
+        float dist = model.getDistanceToBeCovFloat() / 1000;
+        String rate;
+
+        if (dist == 0.0f) {
+            rate = "NA";
+        } else {
+            rate = RideRequestUtils.getUptoDecStr((float) (baseFare / dist), 1);
+        }
+
+        String currency = model.getCurrency();
+        holder.rateText.setText("Rate: " + currency + rate + "/km");
     }
+
 
     public static void updateRentalView(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
         Handler mainLooper = new Handler(Looper.getMainLooper());

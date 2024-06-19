@@ -99,7 +99,7 @@ rateCardConfig rateCard =
           {key : "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val : (getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)},
           {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)},
           {key : "TOLL_OR_PARKING_CHARGES", val : (getString TOLL_OR_PARKING_CHARGES)},
-          {key : "TOLL_CHARGES", val : (getString TOLL_CHARGES)},
+          {key : "TOLL_CHARGES", val : (getString TOLL_CHARGES)}, -- TODO-kuldeep : Confirm to keep TOLL_CHARGES
           {key : "TOLL_CHARGES_DESC", val : (getString TOLL_CHARGES_DESC)},
           {key : "PARKING_CHARGES", val : (getString PARKING_CHARGES)},
           {key : "PARKING_CHARGES_DESC", val : (getString PARKING_CHARGES_DESC)}]

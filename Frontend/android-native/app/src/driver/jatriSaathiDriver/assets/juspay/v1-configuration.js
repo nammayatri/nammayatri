@@ -214,6 +214,8 @@ window.getMerchantConfig = function () {
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
+    , "acExplanation" : false
+    , "rcLimit" : 3
     , "showGenderBanner" : false
     , "defaultLanguage" : "EN_US"
     , "navigationAppConfig" : {
@@ -319,8 +321,12 @@ window.getMerchantConfig = function () {
   , "rideCompletedCardConfig" : {
       "lottieQRAnim" : true
   }
+  , "rateCardScreen" :{
+    "showYoutubeVideo" : false,
+    "showRateCard" : true
+  }
   , "waitTimeConfig" : {
-    "enableWaitTime" : false
+    "enableWaitTime" : true
   }
   , "coinsConfig" : {
     "minCoinSliderValue" : 200,
@@ -352,12 +358,12 @@ window.getMerchantConfig = function () {
       "callDriverInfoPost": false, // Dummy link need to change
       "cityLat" : 22.5354064,
       "cityLong" : 88.2649516,
-      "supportNumber" : "",
+      "supportNumber" : "08069724949",
       "languageKey" : "BN_IN",
       "showDriverReferral" : true,
       "showCustomerReferral" : true,
       "uploadRCandDL" : true, 
-      "enableYatriCoins" : true,
+      "enableYatriCoins" : false,
       "vehicleNSImg" : "",
       "showEarningSection" : true,
       "registration" : {
@@ -403,12 +409,12 @@ window.getMerchantConfig = function () {
       "callDriverInfoPost": false, // Dummy link need to change
       "cityLat" : 26.708845,
       "cityLong" : 88.434362,
-      "supportNumber" : "",
+      "supportNumber" : "08069724949",
       "languageKey" : "BN_IN",
       "showDriverReferral" : true,
       "showCustomerReferral" : true,
       "uploadRCandDL" : true,
-      "enableYatriCoins" : true,
+      "enableYatriCoins" : false,
       "vehicleNSImg" : "",
       "registration" : {
           "supportWAN" : "918618963188",

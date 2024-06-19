@@ -1327,6 +1327,7 @@ getBN stringKey =
         CAPTURE_DOC_DESC_3 -> "নিচে দেখানো হিসাবে সঠিকভাবে চিহ্নিত জায়গায় {} ফিট করুন"
         UPLOAD_DOC -> "আপলোড {}"
         REGISTER_YOUR_CAR -> "আপনার গাড়ি নিবন্ধন করুন"
+        REGISTER_YOUR_AMBULANCE -> "আপনার অ্যাম্বুলেন্সটি নিবন্ধন করুন"
         REGISTER_YOUR_AUTO -> "আপনার অটো নিবন্ধন করুন"
         DO_YOU_WANT_TO_CHANGE_VT -> "আপনি কি গাড়ির ধরন পরিবর্তন করতে চান?"
         YES_CHANGE_VEHICLE -> "হ্যাঁ, যানবাহন পরিবর্তন করুন"

@@ -25,6 +25,12 @@ config =
       showSavedCommission : false,
       lottieQRAnim : false
     }
+   , rateCardScreen : {
+      showYoutubeVideo : true,
+      showRateCard : true
+    },
+    rcLimit : 3
+  , acExplanation : true
   , subscriptionConfig : {
     enableBlocking : false,
     completePaymentPopup : false,
@@ -159,6 +165,7 @@ config =
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
               rateCardConfig : { showLearnMore : true, learnMoreVideoLink : "https://www.youtube.com/shorts/NUTNKPzslpw" }
+              
             },
             {
               cityName : "Hyderabad",

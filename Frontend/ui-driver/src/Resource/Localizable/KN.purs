@@ -1327,6 +1327,7 @@ getKN stringKey =
         CAPTURE_DOC_DESC_3 -> "ಕೆಳಗೆ ತೋರಿಸಿರುವಂತೆ ಗುರುತಿಸಲಾದ ಪ್ರದೇಶದಲ್ಲಿ {} ಅನ್ನು ಸರಿಯಾಗಿ ಹೊಂದಿಸಿ"
         UPLOAD_DOC -> "ಅಪ್ಲೋಡ್ {}"
         REGISTER_YOUR_CAR -> "ನಿಮ್ಮ ಕಾರನ್ನು ನೋಂದಾಯಿಸಿ"
+        REGISTER_YOUR_AMBULANCE -> "ನಿಮ್ಮ ಆಂಬುಲೆನ್ಸ್ ನೆರವಿಗೆ ನೋಂದಣಿ ಮಾಡಿ"
         REGISTER_YOUR_AUTO -> "ನಿಮ್ಮ ಸ್ವಯಂ ನೋಂದಣಿ"
         DO_YOU_WANT_TO_CHANGE_VT -> "ನೀವು ವಾಹನದ ಪ್ರಕಾರವನ್ನು ಬದಲಾಯಿಸಲು ಬಯಸುವಿರಾ?"
         YES_CHANGE_VEHICLE -> "ಹೌದು, ವಾಹನವನ್ನು ಬದಲಾಯಿಸಿ"

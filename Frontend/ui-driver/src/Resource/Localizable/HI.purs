@@ -1328,6 +1328,7 @@ getHI stringKey =
         CAPTURE_DOC_DESC_3 -> "नीचे दिखाए अनुसार चिह्नित क्षेत्र में {} को सही ढंग से फिट करें"
         UPLOAD_DOC -> "{} अपलोड करें"
         REGISTER_YOUR_CAR -> "अपनी कार पंजीकृत करें"
+        REGISTER_YOUR_AMBULANCE -> "अपनी एम्बुलेंस को पंजीकृत करें"
         REGISTER_YOUR_AUTO -> "अपना ऑटो पंजीकृत करें"
         DO_YOU_WANT_TO_CHANGE_VT -> "क्या आप वाहन का प्रकार बदलना चाहते हैं?"
         YES_CHANGE_VEHICLE -> "हां, वाहन बदलें"

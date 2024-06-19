@@ -157,6 +157,7 @@ acCheckForDriversView push state =
                 , height $ V 32
                 , imageWithFallback $ fetchImage FF_ASSET "ny_ic_youtube"
                 , rippleColor Color.rippleShade
+                , visibility $ MP.boolToVisibility $ state.data.config.rateCardScreen.showYoutubeVideo
                 , padding $ Padding 0 5 5 5
                 ]
             ]
@@ -340,7 +341,7 @@ serviceTierItem state push service enabled opacity index =
               [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_grey"
               , width $ V 12
               , height $ V 12
-              , visibility $ MP.boolToVisibility $ state.props.rateCardLoaded && index /= -1
+              , visibility $ MP.boolToVisibility $ state.props.rateCardLoaded && index /= -1 && state.data.config.rateCardScreen.showRateCard
               ]
            ]
           , textView $

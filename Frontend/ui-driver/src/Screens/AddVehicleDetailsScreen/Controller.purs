@@ -520,6 +520,7 @@ eval (SelectAmbulanceVarient varient) state = do
 
 eval SelectAmbulanceFacility state = do
   let old = state.props.facilities
+  _ <- pure $ hideKeyboardOnNavigation true
   continue state{props{facilities = not old , showIssueOptions = true}}
 
 

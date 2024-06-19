@@ -47,7 +47,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||),show)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), accessibility, accessibilityHint,onAnimationEnd,Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), adjustViewWithKeyboard,accessibility, accessibilityHint,onAnimationEnd,Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Properties as PP
@@ -287,7 +287,13 @@ vehicleRegistrationNumber state push =
   , height WRAP_CONTENT
   , padding (Padding 20 32 20 0)
   , visibility if state.props.openHowToUploadManual then GONE else VISIBLE
-  ][  linearLayout
+  , adjustViewWithKeyboard "true"
+  ]
+  [scrollView
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ]
+  [  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
@@ -455,6 +461,7 @@ vehicleRegistrationNumber state push =
                 , cornerRadius 4.0
                 , gravity CENTER_VERTICAL
                 , onClick push $ const $ SelectAmbulanceFacility
+                
                 ][  textView $
                     [ width MATCH_PARENT
                     , height WRAP_CONTENT
@@ -488,6 +495,7 @@ vehicleRegistrationNumber state push =
         , checkACView state push
         ]
       ]
+  ]
       where validateRegistrationNumber regNum = regNum `DA.elem` state.data.rcNumberPrefixList
 
 

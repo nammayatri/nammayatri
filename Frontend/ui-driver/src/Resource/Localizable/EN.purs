@@ -1326,6 +1326,7 @@ getEN stringKey =
         CAPTURE_DOC_DESC_3 -> "Fit the {} in the marked area correctly as shown below"
         UPLOAD_DOC -> "Upload {}"
         REGISTER_YOUR_CAR -> "Register your Car"
+        REGISTER_YOUR_AMBULANCE -> "Register your Ambulance"
         REGISTER_YOUR_AUTO -> "Register your Auto"
         DO_YOU_WANT_TO_CHANGE_VT -> "Do you want to change the vehicle type?"
         YES_CHANGE_VEHICLE -> "Yes, Change Vehicle"

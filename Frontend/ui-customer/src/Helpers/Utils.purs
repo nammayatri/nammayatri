@@ -1113,4 +1113,5 @@ getLanguageBasedCityName cityName =
     Pune -> getString PUNE
     Mysore -> getString MYSORE
     Tumakuru -> getString TUMAKURU
+    Siliguri -> "SILIGURI"
     AnyCity -> ""

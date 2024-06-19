@@ -2787,6 +2787,8 @@ type RateCardScreenData = {
   ridePreferences :: Array RidePreference,
   rateCard :: Common.RateCard,
   cityConfig :: CityConfig
+
+
 }
 
 type RateCardScreenProps = {

@@ -1341,6 +1341,7 @@ getTE stringKey =
         CAPTURE_DOC_DESC_3 -> "క్రింద చూపిన విధంగా గుర్తించబడిన ప్రదేశంలో {}ని సరిగ్గా అమర్చండి"
         UPLOAD_DOC -> "{}ని అప్‌లోడ్ చేయండి"
         REGISTER_YOUR_CAR -> "మీ కారుని నమోదు చేసుకోండి"
+        REGISTER_YOUR_AMBULANCE -> "మీ అంబులెన్స్‌ను నమోదు చేయండి"
         REGISTER_YOUR_AUTO -> "మీ ఆటోను నమోదు చేసుకోండి"
         DO_YOU_WANT_TO_CHANGE_VT -> "మీరు వాహనం రకాన్ని మార్చాలనుకుంటున్నారా?"
         YES_CHANGE_VEHICLE -> "అవును, వాహనాన్ని మార్చండి"

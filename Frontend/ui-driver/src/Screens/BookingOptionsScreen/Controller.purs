@@ -14,7 +14,7 @@ import Components.PopUpModal as PopUpModal
 import Data.Array (filter, length, (!!), find)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Log (trackAppScreenRender)
-import Prelude (class Show, map, pure, show, unit, discard, void, (<>), (==), not, ($), (>), (<$>))
+import Prelude (class Show, map, pure, show, unit, discard, void, (<>), (==), not, ($), (>), (<$>),(&&))
 import PrestoDOM (Eval, update, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (BookingOptionsScreenState, VehicleP, RidePreference)
@@ -82,7 +82,7 @@ eval ToggleIntercityRide state = updateAndExit state {props {canSwitchToIntercit
 
 eval (UpdateACAvailability acServiceToggle) state = exit $ ToggleACAvailability state $ not acServiceToggle
 
-eval ShowACVideoPopup state = continue state { props { acExplanationPopup = not state.props.acExplanationPopup } }
+eval ShowACVideoPopup state = continue state { props { acExplanationPopup = not state.props.acExplanationPopup && state.data.config.rateCardScreen.showYoutubeVideo} }
 
 eval (TopAcDriverAction action) state = do
   let acVideoLink = "https://www.youtube.com/watch?v=MbgxZkqxPLQ"
@@ -126,7 +126,7 @@ eval (ShowRateCard index) state = case state.data.ridePreferences !! index of
             nightChargeTill = rateCardData.nightChargeEnd,
             nightChargeFrom = rateCardData.nightChargeStart,
             extraFare = rateCardData.fareList
-          }} , props {showRateCard = true } }
+          }} , props {showRateCard = true && state.data.config.rateCardScreen.showRateCard} }
       Nothing -> continue state
   Nothing -> continue state
 
