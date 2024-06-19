@@ -1798,6 +1798,7 @@ rideCompletedCardConfig state =
         , totalFare = getString TOTAL_FARE
         , rideDetailsTitle = getString RIDE_DETAILS
         , fareUpdateTitle = getString FARE_UPDATE
+        , surcharges = getString WAITING_CHARGES
         }
       }
   where

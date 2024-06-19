@@ -40,6 +40,7 @@ import Data.Number (fromString)
 import Data.Int (ceil)
 import PrestoDOM.List
 import CarouselHolder as CarouselHolder
+import Language.Strings (getString)
 import Debug
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -287,7 +288,6 @@ rideDetailsButtonView config push =
   , height WRAP_CONTENT 
   , layoutGravity "bottom"
   , padding $ PaddingHorizontal 16 16
-  , rippleColor Color.rippleShade
   ][
     linearLayout
           [ width MATCH_PARENT
@@ -298,6 +298,7 @@ rideDetailsButtonView config push =
           , accessibilityHint "Ride Details : Button"
           , cornerRadius 4.0
           , padding $ Padding 4 16 4 16
+           , rippleColor Color.rippleShade
           ][  textView $
               [ height WRAP_CONTENT
               , text config.topCard.bottomText
@@ -884,7 +885,7 @@ rentalTripRowView config push description =
     , width MATCH_PARENT
     , orientation HORIZONTAL
     , margin $ MarginTop if description == EstimatedFare then 0 else 16
-    , visibility $ boolToVisibility (textConfig.actualValue /= "₹0")
+    , visibility $ boolToVisibility (textConfig.estimatedValue /= "₹0")
     ] 
     [ textView $ [
         text $ textConfig.title
@@ -929,7 +930,7 @@ rentalTripRowView config push description =
             ExtraTimeFare -> mkRentalTextConfig rentalRowDetails.extraTimeFare ("₹" <> show (ceil ( fromMaybe 0.0 (fromString rentalBookingData.extraTimeFare)))) "" Color.black600
             ExtraDistanceFare -> mkRentalTextConfig rentalRowDetails.extraDistanceFare ("₹" <> show (ceil ( fromMaybe 0.0 (fromString rentalBookingData.extraDistanceFare)))) "" Color.black600
             TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare ("₹" <> show config'.topCard.finalAmount) "" Color.black600
-            Surcharges -> mkRentalTextConfig rentalRowDetails.extraTimeFare ("₹" <> show (config'.topCard.finalAmount - config'.topCard.initialAmount)) "" Color.black600
+            Surcharges -> mkRentalTextConfig rentalRowDetails.surcharges ("₹" <> show (config'.topCard.finalAmount - config'.topCard.initialAmount)) "" Color.black600
 
             
       mkRentalTextConfig :: String -> String -> String -> String -> RentalTextConfig

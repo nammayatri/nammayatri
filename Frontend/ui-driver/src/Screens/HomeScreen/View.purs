@@ -187,7 +187,7 @@ screen initialState (GlobalState globalState) =
                                     void $ waitingCountdownTimerV2 startingTime "1" "countUpTimerId" push WaitTimerCallback
                                   else push $ UpdateWaitTime ST.NoStatus
                                   pure unit
-                                else if (getValueToLocalStore WAITING_TIME_STATUS == (show ST.Scheduled) && initialState.props.rideStartRemainingTime == -1) then do
+                                else if (getValueToLocalStore WAITING_TIME_STATUS == (show ST.Scheduled) && initialState.props.rideStartRemainingTime == -1 && isJust initialState.data.activeRide.tripScheduledAt) then do
                                   void $ startTimer (runFn2 JB.differenceBetweenTwoUTC (fromMaybe (getCurrentUTC "") initialState.data.activeRide.tripScheduledAt) (getCurrentUTC "")) "rideStartRemainingTimeId" "1" push RideStartRemainingTime     
                                   else pure unit
                                 if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit

@@ -3081,7 +3081,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                               normalRoutePoints = fromMaybe {points : []} points
                               rentalRoutePoints = fromMaybe {points : []} rentalPoints
                               normalRoute = mkRouteConfig  normalRoutePoints srcMarkerConfig destMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT mapRouteConfig
-                              rentalRouteConfig = mkRouteConfig rentalRoutePoints srcRentalMarkerConfig destRentalMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "DOT" true JB.RENTAL mapRouteConfig
+                              rentalRouteConfig = mkRouteConfig rentalRoutePoints srcRentalMarkerConfig destRentalMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "DOT" true JB.RENTAL mapRouteConfig{isAnimation = false}
                           liftFlow $ drawRoute [normalRoute,rentalRouteConfig] (getNewIDWithTag "CustomerHomeScreen")
                           else pure unit
                         _ <- doAff do liftEffect $ push $ updateState (fromMaybe 1 routeDuration) $ fromMaybe 1 routeDistance

@@ -1159,6 +1159,7 @@ getFR stringKey =
         AC_TURNED_OFF -> "Climatisation éteinte"
         ESTIMATES_EXPIRY_ERROR -> "Estimates has been expired. Please try again."
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "Estimates has been expired. Fetching again, Please wait a moment and check again."
+        QUOTES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "Les devis ont expiré. Récupération en cours, veuillez patienter un moment et vérifier à nouveau."
         PAY_YOUR_DRIVER_BY_CASH_OR_UPI -> "Payez votre chauffeur en espèces ou par UPI"
         TRIP_DELAYED -> "Trajet retardé"
         SELECT_VEHICLE -> "Sélectionner un véhicule"
@@ -1175,7 +1176,7 @@ getFR stringKey =
         FINAL_FARE_DESCRIPTION -> "Le tarif final sera basé sur la durée réelle du trajet arrondie à l'heure suivante ou la durée du trajet sélectionnée (selon laquelle est la plus élevée)."
         EXCESS_DISTANCE_CHARGE_DESCRIPTION charges -> "Le dépassement de distance sera facturé à " <> charges
         ADDITIONAL_CHARGES_DESCRIPTION -> "Le tarif final sera basé sur la durée et la distance réelle du voyage"
-        PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "Les frais de parking, les péages et autres surcharges ne sont pas inclus. Veuillez les payer séparément au chauffeur."
+        PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "Les frais de parking, <b> les péages </b> et autres surcharges ne sont <b> pas inclus </b>. Veuillez les payer séparément au chauffeur."
         NIGHT_TIME_FEE_DESCRIPTION -> "Des frais de nuit de {} seront facturés si votre trajet commence/se termine à n'importe quel moment entre 22h et 5h"
         CHOOSE_YOUR_RENTAL_RIDE -> "Choisissez votre trajet de location"
         FIRST_STOP_OPTIONAL -> "Premier arrêt (facultatif)"
@@ -1301,3 +1302,4 @@ getFR stringKey =
         PUNE -> "Pune"
         MYSORE -> "Mysore"
         TUMAKURU -> "Tumakuru"
+        WAITING_CHARGES -> "Frais d'attente"

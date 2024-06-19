@@ -829,8 +829,16 @@ rideInfoView push config =
           ][ linearLayout
               [ height WRAP_CONTENT
               , width MATCH_PARENT
+              , orientation VERTICAL
               ]
-              if config.rideType == ST.Rental then rentalRideInfoView push config else normalRideInfoView push config
+              if config.rideType == ST.Rental then 
+                [ rideTierAndCapacity push config
+                , linearLayout
+                  [ height WRAP_CONTENT
+                  , width MATCH_PARENT
+                  ] (rentalRideInfoView push config)
+                ] 
+              else normalRideInfoView push config
             ]
       ]
 
