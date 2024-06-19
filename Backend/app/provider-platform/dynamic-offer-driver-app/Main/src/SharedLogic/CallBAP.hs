@@ -902,8 +902,6 @@ sendTollCrossedUpdateToBAP (Just booking) (Just ride) driver driverStats vehicle
     bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
     let bookingDetails = ACL.BookingDetails {..}
         tollCrossedUpdateBuildReq = ACL.TollCrossedBuildReq ACL.DTollCrossedBuildReq {..}
-        isAlreadyFav = False
-        favCount = 0
     tollCrossedMsg <- ACL.buildOnUpdateMessageV2 merchant booking Nothing tollCrossedUpdateBuildReq
     retryConfig <- asks (.shortDurationRetryCfg)
     void $ callOnUpdateV2 tollCrossedMsg retryConfig merchant.id
