@@ -56,6 +56,7 @@ data DocumentType
   | VehicleInspectionForm
   | UploadProfile
   | GSTCertificate
+  | BackgroundVerification
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SupportedVehicleClasses

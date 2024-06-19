@@ -68,7 +68,7 @@ data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY | AMBULA
 
 $(mkHttpInstancesForEnum ''Category)
 
-data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED
+data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

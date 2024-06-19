@@ -7,6 +7,7 @@ module Storage.Beam.MerchantServiceUsageConfig where
 
 import qualified Database.Beam as B
 import qualified Kernel.External.AadhaarVerification.Types
+import qualified Kernel.External.BackgroundVerification.Types
 import qualified Kernel.External.Call
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types
@@ -23,6 +24,7 @@ import Tools.Beam.UtilsTH
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
   { aadhaarVerificationService :: B.C f Kernel.External.AadhaarVerification.Types.AadhaarVerificationService,
     autoComplete :: B.C f Kernel.External.Maps.Types.MapsService,
+    backgroundVerification :: B.C f Kernel.External.BackgroundVerification.Types.BackgroundVerificationService,
     createBankAccount :: B.C f Kernel.External.Payment.Types.PaymentService,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     driverBackgroundVerificationService :: B.C f Kernel.External.Verification.Types.DriverBackgroundVerificationService,

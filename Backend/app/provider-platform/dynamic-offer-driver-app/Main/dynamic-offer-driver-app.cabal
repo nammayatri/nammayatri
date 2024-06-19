@@ -425,6 +425,7 @@ library
       Storage.Clickhouse.Ride
       Storage.Clickhouse.RideDetails
       Storage.Queries.AadhaarCardExtra
+      Storage.Queries.BackgroundVerificationExtra
       Storage.Queries.Booking.Internal
       Storage.Queries.BookingCancellationReasonExtra
       Storage.Queries.BookingExtra
@@ -533,6 +534,7 @@ library
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
       Tools.Auth
+      Tools.BackgroundVerification
       Tools.Beam.UtilsTH
       Tools.Call
       Tools.DriverBackgroundVerification
@@ -574,6 +576,7 @@ library
       Domain.Types.AadhaarCard
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
+      Domain.Types.BackgroundVerification
       Domain.Types.BapMetadata
       Domain.Types.BecknConfig
       Domain.Types.BlackListOrg
@@ -683,6 +686,7 @@ library
       Storage.Beam.AadhaarCard
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
+      Storage.Beam.BackgroundVerification
       Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
       Storage.Beam.BlackListOrg
@@ -793,6 +797,7 @@ library
       Storage.Queries.AadhaarCard
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
+      Storage.Queries.BackgroundVerification
       Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig
       Storage.Queries.BlackListOrg
@@ -864,6 +869,7 @@ library
       Storage.Queries.ModuleCompletionInformation
       Storage.Queries.Notification
       Storage.Queries.OrphanInstances.AadhaarCard
+      Storage.Queries.OrphanInstances.BackgroundVerification
       Storage.Queries.OrphanInstances.Booking
       Storage.Queries.OrphanInstances.BookingCancellationReason
       Storage.Queries.OrphanInstances.BusinessEvent

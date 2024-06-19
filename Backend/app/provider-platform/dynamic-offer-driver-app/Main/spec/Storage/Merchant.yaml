@@ -23,6 +23,7 @@ imports:
   SmsService: Kernel.External.SMS.Types
   IssueTicketService: Kernel.External.Ticket.Types
   DriverBackgroundVerificationService: Kernel.External.Verification.Types
+  BackgroundVerificationService: Kernel.External.BackgroundVerification.Types
   VerificationService: Kernel.External.Verification.Types
   WhatsappService: Kernel.External.Whatsapp.Types
   SlidingWindowOptions: Kernel.Types.SlidingWindowCounters
@@ -451,6 +452,7 @@ MerchantServiceUsageConfig:
     createBankAccount: PaymentService
     retryBankAccountLink: PaymentService
     getBankAccount: PaymentService
+    backgroundVerification: BackgroundVerificationService
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -483,6 +485,7 @@ MerchantServiceUsageConfig:
     driverBackgroundVerificationService: character varying(30)
     serviceName: VARCHAR(50)
     rectifyDistantPointsFailure: text
+    backgroundVerification: text
   default:
     getPickupRoutes: "'Google'"
     getTripRoutes: "'Google'"
@@ -494,6 +497,7 @@ MerchantServiceUsageConfig:
     createBankAccount: "'Stripe'"
     retryBankAccountLink: "'Stripe'"
     getBankAccount: "'Stripe'"
+    backgroundVerification: "'Checkr'"
 
   queries:
     findByMerchantOpCityId:

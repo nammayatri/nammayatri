@@ -12,6 +12,7 @@ import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import Kernel.External.AadhaarVerification.Interface.Types
+import Kernel.External.BackgroundVerification.Types as BackgroundVerification
 import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Maps as Maps
@@ -46,6 +47,7 @@ data ServiceName
   | IssueTicketService Ticket.IssueTicketService
   | NotificationService Notification.NotificationService
   | TokenizationService Tokenize.TokenizationService
+  | BackgroundVerificationService BackgroundVerification.BackgroundVerificationService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -64,6 +66,7 @@ instance Show ServiceName where
   show (IssueTicketService s) = "Ticket_" <> show s
   show (NotificationService s) = "Notification_" <> show s
   show (TokenizationService s) = "Tokenization_" <> show s
+  show (BackgroundVerificationService s) = "BackgroundVerification_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -118,6 +121,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Tokenization_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (BackgroundVerificationService v1, r2)
+                 | r1 <- stripPrefix "BackgroundVerification_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -136,6 +143,7 @@ data ServiceConfigD (s :: UsageSafety)
   | IssueTicketServiceConfig !Ticket.IssueTicketServiceConfig
   | NotificationServiceConfig !NotificationServiceConfig
   | TokenizationServiceConfig !Tokenize.TokenizationServiceConfig
+  | BackgroundVerificationServiceConfig !BackgroundVerification.BackgroundVerificationServiceConfig
   deriving (Generic, Eq, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe

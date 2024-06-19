@@ -35,3 +35,9 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD PRIMARY KEY
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN retry_bank_account_link text NOT NULL default 'Stripe';
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_bank_account text NOT NULL default 'Stripe';
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN create_bank_account text NOT NULL default 'Stripe';
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN background_verification text NOT NULL default 'Checkr';
