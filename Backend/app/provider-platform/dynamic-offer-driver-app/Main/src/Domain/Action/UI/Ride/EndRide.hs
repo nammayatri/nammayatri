@@ -387,6 +387,14 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbUpdatedFareParams booking.riderId newFareParams thresholdConfig
     withTimeAPI "endRide" "clearInterpolatedPoints" $ clearInterpolatedPoints driverId
 
+    logDebug $ "RideCompleted Coin Event" <> show chargeableDistance
+    fork "DriverRideCompletedCoin Event : " $ do
+      expirationPeriod <- DC.getExpirationSeconds thresholdConfig.timeDiffFromUtc
+      validRideTaken <- DC.checkHasTakenValidRide (Just chargeableDistance)
+      when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
+        DC.incrementValidRideCount driverId expirationPeriod 1
+        DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) chargeableDistance)
+
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
       findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId
         >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
@@ -399,14 +407,6 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
           let requestor = callBasedEndRideReq.requestor
           sendDashboardSms requestor.merchantId booking.merchantOperatingCityId Sms.ENDRIDE (Just ride) driverId (Just booking) finalFare
         _ -> pure ()
-
-    logDebug "RideCompleted Coin Event"
-    fork "DriverRideCompletedCoin Event : " $ do
-      expirationPeriod <- DC.getExpirationSeconds thresholdConfig.timeDiffFromUtc
-      validRideTaken <- DC.checkHasTakenValidRide (Just chargeableDistance)
-      when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
-        DC.incrementValidRideCount driverId expirationPeriod 1
-        DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) chargeableDistance)
 
   return $ EndRideResp {result = "Success", homeLocationReached = homeLocationReached'}
   where
