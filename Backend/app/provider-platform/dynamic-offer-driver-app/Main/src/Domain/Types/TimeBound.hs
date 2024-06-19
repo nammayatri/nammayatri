@@ -12,6 +12,8 @@ module Domain.Types.TimeBound
 where
 
 import Control.Applicative ((<|>))
+import Data.Aeson
+import qualified Data.Text as Text
 import Data.Time
 import Data.Time.Calendar.WeekDate
 import Kernel.Prelude
@@ -38,7 +40,7 @@ data TimeBound
   | BoundedByDay [(Day, [(TimeOfDay, TimeOfDay)])]
   | Unbounded
   deriving (Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving anyclass (ToJSON, ToSchema)
   deriving (PrettyShow) via Showable TimeBound
 
 instance Show TimeBound where
@@ -56,6 +58,13 @@ instance Read TimeBound where
           case (readMaybe str :: Maybe [(Day, [(TimeOfDay, TimeOfDay)])]) of
             Just bound -> [(BoundedByDay bound, "")]
             Nothing -> [(Unbounded, "")]
+
+instance FromJSON TimeBound where
+  parseJSON (String val) = do
+    case (readMaybe (Text.unpack val) :: Maybe TimeBound) of
+      Just bound -> pure bound
+      Nothing -> fail "Invalid TimeBound"
+  parseJSON other = genericParseJSON defaultOptions other
 
 $(mkBeamInstancesForEnum ''TimeBound)
 
