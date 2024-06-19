@@ -1257,6 +1257,7 @@ bannersCarousal view state push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , margin $ MarginTop 12
+        , visibility $ boolToVisibility $ state.props.city /= ST.AnyCity
         ][CarouselHolder.carouselView push $ getCarouselConfig view state banners]
       else dummyView state
       
@@ -3426,8 +3427,10 @@ homeScreenViewV2 push state = let
         ]  
   where 
     contentView state = 
-      if state.data.config.banners.homeScreenCabLaunch && Arr.elem state.props.city [ST.Bangalore, ST.Tumakuru, ST.Mysore] then (
-        imageView
+      linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      ][ imageView
           [ imageWithFallback "ny_ic_cab_banner,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_cab_banner.png"
           , height $ V 135
           , width MATCH_PARENT
@@ -3435,12 +3438,13 @@ homeScreenViewV2 push state = let
           , margin $ Margin 16 0 16 8
           , onClick push $ const WhereToClick
           , accessibility DISABLE
+          , visibility $ boolToVisibility $ state.data.config.banners.homeScreenCabLaunch && Arr.elem state.props.city [ST.Bangalore, ST.Tumakuru, ST.Mysore]
           ]
-      )else
-        (maybe -- TEMP disabling banners in Bangalore
+      , (maybe -- TEMP disabling banners in Bangalore
           (emptyLayout state) 
           (\item -> bannersCarousal item state push) 
           state.data.bannerData.bannerItem)
+      ]
       
     followView :: forall w. (Action -> Effect Unit) -> Array Followers -> PrestoDOM (Effect Unit) w
     followView push followers = 
@@ -3808,7 +3812,7 @@ mapView' push state idTag =
                 _ <- push action
                 if state.props.sourceLat == 0.0 && state.props.sourceLong == 0.0 then do
                   void $ getCurrentPosition push CurrentLocation
-                else do push RemoveShimmer
+                else pure unit
                 _ <- showMap (getNewIDWithTag idTag) false "satellite" zoomLevel state.props.sourceLat state.props.sourceLong push MAPREADY
                 if os == "IOS" then
                   case state.props.currentStage of  
@@ -3979,7 +3983,7 @@ shimmerView state =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , background Color.transparent
-    , visibility $ boolToVisibility $ state.props.showShimmer && null state.data.tripSuggestions
+    , visibility $ boolToVisibility $ state.props.showShimmer
     ] 
     [ shimmerHelper 120
     , shimmerHelper 115
