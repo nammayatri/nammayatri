@@ -6,4 +6,5 @@ import org.json.JSONObject;
 
 public interface ShowNotificationCallBack {
     void showInAppNotification(JSONObject jsonObject, Context context);
+    void hideInAppNotification(String channelId);
 }

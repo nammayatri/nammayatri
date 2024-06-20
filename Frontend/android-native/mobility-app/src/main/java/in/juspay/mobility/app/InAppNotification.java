@@ -106,6 +106,19 @@ public class InAppNotification extends AppCompatActivity {
         notification.ring();
     }
 
+    public void hideInAppNotification (String channelId) {
+        try {
+            Notification notification;
+            if (notificationChannels.has(channelId)) {
+                notification = (Notification) notificationChannels.get(channelId);
+                notification.dismissNotification();
+            }
+        }
+        catch (Exception exception){
+            Log.e(LOG_TAG, "Error in hideInAppNotification " + exception);
+        }
+    }
+
     private void refreshView() throws JSONException {
         int limit = Integer.min(2, notificationStack.size() - 1);
         for (int i = 0; i < notificationStack.size(); i++) {

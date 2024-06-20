@@ -585,7 +585,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void registerCallBack() {
-        inappCallBack = this::showInAppNotification;
+        inappCallBack = new ShowNotificationCallBack() {
+            @Override
+            public void showInAppNotification(JSONObject jsonObject, Context context) {
+                this.showInAppNotification(jsonObject, context);
+            }
+
+            @Override
+            public void hideInAppNotification(String channelId) {
+                hideInAppNotificationApp(channelId);
+            }
+        };
         ChatService.registerInAppCallback(inappCallBack);
         bundleUpdateCallBack = this::showAlertForUpdate;
         MyFirebaseMessagingService.registerBundleUpdateCallback(bundleUpdateCallBack);
@@ -1111,6 +1121,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void hideInAppNotificationApp (String channelId) {
+        if (inAppNotification!= null) {
+            inAppNotification.hideInAppNotification(channelId);
+        }
+    }
     private class GetGAIDTask extends AsyncTask<String, Integer, String> {
         @Override
         protected String doInBackground(String... strings) {

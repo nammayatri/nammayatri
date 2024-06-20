@@ -348,9 +348,9 @@ screen initialState =
                 let isRental = initialState.data.fareProductType == FPT.RENTAL
                 case initialState.data.contactList of
                   Nothing -> if initialState.props.chatcallbackInitiated then pure unit else void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ updateEmergencyContacts push initialState
-                  Just contacts -> if not initialState.props.chatcallbackInitiated then startChatServices push initialState.data.driverInfoCardState.bppRideId "Customer" false else  validateAndStartChat contacts push initialState
-                when (initialState.data.fareProductType /= FPT.RENTAL) $ do 
-                  void $ push RemoveChat
+                  Just contacts -> validateAndStartChat contacts push initialState
+                -- when (initialState.data.fareProductType /= FPT.RENTAL) $ do 
+                --   void $ push RemoveChat
                 pure unit
                 if initialState.data.fareProductType == FPT.RENTAL then 
                   void $ rideDurationTimer (floor (toNumber (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") initialState.data.driverInfoCardState.rentalData.startTimeUTC ))) "1" "RideDurationTimer" push (RideDurationTimer)
@@ -2846,12 +2846,23 @@ getEditLocResults pollingId action exitAction count duration push state = do
             let (BookingUpdateRequestDetails bookingUpdateRequestDetails) = resp'.bookingUpdateRequestDetails
             if (bookingUpdateRequestDetails.estimatedDistance /= Nothing && bookingUpdateRequestDetails.estimatedFare /= Nothing) then
               doAff do liftEffect $ push $ action response
-            else do
+            else if isJust bookingUpdateRequestDetails.errorObj then do
+              let (ErrorObj err) = fromMaybe (ErrorObj {errorCode : "SOMETHING WENT WRONG. PLEASE TRY AGAIN LATER", errorMessage : ""}) bookingUpdateRequestDetails.errorObj
+              void $ pure $ setValueToLocalStore FINDING_EDIT_LOC_RESULTS "false"
+              void $ pure $ toast err.errorCode
+              doAff do liftEffect $ push $ exitAction
+            else do 
               void $ delay $ Milliseconds duration
               getEditLocResults pollingId action exitAction (usableCount - 1) duration push state
           Left err -> do
-            void $ delay $ Milliseconds duration
-            getEditLocResults pollingId action exitAction (usableCount - 1) duration push state
+            let errResp = err.response
+                codeMessage = decodeError errResp.errorMessage "errorMessage"
+            if err.code == 400 && codeMessage == "EDIT_LOCATION_ATTEMPTS_EXHAUSTED" then do
+              void $ pure $ toast "TRIP UPDATE REQUEST LIMIT EXCEEDED."
+              doAff do liftEffect $ push $ exitAction
+            else do
+              void $ delay $ Milliseconds duration
+              getEditLocResults pollingId action exitAction (usableCount - 1) duration push state
       else do
         void $ pure $ setValueToLocalStore FINDING_EDIT_LOC_RESULTS "false"
         void $ pure $ toast "SOMETHING WENT WRONG. PLEASE TRY AGAIN LATER"
@@ -4512,12 +4523,15 @@ updateEmergencyContacts push state = do
 
 validateAndStartChat :: Array NewContacts ->  (Action -> Effect Unit) -> HomeScreenState -> Effect Unit
 validateAndStartChat contacts push state = do
-  let filterContacts = filter (\item -> (item.enableForShareRide || item.enableForFollowing) && (item.priority == 0 && not item.onRide)) contacts
-  if (length filterContacts) == 0 
-    then push RemoveChat
-    else do
-      push $ UpdateChatWithEM true
-      if (not $ state.props.chatcallbackInitiated) then startChatServices push state.data.driverInfoCardState.rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) true else pure unit
+  if state.data.fareProductType == FPT.RENTAL && not state.props.chatcallbackInitiated 
+    then startChatServices push state.data.driverInfoCardState.bppRideId "Customer" false 
+  else do
+    let filterContacts = filter (\item -> (item.enableForShareRide || item.enableForFollowing) && (item.priority == 0 && not item.onRide)) contacts
+    if (length filterContacts) == 0 
+      then push RemoveChat
+      else do
+        push $ UpdateChatWithEM true
+        if (not $ state.props.chatcallbackInitiated) then startChatServices push state.data.driverInfoCardState.rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) true else pure unit
 
 
 startChatServices ::  (Action -> Effect Unit) -> String -> String -> Boolean -> Effect Unit

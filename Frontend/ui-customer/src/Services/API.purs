@@ -3815,11 +3815,17 @@ newtype BookingUpdateRequestDetails = BookingUpdateRequestDetails {
   estimatedFare :: Maybe Number,
   id :: String,
   oldEstimatedDistance :: Maybe Int,
+  errorObj :: Maybe ErrorObj,
   oldEstimatedFare :: Number,
   status :: String,
   totalDistance :: Maybe Int,
   travelledDistance :: Maybe Int
   }
+
+newtype ErrorObj = ErrorObj {
+  errorCode :: String,
+  errorMessage :: String
+}
 
 data BookingUpdateRequestStatus = SOFT | CONFIRM
 
@@ -3847,6 +3853,13 @@ instance standardEncodeBookingUpdateRequestDetails :: StandardEncode BookingUpda
 instance showBookingUpdateRequestDetails :: Show BookingUpdateRequestDetails where show = genericShow
 instance decodeBookingUpdateRequestDetails :: Decode BookingUpdateRequestDetails where decode = defaultDecode
 instance encodeBookingUpdateRequestDetails :: Encode BookingUpdateRequestDetails where encode = defaultEncode
+
+derive instance genericErrorObj :: Generic ErrorObj _
+derive instance newtypeErrorObj :: Newtype ErrorObj _
+instance standardEncodeErrorObj :: StandardEncode ErrorObj where standardEncode (ErrorObj req) = standardEncode req
+instance showErrorObj :: Show ErrorObj where show = genericShow
+instance decodeErrorObj :: Decode ErrorObj where decode = defaultDecode
+instance encodeErrorObj :: Encode ErrorObj where encode = defaultEncode
 
 derive instance genericBookingUpdateRequestStatus :: Generic BookingUpdateRequestStatus _
 instance showBookingUpdateRequestStatus :: Show BookingUpdateRequestStatus where show = genericShow

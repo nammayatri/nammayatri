@@ -305,6 +305,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             break;
 
                         case NotificationTypes.TRIP_UPDATED:
+                            if (payload.get("show_notification").equals("true")) {
+                                NotificationUtils.showNotification(this, title, body, payload, imageUrl);
+                            }
+                            for (ShowNotificationCallBack callbacks: showNotificationCallBacks) {
+                                callbacks.hideInAppNotification("EditDest");
+                            }
+                            break;
                         case NotificationTypes.TRIP_STARTED:
                             if (payload.get("show_notification").equals("true")) {
                                 NotificationUtils.showNotification(this, title, body, payload, imageUrl);
