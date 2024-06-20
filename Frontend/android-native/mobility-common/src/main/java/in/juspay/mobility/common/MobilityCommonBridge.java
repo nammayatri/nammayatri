@@ -250,7 +250,7 @@ public class MobilityCommonBridge extends HyperBridge {
     private final UICallBacks callBack;
     private final FusedLocationProviderClient client;
 
-    protected static Hashtable<String, Hashtable<String, PolylineDataPoints>> polylinesByMapInstance = new Hashtable<>();
+    protected Hashtable<String, Hashtable<String, PolylineDataPoints>> polylinesByMapInstance = new Hashtable<>();
     protected HashMap<String, HashMap <String, Marker>> markersElement = new HashMap<>();
     protected HashMap<String, GoogleMap> googleMapInstance = new HashMap<>();
     //Location
@@ -310,7 +310,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected MapUpdate mapUpdate = new MapUpdate();
     private MapRemoteConfig mapRemoteConfig;
     protected LocateOnMapManager locateOnMapManager = null;
-    private static Hashtable<String, Hashtable <String, Timer>> polylineAnimationTimers = new Hashtable<>();
+    private static Hashtable<String, Hashtable <String, PolyLineAnimationTimers>> polylineAnimationTimers = new Hashtable<>();
 
     protected enum AppType {
         CONSUMER, PROVIDER
@@ -415,14 +415,14 @@ public class MobilityCommonBridge extends HyperBridge {
     {   
         if (polylineData != null) { return isOverlayPolyLine ? polylineData.overlayPolylines : polylineData.polyline; }else{ return null; }
     }
-    public static PolylineDataPoints getPolyLineDataByMapInstance(String mapKey, String polyLineKey)
+    public PolylineDataPoints getPolyLineDataByMapInstance(String mapKey, String polyLineKey)
     {
         Hashtable<String, PolylineDataPoints> polylines = polylinesByMapInstance.get(mapKey);
         if (polylines != null) { return polylines.get(polyLineKey);}
         else{ return null;}
     }
 
-    public static void setPolyLineDataByMapInstance(String mapKey, String polyLineKey, PolylineDataPoints polyLineData) {
+    public void setPolyLineDataByMapInstance(String mapKey, String polyLineKey, PolylineDataPoints polyLineData) {
         Hashtable<String, PolylineDataPoints> polylines = polylinesByMapInstance.get(mapKey);
         if (polylines != null) {
             polylines.put(polyLineKey, polyLineData);
@@ -433,18 +433,30 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    public static Timer getPolyLineTimer(String mapKey, String polyLineKey) {
-        Hashtable<String, Timer> polyLineEntries = polylineAnimationTimers != null ? polylineAnimationTimers.get(mapKey) : null;
-        Timer polyLineAnimationTimer = polyLineEntries != null ? polyLineEntries.get(polyLineKey) : null;
+    public PolyLineAnimationTimers getPolyLineTimer(String mapKey, String polyLineKey) {
+        Hashtable<String, PolyLineAnimationTimers> polyLineEntries = polylineAnimationTimers != null ? polylineAnimationTimers.get(mapKey) : null;
+        PolyLineAnimationTimers polyLineAnimationTimer = polyLineEntries != null ? polyLineEntries.get(polyLineKey) : new PolyLineAnimationTimers();
         return polyLineAnimationTimer;
     }
 
-    public static void setPolylineAnimationTimers(String mapKey, String polyLineKey, Timer polyLineTimer) {
-        Hashtable<String, Timer> polyLineEntries = polylineAnimationTimers != null ? polylineAnimationTimers.get(mapKey) : new Hashtable<>();
+    public void setPolylineAnimationTimers(String mapKey, String polyLineKey, PolyLineAnimationTimers polyLineTimer) {
         if(polylineAnimationTimers != null)
-        {
+        {   Hashtable<String, PolyLineAnimationTimers> polyLineEntries = polylineAnimationTimers.get(mapKey);
+            if (polyLineEntries == null){polyLineEntries = new Hashtable<>();}
             polyLineEntries.put(polyLineKey, polyLineTimer);
             polylineAnimationTimers.put(mapKey, polyLineEntries);
+        }
+    }
+
+
+    protected class PolyLineAnimationTimers {
+        Timer polyLineAnimationTimer = null;
+        TimerTask polyAnimationTimerTask = null;
+
+        public void intializePolyLineAnimationTimers(Timer polyLineAnimationTimer, TimerTask polyAnimationTimerTask)
+        {
+            this.polyLineAnimationTimer = polyLineAnimationTimer;
+            this.polyAnimationTimerTask = polyAnimationTimerTask;
         }
     }
     public static class LocateOnMapManager {
@@ -1768,7 +1780,7 @@ public class MobilityCommonBridge extends HyperBridge {
         ExecutorManager.runOnMainThread(() -> {
             try {
                 GoogleMap gMap = googleMapInstance.get(pureScripID);
-                String title = markerConfig.markerId.equals("") ? markerConfig.markerId: markerConfig.pointerIcon;
+                String title = markerConfig.markerId.equals("") ? markerConfig.pointerIcon : markerConfig.markerId;
                 String imageName = markerConfig.pointerIcon;
                 float rotation = markerConfig.rotation;
                 float alpha = (markerConfig.animationType == AnimationType.FADE_IN) ? 0 : 1;
@@ -2365,10 +2377,15 @@ public class MobilityCommonBridge extends HyperBridge {
     private void checkAndAnimatePolyline(final String polyLineKey, final int staticColor, final String style, final int polylineWidth, PolylineOptions polylineOptions, JSONObject mapRouteConfigObject, final GoogleMap gMap, String gmapKey){
         try{
             isAnimationNeeded = mapRouteConfigObject != null && mapRouteConfigObject.optBoolean("isAnimation", false);
-            Timer polylineAnimationTimer = getPolyLineTimer(gmapKey,polyLineKey);
+            PolyLineAnimationTimers polylineAnimationTimerInstance = getPolyLineTimer(gmapKey,polyLineKey);
+            Timer polylineAnimationTimer = polylineAnimationTimerInstance != null ? polylineAnimationTimerInstance.polyLineAnimationTimer : null;
+            TimerTask polylineTimerTask = polylineAnimationTimerInstance != null ? polylineAnimationTimerInstance.polyAnimationTimerTask : null;
             if(!isAnimationNeeded || Utils.getDeviceRAM() <= 3){
                 if(polylineAnimationTimer != null){
                     polylineAnimationTimer.cancel();
+                }
+                if (polylineTimerTask != null) {
+                    polylineTimerTask.cancel();
                 }
                 setPolyLineDataByMapInstance(gmapKey,polyLineKey , setRouteCustomTheme(polylineOptions, staticColor, style, polylineWidth, mapRouteConfigObject, gMap, false, polyLineKey, gmapKey));
                 return ;
@@ -2389,7 +2406,10 @@ public class MobilityCommonBridge extends HyperBridge {
                 polylineAnimationTimer = new Timer();
             }
 
-            polylineAnimationTimer.schedule(new TimerTask() {
+            if (polylineTimerTask != null) {
+                polylineTimerTask.cancel();
+            }
+            polylineTimerTask = new TimerTask() {
                 private float drawDone = 0;
                 @Override
                 public void run() {
@@ -2458,8 +2478,11 @@ public class MobilityCommonBridge extends HyperBridge {
                         });
                     }
                 }
-            }, 200, 15);
-            setPolylineAnimationTimers(gmapKey,polyLineKey,polylineAnimationTimer);
+            };
+
+            polylineAnimationTimer.schedule(polylineTimerTask, 200, 15);
+            polylineAnimationTimerInstance.intializePolyLineAnimationTimers(polylineAnimationTimer,polylineTimerTask);
+            setPolylineAnimationTimers(gmapKey,polyLineKey,polylineAnimationTimerInstance);
         }catch (Exception e){
             e.printStackTrace();
         }
@@ -3200,16 +3223,22 @@ public class MobilityCommonBridge extends HyperBridge {
             for(String mapKey : mapkeys)
             {
                 if(polylineAnimationTimers != null) {
-                    Hashtable<String, Timer> polylineAnimationTimerEntries = polylineAnimationTimers.get(mapKey);
+                    Hashtable<String, PolyLineAnimationTimers> polylineAnimationTimerEntries = polylineAnimationTimers.get(mapKey);
                     if (polylineAnimationTimerEntries != null)
                     {
-                        for(Timer polylineAnimationTimer : polylineAnimationTimerEntries.values())
-                        {
-                            polylineAnimationTimer.cancel();
-
+                        for(PolyLineAnimationTimers polylineAnimationTimer : polylineAnimationTimerEntries.values())
+                        {   if(polylineAnimationTimer != null)
+                            {
+                                if (polylineAnimationTimer.polyLineAnimationTimer != null) {
+                                    polylineAnimationTimer.polyLineAnimationTimer.cancel();
+                                }
+                                if (polylineAnimationTimer.polyAnimationTimerTask != null) {
+                                    polylineAnimationTimer.polyAnimationTimerTask.cancel();
+                                }
+                            }
                         }
                         polylineAnimationTimerEntries.clear();
-                        polylineAnimationTimers.put(mapKey,polylineAnimationTimerEntries);
+                        polylineAnimationTimers.remove(mapKey);
                     }
                 }
             }
