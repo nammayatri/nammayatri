@@ -3813,7 +3813,7 @@ mapView' push state idTag =
                 if state.props.sourceLat == 0.0 && state.props.sourceLong == 0.0 then do
                   void $ getCurrentPosition push CurrentLocation
                 else pure unit
-                _ <- showMap (getNewIDWithTag idTag) false "satellite" zoomLevel state.props.sourceLat state.props.sourceLong push MAPREADY
+                _ <- showMap (getNewIDWithTag idTag) (isHomeScreenView state) "satellite" zoomLevel state.props.sourceLat state.props.sourceLong push MAPREADY
                 if os == "IOS" then
                   case state.props.currentStage of  
                     HomeScreen -> void $ setMapPadding 0 0 0 0
