@@ -729,6 +729,7 @@ data ScreenOutput = LogoutUser
                   | LocationSelected LocationListItemState Boolean HomeScreenState
                   | SearchPlace String HomeScreenState
                   | UpdateLocationName HomeScreenState Number Number
+                  | UpdatePickupName HomeScreenState Number Number
                   | GoToHome HomeScreenState
                   | GoToFavourites HomeScreenState
                   | SubmitRating HomeScreenState
@@ -1539,32 +1540,21 @@ eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonAct
 eval (UpdatePickupLocation  key lat lon) state =
   case key of
     "LatLon" -> do
-      exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+      exit $ UpdatePickupName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
     _ -> do
       let focusedIndex = findIndex (\item -> item.place == key) state.data.nearByPickUpPoints
       case focusedIndex of
         Just index -> do
           _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
-          exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+          exit $ UpdatePickupName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
         Nothing -> continue state
         
-eval (LocateOnMapCallBack key lat lon) state = do
-  let latitude = fromMaybe 0.0 (NUM.fromString lat)
-      longitude = fromMaybe 0.0 (NUM.fromString lon)
-  case key of
-    "LatLon" -> do
-      exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} latitude longitude
-    _ -> do
-      if state.props.currentStage == ConfirmingLocation then do
-        let focusedIndex = findIndex (\item -> item.place == key) state.data.nearByPickUpPoints
-        case focusedIndex of
-          Just index -> void $ pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
-          Nothing -> pure unit
-      else pure unit
-
-      case (filter(\item -> item.place == key) state.data.nearByPickUpPoints) !! 0 of
-        Just spot -> exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} spot.lat spot.lng
-        Nothing -> continue state
+eval (LocateOnMapCallBack key lat lon) state = case key of
+  "LatLon" -> do
+    exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+  _ ->  if length (filter( \ (item) -> (item.place == key)) state.data.nearByPickUpPoints) > 0 then do
+          exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+        else continue state
 
 eval (CheckBoxClick autoAssign) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1810,11 +1800,12 @@ eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC P
 eval (DriverArrivedAction driverArrivalTime) state = do
   _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_WAITING_ACTION"
   exit $ ReloadScreen state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
-eval (DriverArrivedAction driverArrivalTime) state =
-  if any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] then do
-      _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_WAITING_ACTION"
-      exit $ ReloadScreen state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
-    else continue state
+  
+-- eval (DriverArrivedAction driverArrivalTime) state =
+--   if any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] then do
+--       _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_WAITING_ACTION"
+--       exit $ ReloadScreen state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
+--     else continue state
 
 eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
   _ <- pure $ if getValueToLocalStore DRIVER_ARRIVAL_ACTION == "TRIGGER_WAITING_ACTION"
