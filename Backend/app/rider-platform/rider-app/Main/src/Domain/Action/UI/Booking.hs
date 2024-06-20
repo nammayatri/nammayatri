@@ -163,10 +163,8 @@ favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Intege
 favouriteBookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driver = do
   mobileNumberHash <- getDbHash driver.driverNumber
   rides <- runInReplica $ QR.findAllByRiderIdAndDriverNumber personId mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mobileNumberHash
-  rbList <- runInReplica $ QR.findAllBookingsOfRides rides
-  fork "booking list status update" $ checkBookingsForStatus rbList
-  logInfo $ "rbList: test " <> show rbList
-  FavouriteBookingListRes . catMaybes <$> traverse SRB.favouritebuildBookingAPIEntity rbList
+  logDebug $ "rbList: test " <> show rides
+  pure $ FavouriteBookingListRes $ SRB.favouritebuildBookingAPIEntity <$> rides
 
 addStop :: (Id Person.Person, Id Merchant) -> Id SRB.Booking -> StopReq -> Flow APISuccess
 addStop (_, merchantId) bookingId req = do

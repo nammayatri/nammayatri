@@ -40,8 +40,6 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Sequelize as Se
-import qualified Storage.Beam.Ride as BeamR
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Sos as CQSos
@@ -122,7 +120,7 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data FavouriteBookingAPIEntity = FavouriteBookingAPIEntity
-  { id :: Id Booking,
+  { id :: Id Ride,
     rideRating :: Maybe Int,
     fromLocation :: Location, 
     toLocation :: Maybe Location,
@@ -303,10 +301,10 @@ mkBookingAPIDetails = \case
           estimatedDistanceWithUnit = distance
         }
 
-makeFavouriteBookingAPIEntity :: Booking -> Ride -> FavouriteBookingAPIEntity
-makeFavouriteBookingAPIEntity booking ride = do
+makeFavouriteBookingAPIEntity :: Ride -> FavouriteBookingAPIEntity
+makeFavouriteBookingAPIEntity ride = do
   FavouriteBookingAPIEntity
-    { id = booking.id,
+    { id = ride.id,
       rideRating = ride.rideRating,
       fromLocation = ride.fromLocation,
       toLocation = ride.toLocation,
@@ -366,10 +364,8 @@ buildBookingStatusAPIEntity booking = do
   rideStatus <- maybe (pure Nothing) (\ride -> pure $ Just ride.status) mbActiveRide
   return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus
 
-favouritebuildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m (Maybe FavouriteBookingAPIEntity)
-favouritebuildBookingAPIEntity booking = do
-  ride <- findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq $ booking.id.getId]]
-  pure $ makeFavouriteBookingAPIEntity booking <$> ride
+favouritebuildBookingAPIEntity :: Ride -> FavouriteBookingAPIEntity
+favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
 
 -- TODO move to Domain.Types.Ride.Extra
 makeRideAPIEntity :: DRide.Ride -> RideAPIEntity
