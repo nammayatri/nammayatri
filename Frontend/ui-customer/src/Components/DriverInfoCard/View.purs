@@ -1087,6 +1087,7 @@ paymentMethodView push state title shouldShowIcon uid =
           [ text $ state.data.config.currency <> show state.data.price
           , margin $ MarginTop 4
           , color Color.black800
+          , width MATCH_PARENT
           ] <> FontStyle.h2 TypoGraphy
         , textView $
           [ text $ "(" <> (getString TOLL_CHARGES_INCLUDED) <> ")"

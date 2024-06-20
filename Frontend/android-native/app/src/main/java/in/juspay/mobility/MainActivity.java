@@ -785,7 +785,7 @@ public class MainActivity extends AppCompatActivity {
                         initApp();
                         break;
                     case "in_app_notification":
-                        showInAppNotification(jsonObject, context);
+                        showInAppNotificationApp(jsonObject, context);
                         break;
                     case "process_result":
                         try {
