@@ -325,7 +325,8 @@ updateAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> Ride -> m
 updateAll rideId ride = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set BeamR.chargeableDistance ride.chargeableDistance,
+    [ Se.Set BeamR.status ride.status,
+      Se.Set BeamR.chargeableDistance ride.chargeableDistance,
       Se.Set BeamR.fare $ roundToIntegral <$> ride.fare,
       Se.Set BeamR.fareAmount $ ride.fare,
       Se.Set BeamR.tripEndTime ride.tripEndTime,
