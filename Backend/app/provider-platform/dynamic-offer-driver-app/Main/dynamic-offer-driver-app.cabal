@@ -625,6 +625,7 @@ library
       Domain.Types.Invoice
       Domain.Types.KioskLocation
       Domain.Types.KioskLocationTranslation
+      Domain.Types.KnowlarityTest
       Domain.Types.LeaderBoardConfigs
       Domain.Types.LmsModule
       Domain.Types.LmsModuleTranslation
@@ -735,6 +736,7 @@ library
       Storage.Beam.Invoice
       Storage.Beam.KioskLocation
       Storage.Beam.KioskLocationTranslation
+      Storage.Beam.KnowlarityTest
       Storage.Beam.LeaderBoardConfigs
       Storage.Beam.LmsModule
       Storage.Beam.LmsModuleTranslation
@@ -846,6 +848,7 @@ library
       Storage.Queries.Invoice
       Storage.Queries.KioskLocation
       Storage.Queries.KioskLocationTranslation
+      Storage.Queries.KnowlarityTest
       Storage.Queries.LeaderBoardConfigs
       Storage.Queries.LmsModule
       Storage.Queries.LmsModuleTranslation

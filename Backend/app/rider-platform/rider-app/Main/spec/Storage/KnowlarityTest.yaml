@@ -1,0 +1,17 @@
+KnowlarityTest:
+  tableName: knowlarity_test
+
+  fields:
+    callFrom: Text
+    callTo: Text
+    description: Maybe Text
+
+  excludedFields: [merchantId, merchantOperatingCityId,createdAt,updatedAt]
+
+  queries:
+    findByFrom:
+      kvFunction: findOneWithKV
+      where: callFrom
+
+  constraints:
+    callFrom: PrimaryKey
