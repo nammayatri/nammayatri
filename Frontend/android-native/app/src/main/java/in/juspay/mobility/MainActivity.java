@@ -675,13 +675,13 @@ public class MainActivity extends AppCompatActivity {
         mFirebaseAnalytics.logEvent("ny_hyper_onActivityResult",null);
         hyperServices.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_UPDATE_APP) {
-                if (resultCode != RESULT_OK) {
-                    Log.i(LOG_TAG,"Update flow failed! Result code: " + resultCode);
-                    if(updateType == AppUpdateType.IMMEDIATE){
-                        finishAndRemoveTask();
-                    }
+            if (resultCode != RESULT_OK) {
+                Log.i(LOG_TAG,"Update flow failed! Result code: " + resultCode);
+                if(updateType == AppUpdateType.IMMEDIATE){
+                    finishAndRemoveTask();
                 }
             }
+        }
     }
 
     private void initApp() {
@@ -755,9 +755,10 @@ public class MainActivity extends AppCompatActivity {
                             innerPayload.put("driverInfoResponse", driverInfoResponse);
                             innerPayload.put("currentLocation", currentLocationRes);
 
-                            if (getIntent() != null)
+                            if (getIntent() != null) {
                                 setNotificationData(innerPayload, getIntent());
-
+                                handleGeoSchemeData(innerPayload, getIntent());
+                            }
                             json.put(PaymentConstants.PAYLOAD, innerPayload);
                             mFirebaseAnalytics.logEvent("ny_hyper_process", null);
                             Log.i("APP_PERF", "INIT_HYPER_SERVICE_INITIATE_RESULT : " + System.currentTimeMillis());
@@ -918,10 +919,48 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
+    private Vector<Double> handleGeoSchemeVector(Intent intent){
+        Uri data = intent.getData();
+        Vector<Double> geoData = new Vector<>();
+        String[] parts = new String[0];
+        if (data != null) {
+            parts = data.getSchemeSpecificPart().split(",");
+        String latitude = parts[0];
+        String uriData = parts[1];
+        String longitude = parts[2];
+        geoData.add(Double.parseDouble(latitude));
+        geoData.add(Double.parseDouble(longitude));
+        Log.d("whatsapp Intent Location", "Intent Long: " + longitude + ", Lat: " + latitude);
+        Log.d("whatsapp Intent Location", "Uri data : " + uriData);
+        }
+        return geoData;
+
+    }
+    private void handleGeoSchemeData(JSONObject innerPayload , Intent intent){
+        try {
+            Uri data = intent.getData();
+            if (data != null && intent.getScheme().equals("geo")) {
+                Vector<Double> geoData = handleGeoSchemeVector(intent);
+                JSONObject geoObj = new JSONObject();
+                try {
+                    geoObj.put("lat", geoData.get(0));
+                    geoObj.put("lon", geoData.get(1));
+                    geoObj.put("name",null);
+                    innerPayload.put("destination", geoObj);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                Log.d("location Scheme Handled", geoData.toString());
+            }
+        }catch(NullPointerException e){
+            e.printStackTrace();
+        }
+    }
     @Override
     protected void onNewIntent(Intent intent) {
         Vector<String> res = handleDeepLinkIfAvailable(intent);
         Vector<String> notificationDeepLinkVector = notificationTypeHasDL(intent);
+        Vector<Double> geoData = handleGeoSchemeVector(intent);
         String viewParam = null, deepLinkJson =null;
         if (res!=null ){
             viewParam = res.get(0);
@@ -941,6 +980,20 @@ public class MainActivity extends AppCompatActivity {
                 mFirebaseAnalytics.logEvent("ny_hyper_process",null);
                 hyperServices.process(proccessPayload);
             } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        if(intent.getScheme()!=null && intent.getScheme().equals("geo")){
+            try{
+                JSONObject proccessPayload = new JSONObject().put("service", getService())
+                        .put("requestId", UUID.randomUUID());
+                JSONObject innerPayload = new JSONObject().put("onNewIntent", true);
+                proccessPayload.put(PaymentConstants.PAYLOAD, innerPayload);
+                handleGeoSchemeData(innerPayload, intent);
+                mFirebaseAnalytics.logEvent("ny_hyper_process",null);
+                hyperServices.process(proccessPayload);
+            }
+            catch (Exception e){
                 e.printStackTrace();
             }
         }
@@ -1062,7 +1115,7 @@ public class MainActivity extends AppCompatActivity {
             MobilityAppBridge.youTubePlayerView = null;
         }
     }
-    
+
     public void hideSplash() {
         View v = findViewById(in.juspay.mobility.app.R.id.cl_dui_container);
         if (v != null) {

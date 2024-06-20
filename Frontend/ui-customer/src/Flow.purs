@@ -248,6 +248,7 @@ baseAppFlow gPayload callInitUI = do
 handleDeepLinks :: Maybe GlobalPayload -> Boolean -> FlowBT String Unit
 handleDeepLinks mBGlobalPayload skipDefaultCase = do
   liftFlowBT $ markPerformance "HANDLE_DEEP_LINKS"
+  handleExternalLocations mBGlobalPayload
   case mBGlobalPayload of
     Just globalPayload -> case globalPayload ^. _payload ^. _view_param of
       Just screen -> case screen of
@@ -282,6 +283,30 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
       case mBPayload of
         Just _ -> handleDeepLinks mBPayload skipDefaultCase
         Nothing -> pure unit
+
+handleExternalLocations :: Maybe GlobalPayload -> FlowBT String Unit
+handleExternalLocations mBGlobalPayload = do
+  case mBGlobalPayload of
+    Just globalPayload ->
+      case globalPayload ^. _payload ^. _destination of
+        Just (LocationData destinationObj) -> do
+          (ServiceabilityRes dest) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq (destinationObj.lat) (destinationObj.lon)) DESTINATION
+          case dest.serviceable of
+            true -> do
+              case destinationObj.name of
+                Just src -> updateDataInState destinationObj.lat destinationObj.lon src (encodeAddress src [] Nothing destinationObj.lat destinationObj.lon)
+                Nothing -> do
+                    mbDestination <- getPlaceName destinationObj.lat destinationObj.lon HomeScreenData.dummyLocation true
+                    case mbDestination of
+                      Just (PlaceName destination) -> updateDataInState destinationObj.lat destinationObj.lon destination.formattedAddress (encodeAddress destination.formattedAddress destination.addressComponents destination.placeId destinationObj.lat destinationObj.lon)
+                      Nothing -> pure unit
+            false -> pure unit
+        Nothing -> pure unit
+    Nothing -> pure unit
+  where
+    updateDataInState lat lon addressString address = do
+      void $ updateLocalStage GoToConfirmLocation
+      modifyScreenState $ HomeScreenStateType (\homescreen -> homescreen{props{currentStage = GoToConfirmLocation, destinationLat = lat,destinationLong = lon}, data{ destination = addressString, destinationAddress =address}})
 
 hideSplashAndCallFlow :: FlowBT String Unit -> FlowBT String Unit
 hideSplashAndCallFlow flow = do
