@@ -17,6 +17,7 @@ module Storage.Beam.FarePolicy where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.FarePolicy as Domain
+import Domain.Types.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
@@ -54,3 +55,5 @@ type FarePolicy = FarePolicyT Identity
 $(enableKVPG ''FarePolicyT ['id] [[]])
 
 $(mkTableInstances ''FarePolicyT "fare_policy")
+
+$(mkCacParseInstance ''FarePolicyT)

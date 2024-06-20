@@ -6,6 +6,7 @@ import Domain.Types.UtilsTH
 import Kernel.Prelude
 import Storage.Beam.DriverIntelligentPoolConfig as DIPC
 import Storage.Beam.DriverPoolConfig as DPC
+import qualified Storage.Beam.FarePolicy as FP
 import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as DEFB
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as FPFB
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as FPPDPEKRS
@@ -30,5 +31,6 @@ checkParseCommon (key, value) = do
         "driverExtraFeeBounds" -> checkParse (Proxy @DEFB.DriverExtraFeeBoundsT) tableColumn value
         "farePolicyProgressiveDetails" -> checkParse (Proxy @FPFB.FarePolicyProgressiveDetailsT) tableColumn value
         "farePolicyRentalDetails" -> checkParse (Proxy @FPRD.FarePolicyRentalDetailsT) tableColumn value
+        "farePolicy" -> checkParse (Proxy @FP.FarePolicyT) tableColumn value
         _ -> True
     _ -> True
