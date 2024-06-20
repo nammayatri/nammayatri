@@ -189,6 +189,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | FCM_NOTIFICATION String HomeScreenState
                         | SEARCH_LOCATION String HomeScreenState
                         | UPDATE_LOCATION_NAME HomeScreenState Number Number
+                        | UPDATE_PICKUP_NAME HomeScreenState Number Number
                         | GET_LOCATION_NAME HomeScreenState
                         | GO_TO_FAVOURITES_
                         | SUBMIT_RATING HomeScreenState
