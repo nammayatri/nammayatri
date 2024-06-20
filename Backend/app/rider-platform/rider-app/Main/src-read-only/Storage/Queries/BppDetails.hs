@@ -31,11 +31,11 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.BppDetails.BppDetails {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.description description,
-      Se.Set Beam.domain domain,
-      Se.Set Beam.logoUrl logoUrl,
-      Se.Set Beam.name name,
+    [ Se.Set Beam.domain domain,
       Se.Set Beam.subscriberId subscriberId,
+      Se.Set Beam.name name,
+      Se.Set Beam.logoUrl logoUrl,
+      Se.Set Beam.description description,
       Se.Set Beam.supportNumber supportNumber,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
@@ -47,12 +47,12 @@ instance FromTType' Beam.BppDetails Domain.Types.BppDetails.BppDetails where
     pure $
       Just
         Domain.Types.BppDetails.BppDetails
-          { description = description,
+          { id = Kernel.Types.Id.Id id,
             domain = domain,
-            id = Kernel.Types.Id.Id id,
-            logoUrl = logoUrl,
-            name = name,
             subscriberId = subscriberId,
+            name = name,
+            logoUrl = logoUrl,
+            description = description,
             supportNumber = supportNumber,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -61,12 +61,12 @@ instance FromTType' Beam.BppDetails Domain.Types.BppDetails.BppDetails where
 instance ToTType' Beam.BppDetails Domain.Types.BppDetails.BppDetails where
   toTType' (Domain.Types.BppDetails.BppDetails {..}) = do
     Beam.BppDetailsT
-      { Beam.description = description,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.domain = domain,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.logoUrl = logoUrl,
-        Beam.name = name,
         Beam.subscriberId = subscriberId,
+        Beam.name = name,
+        Beam.logoUrl = logoUrl,
+        Beam.description = description,
         Beam.supportNumber = supportNumber,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

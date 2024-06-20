@@ -13,16 +13,16 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data RideRelatedNotificationConfig = RideRelatedNotificationConfig
-  { eventTime :: Domain.Types.RideRelatedNotificationConfig.EventTime,
-    id :: Kernel.Types.Id.Id Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig,
-    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    notificationKey :: Kernel.Prelude.Text,
-    notificationType :: Domain.Types.RideRelatedNotificationConfig.NotificationType,
-    onBookingStatus :: Domain.Types.Extra.Booking.BookingStatus,
-    onScheduledBooking :: Kernel.Prelude.Bool,
+  { id :: Kernel.Types.Id.Id Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig,
     timeDiff :: Kernel.Prelude.NominalDiffTime,
     timeDiffEvent :: Domain.Types.RideRelatedNotificationConfig.TimeDiffEvent,
+    onBookingStatus :: Domain.Types.Extra.Booking.BookingStatus,
+    notificationType :: Domain.Types.RideRelatedNotificationConfig.NotificationType,
+    notificationKey :: Kernel.Prelude.Text,
+    onScheduledBooking :: Kernel.Prelude.Bool,
+    eventTime :: Domain.Types.RideRelatedNotificationConfig.EventTime,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

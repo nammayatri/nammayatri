@@ -13,26 +13,26 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PersonDefaultEmergencyNumberT f = PersonDefaultEmergencyNumberT
-  { contactPersonId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { personId :: B.C f Kernel.Prelude.Text,
+    name :: B.C f Kernel.Prelude.Text,
+    mobileNumberEncrypted :: B.C f Kernel.Prelude.Text,
+    mobileNumberHash :: B.C f Kernel.External.Encryption.DbHash,
+    mobileCountryCode :: B.C f Kernel.Prelude.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
+    contactPersonId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     enableForFollowing :: B.C f Kernel.Prelude.Bool,
     enableForShareRide :: B.C f Kernel.Prelude.Bool,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    mobileCountryCode :: B.C f Kernel.Prelude.Text,
-    mobileNumberEncrypted :: B.C f Kernel.Prelude.Text,
-    mobileNumberHash :: B.C f Kernel.External.Encryption.DbHash,
-    name :: B.C f Kernel.Prelude.Text,
-    personId :: B.C f Kernel.Prelude.Text,
     priority :: B.C f Kernel.Prelude.Int
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table PersonDefaultEmergencyNumberT where
-  data PrimaryKey PersonDefaultEmergencyNumberT f = PersonDefaultEmergencyNumberId (B.C f Kernel.External.Encryption.DbHash) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = PersonDefaultEmergencyNumberId <$> mobileNumberHash <*> personId
+  data PrimaryKey PersonDefaultEmergencyNumberT f = PersonDefaultEmergencyNumberId (B.C f Kernel.Prelude.Text) (B.C f Kernel.External.Encryption.DbHash) deriving (Generic, B.Beamable)
+  primaryKey = PersonDefaultEmergencyNumberId <$> personId <*> mobileNumberHash
 
 type PersonDefaultEmergencyNumber = PersonDefaultEmergencyNumberT Identity
 
-$(enableKVPG ''PersonDefaultEmergencyNumberT ['mobileNumberHash, 'personId] [['mobileNumberHash], ['personId]])
+$(enableKVPG ''PersonDefaultEmergencyNumberT ['personId, 'mobileNumberHash] [['personId], ['mobileNumberHash]])
 
 $(mkTableInstances ''PersonDefaultEmergencyNumberT "person_default_emergency_number")

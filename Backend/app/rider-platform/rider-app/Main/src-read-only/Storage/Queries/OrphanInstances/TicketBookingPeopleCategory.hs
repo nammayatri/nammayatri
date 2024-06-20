@@ -19,14 +19,14 @@ instance FromTType' Beam.TicketBookingPeopleCategory Domain.Types.TicketBookingP
     pure $
       Just
         Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory
-          { amountToRefund = amountToRefund,
-            id = Kernel.Types.Id.Id id,
+          { id = Kernel.Types.Id.Id id,
+            ticketBookingServiceCategoryId = Kernel.Types.Id.Id ticketBookingServiceCategoryId,
+            peopleCategoryId = Kernel.Types.Id.Id <$> peopleCategoryId,
             name = name,
+            pricePerUnit = Kernel.Types.Common.mkPrice currency pricePerUnit,
             numberOfUnits = numberOfUnits,
             numberOfUnitsCancelled = numberOfUnitsCancelled,
-            peopleCategoryId = Kernel.Types.Id.Id <$> peopleCategoryId,
-            pricePerUnit = Kernel.Types.Common.mkPrice currency pricePerUnit,
-            ticketBookingServiceCategoryId = Kernel.Types.Id.Id ticketBookingServiceCategoryId,
+            amountToRefund = amountToRefund,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -36,15 +36,15 @@ instance FromTType' Beam.TicketBookingPeopleCategory Domain.Types.TicketBookingP
 instance ToTType' Beam.TicketBookingPeopleCategory Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory where
   toTType' (Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory {..}) = do
     Beam.TicketBookingPeopleCategoryT
-      { Beam.amountToRefund = amountToRefund,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.name = name,
-        Beam.numberOfUnits = numberOfUnits,
-        Beam.numberOfUnitsCancelled = numberOfUnitsCancelled,
+      { Beam.id = Kernel.Types.Id.getId id,
+        Beam.ticketBookingServiceCategoryId = Kernel.Types.Id.getId ticketBookingServiceCategoryId,
         Beam.peopleCategoryId = Kernel.Types.Id.getId <$> peopleCategoryId,
+        Beam.name = name,
         Beam.currency = (Kernel.Prelude.Just . (.currency)) pricePerUnit,
         Beam.pricePerUnit = (.amount) pricePerUnit,
-        Beam.ticketBookingServiceCategoryId = Kernel.Types.Id.getId ticketBookingServiceCategoryId,
+        Beam.numberOfUnits = numberOfUnits,
+        Beam.numberOfUnitsCancelled = numberOfUnitsCancelled,
+        Beam.amountToRefund = amountToRefund,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

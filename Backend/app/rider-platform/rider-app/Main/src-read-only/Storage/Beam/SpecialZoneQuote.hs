@@ -12,9 +12,9 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data SpecialZoneQuoteT f = SpecialZoneQuoteT
-  { createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    id :: B.C f Kernel.Prelude.Text,
+  { id :: B.C f Kernel.Prelude.Text,
     quoteId :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)

@@ -15,19 +15,19 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data BookingCancellationReasonT f = BookingCancellationReasonT
-  { additionalInfo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    bookingId :: B.C f Kernel.Prelude.Text,
-    createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
+  { bookingId :: B.C f Kernel.Prelude.Text,
+    rideId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    source :: B.C f Domain.Types.BookingCancellationReason.CancellationSource,
+    reasonCode :: B.C f (Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationReasonCode),
+    reasonStage :: B.C f (Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationStage),
+    additionalInfo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverCancellationLocationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     driverCancellationLocationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     driverDistToPickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     driverDistToPickupValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    reasonCode :: B.C f (Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationReasonCode),
-    reasonStage :: B.C f (Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationStage),
-    rideId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    source :: B.C f Domain.Types.BookingCancellationReason.CancellationSource,
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
+    createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)

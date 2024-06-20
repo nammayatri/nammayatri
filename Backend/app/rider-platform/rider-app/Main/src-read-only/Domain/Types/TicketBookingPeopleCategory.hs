@@ -15,14 +15,14 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data TicketBookingPeopleCategory = TicketBookingPeopleCategory
-  { amountToRefund :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    id :: Kernel.Types.Id.Id Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory,
+  { id :: Kernel.Types.Id.Id Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory,
+    ticketBookingServiceCategoryId :: Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory,
+    peopleCategoryId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory),
     name :: Kernel.Prelude.Text,
+    pricePerUnit :: Kernel.Types.Common.Price,
     numberOfUnits :: Kernel.Prelude.Int,
     numberOfUnitsCancelled :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    peopleCategoryId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory),
-    pricePerUnit :: Kernel.Types.Common.Price,
-    ticketBookingServiceCategoryId :: Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory,
+    amountToRefund :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

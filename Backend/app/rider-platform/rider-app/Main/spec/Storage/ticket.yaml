@@ -24,21 +24,21 @@ TicketPlace:
   tableName: ticket_place
 
   fields:
-    id : Id TicketPlace
-    merchantOperatingCityId : Id MerchantOperatingCity
-    name : Text
-    description : Maybe Text
-    lat : Maybe Double
-    lon : Maybe Double
-    gallery : "[Text]"
-    shortDesc : Text
-    iconUrl : Maybe Text
-    termsAndConditions : "[Text]"
-    placeType : PlaceType #
-    mapImageUrl : Maybe Text
-    openTimings : Maybe TimeOfDay
-    closeTimings : Maybe TimeOfDay
-    status : PlaceStatus
+    - id : Id TicketPlace
+    - merchantOperatingCityId : Id MerchantOperatingCity
+    - name : Text
+    - description : Maybe Text
+    - lat : Maybe Double
+    - lon : Maybe Double
+    - gallery : "[Text]"
+    - shortDesc : Text
+    - iconUrl : Maybe Text
+    - termsAndConditions : "[Text]"
+    - placeType : PlaceType #
+    - mapImageUrl : Maybe Text
+    - openTimings : Maybe TimeOfDay
+    - closeTimings : Maybe TimeOfDay
+    - status : PlaceStatus
 
   types:
     PlaceType:
@@ -64,16 +64,16 @@ TicketService:
   tableName : ticket_service
 
   fields :
-    id : Id TicketService
-    placesId : Text
-    service : Text
-    shortDesc : Maybe Text
-    operationalDays : "[Text]"
-    maxVerification : Int
-    allowFutureBooking : Bool
-    allowCancellation : Bool
-    expiry : ExpiryType
-    businessHours : "[Id BusinessHour]"
+    - id : Id TicketService
+    - placesId : Text
+    - service : Text
+    - shortDesc : Maybe Text
+    - operationalDays : "[Text]"
+    - maxVerification : Int
+    - allowFutureBooking : Bool
+    - allowCancellation : Bool
+    - expiry : ExpiryType
+    - businessHours : "[Id BusinessHour]"
   types:
     ExpiryType:
       enum: "InstantExpiry Kernel.Prelude.Int,VisitDate Kernel.Prelude.TimeOfDay"
@@ -101,13 +101,13 @@ SpecialOccasion:
   tableName : special_occasion
 
   fields :
-    id : Id SpecialOccasion
-    entityId : Text
-    date : Maybe Day
-    dayOfWeek : Maybe Text
-    specialDayType : SpecialDayType
-    description : Maybe Text
-    businessHours : "[Id BusinessHour]"
+    - id : Id SpecialOccasion
+    - entityId : Text
+    - date : Maybe Day
+    - dayOfWeek : Maybe Text
+    - specialDayType : SpecialDayType
+    - description : Maybe Text
+    - businessHours : "[Id BusinessHour]"
 
   types:
     SpecialDayType:
@@ -143,9 +143,9 @@ BusinessHour:
   tableName: business_hour
 
   fields:
-    id: Id BusinessHour
-    btype: BusinessHourType # Slot TimeOfDay | Duration TimeOfDay TimeOfDay
-    categoryId: "[Id ServiceCategory]"
+    - id: Id BusinessHour
+    - btype: BusinessHourType # Slot TimeOfDay | Duration TimeOfDay TimeOfDay
+    - categoryId: "[Id ServiceCategory]"
   types:
     BusinessHourType:
       enum: "Slot Kernel.Prelude.TimeOfDay,Duration Kernel.Prelude.TimeOfDay Kernel.Prelude.TimeOfDay"
@@ -159,12 +159,12 @@ ServiceCategory:
   tableName: service_category
 
   fields:
-    id: Id ServiceCategory
-    name: Text
-    description: Text
-    availableSeats: Maybe Int
-    allowedSeats: Maybe Int
-    peopleCategory: "[Id ServicePeopleCategory]"
+    - id: Id ServiceCategory
+    - name: Text
+    - description: Text
+    - availableSeats: Maybe Int
+    - allowedSeats: Maybe Int
+    - peopleCategory: "[Id ServicePeopleCategory]"
 
   queries:
     findById:
@@ -175,11 +175,11 @@ ServicePeopleCategory:
   tableName: service_people_category
   derives: "Generic,Show"
   fields:
-    id: Id ServicePeopleCategory
-    name: Text
-    description: Text
-    pricePerUnit: Price
-    cancellationCharges: "Maybe [CancellationCharge]"
+    - id: Id ServicePeopleCategory
+    - name: Text
+    - description: Text
+    - pricePerUnit: Price
+    - cancellationCharges: "Maybe [CancellationCharge]"
 
   beamType:
     cancellationCharges: Maybe Value
@@ -218,11 +218,11 @@ SeatManagement:
   tableName: seat_management
 
   fields:
-    id: Id SeatManagement
-    date: Day
-    ticketServiceCategoryId: Id ServiceCategory
-    booked: Int
-    blocked: Int
+    - id: Id SeatManagement
+    - date: Day
+    - ticketServiceCategoryId: Id ServiceCategory
+    - booked: Int
+    - blocked: Int
 
   default:
     booked: "0"
@@ -258,18 +258,18 @@ TicketBooking:
   tableName: ticket_booking
   derives: "Generic,Show"
   fields:
-    id: Id TicketBooking
-    shortId: ShortId TicketBooking
-    merchantOperatingCityId: Id MerchantOperatingCity
-    ticketPlaceId: Id TicketPlace
-    personId: Id Person
-    amount: Price
-    visitDate: Day
-    status: BookingStatus
-    createdAt: UTCTime
-    updatedAt: UTCTime
-    bookedSeats: Int
-    cancelledSeats: Maybe Int
+    - id: Id TicketBooking
+    - shortId: ShortId TicketBooking
+    - merchantOperatingCityId: Id MerchantOperatingCity
+    - ticketPlaceId: Id TicketPlace
+    - personId: Id Person
+    - amount: Price
+    - visitDate: Day
+    - status: BookingStatus
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - bookedSeats: Int
+    - cancelledSeats: Maybe Int
 
   beamFields:
     amount:
@@ -327,22 +327,22 @@ TicketBookingService:
   tableName: ticket_booking_service
   derives: "Generic,Show"
   fields:
-    id: Id TicketBookingService
-    shortId: ShortId TicketBookingService
-    ticketBookingId: Id TicketBooking
-    ticketServiceId: Id TicketService
-    merchantOperatingCityId: Id MerchantOperatingCity
-    amount: Price
-    status: ServiceStatus
-    verificationCount: Int
-    visitDate: Maybe Day
-    btype: BusinessHourType
-    bHourId: Maybe (Id BusinessHour)
-    expiryDate: Maybe UTCTime
-    createdAt: UTCTime
-    updatedAt: UTCTime
-    bookedSeats: Int
-    cancelledSeats: Maybe Int
+    - id: Id TicketBookingService
+    - shortId: ShortId TicketBookingService
+    - ticketBookingId: Id TicketBooking
+    - ticketServiceId: Id TicketService
+    - merchantOperatingCityId: Id MerchantOperatingCity
+    - amount: Price
+    - status: ServiceStatus
+    - verificationCount: Int
+    - visitDate: Maybe Day
+    - btype: BusinessHourType
+    - bHourId: Maybe (Id BusinessHour)
+    - expiryDate: Maybe UTCTime
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - bookedSeats: Int
+    - cancelledSeats: Maybe Int
 
   beamFields:
     amount:
@@ -394,17 +394,17 @@ TicketBookingServiceCategory:
   tableName: ticket_booking_service_category
   derives: "Generic,Show"
   fields:
-    id: Id TicketBookingServiceCategory
-    ticketBookingServiceId: Id TicketBookingService
-    name: Text
-    bookedSeats: Int
-    amount: Price
-    eventCancelledBy: Maybe CancelledBy
-    cancelledSeats: Maybe Int
-    amountToRefund: Maybe HighPrecMoney
-    serviceCategoryId: Maybe Text
-    visitDate: Maybe Day
-    btype: Maybe BusinessHourType
+    - id: Id TicketBookingServiceCategory
+    - ticketBookingServiceId: Id TicketBookingService
+    - name: Text
+    - bookedSeats: Int
+    - amount: Price
+    - eventCancelledBy: Maybe CancelledBy
+    - cancelledSeats: Maybe Int
+    - amountToRefund: Maybe HighPrecMoney
+    - serviceCategoryId: Maybe Text
+    - visitDate: Maybe Day
+    - btype: Maybe BusinessHourType
 
   beamFields:
     amount:
@@ -448,14 +448,14 @@ TicketBookingPeopleCategory:
   tableName: ticket_booking_people_category
   derives: "Generic,Show"
   fields:
-    id: Id TicketBookingPeopleCategory
-    ticketBookingServiceCategoryId: Id TicketBookingServiceCategory
-    peopleCategoryId: Maybe (Id ServicePeopleCategory)
-    name: Text
-    pricePerUnit: Price
-    numberOfUnits: Int
-    numberOfUnitsCancelled: Maybe Int
-    amountToRefund: Maybe HighPrecMoney
+    - id: Id TicketBookingPeopleCategory
+    - ticketBookingServiceCategoryId: Id TicketBookingServiceCategory
+    - peopleCategoryId: Maybe (Id ServicePeopleCategory)
+    - name: Text
+    - pricePerUnit: Price
+    - numberOfUnits: Int
+    - numberOfUnitsCancelled: Maybe Int
+    - amountToRefund: Maybe HighPrecMoney
 
   beamFields:
     pricePerUnit:

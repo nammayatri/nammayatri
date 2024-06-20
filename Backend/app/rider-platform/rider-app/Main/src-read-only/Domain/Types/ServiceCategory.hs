@@ -13,11 +13,11 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data ServiceCategory = ServiceCategory
-  { allowedSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    availableSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    description :: Kernel.Prelude.Text,
-    id :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
+  { id :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
     name :: Kernel.Prelude.Text,
+    description :: Kernel.Prelude.Text,
+    availableSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    allowedSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     peopleCategory :: [Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory],
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

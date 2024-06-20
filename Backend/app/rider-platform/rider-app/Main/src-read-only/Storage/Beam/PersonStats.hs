@@ -12,19 +12,19 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PersonStatsT f = PersonStatsT
-  { completedRides :: B.C f Kernel.Prelude.Int,
-    createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+  { personId :: B.C f Kernel.Prelude.Text,
+    userCancelledRides :: B.C f Kernel.Prelude.Int,
     driverCancelledRides :: B.C f Kernel.Prelude.Int,
+    completedRides :: B.C f Kernel.Prelude.Int,
+    weekendRides :: B.C f Kernel.Prelude.Int,
+    weekdayRides :: B.C f Kernel.Prelude.Int,
+    offPeakRides :: B.C f Kernel.Prelude.Int,
     eveningPeakRides :: B.C f Kernel.Prelude.Int,
     morningPeakRides :: B.C f Kernel.Prelude.Int,
-    offPeakRides :: B.C f Kernel.Prelude.Int,
-    personId :: B.C f Kernel.Prelude.Text,
-    referralCount :: B.C f Kernel.Prelude.Int,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    userCancelledRides :: B.C f Kernel.Prelude.Int,
-    weekdayRides :: B.C f Kernel.Prelude.Int,
     weekendPeakRides :: B.C f Kernel.Prelude.Int,
-    weekendRides :: B.C f Kernel.Prelude.Int
+    referralCount :: B.C f Kernel.Prelude.Int,
+    createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 

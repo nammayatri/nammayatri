@@ -10,12 +10,12 @@ WhiteListOrg:
   beamInstance: MakeTableInstancesWithTModifier [("subscriberId", "subscriber_id")]
 
   fields:
-    id : Id WhiteListOrg
-    subscriberId : ShortId Subscriber
-    merchantId : Id Merchant
-    domain : Domain
-    createdAt: UTCTime
-    updatedAt: UTCTime
+    - id : Id WhiteListOrg
+    - subscriberId : ShortId Subscriber
+    - merchantId : Id Merchant
+    - domain : Domain
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
   derives: "Generic,Show,'UsageSafety"
 
   beamType:

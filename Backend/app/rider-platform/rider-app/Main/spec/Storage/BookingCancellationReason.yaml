@@ -16,18 +16,18 @@ BookingCancellationReason:
 
 
   fields:
-    bookingId : Id Booking
-    rideId : Maybe (Id Ride)
-    merchantId : Maybe (Id Merchant)
-    source : CancellationSource
-    reasonCode : Maybe CancellationReasonCode
-    reasonStage : Maybe CancellationStage
-    additionalInfo : Maybe Text
-    driverCancellationLocation : Maybe LatLong
-    driverDistToPickup : Maybe Distance
-    distanceUnit : DistanceUnit
-    createdAt: UTCTime
-    updatedAt: UTCTime
+    - bookingId : Id Booking
+    - rideId : Maybe (Id Ride)
+    - merchantId : Maybe (Id Merchant)
+    - source : CancellationSource
+    - reasonCode : Maybe CancellationReasonCode
+    - reasonStage : Maybe CancellationStage
+    - additionalInfo : Maybe Text
+    - driverCancellationLocation : Maybe LatLong
+    - driverDistToPickup : Maybe Distance
+    - distanceUnit : DistanceUnit
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
 
   beamType:
     createdAt: Maybe UTCTime

@@ -17,31 +17,31 @@ instance FromTType' Beam.Issue Domain.Types.Issue.Issue where
     pure $
       Just
         Domain.Types.Issue.Issue
-          { bookingId = Kernel.Types.Id.Id <$> bookingId,
-            contactEmail = contactEmail,
-            createdAt = createdAt,
+          { id = Kernel.Types.Id.Id id,
             customerId = Kernel.Types.Id.Id customerId,
-            description = description,
-            id = Kernel.Types.Id.Id id,
-            nightSafety = nightSafety,
+            bookingId = Kernel.Types.Id.Id <$> bookingId,
+            contactEmail = contactEmail,
             reason = reason,
-            status = status,
+            description = description,
             ticketId = ticketId,
+            status = status,
+            nightSafety = nightSafety,
+            createdAt = createdAt,
             updatedAt = updatedAt
           }
 
 instance ToTType' Beam.Issue Domain.Types.Issue.Issue where
   toTType' (Domain.Types.Issue.Issue {..}) = do
     Beam.IssueT
-      { Beam.bookingId = Kernel.Types.Id.getId <$> bookingId,
-        Beam.contactEmail = contactEmail,
-        Beam.createdAt = createdAt,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.customerId = Kernel.Types.Id.getId customerId,
-        Beam.description = description,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.nightSafety = nightSafety,
+        Beam.bookingId = Kernel.Types.Id.getId <$> bookingId,
+        Beam.contactEmail = contactEmail,
         Beam.reason = reason,
-        Beam.status = status,
+        Beam.description = description,
         Beam.ticketId = ticketId,
+        Beam.status = status,
+        Beam.nightSafety = nightSafety,
+        Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

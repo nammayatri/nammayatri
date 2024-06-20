@@ -13,15 +13,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data CancellationReasonT f = CancellationReasonT
-  { createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+  { reasonCode :: B.C f Domain.Types.Extra.CancellationReason.CancellationReasonCode,
     description :: B.C f Kernel.Prelude.Text,
     enabled :: B.C f Kernel.Prelude.Bool,
-    onAssign :: B.C f Kernel.Prelude.Bool,
-    onConfirm :: B.C f Kernel.Prelude.Bool,
-    onInit :: B.C f Kernel.Prelude.Bool,
     onSearch :: B.C f Kernel.Prelude.Bool,
+    onInit :: B.C f Kernel.Prelude.Bool,
+    onConfirm :: B.C f Kernel.Prelude.Bool,
+    onAssign :: B.C f Kernel.Prelude.Bool,
     priority :: B.C f Kernel.Prelude.Int,
-    reasonCode :: B.C f Domain.Types.Extra.CancellationReason.CancellationReasonCode,
+    createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)

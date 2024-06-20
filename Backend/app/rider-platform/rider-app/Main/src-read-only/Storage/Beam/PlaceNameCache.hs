@@ -13,14 +13,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PlaceNameCacheT f = PlaceNameCacheT
-  { addressComponents :: B.C f [Domain.Types.Extra.PlaceNameCache.AddressResp],
+  { id :: B.C f Kernel.Prelude.Text,
     formattedAddress :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    geoHash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    id :: B.C f Kernel.Prelude.Text,
+    plusCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     lat :: B.C f Kernel.Prelude.Double,
     lon :: B.C f Kernel.Prelude.Double,
     placeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    plusCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    addressComponents :: B.C f [Domain.Types.Extra.PlaceNameCache.AddressResp],
+    geoHash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
@@ -31,6 +31,6 @@ instance B.Table PlaceNameCacheT where
 
 type PlaceNameCache = PlaceNameCacheT Identity
 
-$(enableKVPG ''PlaceNameCacheT ['id] [['geoHash], ['placeId]])
+$(enableKVPG ''PlaceNameCacheT ['id] [['placeId], ['geoHash]])
 
 $(mkTableInstances ''PlaceNameCacheT "place_name_cache")

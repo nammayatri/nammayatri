@@ -12,9 +12,9 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data MerchantState = MerchantState
-  { allowedDestinationStates :: [Kernel.Types.Beckn.Context.IndianState],
-    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+  { merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     state :: Kernel.Types.Beckn.Context.IndianState,
+    allowedDestinationStates :: [Kernel.Types.Beckn.Context.IndianState],
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

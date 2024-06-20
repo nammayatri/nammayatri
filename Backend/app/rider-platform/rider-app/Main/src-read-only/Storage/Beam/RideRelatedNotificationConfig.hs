@@ -15,16 +15,16 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data RideRelatedNotificationConfigT f = RideRelatedNotificationConfigT
-  { eventTime :: B.C f Domain.Types.RideRelatedNotificationConfig.EventTime,
-    id :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    notificationKey :: B.C f Kernel.Prelude.Text,
-    notificationType :: B.C f Domain.Types.RideRelatedNotificationConfig.NotificationType,
-    onBookingStatus :: B.C f Domain.Types.Extra.Booking.BookingStatus,
-    onScheduledBooking :: B.C f Kernel.Prelude.Bool,
+  { id :: B.C f Kernel.Prelude.Text,
     timeDiff :: B.C f Kernel.Types.Common.Seconds,
     timeDiffEvent :: B.C f Domain.Types.RideRelatedNotificationConfig.TimeDiffEvent,
+    onBookingStatus :: B.C f Domain.Types.Extra.Booking.BookingStatus,
+    notificationType :: B.C f Domain.Types.RideRelatedNotificationConfig.NotificationType,
+    notificationKey :: B.C f Kernel.Prelude.Text,
+    onScheduledBooking :: B.C f Kernel.Prelude.Bool,
+    eventTime :: B.C f Domain.Types.RideRelatedNotificationConfig.EventTime,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

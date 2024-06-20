@@ -14,17 +14,17 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data InterCityDetails = InterCityDetails
-  { baseFare :: Kernel.Types.Common.Price,
-    deadKmFare :: Kernel.Types.Common.Price,
-    id :: Kernel.Types.Id.Id Domain.Types.InterCityDetails.InterCityDetails,
-    kmPerPlannedExtraHour :: Kernel.Types.Common.Distance,
-    nightShiftInfo :: Kernel.Prelude.Maybe Domain.Types.Extra.RentalDetails.NightShiftInfo,
-    perDayMaxHourAllowance :: Kernel.Types.Common.Hours,
-    perExtraKmRate :: Kernel.Types.Common.Price,
-    perExtraMinRate :: Kernel.Types.Common.Price,
+  { id :: Kernel.Types.Id.Id Domain.Types.InterCityDetails.InterCityDetails,
+    baseFare :: Kernel.Types.Common.Price,
     perHourCharge :: Kernel.Types.Common.Price,
+    perExtraMinRate :: Kernel.Types.Common.Price,
+    perExtraKmRate :: Kernel.Types.Common.Price,
+    deadKmFare :: Kernel.Types.Common.Price,
+    kmPerPlannedExtraHour :: Kernel.Types.Common.Distance,
     plannedPerKmRateOneWay :: Kernel.Types.Common.Price,
     plannedPerKmRateRoundTrip :: Kernel.Types.Common.Price,
+    perDayMaxHourAllowance :: Kernel.Types.Common.Hours,
+    nightShiftInfo :: Kernel.Prelude.Maybe Domain.Types.Extra.RentalDetails.NightShiftInfo,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

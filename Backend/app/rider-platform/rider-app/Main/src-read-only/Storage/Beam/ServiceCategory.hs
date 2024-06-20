@@ -12,11 +12,11 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data ServiceCategoryT f = ServiceCategoryT
-  { allowedSeats :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    availableSeats :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    description :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
+  { id :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
+    description :: B.C f Kernel.Prelude.Text,
+    availableSeats :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    allowedSeats :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     peopleCategory :: B.C f [Kernel.Prelude.Text],
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -36,9 +36,9 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.BlackListOrg.BlackListOrg {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
+    [ Se.Set Beam.subscriberId (Kernel.Types.Id.getShortId subscriberId),
       Se.Set Beam.domain domain,
-      Se.Set Beam.subscriberId (Kernel.Types.Id.getShortId subscriberId),
+      Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
       Se.Set Beam.updatedAt (Just _now)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -47,14 +47,14 @@ instance FromTType' Beam.BlackListOrg Domain.Types.BlackListOrg.BlackListOrg whe
   fromTType' (Beam.BlackListOrgT {..}) = do
     createdAt' <- getCreatedAt createdAt
     updatedAt' <- getUpdatedAt updatedAt
-    pure $ Just Domain.Types.BlackListOrg.BlackListOrg {createdAt = createdAt', domain = domain, id = Kernel.Types.Id.Id id, subscriberId = Kernel.Types.Id.ShortId subscriberId, updatedAt = updatedAt'}
+    pure $ Just Domain.Types.BlackListOrg.BlackListOrg {id = Kernel.Types.Id.Id id, subscriberId = Kernel.Types.Id.ShortId subscriberId, domain = domain, createdAt = createdAt', updatedAt = updatedAt'}
 
 instance ToTType' Beam.BlackListOrg Domain.Types.BlackListOrg.BlackListOrg where
   toTType' (Domain.Types.BlackListOrg.BlackListOrg {..}) = do
     Beam.BlackListOrgT
-      { Beam.createdAt = Kernel.Prelude.Just createdAt,
-        Beam.domain = domain,
-        Beam.id = Kernel.Types.Id.getId id,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.subscriberId = Kernel.Types.Id.getShortId subscriberId,
+        Beam.domain = domain,
+        Beam.createdAt = Kernel.Prelude.Just createdAt,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt
       }

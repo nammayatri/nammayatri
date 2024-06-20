@@ -18,20 +18,20 @@ instance FromTType' Beam.FareBreakup Domain.Types.FareBreakup.FareBreakup where
     pure $
       Just
         Domain.Types.FareBreakup.FareBreakup
-          { amount = Kernel.Types.Common.mkPrice currency amount,
+          { id = Kernel.Types.Id.Id id,
             description = description,
-            entityId = bookingId,
+            amount = Kernel.Types.Common.mkPrice currency amount,
             entityType = entityType,
-            id = Kernel.Types.Id.Id id
+            entityId = bookingId
           }
 
 instance ToTType' Beam.FareBreakup Domain.Types.FareBreakup.FareBreakup where
   toTType' (Domain.Types.FareBreakup.FareBreakup {..}) = do
     Beam.FareBreakupT
-      { Beam.amount = (.amount) amount,
-        Beam.currency = Just $ (.currency) amount,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.description = description,
-        Beam.bookingId = entityId,
+        Beam.amount = (.amount) amount,
+        Beam.currency = Just $ (.currency) amount,
         Beam.entityType = entityType,
-        Beam.id = Kernel.Types.Id.getId id
+        Beam.bookingId = entityId
       }

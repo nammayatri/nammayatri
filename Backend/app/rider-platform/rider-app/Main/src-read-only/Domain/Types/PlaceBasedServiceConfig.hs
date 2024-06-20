@@ -15,10 +15,10 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data PlaceBasedServiceConfigD (s :: UsageSafety) = PlaceBasedServiceConfig
-  { merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+  { serviceConfig :: Domain.Types.MerchantServiceConfig.ServiceConfigD s,
     placeId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
-    serviceConfig :: Domain.Types.MerchantServiceConfig.ServiceConfigD s,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

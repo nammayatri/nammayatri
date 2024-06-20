@@ -19,10 +19,10 @@ instance FromTType' Beam.PlaceBasedServiceConfig Domain.Types.PlaceBasedServiceC
     pure $
       Just
         Domain.Types.PlaceBasedServiceConfig.PlaceBasedServiceConfig
-          { merchantId = Kernel.Types.Id.Id merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+          { serviceConfig = serviceConfig',
             placeId = Kernel.Types.Id.Id placeId,
-            serviceConfig = serviceConfig',
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            merchantId = Kernel.Types.Id.Id merchantId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -30,11 +30,11 @@ instance FromTType' Beam.PlaceBasedServiceConfig Domain.Types.PlaceBasedServiceC
 instance ToTType' Beam.PlaceBasedServiceConfig Domain.Types.PlaceBasedServiceConfig.PlaceBasedServiceConfig where
   toTType' (Domain.Types.PlaceBasedServiceConfig.PlaceBasedServiceConfig {..}) = do
     Beam.PlaceBasedServiceConfigT
-      { Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.placeId = Kernel.Types.Id.getId placeId,
-        Beam.configValue = snd $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig,
+      { Beam.configValue = snd $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig,
         Beam.serviceName = fst $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig,
+        Beam.placeId = Kernel.Types.Id.getId placeId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

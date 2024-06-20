@@ -13,12 +13,12 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Storage.Beam.PersonFlowStatus as Beam
 
 instance FromTType' Beam.PersonFlowStatus Domain.Types.PersonFlowStatus.PersonFlowStatus where
-  fromTType' (Beam.PersonFlowStatusT {..}) = do pure $ Just Domain.Types.PersonFlowStatus.PersonFlowStatus {flowStatus = flowStatus, personId = Kernel.Types.Id.Id personId, updatedAt = updatedAt}
+  fromTType' (Beam.PersonFlowStatusT {..}) = do pure $ Just Domain.Types.PersonFlowStatus.PersonFlowStatus {personId = Kernel.Types.Id.Id personId, flowStatus = flowStatus, updatedAt = updatedAt}
 
 instance ToTType' Beam.PersonFlowStatus Domain.Types.PersonFlowStatus.PersonFlowStatus where
   toTType' (Domain.Types.PersonFlowStatus.PersonFlowStatus {..}) = do
     Beam.PersonFlowStatusT
-      { Beam.flowStatus = flowStatus,
-        Beam.personId = Kernel.Types.Id.getId personId,
+      { Beam.personId = Kernel.Types.Id.getId personId,
+        Beam.flowStatus = flowStatus,
         Beam.updatedAt = updatedAt
       }

@@ -13,12 +13,12 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PartnerOrganizationT f = PartnerOrganizationT
-  { apiKeyEncrypted :: B.C f Kernel.Prelude.Text,
-    apiKeyHash :: B.C f Kernel.External.Encryption.DbHash,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    merchantId :: B.C f Kernel.Prelude.Text,
+  { orgId :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
-    orgId :: B.C f Kernel.Prelude.Text,
+    apiKeyEncrypted :: B.C f Kernel.Prelude.Text,
+    apiKeyHash :: B.C f Kernel.External.Encryption.DbHash,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)

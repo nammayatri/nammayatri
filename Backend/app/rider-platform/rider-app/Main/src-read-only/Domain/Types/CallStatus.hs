@@ -13,17 +13,17 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data CallStatus = CallStatus
-  { callError :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { id :: Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus,
     callId :: Kernel.Prelude.Text,
-    callService :: Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService,
-    conversationDuration :: Kernel.Prelude.Int,
-    createdAt :: Kernel.Prelude.UTCTime,
-    dtmfNumberUsed :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    id :: Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus,
-    merchantId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    recordingUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
+    dtmfNumberUsed :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Kernel.External.Call.Interface.Types.CallStatus,
+    recordingUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    conversationDuration :: Kernel.Prelude.Int,
+    merchantId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    callService :: Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService,
+    callError :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

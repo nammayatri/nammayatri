@@ -35,27 +35,27 @@ instance FromTType' Beam.PlaceNameCache Domain.Types.PlaceNameCache.PlaceNameCac
     pure $
       Just
         Domain.Types.PlaceNameCache.PlaceNameCache
-          { addressComponents = addressComponents,
+          { id = Kernel.Types.Id.Id id,
             formattedAddress = formattedAddress,
-            geoHash = geoHash,
-            id = Kernel.Types.Id.Id id,
+            plusCode = plusCode,
             lat = lat,
             lon = lon,
             placeId = placeId,
-            plusCode = plusCode,
+            addressComponents = addressComponents,
+            geoHash = geoHash,
             createdAt = createdAt
           }
 
 instance ToTType' Beam.PlaceNameCache Domain.Types.PlaceNameCache.PlaceNameCache where
   toTType' (Domain.Types.PlaceNameCache.PlaceNameCache {..}) = do
     Beam.PlaceNameCacheT
-      { Beam.addressComponents = addressComponents,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.formattedAddress = formattedAddress,
-        Beam.geoHash = geoHash,
-        Beam.id = Kernel.Types.Id.getId id,
+        Beam.plusCode = plusCode,
         Beam.lat = lat,
         Beam.lon = lon,
         Beam.placeId = placeId,
-        Beam.plusCode = plusCode,
+        Beam.addressComponents = addressComponents,
+        Beam.geoHash = geoHash,
         Beam.createdAt = createdAt
       }

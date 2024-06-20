@@ -13,15 +13,15 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data PersonDefaultEmergencyNumberE e = PersonDefaultEmergencyNumber
-  { contactPersonId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+  { personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    name :: Kernel.Prelude.Text,
+    mobileNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
+    mobileCountryCode :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
+    contactPersonId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     enableForFollowing :: Kernel.Prelude.Bool,
     enableForShareRide :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    mobileCountryCode :: Kernel.Prelude.Text,
-    mobileNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
-    name :: Kernel.Prelude.Text,
-    personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     priority :: Kernel.Prelude.Int
   }
   deriving (Generic)
@@ -36,30 +36,30 @@ instance EncryptedItem PersonDefaultEmergencyNumber where
     mobileNumber_ <- encryptItem (mobileNumber entity, salt)
     pure
       PersonDefaultEmergencyNumber
-        { contactPersonId = contactPersonId entity,
+        { personId = personId entity,
+          name = name entity,
+          mobileNumber = mobileNumber_,
+          mobileCountryCode = mobileCountryCode entity,
           createdAt = createdAt entity,
+          contactPersonId = contactPersonId entity,
           enableForFollowing = enableForFollowing entity,
           enableForShareRide = enableForShareRide entity,
           merchantId = merchantId entity,
-          mobileCountryCode = mobileCountryCode entity,
-          mobileNumber = mobileNumber_,
-          name = name entity,
-          personId = personId entity,
           priority = priority entity
         }
   decryptItem entity = do
     mobileNumber_ <- fst <$> decryptItem (mobileNumber entity)
     pure
       ( PersonDefaultEmergencyNumber
-          { contactPersonId = contactPersonId entity,
+          { personId = personId entity,
+            name = name entity,
+            mobileNumber = mobileNumber_,
+            mobileCountryCode = mobileCountryCode entity,
             createdAt = createdAt entity,
+            contactPersonId = contactPersonId entity,
             enableForFollowing = enableForFollowing entity,
             enableForShareRide = enableForShareRide entity,
             merchantId = merchantId entity,
-            mobileCountryCode = mobileCountryCode entity,
-            mobileNumber = mobileNumber_,
-            name = name entity,
-            personId = personId entity,
             priority = priority entity
           },
         ""

@@ -37,65 +37,65 @@ Person:
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   fields:
-    id : Id Person
-    firstName : Maybe Text
-    middleName : Maybe Text
-    lastName : Maybe Text
-    role : Role
-    gender : Gender
-    identifierType : IdentifierType
-    email : Maybe (EncryptedHashedField e Text)
-    unencryptedMobileNumber : Maybe Text
-    mobileNumber : Maybe (EncryptedHashedField e Text)
-    mobileCountryCode : Maybe Text
-    passwordHash : Maybe DbHash
-    identifier : Maybe Text
-    rating : Maybe Centesimal
-    totalRatings : Int
-    totalRatingScore : Int
-    isValidRating : Bool
-    language : Maybe Language
-    isNew : Bool
-    enabled : Bool
-    blocked : Bool
-    deviceToken : Maybe Text
-    notificationToken : Maybe Text
-    description : Maybe Text
-    merchantId : Id Merchant
-    currentCity : City
-    merchantOperatingCityId : Id MerchantOperatingCity
-    whatsappNotificationEnrollStatus : Maybe OptApiMethods
-    referralCode : Maybe Text
-    referredAt : Maybe UTCTime
-    hasTakenValidRide : Bool
-    hasDisability : Maybe Bool
-    blockedAt : Maybe UTCTime
-    blockedByRuleId : Maybe (Id MerchantConfig)
-    aadhaarVerified : Bool
-    createdAt : UTCTime
-    updatedAt : UTCTime
-    shareEmergencyContacts : Bool
-    nightSafetyChecks : Bool
-    shareTripWithEmergencyContactOption : Maybe RideShareOptions
-    hasCompletedMockSafetyDrill : Maybe Bool
-    hasCompletedSafetySetup : Bool
-    registrationLat : Maybe Double
-    registrationLon : Maybe Double
-    useFakeOtp : Maybe Text
-    followsRide : Bool
-    falseSafetyAlarmCount : Int
-    safetyCenterDisabledOnDate : Maybe UTCTime
-    referredByCustomer: Maybe Text
-    customerReferralCode: Maybe Text
-    clientSdkVersion : Maybe Version
-    clientBundleVersion : Maybe Version
-    clientConfigVersion : Maybe Version
-    clientDevice : Maybe Device
-    backendAppVersion : Maybe Text
-    blockedCount : Maybe Int
-    registeredViaPartnerOrgId : Maybe (Id PartnerOrganization)
-    customerPaymentId : Maybe CustomerId
-    defaultPaymentMethodId: Maybe PaymentMethodId
+    - id : Id Person
+    - firstName : Maybe Text
+    - middleName : Maybe Text
+    - lastName : Maybe Text
+    - role : Role
+    - gender : Gender
+    - identifierType : IdentifierType
+    - email : Maybe (EncryptedHashedField e Text)
+    - unencryptedMobileNumber : Maybe Text
+    - mobileNumber : Maybe (EncryptedHashedField e Text)
+    - mobileCountryCode : Maybe Text
+    - passwordHash : Maybe DbHash
+    - identifier : Maybe Text
+    - rating : Maybe Centesimal
+    - totalRatings : Int
+    - totalRatingScore : Int
+    - isValidRating : Bool
+    - language : Maybe Language
+    - isNew : Bool
+    - enabled : Bool
+    - blocked : Bool
+    - deviceToken : Maybe Text
+    - notificationToken : Maybe Text
+    - description : Maybe Text
+    - merchantId : Id Merchant
+    - currentCity : City
+    - merchantOperatingCityId : Id MerchantOperatingCity
+    - whatsappNotificationEnrollStatus : Maybe OptApiMethods
+    - referralCode : Maybe Text
+    - referredAt : Maybe UTCTime
+    - hasTakenValidRide : Bool
+    - hasDisability : Maybe Bool
+    - blockedAt : Maybe UTCTime
+    - blockedByRuleId : Maybe (Id MerchantConfig)
+    - aadhaarVerified : Bool
+    - createdAt : UTCTime
+    - updatedAt : UTCTime
+    - shareEmergencyContacts : Bool
+    - nightSafetyChecks : Bool
+    - shareTripWithEmergencyContactOption : Maybe RideShareOptions
+    - hasCompletedMockSafetyDrill : Maybe Bool
+    - hasCompletedSafetySetup : Bool
+    - registrationLat : Maybe Double
+    - registrationLon : Maybe Double
+    - useFakeOtp : Maybe Text
+    - followsRide : Bool
+    - falseSafetyAlarmCount : Int
+    - safetyCenterDisabledOnDate : Maybe UTCTime
+    - referredByCustomer: Maybe Text
+    - customerReferralCode: Maybe Text
+    - clientSdkVersion : Maybe Version
+    - clientBundleVersion : Maybe Version
+    - clientConfigVersion : Maybe Version
+    - clientDevice : Maybe Device
+    - backendAppVersion : Maybe Text
+    - blockedCount : Maybe Int
+    - registeredViaPartnerOrgId : Maybe (Id PartnerOrganization)
+    - customerPaymentId : Maybe CustomerId
+    - defaultPaymentMethodId: Maybe PaymentMethodId
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>

@@ -47,9 +47,9 @@ instance FromTType' Beam.MerchantState Domain.Types.MerchantState.MerchantState 
     pure $
       Just
         Domain.Types.MerchantState.MerchantState
-          { allowedDestinationStates = allowedDestinationStates,
-            merchantId = Kernel.Types.Id.Id merchantId,
+          { merchantId = Kernel.Types.Id.Id merchantId,
             state = state,
+            allowedDestinationStates = allowedDestinationStates,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -57,9 +57,9 @@ instance FromTType' Beam.MerchantState Domain.Types.MerchantState.MerchantState 
 instance ToTType' Beam.MerchantState Domain.Types.MerchantState.MerchantState where
   toTType' (Domain.Types.MerchantState.MerchantState {..}) = do
     Beam.MerchantStateT
-      { Beam.allowedDestinationStates = allowedDestinationStates,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+      { Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.state = state,
+        Beam.allowedDestinationStates = allowedDestinationStates,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

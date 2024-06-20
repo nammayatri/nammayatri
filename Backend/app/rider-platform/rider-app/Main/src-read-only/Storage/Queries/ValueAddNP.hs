@@ -32,7 +32,7 @@ updateByPrimaryKey (Domain.Types.ValueAddNP.ValueAddNP {..}) = do
   updateWithKV [Se.Set Beam.enabled enabled, Se.Set Beam.createdAt createdAt, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.subscriberId $ Se.Eq subscriberId]]
 
 instance FromTType' Beam.ValueAddNP Domain.Types.ValueAddNP.ValueAddNP where
-  fromTType' (Beam.ValueAddNPT {..}) = do pure $ Just Domain.Types.ValueAddNP.ValueAddNP {enabled = enabled, subscriberId = subscriberId, createdAt = createdAt, updatedAt = updatedAt}
+  fromTType' (Beam.ValueAddNPT {..}) = do pure $ Just Domain.Types.ValueAddNP.ValueAddNP {subscriberId = subscriberId, enabled = enabled, createdAt = createdAt, updatedAt = updatedAt}
 
 instance ToTType' Beam.ValueAddNP Domain.Types.ValueAddNP.ValueAddNP where
-  toTType' (Domain.Types.ValueAddNP.ValueAddNP {..}) = do Beam.ValueAddNPT {Beam.enabled = enabled, Beam.subscriberId = subscriberId, Beam.createdAt = createdAt, Beam.updatedAt = updatedAt}
+  toTType' (Domain.Types.ValueAddNP.ValueAddNP {..}) = do Beam.ValueAddNPT {Beam.subscriberId = subscriberId, Beam.enabled = enabled, Beam.createdAt = createdAt, Beam.updatedAt = updatedAt}

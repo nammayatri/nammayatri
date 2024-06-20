@@ -13,16 +13,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FRFSSearchT f = FRFSSearchT
-  { fromStationId :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
+  { id :: B.C f Kernel.Prelude.Text,
+    fromStationId :: B.C f Kernel.Prelude.Text,
+    toStationId :: B.C f Kernel.Prelude.Text,
+    quantity :: B.C f Kernel.Prelude.Int,
+    vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,
+    riderId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    quantity :: B.C f Kernel.Prelude.Int,
-    riderId :: B.C f Kernel.Prelude.Text,
-    toStationId :: B.C f Kernel.Prelude.Text,
-    vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,
+    partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

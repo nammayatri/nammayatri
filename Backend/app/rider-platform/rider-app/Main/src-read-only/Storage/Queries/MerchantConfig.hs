@@ -40,20 +40,20 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.MerchantConfig.MerchantConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.enabled enabled,
+    [ Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.fraudBookingCancellationCountThreshold fraudBookingCancellationCountThreshold,
       Se.Set Beam.fraudBookingCancellationCountWindow fraudBookingCancellationCountWindow,
+      Se.Set Beam.fraudBookingTotalCountThreshold fraudBookingTotalCountThreshold,
       Se.Set Beam.fraudBookingCancelledByDriverCountThreshold fraudBookingCancelledByDriverCountThreshold,
       Se.Set Beam.fraudBookingCancelledByDriverCountWindow fraudBookingCancelledByDriverCountWindow,
-      Se.Set Beam.fraudBookingTotalCountThreshold fraudBookingTotalCountThreshold,
-      Se.Set Beam.fraudRideCountThreshold fraudRideCountThreshold,
-      Se.Set Beam.fraudRideCountWindow fraudRideCountWindow,
       Se.Set Beam.fraudSearchCountThreshold fraudSearchCountThreshold,
       Se.Set Beam.fraudSearchCountWindow fraudSearchCountWindow,
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.updatedAt (Just _now)
+      Se.Set Beam.fraudRideCountThreshold fraudRideCountThreshold,
+      Se.Set Beam.fraudRideCountWindow fraudRideCountWindow,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt (Just _now),
+      Se.Set Beam.enabled enabled
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -62,39 +62,39 @@ instance FromTType' Beam.MerchantConfig Domain.Types.MerchantConfig.MerchantConf
     pure $
       Just
         Domain.Types.MerchantConfig.MerchantConfig
-          { createdAt = createdAt,
-            enabled = enabled,
-            fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,
-            fraudBookingCancellationCountWindow = fraudBookingCancellationCountWindow,
-            fraudBookingCancelledByDriverCountThreshold = fraudBookingCancelledByDriverCountThreshold,
-            fraudBookingCancelledByDriverCountWindow = fraudBookingCancelledByDriverCountWindow,
-            fraudBookingTotalCountThreshold = fraudBookingTotalCountThreshold,
-            fraudRideCountThreshold = fraudRideCountThreshold,
-            fraudRideCountWindow = fraudRideCountWindow,
-            fraudSearchCountThreshold = fraudSearchCountThreshold,
-            fraudSearchCountWindow = fraudSearchCountWindow,
-            id = Kernel.Types.Id.Id id,
+          { id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            updatedAt = updatedAt
+            fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,
+            fraudBookingCancellationCountWindow = fraudBookingCancellationCountWindow,
+            fraudBookingTotalCountThreshold = fraudBookingTotalCountThreshold,
+            fraudBookingCancelledByDriverCountThreshold = fraudBookingCancelledByDriverCountThreshold,
+            fraudBookingCancelledByDriverCountWindow = fraudBookingCancelledByDriverCountWindow,
+            fraudSearchCountThreshold = fraudSearchCountThreshold,
+            fraudSearchCountWindow = fraudSearchCountWindow,
+            fraudRideCountThreshold = fraudRideCountThreshold,
+            fraudRideCountWindow = fraudRideCountWindow,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            enabled = enabled
           }
 
 instance ToTType' Beam.MerchantConfig Domain.Types.MerchantConfig.MerchantConfig where
   toTType' (Domain.Types.MerchantConfig.MerchantConfig {..}) = do
     Beam.MerchantConfigT
-      { Beam.createdAt = createdAt,
-        Beam.enabled = enabled,
-        Beam.fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,
-        Beam.fraudBookingCancellationCountWindow = fraudBookingCancellationCountWindow,
-        Beam.fraudBookingCancelledByDriverCountThreshold = fraudBookingCancelledByDriverCountThreshold,
-        Beam.fraudBookingCancelledByDriverCountWindow = fraudBookingCancelledByDriverCountWindow,
-        Beam.fraudBookingTotalCountThreshold = fraudBookingTotalCountThreshold,
-        Beam.fraudRideCountThreshold = fraudRideCountThreshold,
-        Beam.fraudRideCountWindow = fraudRideCountWindow,
-        Beam.fraudSearchCountThreshold = fraudSearchCountThreshold,
-        Beam.fraudSearchCountWindow = fraudSearchCountWindow,
-        Beam.id = Kernel.Types.Id.getId id,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.updatedAt = updatedAt
+        Beam.fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,
+        Beam.fraudBookingCancellationCountWindow = fraudBookingCancellationCountWindow,
+        Beam.fraudBookingTotalCountThreshold = fraudBookingTotalCountThreshold,
+        Beam.fraudBookingCancelledByDriverCountThreshold = fraudBookingCancelledByDriverCountThreshold,
+        Beam.fraudBookingCancelledByDriverCountWindow = fraudBookingCancelledByDriverCountWindow,
+        Beam.fraudSearchCountThreshold = fraudSearchCountThreshold,
+        Beam.fraudSearchCountWindow = fraudSearchCountWindow,
+        Beam.fraudRideCountThreshold = fraudRideCountThreshold,
+        Beam.fraudRideCountWindow = fraudRideCountWindow,
+        Beam.createdAt = createdAt,
+        Beam.updatedAt = updatedAt,
+        Beam.enabled = enabled
       }

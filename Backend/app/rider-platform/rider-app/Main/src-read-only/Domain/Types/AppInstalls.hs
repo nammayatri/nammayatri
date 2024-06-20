@@ -12,14 +12,14 @@ import qualified Kernel.Types.Version
 import qualified Tools.Beam.UtilsTH
 
 data AppInstalls = AppInstalls
-  { appVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
-    bundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
-    createdAt :: Kernel.Prelude.UTCTime,
+  { id :: Kernel.Types.Id.Id Domain.Types.AppInstalls.AppInstalls,
     deviceToken :: Kernel.Prelude.Text,
-    id :: Kernel.Types.Id.Id Domain.Types.AppInstalls.AppInstalls,
-    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    platform :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     source :: Kernel.Prelude.Text,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    appVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    bundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    platform :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

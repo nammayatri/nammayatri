@@ -59,13 +59,13 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.AadhaarVerification.AadhaarVerification {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.aadhaarNumberHash aadhaarNumberHash,
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.isVerified isVerified,
-      Se.Set Beam.personDob personDob,
+    [ Se.Set Beam.personName personName,
       Se.Set Beam.personGender personGender,
+      Se.Set Beam.personDob personDob,
       Se.Set Beam.personImagePath personImagePath,
-      Se.Set Beam.personName personName,
+      Se.Set Beam.aadhaarNumberHash aadhaarNumberHash,
+      Se.Set Beam.isVerified isVerified,
+      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]]
@@ -75,27 +75,27 @@ instance FromTType' Beam.AadhaarVerification Domain.Types.AadhaarVerification.Aa
     pure $
       Just
         Domain.Types.AadhaarVerification.AadhaarVerification
-          { aadhaarNumberHash = aadhaarNumberHash,
-            createdAt = createdAt,
-            isVerified = isVerified,
-            personDob = personDob,
-            personGender = personGender,
+          { personName = personName,
             personId = Kernel.Types.Id.Id personId,
+            personGender = personGender,
+            personDob = personDob,
             personImagePath = personImagePath,
-            personName = personName,
+            aadhaarNumberHash = aadhaarNumberHash,
+            isVerified = isVerified,
+            createdAt = createdAt,
             updatedAt = updatedAt
           }
 
 instance ToTType' Beam.AadhaarVerification Domain.Types.AadhaarVerification.AadhaarVerification where
   toTType' (Domain.Types.AadhaarVerification.AadhaarVerification {..}) = do
     Beam.AadhaarVerificationT
-      { Beam.aadhaarNumberHash = aadhaarNumberHash,
-        Beam.createdAt = createdAt,
-        Beam.isVerified = isVerified,
-        Beam.personDob = personDob,
-        Beam.personGender = personGender,
+      { Beam.personName = personName,
         Beam.personId = Kernel.Types.Id.getId personId,
+        Beam.personGender = personGender,
+        Beam.personDob = personDob,
         Beam.personImagePath = personImagePath,
-        Beam.personName = personName,
+        Beam.aadhaarNumberHash = aadhaarNumberHash,
+        Beam.isVerified = isVerified,
+        Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

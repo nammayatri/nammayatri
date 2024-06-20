@@ -16,15 +16,15 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data MerchantMessageD (s :: UsageSafety) = MerchantMessage
-  { containsUrlButton :: Kernel.Prelude.Bool,
-    createdAt :: Kernel.Prelude.UTCTime,
-    jsonData :: Domain.Types.Extra.MerchantMessage.MerchantMessageDefaultDataJSON,
-    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+  { merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    message :: Kernel.Prelude.Text,
     messageKey :: Domain.Types.MerchantMessage.MessageKey,
+    message :: Kernel.Prelude.Text,
     templateId :: Kernel.Prelude.Text,
-    updatedAt :: Kernel.Prelude.UTCTime
+    jsonData :: Domain.Types.Extra.MerchantMessage.MerchantMessageDefaultDataJSON,
+    containsUrlButton :: Kernel.Prelude.Bool,
+    updatedAt :: Kernel.Prelude.UTCTime,
+    createdAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)
 

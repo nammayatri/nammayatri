@@ -53,14 +53,14 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.MerchantOperatingCity.MerchantOperatingCity {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.city city,
-      Se.Set Beam.country country,
-      Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
-      Se.Set Beam.lat lat,
-      Se.Set Beam.long long,
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+    [ Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantShortId (Kernel.Types.Id.getShortId merchantShortId),
       Se.Set Beam.state state,
+      Se.Set Beam.country country,
+      Se.Set Beam.city city,
+      Se.Set Beam.lat lat,
+      Se.Set Beam.long long,
+      Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -71,15 +71,15 @@ instance FromTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCit
     pure $
       Just
         Domain.Types.MerchantOperatingCity.MerchantOperatingCity
-          { city = city,
-            country = country,
-            distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
-            id = Kernel.Types.Id.Id id,
-            lat = lat,
-            long = long,
+          { id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantShortId = Kernel.Types.Id.ShortId merchantShortId,
             state = state,
+            country = country,
+            city = city,
+            lat = lat,
+            long = long,
+            distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -87,15 +87,15 @@ instance FromTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCit
 instance ToTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCity.MerchantOperatingCity where
   toTType' (Domain.Types.MerchantOperatingCity.MerchantOperatingCity {..}) = do
     Beam.MerchantOperatingCityT
-      { Beam.city = city,
-        Beam.country = country,
-        Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.lat = lat,
-        Beam.long = long,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantShortId = Kernel.Types.Id.getShortId merchantShortId,
         Beam.state = state,
+        Beam.country = country,
+        Beam.city = city,
+        Beam.lat = lat,
+        Beam.long = long,
+        Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

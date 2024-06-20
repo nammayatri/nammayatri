@@ -27,10 +27,10 @@ findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Ty
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FeedbackForm.FeedbackForm -> m ())
 updateByPrimaryKey (Domain.Types.FeedbackForm.FeedbackForm {..}) = do
   updateWithKV
-    [ Se.Set Beam.answer answer,
-      Se.Set Beam.answerType answerType,
-      Se.Set Beam.categoryName categoryName,
+    [ Se.Set Beam.categoryName categoryName,
+      Se.Set Beam.rating rating,
       Se.Set Beam.question question,
-      Se.Set Beam.rating rating
+      Se.Set Beam.answer answer,
+      Se.Set Beam.answerType answerType
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

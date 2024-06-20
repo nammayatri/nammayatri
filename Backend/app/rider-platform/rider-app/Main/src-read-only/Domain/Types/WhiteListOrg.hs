@@ -14,11 +14,11 @@ import qualified Kernel.Types.Registry
 import qualified Tools.Beam.UtilsTH
 
 data WhiteListOrgD (s :: UsageSafety) = WhiteListOrg
-  { createdAt :: Kernel.Prelude.UTCTime,
-    domain :: Kernel.Types.Beckn.Domain.Domain,
-    id :: Kernel.Types.Id.Id Domain.Types.WhiteListOrg.WhiteListOrg,
-    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+  { id :: Kernel.Types.Id.Id Domain.Types.WhiteListOrg.WhiteListOrg,
     subscriberId :: Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    domain :: Kernel.Types.Beckn.Domain.Domain,
+    createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show)

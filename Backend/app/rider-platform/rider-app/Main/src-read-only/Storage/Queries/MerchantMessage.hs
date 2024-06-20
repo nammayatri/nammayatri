@@ -43,27 +43,27 @@ instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMe
     pure $
       Just
         Domain.Types.MerchantMessage.MerchantMessage
-          { containsUrlButton = containsUrlButton,
-            createdAt = createdAt,
-            jsonData = valueToJsonData jsonData,
-            merchantId = Kernel.Types.Id.Id merchantId,
+          { merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            message = message,
             messageKey = messageKey,
+            message = message,
             templateId = fromMaybe "" templateId,
-            updatedAt = updatedAt
+            jsonData = valueToJsonData jsonData,
+            containsUrlButton = containsUrlButton,
+            updatedAt = updatedAt,
+            createdAt = createdAt
           }
 
 instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMessage where
   toTType' (Domain.Types.MerchantMessage.MerchantMessage {..}) = do
     Beam.MerchantMessageT
-      { Beam.containsUrlButton = containsUrlButton,
-        Beam.createdAt = createdAt,
-        Beam.jsonData = Just $ toJSON jsonData,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+      { Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.message = message,
         Beam.messageKey = messageKey,
+        Beam.message = message,
         Beam.templateId = Just templateId,
-        Beam.updatedAt = updatedAt
+        Beam.jsonData = Just $ toJSON jsonData,
+        Beam.containsUrlButton = containsUrlButton,
+        Beam.updatedAt = updatedAt,
+        Beam.createdAt = createdAt
       }

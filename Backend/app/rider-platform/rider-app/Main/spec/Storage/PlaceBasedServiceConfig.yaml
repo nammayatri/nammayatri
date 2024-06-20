@@ -12,10 +12,10 @@ PlaceBasedServiceConfig:
   derives: "Generic,'UsageSafety"
 
   fields:
-    serviceConfig: ServiceConfigD s
-    placeId: Id TicketPlace
-    merchantOperatingCityId: Id MerchantOperatingCity
-    merchantId: Id Merchant
+    - serviceConfig: ServiceConfigD s
+    - placeId: Id TicketPlace
+    - merchantOperatingCityId: Id MerchantOperatingCity
+    - merchantId: Id Merchant
 
   beamFields:
     serviceConfig:

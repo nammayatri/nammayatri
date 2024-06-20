@@ -13,7 +13,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Storage.Beam.Disability as Beam
 
 instance FromTType' Beam.Disability Domain.Types.Disability.Disability where
-  fromTType' (Beam.DisabilityT {..}) = do pure $ Just Domain.Types.Disability.Disability {description = description, id = Kernel.Types.Id.Id id, tag = tag}
+  fromTType' (Beam.DisabilityT {..}) = do pure $ Just Domain.Types.Disability.Disability {id = Kernel.Types.Id.Id id, tag = tag, description = description}
 
 instance ToTType' Beam.Disability Domain.Types.Disability.Disability where
-  toTType' (Domain.Types.Disability.Disability {..}) = do Beam.DisabilityT {Beam.description = description, Beam.id = Kernel.Types.Id.getId id, Beam.tag = tag}
+  toTType' (Domain.Types.Disability.Disability {..}) = do Beam.DisabilityT {Beam.id = Kernel.Types.Id.getId id, Beam.tag = tag, Beam.description = description}

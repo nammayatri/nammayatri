@@ -14,17 +14,17 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data CallStatusT f = CallStatusT
-  { callError :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { id :: B.C f Kernel.Prelude.Text,
     callId :: B.C f Kernel.Prelude.Text,
-    callService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService),
-    conversationDuration :: B.C f Kernel.Prelude.Int,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    dtmfNumberUsed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    id :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    recordingUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     rideId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    dtmfNumberUsed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Kernel.External.Call.Interface.Types.CallStatus,
+    recordingUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    conversationDuration :: B.C f Kernel.Prelude.Int,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    callService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService),
+    callError :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)

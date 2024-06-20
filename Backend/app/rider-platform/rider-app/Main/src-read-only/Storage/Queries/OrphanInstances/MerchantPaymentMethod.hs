@@ -18,27 +18,27 @@ instance FromTType' Beam.MerchantPaymentMethod Domain.Types.MerchantPaymentMetho
     pure $
       Just
         Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod
-          { collectedBy = collectedBy,
-            createdAt = createdAt,
-            id = Kernel.Types.Id.Id id,
+          { id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            paymentInstrument = paymentInstrument,
             paymentType = paymentTypeTrans paymentType,
+            paymentInstrument = paymentInstrument,
+            collectedBy = collectedBy,
             priority = priority,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            createdAt = createdAt
           }
 
 instance ToTType' Beam.MerchantPaymentMethod Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod where
   toTType' (Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod {..}) = do
     Beam.MerchantPaymentMethodT
-      { Beam.collectedBy = collectedBy,
-        Beam.createdAt = createdAt,
-        Beam.id = Kernel.Types.Id.getId id,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.paymentInstrument = paymentInstrument,
         Beam.paymentType = paymentType,
+        Beam.paymentInstrument = paymentInstrument,
+        Beam.collectedBy = collectedBy,
         Beam.priority = priority,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.createdAt = createdAt
       }

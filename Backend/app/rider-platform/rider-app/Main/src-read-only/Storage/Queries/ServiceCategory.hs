@@ -30,10 +30,10 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.ServiceCategory.ServiceCategory {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.allowedSeats allowedSeats,
-      Se.Set Beam.availableSeats availableSeats,
+    [ Se.Set Beam.name name,
       Se.Set Beam.description description,
-      Se.Set Beam.name name,
+      Se.Set Beam.availableSeats availableSeats,
+      Se.Set Beam.allowedSeats allowedSeats,
       Se.Set Beam.peopleCategory (Kernel.Types.Id.getId <$> peopleCategory),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -47,11 +47,11 @@ instance FromTType' Beam.ServiceCategory Domain.Types.ServiceCategory.ServiceCat
     pure $
       Just
         Domain.Types.ServiceCategory.ServiceCategory
-          { allowedSeats = allowedSeats,
-            availableSeats = availableSeats,
-            description = description,
-            id = Kernel.Types.Id.Id id,
+          { id = Kernel.Types.Id.Id id,
             name = name,
+            description = description,
+            availableSeats = availableSeats,
+            allowedSeats = allowedSeats,
             peopleCategory = Kernel.Types.Id.Id <$> peopleCategory,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
@@ -62,11 +62,11 @@ instance FromTType' Beam.ServiceCategory Domain.Types.ServiceCategory.ServiceCat
 instance ToTType' Beam.ServiceCategory Domain.Types.ServiceCategory.ServiceCategory where
   toTType' (Domain.Types.ServiceCategory.ServiceCategory {..}) = do
     Beam.ServiceCategoryT
-      { Beam.allowedSeats = allowedSeats,
-        Beam.availableSeats = availableSeats,
-        Beam.description = description,
-        Beam.id = Kernel.Types.Id.getId id,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.name = name,
+        Beam.description = description,
+        Beam.availableSeats = availableSeats,
+        Beam.allowedSeats = allowedSeats,
         Beam.peopleCategory = Kernel.Types.Id.getId <$> peopleCategory,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,

@@ -7,11 +7,11 @@ NotificationSoundsConfig:
   tableName: notification_sounds_config
 
   fields:
-    merchantId : Id Merchant
-    merchantOperatingCityId : Id MerchantOperatingCity
-    notificationType : Category
-    defaultSound : Maybe Text
-    blindSound : Maybe Text
+    - merchantId : Id Merchant
+    - merchantOperatingCityId : Id MerchantOperatingCity
+    - notificationType : Category
+    - defaultSound : Maybe Text
+    - blindSound : Maybe Text
 
   queries:
     findByNotificationType:

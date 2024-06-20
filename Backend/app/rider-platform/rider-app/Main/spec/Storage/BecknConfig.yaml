@@ -9,30 +9,30 @@ BecknConfig:
   tableName: beckn_config
 
   fields:
-    id: Id BecknConfig
-    domain: Text
-    subscriberId: Text
-    subscriberUrl: BaseUrl
-    gatewayUrl: BaseUrl
-    registryUrl: BaseUrl
-    uniqueKeyId: Text
-    settlementType: Maybe Text
-    paymentParamsJson: Maybe Text
-    vehicleCategory: VehicleCategory
-    collectedBy: PaymentCollectedBy
-    staticTermsUrl: Maybe BaseUrl
-    buyerFinderFee: Maybe Text
-    settlementWindow: Maybe Text
-    searchTTLSec: Maybe Int
-    selectTTLSec: Maybe Int
-    initTTLSec: Maybe Int
-    confirmTTLSec: Maybe Int
-    confirmBufferTTLSec: Maybe Int
-    bapIFSC: Maybe Text
-    statusTTLSec: Maybe Int
-    trackTTLSec: Maybe Int
-    ratingTTLSec: Maybe Int
-    cancelTTLSec: Maybe Int
+    - id: Id BecknConfig
+    - domain: Text
+    - subscriberId: Text
+    - subscriberUrl: BaseUrl
+    - gatewayUrl: BaseUrl
+    - registryUrl: BaseUrl
+    - uniqueKeyId: Text
+    - settlementType: Maybe Text
+    - paymentParamsJson: Maybe Text
+    - vehicleCategory: VehicleCategory
+    - collectedBy: PaymentCollectedBy
+    - staticTermsUrl: Maybe BaseUrl
+    - buyerFinderFee: Maybe Text
+    - settlementWindow: Maybe Text
+    - searchTTLSec: Maybe Int
+    - selectTTLSec: Maybe Int
+    - initTTLSec: Maybe Int
+    - confirmTTLSec: Maybe Int
+    - confirmBufferTTLSec: Maybe Int
+    - bapIFSC: Maybe Text
+    - statusTTLSec: Maybe Int
+    - trackTTLSec: Maybe Int
+    - ratingTTLSec: Maybe Int
+    - cancelTTLSec: Maybe Int
 
   types:
     VehicleCategory:

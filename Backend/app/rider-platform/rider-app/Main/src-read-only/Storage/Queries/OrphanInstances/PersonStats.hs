@@ -18,35 +18,35 @@ instance FromTType' Beam.PersonStats Domain.Types.PersonStats.PersonStats where
     pure $
       Just
         Domain.Types.PersonStats.PersonStats
-          { completedRides = completedRides,
-            createdAt = Kernel.Prelude.fromMaybe updatedAt createdAt,
+          { personId = Kernel.Types.Id.Id personId,
+            userCancelledRides = userCancelledRides,
             driverCancelledRides = driverCancelledRides,
+            completedRides = completedRides,
+            weekendRides = weekendRides,
+            weekdayRides = weekdayRides,
+            offPeakRides = offPeakRides,
             eveningPeakRides = eveningPeakRides,
             morningPeakRides = morningPeakRides,
-            offPeakRides = offPeakRides,
-            personId = Kernel.Types.Id.Id personId,
-            referralCount = referralCount,
-            updatedAt = updatedAt,
-            userCancelledRides = userCancelledRides,
-            weekdayRides = weekdayRides,
             weekendPeakRides = weekendPeakRides,
-            weekendRides = weekendRides
+            referralCount = referralCount,
+            createdAt = Kernel.Prelude.fromMaybe updatedAt createdAt,
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.PersonStats Domain.Types.PersonStats.PersonStats where
   toTType' (Domain.Types.PersonStats.PersonStats {..}) = do
     Beam.PersonStatsT
-      { Beam.completedRides = completedRides,
-        Beam.createdAt = Kernel.Prelude.Just createdAt,
+      { Beam.personId = Kernel.Types.Id.getId personId,
+        Beam.userCancelledRides = userCancelledRides,
         Beam.driverCancelledRides = driverCancelledRides,
+        Beam.completedRides = completedRides,
+        Beam.weekendRides = weekendRides,
+        Beam.weekdayRides = weekdayRides,
+        Beam.offPeakRides = offPeakRides,
         Beam.eveningPeakRides = eveningPeakRides,
         Beam.morningPeakRides = morningPeakRides,
-        Beam.offPeakRides = offPeakRides,
-        Beam.personId = Kernel.Types.Id.getId personId,
-        Beam.referralCount = referralCount,
-        Beam.updatedAt = updatedAt,
-        Beam.userCancelledRides = userCancelledRides,
-        Beam.weekdayRides = weekdayRides,
         Beam.weekendPeakRides = weekendPeakRides,
-        Beam.weekendRides = weekendRides
+        Beam.referralCount = referralCount,
+        Beam.createdAt = Kernel.Prelude.Just createdAt,
+        Beam.updatedAt = updatedAt
       }

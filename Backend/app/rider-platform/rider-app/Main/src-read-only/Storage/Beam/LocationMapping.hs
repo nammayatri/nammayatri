@@ -13,16 +13,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data LocationMappingT f = LocationMappingT
-  { createdAt :: B.C f Kernel.Prelude.UTCTime,
-    entityId :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
-    locationId :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    order :: B.C f Kernel.Prelude.Int,
+  { id :: B.C f Kernel.Prelude.Text,
     tag :: B.C f Domain.Types.LocationMapping.LocationMappingTags,
+    locationId :: B.C f Kernel.Prelude.Text,
+    entityId :: B.C f Kernel.Prelude.Text,
+    order :: B.C f Kernel.Prelude.Int,
+    version :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    version :: B.C f Kernel.Prelude.Text
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 

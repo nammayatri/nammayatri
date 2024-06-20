@@ -53,14 +53,14 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.eventTime eventTime,
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
-      Se.Set Beam.notificationKey notificationKey,
-      Se.Set Beam.notificationType notificationType,
-      Se.Set Beam.onBookingStatus onBookingStatus,
-      Se.Set Beam.onScheduledBooking onScheduledBooking,
-      Se.Set Beam.timeDiff (Kernel.Utils.Common.nominalDiffTimeToSeconds timeDiff),
+    [ Se.Set Beam.timeDiff (Kernel.Utils.Common.nominalDiffTimeToSeconds timeDiff),
       Se.Set Beam.timeDiffEvent timeDiffEvent,
+      Se.Set Beam.onBookingStatus onBookingStatus,
+      Se.Set Beam.notificationType notificationType,
+      Se.Set Beam.notificationKey notificationKey,
+      Se.Set Beam.onScheduledBooking onScheduledBooking,
+      Se.Set Beam.eventTime eventTime,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -71,16 +71,16 @@ instance FromTType' Beam.RideRelatedNotificationConfig Domain.Types.RideRelatedN
     pure $
       Just
         Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig
-          { eventTime = eventTime,
-            id = Kernel.Types.Id.Id id,
-            merchantId = Kernel.Types.Id.Id merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            notificationKey = notificationKey,
-            notificationType = notificationType,
-            onBookingStatus = onBookingStatus,
-            onScheduledBooking = onScheduledBooking,
+          { id = Kernel.Types.Id.Id id,
             timeDiff = Kernel.Utils.Common.secondsToNominalDiffTime timeDiff,
             timeDiffEvent = timeDiffEvent,
+            onBookingStatus = onBookingStatus,
+            notificationType = notificationType,
+            notificationKey = notificationKey,
+            onScheduledBooking = onScheduledBooking,
+            eventTime = eventTime,
+            merchantId = Kernel.Types.Id.Id merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -88,16 +88,16 @@ instance FromTType' Beam.RideRelatedNotificationConfig Domain.Types.RideRelatedN
 instance ToTType' Beam.RideRelatedNotificationConfig Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig where
   toTType' (Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig {..}) = do
     Beam.RideRelatedNotificationConfigT
-      { Beam.eventTime = eventTime,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.notificationKey = notificationKey,
-        Beam.notificationType = notificationType,
-        Beam.onBookingStatus = onBookingStatus,
-        Beam.onScheduledBooking = onScheduledBooking,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.timeDiff = Kernel.Utils.Common.nominalDiffTimeToSeconds timeDiff,
         Beam.timeDiffEvent = timeDiffEvent,
+        Beam.onBookingStatus = onBookingStatus,
+        Beam.notificationType = notificationType,
+        Beam.notificationKey = notificationKey,
+        Beam.onScheduledBooking = onScheduledBooking,
+        Beam.eventTime = eventTime,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

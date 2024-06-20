@@ -11,12 +11,12 @@ PartnerOrganization:
   tableName: partner_organization
   derives: "Generic"
   fields:
-    orgId: Id PartnerOrganization
-    name: Text
-    apiKey: EncryptedHashedField e Text
-    merchantId: Id Merchant
-    createdAt: UTCTime
-    updatedAt: UTCTime
+    - orgId: Id PartnerOrganization
+    - name: Text
+    - apiKey: EncryptedHashedField e Text
+    - merchantId: Id Merchant
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
 
   types:
     PartnerOrgTransaction: {}
@@ -56,10 +56,10 @@ PartnerOrgConfig:
   tableName: partner_org_config
   derives: "Generic, Show, ToJSON, FromJSON"
   fields:
-    partnerOrgId: Id PartnerOrganization
-    config: PartnerOrganizationConfig
-    createdAt: UTCTime
-    updatedAt: UTCTime
+    - partnerOrgId: Id PartnerOrganization
+    - config: PartnerOrganizationConfig
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
 
   beamFields:
     config:
@@ -102,10 +102,10 @@ PartnerOrgStation:
   tableName: partner_org_station
   derives: "Generic, Show, ToJSON, FromJSON"
   fields:
-    partnerOrgId: Id PartnerOrganization
-    stationId: Id Station
-    partnerOrgStationId: Id PartnerOrgStation
-    name: Text
+    - partnerOrgId: Id PartnerOrganization
+    - stationId: Id Station
+    - partnerOrgStationId: Id PartnerOrgStation
+    - name: Text
 
   constraints:
     partnerOrgId: PrimaryKey

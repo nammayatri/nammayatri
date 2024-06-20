@@ -22,27 +22,27 @@ instance FromTType' Beam.AppInstalls Domain.Types.AppInstalls.AppInstalls where
     pure $
       Just
         Domain.Types.AppInstalls.AppInstalls
-          { appVersion = appVersion',
-            bundleVersion = bundleVersion',
-            createdAt = createdAt,
+          { id = Kernel.Types.Id.Id id,
             deviceToken = deviceToken,
-            id = Kernel.Types.Id.Id id,
-            merchantId = Kernel.Types.Id.Id merchantId,
-            platform = platform,
             source = source,
+            merchantId = Kernel.Types.Id.Id merchantId,
+            appVersion = appVersion',
+            bundleVersion = bundleVersion',
+            platform = platform,
+            createdAt = createdAt,
             updatedAt = updatedAt
           }
 
 instance ToTType' Beam.AppInstalls Domain.Types.AppInstalls.AppInstalls where
   toTType' (Domain.Types.AppInstalls.AppInstalls {..}) = do
     Beam.AppInstallsT
-      { Beam.appVersion = Kernel.Prelude.fmap Kernel.Utils.Version.versionToText appVersion,
-        Beam.bundleVersion = Kernel.Prelude.fmap Kernel.Utils.Version.versionToText bundleVersion,
-        Beam.createdAt = createdAt,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.deviceToken = deviceToken,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.platform = platform,
         Beam.source = source,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.appVersion = Kernel.Prelude.fmap Kernel.Utils.Version.versionToText appVersion,
+        Beam.bundleVersion = Kernel.Prelude.fmap Kernel.Utils.Version.versionToText bundleVersion,
+        Beam.platform = platform,
+        Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

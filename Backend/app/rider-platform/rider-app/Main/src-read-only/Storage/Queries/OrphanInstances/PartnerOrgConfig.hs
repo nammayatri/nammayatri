@@ -16,14 +16,14 @@ import Storage.Queries.Transformers.PartnerOrgConfig
 instance FromTType' Beam.PartnerOrgConfig Domain.Types.PartnerOrgConfig.PartnerOrgConfig where
   fromTType' (Beam.PartnerOrgConfigT {..}) = do
     config' <- getPOrgConfigFromTypeAndJson configJSON configType
-    pure $ Just Domain.Types.PartnerOrgConfig.PartnerOrgConfig {config = config', createdAt = createdAt, partnerOrgId = Kernel.Types.Id.Id partnerOrgId, updatedAt = updatedAt}
+    pure $ Just Domain.Types.PartnerOrgConfig.PartnerOrgConfig {partnerOrgId = Kernel.Types.Id.Id partnerOrgId, config = config', createdAt = createdAt, updatedAt = updatedAt}
 
 instance ToTType' Beam.PartnerOrgConfig Domain.Types.PartnerOrgConfig.PartnerOrgConfig where
   toTType' (Domain.Types.PartnerOrgConfig.PartnerOrgConfig {..}) = do
     Beam.PartnerOrgConfigT
-      { Beam.configJSON = snd $ getTypeAndJSONFromPOrgConfig config,
+      { Beam.partnerOrgId = Kernel.Types.Id.getId partnerOrgId,
+        Beam.configJSON = snd $ getTypeAndJSONFromPOrgConfig config,
         Beam.configType = fst $ getTypeAndJSONFromPOrgConfig config,
         Beam.createdAt = createdAt,
-        Beam.partnerOrgId = Kernel.Types.Id.getId partnerOrgId,
         Beam.updatedAt = updatedAt
       }

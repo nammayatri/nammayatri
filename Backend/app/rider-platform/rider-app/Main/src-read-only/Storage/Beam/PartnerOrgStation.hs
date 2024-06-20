@@ -12,10 +12,10 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PartnerOrgStationT f = PartnerOrgStationT
-  { name :: B.C f Kernel.Prelude.Text,
-    partnerOrgId :: B.C f Kernel.Prelude.Text,
-    partnerOrgStationId :: B.C f Kernel.Prelude.Text,
+  { partnerOrgId :: B.C f Kernel.Prelude.Text,
     stationId :: B.C f Kernel.Prelude.Text,
+    partnerOrgStationId :: B.C f Kernel.Prelude.Text,
+    name :: B.C f Kernel.Prelude.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

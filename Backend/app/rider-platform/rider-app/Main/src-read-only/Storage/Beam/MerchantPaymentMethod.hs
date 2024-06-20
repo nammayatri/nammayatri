@@ -13,15 +13,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MerchantPaymentMethodT f = MerchantPaymentMethodT
-  { collectedBy :: B.C f Domain.Types.Extra.MerchantPaymentMethod.PaymentCollector,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    id :: B.C f Kernel.Prelude.Text,
+  { id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    paymentInstrument :: B.C f Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     paymentType :: B.C f Domain.Types.Extra.MerchantPaymentMethod.PaymentType,
+    paymentInstrument :: B.C f Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
+    collectedBy :: B.C f Domain.Types.Extra.MerchantPaymentMethod.PaymentCollector,
     priority :: B.C f Kernel.Prelude.Int,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    createdAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 

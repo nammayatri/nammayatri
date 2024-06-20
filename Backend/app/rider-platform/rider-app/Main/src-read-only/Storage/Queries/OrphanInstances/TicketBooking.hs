@@ -19,36 +19,36 @@ instance FromTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking 
     pure $
       Just
         Domain.Types.TicketBooking.TicketBooking
-          { amount = Kernel.Types.Common.mkPrice currency amount,
+          { id = Kernel.Types.Id.Id id,
+            shortId = Kernel.Types.Id.ShortId shortId,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            ticketPlaceId = Kernel.Types.Id.Id ticketPlaceId,
+            personId = Kernel.Types.Id.Id personId,
+            amount = Kernel.Types.Common.mkPrice currency amount,
+            visitDate = visitDate,
+            status = status,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
             bookedSeats = bookedSeats,
             cancelledSeats = cancelledSeats,
-            createdAt = createdAt,
-            id = Kernel.Types.Id.Id id,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            personId = Kernel.Types.Id.Id personId,
-            shortId = Kernel.Types.Id.ShortId shortId,
-            status = status,
-            ticketPlaceId = Kernel.Types.Id.Id ticketPlaceId,
-            updatedAt = updatedAt,
-            visitDate = visitDate,
             merchantId = Kernel.Types.Id.Id <$> merchantId
           }
 
 instance ToTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking where
   toTType' (Domain.Types.TicketBooking.TicketBooking {..}) = do
     Beam.TicketBookingT
-      { Beam.amount = (.amount) amount,
+      { Beam.id = Kernel.Types.Id.getId id,
+        Beam.shortId = Kernel.Types.Id.getShortId shortId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.ticketPlaceId = Kernel.Types.Id.getId ticketPlaceId,
+        Beam.personId = Kernel.Types.Id.getId personId,
+        Beam.amount = (.amount) amount,
         Beam.currency = (Kernel.Prelude.Just . (.currency)) amount,
+        Beam.visitDate = visitDate,
+        Beam.status = status,
+        Beam.createdAt = createdAt,
+        Beam.updatedAt = updatedAt,
         Beam.bookedSeats = bookedSeats,
         Beam.cancelledSeats = cancelledSeats,
-        Beam.createdAt = createdAt,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.personId = Kernel.Types.Id.getId personId,
-        Beam.shortId = Kernel.Types.Id.getShortId shortId,
-        Beam.status = status,
-        Beam.ticketPlaceId = Kernel.Types.Id.getId ticketPlaceId,
-        Beam.updatedAt = updatedAt,
-        Beam.visitDate = visitDate,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId
       }

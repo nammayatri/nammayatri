@@ -47,11 +47,11 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.MerchantPushNotification.MerchantPushNotification {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.body body,
-      Se.Set Beam.fcmNotificationType fcmNotificationType,
+    [ Se.Set Beam.title title,
+      Se.Set Beam.body body,
       Se.Set Beam.language language,
+      Se.Set Beam.fcmNotificationType fcmNotificationType,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
-      Se.Set Beam.title title,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -62,13 +62,13 @@ instance FromTType' Beam.MerchantPushNotification Domain.Types.MerchantPushNotif
     pure $
       Just
         Domain.Types.MerchantPushNotification.MerchantPushNotification
-          { body = body,
-            fcmNotificationType = fcmNotificationType,
-            key = key,
+          { key = key,
+            title = title,
+            body = body,
             language = language,
+            fcmNotificationType = fcmNotificationType,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            title = title,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -76,13 +76,13 @@ instance FromTType' Beam.MerchantPushNotification Domain.Types.MerchantPushNotif
 instance ToTType' Beam.MerchantPushNotification Domain.Types.MerchantPushNotification.MerchantPushNotification where
   toTType' (Domain.Types.MerchantPushNotification.MerchantPushNotification {..}) = do
     Beam.MerchantPushNotificationT
-      { Beam.body = body,
-        Beam.fcmNotificationType = fcmNotificationType,
-        Beam.key = key,
+      { Beam.key = key,
+        Beam.title = title,
+        Beam.body = body,
         Beam.language = language,
+        Beam.fcmNotificationType = fcmNotificationType,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.title = title,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

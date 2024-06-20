@@ -9,15 +9,15 @@ MerchantOperatingCity:
   tableName: merchant_operating_city
 
   fields:
-    id: Id MerchantOperatingCity
-    merchantId: Id Merchant
-    merchantShortId: ShortId Merchant
-    state: IndianState
-    country: Country
-    city: City
-    lat: Double
-    long: Double
-    distanceUnit: Kernel.Types.Common.DistanceUnit
+    - id: Id MerchantOperatingCity
+    - merchantId: Id Merchant
+    - merchantShortId: ShortId Merchant
+    - state: IndianState
+    - country: Country
+    - city: City
+    - lat: Double
+    - long: Double
+    - distanceUnit: Kernel.Types.Common.DistanceUnit
 
   beamFields:
     distanceUnit:
@@ -56,9 +56,9 @@ MerchantState:
   tableName: merchant_state
 
   fields:
-    merchantId: Id Merchant
-    state: IndianState
-    allowedDestinationStates: "[IndianState]"
+    - merchantId: Id Merchant
+    - state: IndianState
+    - allowedDestinationStates: "[IndianState]"
 
   excludedFields: [merchantOperatingCityId]
 
@@ -79,8 +79,8 @@ ValueAddNP:
   tableName: value_add_np
 
   fields:
-    subscriberId: Text
-    enabled: Bool
+    - subscriberId: Text
+    - enabled: Bool
 
   constraints:
     subscriberId: PrimaryKey

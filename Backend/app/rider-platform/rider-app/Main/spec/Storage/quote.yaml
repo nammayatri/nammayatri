@@ -59,40 +59,40 @@ Quote:
 
 
   fields:
-    id : Id Quote
-    requestId : Id SearchRequest
-    estimatedFare : Price
-    discount : Maybe Price
-    estimatedTotalFare : Price
-    estimatedPickupDuration : Maybe Seconds
-    distanceUnit : DistanceUnit
-    providerId : Text
-    providerUrl : BaseUrl
-    itemId : Text
-    tripTerms : Maybe TripTerms
-    quoteDetails : QuoteDetails
-    merchantId : Id Merchant
-    vehicleServiceTierType : VehicleServiceTierType
-    vehicleServiceTierSeatingCapacity : Maybe Int
-    vehicleServiceTierAirConditioned : Maybe Double
-    isAirConditioned: Maybe Bool
-    serviceTierName: Maybe Text
-    serviceTierShortDesc: Maybe Text
-    merchantOperatingCityId : Id MerchantOperatingCity
-    specialLocationTag : Maybe Text
-    specialLocationName : Maybe Text
-    clientBundleVersion : Maybe Version
-    clientSdkVersion : Maybe Version
-    clientConfigVersion : Maybe Version
-    clientDevice : Maybe Device
-    backendConfigVersion : Maybe Version
-    backendAppVersion : Maybe Text
-    isCustomerPrefferedSearchRoute: Maybe Bool
-    isBlockedRoute: Maybe Bool
-    tollChargesInfo: Maybe TollChargesInfo
-    createdAt : UTCTime
-    updatedAt : UTCTime
-    validTill : UTCTime
+    - id : Id Quote
+    - requestId : Id SearchRequest
+    - estimatedFare : Price
+    - discount : Maybe Price
+    - estimatedTotalFare : Price
+    - estimatedPickupDuration : Maybe Seconds
+    - distanceUnit : DistanceUnit
+    - providerId : Text
+    - providerUrl : BaseUrl
+    - itemId : Text
+    - tripTerms : Maybe TripTerms
+    - quoteDetails : QuoteDetails
+    - merchantId : Id Merchant
+    - vehicleServiceTierType : VehicleServiceTierType
+    - vehicleServiceTierSeatingCapacity : Maybe Int
+    - vehicleServiceTierAirConditioned : Maybe Double
+    - isAirConditioned: Maybe Bool
+    - serviceTierName: Maybe Text
+    - serviceTierShortDesc: Maybe Text
+    - merchantOperatingCityId : Id MerchantOperatingCity
+    - specialLocationTag : Maybe Text
+    - specialLocationName : Maybe Text
+    - clientBundleVersion : Maybe Version
+    - clientSdkVersion : Maybe Version
+    - clientConfigVersion : Maybe Version
+    - clientDevice : Maybe Device
+    - backendConfigVersion : Maybe Version
+    - backendAppVersion : Maybe Text
+    - isCustomerPrefferedSearchRoute: Maybe Bool
+    - isBlockedRoute: Maybe Bool
+    - tollChargesInfo: Maybe TollChargesInfo
+    - createdAt : UTCTime
+    - updatedAt : UTCTime
+    - validTill : UTCTime
   derives: "Generic, Show"
 
   beamFields:

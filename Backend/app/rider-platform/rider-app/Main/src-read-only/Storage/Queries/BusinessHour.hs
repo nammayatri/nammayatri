@@ -44,9 +44,9 @@ instance FromTType' Beam.BusinessHour Domain.Types.BusinessHour.BusinessHour whe
     pure $
       Just
         Domain.Types.BusinessHour.BusinessHour
-          { btype = btype,
+          { id = Kernel.Types.Id.Id id,
+            btype = btype,
             categoryId = Kernel.Types.Id.Id <$> categoryId,
-            id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -56,9 +56,9 @@ instance FromTType' Beam.BusinessHour Domain.Types.BusinessHour.BusinessHour whe
 instance ToTType' Beam.BusinessHour Domain.Types.BusinessHour.BusinessHour where
   toTType' (Domain.Types.BusinessHour.BusinessHour {..}) = do
     Beam.BusinessHourT
-      { Beam.btype = btype,
+      { Beam.id = Kernel.Types.Id.getId id,
+        Beam.btype = btype,
         Beam.categoryId = Kernel.Types.Id.getId <$> categoryId,
-        Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

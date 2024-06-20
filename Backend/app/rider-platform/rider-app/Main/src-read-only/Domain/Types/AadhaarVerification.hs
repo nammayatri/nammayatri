@@ -12,14 +12,14 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data AadhaarVerification = AadhaarVerification
-  { aadhaarNumberHash :: Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash,
-    createdAt :: Kernel.Prelude.UTCTime,
-    isVerified :: Kernel.Prelude.Bool,
-    personDob :: Kernel.Prelude.Text,
-    personGender :: Kernel.Prelude.Text,
+  { personName :: Kernel.Prelude.Text,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    personGender :: Kernel.Prelude.Text,
+    personDob :: Kernel.Prelude.Text,
     personImagePath :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    personName :: Kernel.Prelude.Text,
+    aadhaarNumberHash :: Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash,
+    isVerified :: Kernel.Prelude.Bool,
+    createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, Show)

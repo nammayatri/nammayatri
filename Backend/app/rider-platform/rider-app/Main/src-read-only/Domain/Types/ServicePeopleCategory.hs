@@ -13,11 +13,11 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data ServicePeopleCategory = ServicePeopleCategory
-  { cancellationCharges :: Kernel.Prelude.Maybe [Domain.Types.ServicePeopleCategory.CancellationCharge],
-    description :: Kernel.Prelude.Text,
-    id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory,
+  { id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory,
     name :: Kernel.Prelude.Text,
+    description :: Kernel.Prelude.Text,
     pricePerUnit :: Kernel.Types.Common.Price,
+    cancellationCharges :: Kernel.Prelude.Maybe [Domain.Types.ServicePeopleCategory.CancellationCharge],
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

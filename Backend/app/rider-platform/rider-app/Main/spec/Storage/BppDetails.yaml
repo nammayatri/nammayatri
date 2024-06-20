@@ -2,13 +2,13 @@ BppDetails:
   tableName: bpp_details
 
   fields:
-    id: Id BppDetails
-    domain: Text # TODO: Use Domain type here
-    subscriberId: Text
-    name: Text
-    logoUrl: Maybe Text
-    description: Maybe Text
-    supportNumber: Maybe Text
+    - id: Id BppDetails
+    - domain: Text # TODO: Use Domain type here
+    - subscriberId: Text
+    - name: Text
+    - logoUrl: Maybe Text
+    - description: Maybe Text
+    - supportNumber: Maybe Text
 
   constraints:
     id: PrimaryKey

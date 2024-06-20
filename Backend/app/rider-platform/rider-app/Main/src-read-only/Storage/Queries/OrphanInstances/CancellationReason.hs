@@ -20,29 +20,29 @@ instance FromTType' Beam.CancellationReason Domain.Types.CancellationReason.Canc
     pure $
       Just
         Domain.Types.CancellationReason.CancellationReason
-          { createdAt = createdAt',
+          { reasonCode = reasonCode,
             description = description,
             enabled = enabled,
-            onAssign = onAssign,
-            onConfirm = onConfirm,
-            onInit = onInit,
             onSearch = onSearch,
+            onInit = onInit,
+            onConfirm = onConfirm,
+            onAssign = onAssign,
             priority = priority,
-            reasonCode = reasonCode,
+            createdAt = createdAt',
             updatedAt = updatedAt'
           }
 
 instance ToTType' Beam.CancellationReason Domain.Types.CancellationReason.CancellationReason where
   toTType' (Domain.Types.CancellationReason.CancellationReason {..}) = do
     Beam.CancellationReasonT
-      { Beam.createdAt = Kernel.Prelude.Just createdAt,
+      { Beam.reasonCode = reasonCode,
         Beam.description = description,
         Beam.enabled = enabled,
-        Beam.onAssign = onAssign,
-        Beam.onConfirm = onConfirm,
-        Beam.onInit = onInit,
         Beam.onSearch = onSearch,
+        Beam.onInit = onInit,
+        Beam.onConfirm = onConfirm,
+        Beam.onAssign = onAssign,
         Beam.priority = priority,
-        Beam.reasonCode = reasonCode,
+        Beam.createdAt = Kernel.Prelude.Just createdAt,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt
       }

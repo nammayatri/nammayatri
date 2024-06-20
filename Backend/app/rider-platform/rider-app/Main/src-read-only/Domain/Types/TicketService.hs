@@ -13,16 +13,16 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data TicketService = TicketService
-  { allowCancellation :: Kernel.Prelude.Bool,
-    allowFutureBooking :: Kernel.Prelude.Bool,
-    businessHours :: [Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour],
-    expiry :: Domain.Types.TicketService.ExpiryType,
-    id :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
-    maxVerification :: Kernel.Prelude.Int,
-    operationalDays :: [Kernel.Prelude.Text],
+  { id :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
     placesId :: Kernel.Prelude.Text,
     service :: Kernel.Prelude.Text,
     shortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    operationalDays :: [Kernel.Prelude.Text],
+    maxVerification :: Kernel.Prelude.Int,
+    allowFutureBooking :: Kernel.Prelude.Bool,
+    allowCancellation :: Kernel.Prelude.Bool,
+    expiry :: Domain.Types.TicketService.ExpiryType,
+    businessHours :: [Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour],
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

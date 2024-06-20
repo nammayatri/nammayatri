@@ -37,25 +37,25 @@ BookingLocation:
   derives: "Generic, Show, Eq, Kernel.External.Maps.HasCoordinates.HasCoordinates"
 
   fields:
-    id: Id BookingLocation
-    lat: Double
-    lon: Double
-    address: LocationAddress
+    - id: Id BookingLocation
+    - lat: Double
+    - lon: Double
+    - address: LocationAddress
 
   types:
     BookingLocationAPIEntity:
-      lat: Double
-      lon: Double
-      street: Maybe Text
-      door: Maybe Text
-      city: Maybe Text
-      state: Maybe Text
-      country: Maybe Text
-      building: Maybe Text
-      areaCode: Maybe Text
-      area: Maybe Text
-      ward: Maybe Text
-      placeId: Maybe Text
+      - lat: Double
+      - lon: Double
+      - street: Maybe Text
+      - door: Maybe Text
+      - city: Maybe Text
+      - state: Maybe Text
+      - country: Maybe Text
+      - building: Maybe Text
+      - areaCode: Maybe Text
+      - area: Maybe Text
+      - ward: Maybe Text
+      - placeId: Maybe Text
 
   beamFields:
     address:

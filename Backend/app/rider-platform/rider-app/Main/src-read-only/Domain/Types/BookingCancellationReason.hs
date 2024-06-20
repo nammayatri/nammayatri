@@ -16,17 +16,17 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data BookingCancellationReason = BookingCancellationReason
-  { additionalInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
-    createdAt :: Kernel.Prelude.UTCTime,
-    distanceUnit :: Kernel.Types.Common.DistanceUnit,
-    driverCancellationLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
-    driverDistToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
+  { bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
+    rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    source :: Domain.Types.BookingCancellationReason.CancellationSource,
     reasonCode :: Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationReasonCode,
     reasonStage :: Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationStage,
-    rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
-    source :: Domain.Types.BookingCancellationReason.CancellationSource,
+    additionalInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverCancellationLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
+    driverDistToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
+    createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

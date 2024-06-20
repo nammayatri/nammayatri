@@ -14,11 +14,11 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PlaceBasedServiceConfigT f = PlaceBasedServiceConfigT
-  { merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    placeId :: B.C f Kernel.Prelude.Text,
-    configValue :: B.C f Data.Aeson.Value,
+  { configValue :: B.C f Data.Aeson.Value,
     serviceName :: B.C f Domain.Types.MerchantServiceConfig.ServiceName,
+    placeId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

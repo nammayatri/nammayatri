@@ -15,14 +15,14 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data ClientPersonInfo = ClientPersonInfo
-  { clientId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Client.Client),
-    createdAt :: Kernel.Prelude.UTCTime,
-    id :: Kernel.Types.Id.Id Domain.Types.ClientPersonInfo.ClientPersonInfo,
-    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+  { id :: Kernel.Types.Id.Id Domain.Types.ClientPersonInfo.ClientPersonInfo,
+    clientId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Client.Client),
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.BecknConfig.VehicleCategory,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     rideCount :: Kernel.Prelude.Int,
-    updatedAt :: Kernel.Prelude.UTCTime,
-    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.BecknConfig.VehicleCategory
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

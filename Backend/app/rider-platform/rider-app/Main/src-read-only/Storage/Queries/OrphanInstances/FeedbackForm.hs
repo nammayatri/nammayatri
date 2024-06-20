@@ -17,21 +17,21 @@ instance FromTType' Beam.FeedbackForm Domain.Types.FeedbackForm.FeedbackForm whe
     pure $
       Just
         Domain.Types.FeedbackForm.FeedbackForm
-          { answer = answer,
-            answerType = answerType,
-            categoryName = categoryName,
+          { categoryName = categoryName,
             id = Kernel.Types.Id.Id id,
+            rating = rating,
             question = question,
-            rating = rating
+            answer = answer,
+            answerType = answerType
           }
 
 instance ToTType' Beam.FeedbackForm Domain.Types.FeedbackForm.FeedbackForm where
   toTType' (Domain.Types.FeedbackForm.FeedbackForm {..}) = do
     Beam.FeedbackFormT
-      { Beam.answer = answer,
-        Beam.answerType = answerType,
-        Beam.categoryName = categoryName,
+      { Beam.categoryName = categoryName,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.rating = rating,
         Beam.question = question,
-        Beam.rating = rating
+        Beam.answer = answer,
+        Beam.answerType = answerType
       }

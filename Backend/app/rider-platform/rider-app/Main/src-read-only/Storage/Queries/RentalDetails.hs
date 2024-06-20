@@ -27,38 +27,38 @@ instance FromTType' Beam.RentalDetails Domain.Types.RentalDetails.RentalDetails 
     pure $
       Just
         Domain.Types.RentalDetails.RentalDetails
-          { baseFare = Kernel.Utils.Common.mkPriceWithDefault baseFareAmount currency baseFare,
-            deadKmFare = Kernel.Utils.Common.mkPrice currency deadKmFare,
-            id = Kernel.Types.Id.Id id,
-            includedDistancePerHr = Kernel.Utils.Common.mkDistanceWithDefaultMeters distanceUnit includedDistancePerHrValue $ Kernel.Utils.Common.kilometersToMeters includedKmPerHr,
-            nightShiftInfo = Storage.Queries.Transformers.RentalDetails.mkNightShiftInfo nightShiftCharge nightShiftChargeAmount nightShiftEnd nightShiftStart currency,
-            perExtraKmRate = Kernel.Utils.Common.mkPriceWithDefault perExtraKmRateAmount currency perExtraKmRate,
-            perExtraMinRate = Kernel.Utils.Common.mkPriceWithDefault perExtraMinRateAmount currency perExtraMinRate,
+          { id = Kernel.Types.Id.Id id,
+            baseFare = Kernel.Utils.Common.mkPriceWithDefault baseFareAmount currency baseFare,
             perHourCharge = Kernel.Utils.Common.mkPriceWithDefault perHourChargeAmount currency perHourCharge,
-            plannedPerKmRate = Kernel.Utils.Common.mkPriceWithDefault plannedPerKmRateAmount currency plannedPerKmRate
+            perExtraMinRate = Kernel.Utils.Common.mkPriceWithDefault perExtraMinRateAmount currency perExtraMinRate,
+            perExtraKmRate = Kernel.Utils.Common.mkPriceWithDefault perExtraKmRateAmount currency perExtraKmRate,
+            includedDistancePerHr = Kernel.Utils.Common.mkDistanceWithDefaultMeters distanceUnit includedDistancePerHrValue $ Kernel.Utils.Common.kilometersToMeters includedKmPerHr,
+            plannedPerKmRate = Kernel.Utils.Common.mkPriceWithDefault plannedPerKmRateAmount currency plannedPerKmRate,
+            deadKmFare = Kernel.Utils.Common.mkPrice currency deadKmFare,
+            nightShiftInfo = Storage.Queries.Transformers.RentalDetails.mkNightShiftInfo nightShiftCharge nightShiftChargeAmount nightShiftEnd nightShiftStart currency
           }
 
 instance ToTType' Beam.RentalDetails Domain.Types.RentalDetails.RentalDetails where
   toTType' (Domain.Types.RentalDetails.RentalDetails {..}) = do
     Beam.RentalDetailsT
-      { Beam.baseFare = (.amountInt) baseFare,
+      { Beam.id = Kernel.Types.Id.getId id,
+        Beam.baseFare = (.amountInt) baseFare,
         Beam.baseFareAmount = Just $ (.amount) baseFare,
         Beam.currency = Just $ (.currency) baseFare,
-        Beam.deadKmFare = (.amount) deadKmFare,
-        Beam.id = Kernel.Types.Id.getId id,
+        Beam.perHourCharge = (.amountInt) perHourCharge,
+        Beam.perHourChargeAmount = Just $ (.amount) perHourCharge,
+        Beam.perExtraMinRate = (.amountInt) perExtraMinRate,
+        Beam.perExtraMinRateAmount = Just $ (.amount) perExtraMinRate,
+        Beam.perExtraKmRate = (.amountInt) perExtraKmRate,
+        Beam.perExtraKmRateAmount = Just $ (.amount) perExtraKmRate,
         Beam.distanceUnit = Just $ (.unit) includedDistancePerHr,
         Beam.includedDistancePerHrValue = Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) includedDistancePerHr) includedDistancePerHr,
         Beam.includedKmPerHr = Kernel.Utils.Common.metersToKilometers $ Kernel.Utils.Common.distanceToMeters includedDistancePerHr,
+        Beam.plannedPerKmRate = (.amountInt) plannedPerKmRate,
+        Beam.plannedPerKmRateAmount = Just $ (.amount) plannedPerKmRate,
+        Beam.deadKmFare = (.amount) deadKmFare,
         Beam.nightShiftCharge = (.amountInt) . (.nightShiftCharge) <$> nightShiftInfo,
         Beam.nightShiftChargeAmount = (.amount) . (.nightShiftCharge) <$> nightShiftInfo,
         Beam.nightShiftEnd = (.nightShiftEnd) <$> nightShiftInfo,
-        Beam.nightShiftStart = (.nightShiftStart) <$> nightShiftInfo,
-        Beam.perExtraKmRate = (.amountInt) perExtraKmRate,
-        Beam.perExtraKmRateAmount = Just $ (.amount) perExtraKmRate,
-        Beam.perExtraMinRate = (.amountInt) perExtraMinRate,
-        Beam.perExtraMinRateAmount = Just $ (.amount) perExtraMinRate,
-        Beam.perHourCharge = (.amountInt) perHourCharge,
-        Beam.perHourChargeAmount = Just $ (.amount) perHourCharge,
-        Beam.plannedPerKmRate = (.amountInt) plannedPerKmRate,
-        Beam.plannedPerKmRateAmount = Just $ (.amount) plannedPerKmRate
+        Beam.nightShiftStart = (.nightShiftStart) <$> nightShiftInfo
       }

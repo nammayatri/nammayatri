@@ -50,14 +50,14 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.amountToRefund amountToRefund,
-      Se.Set Beam.name name,
-      Se.Set Beam.numberOfUnits numberOfUnits,
-      Se.Set Beam.numberOfUnitsCancelled numberOfUnitsCancelled,
+    [ Se.Set Beam.ticketBookingServiceCategoryId (Kernel.Types.Id.getId ticketBookingServiceCategoryId),
       Se.Set Beam.peopleCategoryId (Kernel.Types.Id.getId <$> peopleCategoryId),
+      Se.Set Beam.name name,
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) pricePerUnit),
       Se.Set Beam.pricePerUnit ((.amount) pricePerUnit),
-      Se.Set Beam.ticketBookingServiceCategoryId (Kernel.Types.Id.getId ticketBookingServiceCategoryId),
+      Se.Set Beam.numberOfUnits numberOfUnits,
+      Se.Set Beam.numberOfUnitsCancelled numberOfUnitsCancelled,
+      Se.Set Beam.amountToRefund amountToRefund,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,

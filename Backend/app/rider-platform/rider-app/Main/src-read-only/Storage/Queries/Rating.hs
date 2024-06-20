@@ -49,13 +49,13 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Rating.Rating {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.feedbackDetails feedbackDetails,
-      Se.Set Beam.ratingValue ratingValue,
-      Se.Set Beam.rideId (Kernel.Types.Id.getId rideId),
+    [ Se.Set Beam.rideId (Kernel.Types.Id.getId rideId),
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
-      Se.Set Beam.updatedAt _now,
-      Se.Set Beam.wasOfferedAssistance wasOfferedAssistance
+      Se.Set Beam.ratingValue ratingValue,
+      Se.Set Beam.feedbackDetails feedbackDetails,
+      Se.Set Beam.wasOfferedAssistance wasOfferedAssistance,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -64,25 +64,25 @@ instance FromTType' Beam.Rating Domain.Types.Rating.Rating where
     pure $
       Just
         Domain.Types.Rating.Rating
-          { createdAt = createdAt,
-            feedbackDetails = feedbackDetails,
-            id = Kernel.Types.Id.Id id,
-            ratingValue = ratingValue,
+          { id = Kernel.Types.Id.Id id,
             rideId = Kernel.Types.Id.Id rideId,
             riderId = Kernel.Types.Id.Id riderId,
-            updatedAt = updatedAt,
-            wasOfferedAssistance = wasOfferedAssistance
+            ratingValue = ratingValue,
+            feedbackDetails = feedbackDetails,
+            wasOfferedAssistance = wasOfferedAssistance,
+            createdAt = createdAt,
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.Rating Domain.Types.Rating.Rating where
   toTType' (Domain.Types.Rating.Rating {..}) = do
     Beam.RatingT
-      { Beam.createdAt = createdAt,
-        Beam.feedbackDetails = feedbackDetails,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.ratingValue = ratingValue,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.rideId = Kernel.Types.Id.getId rideId,
         Beam.riderId = Kernel.Types.Id.getId riderId,
-        Beam.updatedAt = updatedAt,
-        Beam.wasOfferedAssistance = wasOfferedAssistance
+        Beam.ratingValue = ratingValue,
+        Beam.feedbackDetails = feedbackDetails,
+        Beam.wasOfferedAssistance = wasOfferedAssistance,
+        Beam.createdAt = createdAt,
+        Beam.updatedAt = updatedAt
       }

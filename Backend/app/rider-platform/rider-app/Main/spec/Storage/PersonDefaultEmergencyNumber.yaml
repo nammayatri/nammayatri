@@ -6,16 +6,16 @@ imports:
 PersonDefaultEmergencyNumber:
   derives: Generic
   fields:
-    personId: Id Person
-    name: Text
-    mobileNumber: EncryptedHashedField e Text
-    mobileCountryCode: Text
-    createdAt: UTCTime
-    contactPersonId: Maybe (Id Person)
-    enableForFollowing: Bool
-    enableForShareRide: Bool
-    merchantId: Maybe (Id Merchant)
-    priority: Int
+    - personId: Id Person
+    - name: Text
+    - mobileNumber: EncryptedHashedField e Text
+    - mobileCountryCode: Text
+    - createdAt: UTCTime
+    - contactPersonId: Maybe (Id Person)
+    - enableForFollowing: Bool
+    - enableForShareRide: Bool
+    - merchantId: Maybe (Id Merchant)
+    - priority: Int
 
   # beamType: -- Why do this its already having a default value
   #   enableForShareRide: Maybe Bool

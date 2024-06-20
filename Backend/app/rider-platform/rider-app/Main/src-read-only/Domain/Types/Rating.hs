@@ -12,13 +12,13 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data Rating = Rating
-  { createdAt :: Kernel.Prelude.UTCTime,
-    feedbackDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    id :: Kernel.Types.Id.Id Domain.Types.Rating.Rating,
-    ratingValue :: Kernel.Prelude.Int,
+  { id :: Kernel.Types.Id.Id Domain.Types.Rating.Rating,
     rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    updatedAt :: Kernel.Prelude.UTCTime,
-    wasOfferedAssistance :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    ratingValue :: Kernel.Prelude.Int,
+    feedbackDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    wasOfferedAssistance :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

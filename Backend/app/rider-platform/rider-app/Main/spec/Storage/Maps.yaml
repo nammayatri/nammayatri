@@ -7,14 +7,14 @@ PlaceNameCache:
   tableName: place_name_cache
 
   fields:
-    id: Id PlaceNameCache
-    formattedAddress: Maybe Text
-    plusCode: Maybe Text
-    lat: Double
-    lon: Double
-    placeId: Maybe Text
-    addressComponents: "[AddressResp]"
-    geoHash: Maybe Text
+    - id: Id PlaceNameCache
+    - formattedAddress: Maybe Text
+    - plusCode: Maybe Text
+    - lat: Double
+    - lon: Double
+    - placeId: Maybe Text
+    - addressComponents: "[AddressResp]"
+    - geoHash: Maybe Text
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE

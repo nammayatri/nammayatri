@@ -52,13 +52,13 @@ updateByPrimaryKey (Domain.Types.ClientPersonInfo.ClientPersonInfo {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.clientId (Kernel.Types.Id.getId <$> clientId),
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
+      Se.Set Beam.vehicleCategory vehicleCategory,
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.rideCount rideCount,
-      Se.Set Beam.updatedAt _now,
-      Se.Set Beam.vehicleCategory vehicleCategory
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -67,27 +67,27 @@ instance FromTType' Beam.ClientPersonInfo Domain.Types.ClientPersonInfo.ClientPe
     pure $
       Just
         Domain.Types.ClientPersonInfo.ClientPersonInfo
-          { clientId = Kernel.Types.Id.Id <$> clientId,
-            createdAt = createdAt,
-            id = Kernel.Types.Id.Id id,
-            merchantId = Kernel.Types.Id.Id merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+          { id = Kernel.Types.Id.Id id,
+            clientId = Kernel.Types.Id.Id <$> clientId,
             personId = Kernel.Types.Id.Id personId,
+            vehicleCategory = vehicleCategory,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            merchantId = Kernel.Types.Id.Id merchantId,
             rideCount = rideCount,
-            updatedAt = updatedAt,
-            vehicleCategory = vehicleCategory
+            createdAt = createdAt,
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.ClientPersonInfo Domain.Types.ClientPersonInfo.ClientPersonInfo where
   toTType' (Domain.Types.ClientPersonInfo.ClientPersonInfo {..}) = do
     Beam.ClientPersonInfoT
-      { Beam.clientId = Kernel.Types.Id.getId <$> clientId,
-        Beam.createdAt = createdAt,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+      { Beam.id = Kernel.Types.Id.getId id,
+        Beam.clientId = Kernel.Types.Id.getId <$> clientId,
         Beam.personId = Kernel.Types.Id.getId personId,
+        Beam.vehicleCategory = vehicleCategory,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.rideCount = rideCount,
-        Beam.updatedAt = updatedAt,
-        Beam.vehicleCategory = vehicleCategory
+        Beam.createdAt = createdAt,
+        Beam.updatedAt = updatedAt
       }

@@ -14,14 +14,14 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data RentalDetails = RentalDetails
-  { baseFare :: Kernel.Types.Common.Price,
-    deadKmFare :: Kernel.Types.Common.Price,
-    id :: Kernel.Types.Id.Id Domain.Types.RentalDetails.RentalDetails,
-    includedDistancePerHr :: Kernel.Types.Common.Distance,
-    nightShiftInfo :: Kernel.Prelude.Maybe Domain.Types.Extra.RentalDetails.NightShiftInfo,
-    perExtraKmRate :: Kernel.Types.Common.Price,
-    perExtraMinRate :: Kernel.Types.Common.Price,
+  { id :: Kernel.Types.Id.Id Domain.Types.RentalDetails.RentalDetails,
+    baseFare :: Kernel.Types.Common.Price,
     perHourCharge :: Kernel.Types.Common.Price,
-    plannedPerKmRate :: Kernel.Types.Common.Price
+    perExtraMinRate :: Kernel.Types.Common.Price,
+    perExtraKmRate :: Kernel.Types.Common.Price,
+    includedDistancePerHr :: Kernel.Types.Common.Distance,
+    plannedPerKmRate :: Kernel.Types.Common.Price,
+    deadKmFare :: Kernel.Types.Common.Price,
+    nightShiftInfo :: Kernel.Prelude.Maybe Domain.Types.Extra.RentalDetails.NightShiftInfo
   }
   deriving (Generic, Show)

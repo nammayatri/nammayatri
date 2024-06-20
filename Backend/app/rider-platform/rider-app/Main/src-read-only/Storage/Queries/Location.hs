@@ -49,7 +49,9 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Location.Location {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.area (Domain.Types.LocationAddress.area address),
+    [ Se.Set Beam.lat lat,
+      Se.Set Beam.lon lon,
+      Se.Set Beam.area (Domain.Types.LocationAddress.area address),
       Se.Set Beam.areaCode (Domain.Types.LocationAddress.areaCode address),
       Se.Set Beam.building (Domain.Types.LocationAddress.building address),
       Se.Set Beam.city (Domain.Types.LocationAddress.city address),
@@ -60,8 +62,6 @@ updateByPrimaryKey (Domain.Types.Location.Location {..}) = do
       Se.Set Beam.street (Domain.Types.LocationAddress.street address),
       Se.Set Beam.ward (Domain.Types.LocationAddress.ward address),
       Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.lat lat,
-      Se.Set Beam.lon lon,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -71,18 +71,21 @@ instance FromTType' Beam.Location Domain.Types.Location.Location where
     pure $
       Just
         Domain.Types.Location.Location
-          { address = Domain.Types.LocationAddress.LocationAddress {street, door, city, state, country, building, areaCode, area, ward, placeId},
-            createdAt = createdAt,
-            id = Kernel.Types.Id.Id id,
+          { id = Kernel.Types.Id.Id id,
             lat = lat,
             lon = lon,
+            address = Domain.Types.LocationAddress.LocationAddress {street, door, city, state, country, building, areaCode, area, ward, placeId},
+            createdAt = createdAt,
             updatedAt = updatedAt
           }
 
 instance ToTType' Beam.Location Domain.Types.Location.Location where
   toTType' (Domain.Types.Location.Location {..}) = do
     Beam.LocationT
-      { Beam.area = Domain.Types.LocationAddress.area address,
+      { Beam.id = Kernel.Types.Id.getId id,
+        Beam.lat = lat,
+        Beam.lon = lon,
+        Beam.area = Domain.Types.LocationAddress.area address,
         Beam.areaCode = Domain.Types.LocationAddress.areaCode address,
         Beam.building = Domain.Types.LocationAddress.building address,
         Beam.city = Domain.Types.LocationAddress.city address,
@@ -93,8 +96,5 @@ instance ToTType' Beam.Location Domain.Types.Location.Location where
         Beam.street = Domain.Types.LocationAddress.street address,
         Beam.ward = Domain.Types.LocationAddress.ward address,
         Beam.createdAt = createdAt,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.lat = lat,
-        Beam.lon = lon,
         Beam.updatedAt = updatedAt
       }

@@ -12,14 +12,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RatingT f = RatingT
-  { createdAt :: B.C f Kernel.Prelude.UTCTime,
-    feedbackDetails :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    id :: B.C f Kernel.Prelude.Text,
-    ratingValue :: B.C f Kernel.Prelude.Int,
+  { id :: B.C f Kernel.Prelude.Text,
     rideId :: B.C f Kernel.Prelude.Text,
     riderId :: B.C f Kernel.Prelude.Text,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    wasOfferedAssistance :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)
+    ratingValue :: B.C f Kernel.Prelude.Int,
+    feedbackDetails :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    wasOfferedAssistance :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 

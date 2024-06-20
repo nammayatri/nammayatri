@@ -4,9 +4,9 @@ imports:
 PersonFlowStatus:
   tableName: person_flow_status
   fields:
-    personId: Id Person
-    flowStatus: Domain.Types.Extra.PersonFlowStatus.FlowStatus
-    updatedAt: UTCTime
+    - personId: Id Person
+    - flowStatus: Domain.Types.Extra.PersonFlowStatus.FlowStatus
+    - updatedAt: UTCTime
 
   excludedFields:
     - merchantId

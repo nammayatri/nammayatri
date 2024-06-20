@@ -64,52 +64,52 @@ Estimate:
       derive': "Generic, Show"
 
   fields:
-    id : Id Estimate
-    requestId : Id SearchRequest
-    merchantId : Maybe (Id Merchant)
-    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
-    bppEstimateId : Id BPPEstimate
-    estimatedFare : Price
-    discount : Maybe Price
-    estimatedTotalFare : Price
-    totalFareRange : FareRange
-    estimatedDuration : Maybe Seconds
-    estimatedDistance : Maybe Distance
-    estimatedPickupDuration : Maybe Seconds
-    device : Maybe Text
-    providerId : Text
-    providerUrl : BaseUrl
-    providerName : Text
-    providerMobileNumber : Text
-    providerCompletedRidesCount : Int
-    vehicleServiceTierType : VehicleServiceTierType
-    vehicleServiceTierSeatingCapacity : Maybe Int
-    vehicleServiceTierAirConditioned : Maybe Double
-    isAirConditioned: Maybe Bool
-    itemId : Text
-    tripTerms : Maybe TripTerms
-    estimateBreakupList : "[EstimateBreakup]"
-    nightShiftInfo : Maybe NightShiftInfo
-    status : EstimateStatus
-    waitingCharges : WaitingCharges
-    driversLocation : "[LatLong]"
-    specialLocationTag : Maybe Text
-    specialLocationName : Maybe Text
-    serviceTierName : Maybe Text
-    serviceTierShortDesc : Maybe Text
-    clientSdkVersion: Maybe Version
-    clientBundleVersion: Maybe Version
-    clientConfigVersion: Maybe Version
-    backendConfigVersion: Maybe Version
-    backendAppVersion: Maybe Text
-    clientDevice: Maybe Device
-    tollChargesInfo: Maybe TollChargesInfo
-    isCustomerPrefferedSearchRoute: Maybe Bool
-    isBlockedRoute: Maybe Bool
-    distanceUnit: DistanceUnit
-    updatedAt : UTCTime
-    createdAt : UTCTime
-    validTill : UTCTime
+    - id : Id Estimate
+    - requestId : Id SearchRequest
+    - merchantId : Maybe (Id Merchant)
+    - merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
+    - bppEstimateId : Id BPPEstimate
+    - estimatedFare : Price
+    - discount : Maybe Price
+    - estimatedTotalFare : Price
+    - totalFareRange : FareRange
+    - estimatedDuration : Maybe Seconds
+    - estimatedDistance : Maybe Distance
+    - estimatedPickupDuration : Maybe Seconds
+    - device : Maybe Text
+    - providerId : Text
+    - providerUrl : BaseUrl
+    - providerName : Text
+    - providerMobileNumber : Text
+    - providerCompletedRidesCount : Int
+    - vehicleServiceTierType : VehicleServiceTierType
+    - vehicleServiceTierSeatingCapacity : Maybe Int
+    - vehicleServiceTierAirConditioned : Maybe Double
+    - isAirConditioned: Maybe Bool
+    - itemId : Text
+    - tripTerms : Maybe TripTerms
+    - estimateBreakupList : "[EstimateBreakup]"
+    - nightShiftInfo : Maybe NightShiftInfo
+    - status : EstimateStatus
+    - waitingCharges : WaitingCharges
+    - driversLocation : "[LatLong]"
+    - specialLocationTag : Maybe Text
+    - specialLocationName : Maybe Text
+    - serviceTierName : Maybe Text
+    - serviceTierShortDesc : Maybe Text
+    - clientSdkVersion: Maybe Version
+    - clientBundleVersion: Maybe Version
+    - clientConfigVersion: Maybe Version
+    - backendConfigVersion: Maybe Version
+    - backendAppVersion: Maybe Text
+    - clientDevice: Maybe Device
+    - tollChargesInfo: Maybe TollChargesInfo
+    - isCustomerPrefferedSearchRoute: Maybe Bool
+    - isBlockedRoute: Maybe Bool
+    - distanceUnit: DistanceUnit
+    - updatedAt : UTCTime
+    - createdAt : UTCTime
+    - validTill : UTCTime
 
   constraints:
     id: PrimaryKey

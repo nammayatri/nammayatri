@@ -14,15 +14,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MerchantMessageT f = MerchantMessageT
-  { containsUrlButton :: B.C f Kernel.Prelude.Bool,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    jsonData :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
-    merchantId :: B.C f Kernel.Prelude.Text,
+  { merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    message :: B.C f Kernel.Prelude.Text,
     messageKey :: B.C f Domain.Types.MerchantMessage.MessageKey,
+    message :: B.C f Kernel.Prelude.Text,
     templateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+    jsonData :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    containsUrlButton :: B.C f Kernel.Prelude.Bool,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    createdAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 

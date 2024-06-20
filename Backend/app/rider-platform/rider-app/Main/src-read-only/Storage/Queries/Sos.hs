@@ -37,9 +37,9 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Sos.Sos {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.flow flow,
-      Se.Set Beam.personId (Kernel.Types.Id.getId personId),
+    [ Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.rideId (Kernel.Types.Id.getId rideId),
+      Se.Set Beam.flow flow,
       Se.Set Beam.status status,
       Se.Set Beam.ticketId ticketId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
@@ -54,10 +54,10 @@ instance FromTType' Beam.Sos Domain.Types.Sos.Sos where
     pure $
       Just
         Domain.Types.Sos.Sos
-          { flow = flow,
-            id = Kernel.Types.Id.Id id,
+          { id = Kernel.Types.Id.Id id,
             personId = Kernel.Types.Id.Id personId,
             rideId = Kernel.Types.Id.Id rideId,
+            flow = flow,
             status = status,
             ticketId = ticketId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
@@ -69,10 +69,10 @@ instance FromTType' Beam.Sos Domain.Types.Sos.Sos where
 instance ToTType' Beam.Sos Domain.Types.Sos.Sos where
   toTType' (Domain.Types.Sos.Sos {..}) = do
     Beam.SosT
-      { Beam.flow = flow,
-        Beam.id = Kernel.Types.Id.getId id,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.rideId = Kernel.Types.Id.getId rideId,
+        Beam.flow = flow,
         Beam.status = status,
         Beam.ticketId = ticketId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

@@ -11,11 +11,11 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data FareBreakup = FareBreakup
-  { amount :: Kernel.Types.Common.Price,
+  { id :: Kernel.Types.Id.Id Domain.Types.FareBreakup.FareBreakup,
     description :: Kernel.Prelude.Text,
-    entityId :: Kernel.Prelude.Text,
+    amount :: Kernel.Types.Common.Price,
     entityType :: Domain.Types.FareBreakup.FareBreakupEntityType,
-    id :: Kernel.Types.Id.Id Domain.Types.FareBreakup.FareBreakup
+    entityId :: Kernel.Prelude.Text
   }
   deriving (Show)
 

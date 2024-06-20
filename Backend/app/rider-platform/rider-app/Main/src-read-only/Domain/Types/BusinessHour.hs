@@ -13,9 +13,9 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data BusinessHour = BusinessHour
-  { btype :: Domain.Types.BusinessHour.BusinessHourType,
+  { id :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
+    btype :: Domain.Types.BusinessHour.BusinessHourType,
     categoryId :: [Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory],
-    id :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

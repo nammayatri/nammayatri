@@ -13,9 +13,9 @@ import qualified Kernel.Types.Beckn.Context
 import Tools.Beam.UtilsTH
 
 data MerchantStateT f = MerchantStateT
-  { allowedDestinationStates :: B.C f [Kernel.Types.Beckn.Context.IndianState],
-    merchantId :: B.C f Kernel.Prelude.Text,
+  { merchantId :: B.C f Kernel.Prelude.Text,
     state :: B.C f Kernel.Types.Beckn.Context.IndianState,
+    allowedDestinationStates :: B.C f [Kernel.Types.Beckn.Context.IndianState],
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

@@ -11,15 +11,15 @@ ClientPersonInfo:
   tableName: client_person_info
 
   fields:
-    id: Id ClientPersonInfo
-    clientId : Maybe (Id Client)
-    personId: Id Person
-    vehicleCategory : Maybe VehicleCategory
-    merchantOperatingCityId: Id MerchantOperatingCity
-    merchantId : Id Merchant
-    rideCount : Int
-    createdAt: UTCTime
-    updatedAt: UTCTime
+    - id: Id ClientPersonInfo
+    - clientId : Maybe (Id Client)
+    - personId: Id Person
+    - vehicleCategory : Maybe VehicleCategory
+    - merchantOperatingCityId: Id MerchantOperatingCity
+    - merchantId : Id Merchant
+    - rideCount : Int
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
 
   constraints:
     id: PrimaryKey

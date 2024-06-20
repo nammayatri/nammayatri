@@ -13,16 +13,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data IssueT f = IssueT
-  { bookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    contactEmail :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
+  { id :: B.C f Kernel.Prelude.Text,
     customerId :: B.C f Kernel.Prelude.Text,
-    description :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
-    nightSafety :: B.C f Kernel.Prelude.Bool,
+    bookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    contactEmail :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     reason :: B.C f Kernel.Prelude.Text,
-    status :: B.C f IssueManagement.Common.IssueStatus,
+    description :: B.C f Kernel.Prelude.Text,
     ticketId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    status :: B.C f IssueManagement.Common.IssueStatus,
+    nightSafety :: B.C f Kernel.Prelude.Bool,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
@@ -33,6 +33,6 @@ instance B.Table IssueT where
 
 type Issue = IssueT Identity
 
-$(enableKVPG ''IssueT ['id] [['bookingId], ['customerId], ['ticketId]])
+$(enableKVPG ''IssueT ['id] [['customerId], ['bookingId], ['ticketId]])
 
 $(mkTableInstances ''IssueT "issue")

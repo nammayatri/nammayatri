@@ -13,15 +13,15 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data MerchantOperatingCity = MerchantOperatingCity
-  { city :: Kernel.Types.Beckn.Context.City,
-    country :: Kernel.Types.Beckn.Context.Country,
-    distanceUnit :: Kernel.Types.Common.DistanceUnit,
-    id :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    lat :: Kernel.Prelude.Double,
-    long :: Kernel.Prelude.Double,
+  { id :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantShortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
     state :: Kernel.Types.Beckn.Context.IndianState,
+    country :: Kernel.Types.Beckn.Context.Country,
+    city :: Kernel.Types.Beckn.Context.City,
+    lat :: Kernel.Prelude.Double,
+    long :: Kernel.Prelude.Double,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

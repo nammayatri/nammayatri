@@ -11,7 +11,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
-data ValueAddNPT f = ValueAddNPT {enabled :: B.C f Kernel.Prelude.Bool, subscriberId :: B.C f Kernel.Prelude.Text, createdAt :: B.C f Kernel.Prelude.UTCTime, updatedAt :: B.C f Kernel.Prelude.UTCTime}
+data ValueAddNPT f = ValueAddNPT {subscriberId :: B.C f Kernel.Prelude.Text, enabled :: B.C f Kernel.Prelude.Bool, createdAt :: B.C f Kernel.Prelude.UTCTime, updatedAt :: B.C f Kernel.Prelude.UTCTime}
   deriving (Generic, B.Beamable)
 
 instance B.Table ValueAddNPT where

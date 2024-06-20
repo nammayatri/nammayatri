@@ -12,11 +12,11 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PersonDisabilityT f = PersonDisabilityT
-  { createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { personId :: B.C f Kernel.Prelude.Text,
     disabilityId :: B.C f Kernel.Prelude.Text,
-    personId :: B.C f Kernel.Prelude.Text,
     tag :: B.C f Kernel.Prelude.Text,
+    description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)

@@ -12,14 +12,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data AppInstallsT f = AppInstallsT
-  { appVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    bundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
+  { id :: B.C f Kernel.Prelude.Text,
     deviceToken :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    platform :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     source :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    appVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    bundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    platform :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)

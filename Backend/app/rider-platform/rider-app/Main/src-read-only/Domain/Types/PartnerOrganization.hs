@@ -12,11 +12,11 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data PartnerOrganizationE e = PartnerOrganization
-  { apiKey :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
-    createdAt :: Kernel.Prelude.UTCTime,
-    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+  { orgId :: Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization,
     name :: Kernel.Prelude.Text,
-    orgId :: Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization,
+    apiKey :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)
@@ -29,10 +29,10 @@ instance EncryptedItem PartnerOrganization where
   type Unencrypted PartnerOrganization = (DecryptedPartnerOrganization, HashSalt)
   encryptItem (entity, salt) = do
     apiKey_ <- encryptItem (apiKey entity, salt)
-    pure PartnerOrganization {apiKey = apiKey_, createdAt = createdAt entity, merchantId = merchantId entity, name = name entity, orgId = orgId entity, updatedAt = updatedAt entity}
+    pure PartnerOrganization {orgId = orgId entity, name = name entity, apiKey = apiKey_, merchantId = merchantId entity, createdAt = createdAt entity, updatedAt = updatedAt entity}
   decryptItem entity = do
     apiKey_ <- fst <$> decryptItem (apiKey entity)
-    pure (PartnerOrganization {apiKey = apiKey_, createdAt = createdAt entity, merchantId = merchantId entity, name = name entity, orgId = orgId entity, updatedAt = updatedAt entity}, "")
+    pure (PartnerOrganization {orgId = orgId entity, name = name entity, apiKey = apiKey_, merchantId = merchantId entity, createdAt = createdAt entity, updatedAt = updatedAt entity}, "")
 
 instance EncryptedItem' PartnerOrganization where
   type UnencryptedItem PartnerOrganization = DecryptedPartnerOrganization

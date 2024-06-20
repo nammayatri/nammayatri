@@ -13,10 +13,10 @@ import qualified Kernel.Types.Beckn.Domain
 import Tools.Beam.UtilsTH
 
 data BlackListOrgT f = BlackListOrgT
-  { createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    domain :: B.C f Kernel.Types.Beckn.Domain.Domain,
-    id :: B.C f Kernel.Prelude.Text,
+  { id :: B.C f Kernel.Prelude.Text,
     subscriberId :: B.C f Kernel.Prelude.Text,
+    domain :: B.C f Kernel.Types.Beckn.Domain.Domain,
+    createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)

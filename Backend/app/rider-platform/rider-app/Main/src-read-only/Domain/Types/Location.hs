@@ -12,11 +12,11 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data Location = Location
-  { address :: Domain.Types.LocationAddress.LocationAddress,
-    createdAt :: Kernel.Prelude.UTCTime,
-    id :: Kernel.Types.Id.Id Domain.Types.Location.Location,
+  { id :: Kernel.Types.Id.Id Domain.Types.Location.Location,
     lat :: Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Double,
+    address :: Domain.Types.LocationAddress.LocationAddress,
+    createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, Eq, Kernel.External.Maps.HasCoordinates)

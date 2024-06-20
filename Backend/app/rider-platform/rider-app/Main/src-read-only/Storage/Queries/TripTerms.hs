@@ -32,8 +32,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.TripTerms.TripTerms {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
-      Se.Set Beam.descriptions (intercalateDescriptions descriptions),
+    [ Se.Set Beam.descriptions (intercalateDescriptions descriptions),
+      Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
       Se.Set Beam.updatedAt (Just _now)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -42,13 +42,13 @@ instance FromTType' Beam.TripTerms Domain.Types.TripTerms.TripTerms where
   fromTType' (Beam.TripTermsT {..}) = do
     createdAt' <- getCreatedAt createdAt
     updatedAt' <- getUpdatedAt updatedAt
-    pure $ Just Domain.Types.TripTerms.TripTerms {createdAt = createdAt', descriptions = splitDescriptions descriptions, id = Kernel.Types.Id.Id id, updatedAt = updatedAt'}
+    pure $ Just Domain.Types.TripTerms.TripTerms {id = Kernel.Types.Id.Id id, descriptions = splitDescriptions descriptions, createdAt = createdAt', updatedAt = updatedAt'}
 
 instance ToTType' Beam.TripTerms Domain.Types.TripTerms.TripTerms where
   toTType' (Domain.Types.TripTerms.TripTerms {..}) = do
     Beam.TripTermsT
-      { Beam.createdAt = Kernel.Prelude.Just createdAt,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.descriptions = intercalateDescriptions descriptions,
-        Beam.id = Kernel.Types.Id.getId id,
+        Beam.createdAt = Kernel.Prelude.Just createdAt,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt
       }

@@ -14,21 +14,21 @@ import qualified Kernel.Utils.Common
 import Tools.Beam.UtilsTH
 
 data InterCityDetailsT f = InterCityDetailsT
-  { baseFare :: B.C f Kernel.Types.Common.HighPrecMoney,
+  { id :: B.C f Kernel.Prelude.Text,
+    baseFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     currency :: B.C f Kernel.Utils.Common.Currency,
+    perHourCharge :: B.C f Kernel.Types.Common.HighPrecMoney,
+    perExtraMinRate :: B.C f Kernel.Types.Common.HighPrecMoney,
+    perExtraKmRate :: B.C f Kernel.Types.Common.HighPrecMoney,
     deadKmFare :: B.C f Kernel.Types.Common.HighPrecMoney,
-    id :: B.C f Kernel.Prelude.Text,
     distanceUnit :: B.C f Kernel.Types.Common.DistanceUnit,
     kmPerPlannedExtraHour :: B.C f Kernel.Types.Common.HighPrecDistance,
+    plannedPerKmRateOneWay :: B.C f Kernel.Types.Common.HighPrecMoney,
+    plannedPerKmRateRoundTrip :: B.C f Kernel.Types.Common.HighPrecMoney,
+    perDayMaxHourAllowance :: B.C f Kernel.Types.Common.Hours,
     nightShiftCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     nightShiftEnd :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
     nightShiftStart :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
-    perDayMaxHourAllowance :: B.C f Kernel.Types.Common.Hours,
-    perExtraKmRate :: B.C f Kernel.Types.Common.HighPrecMoney,
-    perExtraMinRate :: B.C f Kernel.Types.Common.HighPrecMoney,
-    perHourCharge :: B.C f Kernel.Types.Common.HighPrecMoney,
-    plannedPerKmRateOneWay :: B.C f Kernel.Types.Common.HighPrecMoney,
-    plannedPerKmRateRoundTrip :: B.C f Kernel.Types.Common.HighPrecMoney,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

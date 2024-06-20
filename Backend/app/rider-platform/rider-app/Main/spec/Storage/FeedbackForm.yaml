@@ -39,12 +39,12 @@ FeedbackForm:
 
   derives: Generic,Show,FromJSON,ToJSON,ToSchema,Eq
   fields:
-    categoryName: Category
-    id: Id FeedbackFormItem
-    rating: Maybe Int
-    question: Text
-    answer: '[Text]'
-    answerType: AnswerType
+    - categoryName: Category
+    - id: Id FeedbackFormItem
+    - rating: Maybe Int
+    - question: Text
+    - answer: '[Text]'
+    - answerType: AnswerType
 
   sqlType:
     categoryName: character varying(255)

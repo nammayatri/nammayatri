@@ -12,25 +12,25 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data HotSpotConfigT f = HotSpotConfigT
-  { blockRadius :: B.C f Kernel.Prelude.Int,
-    hotSpotExpiry :: B.C f Kernel.Prelude.Int,
-    hotSpotRadius :: B.C f Kernel.Prelude.Double,
-    id :: B.C f Kernel.Prelude.Text,
-    maxGeoHashToFilter :: B.C f Kernel.Prelude.Int,
-    maxNumHotSpotsToShow :: B.C f Kernel.Prelude.Int,
+  { id :: B.C f Kernel.Prelude.Text,
+    blockRadius :: B.C f Kernel.Prelude.Int,
     minFrequencyOfHotSpot :: B.C f Kernel.Prelude.Int,
-    precisionToFilterGeohash :: B.C f Kernel.Prelude.Int,
-    precisionToGetGeohash :: B.C f Kernel.Prelude.Int,
-    precisionToSetGeohash :: B.C f Kernel.Prelude.Int,
-    shouldSaveSearchHotSpot :: B.C f Kernel.Prelude.Bool,
-    shouldTakeHotSpot :: B.C f Kernel.Prelude.Bool,
-    weightOfAutoPickup :: B.C f Kernel.Prelude.Int,
-    weightOfAutoSaved :: B.C f Kernel.Prelude.Int,
     weightOfManualPickup :: B.C f Kernel.Prelude.Int,
     weightOfManualSaved :: B.C f Kernel.Prelude.Int,
-    weightOfSpecialLocation :: B.C f Kernel.Prelude.Int,
+    weightOfAutoPickup :: B.C f Kernel.Prelude.Int,
+    weightOfAutoSaved :: B.C f Kernel.Prelude.Int,
+    weightOfTripStart :: B.C f Kernel.Prelude.Int,
+    maxNumHotSpotsToShow :: B.C f Kernel.Prelude.Int,
     weightOfTripEnd :: B.C f Kernel.Prelude.Int,
-    weightOfTripStart :: B.C f Kernel.Prelude.Int
+    weightOfSpecialLocation :: B.C f Kernel.Prelude.Int,
+    shouldTakeHotSpot :: B.C f Kernel.Prelude.Bool,
+    shouldSaveSearchHotSpot :: B.C f Kernel.Prelude.Bool,
+    hotSpotRadius :: B.C f Kernel.Prelude.Double,
+    precisionToSetGeohash :: B.C f Kernel.Prelude.Int,
+    precisionToGetGeohash :: B.C f Kernel.Prelude.Int,
+    precisionToFilterGeohash :: B.C f Kernel.Prelude.Int,
+    maxGeoHashToFilter :: B.C f Kernel.Prelude.Int,
+    hotSpotExpiry :: B.C f Kernel.Prelude.Int
   }
   deriving (Generic, B.Beamable)
 

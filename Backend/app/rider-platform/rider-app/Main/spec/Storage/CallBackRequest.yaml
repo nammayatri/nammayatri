@@ -11,14 +11,14 @@ CallbackRequest:
       enum: "PENDING,RESOLVED,CLOSED"
 
   fields:
-    id : Id CallbackRequest
-    merchantId : Id Merchant
-    customerName : Maybe Text
-    customerPhone : EncryptedHashedField e Text
-    customerMobileCountryCode : Text
-    status : CallbackRequestStatus
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    - id : Id CallbackRequest
+    - merchantId : Id Merchant
+    - customerName : Maybe Text
+    - customerPhone : EncryptedHashedField e Text
+    - customerMobileCountryCode : Text
+    - status : CallbackRequestStatus
+    - createdAt : UTCTime
+    - updatedAt : UTCTime
 
   constraints:
     id: PrimaryKey

@@ -19,20 +19,20 @@ instance FromTType' Beam.MerchantServiceConfig Domain.Types.MerchantServiceConfi
     pure $
       Just
         Domain.Types.MerchantServiceConfig.MerchantServiceConfig
-          { createdAt = createdAt,
-            merchantId = Kernel.Types.Id.Id merchantId,
+          { merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             serviceConfig = serviceConfig',
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            createdAt = createdAt
           }
 
 instance ToTType' Beam.MerchantServiceConfig Domain.Types.MerchantServiceConfig.MerchantServiceConfig where
   toTType' (Domain.Types.MerchantServiceConfig.MerchantServiceConfig {..}) = do
     Beam.MerchantServiceConfigT
-      { Beam.createdAt = createdAt,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+      { Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.configJSON = snd $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig,
         Beam.serviceName = fst $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.createdAt = createdAt
       }

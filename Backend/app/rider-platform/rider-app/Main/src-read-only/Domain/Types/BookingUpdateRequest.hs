@@ -15,23 +15,23 @@ import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data BookingUpdateRequest = BookingUpdateRequest
-  { bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
-    createdAt :: Kernel.Prelude.UTCTime,
-    currentPointLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    currentPointLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    distanceUnit :: Kernel.Types.Common.DistanceUnit,
-    errorObj :: Kernel.Prelude.Maybe Domain.Types.BookingUpdateRequest.ErrorObj,
+  { id :: Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest,
+    bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
+    status :: Domain.Types.BookingUpdateRequest.BookingUpdateRequestStatus,
+    travelledDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     estimatedFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    id :: Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest,
-    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    oldEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
-    oldEstimatedFare :: Kernel.Types.Common.HighPrecMoney,
-    status :: Domain.Types.BookingUpdateRequest.BookingUpdateRequestStatus,
     totalDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
-    travelledDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
-    updatedAt :: Kernel.Prelude.UTCTime
+    currentPointLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    currentPointLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    oldEstimatedFare :: Kernel.Types.Common.HighPrecMoney,
+    oldEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
+    errorObj :: Kernel.Prelude.Maybe Domain.Types.BookingUpdateRequest.ErrorObj,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

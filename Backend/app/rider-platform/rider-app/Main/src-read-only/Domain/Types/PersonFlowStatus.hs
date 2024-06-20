@@ -13,5 +13,5 @@ import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
-data PersonFlowStatus = PersonFlowStatus {flowStatus :: Domain.Types.Extra.PersonFlowStatus.FlowStatus, personId :: Kernel.Types.Id.Id Domain.Types.Person.Person, updatedAt :: Kernel.Prelude.UTCTime}
+data PersonFlowStatus = PersonFlowStatus {personId :: Kernel.Types.Id.Id Domain.Types.Person.Person, flowStatus :: Domain.Types.Extra.PersonFlowStatus.FlowStatus, updatedAt :: Kernel.Prelude.UTCTime}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

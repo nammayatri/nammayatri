@@ -8,28 +8,28 @@ RiderConfig:
   tableName: rider_config
 
   fields:
-    merchantOperatingCityId: Id MerchantOperatingCity
-    enableLocalPoliceSupport: Bool
-    localPoliceNumber: Maybe Text
-    enableSupportForSafety: Bool
-    videoFileSizeUpperLimit: Int
-    timeDiffFromUtc: Seconds
-    enableEmergencyContactAddedMessage: Bool
-    safetyCheckStartTime: Seconds
-    safetyCheckEndTime: Seconds
-    trackingShortUrlPattern: Text
-    specialZoneRadius: Int
-    appUrl: Text
-    collectAutoCompleteData: Maybe Bool
-    distanceWeightage: Int
-    collectMMIRouteData: Maybe Bool
-    isAvoidToll: Bool
-    autoUnblockSafetyCenterAfterDays: Int
-    placeNameCacheExpiryDays: Maybe Int
-    bookingSyncStatusCallSecondsDiffThreshold: Maybe Int
-    kaptureQueue: Text # deprecated
-    kaptureConfig: IssueManagement.Common.KaptureConfig
-    emailOtpConfig: Maybe Email.Types.EmailOTPConfig
+    - merchantOperatingCityId: Id MerchantOperatingCity
+    - enableLocalPoliceSupport: Bool
+    - localPoliceNumber: Maybe Text
+    - enableSupportForSafety: Bool
+    - videoFileSizeUpperLimit: Int
+    - timeDiffFromUtc: Seconds
+    - enableEmergencyContactAddedMessage: Bool
+    - safetyCheckStartTime: Seconds
+    - safetyCheckEndTime: Seconds
+    - trackingShortUrlPattern: Text
+    - specialZoneRadius: Int
+    - appUrl: Text
+    - collectAutoCompleteData: Maybe Bool
+    - distanceWeightage: Int
+    - collectMMIRouteData: Maybe Bool
+    - isAvoidToll: Bool
+    - autoUnblockSafetyCenterAfterDays: Int
+    - placeNameCacheExpiryDays: Maybe Int
+    - bookingSyncStatusCallSecondsDiffThreshold: Maybe Int
+    - kaptureQueue: Text # deprecated
+    - kaptureConfig: IssueManagement.Common.KaptureConfig
+    - emailOtpConfig: Maybe Email.Types.EmailOTPConfig
 
   constraints:
     merchantOperatingCityId: PrimaryKey

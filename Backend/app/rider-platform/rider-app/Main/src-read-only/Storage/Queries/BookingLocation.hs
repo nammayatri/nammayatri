@@ -44,10 +44,10 @@ instance FromTType' Beam.BookingLocation Domain.Types.BookingLocation.BookingLoc
     pure $
       Just
         Domain.Types.BookingLocation.BookingLocation
-          { address = Domain.Types.LocationAddress.LocationAddress {street, door, city, state, country, building, areaCode, area, ward, placeId},
-            id = Kernel.Types.Id.Id id,
+          { id = Kernel.Types.Id.Id id,
             lat = lat,
             lon = lon,
+            address = Domain.Types.LocationAddress.LocationAddress {street, door, city, state, country, building, areaCode, area, ward, placeId},
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -55,7 +55,10 @@ instance FromTType' Beam.BookingLocation Domain.Types.BookingLocation.BookingLoc
 instance ToTType' Beam.BookingLocation Domain.Types.BookingLocation.BookingLocation where
   toTType' (Domain.Types.BookingLocation.BookingLocation {..}) = do
     Beam.BookingLocationT
-      { Beam.area = Domain.Types.LocationAddress.area address,
+      { Beam.id = Kernel.Types.Id.getId id,
+        Beam.lat = lat,
+        Beam.lon = lon,
+        Beam.area = Domain.Types.LocationAddress.area address,
         Beam.areaCode = Domain.Types.LocationAddress.areaCode address,
         Beam.building = Domain.Types.LocationAddress.building address,
         Beam.city = Domain.Types.LocationAddress.city address,
@@ -65,9 +68,6 @@ instance ToTType' Beam.BookingLocation Domain.Types.BookingLocation.BookingLocat
         Beam.state = Domain.Types.LocationAddress.state address,
         Beam.street = Domain.Types.LocationAddress.street address,
         Beam.ward = Domain.Types.LocationAddress.ward address,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.lat = lat,
-        Beam.lon = lon,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

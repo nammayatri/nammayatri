@@ -31,13 +31,13 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.AppInstalls.AppInstalls {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.appVersion (Kernel.Prelude.fmap Kernel.Utils.Version.versionToText appVersion),
-      Se.Set Beam.bundleVersion (Kernel.Prelude.fmap Kernel.Utils.Version.versionToText bundleVersion),
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.deviceToken deviceToken,
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
-      Se.Set Beam.platform platform,
+    [ Se.Set Beam.deviceToken deviceToken,
       Se.Set Beam.source source,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.appVersion (Kernel.Prelude.fmap Kernel.Utils.Version.versionToText appVersion),
+      Se.Set Beam.bundleVersion (Kernel.Prelude.fmap Kernel.Utils.Version.versionToText bundleVersion),
+      Se.Set Beam.platform platform,
+      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

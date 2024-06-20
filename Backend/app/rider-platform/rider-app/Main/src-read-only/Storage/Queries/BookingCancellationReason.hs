@@ -35,18 +35,18 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.BookingCancellationReason.BookingCancellationReason {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.additionalInfo additionalInfo,
-      Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
-      Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
+    [ Se.Set Beam.rideId (Kernel.Types.Id.getId <$> rideId),
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.source source,
+      Se.Set Beam.reasonCode reasonCode,
+      Se.Set Beam.reasonStage reasonStage,
+      Se.Set Beam.additionalInfo additionalInfo,
       Se.Set Beam.driverCancellationLocationLat (driverCancellationLocation <&> (.lat)),
       Se.Set Beam.driverCancellationLocationLon (driverCancellationLocation <&> (.lon)),
       Se.Set Beam.driverDistToPickup (Kernel.Types.Common.distanceToMeters <$> driverDistToPickup),
       Se.Set Beam.driverDistToPickupValue (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> driverDistToPickup),
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.reasonCode reasonCode,
-      Se.Set Beam.reasonStage reasonStage,
-      Se.Set Beam.rideId (Kernel.Types.Id.getId <$> rideId),
-      Se.Set Beam.source source,
+      Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
+      Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
       Se.Set Beam.updatedAt (Just _now)
     ]
     [Se.And [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)]]

@@ -13,12 +13,12 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data FeedbackForm = FeedbackForm
-  { answer :: [Kernel.Prelude.Text],
-    answerType :: Domain.Types.FeedbackForm.AnswerType,
-    categoryName :: Domain.Types.FeedbackForm.Category,
+  { categoryName :: Domain.Types.FeedbackForm.Category,
     id :: Kernel.Types.Id.Id Domain.Types.FeedbackForm.FeedbackFormItem,
+    rating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     question :: Kernel.Prelude.Text,
-    rating :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    answer :: [Kernel.Prelude.Text],
+    answerType :: Domain.Types.FeedbackForm.AnswerType
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq)
 

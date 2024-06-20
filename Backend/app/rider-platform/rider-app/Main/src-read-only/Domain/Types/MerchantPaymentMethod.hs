@@ -16,15 +16,15 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data MerchantPaymentMethodD (s :: UsageSafety) = MerchantPaymentMethod
-  { collectedBy :: Domain.Types.Extra.MerchantPaymentMethod.PaymentCollector,
-    createdAt :: Kernel.Prelude.UTCTime,
-    id :: Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod,
+  { id :: Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    paymentInstrument :: Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     paymentType :: Domain.Types.Extra.MerchantPaymentMethod.PaymentType,
+    paymentInstrument :: Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
+    collectedBy :: Domain.Types.Extra.MerchantPaymentMethod.PaymentCollector,
     priority :: Kernel.Prelude.Int,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    createdAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)
 

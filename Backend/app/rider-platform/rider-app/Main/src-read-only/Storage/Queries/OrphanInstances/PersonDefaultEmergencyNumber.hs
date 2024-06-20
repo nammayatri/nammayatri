@@ -17,30 +17,30 @@ instance FromTType' Beam.PersonDefaultEmergencyNumber Domain.Types.PersonDefault
     pure $
       Just
         Domain.Types.PersonDefaultEmergencyNumber.PersonDefaultEmergencyNumber
-          { contactPersonId = Kernel.Types.Id.Id <$> contactPersonId,
+          { personId = Kernel.Types.Id.Id personId,
+            name = name,
+            mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
+            mobileCountryCode = mobileCountryCode,
             createdAt = createdAt,
+            contactPersonId = Kernel.Types.Id.Id <$> contactPersonId,
             enableForFollowing = enableForFollowing,
             enableForShareRide = enableForShareRide,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
-            mobileCountryCode = mobileCountryCode,
-            mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
-            name = name,
-            personId = Kernel.Types.Id.Id personId,
             priority = priority
           }
 
 instance ToTType' Beam.PersonDefaultEmergencyNumber Domain.Types.PersonDefaultEmergencyNumber.PersonDefaultEmergencyNumber where
   toTType' (Domain.Types.PersonDefaultEmergencyNumber.PersonDefaultEmergencyNumber {..}) = do
     Beam.PersonDefaultEmergencyNumberT
-      { Beam.contactPersonId = Kernel.Types.Id.getId <$> contactPersonId,
+      { Beam.personId = Kernel.Types.Id.getId personId,
+        Beam.name = name,
+        Beam.mobileNumberEncrypted = mobileNumber & unEncrypted . encrypted,
+        Beam.mobileNumberHash = mobileNumber & hash,
+        Beam.mobileCountryCode = mobileCountryCode,
         Beam.createdAt = createdAt,
+        Beam.contactPersonId = Kernel.Types.Id.getId <$> contactPersonId,
         Beam.enableForFollowing = enableForFollowing,
         Beam.enableForShareRide = enableForShareRide,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.mobileCountryCode = mobileCountryCode,
-        Beam.mobileNumberEncrypted = mobileNumber & unEncrypted . encrypted,
-        Beam.mobileNumberHash = mobileNumber & hash,
-        Beam.name = name,
-        Beam.personId = Kernel.Types.Id.getId personId,
         Beam.priority = priority
       }

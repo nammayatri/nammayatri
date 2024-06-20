@@ -11,22 +11,22 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data RegistrationToken = RegistrationToken
-  { attempts :: Kernel.Prelude.Int,
-    authExpiry :: Kernel.Prelude.Int,
+  { id :: Kernel.Types.Id.Id Domain.Types.RegistrationToken.RegistrationToken,
+    token :: Kernel.Prelude.Text,
+    attempts :: Kernel.Prelude.Int,
     authMedium :: Domain.Types.RegistrationToken.Medium,
     authType :: Domain.Types.RegistrationToken.LoginType,
     authValueHash :: Kernel.Prelude.Text,
-    createdAt :: Kernel.Prelude.UTCTime,
-    createdViaPartnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
-    entityId :: Kernel.Prelude.Text,
-    entityType :: Domain.Types.RegistrationToken.RTEntityType,
-    id :: Kernel.Types.Id.Id Domain.Types.RegistrationToken.RegistrationToken,
-    info :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    merchantId :: Kernel.Prelude.Text,
-    token :: Kernel.Prelude.Text,
+    verified :: Kernel.Prelude.Bool,
+    authExpiry :: Kernel.Prelude.Int,
     tokenExpiry :: Kernel.Prelude.Int,
+    entityId :: Kernel.Prelude.Text,
+    merchantId :: Kernel.Prelude.Text,
+    entityType :: Domain.Types.RegistrationToken.RTEntityType,
+    createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime,
-    verified :: Kernel.Prelude.Bool
+    info :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdViaPartnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

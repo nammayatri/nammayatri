@@ -43,10 +43,10 @@ instance FromTType' Beam.PartnerOrgStation Domain.Types.PartnerOrgStation.Partne
     pure $
       Just
         Domain.Types.PartnerOrgStation.PartnerOrgStation
-          { name = name,
-            partnerOrgId = Kernel.Types.Id.Id partnerOrgId,
-            partnerOrgStationId = Kernel.Types.Id.Id partnerOrgStationId,
+          { partnerOrgId = Kernel.Types.Id.Id partnerOrgId,
             stationId = Kernel.Types.Id.Id stationId,
+            partnerOrgStationId = Kernel.Types.Id.Id partnerOrgStationId,
+            name = name,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -54,10 +54,10 @@ instance FromTType' Beam.PartnerOrgStation Domain.Types.PartnerOrgStation.Partne
 instance ToTType' Beam.PartnerOrgStation Domain.Types.PartnerOrgStation.PartnerOrgStation where
   toTType' (Domain.Types.PartnerOrgStation.PartnerOrgStation {..}) = do
     Beam.PartnerOrgStationT
-      { Beam.name = name,
-        Beam.partnerOrgId = Kernel.Types.Id.getId partnerOrgId,
-        Beam.partnerOrgStationId = Kernel.Types.Id.getId partnerOrgStationId,
+      { Beam.partnerOrgId = Kernel.Types.Id.getId partnerOrgId,
         Beam.stationId = Kernel.Types.Id.getId stationId,
+        Beam.partnerOrgStationId = Kernel.Types.Id.getId partnerOrgStationId,
+        Beam.name = name,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

@@ -28,11 +28,11 @@ updateByPrimaryKey (Domain.Types.OnSearchEvent.OnSearchEvent {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bppId bppId,
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.errorCode errorCode,
-      Se.Set Beam.errorMessage errorMessage,
-      Se.Set Beam.errorType errorType,
       Se.Set Beam.messageId messageId,
+      Se.Set Beam.errorCode errorCode,
+      Se.Set Beam.errorType errorType,
+      Se.Set Beam.errorMessage errorMessage,
+      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -42,25 +42,25 @@ instance FromTType' Beam.OnSearchEvent Domain.Types.OnSearchEvent.OnSearchEvent 
     pure $
       Just
         Domain.Types.OnSearchEvent.OnSearchEvent
-          { bppId = bppId,
-            createdAt = createdAt,
-            errorCode = errorCode,
-            errorMessage = errorMessage,
-            errorType = errorType,
-            id = Kernel.Types.Id.Id id,
+          { id = Kernel.Types.Id.Id id,
+            bppId = bppId,
             messageId = messageId,
+            errorCode = errorCode,
+            errorType = errorType,
+            errorMessage = errorMessage,
+            createdAt = createdAt,
             updatedAt = updatedAt
           }
 
 instance ToTType' Beam.OnSearchEvent Domain.Types.OnSearchEvent.OnSearchEvent where
   toTType' (Domain.Types.OnSearchEvent.OnSearchEvent {..}) = do
     Beam.OnSearchEventT
-      { Beam.bppId = bppId,
-        Beam.createdAt = createdAt,
-        Beam.errorCode = errorCode,
-        Beam.errorMessage = errorMessage,
-        Beam.errorType = errorType,
-        Beam.id = Kernel.Types.Id.getId id,
+      { Beam.id = Kernel.Types.Id.getId id,
+        Beam.bppId = bppId,
         Beam.messageId = messageId,
+        Beam.errorCode = errorCode,
+        Beam.errorType = errorType,
+        Beam.errorMessage = errorMessage,
+        Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

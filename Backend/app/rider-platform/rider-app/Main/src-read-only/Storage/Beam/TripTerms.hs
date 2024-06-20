@@ -13,9 +13,9 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data TripTermsT f = TripTermsT
-  { createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+  { id :: B.C f Data.Text.Text,
     descriptions :: B.C f Data.Text.Text,
-    id :: B.C f Data.Text.Text,
+    createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)

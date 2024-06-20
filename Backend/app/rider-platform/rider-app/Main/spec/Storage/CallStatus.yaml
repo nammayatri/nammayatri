@@ -9,17 +9,17 @@ CallStatus:
   tableName: call_status
 
   fields:
-    id : Id CallStatus
-    callId : Text
-    rideId : Maybe (Id Ride)
-    dtmfNumberUsed : Maybe Text
-    status : Kernel.External.Call.Interface.Types.CallStatus
-    recordingUrl : Maybe Text
-    conversationDuration : Int
-    merchantId : Maybe Text
-    callService : Maybe CallService
-    callError : Maybe Text
-    createdAt : UTCTime
+    - id : Id CallStatus
+    - callId : Text
+    - rideId : Maybe (Id Ride)
+    - dtmfNumberUsed : Maybe Text
+    - status : Kernel.External.Call.Interface.Types.CallStatus
+    - recordingUrl : Maybe Text
+    - conversationDuration : Int
+    - merchantId : Maybe Text
+    - callService : Maybe CallService
+    - callError : Maybe Text
+    - createdAt : UTCTime
 
   sqlType:
     callId: character varying(255)

@@ -30,14 +30,14 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.CancellationReason.CancellationReason {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
-      Se.Set Beam.description description,
+    [ Se.Set Beam.description description,
       Se.Set Beam.enabled enabled,
-      Se.Set Beam.onAssign onAssign,
-      Se.Set Beam.onConfirm onConfirm,
-      Se.Set Beam.onInit onInit,
       Se.Set Beam.onSearch onSearch,
+      Se.Set Beam.onInit onInit,
+      Se.Set Beam.onConfirm onConfirm,
+      Se.Set Beam.onAssign onAssign,
       Se.Set Beam.priority priority,
+      Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
       Se.Set Beam.updatedAt (Just _now)
     ]
     [Se.And [Se.Is Beam.reasonCode $ Se.Eq reasonCode]]

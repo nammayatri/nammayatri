@@ -8,12 +8,12 @@ Sos:
   tableName: sos
 
   fields:
-    id : Id Sos
-    personId : Id Person
-    rideId : Id Ride
-    flow : SosType
-    status : SosStatus
-    ticketId : Maybe Text
+    - id : Id Sos
+    - personId : Id Person
+    - rideId : Id Ride
+    - flow : SosType
+    - status : SosStatus
+    - ticketId : Maybe Text
 
   types:
     EmergencyContactId:

@@ -39,20 +39,20 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.DriverOffer.DriverOffer {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.bppQuoteId bppQuoteId,
-      Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
+    [ Se.Set Beam.estimateId (Kernel.Types.Id.getId estimateId),
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.driverName driverName,
+      Se.Set Beam.durationToPickup durationToPickup,
       Se.Set Beam.distanceToPickup (Kernel.Types.Common.distanceToHighPrecMeters <$> distanceToPickup),
       Se.Set Beam.distanceToPickupValue (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> distanceToPickup),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
-      Se.Set Beam.driverName driverName,
-      Se.Set Beam.durationToPickup durationToPickup,
-      Se.Set Beam.estimateId (Kernel.Types.Id.getId estimateId),
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.validTill validTill,
+      Se.Set Beam.bppQuoteId bppQuoteId,
       Se.Set Beam.rating rating,
       Se.Set Beam.status status,
-      Se.Set Beam.updatedAt _now,
-      Se.Set Beam.validTill validTill
+      Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
+      Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -61,38 +61,38 @@ instance FromTType' Beam.DriverOffer Domain.Types.DriverOffer.DriverOffer where
     pure $
       Just
         Domain.Types.DriverOffer.DriverOffer
-          { bppQuoteId = bppQuoteId,
-            createdAt = Kernel.Prelude.fromMaybe updatedAt createdAt,
-            distanceToPickup = Kernel.Types.Common.mkDistanceWithDefault distanceUnit distanceToPickupValue <$> distanceToPickup,
-            distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
-            driverName = driverName,
-            durationToPickup = durationToPickup,
+          { id = Kernel.Types.Id.Id id,
             estimateId = Kernel.Types.Id.Id estimateId,
-            id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
+            driverName = driverName,
+            durationToPickup = durationToPickup,
+            distanceToPickup = Kernel.Types.Common.mkDistanceWithDefault distanceUnit distanceToPickupValue <$> distanceToPickup,
+            distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
+            validTill = validTill,
+            bppQuoteId = bppQuoteId,
             rating = rating,
             status = status,
-            updatedAt = updatedAt,
-            validTill = validTill
+            createdAt = Kernel.Prelude.fromMaybe updatedAt createdAt,
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.DriverOffer Domain.Types.DriverOffer.DriverOffer where
   toTType' (Domain.Types.DriverOffer.DriverOffer {..}) = do
     Beam.DriverOfferT
-      { Beam.bppQuoteId = bppQuoteId,
-        Beam.createdAt = Kernel.Prelude.Just createdAt,
+      { Beam.id = Kernel.Types.Id.getId id,
+        Beam.estimateId = Kernel.Types.Id.getId estimateId,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
+        Beam.driverName = driverName,
+        Beam.durationToPickup = durationToPickup,
         Beam.distanceToPickup = Kernel.Types.Common.distanceToHighPrecMeters <$> distanceToPickup,
         Beam.distanceToPickupValue = Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> distanceToPickup,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
-        Beam.driverName = driverName,
-        Beam.durationToPickup = durationToPickup,
-        Beam.estimateId = Kernel.Types.Id.getId estimateId,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
+        Beam.validTill = validTill,
+        Beam.bppQuoteId = bppQuoteId,
         Beam.rating = rating,
         Beam.status = status,
-        Beam.updatedAt = updatedAt,
-        Beam.validTill = validTill
+        Beam.createdAt = Kernel.Prelude.Just createdAt,
+        Beam.updatedAt = updatedAt
       }

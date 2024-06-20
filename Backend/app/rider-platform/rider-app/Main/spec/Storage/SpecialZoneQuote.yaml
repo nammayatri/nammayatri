@@ -6,10 +6,10 @@ SpecialZoneQuote:
   tableName: special_zone_quote
 
   fields:
-    id : Id SpecialZoneQuote
-    quoteId : Text
-    createdAt: UTCTime
-    updatedAt: UTCTime
+    - id : Id SpecialZoneQuote
+    - quoteId : Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
   derives: "Generic, Show, Kernel.Utils.GenericPretty.PrettyShow"
 
   beamType:

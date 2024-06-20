@@ -12,12 +12,12 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data BppDetailsT f = BppDetailsT
-  { description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { id :: B.C f Kernel.Prelude.Text,
     domain :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
-    logoUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    name :: B.C f Kernel.Prelude.Text,
     subscriberId :: B.C f Kernel.Prelude.Text,
+    name :: B.C f Kernel.Prelude.Text,
+    logoUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     supportNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

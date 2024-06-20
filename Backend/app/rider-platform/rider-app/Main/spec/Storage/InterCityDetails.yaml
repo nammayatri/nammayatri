@@ -19,17 +19,17 @@ InterCityDetails:
   derives: "Generic, Show"
 
   fields:
-    id: Id InterCityDetails
-    baseFare: Price
-    perHourCharge: Price
-    perExtraMinRate: Price
-    perExtraKmRate: Price
-    deadKmFare: Price
-    kmPerPlannedExtraHour: Distance
-    plannedPerKmRateOneWay: Price
-    plannedPerKmRateRoundTrip: Price
-    perDayMaxHourAllowance: Hours
-    nightShiftInfo: Maybe NightShiftInfo
+    - id: Id InterCityDetails
+    - baseFare: Price
+    - perHourCharge: Price
+    - perExtraMinRate: Price
+    - perExtraKmRate: Price
+    - deadKmFare: Price
+    - kmPerPlannedExtraHour: Distance
+    - plannedPerKmRateOneWay: Price
+    - plannedPerKmRateRoundTrip: Price
+    - perDayMaxHourAllowance: Hours
+    - nightShiftInfo: Maybe NightShiftInfo
 
   sqlType:
     baseFare: numeric(30, 2)

@@ -13,16 +13,16 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data Issue = Issue
-  { bookingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Quote.Quote),
-    contactEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    createdAt :: Kernel.Prelude.UTCTime,
+  { id :: Kernel.Types.Id.Id Domain.Types.Issue.Issue,
     customerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    description :: Kernel.Prelude.Text,
-    id :: Kernel.Types.Id.Id Domain.Types.Issue.Issue,
-    nightSafety :: Kernel.Prelude.Bool,
+    bookingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Quote.Quote),
+    contactEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     reason :: Kernel.Prelude.Text,
-    status :: IssueManagement.Common.IssueStatus,
+    description :: Kernel.Prelude.Text,
     ticketId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    status :: IssueManagement.Common.IssueStatus,
+    nightSafety :: Kernel.Prelude.Bool,
+    createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

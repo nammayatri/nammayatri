@@ -64,12 +64,12 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.SpecialOccasion.SpecialOccasion {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
+    [ Se.Set Beam.entityId entityId,
       Se.Set Beam.date date,
       Se.Set Beam.dayOfWeek dayOfWeek,
-      Se.Set Beam.description description,
-      Se.Set Beam.entityId entityId,
       Se.Set Beam.specialDayType specialDayType,
+      Se.Set Beam.description description,
+      Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
@@ -82,13 +82,13 @@ instance FromTType' Beam.SpecialOccasion Domain.Types.SpecialOccasion.SpecialOcc
     pure $
       Just
         Domain.Types.SpecialOccasion.SpecialOccasion
-          { businessHours = Kernel.Types.Id.Id <$> businessHours,
+          { id = Kernel.Types.Id.Id id,
+            entityId = entityId,
             date = date,
             dayOfWeek = dayOfWeek,
-            description = description,
-            entityId = entityId,
-            id = Kernel.Types.Id.Id id,
             specialDayType = specialDayType,
+            description = description,
+            businessHours = Kernel.Types.Id.Id <$> businessHours,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -98,13 +98,13 @@ instance FromTType' Beam.SpecialOccasion Domain.Types.SpecialOccasion.SpecialOcc
 instance ToTType' Beam.SpecialOccasion Domain.Types.SpecialOccasion.SpecialOccasion where
   toTType' (Domain.Types.SpecialOccasion.SpecialOccasion {..}) = do
     Beam.SpecialOccasionT
-      { Beam.businessHours = Kernel.Types.Id.getId <$> businessHours,
+      { Beam.id = Kernel.Types.Id.getId id,
+        Beam.entityId = entityId,
         Beam.date = date,
         Beam.dayOfWeek = dayOfWeek,
-        Beam.description = description,
-        Beam.entityId = entityId,
-        Beam.id = Kernel.Types.Id.getId id,
         Beam.specialDayType = specialDayType,
+        Beam.description = description,
+        Beam.businessHours = Kernel.Types.Id.getId <$> businessHours,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

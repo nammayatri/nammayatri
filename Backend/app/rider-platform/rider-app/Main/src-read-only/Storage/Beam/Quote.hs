@@ -16,14 +16,9 @@ import qualified Kernel.Types.Version
 import Tools.Beam.UtilsTH
 
 data QuoteT f = QuoteT
-  { backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    clientConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    clientOsType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType),
-    clientOsVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
+  { id :: B.C f Kernel.Prelude.Text,
+    requestId :: B.C f Kernel.Prelude.Text,
+    estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     discount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     distanceToNearestDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
@@ -32,32 +27,37 @@ data QuoteT f = QuoteT
     fareProductType :: B.C f Domain.Types.FarePolicy.FareProductType.FareProductType,
     rentalDetailsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialZoneQuoteId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
-    estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
-    estimatedPickupDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedTotalFare :: B.C f Kernel.Types.Common.HighPrecMoney,
-    id :: B.C f Kernel.Prelude.Text,
-    isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    isBlockedRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    isCustomerPrefferedSearchRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    itemId :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    estimatedPickupDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     providerId :: B.C f Kernel.Prelude.Text,
     providerUrl :: B.C f Kernel.Prelude.Text,
-    requestId :: B.C f Kernel.Prelude.Text,
+    itemId :: B.C f Kernel.Prelude.Text,
+    tripTermsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    vehicleVariant :: B.C f Domain.Types.VehicleServiceTier.VehicleServiceTierType,
+    vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     serviceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     serviceTierShortDesc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    specialLocationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    specialLocationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientOsType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType),
+    clientOsVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    isCustomerPrefferedSearchRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isBlockedRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     tollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
-    tripTermsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    validTill :: B.C f Kernel.Prelude.UTCTime,
-    vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
-    vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    vehicleVariant :: B.C f Domain.Types.VehicleServiceTier.VehicleServiceTierType
+    validTill :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -67,6 +67,6 @@ instance B.Table QuoteT where
 
 type Quote = QuoteT Identity
 
-$(enableKVPG ''QuoteT ['id] [['driverOfferId], ['requestId]])
+$(enableKVPG ''QuoteT ['id] [['requestId], ['driverOfferId]])
 
 $(mkTableInstances ''QuoteT "quote")

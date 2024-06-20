@@ -16,11 +16,11 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data MerchantServiceConfigD (s :: UsageSafety) = MerchantServiceConfig
-  { createdAt :: Kernel.Prelude.UTCTime,
-    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+  { merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     serviceConfig :: Domain.Types.Extra.MerchantServiceConfig.ServiceConfigD s,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    createdAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)
 

@@ -11,11 +11,11 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data PersonDisability = PersonDisability
-  { createdAt :: Kernel.Prelude.UTCTime,
-    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     disabilityId :: Kernel.Prelude.Text,
-    personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     tag :: Kernel.Prelude.Text,
+    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

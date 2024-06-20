@@ -11,16 +11,16 @@ LocationMapping:
       enum: "BOOKING, SEARCH_REQUEST, RIDE, BOOKING_UPDATE_REQUEST"
 
   fields:
-    id : Id LocationMapping
-    tag : LocationMappingTags
-    locationId : Id Location
-    entityId : Text
-    order : Int
-    version : Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
-    merchantId : Maybe (Id Merchant)
-    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
+    - id : Id LocationMapping
+    - tag : LocationMappingTags
+    - locationId : Id Location
+    - entityId : Text
+    - order : Int
+    - version : Text
+    - createdAt : UTCTime
+    - updatedAt : UTCTime
+    - merchantId : Maybe (Id Merchant)
+    - merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
 
   constraints:
     id: PrimaryKey

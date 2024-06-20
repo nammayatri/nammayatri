@@ -32,45 +32,45 @@ Merchant:
   derives: "Generic,Show,'UsageSafety"
 
   fields:
-    id: Id Merchant
-    subscriberId: ShortId Subscriber
-    shortId: ShortId Merchant
-    name: Text
-    defaultCity: City
-    defaultState: IndianState
-    country: Country
-    geofencingConfig: GeofencingConfig
-    gatewayUrl: BaseUrl
-    registryUrl: BaseUrl
-    fallbackShortId: ShortId Merchant
-    bapId: Text
-    bapUniqueKeyId: Text
-    driverOfferBaseUrl: BaseUrl
-    driverOfferApiKey: Text
-    driverOfferMerchantId: Text
-    geoHashPrecisionValue: Int
-    minimumDriverRatesCount: Int
-    signingPublicKey: Base64
-    cipherText: Maybe Base64
-    signatureExpiry: Int
-    createdAt: UTCTime
-    updatedAt: UTCTime
-    isAvoidToll: Bool
-    aadhaarVerificationTryLimit: Int
-    aadhaarKeyExpiryTime: Seconds
-    mediaFileSizeUpperLimit: Int
-    mediaFileUrlPattern: Text
-    editPickupDistanceThreshold: Distance
-    driverDistanceThresholdFromPickup: Distance
-    numOfAllowedEditPickupLocationAttemptsThreshold: Int
-    publicMediaFileUrlPattern: Text
-    scheduleRideBufferTime: NominalDiffTime
-    fakeOtpMobileNumbers: "[Text]"
-    fakeOtpEmails: "[Text]"
-    kaptureDisposition: Text # deprecated
-    arrivedPickupThreshold: Distance
-    arrivingPickupThreshold: Distance
-    driverOnTheWayNotifyExpiry: Seconds
+    - id: Id Merchant
+    - subscriberId: ShortId Subscriber
+    - shortId: ShortId Merchant
+    - name: Text
+    - defaultCity: City
+    - defaultState: IndianState
+    - country: Country
+    - geofencingConfig: GeofencingConfig
+    - gatewayUrl: BaseUrl
+    - registryUrl: BaseUrl
+    - fallbackShortId: ShortId Merchant
+    - bapId: Text
+    - bapUniqueKeyId: Text
+    - driverOfferBaseUrl: BaseUrl
+    - driverOfferApiKey: Text
+    - driverOfferMerchantId: Text
+    - geoHashPrecisionValue: Int
+    - minimumDriverRatesCount: Int
+    - signingPublicKey: Base64
+    - cipherText: Maybe Base64
+    - signatureExpiry: Int
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - isAvoidToll: Bool
+    - aadhaarVerificationTryLimit: Int
+    - aadhaarKeyExpiryTime: Seconds
+    - mediaFileSizeUpperLimit: Int
+    - mediaFileUrlPattern: Text
+    - editPickupDistanceThreshold: Distance
+    - driverDistanceThresholdFromPickup: Distance
+    - numOfAllowedEditPickupLocationAttemptsThreshold: Int
+    - publicMediaFileUrlPattern: Text
+    - scheduleRideBufferTime: NominalDiffTime
+    - fakeOtpMobileNumbers: "[Text]"
+    - fakeOtpEmails: "[Text]"
+    - kaptureDisposition: Text # deprecated
+    - arrivedPickupThreshold: Distance
+    - arrivingPickupThreshold: Distance
+    - driverOnTheWayNotifyExpiry: Seconds
 
   excludedFields:
     - merchantId
@@ -225,11 +225,11 @@ MerchantServiceConfig:
   derives: "Generic,'UsageSafety"
 
   fields:
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
-    serviceConfig: Domain.Types.Extra.MerchantServiceConfig.ServiceConfigD s
-    updatedAt: UTCTime
-    createdAt: UTCTime
+    - merchantId: Id Merchant
+    - merchantOperatingCityId: Id MerchantOperatingCity
+    - serviceConfig: Domain.Types.Extra.MerchantServiceConfig.ServiceConfigD s
+    - updatedAt: UTCTime
+    - createdAt: UTCTime
 
   beamFields:
     serviceConfig:
@@ -264,37 +264,37 @@ MerchantServiceUsageConfig:
   derives: "Generic,Show,'UsageSafety"
 
   fields:
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
-    initiateCall: CallService
-    notifyPerson: NotificationService
-    getDistances: MapsService
-    getRoutes: MapsService
-    snapToRoad: MapsService
-    getPlaceName: MapsService
-    getPickupRoutes: MapsService
-    getTripRoutes: MapsService
-    getPlaceDetails: MapsService
-    autoComplete: MapsService
-    aadhaarVerificationService: AadhaarVerificationService
-    getDistancesForCancelRide: MapsService
-    smsProvidersPriorityList: "[SmsService]"
-    whatsappProvidersPriorityList: "[WhatsappService]"
-    issueTicketService: IssueTicketService
-    useFraudDetection: Bool
-    enableDashboardSms: Bool
-    getExophone: CallService
-    createPaymentCustomer: PaymentService
-    createEphemeralKeys: PaymentService
-    getCardList: PaymentService
-    createPaymentIntent: PaymentService
-    updatePaymentMethodInIntent: PaymentService
-    capturePaymentIntent: PaymentService
-    updateAmountInPaymentIntent: PaymentService
-    createSetupIntent: PaymentService
-    deleteCard: PaymentService
-    updatedAt: UTCTime
-    createdAt: UTCTime
+    - merchantId: Id Merchant
+    - merchantOperatingCityId: Id MerchantOperatingCity
+    - initiateCall: CallService
+    - notifyPerson: NotificationService
+    - getDistances: MapsService
+    - getRoutes: MapsService
+    - snapToRoad: MapsService
+    - getPlaceName: MapsService
+    - getPickupRoutes: MapsService
+    - getTripRoutes: MapsService
+    - getPlaceDetails: MapsService
+    - autoComplete: MapsService
+    - aadhaarVerificationService: AadhaarVerificationService
+    - getDistancesForCancelRide: MapsService
+    - smsProvidersPriorityList: "[SmsService]"
+    - whatsappProvidersPriorityList: "[WhatsappService]"
+    - issueTicketService: IssueTicketService
+    - useFraudDetection: Bool
+    - enableDashboardSms: Bool
+    - getExophone: CallService
+    - createPaymentCustomer: PaymentService
+    - createEphemeralKeys: PaymentService
+    - getCardList: PaymentService
+    - createPaymentIntent: PaymentService
+    - updatePaymentMethodInIntent: PaymentService
+    - capturePaymentIntent: PaymentService
+    - updateAmountInPaymentIntent: PaymentService
+    - createSetupIntent: PaymentService
+    - deleteCard: PaymentService
+    - updatedAt: UTCTime
+    - createdAt: UTCTime
 
   beamInstance:
     - MakeTableInstances
@@ -348,15 +348,15 @@ MerchantServiceUsageConfig:
 MerchantPaymentMethod:
   derives: "Generic,'UsageSafety"
   fields:
-    id: Id MerchantPaymentMethod
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
-    paymentType: Domain.Types.Extra.MerchantPaymentMethod.PaymentType
-    paymentInstrument: Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument
-    collectedBy: Domain.Types.Extra.MerchantPaymentMethod.PaymentCollector
-    priority: Int
-    updatedAt: UTCTime
-    createdAt: UTCTime
+    - id: Id MerchantPaymentMethod
+    - merchantId: Id Merchant
+    - merchantOperatingCityId: Id MerchantOperatingCity
+    - paymentType: Domain.Types.Extra.MerchantPaymentMethod.PaymentType
+    - paymentInstrument: Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument
+    - collectedBy: Domain.Types.Extra.MerchantPaymentMethod.PaymentCollector
+    - priority: Int
+    - updatedAt: UTCTime
+    - createdAt: UTCTime
 
   default: {}
   sqlType:
@@ -392,15 +392,15 @@ MerchantMessage:
       enum: "INVITE_TO_UNEXISTENT_EMERGENCY_NUMBER,SET_AS_RIDE_EMERGENCY_NUMBER,SET_AS_DEFAULT_EMERGENCY_NUMBER,SEND_OTP,SEND_BOOKING_OTP,SEND_SOS_ALERT,MARK_RIDE_AS_SAFE,FOLLOW_RIDE,ADDED_AS_EMERGENCY_CONTACT,TICKET_BOOKING_CANCELLED"
 
   fields:
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
-    messageKey: MessageKey
-    message: Text
-    templateId: Text
-    jsonData: MerchantMessageDefaultDataJSON
-    containsUrlButton: Bool
-    updatedAt: UTCTime
-    createdAt: UTCTime
+    - merchantId: Id Merchant
+    - merchantOperatingCityId: Id MerchantOperatingCity
+    - messageKey: MessageKey
+    - message: Text
+    - templateId: Text
+    - jsonData: MerchantMessageDefaultDataJSON
+    - containsUrlButton: Bool
+    - updatedAt: UTCTime
+    - createdAt: UTCTime
 
   beamType:
     templateId: Maybe Text
@@ -449,16 +449,16 @@ RideRelatedNotificationConfig:
     EventTime:
       enum: "PreEvent,PostEvent,OnEvent"
   fields:
-    id: Id RideRelatedNotificationConfig
-    timeDiff : NominalDiffTime
-    timeDiffEvent: TimeDiffEvent
-    onBookingStatus: BookingStatus
-    notificationType: NotificationType
-    notificationKey: Text
-    onScheduledBooking: Bool
-    eventTime: EventTime
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
+    - id: Id RideRelatedNotificationConfig
+    - timeDiff : NominalDiffTime
+    - timeDiffEvent: TimeDiffEvent
+    - onBookingStatus: BookingStatus
+    - notificationType: NotificationType
+    - notificationKey: Text
+    - onScheduledBooking: Bool
+    - eventTime: EventTime
+    - merchantId: Id Merchant
+    - merchantOperatingCityId: Id MerchantOperatingCity
   beamType:
     timeDiff: Seconds
   toTType:
@@ -481,13 +481,13 @@ MerchantPushNotification:
   tableName: merchant_push_notification
   derives: "Generic,Show,ToJSON,FromJSON"
   fields:
-    key: Text
-    title: Text
-    body: Text
-    language: Language
-    fcmNotificationType: Category
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
+    - key: Text
+    - title: Text
+    - body: Text
+    - language: Language
+    - fcmNotificationType: Category
+    - merchantId: Id Merchant
+    - merchantOperatingCityId: Id MerchantOperatingCity
   constraints:
     key: PrimaryKey
     merchantOperatingCityId: PrimaryKey

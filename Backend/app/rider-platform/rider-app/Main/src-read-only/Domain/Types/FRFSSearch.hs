@@ -15,16 +15,16 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data FRFSSearch = FRFSSearch
-  { fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
-    id :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
+  { id :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
+    fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
+    toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
+    quantity :: Kernel.Prelude.Int,
+    vehicleType :: Domain.Types.Station.FRFSVehicleType,
+    riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),
-    quantity :: Kernel.Prelude.Int,
-    riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
-    vehicleType :: Domain.Types.Station.FRFSVehicleType,
+    partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

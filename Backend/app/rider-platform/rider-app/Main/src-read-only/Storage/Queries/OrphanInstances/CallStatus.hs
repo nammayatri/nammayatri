@@ -17,33 +17,33 @@ instance FromTType' Beam.CallStatus Domain.Types.CallStatus.CallStatus where
     pure $
       Just
         Domain.Types.CallStatus.CallStatus
-          { callError = callError,
+          { id = Kernel.Types.Id.Id id,
             callId = callId,
-            callService = callService,
-            conversationDuration = conversationDuration,
-            createdAt = createdAt,
-            dtmfNumberUsed = dtmfNumberUsed,
-            id = Kernel.Types.Id.Id id,
-            merchantId = merchantId,
-            recordingUrl = recordingUrl,
             rideId = Kernel.Types.Id.Id <$> rideId,
+            dtmfNumberUsed = dtmfNumberUsed,
             status = status,
+            recordingUrl = recordingUrl,
+            conversationDuration = conversationDuration,
+            merchantId = merchantId,
+            callService = callService,
+            callError = callError,
+            createdAt = createdAt,
             updatedAt = updatedAt
           }
 
 instance ToTType' Beam.CallStatus Domain.Types.CallStatus.CallStatus where
   toTType' (Domain.Types.CallStatus.CallStatus {..}) = do
     Beam.CallStatusT
-      { Beam.callError = callError,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.callId = callId,
-        Beam.callService = callService,
-        Beam.conversationDuration = conversationDuration,
-        Beam.createdAt = createdAt,
-        Beam.dtmfNumberUsed = dtmfNumberUsed,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.merchantId = merchantId,
-        Beam.recordingUrl = recordingUrl,
         Beam.rideId = Kernel.Types.Id.getId <$> rideId,
+        Beam.dtmfNumberUsed = dtmfNumberUsed,
         Beam.status = status,
+        Beam.recordingUrl = recordingUrl,
+        Beam.conversationDuration = conversationDuration,
+        Beam.merchantId = merchantId,
+        Beam.callService = callService,
+        Beam.callError = callError,
+        Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

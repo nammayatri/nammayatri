@@ -14,20 +14,20 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PartnerOrgConfigT f = PartnerOrgConfigT
-  { configJSON :: B.C f Data.Aeson.Value,
+  { partnerOrgId :: B.C f Kernel.Prelude.Text,
+    configJSON :: B.C f Data.Aeson.Value,
     configType :: B.C f Domain.Types.Extra.PartnerOrgConfig.ConfigType,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
-    partnerOrgId :: B.C f Kernel.Prelude.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table PartnerOrgConfigT where
-  data PrimaryKey PartnerOrgConfigT f = PartnerOrgConfigId (B.C f Domain.Types.Extra.PartnerOrgConfig.ConfigType) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = PartnerOrgConfigId <$> configType <*> partnerOrgId
+  data PrimaryKey PartnerOrgConfigT f = PartnerOrgConfigId (B.C f Kernel.Prelude.Text) (B.C f Domain.Types.Extra.PartnerOrgConfig.ConfigType) deriving (Generic, B.Beamable)
+  primaryKey = PartnerOrgConfigId <$> partnerOrgId <*> configType
 
 type PartnerOrgConfig = PartnerOrgConfigT Identity
 
-$(enableKVPG ''PartnerOrgConfigT ['configType, 'partnerOrgId] [])
+$(enableKVPG ''PartnerOrgConfigT ['partnerOrgId, 'configType] [])
 
 $(mkTableInstances ''PartnerOrgConfigT "partner_org_config")

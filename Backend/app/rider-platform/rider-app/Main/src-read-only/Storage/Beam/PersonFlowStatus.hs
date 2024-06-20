@@ -12,7 +12,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
-data PersonFlowStatusT f = PersonFlowStatusT {flowStatus :: B.C f Domain.Types.Extra.PersonFlowStatus.FlowStatus, personId :: B.C f Kernel.Prelude.Text, updatedAt :: B.C f Kernel.Prelude.UTCTime}
+data PersonFlowStatusT f = PersonFlowStatusT {personId :: B.C f Kernel.Prelude.Text, flowStatus :: B.C f Domain.Types.Extra.PersonFlowStatus.FlowStatus, updatedAt :: B.C f Kernel.Prelude.UTCTime}
   deriving (Generic, B.Beamable)
 
 instance B.Table PersonFlowStatusT where

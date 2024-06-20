@@ -14,9 +14,9 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data PartnerOrgConfig = PartnerOrgConfig
-  { config :: Domain.Types.Extra.PartnerOrgConfig.PartnerOrganizationConfig,
+  { partnerOrgId :: Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization,
+    config :: Domain.Types.Extra.PartnerOrgConfig.PartnerOrganizationConfig,
     createdAt :: Kernel.Prelude.UTCTime,
-    partnerOrgId :: Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON)

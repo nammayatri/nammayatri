@@ -19,15 +19,15 @@ RentalDetails:
   derives: "Generic, Show"
 
   fields:
-    id: Id RentalDetails
-    baseFare: Price
-    perHourCharge: Price
-    perExtraMinRate: Price
-    perExtraKmRate: Price
-    includedDistancePerHr: Distance
-    plannedPerKmRate: Price
-    deadKmFare: Price
-    nightShiftInfo: Maybe NightShiftInfo
+    - id: Id RentalDetails
+    - baseFare: Price
+    - perHourCharge: Price
+    - perExtraMinRate: Price
+    - perExtraKmRate: Price
+    - includedDistancePerHr: Distance
+    - plannedPerKmRate: Price
+    - deadKmFare: Price
+    - nightShiftInfo: Maybe NightShiftInfo
 
   sqlType:
     baseFare: numeric(30, 2)

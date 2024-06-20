@@ -12,7 +12,10 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data LocationT f = LocationT
-  { area :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { id :: B.C f Kernel.Prelude.Text,
+    lat :: B.C f Kernel.Prelude.Double,
+    lon :: B.C f Kernel.Prelude.Double,
+    area :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     areaCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     building :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     city :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -23,9 +26,6 @@ data LocationT f = LocationT
     street :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     ward :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
-    id :: B.C f Kernel.Prelude.Text,
-    lat :: B.C f Kernel.Prelude.Double,
-    lon :: B.C f Kernel.Prelude.Double,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)

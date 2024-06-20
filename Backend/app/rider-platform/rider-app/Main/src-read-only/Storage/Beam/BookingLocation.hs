@@ -12,7 +12,10 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data BookingLocationT f = BookingLocationT
-  { area :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { id :: B.C f Kernel.Prelude.Text,
+    lat :: B.C f Kernel.Prelude.Double,
+    lon :: B.C f Kernel.Prelude.Double,
+    area :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     areaCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     building :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     city :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -22,9 +25,6 @@ data BookingLocationT f = BookingLocationT
     state :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     street :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     ward :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    id :: B.C f Kernel.Prelude.Text,
-    lat :: B.C f Kernel.Prelude.Double,
-    lon :: B.C f Kernel.Prelude.Double,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

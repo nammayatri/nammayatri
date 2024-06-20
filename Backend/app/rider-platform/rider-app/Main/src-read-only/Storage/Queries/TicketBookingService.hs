@@ -64,22 +64,22 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.TicketBookingService.TicketBookingService {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.amount ((.amount) amount),
-      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) amount),
-      Se.Set Beam.bHourId (Kernel.Types.Id.getId <$> bHourId),
-      Se.Set Beam.bookedSeats bookedSeats,
-      Se.Set Beam.btype btype,
-      Se.Set Beam.cancelledSeats cancelledSeats,
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.expiryDate expiryDate,
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.shortId (Kernel.Types.Id.getShortId shortId),
-      Se.Set Beam.status status,
+    [ Se.Set Beam.shortId (Kernel.Types.Id.getShortId shortId),
       Se.Set Beam.ticketBookingId (Kernel.Types.Id.getId ticketBookingId),
       Se.Set Beam.ticketServiceId (Kernel.Types.Id.getId ticketServiceId),
-      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.amount ((.amount) amount),
+      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) amount),
+      Se.Set Beam.status status,
       Se.Set Beam.verificationCount verificationCount,
       Se.Set Beam.visitDate visitDate,
+      Se.Set Beam.btype btype,
+      Se.Set Beam.bHourId (Kernel.Types.Id.getId <$> bHourId),
+      Se.Set Beam.expiryDate expiryDate,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.bookedSeats bookedSeats,
+      Se.Set Beam.cancelledSeats cancelledSeats,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

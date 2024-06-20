@@ -8,12 +8,12 @@ PersonDisability:
   tableName: person_disability
 
   fields:
-    personId : Id Person
-    disabilityId : Text
-    tag : Text
-    description : Maybe Text
-    createdAt: UTCTime
-    updatedAt : UTCTime
+    - personId : Id Person
+    - disabilityId : Text
+    - tag : Text
+    - description : Maybe Text
+    - createdAt: UTCTime
+    - updatedAt : UTCTime
 
   types: {}
 
@@ -53,9 +53,9 @@ PersonDisability:
 Disability:
   tableName: disability
   fields:
-    id: Id Disability
-    tag: Text
-    description: Text
+    - id: Id Disability
+    - tag: Text
+    - description: Text
   excludedFields: [merchantId, merchantOperatingCityId, updatedAt, createdAt]
   constraints:
     id: PrimaryKey
@@ -74,10 +74,10 @@ Disability:
 DisabilityTranslation:
   tableName: disability_translation
   fields:
-    disabilityId: Id DisabilityTranslation
-    language: Text
-    disabilityTag: Text
-    translation: Text
+    - disabilityId: Id DisabilityTranslation
+    - language: Text
+    - disabilityTag: Text
+    - translation: Text
   excludedFields: [merchantId, merchantOperatingCityId, updatedAt, createdAt]
   constraints:
     disabilityId: PrimaryKey

@@ -27,13 +27,13 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.CallbackRequest.CallbackRequest {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.customerMobileCountryCode customerMobileCountryCode,
+    [ Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.customerName customerName,
       Se.Set Beam.customerPhoneEncrypted (customerPhone & unEncrypted . encrypted),
       Se.Set Beam.customerPhoneHash (customerPhone & hash),
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.customerMobileCountryCode customerMobileCountryCode,
       Se.Set Beam.status status,
+      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -43,26 +43,26 @@ instance FromTType' Beam.CallbackRequest Domain.Types.CallbackRequest.CallbackRe
     pure $
       Just
         Domain.Types.CallbackRequest.CallbackRequest
-          { createdAt = createdAt,
-            customerMobileCountryCode = customerMobileCountryCode,
+          { id = Kernel.Types.Id.Id id,
+            merchantId = Kernel.Types.Id.Id merchantId,
             customerName = customerName,
             customerPhone = EncryptedHashed (Encrypted customerPhoneEncrypted) customerPhoneHash,
-            id = Kernel.Types.Id.Id id,
-            merchantId = Kernel.Types.Id.Id merchantId,
+            customerMobileCountryCode = customerMobileCountryCode,
             status = status,
+            createdAt = createdAt,
             updatedAt = updatedAt
           }
 
 instance ToTType' Beam.CallbackRequest Domain.Types.CallbackRequest.CallbackRequest where
   toTType' (Domain.Types.CallbackRequest.CallbackRequest {..}) = do
     Beam.CallbackRequestT
-      { Beam.createdAt = createdAt,
-        Beam.customerMobileCountryCode = customerMobileCountryCode,
+      { Beam.id = Kernel.Types.Id.getId id,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.customerName = customerName,
         Beam.customerPhoneEncrypted = customerPhone & unEncrypted . encrypted,
         Beam.customerPhoneHash = customerPhone & hash,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.customerMobileCountryCode = customerMobileCountryCode,
         Beam.status = status,
+        Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

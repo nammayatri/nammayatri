@@ -12,13 +12,13 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data CallbackRequestE e = CallbackRequest
-  { createdAt :: Kernel.Prelude.UTCTime,
-    customerMobileCountryCode :: Kernel.Prelude.Text,
+  { id :: Kernel.Types.Id.Id Domain.Types.CallbackRequest.CallbackRequest,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     customerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     customerPhone :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
-    id :: Kernel.Types.Id.Id Domain.Types.CallbackRequest.CallbackRequest,
-    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    customerMobileCountryCode :: Kernel.Prelude.Text,
     status :: Domain.Types.CallbackRequest.CallbackRequestStatus,
+    createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)
@@ -33,26 +33,26 @@ instance EncryptedItem CallbackRequest where
     customerPhone_ <- encryptItem (customerPhone entity, salt)
     pure
       CallbackRequest
-        { createdAt = createdAt entity,
-          customerMobileCountryCode = customerMobileCountryCode entity,
+        { id = id entity,
+          merchantId = merchantId entity,
           customerName = customerName entity,
           customerPhone = customerPhone_,
-          id = id entity,
-          merchantId = merchantId entity,
+          customerMobileCountryCode = customerMobileCountryCode entity,
           status = status entity,
+          createdAt = createdAt entity,
           updatedAt = updatedAt entity
         }
   decryptItem entity = do
     customerPhone_ <- fst <$> decryptItem (customerPhone entity)
     pure
       ( CallbackRequest
-          { createdAt = createdAt entity,
-            customerMobileCountryCode = customerMobileCountryCode entity,
+          { id = id entity,
+            merchantId = merchantId entity,
             customerName = customerName entity,
             customerPhone = customerPhone_,
-            id = id entity,
-            merchantId = merchantId entity,
+            customerMobileCountryCode = customerMobileCountryCode entity,
             status = status entity,
+            createdAt = createdAt entity,
             updatedAt = updatedAt entity
           },
         ""

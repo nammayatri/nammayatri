@@ -48,9 +48,9 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.blindSound blindSound,
+    [ Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.defaultSound defaultSound,
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.blindSound blindSound,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -61,11 +61,11 @@ instance FromTType' Beam.NotificationSoundsConfig Domain.Types.NotificationSound
     pure $
       Just
         Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig
-          { blindSound = blindSound,
-            defaultSound = defaultSound,
-            merchantId = Kernel.Types.Id.Id merchantId,
+          { merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             notificationType = notificationType,
+            defaultSound = defaultSound,
+            blindSound = blindSound,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -73,11 +73,11 @@ instance FromTType' Beam.NotificationSoundsConfig Domain.Types.NotificationSound
 instance ToTType' Beam.NotificationSoundsConfig Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig where
   toTType' (Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig {..}) = do
     Beam.NotificationSoundsConfigT
-      { Beam.blindSound = blindSound,
-        Beam.defaultSound = defaultSound,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+      { Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.notificationType = notificationType,
+        Beam.defaultSound = defaultSound,
+        Beam.blindSound = blindSound,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

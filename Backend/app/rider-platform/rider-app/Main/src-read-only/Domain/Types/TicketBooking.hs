@@ -17,18 +17,18 @@ import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data TicketBooking = TicketBooking
-  { amount :: Kernel.Types.Common.Price,
+  { id :: Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking,
+    shortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    ticketPlaceId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
+    personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    amount :: Kernel.Types.Common.Price,
+    visitDate :: Data.Time.Calendar.Day,
+    status :: Domain.Types.TicketBooking.BookingStatus,
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime,
     bookedSeats :: Kernel.Prelude.Int,
     cancelledSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    createdAt :: Kernel.Prelude.UTCTime,
-    id :: Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    shortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking,
-    status :: Domain.Types.TicketBooking.BookingStatus,
-    ticketPlaceId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
-    updatedAt :: Kernel.Prelude.UTCTime,
-    visitDate :: Data.Time.Calendar.Day,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)
   }
   deriving (Generic, Show)

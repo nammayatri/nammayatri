@@ -10,11 +10,11 @@ FareBreakup:
   derives: "Show"
 
   fields:
-    id: Id FareBreakup
-    description: Text
-    amount: Price
-    entityType: FareBreakupEntityType
-    entityId: Text
+    - id: Id FareBreakup
+    - description: Text
+    - amount: Price
+    - entityType: FareBreakupEntityType
+    - entityId: Text
 
   excludedFields:
     - updatedAt

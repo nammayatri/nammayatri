@@ -13,11 +13,11 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data NotificationSoundsConfig = NotificationSoundsConfig
-  { blindSound :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    defaultSound :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+  { merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     notificationType :: Kernel.External.Notification.Interface.Types.Category,
+    defaultSound :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    blindSound :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

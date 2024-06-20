@@ -13,11 +13,11 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data SeatManagementT f = SeatManagementT
-  { blocked :: B.C f Kernel.Prelude.Int,
-    booked :: B.C f Kernel.Prelude.Int,
+  { id :: B.C f Kernel.Prelude.Text,
     date :: B.C f Data.Time.Calendar.Day,
-    id :: B.C f Kernel.Prelude.Text,
     ticketServiceCategoryId :: B.C f Kernel.Prelude.Text,
+    booked :: B.C f Kernel.Prelude.Int,
+    blocked :: B.C f Kernel.Prelude.Int,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

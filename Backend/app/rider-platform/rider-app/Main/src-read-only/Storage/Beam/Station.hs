@@ -13,15 +13,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data StationT f = StationT
-  { address :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { id :: B.C f Kernel.Prelude.Text,
+    vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,
+    name :: B.C f Kernel.Prelude.Text,
     code :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
     lat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     lon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    address :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    name :: B.C f Kernel.Prelude.Text,
-    vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

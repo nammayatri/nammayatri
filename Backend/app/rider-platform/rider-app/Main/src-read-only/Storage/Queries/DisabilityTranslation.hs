@@ -25,8 +25,8 @@ instance FromTType' Beam.DisabilityTranslation Domain.Types.DisabilityTranslatio
       Just
         Domain.Types.DisabilityTranslation.DisabilityTranslation
           { disabilityId = Kernel.Types.Id.Id disabilityId,
-            disabilityTag = disabilityTag,
             language = language,
+            disabilityTag = disabilityTag,
             translation = translation
           }
 
@@ -34,7 +34,7 @@ instance ToTType' Beam.DisabilityTranslation Domain.Types.DisabilityTranslation.
   toTType' (Domain.Types.DisabilityTranslation.DisabilityTranslation {..}) = do
     Beam.DisabilityTranslationT
       { Beam.disabilityId = Kernel.Types.Id.getId disabilityId,
-        Beam.disabilityTag = disabilityTag,
         Beam.language = language,
+        Beam.disabilityTag = disabilityTag,
         Beam.translation = translation
       }

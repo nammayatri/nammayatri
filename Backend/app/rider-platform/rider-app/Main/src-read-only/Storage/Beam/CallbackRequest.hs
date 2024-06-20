@@ -14,14 +14,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data CallbackRequestT f = CallbackRequestT
-  { createdAt :: B.C f Kernel.Prelude.UTCTime,
-    customerMobileCountryCode :: B.C f Kernel.Prelude.Text,
+  { id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
     customerName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     customerPhoneEncrypted :: B.C f Kernel.Prelude.Text,
     customerPhoneHash :: B.C f Kernel.External.Encryption.DbHash,
-    id :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
+    customerMobileCountryCode :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.CallbackRequest.CallbackRequestStatus,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)

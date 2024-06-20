@@ -38,17 +38,17 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.PersonStats.PersonStats {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.completedRides completedRides,
-      Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
+    [ Se.Set Beam.userCancelledRides userCancelledRides,
       Se.Set Beam.driverCancelledRides driverCancelledRides,
+      Se.Set Beam.completedRides completedRides,
+      Se.Set Beam.weekendRides weekendRides,
+      Se.Set Beam.weekdayRides weekdayRides,
+      Se.Set Beam.offPeakRides offPeakRides,
       Se.Set Beam.eveningPeakRides eveningPeakRides,
       Se.Set Beam.morningPeakRides morningPeakRides,
-      Se.Set Beam.offPeakRides offPeakRides,
-      Se.Set Beam.referralCount referralCount,
-      Se.Set Beam.updatedAt _now,
-      Se.Set Beam.userCancelledRides userCancelledRides,
-      Se.Set Beam.weekdayRides weekdayRides,
       Se.Set Beam.weekendPeakRides weekendPeakRides,
-      Se.Set Beam.weekendRides weekendRides
+      Se.Set Beam.referralCount referralCount,
+      Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
+      Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]]

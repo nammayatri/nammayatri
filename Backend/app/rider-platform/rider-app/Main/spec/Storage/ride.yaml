@@ -60,57 +60,57 @@ Ride:
       updatedAt: UTCTime
       bppRideId: Id BPPRide
   fields:
-    id: Id Ride
-    bppRideId: Id BPPRide
-    bookingId: Id Booking
-    shortId: ShortId Ride
-    merchantId: Maybe (Id Merchant)
-    clientId: Maybe (Id Client)
-    fromLocation: Location
-    toLocation: Maybe Location
-    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
-    status: RideStatus
-    driverName: Text
-    driverRating: Maybe Centesimal
-    driverMobileNumber: Text
-    driverMobileCountryCode: Maybe Text
-    driverRegisteredAt: Maybe UTCTime
-    driverImage: Maybe Text
-    vehicleNumber: Text
-    vehicleModel: Text
-    vehicleColor: Maybe Text
-    vehicleVariant: VehicleVariant|NoRelation
-    vehicleServiceTierType: Maybe VehicleServiceTierType
-    otp: Text
-    endOtp: Maybe Text
-    trackingUrl: Maybe BaseUrl
-    fare: Maybe Price
-    totalFare: Maybe Price
-    chargeableDistance: Maybe Distance
-    traveledDistance: Maybe Distance
-    distanceUnit: DistanceUnit
-    driverArrivalTime: Maybe UTCTime
-    rideStartTime: Maybe UTCTime
-    rideEndTime: Maybe UTCTime
-    rideRating: Maybe Int
-    allowedEditLocationAttempts: Maybe Int
-    driversPreviousRideDropLoc : Maybe LatLong
-    startOdometerReading: Maybe Centesimal
-    endOdometerReading: Maybe Centesimal
-    isFreeRide: Maybe Bool
-    createdAt: UTCTime
-    updatedAt: UTCTime
-    clientDevice: Maybe Device
-    clientBundleVersion: Maybe Version
-    clientSdkVersion: Maybe Version
-    clientConfigVersion: Maybe Version
-    backendConfigVersion: Maybe Version
-    backendAppVersion: Maybe Text
-    safetyCheckStatus: Maybe Bool
-    showDriversPreviousRideDropLoc: Bool
-    paymentDone: Bool
-    driverAccountId: Maybe AccountId
-    tollConfidence: Maybe Confidence
+    - id: Id Ride
+    - bppRideId: Id BPPRide
+    - bookingId: Id Booking
+    - shortId: ShortId Ride
+    - merchantId: Maybe (Id Merchant)
+    - clientId: Maybe (Id Client)
+    - fromLocation: Location
+    - toLocation: Maybe Location
+    - merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    - status: RideStatus
+    - driverName: Text
+    - driverRating: Maybe Centesimal
+    - driverMobileNumber: Text
+    - driverMobileCountryCode: Maybe Text
+    - driverRegisteredAt: Maybe UTCTime
+    - driverImage: Maybe Text
+    - vehicleNumber: Text
+    - vehicleModel: Text
+    - vehicleColor: Maybe Text
+    - vehicleVariant: VehicleVariant|NoRelation
+    - vehicleServiceTierType: Maybe VehicleServiceTierType
+    - otp: Text
+    - endOtp: Maybe Text
+    - trackingUrl: Maybe BaseUrl
+    - fare: Maybe Price
+    - totalFare: Maybe Price
+    - chargeableDistance: Maybe Distance
+    - traveledDistance: Maybe Distance
+    - distanceUnit: DistanceUnit
+    - driverArrivalTime: Maybe UTCTime
+    - rideStartTime: Maybe UTCTime
+    - rideEndTime: Maybe UTCTime
+    - rideRating: Maybe Int
+    - allowedEditLocationAttempts: Maybe Int
+    - driversPreviousRideDropLoc : Maybe LatLong
+    - startOdometerReading: Maybe Centesimal
+    - endOdometerReading: Maybe Centesimal
+    - isFreeRide: Maybe Bool
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - clientDevice: Maybe Device
+    - clientBundleVersion: Maybe Version
+    - clientSdkVersion: Maybe Version
+    - clientConfigVersion: Maybe Version
+    - backendConfigVersion: Maybe Version
+    - backendAppVersion: Maybe Text
+    - safetyCheckStatus: Maybe Bool
+    - showDriversPreviousRideDropLoc: Bool
+    - paymentDone: Bool
+    - driverAccountId: Maybe AccountId
+    - tollConfidence: Maybe Confidence
 
   sqlType:
     allowedEditLocationAttempts: int

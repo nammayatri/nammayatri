@@ -14,10 +14,10 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data Sos = Sos
-  { flow :: Domain.Types.Sos.SosType,
-    id :: Kernel.Types.Id.Id Domain.Types.Sos.Sos,
+  { id :: Kernel.Types.Id.Id Domain.Types.Sos.Sos,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
+    flow :: Domain.Types.Sos.SosType,
     status :: Domain.Types.Sos.SosStatus,
     ticketId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),

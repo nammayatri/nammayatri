@@ -9,12 +9,12 @@ Location:
   derives: "Generic, Show, Eq, Kernel.External.Maps.HasCoordinates"
 
   fields:
-    id: Id Location
-    lat: Double
-    lon: Double
-    address: LocationAddress
-    createdAt: UTCTime
-    updatedAt: UTCTime
+    - id: Id Location
+    - lat: Double
+    - lon: Double
+    - address: LocationAddress
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
 
   types:
     LocationAPIEntity:

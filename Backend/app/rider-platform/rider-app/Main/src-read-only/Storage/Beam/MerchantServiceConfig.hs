@@ -14,12 +14,12 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MerchantServiceConfigT f = MerchantServiceConfigT
-  { createdAt :: B.C f Kernel.Prelude.UTCTime,
-    merchantId :: B.C f Kernel.Prelude.Text,
+  { merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     configJSON :: B.C f Data.Aeson.Value,
     serviceName :: B.C f Domain.Types.MerchantServiceConfig.ServiceName,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    createdAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 

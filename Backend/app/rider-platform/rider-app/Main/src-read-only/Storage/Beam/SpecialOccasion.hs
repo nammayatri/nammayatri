@@ -14,13 +14,13 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data SpecialOccasionT f = SpecialOccasionT
-  { businessHours :: B.C f [Kernel.Prelude.Text],
+  { id :: B.C f Kernel.Prelude.Text,
+    entityId :: B.C f Kernel.Prelude.Text,
     date :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
     dayOfWeek :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    entityId :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
     specialDayType :: B.C f Domain.Types.SpecialOccasion.SpecialDayType,
+    description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    businessHours :: B.C f [Kernel.Prelude.Text],
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

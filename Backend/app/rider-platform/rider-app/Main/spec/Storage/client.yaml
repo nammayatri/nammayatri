@@ -6,7 +6,7 @@ Client:
   tableName: client
 
   fields:
-    id: Id Client
-    shortId: ShortId Client
+    - id: Id Client
+    - shortId: ShortId Client
 
   excludedFields: [merchantOperatingCityId]

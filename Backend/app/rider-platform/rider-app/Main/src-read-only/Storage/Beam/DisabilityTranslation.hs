@@ -13,8 +13,8 @@ import Tools.Beam.UtilsTH
 
 data DisabilityTranslationT f = DisabilityTranslationT
   { disabilityId :: B.C f Kernel.Prelude.Text,
-    disabilityTag :: B.C f Kernel.Prelude.Text,
     language :: B.C f Kernel.Prelude.Text,
+    disabilityTag :: B.C f Kernel.Prelude.Text,
     translation :: B.C f Kernel.Prelude.Text
   }
   deriving (Generic, B.Beamable)

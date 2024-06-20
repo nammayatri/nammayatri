@@ -75,10 +75,10 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.SeatManagement.SeatManagement {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.blocked blocked,
-      Se.Set Beam.booked booked,
-      Se.Set Beam.date date,
+    [ Se.Set Beam.date date,
       Se.Set Beam.ticketServiceCategoryId (Kernel.Types.Id.getId ticketServiceCategoryId),
+      Se.Set Beam.booked booked,
+      Se.Set Beam.blocked blocked,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
@@ -91,11 +91,11 @@ instance FromTType' Beam.SeatManagement Domain.Types.SeatManagement.SeatManageme
     pure $
       Just
         Domain.Types.SeatManagement.SeatManagement
-          { blocked = blocked,
-            booked = booked,
+          { id = Kernel.Types.Id.Id id,
             date = date,
-            id = Kernel.Types.Id.Id id,
             ticketServiceCategoryId = Kernel.Types.Id.Id ticketServiceCategoryId,
+            booked = booked,
+            blocked = blocked,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -105,11 +105,11 @@ instance FromTType' Beam.SeatManagement Domain.Types.SeatManagement.SeatManageme
 instance ToTType' Beam.SeatManagement Domain.Types.SeatManagement.SeatManagement where
   toTType' (Domain.Types.SeatManagement.SeatManagement {..}) = do
     Beam.SeatManagementT
-      { Beam.blocked = blocked,
-        Beam.booked = booked,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.date = date,
-        Beam.id = Kernel.Types.Id.getId id,
         Beam.ticketServiceCategoryId = Kernel.Types.Id.getId ticketServiceCategoryId,
+        Beam.booked = booked,
+        Beam.blocked = blocked,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

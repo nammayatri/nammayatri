@@ -37,11 +37,11 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.ServicePeopleCategory.ServicePeopleCategory {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.cancellationCharges (convertCancellationChargesToTable cancellationCharges),
+    [ Se.Set Beam.name name,
       Se.Set Beam.description description,
-      Se.Set Beam.name name,
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) pricePerUnit),
       Se.Set Beam.pricePerUnit ((.amount) pricePerUnit),
+      Se.Set Beam.cancellationCharges (convertCancellationChargesToTable cancellationCharges),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
@@ -54,11 +54,11 @@ instance FromTType' Beam.ServicePeopleCategory Domain.Types.ServicePeopleCategor
     pure $
       Just
         Domain.Types.ServicePeopleCategory.ServicePeopleCategory
-          { cancellationCharges = getCancellationChargesFromTable cancellationCharges,
-            description = description,
-            id = Kernel.Types.Id.Id id,
+          { id = Kernel.Types.Id.Id id,
             name = name,
+            description = description,
             pricePerUnit = Kernel.Types.Common.mkPrice currency pricePerUnit,
+            cancellationCharges = getCancellationChargesFromTable cancellationCharges,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -68,12 +68,12 @@ instance FromTType' Beam.ServicePeopleCategory Domain.Types.ServicePeopleCategor
 instance ToTType' Beam.ServicePeopleCategory Domain.Types.ServicePeopleCategory.ServicePeopleCategory where
   toTType' (Domain.Types.ServicePeopleCategory.ServicePeopleCategory {..}) = do
     Beam.ServicePeopleCategoryT
-      { Beam.cancellationCharges = convertCancellationChargesToTable cancellationCharges,
-        Beam.description = description,
-        Beam.id = Kernel.Types.Id.getId id,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.name = name,
+        Beam.description = description,
         Beam.currency = (Kernel.Prelude.Just . (.currency)) pricePerUnit,
         Beam.pricePerUnit = (.amount) pricePerUnit,
+        Beam.cancellationCharges = convertCancellationChargesToTable cancellationCharges,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

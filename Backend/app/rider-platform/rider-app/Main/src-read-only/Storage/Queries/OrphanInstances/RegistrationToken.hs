@@ -17,41 +17,41 @@ instance FromTType' Beam.RegistrationToken Domain.Types.RegistrationToken.Regist
     pure $
       Just
         Domain.Types.RegistrationToken.RegistrationToken
-          { attempts = attempts,
-            authExpiry = authExpiry,
+          { id = Kernel.Types.Id.Id id,
+            token = token,
+            attempts = attempts,
             authMedium = authMedium,
             authType = authType,
             authValueHash = authValueHash,
-            createdAt = createdAt,
-            createdViaPartnerOrgId = Kernel.Types.Id.Id <$> createdViaPartnerOrgId,
-            entityId = entityId,
-            entityType = entityType,
-            id = Kernel.Types.Id.Id id,
-            info = info,
-            merchantId = merchantId,
-            token = token,
+            verified = verified,
+            authExpiry = authExpiry,
             tokenExpiry = tokenExpiry,
+            entityId = entityId,
+            merchantId = merchantId,
+            entityType = entityType,
+            createdAt = createdAt,
             updatedAt = updatedAt,
-            verified = verified
+            info = info,
+            createdViaPartnerOrgId = Kernel.Types.Id.Id <$> createdViaPartnerOrgId
           }
 
 instance ToTType' Beam.RegistrationToken Domain.Types.RegistrationToken.RegistrationToken where
   toTType' (Domain.Types.RegistrationToken.RegistrationToken {..}) = do
     Beam.RegistrationTokenT
-      { Beam.attempts = attempts,
-        Beam.authExpiry = authExpiry,
+      { Beam.id = Kernel.Types.Id.getId id,
+        Beam.token = token,
+        Beam.attempts = attempts,
         Beam.authMedium = authMedium,
         Beam.authType = authType,
         Beam.authValueHash = authValueHash,
-        Beam.createdAt = createdAt,
-        Beam.createdViaPartnerOrgId = Kernel.Types.Id.getId <$> createdViaPartnerOrgId,
-        Beam.entityId = entityId,
-        Beam.entityType = entityType,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.info = info,
-        Beam.merchantId = merchantId,
-        Beam.token = token,
+        Beam.verified = verified,
+        Beam.authExpiry = authExpiry,
         Beam.tokenExpiry = tokenExpiry,
+        Beam.entityId = entityId,
+        Beam.merchantId = merchantId,
+        Beam.entityType = entityType,
+        Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt,
-        Beam.verified = verified
+        Beam.info = info,
+        Beam.createdViaPartnerOrgId = Kernel.Types.Id.getId <$> createdViaPartnerOrgId
       }

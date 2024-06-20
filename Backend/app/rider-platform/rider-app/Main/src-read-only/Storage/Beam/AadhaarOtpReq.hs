@@ -12,13 +12,13 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data AadhaarOtpReqT f = AadhaarOtpReqT
-  { createdAt :: B.C f Kernel.Prelude.UTCTime,
-    id :: B.C f Kernel.Prelude.Text,
+  { id :: B.C f Kernel.Prelude.Text,
     personId :: B.C f Kernel.Prelude.Text,
     requestId :: B.C f Kernel.Prelude.Text,
-    requestMessage :: B.C f Kernel.Prelude.Text,
     statusCode :: B.C f Kernel.Prelude.Text,
     transactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    requestMessage :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)

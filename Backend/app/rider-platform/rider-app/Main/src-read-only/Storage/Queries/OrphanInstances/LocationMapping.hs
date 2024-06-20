@@ -17,29 +17,29 @@ instance FromTType' Beam.LocationMapping Domain.Types.LocationMapping.LocationMa
     pure $
       Just
         Domain.Types.LocationMapping.LocationMapping
-          { createdAt = createdAt,
-            entityId = entityId,
-            id = Kernel.Types.Id.Id id,
-            locationId = Kernel.Types.Id.Id locationId,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
-            order = order,
+          { id = Kernel.Types.Id.Id id,
             tag = tag,
+            locationId = Kernel.Types.Id.Id locationId,
+            entityId = entityId,
+            order = order,
+            version = version,
+            createdAt = createdAt,
             updatedAt = updatedAt,
-            version = version
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
           }
 
 instance ToTType' Beam.LocationMapping Domain.Types.LocationMapping.LocationMapping where
   toTType' (Domain.Types.LocationMapping.LocationMapping {..}) = do
     Beam.LocationMappingT
-      { Beam.createdAt = createdAt,
-        Beam.entityId = entityId,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.locationId = Kernel.Types.Id.getId locationId,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
-        Beam.order = order,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.tag = tag,
+        Beam.locationId = Kernel.Types.Id.getId locationId,
+        Beam.entityId = entityId,
+        Beam.order = order,
+        Beam.version = version,
+        Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt,
-        Beam.version = version
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
       }

@@ -32,12 +32,12 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.AadhaarOtpVerify.AadhaarOtpVerify {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.personId (Kernel.Types.Id.getId personId),
+    [ Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.requestId requestId,
-      Se.Set Beam.requestMessage requestMessage,
       Se.Set Beam.statusCode statusCode,
       Se.Set Beam.transactionId transactionId,
+      Se.Set Beam.requestMessage requestMessage,
+      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt (Just _now)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -47,25 +47,25 @@ instance FromTType' Beam.AadhaarOtpVerify Domain.Types.AadhaarOtpVerify.AadhaarO
     pure $
       Just
         Domain.Types.AadhaarOtpVerify.AadhaarOtpVerify
-          { createdAt = createdAt,
-            id = Kernel.Types.Id.Id id,
+          { id = Kernel.Types.Id.Id id,
             personId = Kernel.Types.Id.Id personId,
             requestId = requestId,
-            requestMessage = requestMessage,
             statusCode = statusCode,
             transactionId = transactionId,
+            requestMessage = requestMessage,
+            createdAt = createdAt,
             updatedAt = Kernel.Prelude.fromMaybe createdAt updatedAt
           }
 
 instance ToTType' Beam.AadhaarOtpVerify Domain.Types.AadhaarOtpVerify.AadhaarOtpVerify where
   toTType' (Domain.Types.AadhaarOtpVerify.AadhaarOtpVerify {..}) = do
     Beam.AadhaarOtpVerifyT
-      { Beam.createdAt = createdAt,
-        Beam.id = Kernel.Types.Id.getId id,
+      { Beam.id = Kernel.Types.Id.getId id,
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.requestId = requestId,
-        Beam.requestMessage = requestMessage,
         Beam.statusCode = statusCode,
         Beam.transactionId = transactionId,
+        Beam.requestMessage = requestMessage,
+        Beam.createdAt = createdAt,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt
       }

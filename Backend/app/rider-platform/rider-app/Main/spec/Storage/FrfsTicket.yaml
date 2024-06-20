@@ -27,16 +27,16 @@ FRFSSearch:
   tableName: frfs_search
 
   fields:
-    id: Id FRFSSearch
-    fromStationId: Id Station
-    toStationId: Id Station
-    quantity: Int
-    vehicleType: FRFSVehicleType
-    riderId: Id Person
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
-    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
-    partnerOrgId: Maybe (Id PartnerOrganization)
+    - id: Id FRFSSearch
+    - fromStationId: Id Station
+    - toStationId: Id Station
+    - quantity: Int
+    - vehicleType: FRFSVehicleType
+    - riderId: Id Person
+    - merchantId: Id Merchant
+    - merchantOperatingCityId: Id MerchantOperatingCity
+    - partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
+    - partnerOrgId: Maybe (Id PartnerOrganization)
 
   constraints:
     riderId: SecondaryKey
@@ -53,15 +53,15 @@ Station:
   tableName: station
 
   fields:
-    id: Id Station
-    vehicleType: FRFSVehicleType
-    name: Text
-    code: Text
-    lat: Maybe Double
-    lon: Maybe Double
-    address: Maybe Text
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
+    - id: Id Station
+    - vehicleType: FRFSVehicleType
+    - name: Text
+    - code: Text
+    - lat: Maybe Double
+    - lon: Maybe Double
+    - address: Maybe Text
+    - merchantId: Id Merchant
+    - merchantOperatingCityId: Id MerchantOperatingCity
 
   types:
     FRFSVehicleType:
@@ -91,27 +91,27 @@ FRFSQuote:
   tableName: frfs_quote
   derives: "Generic,Show"
   fields:
-    id: Id FRFSQuote
-    bppItemId: Text
-    searchId: Id FRFSSearch
-    _type: FRFSQuoteType
-    fromStationId: Id Station
-    toStationId: Id Station
-    quantity: Int
-    stationsJson: Text
-    vehicleType: FRFSVehicleType
-    bppSubscriberId: Text
-    bppSubscriberUrl: Text
-    providerId: Text
-    providerName: Text
-    providerDescription: Maybe Text
-    price: Price
-    validTill: UTCTime
-    riderId: Id Person
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
-    partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
-    partnerOrgId: Maybe (Id PartnerOrganization)
+    - id: Id FRFSQuote
+    - bppItemId: Text
+    - searchId: Id FRFSSearch
+    - _type: FRFSQuoteType
+    - fromStationId: Id Station
+    - toStationId: Id Station
+    - quantity: Int
+    - stationsJson: Text
+    - vehicleType: FRFSVehicleType
+    - bppSubscriberId: Text
+    - bppSubscriberUrl: Text
+    - providerId: Text
+    - providerName: Text
+    - providerDescription: Maybe Text
+    - price: Price
+    - validTill: UTCTime
+    - riderId: Id Person
+    - merchantId: Id Merchant
+    - merchantOperatingCityId: Id MerchantOperatingCity
+    - partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
+    - partnerOrgId: Maybe (Id PartnerOrganization)
 
   beamFields:
     price:

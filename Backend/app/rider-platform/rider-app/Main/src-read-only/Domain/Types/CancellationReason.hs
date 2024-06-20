@@ -14,15 +14,15 @@ import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data CancellationReason = CancellationReason
-  { createdAt :: Kernel.Prelude.UTCTime,
+  { reasonCode :: Domain.Types.Extra.CancellationReason.CancellationReasonCode,
     description :: Kernel.Prelude.Text,
     enabled :: Kernel.Prelude.Bool,
-    onAssign :: Kernel.Prelude.Bool,
-    onConfirm :: Kernel.Prelude.Bool,
-    onInit :: Kernel.Prelude.Bool,
     onSearch :: Kernel.Prelude.Bool,
+    onInit :: Kernel.Prelude.Bool,
+    onConfirm :: Kernel.Prelude.Bool,
+    onAssign :: Kernel.Prelude.Bool,
     priority :: Kernel.Prelude.Int,
-    reasonCode :: Domain.Types.Extra.CancellationReason.CancellationReasonCode,
+    createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

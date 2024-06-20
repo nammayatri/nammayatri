@@ -15,19 +15,19 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data TicketBookingT f = TicketBookingT
-  { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
+  { id :: B.C f Kernel.Prelude.Text,
+    shortId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    ticketPlaceId :: B.C f Kernel.Prelude.Text,
+    personId :: B.C f Kernel.Prelude.Text,
+    amount :: B.C f Kernel.Types.Common.HighPrecMoney,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    visitDate :: B.C f Data.Time.Calendar.Day,
+    status :: B.C f Domain.Types.TicketBooking.BookingStatus,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
     bookedSeats :: B.C f Kernel.Prelude.Int,
     cancelledSeats :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    id :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    personId :: B.C f Kernel.Prelude.Text,
-    shortId :: B.C f Kernel.Prelude.Text,
-    status :: B.C f Domain.Types.TicketBooking.BookingStatus,
-    ticketPlaceId :: B.C f Kernel.Prelude.Text,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    visitDate :: B.C f Data.Time.Calendar.Day,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
@@ -38,6 +38,6 @@ instance B.Table TicketBookingT where
 
 type TicketBooking = TicketBookingT Identity
 
-$(enableKVPG ''TicketBookingT ['id] [['personId], ['shortId]])
+$(enableKVPG ''TicketBookingT ['id] [['shortId], ['personId]])
 
 $(mkTableInstances ''TicketBookingT "ticket_booking")

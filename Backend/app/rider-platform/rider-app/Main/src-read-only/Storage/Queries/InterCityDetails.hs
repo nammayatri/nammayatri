@@ -28,17 +28,17 @@ instance FromTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCit
     pure $
       Just
         Domain.Types.InterCityDetails.InterCityDetails
-          { baseFare = Kernel.Utils.Common.mkPrice (Just currency) baseFare,
-            deadKmFare = Kernel.Utils.Common.mkPrice (Just currency) deadKmFare,
-            id = Kernel.Types.Id.Id id,
-            kmPerPlannedExtraHour = Kernel.Utils.Common.Distance kmPerPlannedExtraHour distanceUnit,
-            nightShiftInfo = Storage.Queries.Transformers.RentalDetails.mkNightShiftInfo (Kernel.Prelude.roundToIntegral <$> nightShiftCharge) nightShiftCharge nightShiftEnd nightShiftStart (Just currency),
-            perDayMaxHourAllowance = perDayMaxHourAllowance,
-            perExtraKmRate = Kernel.Utils.Common.mkPrice (Just currency) perExtraKmRate,
-            perExtraMinRate = Kernel.Utils.Common.mkPrice (Just currency) perExtraMinRate,
+          { id = Kernel.Types.Id.Id id,
+            baseFare = Kernel.Utils.Common.mkPrice (Just currency) baseFare,
             perHourCharge = Kernel.Utils.Common.mkPrice (Just currency) perHourCharge,
+            perExtraMinRate = Kernel.Utils.Common.mkPrice (Just currency) perExtraMinRate,
+            perExtraKmRate = Kernel.Utils.Common.mkPrice (Just currency) perExtraKmRate,
+            deadKmFare = Kernel.Utils.Common.mkPrice (Just currency) deadKmFare,
+            kmPerPlannedExtraHour = Kernel.Utils.Common.Distance kmPerPlannedExtraHour distanceUnit,
             plannedPerKmRateOneWay = Kernel.Utils.Common.mkPrice (Just currency) plannedPerKmRateOneWay,
             plannedPerKmRateRoundTrip = Kernel.Utils.Common.mkPrice (Just currency) plannedPerKmRateRoundTrip,
+            perDayMaxHourAllowance = perDayMaxHourAllowance,
+            nightShiftInfo = Storage.Queries.Transformers.RentalDetails.mkNightShiftInfo (Kernel.Prelude.roundToIntegral <$> nightShiftCharge) nightShiftCharge nightShiftEnd nightShiftStart (Just currency),
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -46,21 +46,21 @@ instance FromTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCit
 instance ToTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCityDetails where
   toTType' (Domain.Types.InterCityDetails.InterCityDetails {..}) = do
     Beam.InterCityDetailsT
-      { Beam.baseFare = (.amount) baseFare,
+      { Beam.id = Kernel.Types.Id.getId id,
+        Beam.baseFare = (.amount) baseFare,
         Beam.currency = (.currency) baseFare,
+        Beam.perHourCharge = (.amount) perHourCharge,
+        Beam.perExtraMinRate = (.amount) perExtraMinRate,
+        Beam.perExtraKmRate = (.amount) perExtraKmRate,
         Beam.deadKmFare = (.amount) deadKmFare,
-        Beam.id = Kernel.Types.Id.getId id,
         Beam.distanceUnit = (.unit) kmPerPlannedExtraHour,
         Beam.kmPerPlannedExtraHour = Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) kmPerPlannedExtraHour) kmPerPlannedExtraHour,
+        Beam.plannedPerKmRateOneWay = (.amount) plannedPerKmRateOneWay,
+        Beam.plannedPerKmRateRoundTrip = (.amount) plannedPerKmRateRoundTrip,
+        Beam.perDayMaxHourAllowance = perDayMaxHourAllowance,
         Beam.nightShiftCharge = (.amount) . (.nightShiftCharge) <$> nightShiftInfo,
         Beam.nightShiftEnd = (.nightShiftEnd) <$> nightShiftInfo,
         Beam.nightShiftStart = (.nightShiftStart) <$> nightShiftInfo,
-        Beam.perDayMaxHourAllowance = perDayMaxHourAllowance,
-        Beam.perExtraKmRate = (.amount) perExtraKmRate,
-        Beam.perExtraMinRate = (.amount) perExtraMinRate,
-        Beam.perHourCharge = (.amount) perHourCharge,
-        Beam.plannedPerKmRateOneWay = (.amount) plannedPerKmRateOneWay,
-        Beam.plannedPerKmRateRoundTrip = (.amount) plannedPerKmRateRoundTrip,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

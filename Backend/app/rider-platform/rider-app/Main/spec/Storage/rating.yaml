@@ -8,14 +8,14 @@ Rating:
   tableName: rating
 
   fields:
-    id : Id Rating
-    rideId : Id Ride
-    riderId : Id Person
-    ratingValue : Int
-    feedbackDetails : Maybe Text
-    wasOfferedAssistance : Maybe Bool
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    - id : Id Rating
+    - rideId : Id Ride
+    - riderId : Id Person
+    - ratingValue : Int
+    - feedbackDetails : Maybe Text
+    - wasOfferedAssistance : Maybe Bool
+    - createdAt : UTCTime
+    - updatedAt : UTCTime
 
   constraints:
     id: PrimaryKey

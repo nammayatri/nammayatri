@@ -14,13 +14,13 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data MerchantPushNotification = MerchantPushNotification
-  { body :: Kernel.Prelude.Text,
-    fcmNotificationType :: Kernel.External.Notification.Interface.Types.Category,
-    key :: Kernel.Prelude.Text,
+  { key :: Kernel.Prelude.Text,
+    title :: Kernel.Prelude.Text,
+    body :: Kernel.Prelude.Text,
     language :: Kernel.External.Types.Language,
+    fcmNotificationType :: Kernel.External.Notification.Interface.Types.Category,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    title :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

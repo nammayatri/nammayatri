@@ -49,14 +49,14 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Station.Station {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.address address,
+    [ Se.Set Beam.vehicleType vehicleType,
+      Se.Set Beam.name name,
       Se.Set Beam.code code,
       Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,
+      Se.Set Beam.address address,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.name name,
-      Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -67,15 +67,15 @@ instance FromTType' Beam.Station Domain.Types.Station.Station where
     pure $
       Just
         Domain.Types.Station.Station
-          { address = address,
+          { id = Kernel.Types.Id.Id id,
+            vehicleType = vehicleType,
+            name = name,
             code = code,
-            id = Kernel.Types.Id.Id id,
             lat = lat,
             lon = lon,
+            address = address,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            name = name,
-            vehicleType = vehicleType,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -83,15 +83,15 @@ instance FromTType' Beam.Station Domain.Types.Station.Station where
 instance ToTType' Beam.Station Domain.Types.Station.Station where
   toTType' (Domain.Types.Station.Station {..}) = do
     Beam.StationT
-      { Beam.address = address,
+      { Beam.id = Kernel.Types.Id.getId id,
+        Beam.vehicleType = vehicleType,
+        Beam.name = name,
         Beam.code = code,
-        Beam.id = Kernel.Types.Id.getId id,
         Beam.lat = lat,
         Beam.lon = lon,
+        Beam.address = address,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.name = name,
-        Beam.vehicleType = vehicleType,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

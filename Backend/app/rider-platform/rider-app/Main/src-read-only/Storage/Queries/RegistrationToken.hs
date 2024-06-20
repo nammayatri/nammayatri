@@ -38,20 +38,20 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.RegistrationToken.RegistrationToken {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.attempts attempts,
-      Se.Set Beam.authExpiry authExpiry,
+    [ Se.Set Beam.token token,
+      Se.Set Beam.attempts attempts,
       Se.Set Beam.authMedium authMedium,
       Se.Set Beam.authType authType,
       Se.Set Beam.authValueHash authValueHash,
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.createdViaPartnerOrgId (Kernel.Types.Id.getId <$> createdViaPartnerOrgId),
-      Se.Set Beam.entityId entityId,
-      Se.Set Beam.entityType entityType,
-      Se.Set Beam.info info,
-      Se.Set Beam.merchantId merchantId,
-      Se.Set Beam.token token,
+      Se.Set Beam.verified verified,
+      Se.Set Beam.authExpiry authExpiry,
       Se.Set Beam.tokenExpiry tokenExpiry,
+      Se.Set Beam.entityId entityId,
+      Se.Set Beam.merchantId merchantId,
+      Se.Set Beam.entityType entityType,
+      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now,
-      Se.Set Beam.verified verified
+      Se.Set Beam.info info,
+      Se.Set Beam.createdViaPartnerOrgId (Kernel.Types.Id.getId <$> createdViaPartnerOrgId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

@@ -16,23 +16,23 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data TicketBookingServiceT f = TicketBookingServiceT
-  { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
-    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
-    bHourId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    bookedSeats :: B.C f Kernel.Prelude.Int,
-    btype :: B.C f Domain.Types.BusinessHour.BusinessHourType,
-    cancelledSeats :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    expiryDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    id :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+  { id :: B.C f Kernel.Prelude.Text,
     shortId :: B.C f Kernel.Prelude.Text,
-    status :: B.C f Domain.Types.TicketBookingService.ServiceStatus,
     ticketBookingId :: B.C f Kernel.Prelude.Text,
     ticketServiceId :: B.C f Kernel.Prelude.Text,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    amount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    status :: B.C f Domain.Types.TicketBookingService.ServiceStatus,
     verificationCount :: B.C f Kernel.Prelude.Int,
     visitDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
+    btype :: B.C f Domain.Types.BusinessHour.BusinessHourType,
+    bHourId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    expiryDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    bookedSeats :: B.C f Kernel.Prelude.Int,
+    cancelledSeats :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)

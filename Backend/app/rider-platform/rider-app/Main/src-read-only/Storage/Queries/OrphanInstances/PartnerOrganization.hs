@@ -17,22 +17,22 @@ instance FromTType' Beam.PartnerOrganization Domain.Types.PartnerOrganization.Pa
     pure $
       Just
         Domain.Types.PartnerOrganization.PartnerOrganization
-          { apiKey = EncryptedHashed (Encrypted apiKeyEncrypted) apiKeyHash,
-            createdAt = createdAt,
-            merchantId = Kernel.Types.Id.Id merchantId,
+          { orgId = Kernel.Types.Id.Id orgId,
             name = name,
-            orgId = Kernel.Types.Id.Id orgId,
+            apiKey = EncryptedHashed (Encrypted apiKeyEncrypted) apiKeyHash,
+            merchantId = Kernel.Types.Id.Id merchantId,
+            createdAt = createdAt,
             updatedAt = updatedAt
           }
 
 instance ToTType' Beam.PartnerOrganization Domain.Types.PartnerOrganization.PartnerOrganization where
   toTType' (Domain.Types.PartnerOrganization.PartnerOrganization {..}) = do
     Beam.PartnerOrganizationT
-      { Beam.apiKeyEncrypted = unEncrypted . (.encrypted) $ apiKey,
-        Beam.apiKeyHash = (.hash) apiKey,
-        Beam.createdAt = createdAt,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+      { Beam.orgId = Kernel.Types.Id.getId orgId,
         Beam.name = name,
-        Beam.orgId = Kernel.Types.Id.getId orgId,
+        Beam.apiKeyEncrypted = unEncrypted . (.encrypted) $ apiKey,
+        Beam.apiKeyHash = (.hash) apiKey,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

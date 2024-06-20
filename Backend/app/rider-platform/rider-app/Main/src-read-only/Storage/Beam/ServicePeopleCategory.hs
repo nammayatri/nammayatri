@@ -14,12 +14,12 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data ServicePeopleCategoryT f = ServicePeopleCategoryT
-  { cancellationCharges :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
-    description :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
+  { id :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
+    description :: B.C f Kernel.Prelude.Text,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     pricePerUnit :: B.C f Kernel.Types.Common.HighPrecMoney,
+    cancellationCharges :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

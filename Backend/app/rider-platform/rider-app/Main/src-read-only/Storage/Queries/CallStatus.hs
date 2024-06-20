@@ -66,16 +66,16 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.CallStatus.CallStatus {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.callError callError,
-      Se.Set Beam.callId callId,
-      Se.Set Beam.callService callService,
-      Se.Set Beam.conversationDuration conversationDuration,
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.dtmfNumberUsed dtmfNumberUsed,
-      Se.Set Beam.merchantId merchantId,
-      Se.Set Beam.recordingUrl recordingUrl,
+    [ Se.Set Beam.callId callId,
       Se.Set Beam.rideId (Kernel.Types.Id.getId <$> rideId),
+      Se.Set Beam.dtmfNumberUsed dtmfNumberUsed,
       Se.Set Beam.status status,
+      Se.Set Beam.recordingUrl recordingUrl,
+      Se.Set Beam.conversationDuration conversationDuration,
+      Se.Set Beam.merchantId merchantId,
+      Se.Set Beam.callService callService,
+      Se.Set Beam.callError callError,
+      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

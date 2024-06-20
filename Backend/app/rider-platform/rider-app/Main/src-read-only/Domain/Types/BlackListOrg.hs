@@ -13,10 +13,10 @@ import qualified Kernel.Types.Registry
 import qualified Tools.Beam.UtilsTH
 
 data BlackListOrgD (s :: UsageSafety) = BlackListOrg
-  { createdAt :: Kernel.Prelude.UTCTime,
-    domain :: Kernel.Types.Beckn.Domain.Domain,
-    id :: Kernel.Types.Id.Id Domain.Types.BlackListOrg.BlackListOrg,
+  { id :: Kernel.Types.Id.Id Domain.Types.BlackListOrg.BlackListOrg,
     subscriberId :: Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber,
+    domain :: Kernel.Types.Beckn.Domain.Domain,
+    createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)

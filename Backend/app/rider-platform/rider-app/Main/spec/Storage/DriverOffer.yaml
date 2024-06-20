@@ -14,20 +14,20 @@ DriverOffer:
     BPPQuote: {}
 
   fields:
-    id : Id DriverOffer
-    estimateId : Id Estimate
-    merchantId : Maybe (Id Merchant)
-    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
-    driverName : Text
-    durationToPickup : Maybe Int
-    distanceToPickup : Maybe Distance
-    distanceUnit : DistanceUnit
-    validTill : UTCTime
-    bppQuoteId : Text
-    rating : Maybe Centesimal
-    status : DriverOfferStatus
-    createdAt: UTCTime
-    updatedAt : UTCTime
+    - id : Id DriverOffer
+    - estimateId : Id Estimate
+    - merchantId : Maybe (Id Merchant)
+    - merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
+    - driverName : Text
+    - durationToPickup : Maybe Int
+    - distanceToPickup : Maybe Distance
+    - distanceUnit : DistanceUnit
+    - validTill : UTCTime
+    - bppQuoteId : Text
+    - rating : Maybe Centesimal
+    - status : DriverOfferStatus
+    - createdAt: UTCTime
+    - updatedAt : UTCTime
 
   beamType:
     createdAt: Maybe UTCTime

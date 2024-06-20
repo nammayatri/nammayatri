@@ -48,10 +48,10 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.PersonDisability.PersonDisability {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
-      Se.Set Beam.description description,
-      Se.Set Beam.disabilityId disabilityId,
+    [ Se.Set Beam.disabilityId disabilityId,
       Se.Set Beam.tag tag,
+      Se.Set Beam.description description,
+      Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]]
@@ -61,21 +61,21 @@ instance FromTType' Beam.PersonDisability Domain.Types.PersonDisability.PersonDi
     pure $
       Just
         Domain.Types.PersonDisability.PersonDisability
-          { createdAt = Kernel.Prelude.fromMaybe updatedAt createdAt,
-            description = description,
+          { personId = Kernel.Types.Id.Id personId,
             disabilityId = disabilityId,
-            personId = Kernel.Types.Id.Id personId,
             tag = tag,
+            description = description,
+            createdAt = Kernel.Prelude.fromMaybe updatedAt createdAt,
             updatedAt = updatedAt
           }
 
 instance ToTType' Beam.PersonDisability Domain.Types.PersonDisability.PersonDisability where
   toTType' (Domain.Types.PersonDisability.PersonDisability {..}) = do
     Beam.PersonDisabilityT
-      { Beam.createdAt = Kernel.Prelude.Just createdAt,
-        Beam.description = description,
+      { Beam.personId = Kernel.Types.Id.getId personId,
         Beam.disabilityId = disabilityId,
-        Beam.personId = Kernel.Types.Id.getId personId,
         Beam.tag = tag,
+        Beam.description = description,
+        Beam.createdAt = Kernel.Prelude.Just createdAt,
         Beam.updatedAt = updatedAt
       }

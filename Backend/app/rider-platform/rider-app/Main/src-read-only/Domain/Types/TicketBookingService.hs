@@ -17,22 +17,22 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data TicketBookingService = TicketBookingService
-  { amount :: Kernel.Types.Common.Price,
-    bHourId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour),
-    bookedSeats :: Kernel.Prelude.Int,
-    btype :: Domain.Types.BusinessHour.BusinessHourType,
-    cancelledSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    createdAt :: Kernel.Prelude.UTCTime,
-    expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    id :: Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+  { id :: Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService,
-    status :: Domain.Types.TicketBookingService.ServiceStatus,
     ticketBookingId :: Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking,
     ticketServiceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
-    updatedAt :: Kernel.Prelude.UTCTime,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    amount :: Kernel.Types.Common.Price,
+    status :: Domain.Types.TicketBookingService.ServiceStatus,
     verificationCount :: Kernel.Prelude.Int,
     visitDate :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
+    btype :: Domain.Types.BusinessHour.BusinessHourType,
+    bHourId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour),
+    expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime,
+    bookedSeats :: Kernel.Prelude.Int,
+    cancelledSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)
   }
   deriving (Generic, Show)

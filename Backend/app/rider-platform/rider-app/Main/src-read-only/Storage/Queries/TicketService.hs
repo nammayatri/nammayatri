@@ -35,15 +35,15 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.TicketService.TicketService {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.allowCancellation allowCancellation,
-      Se.Set Beam.allowFutureBooking allowFutureBooking,
-      Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
-      Se.Set Beam.expiry expiry,
-      Se.Set Beam.maxVerification maxVerification,
-      Se.Set Beam.operationalDays operationalDays,
-      Se.Set Beam.placesId placesId,
+    [ Se.Set Beam.placesId placesId,
       Se.Set Beam.service service,
       Se.Set Beam.shortDesc shortDesc,
+      Se.Set Beam.operationalDays operationalDays,
+      Se.Set Beam.maxVerification maxVerification,
+      Se.Set Beam.allowFutureBooking allowFutureBooking,
+      Se.Set Beam.allowCancellation allowCancellation,
+      Se.Set Beam.expiry expiry,
+      Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,

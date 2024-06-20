@@ -13,22 +13,22 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RegistrationTokenT f = RegistrationTokenT
-  { attempts :: B.C f Kernel.Prelude.Int,
-    authExpiry :: B.C f Kernel.Prelude.Int,
+  { id :: B.C f Kernel.Prelude.Text,
+    token :: B.C f Kernel.Prelude.Text,
+    attempts :: B.C f Kernel.Prelude.Int,
     authMedium :: B.C f Domain.Types.RegistrationToken.Medium,
     authType :: B.C f Domain.Types.RegistrationToken.LoginType,
     authValueHash :: B.C f Kernel.Prelude.Text,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    createdViaPartnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    entityId :: B.C f Kernel.Prelude.Text,
-    entityType :: B.C f Domain.Types.RegistrationToken.RTEntityType,
-    id :: B.C f Kernel.Prelude.Text,
-    info :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantId :: B.C f Kernel.Prelude.Text,
-    token :: B.C f Kernel.Prelude.Text,
+    verified :: B.C f Kernel.Prelude.Bool,
+    authExpiry :: B.C f Kernel.Prelude.Int,
     tokenExpiry :: B.C f Kernel.Prelude.Int,
+    entityId :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    entityType :: B.C f Domain.Types.RegistrationToken.RTEntityType,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    verified :: B.C f Kernel.Prelude.Bool
+    info :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdViaPartnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -38,6 +38,6 @@ instance B.Table RegistrationTokenT where
 
 type RegistrationToken = RegistrationTokenT Identity
 
-$(enableKVPG ''RegistrationTokenT ['id] [['entityId], ['token]])
+$(enableKVPG ''RegistrationTokenT ['id] [['token], ['entityId]])
 
 $(mkTableInstances ''RegistrationTokenT "registration_token")

@@ -74,22 +74,22 @@ updateByPrimaryKey (Domain.Types.BookingUpdateRequest.BookingUpdateRequest {..})
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bookingId (Kernel.Types.Id.getId bookingId),
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.currentPointLat currentPointLat,
-      Se.Set Beam.currentPointLon currentPointLon,
-      Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
-      Se.Set Beam.errorCode ((.errorCode) <$> errorObj),
-      Se.Set Beam.errorMessage ((.errorMessage) <$> errorObj),
+      Se.Set Beam.status status,
+      Se.Set Beam.travelledDistance travelledDistance,
       Se.Set Beam.estimatedDistance estimatedDistance,
       Se.Set Beam.estimatedFare estimatedFare,
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.oldEstimatedDistance oldEstimatedDistance,
-      Se.Set Beam.oldEstimatedFare oldEstimatedFare,
-      Se.Set Beam.status status,
       Se.Set Beam.totalDistance totalDistance,
-      Se.Set Beam.travelledDistance travelledDistance,
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.currentPointLat currentPointLat,
+      Se.Set Beam.currentPointLon currentPointLon,
+      Se.Set Beam.oldEstimatedFare oldEstimatedFare,
+      Se.Set Beam.oldEstimatedDistance oldEstimatedDistance,
+      Se.Set Beam.errorCode ((.errorCode) <$> errorObj),
+      Se.Set Beam.errorMessage ((.errorMessage) <$> errorObj),
+      Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -98,44 +98,44 @@ instance FromTType' Beam.BookingUpdateRequest Domain.Types.BookingUpdateRequest.
     pure $
       Just
         Domain.Types.BookingUpdateRequest.BookingUpdateRequest
-          { bookingId = Kernel.Types.Id.Id bookingId,
-            createdAt = createdAt,
-            currentPointLat = currentPointLat,
-            currentPointLon = currentPointLon,
-            distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
-            errorObj = Domain.Types.BookingUpdateRequest.ErrorObj <$> errorCode <*> errorMessage,
+          { id = Kernel.Types.Id.Id id,
+            bookingId = Kernel.Types.Id.Id bookingId,
+            status = status,
+            travelledDistance = travelledDistance,
             estimatedDistance = estimatedDistance,
             estimatedFare = estimatedFare,
-            id = Kernel.Types.Id.Id id,
-            merchantId = Kernel.Types.Id.Id merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            oldEstimatedDistance = oldEstimatedDistance,
-            oldEstimatedFare = oldEstimatedFare,
-            status = status,
             totalDistance = totalDistance,
-            travelledDistance = travelledDistance,
-            updatedAt = updatedAt
+            currentPointLat = currentPointLat,
+            currentPointLon = currentPointLon,
+            oldEstimatedFare = oldEstimatedFare,
+            oldEstimatedDistance = oldEstimatedDistance,
+            errorObj = Domain.Types.BookingUpdateRequest.ErrorObj <$> errorCode <*> errorMessage,
+            distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            merchantId = Kernel.Types.Id.Id merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId
           }
 
 instance ToTType' Beam.BookingUpdateRequest Domain.Types.BookingUpdateRequest.BookingUpdateRequest where
   toTType' (Domain.Types.BookingUpdateRequest.BookingUpdateRequest {..}) = do
     Beam.BookingUpdateRequestT
-      { Beam.bookingId = Kernel.Types.Id.getId bookingId,
-        Beam.createdAt = createdAt,
-        Beam.currentPointLat = currentPointLat,
-        Beam.currentPointLon = currentPointLon,
-        Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
-        Beam.errorCode = (.errorCode) <$> errorObj,
-        Beam.errorMessage = (.errorMessage) <$> errorObj,
+      { Beam.id = Kernel.Types.Id.getId id,
+        Beam.bookingId = Kernel.Types.Id.getId bookingId,
+        Beam.status = status,
+        Beam.travelledDistance = travelledDistance,
         Beam.estimatedDistance = estimatedDistance,
         Beam.estimatedFare = estimatedFare,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.oldEstimatedDistance = oldEstimatedDistance,
-        Beam.oldEstimatedFare = oldEstimatedFare,
-        Beam.status = status,
         Beam.totalDistance = totalDistance,
-        Beam.travelledDistance = travelledDistance,
-        Beam.updatedAt = updatedAt
+        Beam.currentPointLat = currentPointLat,
+        Beam.currentPointLon = currentPointLon,
+        Beam.oldEstimatedFare = oldEstimatedFare,
+        Beam.oldEstimatedDistance = oldEstimatedDistance,
+        Beam.errorCode = (.errorCode) <$> errorObj,
+        Beam.errorMessage = (.errorMessage) <$> errorObj,
+        Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
+        Beam.createdAt = createdAt,
+        Beam.updatedAt = updatedAt,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId
       }

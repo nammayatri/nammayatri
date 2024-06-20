@@ -13,16 +13,16 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data LocationMapping = LocationMapping
-  { createdAt :: Kernel.Prelude.UTCTime,
-    entityId :: Kernel.Prelude.Text,
-    id :: Kernel.Types.Id.Id Domain.Types.LocationMapping.LocationMapping,
-    locationId :: Kernel.Types.Id.Id Domain.Types.Location.Location,
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
-    order :: Kernel.Prelude.Int,
+  { id :: Kernel.Types.Id.Id Domain.Types.LocationMapping.LocationMapping,
     tag :: Domain.Types.LocationMapping.LocationMappingTags,
+    locationId :: Kernel.Types.Id.Id Domain.Types.Location.Location,
+    entityId :: Kernel.Prelude.Text,
+    order :: Kernel.Prelude.Int,
+    version :: Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime,
-    version :: Kernel.Prelude.Text
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

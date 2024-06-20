@@ -14,20 +14,20 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data DriverOffer = DriverOffer
-  { bppQuoteId :: Kernel.Prelude.Text,
-    createdAt :: Kernel.Prelude.UTCTime,
-    distanceToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
-    distanceUnit :: Kernel.Types.Common.DistanceUnit,
-    driverName :: Kernel.Prelude.Text,
-    durationToPickup :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+  { id :: Kernel.Types.Id.Id Domain.Types.DriverOffer.DriverOffer,
     estimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,
-    id :: Kernel.Types.Id.Id Domain.Types.DriverOffer.DriverOffer,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    driverName :: Kernel.Prelude.Text,
+    durationToPickup :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    distanceToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
+    distanceUnit :: Kernel.Types.Common.DistanceUnit,
+    validTill :: Kernel.Prelude.UTCTime,
+    bppQuoteId :: Kernel.Prelude.Text,
     rating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     status :: Domain.Types.DriverOffer.DriverOfferStatus,
-    updatedAt :: Kernel.Prelude.UTCTime,
-    validTill :: Kernel.Prelude.UTCTime
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
