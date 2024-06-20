@@ -588,7 +588,7 @@ public class MainActivity extends AppCompatActivity {
         inappCallBack = new ShowNotificationCallBack() {
             @Override
             public void showInAppNotification(JSONObject jsonObject, Context context) {
-                this.showInAppNotification(jsonObject, context);
+                showInAppNotificationApp(jsonObject, context);
             }
 
             @Override
@@ -1144,7 +1144,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void showInAppNotification(JSONObject payload, Context context) {
+    public void showInAppNotificationApp(JSONObject payload, Context context) {
         try {
             Handler handler = new Handler(context.getMainLooper());
             handler.postDelayed(() -> {
