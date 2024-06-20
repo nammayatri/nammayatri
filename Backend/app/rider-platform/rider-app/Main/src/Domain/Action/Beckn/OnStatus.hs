@@ -291,7 +291,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
         DB.OneWaySpecialZoneDetails details -> Just details.toLocation
         DB.InterCityDetails details -> Just details.toLocation
         DB.AmbulanceDetails details -> Just details.toLocation
-  mobileNumberHash <- getDbHash driverNumber
+  driverMobileNumberHash <- getDbHash driverNumber
   let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditLocationAttemptsThreshold) mbMerchant
   let allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
   driverPhoneNumber' <- encrypt driverMobileNumber

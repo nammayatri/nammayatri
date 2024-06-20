@@ -91,7 +91,7 @@ Ride:
     cancellationFeeIfCancelled: Maybe HighPrecMoney  
     isAlreadyFav: Maybe Bool
     favCount: Maybe Int
-    mobileNumberHash: DbHash
+    driverMobileNumberHash: DbHash
     
   sqlType:
     allowedEditLocationAttempts: int
