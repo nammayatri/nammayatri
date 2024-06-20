@@ -878,6 +878,7 @@ mapServiceTierToCategory serviceTier =
 mapRideStatus :: Maybe DRide.RideStatus -> Enums.FulfillmentState
 mapRideStatus rideStatus =
   case rideStatus of
+    Just DRide.UPCOMING -> Enums.SCHEDULED_RIDE_ASSIGNED
     Just DRide.NEW -> Enums.RIDE_ASSIGNED
     Just DRide.INPROGRESS -> Enums.RIDE_STARTED
     Just DRide.COMPLETED -> Enums.RIDE_ENDED

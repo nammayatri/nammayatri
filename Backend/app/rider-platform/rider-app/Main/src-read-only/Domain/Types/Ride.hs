@@ -122,7 +122,7 @@ data RideAPIEntity = RideAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED | UPCOMING deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 

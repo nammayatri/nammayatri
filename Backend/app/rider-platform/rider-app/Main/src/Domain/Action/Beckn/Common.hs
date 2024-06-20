@@ -64,6 +64,7 @@ import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideExtra as QERIDE
 import Tools.Error
 import Tools.Event
 import Tools.Maps (LatLong)
@@ -217,6 +218,108 @@ data DFareBreakup = DFareBreakup
     description :: Text
   }
 
+buildRide :: (MonadFlow m, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> DRide.RideStatus -> Bool -> m DRide.Ride
+buildRide mbMerchant booking BookingDetails {..} previousRideEndPos now status isFreeRide = do
+  guid <- generateGUID
+  shortId <- generateShortId
+  deploymentVersion <- asks (.version)
+  let fromLocation = booking.fromLocation
+      toLocation = case booking.bookingDetails of
+        DRB.OneWayDetails details -> Just details.toLocation
+        DRB.RentalDetails _ -> Nothing
+        DRB.DriverOfferDetails details -> Just details.toLocation
+        DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+        DRB.InterCityDetails details -> Just details.toLocation
+  let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
+  return
+    DRide.Ride
+      { id = guid,
+        bookingId = booking.id,
+        merchantId = Just booking.merchantId,
+        merchantOperatingCityId = Just booking.merchantOperatingCityId,
+        clientId = booking.clientId,
+        trackingUrl = Nothing,
+        fare = Nothing,
+        totalFare = Nothing,
+        chargeableDistance = Nothing,
+        traveledDistance = Nothing,
+        driverArrivalTime = Nothing,
+        vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType, -- fix later
+        vehicleServiceTierType = Just booking.vehicleServiceTierType,
+        createdAt = now,
+        updatedAt = now,
+        rideStartTime = Nothing,
+        rideEndTime = Nothing,
+        rideRating = Nothing,
+        safetyCheckStatus = Nothing,
+        isFreeRide = Just isFreeRide,
+        endOtp = Nothing,
+        startOdometerReading = Nothing,
+        endOdometerReading = Nothing,
+        clientBundleVersion = booking.clientBundleVersion,
+        clientSdkVersion = booking.clientSdkVersion,
+        clientDevice = booking.clientDevice,
+        clientConfigVersion = booking.clientConfigVersion,
+        backendConfigVersion = booking.backendConfigVersion,
+        backendAppVersion = Just deploymentVersion.getDeploymentVersion,
+        driversPreviousRideDropLoc = previousRideEndPos,
+        showDriversPreviousRideDropLoc = isJust previousRideEndPos,
+        tollConfidence = Nothing,
+        distanceUnit = booking.distanceUnit,
+        driverAccountId = Nothing,
+        paymentDone = False,
+        ..
+      }
+
+scheduledAssignedReqHandler ::
+  ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
+    HasField "storeRidesTimeLimit" r Int,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r,
+    EsqDBReplicaFlow m r,
+    HasLongDurationRetryCfg r c,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    SchedulerFlow r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasBAPMetrics m r,
+    EventStreamFlow m r
+  ) =>
+  ValidatedRideAssignedReq ->
+  m ()
+scheduledAssignedReqHandler req = do
+  let BookingDetails {..} = req.bookingDetails
+  void $ QRB.updateBPPBookingId req.booking.id bppBookingId
+  let booking = req.booking {DRB.bppBookingId = Just bppBookingId}
+  mbMerchant <- CQM.findById booking.merchantId
+  now <- getCurrentTime
+  ride <- buildRide mbMerchant booking req.bookingDetails Nothing now DRide.UPCOMING req.isFreeRide
+  triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
+  let category = case booking.specialLocationTag of
+        Just _ -> "specialLocation"
+        Nothing -> "normal"
+  incrementRideCreatedRequestCount booking.merchantId.getId booking.merchantOperatingCityId.getId category
+  let fareParams = fromMaybe [] req.fareParams
+  fareBreakups <- traverse (buildFareBreakupV2 req.booking.id.getId DFareBreakup.BOOKING) fareParams
+  _ <- QFareBreakup.createMany fareBreakups
+  -- _ <- QRB.updateStatus booking.id DRB.CONFIRMED
+  _ <- QRide.createRide ride
+  _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
+  QPFS.clearCache booking.riderId
+  unless isInitiatedByCronJob $ do
+    Notify.notifyOnRideAssigned booking ride
+    when req.isDriverBirthDay $ do
+      Notify.notifyDriverBirthDay booking.riderId driverName
+  withLongRetry $ CallBPP.callTrack booking ride
+
+  notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
+  notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
+  where
+    notifyRideRelatedNotificationOnEvent booking ride now timeDiffEvent = do
+      rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId timeDiffEvent
+      forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now)
+
 rideAssignedReqHandler ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
     HasField "storeRidesTimeLimit" r Int,
@@ -240,8 +343,16 @@ rideAssignedReqHandler req = do
   let booking = req.booking {DRB.bppBookingId = Just bppBookingId}
   mbMerchant <- CQM.findById booking.merchantId
   now <- getCurrentTime
-  ride <- buildRide mbMerchant booking req.bookingDetails req.previousRideEndPos now
-
+  if booking.isScheduled
+    then do
+      mbRide <- QRide.findByBPPRideId bppRideId
+      _ <- QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
+      case mbRide of
+        Just ride -> QERIDE.updateStatus ride.id DRide.NEW
+        _ -> return ()
+    else do
+      ride <- buildRide mbMerchant booking req.bookingDetails req.previousRideEndPos now DRide.NEW req.isFreeRide
+    
   whenJust req.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
     -- handle error flow properly
     let createPaymentIntentReq =
@@ -257,24 +368,24 @@ rideAssignedReqHandler req = do
     void $ SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.riderId ride createPaymentIntentReq
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
-  let category = case booking.specialLocationTag of
-        Just _ -> "specialLocation"
-        Nothing -> "normal"
-  incrementRideCreatedRequestCount booking.merchantId.getId booking.merchantOperatingCityId.getId category
-  let fareParams = fromMaybe [] req.fareParams
-  fareBreakups <- traverse (buildFareBreakupV2 req.booking.id.getId DFareBreakup.BOOKING) fareParams
-  QFareBreakup.createMany fareBreakups
-  QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
-  QRide.createRide ride
-  QPFS.clearCache booking.riderId
-  unless isInitiatedByCronJob $ do
-    Notify.notifyOnRideAssigned booking ride
-    when req.isDriverBirthDay $ do
-      Notify.notifyDriverBirthDay booking.riderId driverName
-  withLongRetry $ CallBPP.callTrack booking ride
+      let category = case booking.specialLocationTag of
+            Just _ -> "specialLocation"
+            Nothing -> "normal"
+      incrementRideCreatedRequestCount booking.merchantId.getId booking.merchantOperatingCityId.getId category
+      let fareParams = fromMaybe [] req.fareParams
+      fareBreakups <- traverse (buildFareBreakupV2 req.booking.id.getId DFareBreakup.BOOKING) fareParams
+      QFareBreakup.createMany fareBreakups
+      QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
+      QRide.createRide ride
+          QPFS.clearCache booking.riderId
+      unless isInitiatedByCronJob $ do
+        Notify.notifyOnRideAssigned booking ride
+        when req.isDriverBirthDay $ do
+          Notify.notifyDriverBirthDay booking.riderId driverName
+      withLongRetry $ CallBPP.callTrack booking ride
 
-  notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
-  notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
+      notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
+      notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
   where
     buildRide :: (MonadFlow m, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> m DRide.Ride
     buildRide mbMerchant booking BookingDetails {..} previousRideEndPos now = do
