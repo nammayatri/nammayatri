@@ -294,10 +294,10 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
       ticketService <- QTS.findById ticketServicesReq.serviceId >>= fromMaybeM (TicketServiceNotFound ticketServicesReq.serviceId.getId)
       businessHour <- QBH.findById bHourId >>= fromMaybeM (BusinessHourNotFound bHourId.getId)
 
-      let startTime = case businessHour.btype of
+      let businessHourTime = case businessHour.btype of
             Domain.Types.BusinessHour.Slot time -> time
-            Domain.Types.BusinessHour.Duration startTime' _ -> startTime'
-      let visitDateTime = UTCTime visitDate (timeOfDayToTime startTime)
+            Domain.Types.BusinessHour.Duration _ endTime' -> endTime'
+      let visitDateTime = UTCTime visitDate (timeOfDayToTime businessHourTime)
 
       when (visitDateTime < now) $ throwError $ InvalidRequest "Cannot book for past date"
 
