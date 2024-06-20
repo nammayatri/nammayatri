@@ -153,8 +153,11 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     QLM.create pickupMapForBooking
     pickupMapForRide <- SLM.buildPickUpLocationMapping startLocation.id rideId.getId DLM.RIDE (Just person.merchantId) (Just person.merchantOperatingCityId)
     QLM.create pickupMapForRide
-    let entityData = Notify.EditLocationReq {..}
-    Notify.notifyPickupOrDropLocationChange person entityData
+    driverInfo <- QDI.findById person.id >>= fromMaybeM DriverInfoNotFound
+    overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf person.merchantOperatingCityId "EDIT_LOCATION" (fromMaybe ENGLISH person.language) Nothing >>= fromMaybeM (InternalError "Overlay not found for EDIT_LOCATION")
+    let fcmOverlayReq = Notify.mkOverlayReq overlay
+    let entityData = Notify.EditPickupLocationReq {hasAdvanceBooking = driverInfo.hasAdvanceBooking, ..}
+    Notify.sendPickupLocationChangedOverlay person fcmOverlayReq entityData
 
   whenJust destination $ \dropLocation -> do
     --------------------TO DO ----------------------- Dependency on other people changes
