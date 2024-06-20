@@ -381,15 +381,7 @@ getProcessedDriverDocuments docType driverId _merchantId _merchantOpCityId =
       return (mapStatus . (.verificationStatus) <$> mbPanCard, Nothing, Nothing)
     DVC.BackgroundVerification -> do
       mbBackgroundVerification <- BVQuery.findByDriverId driverId
-      let invitationStatus = (.invitationStatus) <$> mbBackgroundVerification
-          reportStatus = (.reportStatus) <$> mbBackgroundVerification
-          invitationUrl = (.invitationUrl) <$> mbBackgroundVerification
-      case (invitationStatus, reportStatus, invitationUrl) of
-        (Just Documents.PENDING, _, Just url) -> return (Just PENDING, Nothing, Just url)
-        (_, Just Documents.VALID, _) -> return (Just VALID, Nothing, Nothing)
-        (_, Just Documents.UNAUTHORIZED, _) -> return (Just UNAUTHORIZED, Nothing, Nothing)
-        (Just Documents.VALID, _, _) -> return (Just PENDING, Nothing, Nothing)
-        _ -> return (Nothing, Nothing, Nothing)
+      return (mapStatus <$> (mbBackgroundVerification <&> (.reportStatus)), Nothing, Nothing)
     _ -> return (Nothing, Nothing, Nothing)
 
 getProcessedVehicleDocuments :: DVC.DocumentType -> Id SP.Person -> RC.VehicleRegistrationCertificate -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl)
