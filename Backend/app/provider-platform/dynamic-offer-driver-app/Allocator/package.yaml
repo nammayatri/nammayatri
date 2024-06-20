@@ -90,6 +90,7 @@ dependencies:
   - extra
   - singletons
   - unordered-containers
+  - beckn-services
 
 ghc-options:
   - -fwrite-ide-info

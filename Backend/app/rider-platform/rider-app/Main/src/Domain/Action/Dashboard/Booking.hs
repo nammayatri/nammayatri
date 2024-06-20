@@ -145,6 +145,7 @@ bookingSync merchant merchantOpCityId reqBookingId = do
   case mbRide of
     Just ride -> do
       let bookingNewStatus = case ride.status of
+            DRide.UPCOMING -> DBooking.TRIP_ASSIGNED
             DRide.NEW -> DBooking.TRIP_ASSIGNED
             DRide.INPROGRESS -> DBooking.TRIP_ASSIGNED
             DRide.COMPLETED -> DBooking.COMPLETED

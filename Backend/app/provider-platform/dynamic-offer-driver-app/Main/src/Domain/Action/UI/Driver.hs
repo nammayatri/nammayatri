@@ -175,9 +175,11 @@ import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.SpecialLocation as SL
+import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..))
 import SharedLogic.Cac
-import SharedLogic.CallBAP (sendDriverOffer, sendRideAssignedUpdateToBAP)
+import SharedLogic.CallBAP (sendDriverOffer, sendScheduledRideAssignedUpdateToBAP)
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
@@ -1174,12 +1176,22 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   CS.markBookingAssignmentInprogress booking.id -- this is to handle booking assignment and user cancellation at same time
   unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
   whenJust mbSearchTry $ \searchTry -> QST.updateStatus DST.COMPLETED searchTry.id
-  (ride, _, vehicle) <- initializeRide merchantId driver booking Nothing Nothing clientId
+  (ride, _, vehicle) <- initializeRide merchantId driver booking Nothing Nothing clientId --stop here
   driverFCMPulledList <-
     case mbSearchTry of
       Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchantId driver.id searchTry.id $ mkPrice (Just quote.currency) quote.estimatedFare
       Nothing -> pure []
-  void $ sendRideAssignedUpdateToBAP booking ride driver vehicle
+  void $ sendScheduledRideAssignedUpdateToBAP booking ride driver vehicle
+  now <- getCurrentTime
+  maxShards <- asks (.maxShards)
+  let jobScheduledTime = (diffUTCTime booking.startTime now) - (30 * 60)
+   in createJobIn @_ @'ScheduledRideAssignedOnUpdate jobScheduledTime maxShards $
+        ScheduledRideAssignedOnUpdateJobData
+          { bookingId = booking.id,
+            rideId = ride.id,
+            driverId = driver.id,
+            ..
+          }
   CS.markBookingAssignmentCompleted booking.id
   return driverFCMPulledList
 

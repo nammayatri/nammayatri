@@ -20,6 +20,7 @@ module Beckn.ACL.Common.Order
     buildRideCompletedQuote,
     mkRideCompletedPayment,
     mkLocationTagGroup,
+    tfScheduledAssignedReqToOrder,
     tfAssignedReqToOrder,
     tfStartReqToOrder,
     tfCompleteReqToOrder,
@@ -231,6 +232,34 @@ mkRideCompletedPayment currency paymentMethodInfo paymentUrl = do
           },
       uri = paymentUrl
     }
+
+tfScheduledAssignedReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideAssignedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
+tfScheduledAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig = do
+  let Common.BookingDetails {..} = bookingDetails
+      arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
+      currentRideDropLocation = if isValueAddNP then Utils.mkForwardBatchTagGroupV2 ride.previousRideTripEndPos else Nothing
+      tagGroups = currentRideDropLocation <> arrivalTimeTagGroup
+      quote = Utils.tfQuotation booking
+      farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
+      items = UtilsOU.tfItems ride booking merchant.shortId.getShortId Nothing farePolicy booking.paymentId
+      payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
+  logDebug $ "currentRideDropLocation: " <> show currentRideDropLocation
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) image tagGroups Nothing isDriverBirthDay isFreeRide (Just $ show EventEnum.SCHEDULED_RIDE_ASSIGNED) isValueAddNP riderPhone
+  pure
+    Spec.Order
+      { orderId = Just $ booking.id.getId,
+        orderStatus = Just $ show EventEnum.ACTIVE,
+        orderFulfillments = Just [fulfillment],
+        orderBilling = Nothing,
+        orderCancellation = Nothing,
+        orderCancellationTerms = Just $ Utils.tfCancellationTerms becknConfig (Just EventEnum.SCHEDULED_RIDE_ASSIGNED),
+        orderItems = items,
+        orderPayments = Just [payment],
+        orderProvider = Utils.tfProvider becknConfig,
+        orderQuote = quote,
+        orderCreatedAt = Just booking.createdAt,
+        orderUpdatedAt = Just booking.updatedAt
+      }
 
 tfAssignedReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideAssignedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
 tfAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig = do
