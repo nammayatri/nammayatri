@@ -25,8 +25,10 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Overlay
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as Plan
+import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.Vehicle as DVeh
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
@@ -45,6 +47,7 @@ data AllocatorJobType
   | SendManualPaymentLink
   | RetryDocumentVerification
   | ScheduledRideNotificationsToDriver
+  | ScheduledRideAssignedOnUpdate
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -63,6 +66,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSendManualPaymentLink jobData = AnyJobInfo <$> restoreJobInfo SSendManualPaymentLink jobData
   restoreAnyJobInfo SRetryDocumentVerification jobData = AnyJobInfo <$> restoreJobInfo SRetryDocumentVerification jobData
   restoreAnyJobInfo SScheduledRideNotificationsToDriver jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideNotificationsToDriver jobData
+  restoreAnyJobInfo SScheduledRideAssignedOnUpdate jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideAssignedOnUpdate jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
@@ -211,3 +215,28 @@ data ScheduledRideNotificationsToDriverJobData = ScheduledRideNotificationsToDri
 instance JobInfoProcessor 'ScheduledRideNotificationsToDriver
 
 type instance JobContent 'ScheduledRideNotificationsToDriver = ScheduledRideNotificationsToDriverJobData
+
+--need to discuss to prevent queries
+-- data ScheduledRideAssignedOnUpdateJobData = ScheduledRideAssignedOnUpdateJobData
+--   { booking :: DB.Booking,
+--     ride :: SRide.Ride,
+--     driver :: DP.Person,
+--     vehicle :: DVeh.Vehicle
+--   }
+--   deriving (Generic, Eq, FromJSON, ToJSON)
+
+-- instance JobInfoProcessor 'ScheduledRideAssignedOnUpdate
+
+-- type instance JobContent 'ScheduledRideAssignedOnUpdate = ScheduledRideAssignedOnUpdateJobData
+
+data ScheduledRideAssignedOnUpdateJobData = ScheduledRideAssignedOnUpdateJobData
+  { bookingId :: Id DB.Booking,
+    rideId :: Id SRide.Ride,
+    driverId :: Id DP.Person,
+    vehicle :: DVeh.Vehicle
+  }
+  deriving (Generic, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ScheduledRideAssignedOnUpdate
+
+type instance JobContent 'ScheduledRideAssignedOnUpdate = ScheduledRideAssignedOnUpdateJobData

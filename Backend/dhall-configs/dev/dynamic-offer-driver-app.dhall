@@ -204,6 +204,7 @@ let AllocatorJobType =
       | RetryDocumentVerification
       | SendManualPaymentLink
       | ScheduledRideNotificationsToDriver
+      | ScheduledRideAssignedOnUpdate
       >
 
 let jobInfoMapx =
@@ -224,6 +225,9 @@ let jobInfoMapx =
         }
       , { mapKey = AllocatorJobType.SendManualPaymentLink, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledRideNotificationsToDriver
+        , mapValue = True
+        }
+      , { mapKey = AllocatorJobType.ScheduledRideAssignedOnUpdate
         , mapValue = True
         }
       ]

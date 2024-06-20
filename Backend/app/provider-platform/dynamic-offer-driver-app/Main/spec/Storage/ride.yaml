@@ -34,7 +34,7 @@ Ride:
       fileId: Maybe (Id MediaFile)
       derive: "Eq"
     RideStatus:
-      enum: "NEW,INPROGRESS,COMPLETED,CANCELLED"
+      enum: "UPCOMING,NEW,INPROGRESS,COMPLETED,CANCELLED"
       derive: "'ListInstance,HttpInstance"
   fields:
     id: Id Ride

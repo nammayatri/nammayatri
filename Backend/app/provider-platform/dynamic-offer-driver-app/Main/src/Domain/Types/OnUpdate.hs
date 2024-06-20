@@ -29,7 +29,8 @@ import Kernel.Types.Id
 import SharedLogic.Beckn.Common as Reexport
 
 data OnUpdateBuildReq
-  = RideAssignedBuildReq DRideAssignedReq
+  = ScheduledRideAssignedBuildReq DRideAssignedReq
+  | RideAssignedBuildReq DRideAssignedReq
   | RideStartedBuildReq DRideStartedReq
   | RideCompletedBuildReq DRideCompletedReq
   | BookingCancelledBuildReq DBookingCancelledReq

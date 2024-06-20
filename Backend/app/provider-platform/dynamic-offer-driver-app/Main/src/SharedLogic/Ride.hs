@@ -85,7 +85,7 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
             pure otpCode
           Just otp -> pure otp
   ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
-  previousRideInprogress <- QRide.getInProgressByDriverId driver.id
+  previousRideInprogress <- bool (QRide.getInProgressByDriverId driver.id) (pure Nothing) (booking.isScheduled)
   now <- getCurrentTime
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle
@@ -95,9 +95,10 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
   QRide.createRide ride
   QRideD.create rideDetails
   Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey driver.id.getId) 4 4 $ do
-    QDI.updateOnRide True (cast driver.id)
+    when (not booking.isScheduled) $ QDI.updateOnRide True (cast driver.id)
     when (isJust previousRideInprogress) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
-  void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+  let status = bool DRide.NEW DRide.UPCOMING booking.isScheduled
+  void $ LF.rideDetails ride.id status merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id booking.distanceUnit
@@ -170,6 +171,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
   transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   trackingUrl <- buildTrackingUrl guid
   let previousRideToLocation = previousRide >>= (.toLocation)
+  let status = bool DRide.NEW DRide.UPCOMING booking.isScheduled
   return
     DRide.Ride
       { id = guid,
@@ -179,7 +181,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         shortId = shortId,
         merchantId = Just booking.providerId,
         merchantOperatingCityId = booking.merchantOperatingCityId,
-        status = DRide.NEW,
+        status = status,
         driverId = cast driver.id,
         otp = otp,
         endOtp = Nothing,
