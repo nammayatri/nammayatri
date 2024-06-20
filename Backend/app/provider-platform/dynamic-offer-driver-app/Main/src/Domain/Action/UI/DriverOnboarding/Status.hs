@@ -435,7 +435,7 @@ checkBackgroundVerificationStatus driverId merchantId merchantOpCityId = do
                 Just reportId -> do
                   BVQuery.updateReportId (Just reportId) driverId
                   report <- BackgroundVerification.getReport merchantId merchantOpCityId reportId
-                  if report.status == "completed"
+                  if report.status == "complete"
                     then
                       if report.adjudication == Just "engaged"
                         then do
