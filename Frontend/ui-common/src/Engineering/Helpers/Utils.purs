@@ -322,6 +322,13 @@ cityCodeMap =
   , Tuple "std:0816" "tumakuru"
   , Tuple "std:01189" "noida"
   , Tuple "std:0124" "gurugram"
+  , Tuple "std:0431" "trichy"
+  , Tuple "std:04362" "thanjavur"
+  , Tuple "std:0427" "salem"
+  , Tuple "std:0462" "tirunelveli"
+  , Tuple "std:04344" "hosur"
+  , Tuple "std:0452" "madurai"
+  , Tuple "std:0416" "vellore"
   ]
 
 getCityFromCode :: String -> String
