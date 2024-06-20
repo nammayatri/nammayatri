@@ -15,6 +15,7 @@
 
 module SharedLogic.CallBAP
   ( sendRideAssignedUpdateToBAP,
+    sendScheduledRideAssignedUpdateToBAP,
     sendRideStartedUpdateToBAP,
     sendRideCompletedUpdateToBAP,
     sendBookingCancelledUpdateToBAP,
@@ -263,6 +264,111 @@ buildBppUrl ::
 buildBppUrl (Id transporterId) =
   asks (.nwAddress)
     <&> #baseUrlPath %~ (<> "/" <> T.unpack transporterId)
+
+--can modify it to send required data
+sendScheduledRideAssignedUpdateToBAP ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    CacheFlow m r,
+    HasField "modelNamesHashMap" r (HMS.HashMap Text Text),
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "s3Env" r (S3.S3Env m),
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  DP.Person ->
+  DVeh.Vehicle ->
+  m ()
+sendScheduledRideAssignedUpdateToBAP booking ride driver veh = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  let estimateId = booking.estimateId <&> getId
+  merchant <-
+    CQM.findById booking.providerId
+      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
+  driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+  mbTransporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) -- these two lines just for backfilling driver vehicleModel from idfy TODO: remove later
+  mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+    CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+      >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+  let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+  let paymentUrl = Nothing
+  vehicle <-
+    case mbTransporterConfig of
+      Just transporterConfig ->
+        if transporterConfig.refillVehicleModel
+          then do
+            reffiledVeh <- refillVehicleModel
+            pure $
+              case reffiledVeh of
+                Right reffiledVeh' -> reffiledVeh'
+                Left _ -> veh
+          else pure veh
+      Nothing -> pure veh
+  riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
+  riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
+  let bookingDetails = ACL.BookingDetails {..}
+  resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
+  let image = join (eitherToMaybe resp)
+  isDriverBirthDay <- maybe (return False) (checkIsDriverBirthDay mbTransporterConfig) driverInfo.driverDob
+  isFreeRide <- maybe (return False) (checkIfRideBySpecialDriver ride.driverId) mbTransporterConfig
+  let scheduledRideAssignedBuildReq = ACL.ScheduledRideAssignedBuildReq ACL.DRideAssignedReq {..}
+  retryConfig <- asks (.shortDurationRetryCfg)
+  rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing scheduledRideAssignedBuildReq
+  let generatedMsg = A.encode rideAssignedMsgV2
+  logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
+  void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig merchant.id
+  where
+    refillKey = "REFILLED_" <> ride.driverId.getId
+    updateVehicle DVeh.Vehicle {..} newModel = DVeh.Vehicle {model = newModel, ..}
+    refillVehicleModel = try @_ @SomeException do
+      -- TODO: remove later
+      mbIsRefilledToday :: Maybe Bool <- Redis.get refillKey
+      case mbIsRefilledToday of
+        Just True -> Redis.expire refillKey 86400 $> veh
+        _ -> do
+          driverVehicleIdfyResponse <-
+            find
+              ( \a ->
+                  maybe False ((==) veh.registrationNo) $
+                    (.registration_number)
+                      =<< (.extraction_output)
+                      =<< (.result)
+                      =<< (((A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< (a.idfyResponse)) :: Maybe Idfy.VerificationResponse)
+              )
+              <$> QIV.findAllByDriverIdAndDocType ride.driverId DIT.VehicleRegistrationCertificate
+          newVehicle <-
+            (flip $ maybe (pure veh)) ((.manufacturer_model) =<< (.extraction_output) =<< (.result) =<< (((A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< (.idfyResponse) =<< driverVehicleIdfyResponse) :: Maybe Idfy.VerificationResponse)) $ \newModel -> do
+              modelNamesHashMap <- asks (.modelNamesHashMap)
+              let modelValueToUpdate = fromMaybe "" $ HMS.lookup newModel modelNamesHashMap
+              if modelValueToUpdate == veh.model
+                then pure veh
+                else QVeh.updateVehicleModel modelValueToUpdate ride.driverId $> updateVehicle veh modelValueToUpdate
+          Redis.setExp refillKey True 86400
+          pure newVehicle
+
+    checkIsDriverBirthDay mbTransporterConfig driverBirthDate = do
+      case mbTransporterConfig of
+        Just tc -> do
+          let (_, birthMonth, birthDay) = toGregorian $ utctDay driverBirthDate
+          currentLocalTime <- getLocalCurrentTime tc.timeDiffFromUtc
+          let (_, curMonth, curDay) = toGregorian $ utctDay currentLocalTime
+          return (birthMonth == curMonth && birthDay == curDay)
+        Nothing -> return False
+
+    checkIfRideBySpecialDriver driverId transporterConfig = do
+      let specialDrivers = transporterConfig.specialDrivers
+      if null specialDrivers
+        then return False
+        else return $ (getId driverId) `elem` specialDrivers
 
 sendRideAssignedUpdateToBAP ::
   ( MonadFlow m,

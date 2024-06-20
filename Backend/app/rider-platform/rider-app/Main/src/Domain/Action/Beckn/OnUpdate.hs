@@ -84,7 +84,8 @@ import qualified Tools.Notifications as TN
 import TransactionLogs.Types
 
 data OnUpdateReq
-  = OURideAssignedReq Common.RideAssignedReq
+  = OUScheduledRideAssignedReq Common.RideAssignedReq
+  | OURideAssignedReq Common.RideAssignedReq
   | OURideStartedReq Common.RideStartedReq
   | OURideCompletedReq Common.RideCompletedReq
   | OUBookingCancelledReq Common.BookingCancelledReq
@@ -101,7 +102,8 @@ data OnUpdateReq
   | OUEditDestError EditDestErrorReq
 
 data ValidatedOnUpdateReq
-  = OUValidatedRideAssignedReq Common.ValidatedRideAssignedReq
+  = OUValidatedScheduledRideAssignedReq Common.ValidatedRideAssignedReq
+  | OUValidatedRideAssignedReq Common.ValidatedRideAssignedReq
   | OUValidatedRideStartedReq Common.ValidatedRideStartedReq
   | OUValidatedRideCompletedReq Common.ValidatedRideCompletedReq
   | OUValidatedFarePaidReq Common.ValidatedFarePaidReq
@@ -331,6 +333,7 @@ onUpdate ::
   ValidatedOnUpdateReq ->
   m ()
 onUpdate = \case
+  OUValidatedScheduledRideAssignedReq req -> Common.scheduledAssignedReqHandler req
   OUValidatedRideAssignedReq req -> Common.rideAssignedReqHandler req
   OUValidatedRideStartedReq req -> Common.rideStartedReqHandler req
   OUValidatedRideCompletedReq req -> Common.rideCompletedReqHandler req
@@ -428,6 +431,9 @@ validateRequest ::
   OnUpdateReq ->
   m ValidatedOnUpdateReq
 validateRequest = \case
+  OUScheduledRideAssignedReq req -> do
+    validatedRequest <- Common.validateRideAssignedReq req
+    return $ OUValidatedScheduledRideAssignedReq validatedRequest
   OURideAssignedReq req -> do
     validatedRequest <- Common.validateRideAssignedReq req
     return $ OUValidatedRideAssignedReq validatedRequest

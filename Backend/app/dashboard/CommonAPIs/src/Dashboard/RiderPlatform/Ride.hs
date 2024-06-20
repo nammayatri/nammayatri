@@ -142,7 +142,8 @@ data CancellationSource
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RideStatus
-  = NEW
+  = UPCOMING_RIDE
+  | NEW
   | INPROGRESS
   | COMPLETED
   | CANCELLED

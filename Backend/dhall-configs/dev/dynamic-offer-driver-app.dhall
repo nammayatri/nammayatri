@@ -205,6 +205,7 @@ let AllocatorJobType =
       | SendManualPaymentLink
       | ScheduledRideNotificationsToDriver
       | DriverReferralPayout
+      | ScheduledRideAssignedOnUpdate
       >
 
 let jobInfoMapx =
@@ -225,6 +226,9 @@ let jobInfoMapx =
         }
       , { mapKey = AllocatorJobType.SendManualPaymentLink, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledRideNotificationsToDriver
+        , mapValue = True
+        }
+      , { mapKey = AllocatorJobType.ScheduledRideAssignedOnUpdate
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.DriverReferralPayout, mapValue = True }

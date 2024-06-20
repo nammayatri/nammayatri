@@ -56,6 +56,14 @@ handler transporterId req = do
   info <- case mbRide of
     Just ride -> do
       case ride.status of
+        DRide.UPCOMING -> do
+          bookingDetails <- SyncRide.fetchBookingDetails ride booking
+          driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
+          resp <- try @_ @SomeException (Aadhaar.fetchAndCacheAadhaarImage bookingDetails.driver driverInfo)
+          let image = join (eitherToMaybe resp)
+          let isDriverBirthDay = False
+          let isFreeRide = False
+          pure $ RideAssignedReq DRideAssignedReq {..}
         DRide.NEW -> do
           bookingDetails <- SyncRide.fetchBookingDetails ride booking
           driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound

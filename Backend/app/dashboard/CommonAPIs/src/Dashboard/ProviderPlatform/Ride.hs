@@ -279,7 +279,8 @@ instance HideSecrets RideSyncRes where
   hideSecrets = identity
 
 data RideStatus
-  = RIDE_NEW
+  = RIDE_UPCOMING
+  | RIDE_NEW
   | RIDE_INPROGRESS
   | RIDE_COMPLETED
   | RIDE_CANCELLED

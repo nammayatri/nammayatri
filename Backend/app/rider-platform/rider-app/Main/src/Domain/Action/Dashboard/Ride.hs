@@ -92,6 +92,7 @@ instance Common.HideSecrets MultipleRideCancelReq where
 
 mkCommonRideStatus :: DRide.RideStatus -> Common.RideStatus
 mkCommonRideStatus rs = case rs of
+  DRide.UPCOMING -> Common.UPCOMING_RIDE
   DRide.NEW -> Common.NEW
   DRide.INPROGRESS -> Common.INPROGRESS
   DRide.COMPLETED -> Common.COMPLETED

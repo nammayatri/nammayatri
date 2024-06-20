@@ -98,7 +98,7 @@ data OdometerReading = OdometerReading {fileId :: Kernel.Prelude.Maybe (Kernel.T
 
 data RideEndedBy = Driver | Dashboard | CallBased | CronJob deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
 
