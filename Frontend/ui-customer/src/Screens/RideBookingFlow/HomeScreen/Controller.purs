@@ -1672,7 +1672,8 @@ eval BackPressed state = do
             , trips
             , suggestedDestinations
             } = getHelperLists state.data.savedLocations state.data.recentSearchs state state.props.currentLocation.lat state.props.currentLocation.lng
-          recenterCurrentLocation $ 
+            _ = removeMarker $ getCurrentLocationMarker ""
+          continue 
             HomeScreenData.initData
               { data
                 { disability = state.data.disability
@@ -3091,8 +3092,6 @@ eval MapReadyAction state = do
       permissionConditionA <- isLocationPermissionEnabled unit
       permissionConditionB <- isLocationEnabled unit
       internetCondition <- isInternetAvailable unit
-      when (state.props.currentStage == HomeScreen) $ do
-        void $ showMarkerOnMap (getCurrentLocationMarker $ getValueToLocalStore VERSION_NAME) 9.9 9.9
       let action =  if( not internetCondition) then TriggerPermissionFlow INTERNET_ACTION
                     else if ( not (permissionConditionA && permissionConditionB)) then TriggerPermissionFlow LOCATION_DISABLED
                     else CheckAndAskNotificationPermission
@@ -3560,7 +3559,7 @@ showPersonMarker state marker location = do
 showMarkerOnMap :: String -> Number -> Number -> Effect Unit
 showMarkerOnMap markerName lat lng = do
   let markerConfig = defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName }
-  void $ showMarker markerConfig lat lng 160 0.5 0.9 (getNewIDWithTag "CustomerHomeScreen")
+  void $ showMarker markerConfig lat lng 160 0.5 0.9 (getNewIDWithTag "CustomerHomeScreenMap")
 
 getEstimateId :: Array ChooseVehicleController.Config -> ChooseVehicleController.Config -> (Tuple String (Array String)) 
 getEstimateId esimates config =

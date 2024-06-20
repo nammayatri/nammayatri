@@ -1787,7 +1787,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 System.out.println("marker ids" + title);
                 if (lat != null && lng != null) {
                     double latitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lat);
-                    double longitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lng);
+                    double longitude = lng.equals("9.9") ? lastLongitudeValue : Double.parseDouble(lng);
                     LatLng latLngObj = new LatLng(latitude, longitude);
                     Marker markerObject;
                     if (markers.containsKey(title)) {
