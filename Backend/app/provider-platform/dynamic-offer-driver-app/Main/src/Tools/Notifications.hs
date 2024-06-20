@@ -56,10 +56,10 @@ instance ToJSON EmptyDynamicParam where
 clearDeviceToken :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
 clearDeviceToken = QPerson.clearDeviceTokenByPersonId
 
-data EditLocationReq = EditLocationReq
+data EditPickupLocationReq = EditPickupLocationReq
   { rideId :: Id DRide.Ride,
     origin :: Maybe Location,
-    destination :: Maybe Location
+    hasAdvanceBooking :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -712,14 +712,15 @@ sendUpdateLocOverlay merchantOpCityId person req@FCM.FCMOverlayReq {..} entityDa
     notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title -- if nothing then anyways fcmShowNotification is false
     body = FCMNotificationBody $ fromMaybe "Description" description
 
-notifyPickupOrDropLocationChange ::
+sendPickupLocationChangedOverlay ::
   ( CacheFlow m r,
     EsqDBFlow m r
   ) =>
   Person ->
-  EditLocationReq ->
+  FCM.FCMOverlayReq ->
+  EditPickupLocationReq ->
   m ()
-notifyPickupOrDropLocationChange person entityData = do
+sendPickupLocationChangedOverlay person req entityData = do
   let newCityId = cityFallback person.clientBundleVersion person.merchantOperatingCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) False notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
@@ -732,16 +733,12 @@ notifyPickupOrDropLocationChange person entityData = do
           fcmEntityType = FCM.EditLocation,
           fcmEntityIds = entityData.rideId.getId,
           fcmEntityData = Just entityData,
-          fcmNotificationJSON = FCM.createAndroidNotification title body notifType Nothing,
-          fcmOverlayNotificationJSON = Nothing,
+          fcmNotificationJSON = FCM.createAndroidNotification notifTitle body notifType Nothing,
+          fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification req,
           fcmNotificationId = Nothing
         }
-    title = FCMNotificationTitle "Pickup and/or drop location has been changed by the customer"
-    body =
-      FCMNotificationBody $
-        EulerHS.Prelude.unwords
-          [ "Customer has changed pickup or drop location. Please check the app for more details"
-          ]
+    notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title -- if nothing then anyways fcmShowNotification is false
+    body = FCMNotificationBody $ fromMaybe "Description" req.description
 
 mkOverlayReq :: DTMO.Overlay -> FCM.FCMOverlayReq -- handle mod Title
 mkOverlayReq _overlay@DTMO.Overlay {..} =
