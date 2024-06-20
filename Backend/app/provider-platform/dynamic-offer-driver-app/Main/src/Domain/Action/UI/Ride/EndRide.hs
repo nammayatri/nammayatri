@@ -376,6 +376,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
           ride{tripEndTime = Just now,
                chargeableDistance = Just chargeableDistance,
                fare = Just finalFare,
+               status = DRide.COMPLETED,
                tripEndPos = Just tripEndPoint,
                rideEndedBy = Just rideEndedBy',
                fareParametersId = Just newFareParams.id,
