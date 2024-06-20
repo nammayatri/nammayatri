@@ -732,5 +732,9 @@ BackgroundVerification:
       kvFunction: updateOneWithKV
       params: [reportStatus]
       where: driverId
+    updateReportId:
+      kvFunction: updateOneWithKV
+      params: [reportId]
+      where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE

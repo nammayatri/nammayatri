@@ -379,9 +379,6 @@ getProcessedDriverDocuments docType driverId _merchantId _merchantOpCityId =
     DVC.PanCard -> do
       mbPanCard <- QDPC.findByDriverId driverId
       return (mapStatus . (.verificationStatus) <$> mbPanCard, Nothing, Nothing)
-    DVC.BackgroundVerification -> do
-      mbBackgroundVerification <- BVQuery.findByDriverId driverId
-      return (mapStatus <$> (mbBackgroundVerification <&> (.reportStatus)), Nothing, Nothing)
     _ -> return (Nothing, Nothing, Nothing)
 
 getProcessedVehicleDocuments :: DVC.DocumentType -> Id SP.Person -> RC.VehicleRegistrationCertificate -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl)
@@ -436,6 +433,7 @@ checkBackgroundVerificationStatus driverId merchantId merchantOpCityId = do
               BVQuery.updateInvitationStatus Documents.VALID driverId
               case invitation.reportId of
                 Just reportId -> do
+                  BVQuery.updateReportId (Just reportId) driverId
                   report <- BackgroundVerification.getReport merchantId merchantOpCityId reportId
                   if report.status == "completed"
                     then

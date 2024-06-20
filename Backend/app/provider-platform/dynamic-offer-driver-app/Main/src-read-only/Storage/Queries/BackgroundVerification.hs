@@ -32,6 +32,11 @@ updateInvitationStatus invitationStatus driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.invitationStatus invitationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateReportId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateReportId reportId driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.reportId reportId, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateReportStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateReportStatus reportStatus driverId = do
   _now <- getCurrentTime
