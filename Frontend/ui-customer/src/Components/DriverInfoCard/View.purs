@@ -669,6 +669,9 @@ getCarouselConfig view state = {
   , onPageScrollStateChanged : Just BannerStateChanged
   , onPageScrolled : Nothing
   , currentIndex : state.data.bannerData.currentBanner
+  , showScrollIndicator : true
+  , layoutHeight : V 100
+  , overlayScrollIndicator : false
 }
 
 distanceView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w

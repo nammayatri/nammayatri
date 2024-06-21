@@ -604,6 +604,9 @@ getCarouselConfig view state banners = {
   , onPageScrollStateChanged : Just BannerStateChanged
   , onPageScrolled : Nothing
   , currentIndex : state.data.bannerData.currentBanner
+  , showScrollIndicator : true
+  , layoutHeight : V 125
+  , overlayScrollIndicator : false
 }
 
 rideCompletedCardView ::  forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -4069,6 +4072,7 @@ newView push state =
     , background Color.blue900
     , padding $ Padding 6 4 6 4
     , margin $ MarginLeft 8
+    , gravity CENTER_VERTICAL
     , visibility $ boolToVisibility $ state.data.config.homeScreen.showAdditionalServicesNew
     ] <> FontStyle.tags TypoGraphy
 
