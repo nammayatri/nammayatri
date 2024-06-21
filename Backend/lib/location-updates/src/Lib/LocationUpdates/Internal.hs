@@ -160,6 +160,10 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
   let currentLastTwoPoints = takeLastTwo (toList waypoints)
   Redis.setExp (lastTwoOnRidePointsRedisKey driverId) currentLastTwoPoints 21600 -- 6 hours
   (routeDeviation, tollRouteDeviation) <- updateRouteDeviation driverId (toList modifiedWaypoints)
+  when tollRouteDeviation $
+    fork "Toll Crossed OnUpdate" $ do
+      sendTollCrossedNotificationToDriver driverId
+      sendTollCrossedUpdateToBAP driverId
   let recomputeIfPickupDropNotOutsideOfThreshold = getRecomputeIfPickupDropNotOutsideOfThreshold
   let snapToRoadCallCondition = (routeDeviation && recomputeIfPickupDropNotOutsideOfThreshold) || pickupDropOutsideThreshold || isJust rectifyDistantPointsFailureUsing || isJust estTollCharges || tollRouteDeviation
   if ending
@@ -220,9 +224,6 @@ recalcDistanceBatchStep RideInterpolationHandler {..} rectifyDistantPointsFailur
   batchWaypoints <- getFirstNwaypoints driverId (batchSize + 1)
   (distance, interpolatedWps, servicesUsed, snapToRoadFailed, mbTollChargesAndNames) <- interpolatePointsAndCalculateDistanceAndToll rectifyDistantPointsFailureUsing isTollApplicable driverId batchWaypoints
   whenJust mbTollChargesAndNames $ \(tollCharges, tollNames, _) -> do
-    fork "Toll Crossed OnUpdate" $ do
-      sendTollCrossedNotificationToDriver driverId
-      sendTollCrossedUpdateToBAP driverId
     void $ Redis.rPushExp (onRideTollNamesKey driverId) tollNames 21600
     void $ Redis.incrby (onRideTollChargesKey driverId) (round tollCharges.getHighPrecMoney)
     Redis.expire (onRideTollChargesKey driverId) 21600 -- 6 hours
