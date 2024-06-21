@@ -399,9 +399,10 @@ onUpdate = \case
     QRB.updateMultipleById estimatedFare estimatedFare (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) bookingUpdateRequest.bookingId
     Notify.notifyOnTripUpdate booking ride "Destination and Fare Updated" "Your edit request was accepted by your driver!"
   OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..} -> do
-    merchantPN <- CPN.findByMerchantOpCityIdAndMessageKey booking.merchantOperatingCityId "TOLL_CROSSED" >>= fromMaybeM (MerchantPNNotFound booking.merchantOperatingCityId.getId "TOLL_CROSSED")
-    let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
-    TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
+    mbMerchantPN <- CPN.findByMerchantOpCityIdAndMessageKey booking.merchantOperatingCityId "TOLL_CROSSED"
+    whenJust mbMerchantPN $ \merchantPN -> do
+      let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
+      TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
   OUValidatedEditDestError ValidatedEditDestErrorReq {..} -> do
     if bookingUpdateReqDetails.status == DBUR.SOFT
       then QBUR.updateErrorObjById (Just DBUR.ErrorObj {..}) bookingUpdateReqId
