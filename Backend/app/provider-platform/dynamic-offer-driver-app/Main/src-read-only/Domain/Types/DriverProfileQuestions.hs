@@ -21,6 +21,7 @@ data DriverProfileQuestions = DriverProfileQuestions
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     pledges :: [Kernel.Prelude.Text],
+    updatedAt :: Kernel.Prelude.UTCTime,
     whyNY :: [Kernel.Prelude.Text]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

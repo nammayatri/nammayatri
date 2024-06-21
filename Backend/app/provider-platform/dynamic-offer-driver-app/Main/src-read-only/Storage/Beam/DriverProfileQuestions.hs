@@ -20,6 +20,7 @@ data DriverProfileQuestionsT f = DriverProfileQuestionsT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     pledges :: B.C f [Kernel.Prelude.Text],
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
     whyNY :: B.C f [Kernel.Prelude.Text]
   }
   deriving (Generic, B.Beamable)

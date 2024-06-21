@@ -10,11 +10,11 @@ import Servant
 import Tools.Auth
 
 data DriverProfileQuesReq = DriverProfileQuesReq
-  { aspirations :: [Kernel.Prelude.Text],
-    expertAt :: [Kernel.Prelude.Text],
+  { aspirations :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    expertAt :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     hometown :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    pledges :: [Kernel.Prelude.Text],
-    whyNY :: [Kernel.Prelude.Text]
+    pledges :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    whyNY :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

@@ -70,12 +70,15 @@ knowYourFavDriver driverId apiKey = do
 
 getDriverProfile :: DP.Person -> Flow DriverProfileRes
 getDriverProfile person = do
-  driverProfileQues <- DPQ.findByPersonId person.id >>= fromMaybeM (InternalError $ "No driver profile against driver id : " <> person.id.getId)
+  driverProfileQues <- DPQ.findByPersonId person.id
   driverStats <- B.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
   driverModulesCompleted <- SQDMC.findByDriverIdAndStatus person.id MODULE_COMPLETED
   modules <- mapM (\driverModule -> QLmsModule.findById driverModule.moduleId) driverModulesCompleted
   let moduleCategories = mapMaybe (fmap (.category)) modules
       moduleCategoriesText = map show moduleCategories
+      pledges = fromMaybe [] (driverProfileQues >>= Just . (.pledges))
+      expertAt = fromMaybe [] (driverProfileQues >>= Just . (.expertAt))
+      whyNY = fromMaybe [] (driverProfileQues >>= Just . (.whyNY))
   pure $
     DriverProfileRes
       { certificates = moduleCategoriesText,
@@ -85,9 +88,9 @@ getDriverProfile person = do
         approvalRate = SP.roundToOneDecimal <$> driverStats.rating,
         cancellation = div ((fromMaybe 0 driverStats.ridesCancelled) * 100 :: Int) (nonZero driverStats.totalRidesAssigned :: Int),
         onboardedAt = person.createdAt,
-        pledges = driverProfileQues.pledges,
-        expertAt = driverProfileQues.expertAt,
-        whyNY = driverProfileQues.whyNY,
+        pledges = pledges,
+        expertAt = expertAt,
+        whyNY = whyNY,
         languages = fromMaybe [] person.languagesSpoken
       }
   where

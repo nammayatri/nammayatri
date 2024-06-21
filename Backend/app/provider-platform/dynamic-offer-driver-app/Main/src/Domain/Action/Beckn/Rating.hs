@@ -85,7 +85,7 @@ handler merchantId req ride = do
                         mobileNumber = encPhoneNumber
                       }
               RDC.create riderDriverCorr
-          SQD.incFavouriteRiderCount ride.driverId
+              SQD.incFavouriteRiderCount ride.driverId
     Nothing -> do
       logError $ "Booking not found for bookingId : " <> req.bookingId.getId
       pure ()
