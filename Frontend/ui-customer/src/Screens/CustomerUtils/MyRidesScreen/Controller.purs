@@ -258,11 +258,14 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
     rideStartTime = fromMaybe ride.createdAt $ if isScheduled then ride.rideScheduledTime else ride.rideStartTime
     destination = (fromMaybe dummyBookingDetails $ if (getFareProductType rideApiDetails.fareProductType) == FPT.RENTAL then (ride.bookingDetails ^._contents^._stopLocation) else (ride.bookingDetails ^._contents^._toLocation))
     cityConfig = getCityConfig state.data.config.cityConfig cityStr
+    rideType = getFareProductType rideApiDetails.fareProductType
+    autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
+    cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
     waitingCharges = 
       if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
-          cityConfig.waitingChargeConfig.auto
+          autoWaitingCharges
       else 
-          cityConfig.waitingChargeConfig.cabs
+         cabsWaitingCharges
      in {
     date : (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC rideStartTime "llll")) !!0 )) <> ", " <>  (convertUTCtoISC rideStartTime "Do MMM") )),
     time :  (convertUTCtoISC rideStartTime "h:mm A"),
@@ -310,8 +313,8 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
   , optionsVisibility : false
   , merchantExoPhone : ride.merchantExoPhone
   , serviceTierName : ride.serviceTierName
-  , showRepeatRide : if getFareProductType rideApiDetails.fareProductType == FPT.RENTAL || isScheduled then "gone" else "visible"
-  , rideType : getFareProductType rideApiDetails.fareProductType
+  , showRepeatRide : if rideType == FPT.RENTAL || isScheduled then "gone" else "visible"
+  , rideType :rideType
   , estimatedDistance : fromMaybe 0 ride.estimatedDistance
   , estimatedDuration : fromMaybe 0 ride.estimatedDuration
   , estimatedFare : ride.estimatedFare

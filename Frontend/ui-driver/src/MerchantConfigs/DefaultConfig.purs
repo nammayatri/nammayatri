@@ -158,6 +158,7 @@ config =
               },
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
+              rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : { showLearnMore : true, learnMoreVideoLink : "https://www.youtube.com/shorts/NUTNKPzslpw" },
               assets :{
                 auto_image : "ny_ic_auto_side_view",
@@ -196,6 +197,7 @@ config =
               },
               waitingCharges : 2.00,
               waitingChargesConfig : defWaitingChargesConfig,
+              rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
@@ -234,6 +236,7 @@ config =
               },
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
+              rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : { showLearnMore : true, learnMoreVideoLink : "https://www.youtube.com/shorts/NUTNKPzslpw" },
               assets :{
                 auto_image : "ny_ic_auto_side_view",
@@ -272,6 +275,7 @@ config =
               },
               waitingCharges : 0.75,
               waitingChargesConfig : defWaitingChargesConfig,
+              rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image : "ny_ic_auto_side_view",
@@ -310,6 +314,7 @@ config =
               },
               waitingCharges : 1.00,
               waitingChargesConfig : defWaitingChargesConfig,
+              rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
@@ -348,6 +353,7 @@ config =
               },
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
+              rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
@@ -386,6 +392,7 @@ config =
               },
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
+              rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
@@ -424,6 +431,7 @@ config =
               },
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
+              rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image : "ny_ic_auto_side_view",
@@ -462,6 +470,7 @@ config =
               },
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
+              rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image : "ny_ic_auto_side_view",
@@ -500,6 +509,7 @@ config =
               },
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
+              rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
@@ -542,6 +552,7 @@ config =
               },
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
+              rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
@@ -584,6 +595,7 @@ config =
             },
             waitingCharges : 1.50,
             waitingChargesConfig : defWaitingChargesConfig,
+            rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
             rateCardConfig : defRateCardConfig,
             assets :{
               auto_image : "ic_auto_rickshaw",
@@ -738,6 +750,18 @@ defWaitingChargesConfig = {
   auto : {
     freeSeconds : 180,
     perMinCharges : 1.50
+  }
+}
+
+defRentalWaitingChargesConfig :: CTC.WaitingChargesConfig
+defRentalWaitingChargesConfig = {
+  cab : {
+    freeSeconds : 180,
+    perMinCharges : 2.0
+  },
+  auto : {
+    freeSeconds : 180,
+    perMinCharges : 2.0
   }
 }
 

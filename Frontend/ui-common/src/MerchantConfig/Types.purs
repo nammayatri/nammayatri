@@ -111,6 +111,7 @@ type CityConfig = {
   referral :: Referral,
   waitingCharges :: Number,
   waitingChargesConfig :: WaitingChargesConfig,
+  rentalWaitingChargesConfig :: WaitingChargesConfig,
   rateCardConfig :: RateCardConfig,
   assets :: Assets
 }

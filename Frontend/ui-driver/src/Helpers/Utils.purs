@@ -687,6 +687,16 @@ getCityConfig cityConfig cityName = do
                               perMinCharges : 1.50
                             }
                           },
+                          rentalWaitingChargesConfig : {
+                            cab : {
+                              freeSeconds : 3,
+                              perMinCharges : 2.0
+                            },
+                            auto : {
+                              freeSeconds : 3,
+                              perMinCharges : 2.0
+                            }
+                          },
                           rateCardConfig : { showLearnMore : false, learnMoreVideoLink : "" },
                           assets :{
                             auto_image :  "ny_ic_black_yellow_auto_side_view",
@@ -896,11 +906,22 @@ checkSpecialPickupZone maybeLabel =
                   in specialPickupZone == "PickupZone"
     Nothing    -> false
 
-getChargesOb :: CTC.CityConfig -> String -> CTC.ChargesEntity
-getChargesOb cityConfig driverVehicle = 
+getChargesOb :: ST.TripType -> CTC.CityConfig -> String -> CTC.ChargesEntity
+getChargesOb tripType cityConfig driverVehicle = 
+  if tripType == ST.Rental then
+    getRentalChargesOb cityConfig driverVehicle
+  else
+    case driverVehicle of
+      "AUTO_RICKSHAW" -> cityConfig.waitingChargesConfig.auto
+      _ -> cityConfig.waitingChargesConfig.cab
+
+getRentalChargesOb :: CTC.CityConfig -> String -> CTC.ChargesEntity
+getRentalChargesOb cityConfig driverVehicle = 
   case driverVehicle of
-    "AUTO_RICKSHAW" -> cityConfig.waitingChargesConfig.auto
-    _ -> cityConfig.waitingChargesConfig.cab
+    "AUTO_RICKSHAW" -> cityConfig.rentalWaitingChargesConfig.auto
+    _ -> cityConfig.rentalWaitingChargesConfig.cab
+
+
 
 getRideInfoEntityBasedOnBookingType :: HomeScreenState -> ST.ActiveRide
 getRideInfoEntityBasedOnBookingType homeScreenState = 

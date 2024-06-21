@@ -330,7 +330,7 @@ getLocationFromTrip locationType trip sourceLat sourceLong =
     , placeId : Nothing
     , lat : Just lat
     , lon : Just lon
-    , description : ""
+    , description : singleLineAddress
     , tag : ""
     , tagType : Nothing
     , cardType : Nothing

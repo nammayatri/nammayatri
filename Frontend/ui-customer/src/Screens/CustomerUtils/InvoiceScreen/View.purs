@@ -118,11 +118,14 @@ referenceList state =
       nightChargeFrom = if city == ST.Delhi then "11 PM" else "10 PM"
       nightChargeTill = "5 AM"
       cityConfig = getCityConfig state.data.config.cityConfig cityStr
+      rideType = state.data.selectedItem.rideType
+      autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
+      cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
       waitingCharges = 
         if state.data.selectedItem.vehicleVariant == Just VV.AUTO_RICKSHAW then
-            cityConfig.waitingChargeConfig.auto
+            autoWaitingCharges
         else 
-            cityConfig.waitingChargeConfig.cabs
+            cabsWaitingCharges
   in
   (if (state.data.selectedItem.nightCharges ) then [ "1.5" <> (getString $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill) ] else [])
     <> (if (isHaveFare "DRIVER_SELECTED_FARE" state.data.selectedItem.faresList) then [(getString DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) ] else [])

@@ -756,8 +756,8 @@ primaryButtonRequestRideConfig config id' = PrimaryButton.config
     selectedItem = case config.quoteList !! config.activeIndex of
               Just selectedItem -> selectedItem
               Nothing -> ChooseVehicle.config
-    disableButton = (selectedItem.selectedServices == []) && selectedItem.vehicleVariant == "BOOK_ANY"
     name = fromMaybe "" selectedItem.serviceTierName
+    disableButton = ((selectedItem.selectedServices == []) && selectedItem.vehicleVariant == "BOOK_ANY") || (config.fareProductType == RENTAL && name == "")
     additionalString = if config.fareProductType == RENTAL then "Rental" else ""
     title = if selectedItem.vehicleVariant == "BOOK_ANY" then getString $ BOOK_ANY else getString $ BOOK ( additionalString <> " " <> name )
 

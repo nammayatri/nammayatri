@@ -712,6 +712,7 @@ window.getMerchantConfig = function () {
       },
       "waitingCharges" : 1.50,
       "waitingChargesConfig" : defWaitingChargesConfig,
+      "rentalWaitingChargesConfig" : rentalWaitingChargesConfig,
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_black"
@@ -738,6 +739,28 @@ window.getMerchantConfig = function () {
       "validationPrefix" : "KA|AP|TS|DL|TN|PY|UP|HR|TG"
     }
   })
+}
+
+let defWaitingChargesConfig = {
+  "cab" : {
+    "freeSeconds" : 300,
+    "perMinCharges" : 1.0
+  },
+  "auto" : {
+    "freeSeconds" : 180,
+    "perMinCharges" : 1.50
+  }
+}
+
+let rentalWaitingChargesConfig = {
+  "cab" : {
+    "freeSeconds" : 180,
+    "perMinCharges" : 2.0
+  },
+  "auto" : {
+    "freeSeconds" : 180,
+    "perMinCharges" : 2.0
+  }
 }
 
 let staticSubscriptionConfig = [

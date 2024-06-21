@@ -715,7 +715,7 @@ estimatedFareView push config =
     ]
     where currency = getCurrency appConfig
           pillText = "+" <> currency <> " " <> show (calculateCharges (config.waitTimeSeconds - chargesOb.freeSeconds))
-          chargesOb = HU.getChargesOb config.cityConfig config.driverVehicle
+          chargesOb = HU.getChargesOb config.rideType config.cityConfig config.driverVehicle
 
           calculateCharges :: Int -> Number
           calculateCharges sec =
@@ -781,7 +781,7 @@ waitTimeView push config =
         ]
      ]
      where 
-      chargesOb = HU.getChargesOb config.cityConfig config.driverVehicle
+      chargesOb = HU.getChargesOb config.rideType config.cityConfig config.driverVehicle
 
 yellowPill :: forall w. (Action -> Effect Unit) -> String -> Boolean -> PrestoDOM (Effect Unit) w
 yellowPill push text' showInfo = 

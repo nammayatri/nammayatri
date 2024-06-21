@@ -121,7 +121,6 @@ searchLocationScreen initialState globalProps =
 
 view :: forall w. GlobalProps -> (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w 
 view globalProps push state = 
-  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true ] $ 
   relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT

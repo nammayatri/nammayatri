@@ -137,6 +137,7 @@ primaryButtonConfig state =
       , margin = MarginHorizontal 16 16
       , isClickable = true
       , id = "SelectLocationFromMapSLS"
+      , enableRipple = true
       }
   in primaryButtonConfig'
 
@@ -153,6 +154,7 @@ confirmLocBtnConfig state =
         , cornerRadius = state.appConfig.primaryButtonCornerRadius
         , margin = MarginTop 8 
         , id = "ConfirmLocationSLS"
+        , enableRipple = true
         , background = state.appConfig.primaryBackground
         }
   in confirmLocBtnConfig'

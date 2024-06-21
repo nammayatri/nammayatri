@@ -922,6 +922,7 @@ waitTimeInfoCardConfig state =
         imageUrl = fetchImage FF_ASSET "ny_ic_waiting_info",
         height = V 130,
         width = V 130,
+        visibility = VISIBLE,
         padding = Padding 0 4 1 0
       }
     , buttonConfig {
@@ -930,7 +931,7 @@ waitTimeInfoCardConfig state =
       }
     }
     where rideInProgress = state.data.activeRide.status == SA.INPROGRESS
-          chargesOb = HU.getChargesOb state.data.cityConfig state.data.activeRide.driverVehicle
+          chargesOb = HU.getChargesOb state.data.activeRide.tripType state.data.cityConfig state.data.activeRide.driverVehicle
           maxWaitTimeInMinutes = Int.floor $ Int.toNumber chargesOb.freeSeconds / 60.0
 
 makePaymentState :: ST.HomeScreenState -> MakePaymentModal.MakePaymentModalState

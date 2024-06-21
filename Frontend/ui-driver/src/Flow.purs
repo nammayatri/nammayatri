@@ -2275,7 +2275,7 @@ homeScreenFlow = do
       startRideResp <- lift $ lift $ Remote.startRide id (Remote.makeStartRideReq otp startOdometerReading (updatedState.props.odometerFileId) (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) ts) -- driver's lat long during starting ride
       case startRideResp of
         Right startRideResp -> do
-          let chargesOb = HU.getChargesOb updatedState.data.cityConfig updatedState.data.activeRide.driverVehicle
+          let chargesOb = HU.getChargesOb updatedState.data.activeRide.tripType updatedState.data.cityConfig updatedState.data.activeRide.driverVehicle
           void $ pure $ setValueToLocalNativeStore RIDE_ID id
           _ <- pure $ hideKeyboardOnNavigation true
           liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ride_start" $ [{key : "Service Tier", value : unsafeToForeign updatedState.data.activeRide.serviceTier},
@@ -2449,7 +2449,7 @@ homeScreenFlow = do
                         estimatedTollCharge = fromMaybe 0.0 response.estimatedTollCharges, 
                         tollAmbigous = response.tollConfidence == Just CTA.Unsure,
                         actualRideDuration = response.actualDuration,
-                        actualRideDistance = response.chargeableDistance, 
+                        actualRideDistance = if state.data.activeRide.tripType == ST.Rental then response.actualRideDistance else response.chargeableDistance, 
                         finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, 
                         riderName = fromMaybe "" response.riderName, 
                         rideId = response.id, 

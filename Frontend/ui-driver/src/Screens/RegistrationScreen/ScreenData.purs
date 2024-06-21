@@ -124,6 +124,16 @@ dummyCityConfig = {
                         perMinCharges : 1.50
                       }
                     },
+                    rentalWaitingChargesConfig : {
+                      cab : {
+                        freeSeconds : 3,
+                        perMinCharges : 2.0
+                      },
+                      auto : {
+                        freeSeconds : 3,
+                        perMinCharges : 2.0
+                      }
+                    },
                     rateCardConfig : {
                       showLearnMore : false,
                       learnMoreVideoLink : ""
