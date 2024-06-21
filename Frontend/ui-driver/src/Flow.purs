@@ -2562,25 +2562,24 @@ homeScreenFlow = do
             Nothing -> pure unit
       homeScreenFlow
     NOTIFY_CUSTOMER state -> do
-      driverArrived <- lift $ lift $ Remote.driverArrived (state.data.activeRide.id) (DriverArrivedReq {
-        "lat" : state.data.currentDriverLat
-      , "lon" : state.data.currentDriverLon
-      })
-      case driverArrived of
-        Right _ -> do
-          if (state.data.activeRide.tripType == ST.Rental || state.data.activeRide.tripType == ST.Intercity) then
-            setValueToLocalStore WAITING_TIME_STATUS (show ST.Scheduled)
-          else do
+      if (getValueToLocalStore WAITING_TIME_STATUS == show ST.NoStatus) && (state.data.activeRide.tripType == ST.Rental || state.data.activeRide.tripType == ST.Intercity) then do
+        setValueToLocalStore WAITING_TIME_STATUS (show ST.Scheduled)
+      else do
+        driverArrived <- lift $ lift $ Remote.driverArrived (state.data.activeRide.id) (DriverArrivedReq {
+          "lat" : state.data.currentDriverLat
+        , "lon" : state.data.currentDriverLon
+        })
+        case driverArrived of
+          Right _ -> do
             setValueToLocalStore WAITING_TIME_STATUS (show ST.Triggered) 
             setValueToLocalStore WAITING_TIME_VAL (state.data.activeRide.id <> "<$>" <> getCurrentUTC "")
-            
-          void $ pure $ JB.sendMessage $ if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) then (EHS.getMessageFromKey EHS.chatSuggestion "dis1AP" "EN_US") else "dis1AP"
-          liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_i_have_arrived_clicked" $ [{key : "Service Tier", value : unsafeToForeign state.data.activeRide.serviceTier},
-                                                                                                  {key : "Driver Vehicle", value : unsafeToForeign state.data.activeRide.driverVehicle},
-                                                                                                  {key : "Estimated Toll Charge", value : unsafeToForeign (fromMaybe 0.0 state.data.activeRide.estimatedTollCharge)},
-                                                                                                  {key : "Has Toll", value : unsafeToForeign state.data.activeRide.hasToll}]
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedCustomer = true}}})
-        Left _ -> pure unit
+            void $ pure $ JB.sendMessage $ if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) then (EHS.getMessageFromKey EHS.chatSuggestion "dis1AP" "EN_US") else "dis1AP"
+            liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_i_have_arrived_clicked" $ [{key : "Service Tier", value : unsafeToForeign state.data.activeRide.serviceTier},
+                                                                                                    {key : "Driver Vehicle", value : unsafeToForeign state.data.activeRide.driverVehicle},
+                                                                                                    {key : "Estimated Toll Charge", value : unsafeToForeign (fromMaybe 0.0 state.data.activeRide.estimatedTollCharge)},
+                                                                                                    {key : "Has Toll", value : unsafeToForeign state.data.activeRide.hasToll}]
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedCustomer = true}}})
+          Left _ -> pure unit
       homeScreenFlow
     UPDATE_ROUTE state -> do
       void $ pure $ JB.exitLocateOnMap ""
