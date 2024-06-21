@@ -1886,8 +1886,6 @@ type BookingOptionsScreenData = {
   downgradeOptions :: Array ChooseVehicle.Config,
   ridePreferences :: Array RidePreference,
   defaultRidePreference :: RidePreference,
-  canSwitchToInterCity :: Boolean,
-  canSwitchToRental :: Boolean,
   airConditioned :: Maybe API.AirConditionedTier,
   config :: AppConfig,
   rateCard :: Common.RateCard

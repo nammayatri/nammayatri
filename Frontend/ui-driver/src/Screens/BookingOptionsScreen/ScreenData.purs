@@ -16,8 +16,6 @@ initData =
       , downgradeOptions: []
       , ridePreferences: []
       , defaultRidePreference: defaultRidePreferenceOption
-      , canSwitchToRental: false
-      , canSwitchToInterCity: false
       , airConditioned: Nothing
       , config: getAppConfig appConfig
       , rateCard : dummyRateCard

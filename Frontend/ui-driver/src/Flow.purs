@@ -1625,7 +1625,7 @@ bookingOptionsFlow :: FlowBT String Unit
 bookingOptionsFlow = do
   (API.DriverVehicleServiceTierResponse resp) <- HelpersAPI.callApiBT $ API.DriverVehicleServiceTierReq
   let ridePreferences' = transfromRidePreferences resp.tiers
-      canSwitchToInterCity' = fromMaybe false resp.canSwitchToInterCity
+      canSwitchToInterCity' = resp.canSwitchToInterCity
       canSwitchToRental' = fromMaybe false resp.canSwitchToRental
       defaultRide = fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption $ find (\item -> item.isDefault) ridePreferences'
 
@@ -1633,10 +1633,14 @@ bookingOptionsFlow = do
    { data { airConditioned = resp.airConditioned
            , vehicleType = show defaultRide.serviceTierType
            , vehicleName = defaultRide.name
-           , canSwitchToInterCity = canSwitchToInterCity'
-           , canSwitchToRental = canSwitchToRental'
            , ridePreferences = ridePreferences'
-           , defaultRidePreference = defaultRide } })
+           , defaultRidePreference = defaultRide 
+          }, 
+     props {
+             canSwitchToRental = canSwitchToRental',
+             canSwitchToIntercity = canSwitchToInterCity'
+           } 
+    })
 
   action <- UI.bookingOptions
   case action of
