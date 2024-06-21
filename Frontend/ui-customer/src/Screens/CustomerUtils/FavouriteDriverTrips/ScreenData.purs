@@ -13,10 +13,5 @@ initData = {
   , driverName : ""
   , driverId : Nothing
   , details : []
-  } ,
-  props: {
-    activateSubmit : false,
-    fromMyRides : SavedLocations,
-    triggerUIUpdate : true
-  }
+  } 
 }

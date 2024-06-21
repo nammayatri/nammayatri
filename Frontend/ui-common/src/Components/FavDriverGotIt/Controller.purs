@@ -13,17 +13,15 @@ data Action = GotIt PrimaryButton.Action
 
 type FavDriverConfig = 
   { primaryButtonConfig :: PrimaryButton.Config
-  , showProfileImg :: Boolean
   , title :: String 
   , accessibility :: Accessiblity
-  , closeImgVisible :: Visibility
+  , driverName :: String
   }
 
 favdriverConfig :: FavDriverConfig
 favdriverConfig = {
   primaryButtonConfig : PrimaryButton.config,
-  showProfileImg : false, 
   title : "",
   accessibility : DISABLE,
-  closeImgVisible : GONE
+  driverName : ""
 }

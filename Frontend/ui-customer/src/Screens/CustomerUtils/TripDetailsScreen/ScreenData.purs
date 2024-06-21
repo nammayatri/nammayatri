@@ -32,7 +32,6 @@ initData = {
       totalAmount : "",
       paymentMode : CASH,
       rating : 0,
-      favDriver : false,
       tripId : "",
       selectedItem : dummyIndividualCard,
       vehicleVariant : Nothing,

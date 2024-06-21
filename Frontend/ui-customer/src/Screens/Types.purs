@@ -287,7 +287,6 @@ type TripDetailsScreenData =
     totalAmount :: String,
     paymentMode :: PaymentMode,
     rating :: Int,
-    favDriver :: Boolean,
     selectedItem :: IndividualRideCardState,
     tripId :: String,
     config :: AppConfig,
@@ -433,7 +432,6 @@ type IndividualRideCardState =
     isCancelled :: String,
     isSuccessfull :: String,
     rating :: Int,
-    -- favDriver :: Boolean,
     driverName :: String,
     rideStartTime :: String,
     rideEndTime :: String,
@@ -499,7 +497,6 @@ type ItemState =
     isSuccessfull :: PropValue,
     isScheduled :: PropValue,
     rating :: PropValue,
-    -- favDriver :: PropValue,
     driverName :: PropValue,
     rideStartTime :: PropValue,
     rideEndTime :: PropValue,
@@ -594,7 +591,6 @@ type HomeScreenStateData =
   , vehicleDetails :: String
   , registrationNumber :: String
   , rating :: Number
-  , favDriver :: Boolean
   , locationList :: Array LocationListItemState
   , savedLocations :: Array LocationListItemState
   , recentSearchs :: RecentlySearchedObject
@@ -1324,7 +1320,6 @@ type Address =
 type FavouriteDriverTripsState =
   {
     data :: FavouriteDriverTripsData
-  , props :: FavouriteDriverTripsProps
   }
 
 type FavouriteDriverTripsData =

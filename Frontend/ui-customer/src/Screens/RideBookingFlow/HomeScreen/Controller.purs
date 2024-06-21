@@ -1295,20 +1295,6 @@ eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = save
 
 ------------------------------- Ride Completed Screen - Start --------------------------
 
-eval ( RideCompletedAC (RideCompletedCard.RateClick index)) state = do
-  void $ pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
-  continue
-    state
-      { props { currentStage = if state.data.driverInfoCardState.providerType == CTP.ONUS then RideRating else state.props.currentStage }
-      , data
-        { rideRatingState 
-            { rating = index
-            , feedbackList = state.data.rideRatingState.feedbackList
-            }
-          , ratingViewState { selectedRating = index }
-        }
-      }
-
 eval (RideCompletedAC(RideCompletedCard.BannerChanged idxStr)) state = 
   case fromString idxStr of 
     Just idx -> if idx == state.data.rideCompletedData.issueReportData.currentBannerIndex then update state else continue state {data {rideCompletedData { issueReportData {currentBannerIndex = idx}}}} 
@@ -1379,11 +1365,14 @@ eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButt
             wasOfferedAssistance = Just $ not hasAssistenceIssue
           }
         }
+      , props { 
+          currentStage = if state.data.driverInfoCardState.providerType == CTP.ONUS then RideRating else state.props.currentStage 
+        }
       }
     
     if priorityIssue == CTP.NoIssue then do
       void $ pure $ toggleBtnLoader "" false
-      continue ratingUpdatedState 
+      continue ratingUpdatedState
     else 
       exit $ GoToIssueReportChatScreenWithIssue ratingUpdatedState priorityIssue
   else do
@@ -1893,7 +1882,10 @@ eval (RatingCardAC (RatingCard.Rating index)) state = do
   continue state { data { rideRatingState { rating = index , feedbackList = feedbackListArr, favDriver = fav}, ratingViewState { selectedRating = index} } }
 
 eval (RatingCardAC (RatingCard.Favourite)) state = do 
-  continue state { data { rideRatingState { favDriver = not state.data.favDriver}} }
+  continue state { data { rideRatingState { favDriver = not state.data.rideRatingState.favDriver}} }
+
+eval (RatingCardAC (RatingCard.Back)) state = do 
+  continue state { data { rideRatingState { rating = 0 }, ratingViewState { selectedRating = 0}} }
 
 eval (RatingCardAC (RatingCard.SelectPill feedbackItem id)) state = do
   let newFeedbackList = updateFeedback id feedbackItem state.data.rideRatingState.feedbackList
@@ -1901,13 +1893,10 @@ eval (RatingCardAC (RatingCard.SelectPill feedbackItem id)) state = do
   continue state { data { rideRatingState {  feedbackList = filterFeedbackList} } }
 
 eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = do
-  void $ pure $ spy "key in submit" state 
-  if (spy "key in submit 2 ->" state.data.rideRatingState.favDriver) == true
+  if (state.data.rideRatingState.favDriver) == true
     then do
-    void $ pure $ spy "key" "i am in fav driver"
     continue state { props { currentStage = FavouriteDriverScreen }}
     else do
-    void $ pure $ spy "key" "i am not in fav driver"
     updateAndExit state $ SubmitRating state
 
 eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.NoAction)) state = continue state

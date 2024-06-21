@@ -45,9 +45,9 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), (<<<), (/=), const, map, pure, unit, discard, bind, not, void, show, (<>), (==), (&&))
+import Prelude (Unit, ($), (<<<), (/=), const, map, pure, unit, discard, bind, not, void, show, (<>), (==), (&&), (*), (/), (||), (&&))
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), alignParentBottom, background, color, fontStyle, frameLayout, gravity, height, linearLayout, onBackPressed, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, visibility, width, relativeLayout, alignParentRight, margin, stroke, onClick, cornerRadius, afterRender, accessibility, maxLines, imageView, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), alignParentBottom, background, color, fontStyle, frameLayout, gravity, height, linearLayout, onBackPressed, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, visibility, width, relativeLayout, alignParentRight, margin, stroke, onClick, cornerRadius, afterRender, accessibility, maxLines, imageView, imageWithFallback, weight)
 import Screens.SavedLocationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Services.API (SavedLocationReq(..), SavedLocationsListRes(..), GetFavouriteDriverListRes(..))
@@ -56,6 +56,7 @@ import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState, FlowBT)
 import Services.FlowCache as FlowCache
 import Engineering.Helpers.BackTrack
+import Data.Int (fromNumber)
 
 screen :: ST.SavedLocationScreenState -> GlobalState -> Screen Action ST.SavedLocationScreenState ScreenOutput
 screen initialState st =
@@ -87,8 +88,8 @@ view push state =
   , padding $ Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 24 else EHC.safeMarginBottom)
   , onBackPressed push $ const BackPressed state.props.showDeleteLocationModel
   ][
-     linearLayout
-      [ 
+    linearLayout
+      [
         height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -101,140 +102,144 @@ view push state =
         , background Color.greySmoke
         ][]
       else
-        linearLayout[][]
-    , linearLayout
-      [
-        height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation HORIZONTAL
-      , background Color.blue600 
+        linearLayout[][] 
+    , tabView push state ]
+  , favDriverView push state
+  , favouriteLocationView push state
+  , linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , background Color.lightBlack900
+    , visibility if (state.props.showDeleteLocationModel) then VISIBLE else GONE
+    ][ PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state )]]
+
+
+tabView :: forall w. (Action -> Effect Unit) -> ST.SavedLocationScreenState -> PrestoDOM (Effect Unit) w
+tabView push state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , cornerRadius 24.0
+    , background Color.blue600
+    , padding $ Padding 4 4 4 4
+    , margin $ Margin 16 24 16 24
+    , gravity CENTER
+    , visibility VISIBLE
+    ]
+    [ tabItem push state "Drivers" "DRIVERS"
+    , tabItem push state "Locations" "LOCATIONS"
+    ]
+
+tabItem :: forall w. (Action -> Effect Unit) -> ST.SavedLocationScreenState -> String -> String -> PrestoDOM (Effect Unit) w
+tabItem push state text' scr =
+  let
+    imageHeight = V 16 
+
+    imageWidth = V 16 
+  in
+    linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , padding $ PaddingVertical 0 4
+      , weight 1.0
+      , background if (state.data.current == "Drivers" && "DRIVERS" == scr) || (state.data.current == "Locations" && "LOCATIONS" == scr) then Color.black900 else Color.blue600 
+      , gravity CENTER
       , cornerRadius 24.0
-      , padding $ Padding 4 4 4 4
-      , margin $ Margin 15 20 15 15
-      ][
-        linearLayout
-        [
-           height WRAP_CONTENT
-         , width WRAP_CONTENT
-         , background if state.data.current == "Drivers" then Color.black900 else Color.blue600 
-         , padding $ Padding 65 5 65 5
-         , cornerRadius 24.0
-         , onClick push $ const $ ChangeView "Drivers"
-        ][
-          textView $
-            [ height WRAP_CONTENT
-            , width WRAP_CONTENT
-            , gravity CENTER
-            , text "Drivers"
-            , color if state.data.current == "Drivers" then Color.white900 else Color.black700 
-            ]
-        ]
-        , linearLayout
-        [
-           height WRAP_CONTENT
-         , width WRAP_CONTENT
-         , background if state.data.current == "Drivers" then Color.blue600 else Color.black900
-         , padding $ Padding 65 5 65 5
-         , cornerRadius 24.0
-         , margin $ MarginLeft 5
-         , onClick push $ const $ ChangeView "Locations"
-        ][
-          textView $
-            [ height WRAP_CONTENT
-            , width WRAP_CONTENT
-            , gravity CENTER
-            , text "Locations"
-            , color if state.data.current == "Drivers" then Color.black700 else Color.white900
-            ]
-        ]
+      , onClick push $ const $ ChangeView if state.data.current == "Drivers" then "Locations" else "Drivers"
       ]
-        ]
-    ,
-     linearLayout
-      [ height MATCH_PARENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , margin $ MarginTop 150
-      ][
-       linearLayout
-        [
-           height WRAP_CONTENT
-         , width WRAP_CONTENT
-         , visibility if state.data.current == "Drivers" then VISIBLE else GONE
-        ][
-          textView $
-            [ height WRAP_CONTENT
-            , width WRAP_CONTENT
-            , gravity LEFT
-            , text "This list includes all the drivers you've marked as favourites."
-            , color Color.black700
-            , margin $ Margin 15 0 15 0
-            , textSize FontSize.a_17
-            , maxLines 2
+      [ textView
+          $ [ height WRAP_CONTENT
+            , text $ text'
+            , color if (state.data.current == "Drivers" && "DRIVERS" == scr) || (state.data.current == "Locations" && "LOCATIONS" == scr) then Color.white900 else Color.black700 
+            , padding $ PaddingBottom 3
+            , margin $ MarginTop 4 
             ]
-        ] 
-      , frameLayout
-      [ height MATCH_PARENT
-      , width MATCH_PARENT
-      , visibility if state.data.current == "Drivers" then VISIBLE else GONE
-      ][  linearLayout
-          [ height MATCH_PARENT
-          , width MATCH_PARENT
-          , orientation VERTICAL
-          ][  linearLayout
-              [ height MATCH_PARENT
-              , width MATCH_PARENT
-              , orientation VERTICAL
-              ][ 
-                savedLocationsViews push state
-              ]
-            ]
-        ]
+          <> FontStyle.tags TypoGraphy
       ]
-    ,
+
+favDriverView :: forall w. (Action -> Effect Unit) -> ST.SavedLocationScreenState -> PrestoDOM (Effect Unit) w
+favDriverView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ MarginTop 150
+    ][
       linearLayout
-      [ height MATCH_PARENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , margin $ MarginTop 130
-      , accessibility if (state.props.showDeleteLocationModel) then DISABLE_DESCENDANT else DISABLE 
-      , visibility if state.data.current == "Locations" then VISIBLE else GONE
+      [
+          height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , visibility if state.data.current == "Drivers" then VISIBLE else GONE
       ][
-      frameLayout
-      [ height MATCH_PARENT
-      , width MATCH_PARENT
-      ][  relativeLayout
-          [ height MATCH_PARENT
-          , width MATCH_PARENT
-          , orientation VERTICAL
-          ][  linearLayout
-              [ height MATCH_PARENT
-              , width MATCH_PARENT
-              , orientation VERTICAL
-              ][ savedLocationsView push state
-                ]
-            , linearLayout
-              [ height WRAP_CONTENT
-              , width MATCH_PARENT
-              , orientation HORIZONTAL
-              , background Color.white900
-              , alignParentBottom "true,-1"
-              , visibility if (DA.length state.data.savedLocations )/= 0 && state.props.apiRespReceived then VISIBLE else GONE
-              ][  PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state) ]
+        textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , gravity LEFT
+          , text "This list includes all the drivers you've marked as favourites."
+          , color Color.black700
+          , margin $ Margin 15 0 15 0
+          , textSize FontSize.a_17
+          , maxLines 2
+          ]
+      ] 
+    , frameLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , visibility if state.data.current == "Drivers" then VISIBLE else GONE
+    ][  linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        ][  linearLayout
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            ][ 
+              favouriteDriverViews push state
             ]
-        , linearLayout
-          [ height MATCH_PARENT
-          , width MATCH_PARENT
-          , visibility if (DA.length state.data.savedLocations )== 0 && state.props.apiRespReceived then VISIBLE else GONE
-          ][  ErrorModal.view (push <<< ErrorModalAC) (errorModalConfig state )]
-        ]
+          ]
       ]
-    , linearLayout
-          [ width MATCH_PARENT
-          , height MATCH_PARENT
-          , background Color.lightBlack900
-          , visibility if (state.props.showDeleteLocationModel) then VISIBLE else GONE
-          ][ PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state )]]
+    ]
+
+favouriteLocationView :: forall w. (Action -> Effect Unit) -> ST.SavedLocationScreenState -> PrestoDOM (Effect Unit) w
+favouriteLocationView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ MarginTop 130
+    , accessibility if (state.props.showDeleteLocationModel) then DISABLE_DESCENDANT else DISABLE 
+    , visibility if state.data.current == "Locations" then VISIBLE else GONE
+    ][
+    frameLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    ][  relativeLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        ][  linearLayout
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            ][ savedLocationsView push state
+              ]
+          , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation HORIZONTAL
+            , background Color.white900
+            , alignParentBottom "true,-1"
+            , visibility if (DA.length state.data.savedLocations )/= 0 && state.props.apiRespReceived then VISIBLE else GONE
+            ][  PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state) ]
+          ]
+      , linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , visibility if (DA.length state.data.savedLocations )== 0 && state.props.apiRespReceived then VISIBLE else GONE
+        ][  ErrorModal.view (push <<< ErrorModalAC) (errorModalConfig state )]
+      ]
+    ]
 
 savedLocationsView :: forall w.(Action -> Effect Unit) -> ST.SavedLocationScreenState -> PrestoDOM (Effect Unit) w
 savedLocationsView push state =
@@ -311,8 +316,8 @@ getFavouriteDriverList action push state = do
   pure unit
 
 
-savedLocationsViews :: forall w.(Action -> Effect Unit) -> ST.SavedLocationScreenState -> PrestoDOM (Effect Unit) w
-savedLocationsViews push state =
+favouriteDriverViews :: forall w.(Action -> Effect Unit) -> ST.SavedLocationScreenState -> PrestoDOM (Effect Unit) w
+favouriteDriverViews push state =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -407,7 +412,7 @@ savedLocationsViews push state =
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
                     , gravity CENTER
-                    , text "98% Approval rate"
+                    , text $ show (fromMaybe 0 (fromNumber (item.driverRating * 4.0))) <> "% Approval rate"
                     , color Color.black800
                     , margin $ MarginLeft 8
                     , textSize FontSize.a_16

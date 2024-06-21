@@ -31,6 +31,7 @@ data Action = NoAction
             | Favourite
             | FeedbackChanged String
             | SelectPill String String
+            | Back
 
 type RatingCardConfig = 
   { data :: RatingCardData
@@ -47,6 +48,7 @@ type RatingCardConfig =
   , isAlreadyFav :: Maybe Boolean
   , favCount :: Maybe Int
   , driverName :: String
+  , isDriver :: Boolean
   }
 
 type RatingCardData =
@@ -94,6 +96,7 @@ ratingCardConfig = {
 , isAlreadyFav : Just false
 , favCount : Just 0
 , driverName : ""
+, isDriver : true 
 }
 
 

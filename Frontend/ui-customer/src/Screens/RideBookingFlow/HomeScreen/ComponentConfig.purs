@@ -1196,6 +1196,7 @@ ratingCardViewState state =
   , isAlreadyFav : state.data.driverInfoCardState.isAlreadyFav
   , favCount : state.data.driverInfoCardState.favCount
   , driverName : state.data.driverInfoCardState.driverName
+  , isDriver : false
   }
 
 favDriverCardViewState :: ST.HomeScreenState -> FavDriverGotIt.FavDriverConfig
@@ -1215,10 +1216,9 @@ favDriverCardViewState state = {
     , enableRipple = true
     , rippleColor = Color.rippleShade
   }
-  , showProfileImg : true
   , title : getRateYourRideString ( getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName
   , accessibility : ENABLE
-  , closeImgVisible : GONE
+  , driverName : state.data.rideRatingState.driverName
 }
 
 getRateYourRideString :: String -> String -> String

@@ -356,7 +356,6 @@ rideCustomerExperienceView config push =
   , gravity CENTER
   ]
   [ customerIssueCaroselView push config.customerIssue 
-  --, customerRatingDriverView config push
   , needHelpPillView config push
   ]
 
@@ -483,50 +482,6 @@ customerIssueCarousalView  push =
         ]
       ]
     ]
-
-
-------------------------------------------- customerRatingDriverView -------------------------------------------------------------------------------------------------------------------------------------------------------------
--- customerRatingDriverView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
--- customerRatingDriverView config push =
---   let 
---     ratingVisibility = boolToVisibility $  ((not config.customerIssue.showIssueBanners)  || (null config.customerIssue.customerIssueCards))
---   in
---   linearLayout
---   [ width MATCH_PARENT
---   , height WRAP_CONTENT
---   , orientation VERTICAL
---   , visibility ratingVisibility
---   , cornerRadius 8.0
---   , stroke $ "1,"<>Color.grey800
---   , padding $ Padding 10 10 10 20
---   , gravity CENTER
---   ][ imageView [
---       imageWithFallback config.customerBottomCard.driverImage
---       , height $ V 56
---       , width $ V 56
---     ]
---     , commonTextView config push config.customerBottomCard.title Color.black800 (FontStyle.h3 TypoGraphy) 10
---     , commonTextView config push config.customerBottomCard.subTitle Color.black800 (FontStyle.paragraphText TypoGraphy) 10
---     , linearLayout
---       [ height WRAP_CONTENT
---       , width MATCH_PARENT
---       , gravity CENTER
---       , margin $ MarginTop 15
---       ](mapWithIndex (\_ item ->
---           linearLayout
---           [ height WRAP_CONTENT
---           , width WRAP_CONTENT
---           , margin $ MarginHorizontal 5 5
---           , onClick push $ const $ RateClick item
---           ][imageView
---               [ height $ V 30
---               , width $ V 30
---               , accessibilityHint $ (show item <> "star" ) <> if item <= config.customerBottomCard.selectedRating then " : Selected " else " : Un Selected "
---               , accessibility config.accessibility
---               , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if item <= config.customerBottomCard.selectedRating then "ny_ic_star_active" else "ny_ic_star_inactive"
---               ]
---           ]) [1,2,3,4,5])
---   ]
 
 needHelpPillView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 needHelpPillView config push = 

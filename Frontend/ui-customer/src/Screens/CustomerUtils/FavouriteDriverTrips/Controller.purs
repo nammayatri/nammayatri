@@ -35,14 +35,14 @@ instance loggableAction :: Loggable Action where
 data Action = GenericHeaderActionController GenericHeaderController.Action
             | SourceToDestinationActionController SourceToDestinationController.Action 
             | BackPressed
-            | MessageTextChanged String
-            | ViewInvoice
+            -- | MessageTextChanged String
+            -- | ViewInvoice
             | AfterRender
-            | NoAction
-            | Copy
-            | ShowPopUp
-            | PopUpModalAction PopUpModalController.Action
-            | ListExpandAinmationEnd
+            -- | NoAction
+            -- | Copy
+            -- | ShowPopUp
+            -- | PopUpModalAction PopUpModalController.Action
+            -- | ListExpandAinmationEnd
             | GetFavouriteDriversTripsAPIResponseAction (FavouriteDriverTripsResp)
             | RemoveFav
             | SavedLocation

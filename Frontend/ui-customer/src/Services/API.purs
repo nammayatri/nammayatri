@@ -716,7 +716,6 @@ newtype SpecialZoneQuoteAPIDetails = SpecialZoneQuoteAPIDetails {
 newtype DriverOfferAPIEntity = DriverOfferAPIEntity
   {
     rating :: Maybe Number
-  -- , favDriver :: Maybe Boolean
   , validTill :: String
   , driverName :: String
   , distanceToPickup :: Maybe Number
@@ -1388,7 +1387,7 @@ newtype FeedbackReq = FeedbackReq
   , rideId :: String
   , feedbackDetails :: String
   , wasOfferedAssistance :: Maybe Boolean
-  , shouldFavDriver :: Boolean
+  , shouldFavDriver :: Maybe Boolean
   }
 
 newtype FeedbackRes = FeedbackRes

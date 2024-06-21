@@ -182,7 +182,7 @@ checkRideStatus rideAssigned = do
 
 
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
-                    props { currentStage = RideRating
+                    props { currentStage = if hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue' then RideCompleted else RideRating
                           , estimatedDistance = contents.estimatedDistance
                           , zoneType = getSpecialTag resp.specialLocationTag
                           }
@@ -250,7 +250,6 @@ checkRideStatus rideAssigned = do
                             }
                           }
                         })
-                updateLocalStage RideRating
               when (length listResp.list == 0) $ do 
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
                 updateLocalStage HomeScreen

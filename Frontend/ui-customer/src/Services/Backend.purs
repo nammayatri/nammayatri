@@ -498,7 +498,7 @@ makeFeedBackReq rating rideId feedback wasOfferedAssistance favDriver= FeedbackR
     ,   "rideId" : rideId
     ,   "feedbackDetails" : feedback
     ,   "wasOfferedAssistance" : wasOfferedAssistance
-    ,   "shouldFavDriver" : favDriver
+    ,   "shouldFavDriver" : Just favDriver
     }
 
 removeFavouriteDriver :: String -> Flow GlobalState (Either ErrorResponse RemoveFavouriteDriverResp)

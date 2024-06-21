@@ -75,7 +75,19 @@ view push state =
   , onBackPressed push $ const BackPressed
   , afterRender push $ const AfterRender
   ][ 
-    linearLayout[
+      header push state
+    , linearLayout
+      [ height $ V 1
+      , width MATCH_PARENT
+      , background Color.greySmoke
+      ] []
+    , driverList push state 
+    , removeFavourite push state 
+  ]
+
+header :: forall w. (Action -> Effect Unit) -> ST.FavouriteDriverTripsState -> PrestoDOM (Effect Unit) w
+header push state =
+  linearLayout[
       height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation HORIZONTAL
@@ -94,13 +106,10 @@ view push state =
         ] <> FontStyle.body1 TypoGraphy
     ]
     ]
-    , linearLayout
-      [ height $ V 1
-      , width MATCH_PARENT
-      , background Color.greySmoke
-      ] []
 
-    , scrollView
+driverList :: forall w. (Action -> Effect Unit) -> ST.FavouriteDriverTripsState -> PrestoDOM (Effect Unit) w
+driverList push state =
+  scrollView
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , weight 1.0
@@ -231,18 +240,20 @@ view push state =
                 ] 
             ]) state.data.details)
       ]
-      , linearLayout[
-        height WRAP_CONTENT
-      , width MATCH_PARENT
-      , gravity CENTER
-      , onClick push $ const RemoveFav 
-      , margin $ Margin 0 7 0 35
-      ][
-        textView $ 
-          [ textFromHtml $ "<u>" <> "Remove From Favourites" <> "</u>"
-          , accessibilityHint $ "Remove From Favourites"
-          , accessibility ENABLE
-          , color Color.black700
-          ] <> FontStyle.body2 LanguageStyle
-      ]
-  ]
+
+removeFavourite :: forall w. (Action -> Effect Unit) -> ST.FavouriteDriverTripsState -> PrestoDOM (Effect Unit) w
+removeFavourite push state =
+  linearLayout[
+      height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER
+    , onClick push $ const RemoveFav 
+    , margin $ Margin 0 7 0 35
+    ][
+      textView $ 
+        [ textFromHtml $ "<u>" <> "Remove From Favourites" <> "</u>"
+        , accessibilityHint $ "Remove From Favourites"
+        , accessibility ENABLE
+        , color Color.black700
+        ] <> FontStyle.body2 LanguageStyle
+    ]

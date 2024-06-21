@@ -54,7 +54,7 @@ view push state =
     , gravity BOTTOM
     , onClick push $ const BackPressed
     , background Color.black9000
-  ][  currentRatingView push state 
+  ][  mainView push state 
     , linearLayout
       [height WRAP_CONTENT
       , width MATCH_PARENT
@@ -67,8 +67,8 @@ view push state =
   ]
   
 
-currentRatingView :: forall w. (Action -> Effect Unit) -> RatingCardConfig -> PrestoDOM (Effect Unit) w
-currentRatingView push state = 
+mainView :: forall w. (Action -> Effect Unit) -> RatingCardConfig -> PrestoDOM (Effect Unit) w
+mainView push state = 
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -89,161 +89,20 @@ currentRatingView push state =
          , width MATCH_PARENT
          , orientation VERTICAL
          , padding $ PaddingBottom if os == "IOS" then 40 else 0
-         ][ starRatingView state push
-          , linearLayout
-            [
-              height WRAP_CONTENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , gravity CENTER
-            ]
-            [
-              textView $
-            [ height WRAP_CONTENT
-            , width WRAP_CONTENT
-            , accessibilityHint "Bad Experience 😔"
-            , accessibility state.accessibility
-            , text $ "Bad Experience 😔"
-            , color Color.black900
-            , maxLines 1
-            , gravity CENTER
-            , visibility if state.data.rating == 1 then VISIBLE else GONE
-          ] <> FontStyle.h3 LanguageStyle
-            , textView $
-            [ height WRAP_CONTENT
-            , width WRAP_CONTENT
-            , accessibilityHint "(Select Multiple Items)"
-            , accessibility state.accessibility
-            , text $ "(Select Multiple Items)"
-            , color Color.black700
-            , maxLines 1
-            , gravity CENTER
-            , margin $ Margin 0 7 0 21
-            , visibility if state.data.rating == 1 then VISIBLE else GONE
-          ]
-            ]
-            , if state.showFeedbackPill && state.data.rating == 1 then feedbackPillView state push else dummyTextView
-            , if state.data.rating == 1 then editTextView state push else dummyTextView
+         ][ riderView state push
+          , driverView push state 
+          , badExperience state push
+          , if state.showFeedbackPill && state.data.rating == 1 then feedbackPillView state push else dummyTextView
+          , if state.data.rating == 1 then editTextView state push else dummyTextView
           ]
        ]
   ]
 
--------------------------------------------------- feedbackPillView ---------------------------------------------------
-givePillsImage :: String -> Boolean -> String
-givePillsImage txt isSelected = case txt of
-                      "Rude Driver" -> if isSelected then "ic_rudedriver_selected" else "ic_rudedriver_unselected"
-                      "Unsafe Trip" -> if isSelected then "ic_unsafetrip_selected" else "ic_unsafetrip_unselected"
-                      "Charged More" -> if isSelected then "ic_chargedmore_selected" else "ic_chargedmore_unselected"
-                      "Late Drop/Pickup" -> if isSelected then "ic_latedrop_selected" else "ic_latedrop_unselected"
-                      _ -> "Nothing"
 
+--------------------------------------------------------------Rider Side View---------------------------------------------------------------------
 
-feedbackPillView :: forall w. RatingCardConfig -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-feedbackPillView state push = 
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , gravity CENTER_VERTICAL
-    , padding (PaddingBottom 16)
-    ](map  
-      (\list1 ->  
-        linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation HORIZONTAL
-        , margin $ MarginBottom 6
-        ](map 
-            (\item -> 
-              let imageName = givePillsImage item.text isSelected
-                  isSelected = checkPillSelected item.text state.data.feedbackList item.id
-              in
-                linearLayout
-                  [ height WRAP_CONTENT
-                  , width WRAP_CONTENT
-                  , margin $ Margin 13 0 13 0
-                  , background Color.white900
-                  , orientation VERTICAL
-                  ][  
-                    imageView 
-                      [ imageWithFallback $ fetchImage FF_COMMON_ASSET imageName
-                      , height $ V 55
-                      , width $ V 68
-                      , visibility if state.showProfileImg then VISIBLE else GONE 
-                      , gravity CENTER_HORIZONTAL
-                      , onClick push $ const $ SelectPill item.text item.id ]
-                    ,textView
-                      [ height $ V 40
-                      , width $ V 58
-                      , textSize FontSize.a_12
-                      , fontStyle $ FontStyle.medium LanguageStyle
-                      , text item.text
-                      , accessibilityHint $ item.text <> if isSelected then " : Selected" else " : Un Selected"
-                      , accessibility state.accessibility
-                      , color Color.black700
-                      , maxLines 2
-                      , gravity CENTER_HORIZONTAL
-                      , margin $ MarginLeft 4
-                      ]
-                  ]
-            )list1
-          ) 
-      ) (getFeedbackPillData state.data.rating state.feedbackPillData)
-    ) 
-
-getFeedbackPillData :: Int -> Array (Array (Array FeedbackItem)) -> Array (Array FeedbackItem)
-getFeedbackPillData rating feedbackPillData = fromMaybe [] $ (feedbackPillData) !! (rating - 1)
-                            
-checkPillSelected :: String -> Array FeedbackAnswer -> String -> Boolean
-checkPillSelected feedbackItem feedbackList itemId =
-  let
-    selectedItems = filter (\item -> item.questionId == itemId) feedbackList
-  in
-    any (\item -> feedbackItem `elem` item.answer) selectedItems
-
-
---------------------------------------------------------------------------------------------------------------------
-
---------------------------------------------------- editTextView ---------------------------------------------------
-
-editTextView :: forall w. RatingCardConfig -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-editTextView state push =
-  linearLayout
-  [ height $ V 94
-  , width MATCH_PARENT
-  , background Color.white800
-  , cornerRadius 8.0
-  , orientation HORIZONTAL
-  , margin $ MarginBottom 24
-  , padding $ Padding 16 16 16 0
-  , stroke $ "1," <> Color.grey800
-  ][  imageView 
-      [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_message_square"
-      , height $ V 16 
-      , width $ V 16 
-      , margin $ if os == "ANDROID" then MarginRight 9 else  Margin 0 6 9 0 
-      ]                   
-    , (if os == "ANDROID" then editText else multiLineEditText)
-      $
-      [ height MATCH_PARENT
-      , width $ WRAP_CONTENT
-      , gravity LEFT
-      , padding $ Padding 0 0 0 0
-      , background Color.white800
-      , color Color.black 
-      , hint state.feedbackPlaceHolder
-      , weight 1.0
-      , pattern "[^\n]*,255"
-      , singleLine false 
-      , onChange push FeedbackChanged 
-      ] <> FontStyle.body3 LanguageStyle
-
-  ]
-
-------------------------starRatingView--------------------------
-
-starRatingView :: forall w . RatingCardConfig -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-starRatingView state push =
+riderView :: forall w . RatingCardConfig -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+riderView state push =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -251,6 +110,7 @@ starRatingView state push =
     , gravity CENTER
     , padding (PaddingBottom 16)
     , cornerRadius 8.0
+    , visibility if state.isDriver then GONE else VISIBLE
     ][
       relativeLayout[
         height WRAP_CONTENT
@@ -263,22 +123,37 @@ starRatingView state push =
         height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation HORIZONTAL
-      , gravity CENTER
       ][
         imageView [
-          imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_driver_avatar"
-        , height $ V 80
-        , width $ V 80
-        , cornerRadius 50.0
-        , margin $ MarginLeft if state.data.rating == 1 then 20 else 0
-        , visibility if state.showProfileImg then VISIBLE else GONE ],
-        imageView [
-          imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_redthumbs_down"
-        , height $ V 40
-        , width $ V 40
-        , cornerRadius 50.0
-        , visibility if state.data.rating == 1 then VISIBLE else GONE 
-        , margin $ Margin 85 20 0 0]
+            imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+          , visibility if state.data.rating == 1 then VISIBLE else GONE
+          , height $ V 48
+          , width $ V 24
+          , gravity LEFT
+          , onClick push $ const (Back)
+          ]
+        , relativeLayout
+          [
+            height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation HORIZONTAL
+          , gravity CENTER
+          ][
+            imageView [
+              imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_driver_avatar"
+            , height $ V 80
+            , width $ V 80
+            , cornerRadius 50.0
+            , margin $ MarginLeft if state.data.rating == 1 then 20 else 0
+            , visibility if state.showProfileImg then VISIBLE else GONE ],
+            imageView [
+              imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_redthumbs_down"
+            , height $ V 40
+            , width $ V 40
+            , cornerRadius 50.0
+            , visibility if state.data.rating == 1 then VISIBLE else GONE 
+            , margin $ Margin 85 20 0 0]
+          ]
       ]
     ,linearLayout
     [ height WRAP_CONTENT
@@ -410,6 +285,42 @@ starRatingView state push =
         ]
     ]
 
+badExperience :: forall w . RatingCardConfig -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+badExperience state push =
+  linearLayout
+    [
+      height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER
+    , visibility if state.isDriver then GONE else VISIBLE
+    ]
+    [
+      textView $
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , accessibilityHint "Bad Experience 😔"
+    , accessibility state.accessibility
+    , text $ "Bad Experience 😔"
+    , color Color.black900
+    , maxLines 1
+    , gravity CENTER
+    , visibility if state.data.rating == 1 then VISIBLE else GONE
+  ] <> FontStyle.h3 LanguageStyle
+    , textView $
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , accessibilityHint "(Select Multiple Items)"
+    , accessibility state.accessibility
+    , text $ "(Select Multiple Items)"
+    , color Color.black700
+    , maxLines 1
+    , gravity CENTER
+    , margin $ Margin 0 7 0 21
+    , visibility if state.data.rating == 1 then VISIBLE else GONE
+  ]
+    ]
+
 feedbackBasedOnRatingView :: forall w . RatingCardConfig -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 feedbackBasedOnRatingView state push = 
     textView
@@ -428,4 +339,215 @@ dummyTextView =
   textView
   [ width WRAP_CONTENT
   , height $ V 0
+  ]
+
+
+-------------------------------------------------- feedbackPillView ---------------------------------------------------
+givePillsImage :: String -> Boolean -> String
+givePillsImage txt isSelected = case txt of
+                      "Rude Driver" -> if isSelected then "ic_rudedriver_selected" else "ic_rudedriver_unselected"
+                      "Unsafe Trip" -> if isSelected then "ic_unsafetrip_selected" else "ic_unsafetrip_unselected"
+                      "Charged More" -> if isSelected then "ic_chargedmore_selected" else "ic_chargedmore_unselected"
+                      "Late Drop/Pickup" -> if isSelected then "ic_latedrop_selected" else "ic_latedrop_unselected"
+                      _ -> "Nothing"
+
+
+feedbackPillView :: forall w. RatingCardConfig -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+feedbackPillView state push = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER_VERTICAL
+    , padding (PaddingBottom 16)
+    ](map  
+      (\list1 ->  
+        linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation HORIZONTAL
+        , margin $ MarginBottom 6
+        ](map 
+            (\item -> 
+              let imageName = givePillsImage item.text isSelected
+                  isSelected = checkPillSelected item.text state.data.feedbackList item.id
+              in
+                linearLayout
+                  [ height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , margin $ Margin 13 0 13 0
+                  , background Color.white900
+                  , orientation VERTICAL
+                  ][  
+                    imageView 
+                      [ imageWithFallback $ fetchImage FF_COMMON_ASSET imageName
+                      , height $ V 55
+                      , width $ V 68
+                      , visibility if state.showProfileImg then VISIBLE else GONE 
+                      , gravity CENTER_HORIZONTAL
+                      , onClick push $ const $ SelectPill item.text item.id ]
+                    ,textView
+                      [ height $ V 40
+                      , width $ V 58
+                      , textSize FontSize.a_12
+                      , fontStyle $ FontStyle.medium LanguageStyle
+                      , text item.text
+                      , accessibilityHint $ item.text <> if isSelected then " : Selected" else " : Un Selected"
+                      , accessibility state.accessibility
+                      , color Color.black700
+                      , maxLines 2
+                      , gravity CENTER_HORIZONTAL
+                      , margin $ MarginLeft 4
+                      ]
+                  ]
+            )list1
+          ) 
+      ) (getFeedbackPillData state.data.rating state.feedbackPillData)
+    ) 
+
+getFeedbackPillData :: Int -> Array (Array (Array FeedbackItem)) -> Array (Array FeedbackItem)
+getFeedbackPillData rating feedbackPillData = fromMaybe [] $ (feedbackPillData) !! (rating - 1)
+                            
+checkPillSelected :: String -> Array FeedbackAnswer -> String -> Boolean
+checkPillSelected feedbackItem feedbackList itemId =
+  let
+    selectedItems = filter (\item -> item.questionId == itemId) feedbackList
+  in
+    any (\item -> feedbackItem `elem` item.answer) selectedItems
+
+
+-----------------------------------------------------Driver Side View---------------------------------------------------------------------
+
+driverView :: forall w. (Action -> Effect Unit) -> RatingCardConfig -> PrestoDOM (Effect Unit) w
+driverView push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , padding $ Padding 16 6 16 12
+  , background Color.white900
+  , cornerRadii $ Corners 20.0 true true false false
+  , clickable true
+  , alignParentBottom "true,-1"
+  , onClick push $ const NoAction
+  , visibility if state.isDriver then VISIBLE else GONE
+  ][  scrollView 
+      [ height if os == "IOS" then (V 500) else WRAP_CONTENT
+      , width MATCH_PARENT
+      , scrollBarY false 
+      ][ linearLayout 
+         [ height WRAP_CONTENT
+         , width MATCH_PARENT
+         , orientation VERTICAL
+         , padding $ PaddingBottom if os == "IOS" then 40 else 0
+         ][ starRatingView state push
+          , editTextView state push
+          ]
+       ]
+  ]
+
+------------------------starRatingView--------------------------
+
+starRatingView :: forall w . RatingCardConfig -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+starRatingView state push =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER
+    , padding (PaddingBottom 16)
+    , cornerRadius 8.0
+    ][ imageView [
+        imageWithFallback state.driverImage
+        , height $ V 56
+        , width $ V 56
+        , cornerRadius 50.0
+        , visibility if state.showProfileImg then VISIBLE else GONE
+      ]
+    , linearLayout [
+        orientation HORIZONTAL
+      , width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ MarginBottom 10
+      , gravity CENTER
+      ][
+        textView $
+          [ height WRAP_CONTENT
+          , width $ V (screenWidth unit - 80)
+          , accessibilityHint "Rate Your Ride"
+          , accessibility state.accessibility
+          , text $ state.title
+          , color Color.black800
+          , padding $ PaddingBottom 4
+          , maxLines 2
+          , gravity CENTER
+          ] <> FontStyle.h3 LanguageStyle
+      , imageView [
+          width $ V 16 
+        , height $ V 16 
+        , accessibility DISABLE
+        , onClick push $ const BackPressed
+        , gravity CENTER
+        , visibility state.closeImgVisible
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_cancel_unfilled"
+        ]
+      ]
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity CENTER
+        ](mapWithIndex (\index item ->
+                          linearLayout
+                          [ height WRAP_CONTENT
+                          , width WRAP_CONTENT
+                          , margin (MarginHorizontal 5 5)
+                          , onClick push $ const (Rating item)
+                          ][imageView
+                              [ height $ V 35
+                              , width $ V 35
+                              , accessibilityHint (show item <> " Star : " <> (if item <= state.data.rating then "Selected" else "Un Selected") )
+                              , accessibility state.accessibility
+                              , imageWithFallback  $ fetchImage FF_COMMON_ASSET $ if item <= state.data.rating then "ny_ic_star_active" else "ny_ic_star_inactive"
+                              ]
+                          ]) [1,2,3,4,5])
+    ]
+
+
+
+--------------------------------------------------------------------Common components---------------------------------------------------------------
+
+--------------------------------------------------- editTextView -------------------------------------------------
+
+editTextView :: forall w. RatingCardConfig -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+editTextView state push =
+  linearLayout
+  [ height $ V 94
+  , width MATCH_PARENT
+  , background Color.white800
+  , cornerRadius 8.0
+  , orientation HORIZONTAL
+  , margin $ MarginBottom 24
+  , padding $ Padding 16 16 16 0
+  , stroke $ "1," <> Color.grey800
+  ][  imageView 
+      [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_message_square"
+      , height $ V 16 
+      , width $ V 16 
+      , margin $ if os == "ANDROID" then MarginRight 9 else  Margin 0 6 9 0 
+      ]                   
+    , (if os == "ANDROID" then editText else multiLineEditText)
+      $
+      [ height MATCH_PARENT
+      , width $ WRAP_CONTENT
+      , gravity LEFT
+      , padding $ Padding 0 0 0 0
+      , background Color.white800
+      , color Color.black 
+      , hint state.feedbackPlaceHolder
+      , weight 1.0
+      , pattern "[^\n]*,255"
+      , singleLine false 
+      , onChange push FeedbackChanged 
+      ] <> FontStyle.body3 LanguageStyle
+
   ]

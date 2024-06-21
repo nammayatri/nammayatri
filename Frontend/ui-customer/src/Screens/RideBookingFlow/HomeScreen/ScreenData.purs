@@ -49,7 +49,7 @@ initData = {
     , vehicleDetails : "Bajaj RE Auto"
     , registrationNumber : "KA  01  YF  4921"
     , rating : 4.0
-    , favDriver : false
+    --, favDriver : false
     , locationList : []
     , savedLocations : []
     , fareProductType : FPT.ONE_WAY

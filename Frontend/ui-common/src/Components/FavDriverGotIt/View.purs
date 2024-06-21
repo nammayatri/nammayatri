@@ -53,7 +53,7 @@ view push state =
     , clickable true
     , gravity BOTTOM
     , background Color.black9000
-  ][  currentRatingView push state 
+  ][  mainView push state 
     , linearLayout
       [height WRAP_CONTENT
       , width MATCH_PARENT
@@ -65,8 +65,8 @@ view push state =
   ]
   
 
-currentRatingView :: forall w. (Action -> Effect Unit) -> FavDriverConfig -> PrestoDOM (Effect Unit) w
-currentRatingView push state = 
+mainView :: forall w. (Action -> Effect Unit) -> FavDriverConfig -> PrestoDOM (Effect Unit) w
+mainView push state = 
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -90,24 +90,23 @@ currentRatingView push state =
             textView $
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
-          , accessibilityHint "Rammorthy is now added to your favourite list!"
-          , accessibility state.accessibility
-          , text $ "Rammorthy is now added to your favourite list!"
+          , accessibilityHint $ state.driverName <> " is now added to your favourite list!"
+          , text $ state.driverName <> " is now added to your favourite list!"
           , color Color.black900
           , maxLines 2
           , gravity CENTER
           , margin $ Margin 22 0 22 10
           , visibility VISIBLE
           ] <> FontStyle.h1 LanguageStyle
-          , starRatingView state push
+          , driverInfo state push
           ]
        ]
   ]
 
-------------------------starRatingView--------------------------
+------------------------driverInfo--------------------------
 
-starRatingView :: forall w . FavDriverConfig -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-starRatingView state push =
+driverInfo :: forall w . FavDriverConfig -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+driverInfo state push =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -149,9 +148,9 @@ starRatingView state push =
         textView $
           [ height $ V 18
           , width $ V 260
-          , accessibilityHint "I am Rammorthy, know about me >"
+          , accessibilityHint $ "I am " <> state.driverName <>", know about me >"
           , accessibility state.accessibility
-          , text $ "I am Rammorthy, know about me >"
+          , text $ "I am " <> state.driverName <>", know about me >"
           , color Color.blue900
           , maxLines 1
           , gravity CENTER
