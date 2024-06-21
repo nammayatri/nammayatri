@@ -1301,4 +1301,6 @@ getKN stringKey =
         PUNE -> "ಪುಣೆ"
         MYSORE -> "ಮೈಸೂರು"
         TUMAKURU -> "ತುಮಕೂರು"
+        NOIDA -> "ನೋಯ್ಡಾ"
+        GURUGRAM -> "ಗುರುಗ್ರಾಮ"
         WAITING_CHARGES -> "ನಿರೀಕ್ಷಣಾ ಶುಲ್ಕಗಳು"

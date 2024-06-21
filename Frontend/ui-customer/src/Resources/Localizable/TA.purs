@@ -1318,4 +1318,6 @@ getTA stringKey =
     PUNE -> "புனே"
     MYSORE -> "மைசூர்"
     TUMAKURU -> "தும்கூர்"
+    NOIDA -> "நொய்டா"
+    GURUGRAM -> "குருகிராம்"
     WAITING_CHARGES -> "காத்திருப்பு கட்டணங்கள்"

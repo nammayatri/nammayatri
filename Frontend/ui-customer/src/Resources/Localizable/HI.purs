@@ -1300,4 +1300,6 @@ getHI stringKey =
         PUNE -> "पुणे"
         MYSORE -> "मैसूर"
         TUMAKURU -> "तुमकूरु"
+        NOIDA -> "नोएडा"
+        GURUGRAM -> "गुरुग्राम"
         WAITING_CHARGES -> "प्रतीक्षा शुल्क"

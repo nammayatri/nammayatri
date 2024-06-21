@@ -735,6 +735,8 @@ cityCodeMap =
   , Tuple (Just "std:020") Pune
   , Tuple (Just "std:0821") Mysore
   , Tuple (Just "std:0816") Tumakuru
+  , Tuple (Just "std:01189") Noida
+  , Tuple (Just "std:0124") Gurugram
   , Tuple Nothing AnyCity
   ]
 
@@ -800,6 +802,8 @@ getCityFromString cityString =
     "Pune" -> Pune
     "Mysore" -> Mysore
     "Tumakuru" -> Tumakuru
+    "Noida" -> Noida
+    "Gurugram" -> Gurugram
     _ -> AnyCity
 
 getCityNameFromCode :: Maybe String -> City
@@ -956,13 +960,15 @@ getAllServices dummy =
   in case city of 
     Bangalore -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     Tumakuru -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
-    Hyderabad -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
+    Hyderabad -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     Delhi -> ["AC Mini", "AC Sedan", "Auto", "AC SUV"]
     Chennai -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
     Mysore -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     Kolkata -> ["Non-AC", "Hatchback", "Sedan", "SUV"]
     Kochi -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
     Pondicherry -> ["Auto", "Eco"]
+    Noida -> ["AC Mini", "AC Sedan", "Auto", "AC SUV"]
+    Gurugram -> ["AC Mini", "AC Sedan", "Auto", "AC SUV"]
     _ ->  ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
 
 getSelectedServices :: LazyCheck -> Array String
@@ -971,13 +977,15 @@ getSelectedServices dummy =
   in case city of 
     Bangalore -> ["Non-AC Mini", "AC Mini", "Sedan"]
     Tumakuru -> ["Non-AC Mini", "AC Mini", "Sedan"]
-    Hyderabad -> ["Eco", "Hatchback", "Sedan"]
+    Hyderabad -> ["Non-AC Mini", "AC Mini", "Sedan"]
     Delhi -> ["AC Mini", "AC Sedan"]
     Chennai -> ["Eco", "Hatchback", "Sedan"]
     Mysore -> ["Non-AC Mini", "AC Mini", "Sedan"]
     Kolkata -> ["Non-AC", "Hatchback", "Sedan"]
     Kochi -> ["Eco", "Hatchback", "Sedan"]
     Pondicherry -> ["Eco", "Auto"]
+    Noida -> ["AC Mini", "AC Sedan"]
+    Gurugram -> ["AC Mini", "AC Sedan"]
     _ ->  ["Eco", "Hatchback", "Sedan"] 
 
 getVariantDescription :: String -> { text :: String, airConditioned :: Boolean}
@@ -1112,4 +1120,6 @@ getLanguageBasedCityName cityName =
     Pune -> getString PUNE
     Mysore -> getString MYSORE
     Tumakuru -> getString TUMAKURU
+    Noida -> getString NOIDA
+    Gurugram -> getString GURUGRAM
     AnyCity -> ""

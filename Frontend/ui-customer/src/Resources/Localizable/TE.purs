@@ -1315,4 +1315,6 @@ getTE stringKey =
     PUNE -> "పూణే"
     MYSORE -> "మైసూరు"
     TUMAKURU -> "తుమకూరు"
+    NOIDA -> "నోయిడా"
+    GURUGRAM -> "గురుగ్రామ్"
     WAITING_CHARGES -> "వెచ్చింపు ధరలు"

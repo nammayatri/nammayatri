@@ -1300,4 +1300,6 @@ getBN stringKey =
         PUNE -> "পুণে"
         MYSORE -> "মাইসুর"
         TUMAKURU -> "তুমাকুরু"
+        NOIDA -> "নয়ডা"
+        GURUGRAM -> "গুরুগ্রাম"
         WAITING_CHARGES -> "অপেক্ষার খরচ"

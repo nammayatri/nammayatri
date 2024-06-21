@@ -1302,4 +1302,6 @@ getML stringKey =
         PUNE -> "പൂന"
         MYSORE -> "മൈസൂരു"
         TUMAKURU -> "തുമകൂരു"
+        NOIDA -> "നോയിഡ"
+        GURUGRAM -> "ഗുരുഗ്രാം"
         WAITING_CHARGES -> "കാത്തിരിക്കൽ ചാർജുകൾ"
