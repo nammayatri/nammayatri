@@ -10,11 +10,11 @@ types:
     whyNY : "[Text]"
     aspirations : "[Text]"
   DriverProfileQuesReq:
-    aspirations : "[Text]"
-    expertAt : "[Text]"
+    aspirations : "Maybe [Text]"
+    expertAt : "Maybe [Text]"
     hometown : Maybe Text
-    pledges : "[Text]"
-    whyNY : "[Text]"
+    pledges : "Maybe [Text]"
+    whyNY : "Maybe [Text]"
 apis:
   # POST /DriverProfileQues
   - POST:
