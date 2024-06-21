@@ -43,6 +43,7 @@ type CarouselHolderConfig item a = {
   , currentIndex :: Int
   , showScrollIndicator :: Boolean
   , layoutHeight :: Length
+  , overlayScrollIndicator :: Boolean
 }
 
 checkAndStartAutoLoop :: forall a action. (action -> Effect Unit) -> CarouselHolderConfig a action -> Effect Unit

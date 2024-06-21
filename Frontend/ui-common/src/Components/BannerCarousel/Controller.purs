@@ -82,6 +82,7 @@ type Config a = {
   actionImageVisibility :: Boolean,
   actionArrowIconVisibility :: Boolean,
   actionBottomArrowIconVisibility :: Boolean
+, imageBannerUrl :: String
 }
 
 config :: forall a. a -> Config a
@@ -118,6 +119,7 @@ config action = {
     actionImageVisibility : false,
     actionArrowIconVisibility : true,
     actionBottomArrowIconVisibility : false
+, imageBannerUrl : ""
 }
 
 
@@ -141,18 +143,24 @@ type PropConfig = (
   actionImageUrl :: PropValue,
   actionImageVisibility :: PropValue,
   actionArrowIconVisibility :: PropValue,
-  actionBottomArrowIconVisibility :: PropValue
+  actionBottomArrowIconVisibility :: PropValue,
+  imageBannerUrl :: PropValue,
+  imageBannerVisibility :: PropValue
 )
 
 
 bannerTransformer :: forall a. Array (Config a) -> Array (Record PropConfig)
-bannerTransformer = map (
-  \item -> {
+bannerTransformer = 
+  map (\item -> 
+  let 
+    imageBannerUrl = fromMaybe "" ((split (Pattern ",") item.imageBannerUrl) !! 0)
+  in
+  {
   backgroundColor : toPropValue item.backgroundColor,
   alertText : toPropValue item.alertText,
   alertTextColor : toPropValue item.alertTextColor,
   alertTextVisibility : toPropValue $ if item.alertTextVisibility then "visible" else "gone",
-  visibility : toPropValue $ if item.isBanner then "visible" else "gone",
+  visibility : toPropValue $ if item.isBanner && (DS.null imageBannerUrl) then "visible" else "gone",
   titleText : toPropValue item.title ,
   titleTextColor : toPropValue item.titleColor,
   actionTextVisibility : toPropValue $ if item.actionTextVisibility then "visible" else "gone",
@@ -168,6 +176,8 @@ bannerTransformer = map (
   actionImageVisibility : toPropValue $ if item.actionImageVisibility then "visible" else "gone",
   actionArrowIconVisibility : toPropValue $ if item.actionArrowIconVisibility then "visible" else "gone",
   actionBottomArrowIconVisibility : toPropValue $ if item.actionBottomArrowIconVisibility then "visible" else "gone"
+, imageBannerUrl : toPropValue $ imageBannerUrl
+, imageBannerVisibility : toPropValue $ if DS.null $ imageBannerUrl then "gone" else "visible"
   }
 )
 
@@ -194,6 +204,7 @@ remoteConfigTransformer remoteConfig action =
         actionImageVisibility = not $ DS.null remoteConfig.cta_image_url,
         actionTextVisibility = DS.null remoteConfig.cta_image_url ,
         actionArrowIconVisibility = DS.null remoteConfig.cta_image_url,
-        actionBottomArrowIconVisibility = DS.null remoteConfig.cta_image_url
+        actionBottomArrowIconVisibility = DS.null remoteConfig.cta_image_url,
+        imageBannerUrl = fromMaybe "" remoteConfig.image_banner
       }
     in config'') remoteConfig

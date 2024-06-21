@@ -497,4 +497,5 @@ getCarouselConfig view customerIssueConfig = {
   , currentIndex : customerIssueConfig.currentIndex
   , showScrollIndicator : false
   , layoutHeight : V 180
+  , overlayScrollIndicator : false
 }

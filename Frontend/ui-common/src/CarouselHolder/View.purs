@@ -42,16 +42,16 @@ carouselView :: forall w a action. Homogeneous a PropValue => (action -> Effect 
 carouselView push config =
   let itemsLen = length config.items
       layoutHeight = if os == "IOS" then config.layoutHeight else WRAP_CONTENT
-      indicatorLayoutHeight = if os == "IOS" then config.layoutHeight else MATCH_PARENT
+      indicatorLayoutHeight =  if not  config.overlayScrollIndicator then WRAP_CONTENT else if os == "IOS" then config.layoutHeight else MATCH_PARENT
   in
-  frameLayout
+  (if config.overlayScrollIndicator then frameLayout else linearLayout )
   [ height layoutHeight
   , width MATCH_PARENT
   , gravity BOTTOM
   , visibility $ boolToVisibility $ itemsLen  > 0
-  ]$[ animationSet
-  [ scaleYAnimWithDelay 50
-  ]$ viewPager2
+  , orientation VERTICAL
+  ]$[ animationSet[ scaleYAnimWithDelay 50 ]$ 
+    viewPager2
       $ [ listItem  $ config.view
       , listDataV2 $ config.items
       , height layoutHeight
@@ -66,7 +66,7 @@ carouselView push config =
               [ height indicatorLayoutHeight
               , width MATCH_PARENT
               , orientation VERTICAL
-              , padding $ PaddingBottom 8
+              , padding $ if config.overlayScrollIndicator then PaddingBottom 8 else PaddingTop 4 
               , afterRender (\_ -> when (itemsLen > 1) $ checkAndStartAutoLoop push config) (pure unit)
               ]
               [ linearLayout [ weight 1.0, orientation VERTICAL ] []

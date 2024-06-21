@@ -32,19 +32,20 @@ import Data.Foldable
 
 getBannerConfigs :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
 getBannerConfigs state action =
-  (if state.props.city == ST.Chennai || state.props.city == ST.Kochi
-  then [metroBannerConfig state action]
-  else [])
-  <> (if state.data.config.banners.homeScreenCabLaunch && state.props.city == ST.Bangalore then [cabLaunchBannerConfig state action] else [])
-  <> (if state.data.config.feature.enableAdditionalServices || (cityConfig state).enableRentals
-  then [checkoutRentalBannerConfig state action] 
-  else [])
-  <> 
-  (if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
-    then [disabilityBannerConfig state action] 
-    else [])
-  <> (if  state.data.config.banners.homeScreenSafety && state.props.sosBannerType == Just ST.SETUP_BANNER && state.data.config.feature.enableSafetyFlow then [sosSetupBannerConfig state action] else [])
-  <> (getRemoteBannerConfigs state.props.city)
+  -- (if state.props.city == ST.Chennai || state.props.city == ST.Kochi
+  -- then [metroBannerConfig state action]
+  -- else [])
+  -- <> (if state.data.config.banners.homeScreenCabLaunch && state.props.city == ST.Bangalore then [cabLaunchBannerConfig state action] else [])
+  -- <> (if state.data.config.feature.enableAdditionalServices || (cityConfig state).enableRentals
+  -- then [checkoutRentalBannerConfig state action] 
+  -- else [])
+  -- <> 
+  -- (if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
+  --   then [disabilityBannerConfig state action] 
+  --   else [])
+  -- <> (if  state.data.config.banners.homeScreenSafety && state.props.sosBannerType == Just ST.SETUP_BANNER && state.data.config.feature.enableSafetyFlow then [sosSetupBannerConfig state action] else [])
+  -- <> 
+  (getRemoteBannerConfigs state.props.city)
   where
     getRemoteBannerConfigs :: City -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
     getRemoteBannerConfigs city = do
