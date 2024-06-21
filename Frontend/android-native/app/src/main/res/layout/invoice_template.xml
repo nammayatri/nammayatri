@@ -399,17 +399,15 @@
         </LinearLayout>
 
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/plus_jakartasans_regular"
-            android:layout_marginTop="35px"
-            android:lineHeight="16px"
             android:id="@+id/referenceText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/plus_jakartasans_medium_italic"
+            android:lineHeight="16px"
             android:text=""
             android:textColor="@color/Black700"
             android:textFontWeight="400"
             android:textStyle="italic"
-            android:paddingHorizontal="5px"
             android:textSize="16px" />
     </LinearLayout>
 </LinearLayout>
