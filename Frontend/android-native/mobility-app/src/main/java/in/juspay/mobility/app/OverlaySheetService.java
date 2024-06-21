@@ -1058,15 +1058,17 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     JSONArray jsonArray = respOb.getJSONArray("list");
                      int rideListLength = jsonArray.length();
                      if (rideListLength > 0) {
-                         sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "true").apply();
-                         sharedPref.edit().putString(getResources().getString(R.string.RIDE_STATUS), "null").apply();
-                         showAcknowledgement(getString(R.string.DRIVER_ASSIGNMENT));
-                         RideRequestUtils.openApplication(this);
+                         mainLooper.post(() -> {
+                             sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "true").apply();
+                             sharedPref.edit().putString(getResources().getString(R.string.RIDE_STATUS), "null").apply();
+                             showAcknowledgement(getString(R.string.DRIVER_ASSIGNMENT));
+                             RideRequestUtils.openApplication(this);
+                         });
                      }
                 }
                 executor.shutdown();
             } catch (Exception error) {
-                Exception exception = new Exception("Error in updateDriverStatus " + error);
+                Exception exception = new Exception("Exception in checkDriverRideList " + error);
                 FirebaseCrashlytics.getInstance().recordException(exception);
             }
         });

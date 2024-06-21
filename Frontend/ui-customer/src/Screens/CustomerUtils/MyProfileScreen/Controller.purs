@@ -250,4 +250,5 @@ updateProfile (GetProfileRes profile) state = do
                         , hasDisability = hasDisability
                         , disabilityType = disability
                         , editedDisabilityOptions = disabilityOptions
-                        , disabilityOptions = disabilityOptions } }
+                        , disabilityOptions = disabilityOptions } 
+                , props { profileLoaded = true }}

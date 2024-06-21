@@ -1211,7 +1211,8 @@ type MyProfileScreenProps = {
   fromHomeScreen :: Boolean,
   showAccessibilityPopUp :: Boolean,
   changeAccessibility :: Boolean,
-  isSpecialAssistList :: Boolean
+  isSpecialAssistList :: Boolean,
+  profileLoaded :: Boolean
 }
 
 data FieldType = NAME | EMAILID_ | GENDER_ | MOBILE | DISABILITY_TYPE

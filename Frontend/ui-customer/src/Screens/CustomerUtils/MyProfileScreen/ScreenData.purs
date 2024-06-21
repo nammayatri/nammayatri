@@ -33,7 +33,8 @@ initData = {
         fromHomeScreen : false,
         showAccessibilityPopUp : false,
         changeAccessibility : false,
-        isSpecialAssistList : false
+        isSpecialAssistList : false,
+        profileLoaded : false
     },
     data : {
         name : "",
