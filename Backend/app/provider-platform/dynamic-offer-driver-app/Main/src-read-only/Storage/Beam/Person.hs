@@ -70,6 +70,6 @@ instance B.Table PersonT where
 
 type Person = PersonT Identity
 
-$(enableKVPG ''PersonT ['id] [['mobileNumberHash]])
+$(enableKVPG ''PersonT ['id] [['alternateMobileNumberHash], ['mobileNumberHash]])
 
 $(mkTableInstances ''PersonT "person")

@@ -131,6 +131,7 @@ Person:
   constraints:
     id: PrimaryKey
     mobileNumberHash: SecondaryKey
+    alternateMobileNumberHash: SecondaryKey
   sqlType:
     firstName: character varying (255)
     middleName: character varying (255)
