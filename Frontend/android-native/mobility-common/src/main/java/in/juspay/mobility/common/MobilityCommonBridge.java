@@ -2380,7 +2380,7 @@ public class MobilityCommonBridge extends HyperBridge {
             PolyLineAnimationTimers polylineAnimationTimerInstance = getPolyLineTimer(gmapKey,polyLineKey);
             Timer polylineAnimationTimer = polylineAnimationTimerInstance != null ? polylineAnimationTimerInstance.polyLineAnimationTimer : null;
             TimerTask polylineTimerTask = polylineAnimationTimerInstance != null ? polylineAnimationTimerInstance.polyAnimationTimerTask : null;
-            if(!isAnimationNeeded || Utils.getDeviceRAM() <= 3){
+            if(!isAnimationNeeded || Utils.getDeviceRAM() <= 4){
                 if(polylineAnimationTimer != null){
                     polylineAnimationTimer.cancel();
                 }
