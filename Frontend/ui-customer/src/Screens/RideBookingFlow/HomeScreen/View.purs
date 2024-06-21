@@ -353,7 +353,7 @@ screen initialState =
                 --   void $ push RemoveChat
                 pure unit
                 if initialState.data.fareProductType == FPT.RENTAL then 
-                  void $ rideDurationTimer (floor (toNumber (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") initialState.data.driverInfoCardState.rentalData.startTimeUTC ))) "1" "RideDurationTimer" push (RideDurationTimer)
+                  void $ rideDurationTimer (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") initialState.data.driverInfoCardState.rentalData.startTimeUTC ) "1" "RideDurationTimer" push (RideDurationTimer)
                   else pure unit
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               ChatWithDriver -> if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction else pure unit
@@ -3137,9 +3137,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                 let rideStatus = res.status
                 doAff do liftEffect $ push $ action rideStatus ( RideBookingRes respBooking)
                 let scheduledTimeDiff = compareUTCDate (fromMaybe (getCurrentUTC "") respBooking.rideScheduledTime) (getCurrentUTC "")
-                    waitTimeStartTime = if fareProductType == "RENTAL" then (fromMaybe "" respBooking.rideScheduledTime) else (fromMaybe "" res.driverArrivalTime)
-                    triggerDriverArrivalAction = if fareProductType == "RENTAL" then scheduledTimeDiff <= 0  else true
-                if (res.driverArrivalTime /= Nothing && triggerDriverArrivalAction && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" ) then 
+                    waitTimeStartTime = fromMaybe "" res.driverArrivalTime
+                if (res.driverArrivalTime /= Nothing && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" ) then 
                   doAff do liftEffect $ push $ driverArrivedAction waitTimeStartTime
                 else pure unit
               Nothing -> pure unit

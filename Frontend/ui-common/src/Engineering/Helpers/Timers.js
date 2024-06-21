@@ -98,18 +98,21 @@ export const waitingCountdownTimerV2Impl = function (startingTime, interval, tim
     const handler = function (keyId) {
       const timer = activeTimers[keyId];
       if (timer) {
-        timer.time = timer.time + timer.timerInterval;
-        const minutes = getTwoDigitsNumber(Math.floor(timer.time / 60));
-        const seconds = getTwoDigitsNumber(timer.time - minutes * 60);
+        let currentTimeStamp = new Date().getTime();
+        const time = Math.round((currentTimeStamp - timer.time) / 1000)
+        const minutes = getTwoDigitsNumber(Math.floor(time / 60));
+        const seconds = getTwoDigitsNumber(time - minutes * 60);
         const timeInMinutesFormat = minutes + " : " + seconds;
-        cb(action(keyId)(timeInMinutesFormat)(timer.time))();
+        cb(action(keyId)(timeInMinutesFormat)(time))();
       }
     }
     const timerID = instantGetTimer(handler, timerId, interval * 1000);
+    const currentTime = new Date().getTime();
     const timer = {
-      time: startingTime,
+      time: currentTime - startingTime*1000,
       id: timerID,
-      timerInterval: parseInt(interval)
+      timerInterval: parseInt(interval),
+      timeStamp: new Date().getTime()
     }
     activeTimers[timerId] = timer;
     handler(timerId);
@@ -169,8 +172,8 @@ export const rideDurationTimerImpl = (startingTime, interval, timerId, cb, actio
     const handler = function (keyId) {
       const timer = activeTimers[keyId];
       if (timer) {
-        timer.time = timer.time + timer.timerInterval;
-        const mins = timer.time;
+        let currentTimeStamp = new Date().getTime();
+        const mins = Math.round((currentTimeStamp - timer.time) / 60000);
         // const mins = Math.floor(timer.time/60); // IF WE ARE STORING TIME IN SECONDS IN activeTimers ARRAY because of interval in seconds
         const hours = getTwoDigitsNumber(Math.floor(mins / 60));
         const minutes = getTwoDigitsNumber(Math.floor((mins - (hours * 60))));
@@ -181,8 +184,9 @@ export const rideDurationTimerImpl = (startingTime, interval, timerId, cb, actio
 
     let remainingTimeID = setTimeout(function() {
       const timerID = instantGetTimer(handler, timerId, interval * (60000));
+      const currentTime = new Date().getTime();
       const timer = {
-        time: startTimeInMinutes,
+        time: currentTime - startTimeInMinutes * 60000,
         id: timerID,
         timerInterval: parseInt(interval)
       }

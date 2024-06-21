@@ -1038,14 +1038,8 @@ eval (WaitTimerCallback timerID _ seconds) state =
   continue state { data {activeRide {waitTimerId = timerID, waitTimeSeconds = seconds}}}
 
 eval (RideStartRemainingTime seconds status id) state = do
-  if status == "EXPIRED" then do
-    if getValueToLocalStore WAITING_TIME_STATUS == (show ST.Scheduled) then do
-      void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.Triggered)
-      void $ pure $ setValueToLocalStore WAITING_TIME_VAL $ state.data.activeRide.id <> "<$>" <> getCurrentUTC ""
-      pure unit
-    else 
-      pure unit
-    updateAndExit state { props {rideStartRemainingTime = 0}} $ UpdatedState state { props {rideStartRemainingTime = 0}} 
+  if status == "EXPIRED" then
+    updateAndExit state { props {rideStartRemainingTime = 0}} $ NotifyDriverArrived state { props {rideStartRemainingTime = 0}} 
   else continue state { props {rideStartRemainingTime = seconds}}
   
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {endRidePopUp = false}})
