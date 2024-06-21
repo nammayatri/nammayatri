@@ -1160,8 +1160,10 @@ eval (BannerCarousel (BannerCarousel.OnClick idx)) state =
           BannerCarousel.Remote link -> do
             if os == "IOS" && STR.contains (STR.Pattern "vp=sedu&option=video") link  -- To be removed after deep links are added in iOS
               then pure GoToSafetyEducationScreen
-            else do
+            else if not $ STR.null link then do
               void $ openUrlInApp link
+              pure NoAction
+            else
               pure NoAction
           _ -> pure NoAction
       Nothing -> pure NoAction
