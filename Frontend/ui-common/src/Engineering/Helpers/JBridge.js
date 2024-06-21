@@ -849,10 +849,7 @@ export const scrollToEnd = function (id) {
 export const saveSuggestions = function (key) {
   return function (suggestions) {
     try {
-      let configSuggestions = "";
-      if(JBridge.fetchRemoteConfigString) {
-        configSuggestions = JBridge.fetchRemoteConfigString("chat_suggestions");
-      }
+      let configSuggestions = fetchCachedRemoteConfigString("chat_suggestions");
       if (configSuggestions == "") {
         const convertedJSON = {};
         if (!Array.isArray(suggestions)) {
@@ -874,10 +871,7 @@ export const saveSuggestions = function (key) {
 export const saveSuggestionDefs = function (key) {
   return function (suggestionDefs) {
     try {
-      let configSuggestionDefs = "";
-      if(JBridge.fetchRemoteConfigString) {
-        configSuggestionDefs = JBridge.fetchRemoteConfigString("chat_suggestions_defs");
-      }
+      let configSuggestionDefs = fetchCachedRemoteConfigString("chat_suggestions_defs");
       if(configSuggestionDefs == "") {
         const convertedJSON = {};
         if (!Array.isArray(suggestionDefs)) {
@@ -899,7 +893,7 @@ export const saveSuggestionDefs = function (key) {
 export const getSuggestionsfromLocal = function (configKey) {
   return function (key) {
     try {
-      const suggestions = JSON.parse(JBridge.fetchRemoteConfigString(configKey));
+      const suggestions = JSON.parse(fetchCachedRemoteConfigString(configKey));
       const keys = suggestions[key];
       if (keys) {
         return keys;
@@ -916,7 +910,7 @@ export const getSuggestionfromKey = function (configKey) {
   return function (key) {
     return function (language) {
       try {
-        const suggestionDefs = JSON.parse(JBridge.fetchRemoteConfigString(configKey + "_defs"));
+        const suggestionDefs = JSON.parse(fetchCachedRemoteConfigString(configKey + "_defs"));
         const val = suggestionDefs[key];
         let suggestion = "";
         if (val) {
@@ -2678,4 +2672,18 @@ export const getFromUTC = (timestamp) => (val) => {
     default:
       return date.getUTCDate();
   }
+}
+
+const sessionCacheRemoteConfigs = {};
+
+function fetchCachedRemoteConfigString(key) {
+  if (sessionCacheRemoteConfigs[key]) {
+    return sessionCacheRemoteConfigs[key];
+  }
+  if(JBridge.fetchRemoteConfigString){
+    const value = JBridge.fetchRemoteConfigString(key);
+    sessionCacheRemoteConfigs[key] = value;
+    return value;
+  }
+  return "";
 }

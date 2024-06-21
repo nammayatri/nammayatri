@@ -56,13 +56,13 @@ getTips arr = mapWithIndex (\index item -> if item == 0 then (getString NO_TIP)
 bangaloreConfig :: String -> TipConfig
 bangaloreConfig variant = 
   case variant of
-    "SEDAN" -> mkTipConfig [0, 30, 40, 50]
-    "SUV" -> mkTipConfig [0, 30, 40, 50]
-    "HATCHBACK" -> mkTipConfig [0, 30, 40, 50]
+    "SEDAN" -> mkTipConfig [0, 20, 30, 50]
+    "SUV" -> mkTipConfig [0, 20, 30, 50]
+    "HATCHBACK" -> mkTipConfig [0, 20, 30, 50]
     "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
-    "TAXI" -> mkTipConfig [0, 30, 40, 50]
-    "TAXI_PLUS" -> mkTipConfig [0, 30, 40, 50]
-    _ -> mkTipConfig [0, 30, 40, 50]
+    "TAXI" -> mkTipConfig [0, 20, 30, 50]
+    "TAXI_PLUS" -> mkTipConfig [0, 20, 30, 50]
+    _ -> mkTipConfig [0, 20, 30, 50]
 
 hyderabadConfig :: String -> TipConfig
 hyderabadConfig variant = 
