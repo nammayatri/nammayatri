@@ -36,8 +36,20 @@ view push config =
     , width $ V $ screenWidth unit
     , padding $ PaddingHorizontal 16 16
     , root true
-    ][ bannerView push config]
+    ][ 
+      bannerView push config
+    , imageBannerView push config
+    ]
 
+
+imageBannerView :: forall w a. (a -> Effect Unit) -> (Config (Action -> a)) -> PrestoDOM (Effect Unit) w
+imageBannerView push config = 
+  imageView $ [
+    height WRAP_CONTENT
+  , width MATCH_PARENT
+  , imageUrlHolder "imageBannerUrl"
+  , visibilityHolder "imageBannerVisibility"
+  ] <> maybe ([]) (\action -> [onClickHolder push $ (action <<< OnClick)]) config.action
 
 
 bannerView :: forall w a. (a -> Effect Unit) -> (Config (Action -> a)) -> PrestoDOM (Effect Unit) w

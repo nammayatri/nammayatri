@@ -653,6 +653,7 @@ getCarouselConfig view state = {
   , currentIndex : state.data.bannerData.currentBanner
   , showScrollIndicator : true
   , layoutHeight : V 100
+  , overlayScrollIndicator : true
 }
 
 genericAccessibilityPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

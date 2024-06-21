@@ -714,7 +714,8 @@ getCarouselConfig view state banners = {
   , onPageScrolled : Nothing
   , currentIndex : state.data.bannerData.currentBanner
   , showScrollIndicator : true
-  , layoutHeight : V 100
+  , layoutHeight : V 125
+  , overlayScrollIndicator : false
 }
 
 rideCompletedCardView ::  forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -4480,7 +4481,7 @@ additionalServicesView push state = let
     , orientation VERTICAL 
     , padding $ PaddingHorizontal 16 16
     , visibility $ boolToVisibility $ showAdditionalServices && (not state.props.showShimmer)
-    , margin $ MarginVertical 20 15
+    , margin $ MarginVertical 4 15
     ][  linearLayout[
           height WRAP_CONTENT
         , width MATCH_PARENT 
@@ -4617,6 +4618,7 @@ newView push state =
     , background Color.blue900
     , padding $ Padding 6 4 6 4
     , margin $ MarginLeft 8
+    , gravity CENTER_VERTICAL
     , visibility $ boolToVisibility $ state.data.config.homeScreen.showAdditionalServicesNew
     ] <> FontStyle.tags TypoGraphy
 
