@@ -11,6 +11,15 @@ case $var1 in
   "Y")
     bundle exec fastlane release_y
     ;;
+  "NYP")
+    bundle exec fastlane release_nyp
+    ;;
+  "MYP")
+    bundle exec fastlane release_myp
+    ;;
+  "YP")
+    bundle exec fastlane release_yp
+    ;;
   *)
     bundle exec fastlane
     ;;
