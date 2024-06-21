@@ -722,6 +722,13 @@ newtype LocationInfo = LocationInfo
         lon :: Number
       }
 
+data DistanceUnit = Meter | Mile | Yard | Kilometer
+
+derive instance genericDistanceUnit :: Generic DistanceUnit _
+instance standardEncodeDistanceUnit :: StandardEncode DistanceUnit where standardEncode body = defaultEnumEncode body
+instance eqDistanceUnit :: Eq DistanceUnit where eq = genericEq
+instance decodeDistanceUnit :: Decode DistanceUnit where decode = defaultEnumDecode
+
 data BookingTypes = CURRENT | ADVANCED
 
 derive instance genericBookingTypesMethods :: Generic BookingTypes _

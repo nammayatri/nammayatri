@@ -51,6 +51,7 @@ defaultRidePreferenceOption =
   , rateCardData : Nothing
   , perKmRate : Nothing
   , farePolicyHour : Nothing
+  , currency : Nothing
   }
 
 dummyRateCard :: CTA.RateCard

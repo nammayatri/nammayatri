@@ -15,7 +15,7 @@
 module Engineering.Helpers.Utils where
 
 import Prelude
-import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, GlobalPayload(..), MobileNumberValidatorResp(..), ModifiedCalendarObject, Payload(..), LazyCheck(..))
+import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, GlobalPayload(..), MobileNumberValidatorResp(..), ModifiedCalendarObject, Payload(..), LazyCheck(..), Currency(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Data.Either (Either(..), hush)
@@ -447,11 +447,18 @@ formatNumber amount decimalPlaces = case (DI.fromNumber amount),decimalPlaces  o
                                       Nothing, Just decimalPlace -> toStringWith (fixed decimalPlace) amount
                                       _,_ -> show amount
                                       
-                                
-        
+                                   
 formatMinIntoHoursMins :: Int -> String
 formatMinIntoHoursMins mins = 
   let 
     hours = mins / 60
     minutes = mins `mod` 60
   in (if hours < 10 then "0" else "") <> show hours <> " : " <> (if minutes < 10 then "0" else "") <> show minutes <> " hr"
+
+getCurrencySymbol :: Currency -> String
+getCurrencySymbol cur = 
+  case cur of
+    INR -> "₹"
+    USD -> "$"
+    EUR -> "€"
+    _ -> ""

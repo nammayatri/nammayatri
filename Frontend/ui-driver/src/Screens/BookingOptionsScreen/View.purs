@@ -117,7 +117,7 @@ acCheckForDriversView push state =
 
     (API.AirConditionedTier airConditionedData) = MB.fromMaybe defaultAirConditionedData state.data.airConditioned
 
-    backgroundColor = if airConditionedData.isWorking then Color.blue800 else Color.black600
+    backgroundColor = if airConditionedData.isWorking then state.data.config.bookingPreferencesConfig.primaryToggleBackground else Color.black600
 
     align = if airConditionedData.isWorking then RIGHT else LEFT
 
@@ -363,7 +363,7 @@ serviceTierItem state push service enabled opacity index =
             , onClick push $ const $ ToggleRidePreference service
             , gravity RIGHT
             ]
-            [ toggleView push service.isSelected service.isDefault service ]
+            [ toggleView push state service.isSelected service.isDefault service ]
         ]
     ]
 
@@ -388,10 +388,10 @@ intercityPreferenceView push state = do
     item :: ST.RidePreference
     item = defaultRidePreferenceOption {name = "Intercity", isSelected = fromMaybe false state.props.canSwitchToIntercity, serviceTierType = API.INTERCITY}
 
-toggleView :: forall w. (Action -> Effect Unit) -> Boolean -> Boolean -> ST.RidePreference -> PrestoDOM (Effect Unit) w
-toggleView push enabled default service =
+toggleView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> Boolean -> Boolean -> ST.RidePreference -> PrestoDOM (Effect Unit) w
+toggleView push state enabled default service =
   let
-    backgroundColor = if enabled && not service.isUsageRestricted then Color.blue800 else Color.black600
+    backgroundColor = if enabled && not service.isUsageRestricted then state.data.config.bookingPreferencesConfig.primaryToggleBackground else Color.black600
 
     align = if enabled && not service.isUsageRestricted then RIGHT else LEFT
   in
@@ -455,6 +455,7 @@ vehicleDetailsView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScre
 vehicleDetailsView push state =
   let
     vehicleViewLabel = if DS.null state.data.vehicleName then (getVariantRideType state.data.vehicleType) else state.data.vehicleName
+    isBridgeApp = DS.contains (DS.Pattern "Bridge") (HU.appName false)  
   in
     linearLayout
       [ width MATCH_PARENT
@@ -472,8 +473,8 @@ vehicleDetailsView push state =
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , orientation VERTICAL
-          , cornerRadius 6.0
-          , background Color.golden
+          , cornerRadius state.data.config.bookingPreferencesConfig.vehicleNumberRadius
+          , background state.data.config.bookingPreferencesConfig.vehicleNumberBackground
           , padding $ Padding 3 3 3 3
           ]
           [ textView
@@ -481,11 +482,10 @@ vehicleDetailsView push state =
                 , height MATCH_PARENT
                 , padding $ Padding 5 3 5 3
                 , text state.data.vehicleNumber
-                , color Color.black800
+                , color Color.black900
                 , gravity CENTER
                 , cornerRadius 3.0
-                , stroke $ "2," <> Color.black800
-                ]
+                ] <> if isBridgeApp then [] else [stroke $ "2," <> Color.black800]
               <> FontStyle.body8 TypoGraphy
           ]
       ]
@@ -590,7 +590,7 @@ rateCardBannerView push state =
   , gravity CENTER
   , cornerRadius 8.0
   , rippleColor Color.rippleShade
-  , gradient (Linear 90.0 [Colors.darkGradientBlue, Color.lightGradientBlue])
+  , gradient gradientColors
   , onClick push $ const $ RateCardBannerClick
   , visibility $ MP.boolToVisibility state.props.rateCardLoaded
   ][  relativeLayout
@@ -637,6 +637,7 @@ rateCardBannerView push state =
     ]
   ]
   where peakTime = state.props.peakTime
-        bgColor = if peakTime then Color.green900 else Color.blue800
+        bgColor = if peakTime then Color.green900 else state.data.config.bookingPreferencesConfig.primaryToggleBackground
         cornerRad = if peakTime then 8.0 else 24.0
         txt = if peakTime then "↑  Peak" else CP.getCurrency CS.appConfig
+        gradientColors = (Linear 90.0 state.data.config.primaryGradientColor)
