@@ -520,7 +520,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         try {
                             currLoc.put("lat", location.getLatitude());
                             currLoc.put("lon", location.getLongitude());
-                        } catch (JSONException e) {
+                        } catch (Exception e) {
                             currLoc = null;
                         }
 
