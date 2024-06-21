@@ -56,6 +56,7 @@ newtype RCCarousel
   , cta_image_url :: String
   , whitelist :: Maybe (Array String)
   , categoryFilter :: Maybe (Array String)
+  , image_banner :: Maybe String
   }
 
 derive instance genericRCCarousel :: Generic RCCarousel _
