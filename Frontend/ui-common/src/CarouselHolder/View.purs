@@ -42,7 +42,7 @@ carouselView :: forall w a action. Homogeneous a PropValue => (action -> Effect 
 carouselView push config =
   let itemsLen = length config.items
       layoutHeight = if os == "IOS" then config.layoutHeight else WRAP_CONTENT
-      indicatorLayoutHeight =  if not  config.overlayScrollIndicator then WRAP_CONTENT else if os == "IOS" then config.layoutHeight else MATCH_PARENT
+      indicatorLayoutHeight =  if os /= "IOS" then MATCH_PARENT else if config.overlayScrollIndicator then  config.layoutHeight else WRAP_CONTENT
   in
   (if config.overlayScrollIndicator then frameLayout else linearLayout )
   [ height layoutHeight
