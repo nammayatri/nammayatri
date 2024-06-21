@@ -629,20 +629,22 @@ getTripDetailsState (RideBookingRes ride) state = do
       cityStr = getValueToLocalStore CUSTOMER_LOCATION
       city = getCityFromString cityStr    
       cityConfig = getCityConfig state.data.config.cityConfig cityStr
+      (RideBookingAPIDetails bookingDetails) = ride.bookingDetails
+      rideType = getFareProductType bookingDetails.fareProductType
+      autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
+      cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
       waitingCharges = 
         if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
-            cityConfig.waitingChargeConfig.auto
+            autoWaitingCharges
         else 
-            cityConfig.waitingChargeConfig.cabs
+            cabsWaitingCharges
       nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
       nightChargeTill = "5 AM"
       nightCharges = if rideDetails.vehicleVariant == "AUTO_RICKSHAW" 
                           then 1.5 
                           else 1.1
       endTime = fromMaybe "" rideDetails.rideEndTime
-      startTime = fromMaybe "" rideDetails.rideStartTime
-      (RideBookingAPIDetails bookingDetails) = ride.bookingDetails
-      rideType = getFareProductType bookingDetails.fareProductType
+      startTime = fromMaybe "" rideDetails.rideStartTime      
       dropLocation = if rideType == FPT.RENTAL then _stopLocation else _toLocation
   state {
     data {

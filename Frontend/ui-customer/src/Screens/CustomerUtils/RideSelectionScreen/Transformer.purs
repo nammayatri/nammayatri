@@ -103,11 +103,14 @@ myRideListTransformer isSrcServiceable listRes config = filter (\item -> any (_ 
     cityStr = getValueToLocalStore CUSTOMER_LOCATION
     city = getCityFromString cityStr    
     cityConfig = getCityConfig config.cityConfig cityStr
+    rideType = getFareProductType rideApiDetails.fareProductType
+    autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
+    cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
     waitingCharges = 
       if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
-          cityConfig.waitingChargeConfig.auto
+          autoWaitingCharges
       else 
-          cityConfig.waitingChargeConfig.cabs
+          cabsWaitingCharges
     nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
     nightChargeTill = "5 AM"
     referenceString' = (if nightChargesVal && (getMerchant CTP.FunctionCall) /= YATRI then "1.5" <> (getEN $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill) else "")

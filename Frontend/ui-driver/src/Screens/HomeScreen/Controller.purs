@@ -1116,7 +1116,7 @@ eval (TimeUpdate time lat lng) state = do
   let driverLat = getLastKnownLocValue ST.LATITUDE lat
       driverLong = getLastKnownLocValue ST.LONGITUDE lng
       geoHash = Uncurried.runFn3 encodeGeohash driverLat driverLong 7
-      chargesOb = HU.getChargesOb state.data.cityConfig state.data.activeRide.driverVehicle
+      chargesOb = HU.getChargesOb state.data.activeRide.tripType state.data.cityConfig state.data.activeRide.driverVehicle
       waitTimeEnabledForCity = chargesOb.perMinCharges > 0.0
       nearestZone = case state.props.currentStage, state.data.config.feature.enableSpecialPickup of 
                       ST.HomeScreen, true -> findNearestSpecialZone driverLat driverLong

@@ -715,6 +715,7 @@ dummyRideHistoryItem = RidesInfo {
       driverName : "",
       driverSelectedFare : 0,
       chargeableDistance : Nothing,
+      actualRideDistance : Nothing,
       vehicleVariant : "",
       estimatedBaseFare : 0,
       vehicleColor : "",

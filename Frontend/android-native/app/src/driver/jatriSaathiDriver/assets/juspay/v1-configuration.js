@@ -385,7 +385,17 @@ window.getMerchantConfig = function () {
              "perMinCharges" : 1.50
            }
          },
-       "rateCardConfig" : defRateCardConfig,
+      "rentalWaitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        }
+      },
+      "rateCardConfig" : defRateCardConfig,
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_side"

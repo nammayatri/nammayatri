@@ -4446,7 +4446,7 @@ searchLocationFlow = do
   case action of
     SearchLocationController.AddStop state -> do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
-      searchLocationFlow
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> searchLocationFlow)
     SearchLocationController.UpdateLocName state lat lon -> do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
       handleUpdateLocNameFlow state lat lon
@@ -4461,24 +4461,24 @@ searchLocationFlow = do
         let
           address = maybe "" (\(PlaceName address) -> address.formattedAddress) fullAddress
         modifyScreenState $ SearchLocationScreenStateType (\_ -> state { data { latLonOnMap = fromMaybe (maybe SearchLocationScreenData.dummyLocationInfo (\srcLoc -> srcLoc { address = address }) state.data.srcLoc) focussedField } })
-      searchLocationFlow
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> searchLocationFlow)
     SearchLocationController.GoToMetroRouteMap state -> do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
       let
         currentCity = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
       modifyScreenState $ MetroTicketDetailsScreenStateType (\_ -> MetroTicketDetailsScreenData.initData)
       modifyScreenState $ MetroTicketDetailsScreenStateType (\slsState -> slsState { data { city = currentCity }, props { stage = ST.MetroMapStage, previousScreenStage = ST.SearchMetroLocationStage } })
-      metroTicketDetailsFlow
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> metroTicketDetailsFlow)
     SearchLocationController.NoOutput state -> modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
     SearchLocationController.SearchPlace searchString state -> do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
-      searchPlaceFlow searchString state
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> searchPlaceFlow searchString state)
     SearchLocationController.SaveFavLoc state savedLoc -> do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
-      checkRedundantFavLocFlow state savedLoc
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> checkRedundantFavLocFlow state savedLoc)
     SearchLocationController.ConfirmAndSaveFav state -> do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
-      confirmAndSaveLocFlow state
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> confirmAndSaveLocFlow state)
     SearchLocationController.PredictionClicked prediction state -> do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
       predictionClickedFlow prediction state
@@ -4494,27 +4494,27 @@ searchLocationFlow = do
       when (globalState.homeScreen.props.currentStage == HomeScreen)
         $ do
             modifyScreenState $ HomeScreenStateType (\_ -> HomeScreenData.initData)
-      homeScreenFlow
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> homeScreenFlow )
     SearchLocationController.RentalsScreen state -> do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
       modifyScreenState $ RentalScreenStateType (\rentalScreenState -> rentalScreenState { data { currentStage = RENTAL_SELECT_PACKAGE }, props { showPrimaryButton = true } })
-      rentalScreenFlow
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> rentalScreenFlow )
     SearchLocationController.LocSelectedOnMap state -> do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
       locSelectedOnMapFlow state
     SearchLocationController.MetroTicketBookingScreen state -> do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
-      metroTicketBookingFlow
-    SearchLocationController.RideScheduledScreen state -> rideScheduledFlow
-    SearchLocationController.CurrentFlowStatus -> currentFlowStatus
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> metroTicketBookingFlow )
+    SearchLocationController.RideScheduledScreen state ->  (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  rideScheduledFlow)
+    SearchLocationController.CurrentFlowStatus -> (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  currentFlowStatus)
     SearchLocationController.SelectedQuote state -> do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
       modifyScreenState $ RentalScreenStateType (\rentalScreenState -> rentalScreenState { data { selectedQuote = state.data.selectedQuote, currentStage = RENTAL_CONFIRMATION }, props { showPrimaryButton = true } })
-      rentalScreenFlow
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  rentalScreenFlow)
     SearchLocationController.NotificationListenerSO notificationType -> do
       (GlobalState globalState) <- getState
       fcmHandler notificationType globalState.homeScreen
-      homeScreenFlow
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  homeScreenFlow)
     _ -> pure unit
   where
   locSelectedOnMapFlow :: SearchLocationScreenState -> FlowBT String Unit
@@ -4557,7 +4557,7 @@ searchLocationFlow = do
                             , data { latLonOnMap = SearchLocationScreenData.dummyLocationInfo, specialZoneCoordinates = "", confirmLocCategory = NOZONE, nearByGates = [] }
                             }
                       ) -- restoring to previous state
-                searchLocationFlow
+                (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> searchLocationFlow)
             AddingStopAction -> do
               updateRentalsData focussedField geoJson state -- depending on fromScreen change the screen addStopFlow
               addStopFlow state
@@ -4642,9 +4642,9 @@ searchLocationFlow = do
     --     SearchLocationScreenStateType (\slsState -> slsState {props{searchLocStage = PredictionsStage, focussedTextField = Nothing ,locUnserviceable = false, isSpecialZone = true  }
     --                                                           , data {latLonOnMap = SearchLocationScreenData.dummyLocationInfo, specialZoneCoordinates = "", confirmLocCategory = NOZONE, nearByGates = []}}) -- restoring to previous state
     -- else do 
-    modifyScreenState
-      $ RentalScreenStateType (\rentalScreen -> rentalScreen { data { pickUpLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.srcLoc, dropLoc = state.data.destLoc } })
-    if state.data.fromScreen == (Screen.getScreen Screen.RENTAL_SCREEN) then
+    
+    if state.data.fromScreen == (Screen.getScreen Screen.RENTAL_SCREEN) then do 
+      modifyScreenState $ RentalScreenStateType (\rentalScreen -> rentalScreen { data { pickUpLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.srcLoc, dropLoc = state.data.destLoc } })
       rentalScreenFlow
     else
       pure unit
@@ -4720,7 +4720,7 @@ searchLocationFlow = do
             $ SearchLocationScreenStateType
                 (\slsState -> slsState { data { latLonOnMap = updatedAddress, confirmLocCategory = NOZONE, srcLoc = if focussedField == SearchLocPickup then Just updatedAddress else state.data.srcLoc, destLoc = if focussedField == SearchLocDrop then Just updatedAddress else state.data.destLoc } })
         Nothing -> void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
-    searchLocationFlow
+    (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> searchLocationFlow)
 
   specialLocFlow :: String -> Array Location -> String -> Number -> Number -> FlowBT String Unit
   specialLocFlow geoJson pickUpPoints category lat lon = do
@@ -4737,7 +4737,7 @@ searchLocationFlow = do
           )
     void $ pure $ removeAllPolylines ""
     liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints }
-    searchLocationFlow
+    (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> searchLocationFlow)
 
   searchPlaceFlow :: String -> SearchLocationScreenState -> FlowBT String Unit
   searchPlaceFlow searchString state = do
@@ -4885,7 +4885,7 @@ searchLocationFlow = do
                   }
                 }
           )
-    addNewAddressScreenFlow ""
+    (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> addNewAddressScreenFlow "")
 
 predictionClickedFlow :: LocationListItemState -> SearchLocationScreenState -> FlowBT String Unit
 predictionClickedFlow prediction state = do
@@ -4907,7 +4907,7 @@ predictionClickedFlow prediction state = do
       (\currTextField -> onPredictionClicked placeLat placeLon currTextField prediction)
       state.props.focussedTextField
     void $ lift $ lift $ toggleLoader false
-    searchLocationFlow
+    (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  searchLocationFlow)
   else if state.props.actionType == MetroStationSelectionAction then do
     if isJust state.data.srcLoc && isJust state.data.destLoc then do
       -- TicketBookingScreenStateType
@@ -4920,17 +4920,17 @@ predictionClickedFlow prediction state = do
 
         destCode = maybe "" (\(loc) -> loc.stationCode) state.data.destLoc
       modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data { srcLoc = src, destLoc = dest, srcCode = srcCode, destCode = destCode }, props { isButtonActive = true } })
-      metroTicketBookingFlow
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> metroTicketBookingFlow)
     else do
       if state.props.focussedTextField == Just SearchLocPickup then
         void $ pure $ showKeyboard (getNewIDWithTag (show SearchLocPickup))
       else do
         void $ pure $ showKeyboard (getNewIDWithTag (show SearchLocDrop))
       modifyScreenState $ SearchLocationScreenStateType (\state -> state { data { updatedMetroStations = state.data.metroStations } })
-      searchLocationFlow
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  searchLocationFlow)
   else do
     void $ lift $ lift $ toggleLoader false
-    searchLocationFlow
+    (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  searchLocationFlow)
   where
   onPredictionClicked :: Number -> Number -> SearchLocationTextField -> LocationListItemState -> FlowBT String Unit
   onPredictionClicked placeLat placeLon currTextField prediction = do
@@ -4965,11 +4965,11 @@ predictionClickedFlow prediction state = do
                     }
               )
         liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = placeLat, lon = placeLon, geoJson = geoJson, points = pickUpPoints, zoomLevel = zoomLevel }
-        searchLocationFlow
+        (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> searchLocationFlow)
     else do
       modifyScreenState $ SearchLocationScreenStateType (\state -> state { props { searchLocStage = PredictionsStage, locUnserviceable = true } })
       void $ lift $ lift $ toggleLoader false
-      searchLocationFlow
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> searchLocationFlow)
 
   mkSrcAndDestLoc :: Number -> Number -> SearchLocationScreenState -> SearchLocationTextField -> LocationListItemState -> Maybe String -> { sourceLoc :: Maybe LocationInfo, destinationLoc :: Maybe LocationInfo, updatedState :: LocationInfo }
   mkSrcAndDestLoc placeLat placeLon state currTextField prediction city =
@@ -5014,7 +5014,7 @@ checkForBothLocs state sourceLoc destinationLoc =
                   }
             )
       liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints, zoomLevel = zoomLevel }
-      searchLocationFlow
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> searchLocationFlow)
     else
       enterRideSearchFLow
   else do
@@ -5027,7 +5027,7 @@ checkForBothLocs state sourceLoc destinationLoc =
                 , data { latLonOnMap = SearchLocationScreenData.dummyLocationInfo }
                 }
           ) -- restoring to previous statez
-    searchLocationFlow
+    (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> searchLocationFlow)
 
 getSrcAndDestLoc :: SearchLocationScreenState -> { srcLat :: Number, srcLon :: Number, srcAddressComponents :: Address, srcAddress :: String, srcCity :: City, destLat :: Number, destLon :: Number, destAddressComponents :: Address, destAddress :: String, destCity :: City }
 getSrcAndDestLoc state =
@@ -5629,7 +5629,7 @@ enterRideSearchFLow = do
               }
         )
   updateLocalStage RideSearch
-  homeScreenFlow
+  (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> homeScreenFlow)
 
 fetchSrcAndDestLoc :: HomeScreenState -> FlowBT String SearchLocationController.SrcAndDestLocations
 fetchSrcAndDestLoc state = do
