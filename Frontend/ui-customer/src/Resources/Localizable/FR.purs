@@ -1302,4 +1302,6 @@ getFR stringKey =
         PUNE -> "Pune"
         MYSORE -> "Mysore"
         TUMAKURU -> "Tumakuru"
+        NOIDA -> "Noida"
+        GURUGRAM -> "Gurugram"
         WAITING_CHARGES -> "Frais d'attente"
