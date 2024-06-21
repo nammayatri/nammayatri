@@ -384,3 +384,6 @@ bridgeGreen = "#F0F5F2"
 
 purple900 :: Color
 purple900 = "#7435FC"
+
+purple500 :: Color
+purple500 = "#E0D1FF"

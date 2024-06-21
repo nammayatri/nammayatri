@@ -22,6 +22,7 @@ import Prelude
 
 import Common.Styles.Colors as Color
 import Common.Types.App (LazyCheck(..), ReelModal(..))
+import ConfigProvider
 import Components.PaymentHistoryListItem (PaymentBreakUp)
 import Data.Array (cons, length, mapWithIndex, (!!))
 import Data.Array as DA
@@ -58,7 +59,7 @@ getMultiLanguagePlanData isLocalized planData = do
     else do
         if planData.title ==  dailyUnlimited 
             then {title : getString DAILY_UNLIMITED, description : getString DAILY_UNLIMITED_PLAN_DESC}
-            else {title : getString DAILY_PER_RIDE, description : getString $ DAILY_PER_RIDE_PLAN_DESC "35"} 
+            else {title : getString DAILY_PER_RIDE, description : getString $ DAILY_PER_RIDE_PLAN_DESC (getCurrency appConfig <> "35")} 
 
 getPromoConfig :: Array OfferEntity -> Array GradientConfig -> Array PromoConfig
 getPromoConfig offerEntityArr gradientConfig =
@@ -134,7 +135,7 @@ introductoryOfferConfig config offerName =
     {  
     title : Just offer,
     isGradient : true,
-    gradient : [Color.blue600, Color.blue600],
+    gradient : [config.benefitsBgColor, config.benefitsBgColor],
     hasImage : true,
     imageURL : fetchImage FF_ASSET "ny_ic_benefits_filled_blue",
     offerDescription : Nothing,
@@ -338,5 +339,5 @@ getTranslatedString str = case str of
                     "DAILY_UNLIMITED" -> getString DAILY_UNLIMITED
                     "DAILY_PER_RIDE" -> getString DAILY_PER_RIDE
                     "CAB_DAILY_UNLIMITED_OFFER" -> getString DAILY_UNLIMITED_PLAN_DESC
-                    "CAB_DAILY_PER_RIDE_OFFER" -> getString $ DAILY_PER_RIDE_PLAN_DESC "90"
+                    "CAB_DAILY_PER_RIDE_OFFER" -> getString $ DAILY_PER_RIDE_PLAN_DESC (getCurrency appConfig <> "90")
                     _ -> splitBasedOnLanguage str

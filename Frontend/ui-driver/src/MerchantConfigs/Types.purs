@@ -9,6 +9,7 @@ type AppConfigDriver a =
   {
     primaryTextColor :: String,
     primaryBackground :: String,
+    primaryGradientColor :: Array String,
     secondaryBackground :: String,
     languageList :: Array Language,
     popupBackground :: String,
@@ -45,7 +46,8 @@ type AppConfigDriver a =
     safetyRide :: SafetyRideConfig,
     welcomeScreen :: WelcomeScreen,
     enterMobileNumberScreen :: EnterMobileNumberScreen,
-    vehicleRegisterationScreen :: VehicleRegisterationScreen
+    vehicleRegisterationScreen :: VehicleRegisterationScreen,
+    bookingPreferencesConfig :: BookingPreferencesConfig
     | a
   } 
 
@@ -62,6 +64,12 @@ type Language =  {
   value :: String,
   subtitle :: String
  }
+
+type BookingPreferencesConfig = {
+  primaryToggleBackground :: String,
+  vehicleNumberBackground :: String,
+  vehicleNumberRadius :: Number
+}
 
 type LeaderBoard = {
   isMaskedName :: Boolean
@@ -94,7 +102,13 @@ type SubscriptionConfig =  {
   earnAmountInADay :: Int,
   showFeeBreakup :: Boolean,
   noChargesTillDate :: String,
-  lowestFeesFromDate :: String
+  lowestFeesFromDate :: String,
+  showLottieSubscriptionScreen :: Boolean,
+  backgroundGradient :: Array String,
+  showUPIAutopay :: Boolean,
+  promoTextColor :: String,
+  showHowThisWorks :: Boolean,
+  benefitsBgColor :: String
  }
 
 type SubscriptionOfferBannerConfig = {

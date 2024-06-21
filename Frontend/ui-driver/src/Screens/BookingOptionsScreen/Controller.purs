@@ -174,16 +174,19 @@ getRateCardOb serviceTierType (API.GetDriverRateCardRes rateCardResp) = do
       { 
         perKmRate : Just rateCardRespItem.perKmRate.amount, 
         farePolicyHour : Just rateCardRespItem.farePolicyHour,
-        rateCardData : Just $ getFareBreakupList rateCardRespItem.rateCardItems tips
+        rateCardData : Just $ getFareBreakupList rateCardRespItem.rateCardItems tips,
+        currency : Just $ rateCardRespItem.perKmRate.currency
       }
     Nothing -> {
         perKmRate : Nothing,
         farePolicyHour : Nothing,
-        rateCardData : Nothing
+        rateCardData : Nothing,
+        currency : Nothing
     }
 
 type RateCardOb = {
   perKmRate :: Maybe Number,
   farePolicyHour :: Maybe API.FarePolicyHour,
-  rateCardData :: Maybe CTA.BreakupList
+  rateCardData :: Maybe CTA.BreakupList,
+  currency :: Maybe CTA.Currency
 }

@@ -157,6 +157,7 @@ config =
   , showGenderBanner : true
   , enableMockLocation : false
   , specialLocationView : false
+  , distanceUnit : "km"
   , internationalNumberEnabled : true
   , callOptions : ["ANONYMOUS"]
   , autoVariantEnabled : true

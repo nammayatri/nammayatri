@@ -21,7 +21,8 @@ window.getMerchantConfig = function () {
                    "VEHICLE_REGISTRATION_NUMBER",
                    "RE_ENTER_VEHICLE_REGISTRATION_NUMBER"],
     "fontType": "Assets",
-    "currency": "₹",
+    "currency": "$",
+    "distanceUnit": "mi",
     "isGradient" : "false",
     "gradient": [],
     "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
@@ -143,6 +144,12 @@ window.getMerchantConfig = function () {
             "paymentHistory" : true,
             "viewFaqs" : true,
           },
+          "showLottieSubscriptionScreen" : false,
+          "backgroundGradient" : ["#E0D1FF" , "#F9F6FF"],
+          "showUPIAutopay" : false,
+          "promoTextColor" : "#7D4BFF",
+          "showHowThisWorks" : true,
+          "benefitsBgColor" : "#F6F1FF"
     }
     , "rideActionModelConfig" : {
       "showVehicleVariant" : false,
@@ -171,7 +178,7 @@ window.getMerchantConfig = function () {
           "showNew": false
         },
         "subscription": {
-          "isVisible": false,
+          "isVisible": true,
           "showNew": false
         },
         "referral": {
@@ -226,6 +233,7 @@ window.getMerchantConfig = function () {
   }
   , "primaryTextColor" : "#FFFFFF"
   , "primaryBackground" : "#7435FC"
+  , "primaryGradientColor": ["#996DFF", "#1A9747FF"]
   , "rideCompletedCardConfig" : {
       "lottieQRAnim" : true,
       "topCardGradient" : ["#F2E2FF","#FAF5FF"],
@@ -241,23 +249,28 @@ window.getMerchantConfig = function () {
         }
   , "enterMobileNumberScreen" : {
         "headerBackground": "#11032F"
-      , "emailAuth" : true
+      , "emailAuth" : false
       }
   , "defaultCountryCodeConfig" : {
-      "countryName" : "UnitedStates"
-    , "countryCode"  : "+1"
+      "countryName" : "United States"
+    , "countryCode"  : "+91"
     , "countryShortCode" : "US"
     }
   , "flowConfig" : {
       "chooseCity" : {
         "runFlow" : false,
         "directAuth" : true,
-        "defCity" : "Minneapolis",
+        "defCity" : "Bangalore",
         "useDefault" : true
       }
   }
   , "vehicleRegisterationScreen" : {
       "collectVehicleDetails" : true
+  }
+  , "bookingPreferencesConfig" : {
+      "primaryToggleBackground": "#7D4BFF"
+    , "vehicleNumberBackground" : "#E0D1FF"
+    , "vehicleNumberRadius" : 15.0
   }
   , "homeScreen": {
           "offlineBtnColor" : "#7D4BFF",

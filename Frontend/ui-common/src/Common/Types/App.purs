@@ -574,7 +574,7 @@ instance decodeProviderType :: Decode ProviderType where decode = defaultEnumDec
 
 type Price = {
     amount :: Number
-  , currency :: String
+  , currency :: Currency
 }
 
 type WaitingTimeInfo = {
@@ -597,8 +597,14 @@ type RentalBookingConfig = {
   , extraTimeFare :: String
 }
 
+data Currency = INR | USD | EUR
 
-
+derive instance genericCurrency :: Generic Currency _
+instance standardEncodeCurrency :: StandardEncode Currency where standardEncode _ = standardEncode {}
+instance showCurrency :: Show Currency where show = genericShow
+instance decodeCurrency :: Decode Currency where decode = defaultEnumDecode
+instance encodeCurrency  :: Encode Currency where encode = defaultEnumEncode
+instance eqCurrency :: Eq Currency where eq = genericEq
 
 data CustomerIssueTypes = TollCharge | NightSafety | Accessibility | NoIssue | MoreIssues
 derive instance genericCustomerIssueTypes :: Generic CustomerIssueTypes _
