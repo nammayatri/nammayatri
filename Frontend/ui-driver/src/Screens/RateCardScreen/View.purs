@@ -17,6 +17,7 @@ module Screens.RateCardScreen.View where
 
 import Animation as Anim
 import Components.PrimaryButton as PrimaryButton
+import ConfigProvider
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -33,6 +34,7 @@ import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Mobility.Prelude (boolToVisibility)
 import Data.Number.Format (fixed, toStringWith)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as EHU
 import Components.RateCard as RateCard
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -275,9 +277,9 @@ serviceTierItem push state service index =
     ]
     where primaryTextColor = if peakTime then Color.green900 else Color.black800
           secondaryTextColor = if peakTime then Color.green900 else Color.black600
-          curr = CP.getCurrency CS.appConfig
+          curr = EHU.getCurrencySymbol $ fromMaybe CT.INR service.currency
           primaryText = curr <> show (DI.round $  (DI.toNumber state.props.sliderVal) * (fromMaybe 0.0 service.perKmRate))
-          secondaryText = curr <> (toStringWith (fixed 2) $ fromMaybe 0.0 service.perKmRate) <> "/km"
+          secondaryText = curr <> (toStringWith (fixed 2) $ fromMaybe 0.0 service.perKmRate) <> "/" <> getDistanceUnit appConfig -- getDistanceUnit 
           peakTime = service.farePolicyHour == Just API.Peak
 
 peakTimeView :: forall w. (Action -> Effect Unit) -> ST.RateCardScreenState -> PrestoDOM (Effect Unit) w
@@ -329,7 +331,7 @@ rateSlider push state =
         , width MATCH_PARENT
         , orientation VERTICAL
         , cornerRadius 12.0
-        , background Color.blue600
+        , background state.data.config.profile.background
         , gravity CENTER
         , padding $ Padding 16 16 16 16
         , margin $ MarginHorizontal 16 16
@@ -354,7 +356,7 @@ rateSlider push state =
                   , alpha decButtonAlpha
                   ] <> if decButtonEnabled then [rippleColor Color.rippleShade] else []
             , textView
-                $ [ text $ show state.props.sliderVal <> " km"
+                $ [ text $ show state.props.sliderVal <> " " <> getDistanceUnit appConfig
                   , color Color.black800
                   , gravity CENTER
                   , weight 1.0
@@ -410,7 +412,7 @@ rateSlider push state =
                 ]
               , textView $
                 [ text $ getString LEARN_MORE
-                , color Color.blue900
+                , color state.data.config.bookingPreferencesConfig.primaryToggleBackground
                 , rippleColor Color.rippleShade
                 ] <> FontStyle.body3 CT.TypoGraphy
 
@@ -432,9 +434,9 @@ rateSlider push state =
               stepFunctionForCoinConversion = state.props.incrementUnit,
               enableToolTip = false,
               getCallbackOnProgressChanged = true,
-              thumbColor = Color.blue800,
+              thumbColor = state.data.config.bookingPreferencesConfig.primaryToggleBackground,
               bgColor = Color.grey900,
-              progressColor = Color.blue800,
+              progressColor = state.data.config.bookingPreferencesConfig.primaryToggleBackground,
               bgAlpha = 1000
               }
 
@@ -453,10 +455,8 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig
       { text = getString VIEW_BOOKING_PREF
-      , color = Color.primaryButtonColor
       }
       , margin = Margin 16 16 16 0
-      , background = Color.black900
       , height = V 54
       , id = "ViewBookingPreferencesButton"
       }

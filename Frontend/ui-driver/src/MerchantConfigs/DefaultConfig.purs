@@ -12,6 +12,7 @@ config :: AppConfig
 config =
   { primaryTextColor: "#FCC32C"
   , primaryBackground: "#2C2F3A"
+  , primaryGradientColor: ["#E2EAFF", "#F5F8FF"]
   , languageList:
       [ { name: "English", value: "EN_US", subtitle: "" }
       , { name: "ಕನ್ನಡ", value: "KN_IN", subtitle: "Kannada" }
@@ -66,7 +67,13 @@ config =
     earnAmountInADay : 2500,
     showFeeBreakup : true,
     noChargesTillDate : "Oct 1st 2024-*$*-ಅಕ್ಟೋಬರ್ 01, ರವರೆಗೆ-*$*-1 अक्टूबर 2024-*$*-১লা অক্টোবর, ২০২৪-*$*-ഒക്ടോബര്‍ 1, 2024-*$*-1 அக்டோபர் 2024-*$*-1 అక్టోబర్ 2024",
-    lowestFeesFromDate : "Oct 2nd 2024-*$*-ಅಕ್ಟೋಬರ್ 2, 2024-*$*-2 अक्टूबर 2024-*$*-২য় অক্টোবর, ২০২৪-*$*-രണ്ടാം ഒക്ടോബര്‍, 2024-*$*-அக்டோபர் 2, 2024-*$*-అక్టోబరు 2, 2024"
+    lowestFeesFromDate : "Oct 2nd 2024-*$*-ಅಕ್ಟೋಬರ್ 2, 2024-*$*-2 अक्टूबर 2024-*$*-২য় অক্টোবর, ২০২৪-*$*-രണ്ടാം ഒക്ടോബര്‍, 2024-*$*-அக்டோபர் 2, 2024-*$*-అక్టోబరు 2, 2024",
+    showLottieSubscriptionScreen : true,
+    backgroundGradient : ["#E2EAFF", "#F5F8FF"],
+    showUPIAutopay : true,
+    promoTextColor : "#0066FF",
+    showHowThisWorks : false,
+    benefitsBgColor : "#f4F7FF"
   },
   showPaymentDetails : true,
   enableDriverReferral : false,
@@ -563,7 +570,7 @@ config =
             , variantSubscriptionConfig:
                 { enableVariantBasedSubscription: false
                 , variantList: []
-                , enableCabsSubscriptionView: false
+                , enableCabsSubscriptionView: true
                 , staticViewPlans: getStaticViewPlans
                 }
             , showEarningSection: false
@@ -637,6 +644,7 @@ config =
   , navigationAppConfig : defaultNavigationAppConfig
   , genericHeaderConfig : defaultGenericHeader
   , currency: "₹"
+  , distanceUnit : "km"
   , internationalNumberEnabled : false
   , countryCodeConfig : []
   , feature : {
@@ -725,6 +733,11 @@ config =
   , secondaryBackground : "#2C2F3A"
   , vehicleRegisterationScreen : {
       collectVehicleDetails : false
+  }
+  , bookingPreferencesConfig : {
+      primaryToggleBackground : "#2194FF"
+    , vehicleNumberBackground : "#E9BE4D"
+    , vehicleNumberRadius : 6.0
   }
   }
 

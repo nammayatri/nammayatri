@@ -776,7 +776,7 @@ getEN stringKey =
         DAILY_UNLIMITED -> "DAILY UNLIMITED"
         DAILY_PER_RIDE -> "DAILY PER RIDE"
         DAILY_UNLIMITED_PLAN_DESC -> "Enjoy UNLIMITED rides, every day"
-        DAILY_PER_RIDE_PLAN_DESC price -> "Up to a maximum of ₹"<> price <>" per day"
+        DAILY_PER_RIDE_PLAN_DESC price -> "Up to a maximum of "<> price <>" per day"
         AUTOPAY_CANCELLED -> "Autopay Cancelled"
         NO -> "No"
         YES_CANCEL -> "Yes, Cancel"

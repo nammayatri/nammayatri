@@ -581,7 +581,7 @@ getFR stringKey =
         DAILY_UNLIMITED ->  "quotidiennement illimité"
         DAILY_PER_RIDE ->  "quotidiennement par trajet"
         DAILY_UNLIMITED_PLAN_DESC ->  "Profitez de trajets illimités, tous les jours"
-        DAILY_PER_RIDE_PLAN_DESC price ->  "Jusqu'à un maximum de ₹"<> price <>" par jour"
+        DAILY_PER_RIDE_PLAN_DESC price ->  "Jusqu'à un maximum de "<> price <>" par jour"
         PAY_TO_JOIN_THIS_PLAN ->  "Payez 1 ₹ pour rejoindre ce plan"
         OFFERS_NOT_APPLICABLE ->  "Les offres ne s'appliquent que si elles sont complétées"
         PAUSED_STR ->  "En pause"

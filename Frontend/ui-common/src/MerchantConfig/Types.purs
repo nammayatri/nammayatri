@@ -21,6 +21,7 @@ type CommonAppConfig = (
   , fontConfig :: FontConfig
   , loaderConfig :: LoaderConfig
   , currency :: String
+  , distanceUnit :: String
   , internationalNumberEnabled :: Boolean
   , navigationAppConfig :: NavigationConfig
   , genericHeaderConfig :: GenericHeaderConfig
