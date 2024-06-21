@@ -238,6 +238,7 @@ getFaresList fares chargeableRideDistance =
                       "DIST_BASED_FARE" -> getEN DIST_BASED_CHARGES
                       "TIME_BASED_FARE" -> getEN TIME_BASED_CHARGES
                       "EXTRA_TIME_FARE" -> getEN EXTRA_TIME_CHARGES
+                      "PARKING_CHARGE" -> getEN PARKING_CHARGE
                       _ -> formatFareType $ item.description
           }
     )
@@ -269,7 +270,7 @@ getFareFromArray fareBreakUp fareType = do
     Nothing -> 0.0
 
 dummyFareBreakUp :: FareBreakupAPIEntity
-dummyFareBreakUp = FareBreakupAPIEntity{amountWithCurrency : dummyPrice ,description: ""}
+dummyFareBreakUp = FareBreakupAPIEntity{ amount : 0.0, amountWithCurrency : dummyPrice ,description: ""}
 
 dummyPrice :: Price
 dummyPrice = {amount: 0.0, currency: ""}

@@ -61,4 +61,5 @@ type QuoteListModelState = {
   , showAnim :: Boolean
   , animEndTime :: Int
   , isRentalSearch :: Boolean
+  , hasToll :: Boolean
 }

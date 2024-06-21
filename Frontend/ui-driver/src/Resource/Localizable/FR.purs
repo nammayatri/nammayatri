@@ -985,7 +985,7 @@ getFR stringKey =
         ARRIVED_AT_STOP -> "Arrivé à l'arrêt"
         TOLL_CHARGES_INCLUDING amount  -> "Frais de péage " <> amount <>" inclus dans le tarif"
         TOLL_ROAD_CHANGED -> "Frais de péage non applicables"
-        RIDE_TOLL_FARE_INCLUDES -> "Frais de péage inclus"
+        RIDE_TOLL_FARE_INCLUDES amount -> amount <> " Frais de péage inclus"
         TOLL_INCLUDED -> "Péage (inclus dans le tarif)"
         YOU_CAN_ALWAYS_CHANGE_THIS_FROM_PROFILE -> "(Vous pouvez toujours modifier cela depuis votre profil)"
         IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING -> "Votre voiture est-elle allumée et la climatisation fonctionne-t-elle ?"

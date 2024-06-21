@@ -670,7 +670,19 @@ type HomeScreenStateData =
   , routeCacheForAdvancedBooking :: Maybe Route
   , previousRideDrop :: Boolean
   , famousDestinations :: Array LocationListItemState
-  }
+, parking :: ParkingData
+, toll :: TollData
+}
+
+type TollData = {
+  confidence :: Maybe CTA.Confidence
+, showAmbiguousPopUp :: Boolean
+, estimatedCharges :: Number 
+}
+
+type ParkingData = {
+  estimatedCharge :: Maybe Number
+}
 
 type InteroperabilityState = {
   timerId :: String,
@@ -745,12 +757,6 @@ type BannerCarousalData = {
 
 type RideCompletedData = {
   issueReportData :: IssueReportData
-, toll :: FinalTollData
-}
-
-type FinalTollData = {
-  confidence :: Maybe CTA.Confidence
-, showAmbiguousPopUp :: Boolean
 }
 
 type IssueReportData = {
@@ -909,7 +915,6 @@ type HomeScreenStateProps =
   , hotSpot :: HotSpotProps
   , isBannerDataComputed :: Boolean
   , repeatRideVariant :: String
-  , hasToll :: Boolean
   , repeatRideServiceTierName :: Maybe String
   , isSearchCancelled :: Boolean
   , referralComponentProps :: ReferralComponentState
@@ -1296,6 +1301,7 @@ type DriverInfoCard =
   , driversPreviousRideDropLocLon :: Maybe Number
   , spLocationName :: Maybe String
   , addressWard :: Maybe String
+  , hasToll :: Boolean
   }
 
 type RatingCard =

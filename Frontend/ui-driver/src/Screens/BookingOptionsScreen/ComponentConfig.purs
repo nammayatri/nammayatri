@@ -101,7 +101,7 @@ rateCardConfig rateCard =
           {key : "TOLL_OR_PARKING_CHARGES", val : (getString TOLL_OR_PARKING_CHARGES)},
           {key : "TOLL_CHARGES", val : (getString TOLL_CHARGES)},
           {key : "TOLL_CHARGES_DESC", val : (getString TOLL_CHARGES_DESC)},
-          {key : "PARKING_CHARGES", val : (getString PARKING_CHARGES)},
+          {key : "PARKING_CHARGE", val : (getString PARKING_CHARGE)},
           {key : "PARKING_CHARGES_DESC", val : (getString PARKING_CHARGES_DESC)}]
         }
   in

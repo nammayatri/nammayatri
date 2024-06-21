@@ -5838,7 +5838,7 @@ fcmHandler notification state = do
           isDeviceAccessibilityEnabled =  JB.isAccessibilityEnabled ""
           hasAccessibilityIssue' = resp.hasDisability == Just true || isDeviceAccessibilityEnabled
           hasSafetyIssue' = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime && not isDeviceAccessibilityEnabled
-          hasTollIssue' = getValueToLocalStore HAS_TOLL_CHARGES == "true" && not isDeviceAccessibilityEnabled
+          hasTollIssue' = (any (\(FareBreakupAPIEntity item) -> item.description == "TOLL_CHARGES") resp.fareBreakup) && not isDeviceAccessibilityEnabled
         modifyScreenState
           $ HomeScreenStateType
               ( \homeScreen ->
@@ -5874,10 +5874,10 @@ fcmHandler notification state = do
                         , hasTollIssue = hasTollIssue'
                         , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
                         }
-                      , toll {
+                        }
+                       , toll {
                           confidence = ride.tollConfidence
                         , showAmbiguousPopUp = ride.tollConfidence == Just CTA.Unsure
-                        }
                         }
                       }
                     , props

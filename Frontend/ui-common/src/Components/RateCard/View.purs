@@ -374,7 +374,7 @@ tollOrParkingView push config =
   ][
     commonTV push (getStringByKey config "TOLL_CHARGES") Color.black800 FontStyle.subHeading1 LEFT 20 NoAction,
     commonTV push (getStringByKey config "TOLL_CHARGES_DESC") Color.black800 FontStyle.body3 LEFT 8 NoAction,
-    commonTV push (getStringByKey config "PARKING_CHARGES") Color.black800 FontStyle.subHeading1 LEFT 8 NoAction,
+    commonTV push (getStringByKey config "PARKING_CHARGE") Color.black800 FontStyle.subHeading1 LEFT 8 NoAction,
     commonTV push (getStringByKey config "PARKING_CHARGES_DESC") Color.black800 FontStyle.body3 LEFT 8 NoAction
   ]
 

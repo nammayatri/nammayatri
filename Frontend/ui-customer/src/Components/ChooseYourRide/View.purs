@@ -386,12 +386,13 @@ multipleOfferInfoView push menuImage autoAssign =
 
 chooseYourRideView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 chooseYourRideView push config =
-  let estimateConfig = (getAppConfig appConfig).estimateAndQuoteConfig
-      anims = if EHC.os == "IOS"
-              then [fadeIn true]
-              else [translateYAnimFromTop $ Animation.chooseRideAnimConfig]
-      tagConfig = HS.specialZoneTagConfig config.zoneType
-      showTag = any (_ == config.zoneType) [SPECIAL_PICKUP, METRO]
+  let 
+    estimateConfig = (getAppConfig appConfig).estimateAndQuoteConfig
+    anims = if EHC.os == "IOS" then [fadeIn true] else [translateYAnimFromTop $ Animation.chooseRideAnimConfig]
+    tagConfig = HS.specialZoneTagConfig config.zoneType
+    showTag = any (_ == config.zoneType) [SPECIAL_PICKUP, METRO]
+    selectedVehicle = fromMaybe ChooseVehicle.config $ config.quoteList !! config.activeIndex 
+      
   in
   PrestoAnim.animationSet anims $
   linearLayout
@@ -499,13 +500,17 @@ chooseYourRideView push config =
                 ] <> FontStyle.h1 TypoGraphy)
                 , estimatedTimeAndDistanceView push config
                 , textView $
-                  [ textFromHtml $ getString TOLL_CHARGES_WILL_BE_EXTRA
+                  [ textFromHtml case selectedVehicle.hasTollCharges, selectedVehicle.hasParkingCharges of
+                      true, true -> getString APP_TOLL_PARKING_CHARGES
+                      true, false -> getString APP_TOLL_CHARGES
+                      false, true -> getString APP_PARKING_CHARGES
+                      _, _ -> ""
                   , color Color.black650
                   , gravity CENTER_HORIZONTAL
                   , height WRAP_CONTENT
                   , gravity CENTER_HORIZONTAL
                   , width MATCH_PARENT
-                  , visibility $ boolToVisibility $ config.showTollExtraCharges && maybe false (\item -> not $ item.serviceTierName == Just "Auto" || (item.vehicleVariant == "BOOK_ANY"  && all (_ ==  "Auto") item.selectedServices )) (config.quoteList !! config.activeIndex)
+                  , visibility $ boolToVisibility $ selectedVehicle.hasTollCharges || selectedVehicle.hasParkingCharges
                   ] <> FontStyle.paragraphText TypoGraphy
                 , linearLayout
                   [ height $ V 1

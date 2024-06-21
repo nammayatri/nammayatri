@@ -64,6 +64,7 @@ getFareBreakupList fareBreakup maxTip =
     <> (if tollCharge.amount > 0.0 then [ { key: getString TOLL_CHARGES_ESTIMATED, val: priceToBeDisplayed tollCharge } ] else [])
     <> [ { key: getString PICKUP_CHARGE, val: pickupCharges } ]
     <> [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.formatNumber freeWaitingTime.amount Nothing, val: priceToBeDisplayed waitingCharge <> "/min" } ]
+    <> (if parkingCharge.amount > 0.0 then [{ key: getString PARKING_CHARGE <> "^", val: priceToBeDisplayed parkingCharge }] else [])
 
 
   fareInfoDescription = 
@@ -119,6 +120,8 @@ getFareBreakupList fareBreakup maxTip =
 
   -- Toll charges
   tollCharge = fetchSpecificFare fareBreakup "TOLL_CHARGES"
+
+  parkingCharge = fetchSpecificFare fareBreakup "PARKING_CHARGE"
 
   -- Waiting charges
   freeWaitingTime = fetchSpecificFare fareBreakup "FREE_WAITING_TIME_IN_MINUTES"

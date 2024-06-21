@@ -600,7 +600,7 @@ view push state =
             , if state.props.showIntercityUnserviceablePopUp || state.props.showNormalRideNotSchedulablePopUp then intercityInSpecialZonePopupView push state else emptyTextView state
             , if state.props.zoneOtpExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.showScheduledRideExistsPopUp then scheduledRideExistsPopUpView push state else emptyTextView state
-            , if state.data.rideCompletedData.toll.showAmbiguousPopUp then PopUpModal.view (push <<< TollChargeAmbigousPopUpAction) (PopUpConfigs.finalFareExcludesToll state) else emptyTextView state
+            , if state.data.toll.showAmbiguousPopUp then PopUpModal.view (push <<< TollChargeAmbigousPopUpAction) (PopUpConfigs.finalFareExcludesToll state) else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -1913,14 +1913,18 @@ estimateHeaderView push state =
         <> FontStyle.h1 TypoGraphy
     , estimatedTimeDistanceView push state
     , textView $
-      [ textFromHtml $ getString TOLL_CHARGES_WILL_BE_EXTRA
+      [ textFromHtml $ case state.data.selectedEstimatesObject.hasTollCharges, state.data.selectedEstimatesObject.hasParkingCharges of
+          true, true -> getString APP_TOLL_PARKING_CHARGES
+          true, false -> getString APP_TOLL_CHARGES
+          false, true -> getString APP_PARKING_CHARGES
+          _, _ -> ""
       , color Color.black650
       , gravity CENTER_HORIZONTAL
       , height WRAP_CONTENT
       , gravity CENTER_HORIZONTAL
       , width MATCH_PARENT
       , margin $ MarginTop 4
-      , visibility $  boolToVisibility $ state.props.hasToll && state.data.selectedEstimatesObject.serviceTierName /= Just "Auto"
+      , visibility $  boolToVisibility $ state.data.selectedEstimatesObject.hasTollCharges || state.data.selectedEstimatesObject.hasParkingCharges
       ] <> FontStyle.paragraphText TypoGraphy
     , linearLayout
         [ height $ V 1
