@@ -45,7 +45,7 @@ view push config =
 imageBannerView :: forall w a. (a -> Effect Unit) -> (Config (Action -> a)) -> PrestoDOM (Effect Unit) w
 imageBannerView push config = 
   imageView $ [
-    height WRAP_CONTENT
+    height $ V 130
   , width MATCH_PARENT
   , imageUrlHolder "imageBannerUrl"
   , visibilityHolder "imageBannerVisibility"
