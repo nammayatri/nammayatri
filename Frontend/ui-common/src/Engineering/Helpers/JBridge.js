@@ -569,7 +569,11 @@ export const isNetworkAvailable = function (unit) {
 
 export const openUrlInApp = function (str) {
   return function (unit) {
-    return window.JBridge.openUrlInApp(str);
+    if(str !== ""){
+      return window.JBridge.openUrlInApp(str);
+    }else{
+      console.error("openUrlInApp: URL is empty");
+    }
   };
 };
 
