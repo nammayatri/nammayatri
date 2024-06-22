@@ -1157,9 +1157,11 @@ eval (BannerCarousel (BannerCarousel.OnClick idx)) state =
           BannerCarousel.MetroTicket -> pure $ MetroTicketBannerClickAC $ Banner.OnClick
           BannerCarousel.Safety -> pure $ SafetyBannerAction $ Banner.OnClick
           BannerCarousel.CabLaunch -> pure $ WhereToClick
-          BannerCarousel.Remote link -> do
-            if os == "IOS" && STR.contains (STR.Pattern "vp=sedu&option=video") link  -- To be removed after deep links are added in iOS
-              then pure GoToSafetyEducationScreen
+          BannerCarousel.Remote link ->
+            if link == "search" then 
+              pure $ WhereToClick 
+            else if os == "IOS" && STR.contains (STR.Pattern "vp=sedu&option=video") link then  -- To be removed after deep links are added in iOS
+              pure GoToSafetyEducationScreen
             else if not $ STR.null link then do
               void $ openUrlInApp link
               pure NoAction

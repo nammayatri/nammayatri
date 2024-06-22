@@ -714,7 +714,7 @@ getCarouselConfig view state banners = {
   , onPageScrolled : Nothing
   , currentIndex : state.data.bannerData.currentBanner
   , showScrollIndicator : true
-  , layoutHeight : V 140
+  , layoutHeight : V 137
   , overlayScrollIndicator : false
 }
 

@@ -49,6 +49,7 @@ imageBannerView push config =
   , width MATCH_PARENT
   , imageUrlHolder "imageBannerUrl"
   , visibilityHolder "imageBannerVisibility"
+  , margin $ MarginTop if os == "IOS" then  15 else 0
   ] <> maybe ([]) (\action -> [onClickHolder push $ (action <<< OnClick)]) config.action
 
 
