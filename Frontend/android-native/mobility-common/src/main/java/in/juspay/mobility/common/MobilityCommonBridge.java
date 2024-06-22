@@ -520,12 +520,11 @@ public class MobilityCommonBridge extends HyperBridge {
                         try {
                             currLoc.put("lat", location.getLatitude());
                             currLoc.put("lon", location.getLongitude());
+                            String command = String.format("window[\"onEvent'\"]('%s','%s')", "onLocationFetch", currLoc.toString());
+                            callbackQueue.add(command);
                         } catch (Exception e) {
-                            currLoc = null;
+                            e.printStackTrace();
                         }
-
-                        String command = String.format("window[\"onEvent'\"]('%s','%s')", "onLocationFetch", currLoc.toString());
-                        callbackQueue.add(command);
                     });
         }
 
