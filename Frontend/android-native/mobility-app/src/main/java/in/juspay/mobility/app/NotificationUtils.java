@@ -752,7 +752,8 @@ public class NotificationUtils {
         boolean activityBasedChecks = Arrays.asList("onPause", "onDestroy").contains(sharedPref.getString("ACTIVITY_STATUS", "null"));
         boolean useWidgetService = (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && activityBasedChecks) || useSilentFCMForForwardBatch;
         boolean widgetCheckForNonOverlay = useWidgetService && !NotificationUtils.overlayFeatureNotAvailable(context);
-        if (widgetCheckForNonOverlay) {
+         boolean reqPresentCheckForWidget = binder == null && widgetCheckForNonOverlay;
+         if (reqPresentCheckForWidget) {
              NotificationUtils.startWidgetService(context, null, payload, entity_payload, source);
         } else {
             NotificationUtils.showAllocationNotification(context, payload, entity_payload, source);
