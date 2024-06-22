@@ -159,11 +159,7 @@ view globalProps push state =
       currentStage = currentStageOn state ConfirmLocationStage
       focusedField = state.props.focussedTextField
       imageName =
-        if actionType == AddingStopAction then
-          "ny_ic_blue_marker"
-        else if currentStage then
-          "ny_ic_src_marker"
-        else case focusedField of
+        case focusedField of
           MB.Just SearchLocPickup -> "ny_ic_src_marker"
           MB.Just _ -> if actionType == SearchLocationAction then "ny_ic_dest_marker" else "ny_ic_blue_marker"
           MB.Nothing -> "ny_ic_blue_marker"  
@@ -372,7 +368,7 @@ currentLocationView push state = let
     , visibility viewVisibility
     ]
     [ imageView
-        [ imageWithFallback $ fetchImage FF_COMMON_ASSET (if state.props.actionType == AddingStopAction then "ny_ic_blue_dot" else "ny_ic_source_dot")
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET (if state.props.actionType == AddingStopAction && state.props.focussedTextField == MB.Just SearchLocDrop then "ny_ic_blue_dot" else "ny_ic_source_dot")
         , height $ V 16
         , width $ V 16
         , gravity CENTER_VERTICAL

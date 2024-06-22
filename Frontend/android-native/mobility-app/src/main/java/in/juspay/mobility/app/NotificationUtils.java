@@ -578,7 +578,7 @@ public class NotificationUtils {
             } else {
                 int cancellationSound = R.raw.cancel_notification_sound;
                 if (disabilityName.equals("BLIND_LOW_VISION"))
-                {  if (msg.contains("The driver had to cancel the ride"))
+                {  if (msg.contains("The driver had cancelled the ride"))
                     cancellationSound = R.raw.ride_cancelled_by_driver;
                     else
                         cancellationSound = R.raw.you_have_cancelled_the_ride;

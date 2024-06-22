@@ -110,7 +110,7 @@ config = {
       width : WRAP_CONTENT,
       accessibilityHint : ""
     }
-  , imageConfig : dummyImageConfig
+  , imageConfig : dummyImageConfig{visibility = VISIBLE}
   , buttonConfig : {
       text : "",
       color : Color.blue800,

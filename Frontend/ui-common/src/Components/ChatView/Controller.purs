@@ -55,6 +55,7 @@ type Config =
   , enableSuggestions :: Boolean
   , chatBodyPadding :: Padding
   , chatMargin :: Margin 
+  , showNavigate :: Boolean
   }
 
 type UserConfig =
@@ -104,6 +105,7 @@ config =
     , enableSuggestions : true
     , chatBodyPadding : Padding 0 0 0 0
     , chatMargin : Margin 0 0 0 0
+    , showNavigate : true
   }
 
 makeChatComponent' :: String -> String -> String -> String -> Int -> ChatComponentConfig 
