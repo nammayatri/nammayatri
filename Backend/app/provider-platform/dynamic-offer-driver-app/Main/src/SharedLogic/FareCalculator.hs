@@ -118,7 +118,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
           mbExtraKmFare = det.extraKmFare <&> HighPrecMoney . (* toRational dayPartRate) . (.getHighPrecMoney) -- temp fix :: have to fix properly
           extraDistanceFareItem =
             mbExtraKmFare <&> \extraKmFareRounded ->
-              mkBreakupItem extraDistanceFareCaption (mkPrice extraKmFareRounded)
+              mkBreakupItem extraDistanceFareCaption (mkPrice (extraKmFareRounded + fromMaybe 0.0 fareParams.congestionCharge)) -- temp fix :: MOVE CONGESTION CHARGE TO PROPER PLACE
       catMaybes [Just deadKmFareItem, extraDistanceFareItem]
 
     mkFPSlabDetailsBreakupList det = do
