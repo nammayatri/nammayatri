@@ -2360,25 +2360,29 @@ homeScreenFlow = do
               })
           onSuccessEndRide
         Left errorPayload -> do
-          (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
-          case Tuple (head rideHistoryResponse.list) (isJust state.data.advancedRideData)  of
-            Tuple Nothing _-> do
-                onSuccessEndRide
-            Tuple (Just _) true -> do
-              void $ lift $ lift $ toggleLoader false
-              let errResp = errorPayload.response
-              let codeMessage = decodeErrorCode errResp.errorMessage
-              liftFlowBT $ logEvent logField_ "incorrect flow"
-              if ( errorPayload.code == 400 && codeMessage == "INCORRECT_OTP") then do
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, enterOtpModal = endRideOtpModalOnError, otpAttemptsExceeded = false, rideOtp = "",enterOdometerReadingModal= false, endRideOdometerReadingModal = false, enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
-              else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = false,otpAttemptsExceeded = true, enterOtpModal = endRideOtpModalOnError, rideOtp = "",enterOdometerReadingModal= false,endRideOdometerReadingModal = false, enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
-              else do
-                pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-                homeScreenFlow
-            Tuple (Just _) false -> do
-              onSuccessEndRide
+          (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
+          let getCurrentRideInfo = head rideHistoryResponse.list
+          case Tuple (DA.length $ rideHistoryResponse.list) (isJust state.data.advancedRideData)  of
+            Tuple 1 true -> do 
+              case getCurrentRideInfo , state.data.advancedRideData of
+                Just (RidesInfo rideDataResp), Just advRide -> if (rideDataResp.id == advRide.id) then onSuccessEndRide else errorHandlerEndRide errorPayload endRideOtpModalOnError
+                _ , _ -> onSuccessEndRide
+            Tuple 2 true -> errorHandlerEndRide errorPayload endRideOtpModalOnError
+            Tuple 1 false -> errorHandlerEndRide errorPayload endRideOtpModalOnError
+            Tuple _ _ ->  onSuccessEndRide
       where
+        errorHandlerEndRide errorPayload endRideOtpModalOnError = do
+          void $ lift $ lift $ toggleLoader false
+          let errResp = errorPayload.response
+          let codeMessage = decodeErrorCode errResp.errorMessage
+          liftFlowBT $ logEvent logField_ "incorrect flow"
+          if ( errorPayload.code == 400 && codeMessage == "INCORRECT_OTP") then do
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, enterOtpModal = endRideOtpModalOnError, otpAttemptsExceeded = false, rideOtp = "",enterOdometerReadingModal= false, endRideOdometerReadingModal = false, enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
+          else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = false,otpAttemptsExceeded = true, enterOtpModal = endRideOtpModalOnError, rideOtp = "",enterOdometerReadingModal= false,endRideOdometerReadingModal = false, enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
+          else do
+            pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+            homeScreenFlow
         onSuccessEndRide = do
             void $ pure $ cleverTapCustomEvent "ny_driver_ride_ended"
             void $ pure $ metaLogEvent "ny_driver_ride_ended"
