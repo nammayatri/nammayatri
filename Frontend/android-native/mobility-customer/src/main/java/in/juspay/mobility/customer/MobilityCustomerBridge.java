@@ -126,18 +126,18 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
             result.put("eta", 0);
             result.put("distance", 0);
             result.put("isInPath", false);
-        } else if (resultIndex == 0) {
-            path.clear();
-            result.put("points", new JSONArray());
-            result.put("eta", 0);
-            result.put("distance", 0);
-            result.put("isInPath", true);
         } else if (resultIndex == (path.size() - 2) || resultIndex == (path.size() - 1)) {
             distanceRemaining = (int) SphericalUtil.computeLength(path);
             eta = distanceRemaining / speed;
             result.put("points", coordinates);
             result.put("eta", eta);
             result.put("distance", distanceRemaining);
+            result.put("isInPath", true);
+        } else if (resultIndex == 0) {
+            path.clear();
+            result.put("points", new JSONArray());
+            result.put("eta", 0);
+            result.put("distance", 0);
             result.put("isInPath", true);
         } else {
             path.subList(resultIndex + 2, path.size()).clear();

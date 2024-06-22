@@ -65,7 +65,7 @@ import Screens.RideBookingFlow.HomeScreen.Config (specialLocationConfig)
 import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo, initData) as SearchLocationScreenData
 import Services.API (QuoteAPIEntity(..), GetQuotesRes(..), OfferRes(..), RentalQuoteAPIDetails(..), QuoteAPIContents(..), Snapped(..), LatLong(..), Route(..))
 import Services.Backend (walkCoordinates, walkCoordinate)
-import Storage (getValueToLocalStore, KeyStore(..))
+import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..))
 import Types.App (GlobalState(..), defaultGlobalState, FlowBT, ScreenType(..))
 import Language.Strings (getString)
 import Components.ChooseYourRide.Controller as ChooseYourRideController
@@ -610,6 +610,7 @@ quotesFlow res state = do
           _  -> dummyFareQuoteDetails
     in { quoteDetails : quoteDetails, index : index, activeIndex : 0 , fareDetails : fareDetails}
     ) sortedByFare)
+  void $ pure $ setValueToLocalStore HAS_TOLL_CHARGES "false"
   if DA.length rentalsQuoteList == 0 then do 
     void $ pure $ toast $ getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN
     exit $ RentalsScreen state {props {showLoader = false}}

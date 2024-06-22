@@ -116,21 +116,21 @@ dummyCityConfig = {
                     waitingCharges : 1.50,
                     waitingChargesConfig : {
                       cab : {
-                        freeSeconds : 5,
+                        freeSeconds : 300,
                         perMinCharges : 1.0
                       },
                       auto : {
-                        freeSeconds : 3,
+                        freeSeconds : 180,
                         perMinCharges : 1.50
                       }
                     },
                     rentalWaitingChargesConfig : {
                       cab : {
-                        freeSeconds : 3,
+                        freeSeconds : 180,
                         perMinCharges : 2.0
                       },
                       auto : {
-                        freeSeconds : 3,
+                        freeSeconds : 180,
                         perMinCharges : 2.0
                       }
                     },

@@ -190,6 +190,7 @@ type Features = {
 , enableYatriCoins :: Boolean
 , enableAutoReferral :: Boolean
 , enableSpecialPickup :: Boolean
+, enableIntercity :: Boolean
 }
  
  -- VV - VechileVerfication

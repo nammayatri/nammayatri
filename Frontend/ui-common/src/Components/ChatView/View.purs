@@ -161,7 +161,7 @@ headerActionView config push =
   , linearLayout
     [ height $ V 40
     , width $ V 94
-    , visibility (getConfig config.userConfig.appType).driverVisibility
+    , visibility $ boolToVisibility $ ((getConfig config.userConfig.appType).driverVisibility == VISIBLE) && config.showNavigate
     , gravity CENTER
     , orientation HORIZONTAL
     , background Color.blue600
