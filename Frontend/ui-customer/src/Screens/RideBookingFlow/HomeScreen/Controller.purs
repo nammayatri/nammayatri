@@ -2428,21 +2428,22 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
                   { data {source = srcValue}
                   , props { isSearchLocation = LocateOnMap
                           , currentStage = SearchLocationModel
-                          , locateOnMap = true,
-                           isRideServiceable = true
-                           , showlocUnserviceablePopUp = false
-                           , searchLocationModelProps{isAutoComplete = false}
-                           , locateOnMapLocation
-                              { sourceLat = state.props.sourceLat
-                              , sourceLng = state.props.sourceLong
-                              , source = state.data.source
-                              , sourceAddress = state.data.sourceAddress
-                              , destinationLat = if state.props.destinationLat /= 0.0 then state.props.destinationLat else state.props.sourceLat
-                              , destinationLng = if state.props.destinationLong /= 0.0 then state.props.destinationLong else state.props.sourceLong
-                              , destination = state.data.destination
-                              , destinationAddress = state.data.destinationAddress 
-                              }
-                           }
+                          , locateOnMap = true
+                          , isRideServiceable = true
+                          , showlocUnserviceablePopUp = false
+                          , searchLocationModelProps{isAutoComplete = false}
+                          , locateOnMapLocation
+                             { sourceLat = state.props.sourceLat
+                             , sourceLng = state.props.sourceLong
+                             , source = state.data.source
+                             , sourceAddress = state.data.sourceAddress
+                             , destinationLat = if state.props.destinationLat /= 0.0 then state.props.destinationLat else state.props.sourceLat
+                             , destinationLng = if state.props.destinationLong /= 0.0 then state.props.destinationLong else state.props.sourceLong
+                             , destination = state.data.destination
+                             , destinationAddress = state.data.destinationAddress 
+                             }
+                          , hasEstimateBackpoint = false
+                          }
                     }
   (updateAndExit newState) $ UpdatedState newState false
 

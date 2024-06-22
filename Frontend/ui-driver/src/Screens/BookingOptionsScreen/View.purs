@@ -122,7 +122,7 @@ acCheckForDriversView push state =
 
     messageColor = if airConditionedData.isWorking then Color.black600 else Color.red900
 
-    callSupportVisibility = not airConditionedData.isWorking && airConditionedData.usageRestrictionType == API.ToggleNotAllowed
+    canUpgradeToAcVariant = not airConditionedData.isWorking && airConditionedData.usageRestrictionType /= API.ToggleNotAllowed
   in
     linearLayout
       [ width MATCH_PARENT
@@ -164,7 +164,6 @@ acCheckForDriversView push state =
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , padding $ PaddingVertical 16 16
-            , onClick push $ const $ UpdateACAvailability airConditionedData.isWorking
            ][
             linearLayout
               [ width $ V 40
@@ -172,6 +171,7 @@ acCheckForDriversView push state =
               , cornerRadius 100.0
               , background backgroundColor
               , stroke $ "1," <> backgroundColor
+              , clickable canUpgradeToAcVariant
               , onClick push $ const $ UpdateACAvailability airConditionedData.isWorking
               , gravity CENTER_VERTICAL
               ]
@@ -198,7 +198,7 @@ acCheckForDriversView push state =
           , height WRAP_CONTENT
           , visibility $ MP.boolToVisibility $ MB.isJust airConditionedData.restrictionMessage
           , color messageColor
-          , padding $ if callSupportVisibility then Padding 0 0 0 0 else PaddingBottom 12
+          , padding $ if not canUpgradeToAcVariant then Padding 0 0 0 0 else PaddingBottom 12
           , text $ fromMaybe "" airConditionedData.restrictionMessage
           ]
       , linearLayout
@@ -206,10 +206,10 @@ acCheckForDriversView push state =
           , height WRAP_CONTENT
           , orientation HORIZONTAL
           , cornerRadius 4.0
-          , padding $ PaddingHorizontal 6 12
+          , padding $ Padding 6 8 12 10
           , gravity CENTER_VERTICAL
           , onClick push $ const $ CallSupport
-          , visibility $ MP.boolToVisibility callSupportVisibility
+          , visibility $ MP.boolToVisibility $ not canUpgradeToAcVariant
           ]
           [ imageView
               [ width $ V 18
