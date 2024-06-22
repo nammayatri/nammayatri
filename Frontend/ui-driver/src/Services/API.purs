@@ -633,7 +633,7 @@ newtype RidesInfo = RidesInfo
       vehicleCapacity :: Maybe Int,
       tollConfidence :: Maybe CTA.Confidence,
       bookingType :: Maybe BookingTypes,
-      bapName :: String,
+      bapName :: Maybe String,
       isValueAddNP :: Boolean
   }
 

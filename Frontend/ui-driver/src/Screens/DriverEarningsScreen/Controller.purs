@@ -545,7 +545,7 @@ earningHistoryItemsListTransformer list =
           , cash: 0.0
           , vehicleVariant : ride.vehicleServiceTier
           , isValueAddNP : ride.isValueAddNP
-          , bapName : transformBapName ride.bapName
+          , bapName : transformBapName $ fromMaybe "" ride.bapName
           }
       )
       list
@@ -756,7 +756,7 @@ dummyRideHistoryItem = RidesInfo {
       vehicleCapacity : Nothing,
       tollConfidence : Nothing,
       bookingType : Nothing,
-      bapName : "",
+      bapName : Nothing,
       isValueAddNP : false
   }
 

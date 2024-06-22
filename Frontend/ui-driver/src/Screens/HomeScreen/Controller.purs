@@ -1594,7 +1594,7 @@ activeRideDetail state (RidesInfo ride) =
   hasToll :  maybe false (\charge -> charge /= 0.0) ride.estimatedTollCharges,
   estimatedTollCharge : ride.estimatedTollCharges,
   acRide : ride.isVehicleAirConditioned,
-  bapName : transformBapName ride.bapName,
+  bapName : transformBapName $ fromMaybe "" ride.bapName,
   bookingFromOtherPlatform : not ride.isValueAddNP
 }
   where 
