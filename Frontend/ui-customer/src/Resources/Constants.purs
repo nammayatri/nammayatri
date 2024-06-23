@@ -86,12 +86,12 @@ decodeAddress addressWithCons =
 encodeAddress :: String -> Array AddressComponents -> Maybe String -> Number -> Number -> ST.Address
 encodeAddress fullAddress addressComponents placeId lat lon =
   let
-    totalAddressComponents = length $ split (Pattern ", ") fullAddress
+    splitedAddress = split (Pattern ", ") fullAddress
+    totalAddressComponents = length splitedAddress
     areaCodeFromFullAdd = runFn2 extractKeyByRegex areaCodeRegex fullAddress
     areaCodeFromAddComp = getValueByComponent addressComponents "postal_code"
     areaCodeComp = if (trim areaCodeFromAddComp) /= "" then areaCodeFromAddComp else areaCodeFromFullAdd
     areaCodeVal = Just if (trim areaCodeComp) == "" then (runFn2 extractKeyByRegex areaCodeRegex $ runFn2 JB.getLocationNameV2 lat lon) else areaCodeComp
-    splitedAddress = split (Pattern ", ") fullAddress
     gateName = getValueByComponent addressComponents "sublocality"
   in
     { area: if DS.null gateName then splitedAddress !! (totalAddressComponents - 4) else (Just gateName)

@@ -28,6 +28,8 @@ import Data.Either (Either(..), either)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String as DS
+import Data.Foldable (or)
+import Resources.Constants as Constants
 import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Commons (liftFlow, os, convertUTCtoISC, isPreviousVersion, isInvalidUrl, getNewIDWithTag)
 import Engineering.Helpers.Utils as EHU
@@ -59,6 +61,7 @@ import Locale.Utils
 import MerchantConfig.Types (GeoCodeConfig)
 import Debug
 import Effect.Uncurried (runEffectFn10)
+import Data.Function.Uncurried (runFn2)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import SessionCache
 import LocalStorage.Cache (removeValueFromCache)
@@ -366,14 +369,14 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMo
                         { "lat" : dlat 
                         , "lon" : dlong
                         }
-                    , "address" : (LocationAddress desAdd)
+                    , "address" : validateLocationAddress dlat dlong (LocationAddress desAdd)
                     }
                 , "origin" : SearchReqLocation 
                     { "gps" : LatLong 
                         { "lat" : slat 
                         , "lon" : slong
                         }
-                    , "address" : (LocationAddress srcAdd)
+                    , "address" : validateLocationAddress slat slong (LocationAddress srcAdd)
                     }
                 , "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
                 , "isSourceManuallyMoved" : Just sourceManuallyMoved
@@ -384,7 +387,37 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMo
             )
         , "fareProductType" : "ONE_WAY"
         }
+    where 
+        validateLocationAddress :: Number -> Number -> LocationAddress -> LocationAddress
+        validateLocationAddress lat long address = 
+            let addressValidated = validateAddressHelper address
+            in 
+                if addressValidated
+                    then address 
+                    else fallbackAndFetchAgain lat long
 
+        validateAddressHelper :: LocationAddress -> Boolean
+        validateAddressHelper (LocationAddress address) = 
+            or
+                [ isNonEmpty address.area
+                , isNonEmpty address.state
+                , isNonEmpty address.country
+                , isNonEmpty address.building
+                , isNonEmpty address.door
+                , isNonEmpty address.street
+                , isNonEmpty address.city
+                , isNonEmpty address.areaCode
+                , isNonEmpty address.ward
+                , isNonEmpty address.placeId
+                ]
+        
+        fallbackAndFetchAgain :: Number -> Number -> LocationAddress
+        fallbackAndFetchAgain lat long = 
+            let addressFetched = runFn2 JB.getLocationNameV2 lat long
+            in LocationAddress $ Constants.encodeAddress addressFetched [] Nothing lat long
+
+        isNonEmpty :: Maybe String -> Boolean
+        isNonEmpty = maybe false (\s -> DS.null s)
 
 ------------------------------------------------------------------------ GetQuotes Function -------------------------------------------------------------------------------------------
 getQuotes searchId = do
