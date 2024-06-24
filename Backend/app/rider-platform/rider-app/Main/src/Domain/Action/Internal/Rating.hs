@@ -64,16 +64,11 @@ rating apiKey FeedbackReq {..} = do
     throwError $ AuthBlocked "Invalid BPP internal api key"
 
   ratingu <- B.runInReplica $ QRating.findRatingForRide ride.id
-  _ <- case ratingu of
-    Nothing -> do
-      logTagInfo "FeedbackAPI" $
-        "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- buildRating ride.id booking.riderId ratingValue feedbackDetails wasOfferedAssistance
-      QRating.create newRating
-    Just rideRating -> do
-      logTagInfo "FeedbackAPI" $
-        "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      QRating.updateRating ratingValue feedbackDetails wasOfferedAssistance rideRating.id booking.riderId
+  when (isNothing ratingu) $ do
+    logTagInfo "FeedbackAPI" $
+      "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
+    newRating <- buildRating ride.id booking.riderId ratingValue feedbackDetails wasOfferedAssistance
+    QRating.create newRating
   calculateAverageRating booking.riderId merchant.minimumDriverRatesCount ratingValue person.totalRatings person.totalRatingScore
   pure Success
 

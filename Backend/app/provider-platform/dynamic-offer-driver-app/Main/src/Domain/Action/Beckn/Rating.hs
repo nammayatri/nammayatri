@@ -106,20 +106,13 @@ handler merchantId req ride = do
       else return (driverStats.totalRatings, driverStats.totalRatingScore)
 
   rating <- B.runInReplica $ QRating.findRatingForRide ride.id
-  _ <- case rating of
-    Nothing -> do
-      logTagInfo "FeedbackAPI" $
-        "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- buildRating ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance req.shouldFavDriver
-      QRating.create newRating
-      logDebug "Driver Rating Coin Event"
-      fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride.chargeableDistance)
-    Just rideRating -> do
-      logTagInfo "FeedbackAPI" $
-        "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      QRating.updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver rideRating.id driverId
-      logDebug "Driver Rating Coin Event"
-      fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride.chargeableDistance)
+  when (isNothing rating) $ do
+    logTagInfo "FeedbackAPI" $
+      "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
+    newRating <- buildRating ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance req.shouldFavDriver
+    QRating.create newRating
+    logDebug "Driver Rating Coin Event"
+    fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride.chargeableDistance)
   calculateAverageRating driverId merchant.minimumDriverRatesCount ratingValue ratingCount ratingsSum
 
 calculateAverageRating ::

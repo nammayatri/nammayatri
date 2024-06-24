@@ -48,6 +48,7 @@ module Domain.Action.Dashboard.Merchant
 where
 
 import Control.Applicative
+import qualified Dashboard.Common as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
