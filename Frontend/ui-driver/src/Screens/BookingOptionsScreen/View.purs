@@ -122,7 +122,9 @@ acCheckForDriversView push state =
 
     messageColor = if airConditionedData.isWorking then Color.black600 else Color.red900
 
-    canUpgradeToAcVariant = not airConditionedData.isWorking && airConditionedData.usageRestrictionType /= API.ToggleNotAllowed
+    callSupportVisibility = not airConditionedData.isWorking && airConditionedData.usageRestrictionType == API.ToggleNotAllowed
+
+    canUpgradeOrDowngradeVariant = (not airConditionedData.isWorking && airConditionedData.usageRestrictionType /= API.ToggleNotAllowed) || airConditionedData.isWorking
   in
     linearLayout
       [ width MATCH_PARENT
@@ -171,7 +173,7 @@ acCheckForDriversView push state =
               , cornerRadius 100.0
               , background backgroundColor
               , stroke $ "1," <> backgroundColor
-              , clickable canUpgradeToAcVariant
+              , clickable canUpgradeOrDowngradeVariant
               , onClick push $ const $ UpdateACAvailability airConditionedData.isWorking
               , gravity CENTER_VERTICAL
               ]
@@ -198,7 +200,7 @@ acCheckForDriversView push state =
           , height WRAP_CONTENT
           , visibility $ MP.boolToVisibility $ MB.isJust airConditionedData.restrictionMessage
           , color messageColor
-          , padding $ if not canUpgradeToAcVariant then Padding 0 0 0 0 else PaddingBottom 12
+          , padding $ if callSupportVisibility then Padding 0 0 0 0 else PaddingBottom 12
           , text $ fromMaybe "" airConditionedData.restrictionMessage
           ]
       , linearLayout
@@ -209,7 +211,7 @@ acCheckForDriversView push state =
           , padding $ Padding 6 8 12 10
           , gravity CENTER_VERTICAL
           , onClick push $ const $ CallSupport
-          , visibility $ MP.boolToVisibility $ not canUpgradeToAcVariant
+          , visibility $ MP.boolToVisibility $ callSupportVisibility
           ]
           [ imageView
               [ width $ V 18
