@@ -1545,7 +1545,7 @@ convertView push state =
                           , id $ getNewIDWithTag "ConvertCoinsSliderView"
                           , onAnimationEnd
                               ( \action ->
-                                  void $ renderSlider push SliderCallback sliderConfig{ id= (getNewIDWithTag "ConvertCoinsSliderView"), stepFunctionForCoinConversion= state.data.config.coinsConfig.stepFunctionForCoinConversion, sliderConversionRate= state.data.coinConversionRate, sliderMinValue = state.data.config.coinsConfig.minCoinSliderValue, sliderMaxValue = coinBalanceNearestCeil, sliderDefaultValue = state.data.config.coinsConfig.minCoinSliderValue, toolTipId = getNewIDWithTag "SliderToolTipView", enableToolTip = true }
+                                  void $ renderSlider push SliderCallback sliderConfig{ id= (getNewIDWithTag "ConvertCoinsSliderView"), stepFunctionForCoinConversion= state.data.config.coinsConfig.stepFunctionForCoinConversion, sliderConversionRate= state.data.coinConversionRate, sliderMinValue = state.data.config.coinsConfig.minCoinSliderValue, sliderMaxValue = coinBalanceNearestCeil, sliderDefaultValue = coinBalanceNearestCeil, toolTipId = getNewIDWithTag "SliderToolTipView", progressColor = Color.blue800, enableToolTip = true }
                               )
                               (const AfterRender)
                           ]
