@@ -1196,7 +1196,7 @@ public class MobilityAppBridge extends HyperBridge {
                 JSONObject jsonData = new JSONObject(config);
                 String id = jsonData.getString("id");
                 String callback = jsonData.optString("callback", "");
-                float conversionRate = jsonData.optLong("sliderConversionRate", (long) 1.0);
+                float conversionRate = (float) jsonData.optDouble("sliderConversionRate",  1.0);
                 int minLimit = jsonData.optInt("sliderMinValue",1);
                 int maxLimit = jsonData.optInt("sliderMaxValue",10);
                 int defaultValue = jsonData.optInt("sliderDefaultValue",1);
