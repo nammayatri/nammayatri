@@ -1877,7 +1877,7 @@ eval (MAPREADY key latitude longitude) state =
           primaryText = state.data.destination
           markers = HU.normalRoute ""
           srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
-          destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = primaryText }
+          destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = primaryText, anchorU = 0.5, anchorV = 1.0 }
           routeConfig = JB.mkRouteConfig (Remote.walkCoordinate srcLat srcLon dstLat dstLon) srcMarkerConfig destMarkerConfig Nothing "NORMAL_ROUTE" "DOT" false JB.DEFAULT (JB.mapRouteConfig{vehicleSizeTagIcon = HU.getVehicleSize unit, polylineAnimationConfig = getPolylineAnimationConfig})
       void $ drawRoute [routeConfig] (getNewIDWithTag "CustomerHomeScreenEditDest")
       pure AfterRender
@@ -3425,7 +3425,8 @@ eval (EditDestSearchLocationModelActionController (SearchLocationModelController
 
 eval (EditDestSearchLocationModelActionController (SearchLocationModelController.GoBack)) state = do
   void $ pure $ performHapticFeedback unit
-  continueWithCmd state{props{showShimmer = true}}
+  let updatedState = state{props{locateOnMap = false, showShimmer = true}}
+  continueWithCmd updatedState
     [ do
         void $ pure $ hideKeyboardOnNavigation true
         pure $ BackPressed
