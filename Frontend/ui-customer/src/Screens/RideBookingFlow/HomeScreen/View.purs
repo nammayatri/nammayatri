@@ -4833,7 +4833,7 @@ exploreCityCard push state index locationItem =
         , accessibility DISABLE
         ]
       , textView $
-          [ text $ getString $ GO_TO_DESTINATION locationItem.address
+          [ text $ locationItem.address
           , color Color.black800
           , margin $ MarginTop 8
           , accessibility DISABLE
