@@ -214,6 +214,8 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | SelectButton Int
   | OpenAcModal
   | RequestInfoCardAction RequestInfoCard.Action
+  | ChassisNumberChanged String
+  | ShowChassisNumberInfo Boolean
 
 
 eval :: Action -> AddVehicleDetailsScreenState -> Eval Action ScreenOutput AddVehicleDetailsScreenState
@@ -349,8 +351,8 @@ eval (ReferralMobileNumberAction (ReferralMobileNumberController.PrimaryEditText
                                         , isEdit = if (length newVal == 10 && state.props.isEdit) then true else false }
                                         , data = state.data { referral_mobile_number = if length newVal <= 10 then newVal else state.data.referral_mobile_number}}
 eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
-  _ <- pure $ hideKeyboardOnNavigation true
-  if isJust state.data.dateOfRegistration then exit $ ValidateDataAPICall state
+  void $ pure $ hideKeyboardOnNavigation true
+  if state.props.showChassisNumber || state.props.showRCregistrationDate then exit $ ValidateDataAPICall state
   else if (state.props.openHowToUploadManual == false) then 
     continue state {props {openHowToUploadManual = true}}
   else  continueWithCmd state {props { fileCameraPopupModal = false, fileCameraOption = false}} [do
@@ -469,6 +471,12 @@ eval OpenAcModal state = continue state { props { acModal = true}}
 eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { acModal = false}}
 
 eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { acModal = false}}
+
+eval (ChassisNumberChanged chassisNumber) state = do 
+  pure if length chassisNumber == 5 then hideKeyboardOnNavigation true else unit
+  continue state { data { chassisNumber = chassisNumber }}
+
+eval (ShowChassisNumberInfo showChassisNumberInfo) state = continue state { props { showChassisNumberInfo = showChassisNumberInfo }}
 
 eval _ state = update state
 

@@ -50,14 +50,21 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     feature = (getAppConfig appConfig).feature
     imageUploadCondition = state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL
-    rcMatch = caseInsensitiveCompare state.data.vehicle_registration_number state.data.reEnterVehicleRegistrationNumber
-    activate = (( rcMatch || (not state.data.cityConfig.uploadRCandDL)) && 
-                -- (state.data.dateOfRegistration /= Just "") && 
-                state.data.vehicle_registration_number /= "" &&
-                (state.data.vehicleCategory /= Just ST.CarCategory || isJust state.props.buttonIndex) &&
-                ((DS.length state.data.vehicle_registration_number >= 2) && ((DS.take 2 state.data.vehicle_registration_number) `DA.elem` state.data.rcNumberPrefixList)))
+
+    rcMatch = state.data.vehicle_registration_number /= ""  && (caseInsensitiveCompare state.data.vehicle_registration_number state.data.reEnterVehicleRegistrationNumber || (not state.data.cityConfig.uploadRCandDL))
+    rcRegistrationDateValidCheck = (not state.props.showRCregistrationDate) || (maybe false (not $ DS.null) state.data.dateOfRegistration)
+    chassisNumberCheck = (not state.props.showChassisNumber) ||  (DS.length state.data.chassisNumber) >= 5
+    rcPrefixValidCheck = (DS.take 2 state.data.vehicle_registration_number) `DA.elem` state.data.rcNumberPrefixList
+    acCheck =   (state.data.vehicleCategory /= Just ST.CarCategory || isJust state.props.buttonIndex)
+
+    activate =  rcMatch && 
+                rcRegistrationDateValidCheck &&
+                chassisNumberCheck && 
+                rcPrefixValidCheck &&
+                acCheck
+
     primaryButtonConfig' = config 
-      { textConfig{ text = if isJust state.data.dateOfRegistration then getString CONFIRM 
+      { textConfig{ text = if isJust state.data.dateOfRegistration || state.props.showChassisNumber then getString CONFIRM 
                            else if state.props.openHowToUploadManual then getString UPLOAD_PHOTO
                            else getString UPLOAD_REGISTRATION_CERTIFICATE}
       , width = MATCH_PARENT

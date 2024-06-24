@@ -160,6 +160,7 @@ type AddVehicleDetailsScreenData =  {
   vehicleCategory :: Maybe VehicleCategory,
   config :: AppConfig,
   rcNumberPrefixList :: Array String
+, chassisNumber :: String
  }
 
 type AddVehicleDetailsScreenProps =  {
@@ -196,7 +197,10 @@ type AddVehicleDetailsScreenProps =  {
   contactSupportModal :: AnimType,
   buttonIndex :: Maybe Int,
   acModal :: Boolean
- }
+, showChassisNumberInfo :: Boolean
+, showChassisNumber :: Boolean
+, showRCregistrationDate :: Boolean
+}
 
 data ValidationStatus  =  Success | Failure | InProgress | None
 

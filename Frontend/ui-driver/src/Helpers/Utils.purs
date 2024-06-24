@@ -663,6 +663,8 @@ getCityConfig cityConfig cityName = do
                             callSupport : false,
                             supportWAN : "", 
                             whatsappSupport : false
+                          , chassisNumber : Nothing
+                          , rcRegistrationDate : Just true
                           },
                           variantSubscriptionConfig : {
                             enableVariantBasedSubscription : true,

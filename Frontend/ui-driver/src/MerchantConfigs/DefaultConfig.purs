@@ -4,6 +4,7 @@ import MerchantConfig.Types
 import Common.DefaultConfig
 import Common.Types.Config as CTC
 import Engineering.Helpers.Commons as EHC
+import Data.Maybe
 
 config :: AppConfig
 config =
@@ -526,7 +527,9 @@ config =
               registration : {
                   supportWAN : "",
                   callSupport : false,
-                  whatsappSupport : false
+                  whatsappSupport : false,
+                  chassisNumber : Nothing
+                , rcRegistrationDate : Just true
               },
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
@@ -568,7 +571,9 @@ config =
               registration : {
                   supportWAN : "918618963188",
                   callSupport : true,
-                  whatsappSupport : true
+                  whatsappSupport : true,
+                  chassisNumber : Nothing
+                , rcRegistrationDate : Just true
               },
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : true,
@@ -720,6 +725,8 @@ registrationConfig = {
   supportWAN : "919625724848",
   callSupport : true,
   whatsappSupport : false
+, chassisNumber : Nothing
+, rcRegistrationDate : Just true
 }
 
 getStaticViewPlans :: Array CTC.StaticViewPlans

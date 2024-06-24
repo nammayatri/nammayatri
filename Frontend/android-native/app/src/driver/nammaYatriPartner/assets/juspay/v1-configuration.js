@@ -241,7 +241,9 @@ window.getMerchantConfig = function () {
         "registration" : {
             "supportWAN" : "919392636637",
             "callSupport" : true,
-            "whatsappSupport" : true
+            "whatsappSupport" : true,
+            "chassisNumber" : true,
+            "rcRegistrationDate" : false,
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,

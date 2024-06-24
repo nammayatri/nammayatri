@@ -276,6 +276,7 @@
       "ny_ic_car_onboard" : true,
       "ny_ic_car_profile" : true,
       "ny_ic_car_warning" : true,
+      "ny_ic_chassis_number" : true,
       "ny_ic_chat_grey" : true,
       "ny_ic_chat_white" : true,
       "ny_ic_check_box" : true,

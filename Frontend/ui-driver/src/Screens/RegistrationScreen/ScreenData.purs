@@ -100,6 +100,8 @@ dummyCityConfig = {
                       callSupport : false,
                       supportWAN : "", 
                       whatsappSupport : false
+                    , chassisNumber : Nothing
+                    , rcRegistrationDate : Just true
                     },
                     variantSubscriptionConfig : {
                       enableVariantBasedSubscription : true,

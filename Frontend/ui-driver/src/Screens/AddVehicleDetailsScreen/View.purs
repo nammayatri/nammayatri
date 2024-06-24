@@ -46,7 +46,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||))
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Properties as PP
@@ -132,11 +132,12 @@ view push state =
                       , padding $ Padding 16 12 16 12
                       , margin $ Margin 16 16 16 16
                       , cornerRadius 8.0
-                      , visibility if state.data.dateOfRegistration == Nothing then GONE else VISIBLE            
+                      , visibility $ boolToVisibility state.props.showRCregistrationDate          
                       ] <> FontStyle.body3 TypoGraphy
                     , vehicleRegistrationNumber state push
                     , howToUpload push state 
                     , dateOfRCRegistrationView push state
+                    , enterChassisNumber state push
                     ]
                 ]
           ]
@@ -186,6 +187,7 @@ view push state =
       <> if state.props.multipleRCstatus /= NOT_STARTED then [addRCFromProfileStatusView state push] else []
       <> if state.props.menuOptions then [menuOptionModal push state] else []
       <> if state.props.acModal then [RequestInfoCard.view (push <<< RequestInfoCardAction) (acModalConfig state)] else []
+      <> if state.props.showChassisNumberInfo then [chassisNumberInfoView state push] else []
 
 menuOptionModal :: forall w. (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
 menuOptionModal push state = 
@@ -333,6 +335,7 @@ vehicleRegistrationNumber state push =
               , id (EHC.getNewIDWithTag "VehicleRegistrationNumber")
               , onChange push (const VehicleRegistrationNumber state.props.input_data)
               , inputTypeI 4097
+              , inputType Password
               ] <> FontStyle.subHeading1 TypoGraphy)
             ]
           , textView $
@@ -651,7 +654,109 @@ referralView state push =
         , onClick push (const ReferralMobileNumber)
         ] <> FontStyle.subHeading2 TypoGraphy)
   ]
-  
+
+enterChassisNumber :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+enterChassisNumber state push = 
+  linearLayout[
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , margin $ Margin 20 32 20 0
+  , orientation VERTICAL
+  , visibility $ boolToVisibility $ state.props.showChassisNumber 
+  ][
+    linearLayout[
+      width WRAP_CONTENT
+    , height WRAP_CONTENT
+    ][
+      textView $
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , text $ "Chassis Number"
+      , color Color.black800
+      , margin $ MarginBottom 12
+      ] <> FontStyle.body3 TypoGraphy
+    , imageView[
+        width $ V 15
+      , height $ V 15
+      , margin $ MarginLeft 4
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_blue"
+      , onClick push $ const $ ShowChassisNumberInfo true 
+      , gravity CENTER_VERTICAL
+      ]
+    ]
+  , linearLayout[
+      width MATCH_PARENT
+    , height WRAP_CONTENT
+    ][
+      textView $ [
+        width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , text $ "XXXXXXXXXXXX"
+      , color Color.black800
+      ] <> FontStyle.body25 TypoGraphy
+    , editText $ [ 
+        weight 1.0
+      , height WRAP_CONTENT
+      , padding $  Padding 16 20 16 20
+      , color Color.black800
+      , hint $ if DS.null state.data.chassisNumber then "Enter last 5 digits" else ""
+      , hintColor Color.black500
+      , cornerRadius 4.0
+      , pattern "[0-9a-zA-Z]*,5"
+      , stroke $ "1," <> Color.grey900
+      , onChange push  $  ChassisNumberChanged
+      , margin $ MarginLeft 8
+      ] 
+      <> FontStyle.subHeading1 TypoGraphy
+      <> if (not $ DS.null state.data.chassisNumber) then [letterSpacing $ PX 4.0] else []
+    ]
+  ]
+
+chassisNumberInfoView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+chassisNumberInfoView state push = 
+  linearLayout[
+    height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.blackLessTrans
+  , onClick push $ const $ ShowChassisNumberInfo false
+  , gravity CENTER
+  ][
+    linearLayout[
+      width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , margin $ MarginHorizontal 20 20
+    , background Color.white900
+    , cornerRadius 16.0
+    , padding $ PaddingVertical 16 16
+    , clickable true
+    ][
+      textView $ [
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , text $ "Chassis Number"
+      , color Color.black800
+      , margin $ MarginBottom 12
+      , gravity CENTER
+      ] <> FontStyle.h2 TypoGraphy
+    , imageView [
+        width MATCH_PARENT
+      , height $ V 350
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chassis_number"
+      , gravity CENTER
+      ]
+    , textView $ [
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , text $ "Got it"
+      , onClick push $ const $ ShowChassisNumberInfo false
+      , color Color.blue800
+      , gravity CENTER
+      , padding $ PaddingTop 8 
+      ] <> FontStyle.subHeading1 TypoGraphy
+    ]
+  ]
+
 
 dateOfRCRegistrationView :: (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> forall w . PrestoDOM (Effect Unit) w
 dateOfRCRegistrationView push state = 
@@ -659,7 +764,7 @@ dateOfRCRegistrationView push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , visibility if state.data.dateOfRegistration == Nothing then GONE else VISIBLE
+  , visibility $ boolToVisibility state.props.showRCregistrationDate 
   , padding (PaddingHorizontal 20 20)
   , margin $ MarginTop 20
   ][ textView $

@@ -43,6 +43,7 @@ initData = {
       cityConfig : dummyCityConfig,
       vehicleCategory : Nothing,
       rcNumberPrefixList : [],
+      chassisNumber : "",
       config : getAppConfig appConfig
     },
     props: {
@@ -79,5 +80,8 @@ initData = {
       contactSupportModal : ST.HIDE,
       buttonIndex : Nothing,
       acModal : false
+    , showChassisNumberInfo : false
+    , showChassisNumber : false
+    , showRCregistrationDate : false
     }
 }

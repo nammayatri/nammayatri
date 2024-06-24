@@ -15,6 +15,8 @@
 module Common.Types.Config where
 
 import Common.Types.App
+import Data.Maybe
+
 type CommonAppConfig = (
     colors :: Colors
   , primaryButtonConfig :: PrimaryButtonConfig
@@ -150,6 +152,8 @@ type RegistrationConfig = {
   supportWAN :: String,
   callSupport :: Boolean,
   whatsappSupport :: Boolean
+, chassisNumber :: Maybe Boolean
+, rcRegistrationDate :: Maybe Boolean
 }
 
 type BannerCarousalConfig = {
