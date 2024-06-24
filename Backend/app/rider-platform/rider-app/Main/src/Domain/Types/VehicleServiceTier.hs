@@ -23,7 +23,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Utils.GenericPretty
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
-data VehicleServiceTierType = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | ECO | COMFY | PREMIUM | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR
+data VehicleServiceTierType = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | ECO | COMFY | PREMIUM | BIKE | PREMIUM_SEDAN | BLACK | BLACK_XL | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR
   deriving
     ( Show,
       Eq,
@@ -53,6 +53,9 @@ castServiceTierToVariant TAXI_PLUS = VehicleVariant.TAXI_PLUS
 castServiceTierToVariant ECO = VehicleVariant.HATCHBACK
 castServiceTierToVariant COMFY = VehicleVariant.SEDAN
 castServiceTierToVariant PREMIUM = VehicleVariant.SEDAN
+castServiceTierToVariant PREMIUM_SEDAN = VehicleVariant.PREMIUM_SEDAN
+castServiceTierToVariant BLACK = VehicleVariant.BLACK
+castServiceTierToVariant BLACK_XL = VehicleVariant.BLACK_XL
 castServiceTierToVariant BIKE = VehicleVariant.BIKE
 castServiceTierToVariant AMBULANCE_TAXI = VehicleVariant.AMBULANCE_TAXI
 castServiceTierToVariant AMBULANCE_TAXI_OXY = VehicleVariant.AMBULANCE_TAXI_OXY
@@ -67,6 +70,9 @@ castVariantToServiceTier VehicleVariant.HATCHBACK = HATCHBACK
 castVariantToServiceTier VehicleVariant.AUTO_RICKSHAW = AUTO_RICKSHAW
 castVariantToServiceTier VehicleVariant.TAXI = TAXI
 castVariantToServiceTier VehicleVariant.TAXI_PLUS = TAXI_PLUS
+castVariantToServiceTier VehicleVariant.BLACK = BLACK
+castVariantToServiceTier VehicleVariant.BLACK_XL = BLACK_XL
+castVariantToServiceTier VehicleVariant.PREMIUM_SEDAN = PREMIUM
 castVariantToServiceTier VehicleVariant.BIKE = BIKE
 castVariantToServiceTier VehicleVariant.AMBULANCE_TAXI = AMBULANCE_TAXI
 castVariantToServiceTier VehicleVariant.AMBULANCE_TAXI_OXY = AMBULANCE_TAXI_OXY
@@ -84,6 +90,9 @@ castServiceTierToCategory TAXI_PLUS = BecknConfig.CAB
 castServiceTierToCategory ECO = BecknConfig.CAB
 castServiceTierToCategory COMFY = BecknConfig.CAB
 castServiceTierToCategory PREMIUM = BecknConfig.CAB
+castServiceTierToCategory PREMIUM_SEDAN = BecknConfig.CAB
+castServiceTierToCategory BLACK = BecknConfig.CAB
+castServiceTierToCategory BLACK_XL = BecknConfig.CAB
 castServiceTierToCategory BIKE = BecknConfig.MOTORCYCLE
 castServiceTierToCategory AMBULANCE_TAXI = BecknConfig.AMBULANCE
 castServiceTierToCategory AMBULANCE_TAXI_OXY = BecknConfig.AMBULANCE

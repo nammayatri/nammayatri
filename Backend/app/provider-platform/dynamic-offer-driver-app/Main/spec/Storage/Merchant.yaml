@@ -633,6 +633,9 @@ TransporterConfig:
       taxiplus: Kilometers
       bike: Kilometers
       ambulance: Kilometers
+      premiumsedan: Kilometers
+      black: Kilometers
+      blackxl: Kilometers
       derive': Generic, Show, ToJSON, FromJSON, Read
     DashboardMediaSendingLimit:
       sms: Int

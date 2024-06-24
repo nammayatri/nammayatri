@@ -447,6 +447,9 @@ calculateFareParameters params = do
             BIKE -> avgSpeedOfVehicle.bike.getKilometers
             TAXI -> avgSpeedOfVehicle.taxi.getKilometers
             TAXI_PLUS -> avgSpeedOfVehicle.taxiplus.getKilometers
+            PREMIUM_SEDAN -> avgSpeedOfVehicle.premiumsedan.getKilometers
+            BLACK -> avgSpeedOfVehicle.black.getKilometers
+            BLACK_XL -> avgSpeedOfVehicle.blackxl.getKilometers
             ECO -> avgSpeedOfVehicle.hatchback.getKilometers
             COMFY -> avgSpeedOfVehicle.sedan.getKilometers
             PREMIUM -> avgSpeedOfVehicle.sedan.getKilometers

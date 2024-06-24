@@ -212,6 +212,9 @@ castVariant Variant.SUV = (show Enums.CAB, "SUV")
 castVariant Variant.AUTO_RICKSHAW = (show Enums.AUTO_RICKSHAW, "AUTO_RICKSHAW")
 castVariant Variant.TAXI = (show Enums.CAB, "TAXI")
 castVariant Variant.TAXI_PLUS = (show Enums.CAB, "TAXI_PLUS")
+castVariant Variant.PREMIUM_SEDAN = (show Enums.CAB, "PREMIUM_SEDAN")
+castVariant Variant.BLACK = (show Enums.CAB, "BLACK")
+castVariant Variant.BLACK_XL = (show Enums.CAB, "BLACK_XL")
 castVariant Variant.BIKE = (show Enums.MOTORCYCLE, "BIKE")
 castVariant Variant.AMBULANCE_TAXI = (show Enums.AMBULANCE, "AMBULANCE_TAXI")
 castVariant Variant.AMBULANCE_TAXI_OXY = (show Enums.AMBULANCE, "AMBULANCE_TAXI_OXY")
@@ -239,6 +242,8 @@ parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "CAB", Just "SEDAN") -> Just Variant.SEDAN
   (Just "CAB", Just "SUV") -> Just Variant.SUV
   (Just "CAB", Just "HATCHBACK") -> Just Variant.HATCHBACK
+  (Just "CAB", Just "PREMIUM_SEDAN") -> Just Variant.PREMIUM_SEDAN
+  (Just "CAB", Just "BLACK") -> Just Variant.BLACK
   (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just Variant.AUTO_RICKSHAW
   (Just "CAB", Just "TAXI") -> Just Variant.TAXI
   (Just "CAB", Just "TAXI_PLUS") -> Just Variant.TAXI_PLUS
@@ -803,6 +808,9 @@ mapServiceTierToCategory serviceTier =
     DVST.COMFY -> CAB
     DVST.ECO -> CAB
     DVST.PREMIUM -> CAB
+    DVST.PREMIUM_SEDAN -> CAB
+    DVST.BLACK -> CAB
+    DVST.BLACK_XL -> CAB
     DVST.AUTO_RICKSHAW -> AUTO_RICKSHAW
     DVST.BIKE -> MOTORCYCLE
     DVST.AMBULANCE_TAXI -> AMBULANCE
@@ -1209,6 +1217,9 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
                 Variant.BIKE -> avgSpeed.bike.getKilometers
                 Variant.TAXI -> avgSpeed.taxi.getKilometers
                 Variant.TAXI_PLUS -> avgSpeed.ambulance.getKilometers
+                Variant.PREMIUM_SEDAN -> avgSpeed.premiumsedan.getKilometers
+                Variant.BLACK -> avgSpeed.black.getKilometers
+                Variant.BLACK_XL -> avgSpeed.blackxl.getKilometers
                 Variant.AMBULANCE_TAXI -> avgSpeed.ambulance.getKilometers
                 Variant.AMBULANCE_TAXI_OXY -> avgSpeed.ambulance.getKilometers
                 Variant.AMBULANCE_AC -> avgSpeed.ambulance.getKilometers

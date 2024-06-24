@@ -869,6 +869,9 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               SV.SEDAN -> [DVST.SEDAN, DVST.COMFY] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
               SV.SUV -> [DVST.SUV] <> [DVST.SEDAN | canDowngradeToSedan] <> [DVST.COMFY | canDowngradeToSedan] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
               SV.TAXI_PLUS -> [DVST.TAXI_PLUS]
+              SV.PREMIUM_SEDAN -> [DVST.PREMIUM_SEDAN]
+              SV.BLACK -> [DVST.BLACK]
+              SV.BLACK_XL -> [DVST.BLACK_XL]
               SV.BIKE -> [DVST.BIKE]
               SV.AMBULANCE_TAXI -> [DVST.AMBULANCE_TAXI] -- deprecated, only for compilation
               SV.AMBULANCE_TAXI_OXY -> [DVST.AMBULANCE_TAXI_OXY]
