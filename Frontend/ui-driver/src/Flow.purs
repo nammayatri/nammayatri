@@ -62,7 +62,7 @@ import Domain.Payments (PaymentStatus(..))
 import Effect (Effect)
 import Effect.Aff (makeAff, nonCanceler, launchAff, launchAff_)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn1, runEffectFn5, runEffectFn2, runEffectFn9, runEffectFn10)
+import Effect.Uncurried (runEffectFn1, runEffectFn5, runEffectFn2, runEffectFn3, runEffectFn9, runEffectFn10)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, getNewIDWithTag, getVersionByKey, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, markPerformance, setEventTimestamp, getTimeStampObject)
 import Engineering.Helpers.Commons as EHC
@@ -148,9 +148,11 @@ import Engineering.Helpers.API as EHA
 import LocalStorage.Cache (getValueFromCache)
 import Effect.Unsafe (unsafePerformEffect)
 import Common.Types.App as CTA
+import AssetsProvider (renewFile)
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
+    lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.5/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
     liftFlowBT $ markPerformance "BASE_APP_FLOW_START"
     liftFlowBT $ Events.endMeasuringDuration "Flow.mainFlow"
     liftFlowBT $ Events.initMeasuringDuration "Flow.baseAppFlow"

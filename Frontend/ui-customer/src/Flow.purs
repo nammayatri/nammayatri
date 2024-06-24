@@ -51,7 +51,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (Milliseconds(..), makeAff, nonCanceler, launchAff)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn9)
+import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn9, runEffectFn3)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, getExpiryTime, convertUTCtoISC, getCurrentUTC, getWindowVariable, flowRunner, resetIdMap, markPerformance, splitString)
 import Engineering.Helpers.Commons as EHC
@@ -211,9 +211,11 @@ import Screens.Types (FareProductType(..)) as FPT
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Helpers.TipConfig (isTipEnabled, setTipViewData)
 import Presto.Core.Types.API (ErrorResponse(..))
+import AssetsProvider (renewFile)
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
+  lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.5/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
   liftFlowBT $ markPerformance "BASE_APP_FLOW"
   checkVersion
   baseAppStorage -- TODO:: Restructure the files and names
