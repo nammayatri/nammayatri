@@ -34,13 +34,13 @@ import qualified "rider-app" Domain.Types.Booking as SRB
 import qualified "rider-app" Domain.Types.Booking.API as DB
 import qualified "rider-app" Domain.Types.Estimate as DEstimate
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "rider-app" Domain.Types.MerchantPaymentMethod as DMPM
 import qualified "rider-app" Domain.Types.Person as DP
 import qualified "rider-app" Domain.Types.Quote as Quote
 import qualified "rider-app" Domain.Types.RegistrationToken as DTR
 import qualified "rider-app" Domain.Types.SearchRequest as SSR
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
+import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess (APISuccess)
@@ -96,7 +96,7 @@ data SelectAPIs = SelectAPIs
   }
 
 newtype ConfirmAPIs = ConfirmAPIs
-  { rconfirm :: Id DP.Person -> Id Quote.Quote -> Maybe (Id DMPM.MerchantPaymentMethod) -> Euler.EulerClient UC.ConfirmRes
+  { rconfirm :: Id DP.Person -> Id Quote.Quote -> Maybe Payment.PaymentMethodId -> Euler.EulerClient UC.ConfirmRes
   }
 
 data BookingAPIs = BookingAPIs

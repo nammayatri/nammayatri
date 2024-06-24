@@ -86,3 +86,8 @@ ALTER TABLE atlas_app.ride ADD COLUMN toll_confidence text ;
 
 ALTER TABLE atlas_app.ride ADD COLUMN payment_done boolean ;
 ALTER TABLE atlas_app.ride ADD COLUMN driver_account_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN online_payment boolean ;

@@ -9,6 +9,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.SearchRequest
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
+import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -19,7 +20,6 @@ import Tools.Beam.UtilsTH
 data SearchRequestT f = SearchRequestT
   { autoAssignEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     autoAssignEnabledV2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    availablePaymentMethods :: B.C f [Kernel.Prelude.Text],
     backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -50,7 +50,7 @@ data SearchRequestT f = SearchRequestT
     riderId :: B.C f Kernel.Prelude.Text,
     riderPreferredOption :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequest.RiderPreferredOption),
     roundTrip :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    selectedPaymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    selectedPaymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
     startTime :: B.C f Kernel.Prelude.UTCTime,
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     validTill :: B.C f Kernel.Prelude.UTCTime

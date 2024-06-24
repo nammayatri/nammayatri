@@ -321,6 +321,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       distanceUnit = booking.distanceUnit
       paymentDone = False
       driverAccountId = Nothing
+      onlinePayment = maybe False (.onlinePayment) mbMerchant
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::

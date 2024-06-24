@@ -291,5 +291,5 @@ ticketStatusCallBack req identifier = do
 transformKaptureStatus :: BeamFlow m r => Common.TicketStatusCallBackReq -> m IssueStatus
 transformKaptureStatus req = case req.status of
   "Complete" -> return RESOLVED
-  "Pending" -> return PENDING_INTERNAL
+  "Pending" -> return PENDING_EXTERNAL
   _ -> throwError $ InvalidRequest ("Invalid ticket status " <> req.status <> " for ticket id " <> req.ticketId)

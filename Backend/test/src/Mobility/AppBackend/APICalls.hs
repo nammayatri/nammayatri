@@ -27,11 +27,11 @@ import qualified "rider-app" Domain.Types.Booking.API as AbeBooking
 import qualified "rider-app" Domain.Types.CancellationReason as AbeCRC
 import qualified "rider-app" Domain.Types.Client as DC
 import qualified "rider-app" Domain.Types.Estimate as AbeEstimate
-import qualified "rider-app" Domain.Types.MerchantPaymentMethod as AppMPM
 import qualified "rider-app" Domain.Types.Quote as AbeQuote
 import qualified "rider-app" Domain.Types.RegistrationToken as AppSRT
 import qualified "rider-app" Domain.Types.Ride as BRide
 import EulerHS.Prelude
+import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods (..))
 import Kernel.Types.APISuccess
 import Kernel.Types.App
@@ -55,7 +55,7 @@ mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 mkAppCancelReq stage =
   CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing Nothing
 
-appConfirmRide :: Text -> Id AbeQuote.Quote -> Maybe (Id AppMPM.MerchantPaymentMethod) -> ClientM ConfirmAPI.ConfirmRes
+appConfirmRide :: Text -> Id AbeQuote.Quote -> Maybe Payment.PaymentMethodId -> ClientM ConfirmAPI.ConfirmRes
 appConfirmRide = client (Proxy :: Proxy ConfirmAPI.API)
 
 knowYourDriver :: Text -> Id BRide.Ride -> ClientM AppFeedback.DriverProfileResponse

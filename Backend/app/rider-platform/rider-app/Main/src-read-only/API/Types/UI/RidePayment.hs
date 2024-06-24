@@ -7,8 +7,11 @@ import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Servant
 import Tools.Auth
+
+newtype AddTipRequest = AddTipRequest {amount :: Kernel.Types.Common.PriceAPIEntity} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data PaymentIntentResponse = PaymentIntentResponse {customerId :: Kernel.External.Payment.Interface.Types.CustomerId, ephemeralKey :: Kernel.Prelude.Text, paymentIntentClientSecret :: Kernel.Prelude.Text}
   deriving (Generic, ToJSON, FromJSON, ToSchema)

@@ -144,4 +144,4 @@ validateRequest (BookingConfirmed BookingConfirmedInfo {..}) _txnId = do
 validateRequest (RideAssigned RideAssignedInfo {..}) transactionId = do
   let bookingDetails = DCommon.BookingDetails {otp = rideOtp, isInitiatedByCronJob = False, ..}
   booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
-  return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {..}
+  return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {onlinePaymentParameters = Nothing, ..}

@@ -56,6 +56,7 @@ Ride:
       isFreeRide: Maybe Bool
       startOdometerReading: Maybe Centesimal
       endOdometerReading: Maybe Centesimal
+      onlinePayment: Bool
       createdAt: UTCTime
       updatedAt: UTCTime
       bppRideId: Id BPPRide
@@ -110,6 +111,7 @@ Ride:
     showDriversPreviousRideDropLoc: Bool
     paymentDone: Bool
     driverAccountId: Maybe AccountId
+    onlinePayment: Bool
     tollConfidence: Maybe Confidence
 
   sqlType:
@@ -179,6 +181,7 @@ Ride:
     showDriversPreviousRideDropLoc: Kernel.Prelude.fromMaybe False showDriversPreviousRideDropLoc|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
     paymentDone: Kernel.Prelude.fromMaybe True paymentDone|E
+    onlinePayment: Kernel.Prelude.fromMaybe False onlinePayment|E
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -201,6 +204,7 @@ Ride:
     driversPreviousRideDropLon: Kernel.Prelude.fmap (.lon)|I
     showDriversPreviousRideDropLoc: Kernel.Prelude.Just showDriversPreviousRideDropLoc|E
     paymentDone: Kernel.Prelude.Just paymentDone|E
+    onlinePayment: Kernel.Prelude.Just onlinePayment|E
   beamType:
     fare: Maybe HighPrecMoney
     totalFare: Maybe HighPrecMoney
@@ -211,6 +215,7 @@ Ride:
     backendConfigVersion: Maybe Text
     showDriversPreviousRideDropLoc : Maybe Bool
     paymentDone: Maybe Bool
+    onlinePayment: Maybe Bool
 
   constraints:
     id: PrimaryKey

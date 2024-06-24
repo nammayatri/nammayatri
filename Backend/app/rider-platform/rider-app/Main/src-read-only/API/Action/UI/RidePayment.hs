@@ -61,6 +61,9 @@ type API =
            "rideId"
            (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
       :> "addTip"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.RidePayment.AddTipRequest
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
@@ -107,6 +110,7 @@ postPaymentAddTip ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+    API.Types.UI.RidePayment.AddTipRequest ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postPaymentAddTip a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.postPaymentAddTip (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postPaymentAddTip a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.postPaymentAddTip (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

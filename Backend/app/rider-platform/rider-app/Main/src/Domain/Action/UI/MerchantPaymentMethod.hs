@@ -14,6 +14,3 @@ data PaymentMethodAPIEntity = PaymentMethodAPIEntity
     collectedBy :: PaymentCollector
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
-mkPaymentMethodAPIEntity :: MerchantPaymentMethod -> PaymentMethodAPIEntity
-mkPaymentMethodAPIEntity MerchantPaymentMethod {..} = PaymentMethodAPIEntity {..}

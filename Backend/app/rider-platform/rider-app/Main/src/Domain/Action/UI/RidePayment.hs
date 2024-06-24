@@ -4,6 +4,7 @@
 module Domain.Action.UI.RidePayment where
 
 import qualified API.Types.UI.RidePayment
+import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -15,9 +16,13 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.External.Payment.Interface.Types
 import qualified Kernel.Prelude
 import Kernel.Types.APISuccess
+import Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified SharedLogic.Payment as Payment
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
@@ -48,6 +53,10 @@ getPaymentMethods (mbPersonId, _) = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   customerPaymentId <- getCustomerPaymentId person
   resp <- Payment.getCardList person.merchantId person.merchantOperatingCityId customerPaymentId -- TODO: Add pagination, do we need to store the card details in our DB?
+  let savedPaymentMethodIds = resp <&> (.cardId)
+  when (maybe False (\dpm -> dpm `notElem` savedPaymentMethodIds) person.defaultPaymentMethodId) $ do
+    let firstSavedPaymentMethodId = listToMaybe savedPaymentMethodIds
+    QPerson.updateDefaultPaymentMethodId firstSavedPaymentMethodId personId
   return $ API.Types.UI.RidePayment.PaymentMethodsResponse {list = resp}
 
 getPaymentIntentSetup ::
@@ -80,23 +89,6 @@ getPaymentIntentPayment ::
   )
 getPaymentIntentPayment (_mbPersonId, _) = throwError $ InternalError "Not implemented"
 
--- personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
--- person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-
--- customerPaymentId <- getCustomerPaymentId person
--- ephemeralKey <- Payment.createEphemeralKeys person.merchantId person.merchantOperatingCityId customerPaymentId
-
--- receiptEmail <- mapM decrypt person.email
--- let req = CreatePaymentIntentReq {amount = 0, currency = USD, customer = customerPaymentId, paymentMethod = "", receiptEmail, driverAccountId = ""}
--- paymentIntent <- Payment.createSetupIntent person.merchantId person.merchantOperatingCityId req
-
--- return $
---   API.Types.UI.RidePayment.PaymentIntentResponse
---     { paymentIntentClientSecret = setupIntent.clientSecret,
---       customerId = customerPaymentId,
---       ephemeralKey = ephemeralKey
---     }
-
 postPaymentMethodUpdate ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -108,9 +100,10 @@ postPaymentMethodUpdate ::
 postPaymentMethodUpdate (mbPersonId, _) rideId newPaymentMethodId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  _ <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  let paymentIntentId = "" -- fix later ride.paymentIntentId & fromMaybeM (InternalError $ "No payment intent found for the ride " <> rideId.getId)
-  Payment.updatePaymentMethodInIntent person.merchantId person.merchantOperatingCityId paymentIntentId newPaymentMethodId
+  -- check if payment method exists for the customer
+  order <- runInReplica $ QPaymentOrder.findById (Kernel.Types.Id.cast rideId) >>= fromMaybeM (InternalError $ "No payment order found for the ride " <> rideId.getId)
+  Payment.updatePaymentMethodInIntent person.merchantId person.merchantOperatingCityId order.paymentServiceOrderId newPaymentMethodId
+  -- Update booking and person default payment method
   return Success
 
 deletePaymentMethodsDelete ::
@@ -132,6 +125,18 @@ postPaymentAddTip ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+    API.Types.UI.RidePayment.AddTipRequest ->
     Environment.Flow APISuccess
   )
-postPaymentAddTip = error "Logic yet to be decided"
+postPaymentAddTip (mbPersonId, _) rideId tipRequest = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  customerPaymentId <- person.customerPaymentId & fromMaybeM (PersonFieldNotPresent "customerPaymentId")
+  paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
+  driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
+  email <- mapM decrypt person.email
+  paymentIntentResp <- Payment.makePaymentIntent person.merchantId person.merchantOperatingCityId person.id ride booking customerPaymentId paymentMethodId driverAccountId email
+  Payment.capturePaymentIntent person.merchantId person.merchantOperatingCityId paymentIntentResp.paymentIntentId tipRequest.amount.amount (HighPrecMoney 0.0)
+  return Success

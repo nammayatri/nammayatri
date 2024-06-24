@@ -20,7 +20,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common (getCurrentTime)
+import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
@@ -75,6 +75,16 @@ updateStatus orderId paymentServiceOrderId status = do
   let newStatus = maybe status (\order -> if order.status == Payment.CHARGED then order.status else status) mOrder -- don't change if status is already charged
   updateWithKV
     [ Se.Set BeamPO.status newStatus,
+      Se.Set BeamPO.paymentServiceOrderId paymentServiceOrderId,
+      Se.Set BeamPO.updatedAt now
+    ]
+    [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
+
+updateAmountAndStatus :: BeamFlow m r => Id DOrder.PaymentOrder -> HighPrecMoney -> Text -> m ()
+updateAmountAndStatus orderId amount paymentServiceOrderId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPO.amount amount,
       Se.Set BeamPO.paymentServiceOrderId paymentServiceOrderId,
       Se.Set BeamPO.updatedAt now
     ]

@@ -38,7 +38,6 @@ import Domain.Types.Booking
 import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
@@ -47,6 +46,7 @@ import Domain.Types.VehicleVariant (VehicleVariant)
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Types.Beckn.Context as Context
@@ -74,7 +74,7 @@ data DSelectReq = DSelectReq
     customerExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     autoAssignEnabled :: Bool,
     autoAssignEnabledV2 :: Maybe Bool,
-    paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
+    paymentMethodId :: Maybe Payment.PaymentMethodId,
     otherSelectedEstimates :: Maybe [Id DEstimate.Estimate],
     isAdvancedBookingEnabled :: Maybe Bool
   }
@@ -165,12 +165,15 @@ select2 personId estimateId req@DSelectReq {..} = do
   phoneNumber <- bool (pure Nothing) getPhoneNo isValueAddNP
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
+  when merchant.onlinePayment $ do
+    when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
+    QP.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
   when ((searchRequest.validTill) < now) $
     throwError SearchRequestExpired
-  _ <- QSearchRequest.updateAutoAssign searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
-  _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill}
-  _ <- QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
-  _ <- QDOffer.updateStatus DDO.INACTIVE estimateId
+  QSearchRequest.updateAutoAssign searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
+  QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill}
+  QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
+  QDOffer.updateStatus DDO.INACTIVE estimateId
   QSearchRequest.updateAdvancedBookingEnabled isAdvancedBookingEnabled searchRequestId
   let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.customerExtraFee)
   Kernel.Prelude.whenJust req.customerExtraFeeWithCurrency $ \reqWithCurrency -> do

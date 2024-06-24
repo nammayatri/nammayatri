@@ -30,6 +30,7 @@ imports:
   VehicleServiceTierType: Domain.Types.VehicleServiceTier
   HighPrecMoney: Kernel.Types.Common
   Estimate: Domain.Types.Estimate
+  PaymentMethodId: Kernel.External.Payment.Interface.Types
 
 BookingLocation:
   tableName: booking_location
@@ -147,7 +148,7 @@ Booking:
     clientId: Maybe (Id Client)
     bppBookingId: Maybe (Id BPPBooking)
     quoteId: Maybe (Id Quote)
-    paymentMethodId: Maybe (Id MerchantPaymentMethod)
+    paymentMethodId: Maybe PaymentMethodId
     paymentUrl: Maybe Text
     status: BookingStatus
     providerId: Text
@@ -167,6 +168,7 @@ Booking:
     estimatedDuration: Maybe Seconds
     discount: Maybe Price
     estimatedTotalFare: Price
+    estimatedApplicationFee: Maybe Price
     isScheduled: Bool
     vehicleServiceTierType: VehicleServiceTierType|NoRelation
     vehicleServiceTierSeatingCapacity: Maybe Int
@@ -225,6 +227,7 @@ Booking:
     discount: Maybe HighPrecMoney
     providerUrl: Text
     estimatedTotalFare: HighPrecMoney
+    estimatedApplicationFee: Maybe HighPrecMoney
     currency: Maybe Currency
     tripTermsId: Maybe Text
     isScheduled: Maybe Bool
@@ -246,6 +249,7 @@ Booking:
     estimatedFare: numeric(30,2)
     discount: numeric(30,2)
     estimatedTotalFare: numeric(30,2)
+    estimatedApplicationFee: numeric(30,2)
     distance: numeric(30,2)
     vehicleVariant: character varying(60)
     createdAt: timestamp with time zone
@@ -262,7 +266,7 @@ Booking:
     otpCode: character(4)
     transactionId: character(36)
     specialLocationTag: text
-    paymentMethodId: character(36)
+    paymentMethodId: text
     paymentUrl: text
     fulfillmentId: text
     driverId: text
@@ -302,6 +306,7 @@ Booking:
     estimatedFare: ((.amount) estimatedFare)|E
     discount: (discount <&> (.amount))|E
     estimatedTotalFare: ((.amount) estimatedTotalFare)|E
+    estimatedApplicationFee: (estimatedApplicationFee <&> (.amount))|E
     currency: (Just $ (.currency) estimatedFare)|E
     tripTermsId: (Kernel.Types.Id.getId <$> (tripTerms <&> (.id)))|E
     isScheduled: (Just isScheduled)|E
@@ -330,6 +335,7 @@ Booking:
     estimatedFare: (Kernel.Types.Common.mkPrice currency estimatedFare)|E
     discount: (Kernel.Types.Common.mkPrice currency <$> discount)|E
     estimatedTotalFare: (Kernel.Types.Common.mkPrice currency estimatedTotalFare)|E
+    estimatedApplicationFee: (Kernel.Types.Common.mkPrice currency <$> estimatedApplicationFee)|E
     isScheduled: (fromMaybe False isScheduled)|E
     estimatedDistance: Kernel.Utils.Common.mkDistanceWithDefault distanceUnit estimatedDistanceValue <$> estimatedDistance|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I

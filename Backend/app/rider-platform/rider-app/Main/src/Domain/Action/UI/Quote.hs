@@ -66,7 +66,6 @@ import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
 import qualified SharedLogic.PublicTransport as PublicTransport
 import qualified Storage.CachedQueries.BppDetails as CQBPP
-import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
@@ -196,14 +195,13 @@ getQuotes searchRequestId = do
   Redis.withLockRedisAndReturnValue lockKey 5 $ do
     offers <- getOffers searchRequest
     estimates <- getEstimates searchRequestId
-    paymentMethods <- getPaymentMethods searchRequest
     return $
       GetQuotesRes
         { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,
           toLocation = DL.makeLocationAPIEntity <$> searchRequest.toLocation,
           quotes = offers,
           estimates,
-          paymentMethods
+          paymentMethods = []
         }
 
 processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Booking -> CancellationStage -> m ()
@@ -280,10 +278,3 @@ sortByEstimatedFare :: (HasField "estimatedFare" r Price) => [r] -> [r]
 sortByEstimatedFare resultList = do
   let sortFunc = compare `on` (.estimatedFare.amount)
   sortBy sortFunc resultList
-
-getPaymentMethods :: (CacheFlow m r, EsqDBFlow m r) => SSR.SearchRequest -> m [DMPM.PaymentMethodAPIEntity]
-getPaymentMethods searchRequest = do
-  let merchantOperatingCityId = searchRequest.merchantOperatingCityId
-  allMerchantPaymentMethods <- CQMPM.findAllByMerchantOperatingCityId merchantOperatingCityId
-  let availablePaymentMethods = filter (\mpm -> mpm.id `elem` searchRequest.availablePaymentMethods) allMerchantPaymentMethods
-  pure $ DMPM.mkPaymentMethodAPIEntity <$> availablePaymentMethods

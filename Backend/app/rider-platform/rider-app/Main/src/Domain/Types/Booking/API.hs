@@ -19,14 +19,12 @@ import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 
 import qualified Domain.Action.UI.FareBreakup as DAFareBreakup
 import qualified Domain.Action.UI.Location as SLoc
-import qualified Domain.Action.UI.MerchantPaymentMethod as DMPM
 import Domain.Types.Booking
 import qualified Domain.Types.BppDetails as DBppDetails
 import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.FareBreakup
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.Location (LocationAPIEntity)
-import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as Person
 import Domain.Types.Ride (Ride (..), RideAPIEntity (..))
 import qualified Domain.Types.Ride as DRide
@@ -34,6 +32,7 @@ import Domain.Types.Sos as DSos
 import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id, length, null)
 import Kernel.Beam.Functions
+import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -42,7 +41,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
-import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.FareBreakup as QFareBreakup
@@ -83,7 +81,7 @@ data BookingAPIEntity = BookingAPIEntity
     merchantExoPhone :: Text,
     specialLocationTag :: Maybe Text,
     specialLocationName :: Maybe Text,
-    paymentMethod :: Maybe DMPM.PaymentMethodAPIEntity,
+    paymentMethodId :: Maybe Payment.PaymentMethodId,
     paymentUrl :: Maybe Text,
     hasDisability :: Maybe Bool,
     sosStatus :: Maybe DSos.SosStatus,
@@ -152,7 +150,7 @@ makeBookingAPIEntity ::
   [FareBreakup] ->
   [FareBreakup] ->
   Maybe DExophone.Exophone ->
-  Maybe DMPM.MerchantPaymentMethod ->
+  Maybe Payment.PaymentMethodId ->
   Maybe Bool ->
   Bool ->
   Maybe DSos.SosStatus ->
@@ -160,7 +158,7 @@ makeBookingAPIEntity ::
   Bool ->
   Bool ->
   BookingAPIEntity
-makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone mbPaymentMethod hasDisability hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon = do
+makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasDisability hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon = do
   let bookingDetails = mkBookingAPIDetails booking.bookingDetails
       providerNum = fromMaybe "+91" bppDetails.supportNumber
   BookingAPIEntity
@@ -192,7 +190,7 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
       merchantExoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
       specialLocationTag = booking.specialLocationTag,
       specialLocationName = booking.specialLocationName,
-      paymentMethod = DMPM.mkPaymentMethodAPIEntity <$> mbPaymentMethod,
+      paymentMethodId = paymentMethodId,
       paymentUrl = booking.paymentUrl,
       createdAt = booking.createdAt,
       updatedAt = booking.updatedAt,
@@ -272,15 +270,11 @@ buildBookingAPIEntity booking personId = do
   estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
-  let merchantOperatingCityId = booking.merchantOperatingCityId
   mbSosStatus <- getActiveSos mbActiveRide personId
-  mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-    CQMPM.findByIdAndMerchantOperatingCityId paymentMethodId merchantOperatingCityId
-      >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   let showPrevDropLocationLatLon = maybe False (.showDriversPreviousRideDropLoc) mbRide
-  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone mbPaymentMethod person.hasDisability False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon
+  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId person.hasDisability False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon
 
 -- TODO move to Domain.Types.Ride.Extra
 makeRideAPIEntity :: Ride -> RideAPIEntity

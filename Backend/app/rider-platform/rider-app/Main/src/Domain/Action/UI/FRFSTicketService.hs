@@ -485,6 +485,7 @@ makeTicketBookingPaymentAPIStatus COD_INITIATED = FRFSTicketService.REFUNDED
 makeTicketBookingPaymentAPIStatus STARTED = FRFSTicketService.PENDING
 makeTicketBookingPaymentAPIStatus AUTO_REFUNDED = FRFSTicketService.REFUNDED
 makeTicketBookingPaymentAPIStatus CLIENT_AUTH_TOKEN_EXPIRED = FRFSTicketService.FAILURE
+makeTicketBookingPaymentAPIStatus CANCELLED = FRFSTicketService.FAILURE
 
 cancelFRFSTicketBooking :: DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow ()
 cancelFRFSTicketBooking booking = do

@@ -64,3 +64,13 @@ ALTER TABLE atlas_app.search_request ADD COLUMN return_time timestamp with time 
 
 ALTER TABLE atlas_app.search_request ADD COLUMN round_trip boolean ;
 ALTER TABLE atlas_app.search_request ADD COLUMN is_advance_booking_enabled boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ALTER COLUMN selected_payment_method_id TYPE text;
+
+--- Drop columns section begins. Please be careful while running ---
+ALTER TABLE atlas_app.search_request DROP COLUMN available_payment_methods;
+--- Drop columns section ends ---

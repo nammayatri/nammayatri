@@ -18,11 +18,11 @@ import qualified "rider-app" API.Dashboard.RideBooking.Confirm as BAP
 import qualified "rider-app" API.UI.Confirm as UC
 import qualified Dashboard.RiderPlatform.Customer as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "rider-app" Domain.Types.MerchantPaymentMethod as DMPM
 import qualified "rider-app" Domain.Types.Person as DP
 import qualified "rider-app" Domain.Types.Quote as Quote
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
+import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
@@ -53,7 +53,7 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.ConfirmAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
-callConfirm :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Id Quote.Quote -> Maybe (Id DMPM.MerchantPaymentMethod) -> FlowHandler UC.ConfirmRes
+callConfirm :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Id Quote.Quote -> Maybe Payment.PaymentMethodId -> FlowHandler UC.ConfirmRes
 callConfirm merchantShortId opCity apiTokenInfo personId quoteId mbMerchantPaymentId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.ConfirmEndPoint apiTokenInfo T.emptyRequest

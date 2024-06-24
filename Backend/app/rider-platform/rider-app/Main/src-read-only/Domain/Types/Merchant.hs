@@ -47,6 +47,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     minimumDriverRatesCount :: Kernel.Prelude.Int,
     name :: Kernel.Prelude.Text,
     numOfAllowedEditPickupLocationAttemptsThreshold :: Kernel.Prelude.Int,
+    onlinePayment :: Kernel.Prelude.Bool,
     publicMediaFileUrlPattern :: Kernel.Prelude.Text,
     registryUrl :: Kernel.Types.Common.BaseUrl,
     scheduleRideBufferTime :: Kernel.Prelude.NominalDiffTime,

@@ -18,10 +18,10 @@ module API.Dashboard.RideBooking.Confirm where
 
 import qualified API.UI.Confirm as UC
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as Quote
 import Environment
+import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
@@ -45,14 +45,14 @@ type CustomerConfirmAPI =
     :> "quotes"
     :> Capture "quoteId" (Id Quote.Quote)
     :> "confirm"
-    :> QueryParam "paymentMethodId" (Id DMPM.MerchantPaymentMethod)
+    :> QueryParam "paymentMethodId" Payment.PaymentMethodId
     :> Post '[JSON] UC.ConfirmRes
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler =
   callConfirm
 
-callConfirm :: ShortId DM.Merchant -> Id DP.Person -> Id Quote.Quote -> Maybe (Id DMPM.MerchantPaymentMethod) -> FlowHandler UC.ConfirmRes
+callConfirm :: ShortId DM.Merchant -> Id DP.Person -> Id Quote.Quote -> Maybe Payment.PaymentMethodId -> FlowHandler UC.ConfirmRes
 callConfirm merchantId personId quote mbPaymentMethodId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
   UC.confirm (personId, m.id) quote mbPaymentMethodId

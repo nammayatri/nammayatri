@@ -52,6 +52,7 @@ data MerchantT f = MerchantT
     minimumDriverRatesCount :: B.C f Kernel.Prelude.Int,
     name :: B.C f Kernel.Prelude.Text,
     numOfAllowedEditPickupLocationAttemptsThreshold :: B.C f Kernel.Prelude.Int,
+    onlinePayment :: B.C f Kernel.Prelude.Bool,
     publicMediaFileUrlPattern :: B.C f Kernel.Prelude.Text,
     registryUrl :: B.C f Kernel.Prelude.Text,
     scheduleRideBufferTime :: B.C f Kernel.Types.Common.Seconds,

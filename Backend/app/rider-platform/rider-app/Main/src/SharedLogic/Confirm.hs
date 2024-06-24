@@ -33,6 +33,7 @@ import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto.Config
@@ -45,7 +46,6 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -61,7 +61,7 @@ import TransactionLogs.Types
 data DConfirmReq = DConfirmReq
   { personId :: Id DP.Person,
     quote :: DQuote.Quote,
-    paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod)
+    paymentMethodId :: Maybe Payment.PaymentMethodId
   }
 
 data DConfirmRes = DConfirmRes
@@ -126,6 +126,10 @@ confirm DConfirmReq {..} = do
       DQuote.OneWaySpecialZoneDetails details -> pure (Just details.quoteId, Nothing)
       DQuote.InterCityDetails details -> pure (Just details.id.getId, Nothing)
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
+  merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
+  when merchant.onlinePayment $ do
+    when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
+    QPerson.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
   activeBooking <- QRideB.findLatestByRiderId personId
   scheduledBookings <- QRideB.findByRiderIdAndStatus personId [DRB.CONFIRMED]
   let searchDist = round $ fromMaybe 0 $ distanceToHighPrecMeters <$> searchRequest.distance
@@ -143,7 +147,6 @@ confirm DConfirmReq {..} = do
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
-  merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   let isScheduled = merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
   booking <- buildBooking searchRequest mbEstimateId fulfillmentId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -155,18 +158,10 @@ confirm DConfirmReq {..} = do
   let riderName = person.firstName
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   details <- mkConfirmQuoteDetails quote.quoteDetails fulfillmentId
-  paymentMethod <- forM paymentMethodId $ \paymentMethodId' -> do
-    paymentMethod <-
-      CQMPM.findByIdAndMerchantOperatingCityId paymentMethodId' merchantOperatingCityId
-        >>= fromMaybeM (MerchantPaymentMethodDoesNotExist paymentMethodId'.getId)
-    unless (paymentMethodId' `elem` searchRequest.availablePaymentMethods) $
-      throwError (InvalidRequest "Payment method not allowed")
-    pure paymentMethod
   let fareProduct = QTB.getFareProductType booking.bookingDetails
-  -- DB.runTransaction $ do
-  _ <- QRideB.createBooking booking
-  _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just fareProduct}
-  _ <- QEstimate.updateStatusByRequestId DEstimate.COMPLETED quote.requestId
+  void $ QRideB.createBooking booking
+  void $ QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just fareProduct}
+  void $ QEstimate.updateStatusByRequestId DEstimate.COMPLETED quote.requestId
   QPFS.clearCache searchRequest.riderId
   return $
     DConfirmRes
@@ -180,15 +175,12 @@ confirm DConfirmReq {..} = do
         quoteDetails = details,
         searchRequestId = searchRequest.id,
         maxEstimatedDistance = searchRequest.maxDistance,
-        paymentMethodInfo = mkPaymentMethodInfo <$> paymentMethod,
+        paymentMethodInfo = Nothing, -- can be removed later
         ..
       }
   where
     prependZero :: Text -> Text
     prependZero str = "0" <> str
-
-    mkPaymentMethodInfo :: DMPM.MerchantPaymentMethod -> DMPM.PaymentMethodInfo
-    mkPaymentMethodInfo DMPM.MerchantPaymentMethod {..} = DMPM.PaymentMethodInfo {..}
 
     mkConfirmQuoteDetails quoteDetails fulfillmentId = do
       case quoteDetails of
@@ -219,7 +211,7 @@ buildBooking ::
   DExophone.Exophone ->
   UTCTime ->
   Maybe Text ->
-  Maybe (Id DMPM.MerchantPaymentMethod) ->
+  Maybe Payment.PaymentMethodId ->
   Bool ->
   m DRB.Booking
 buildBooking searchRequest mbEstimateId mbFulfillmentId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled = do
@@ -251,6 +243,7 @@ buildBooking searchRequest mbEstimateId mbFulfillmentId quote fromLoc mbToLoc ex
         estimatedFare = quote.estimatedFare,
         discount = quote.discount,
         estimatedTotalFare = quote.estimatedTotalFare,
+        estimatedApplicationFee = Nothing,
         estimatedDistance = searchRequest.distance,
         estimatedDuration = searchRequest.estimatedRideDuration,
         bookingDetails,

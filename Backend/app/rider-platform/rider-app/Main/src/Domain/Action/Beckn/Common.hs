@@ -35,7 +35,9 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Beam.Functions
 import Kernel.Beam.Functions as B
+import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Maps as Maps
+import Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -49,6 +51,7 @@ import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.MerchantConfig as SMC
+import SharedLogic.Payment as SPayment
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -89,13 +92,23 @@ data RideAssignedReq = RideAssignedReq
     transactionId :: Text,
     isDriverBirthDay :: Bool,
     isFreeRide :: Bool,
+    driverAccountId :: Maybe Payment.AccountId,
     previousRideEndPos :: Maybe LatLong
+  }
+
+data OnlinePaymentParameters = OnlinePaymentParameters
+  { paymentMethodId :: Payment.PaymentMethodId,
+    customerPaymentId :: Payment.CustomerId,
+    driverAccountId :: Payment.AccountId,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    email :: Maybe Text
   }
 
 data ValidatedRideAssignedReq = ValidatedRideAssignedReq
   { bookingDetails :: BookingDetails,
     isDriverBirthDay :: Bool,
     isFreeRide :: Bool,
+    onlinePaymentParameters :: Maybe OnlinePaymentParameters,
     previousRideEndPos :: Maybe LatLong,
     booking :: DRB.Booking,
     fareParams :: Maybe [DFareBreakup]
@@ -226,6 +239,11 @@ rideAssignedReqHandler req = do
   mbMerchant <- CQM.findById booking.merchantId
   now <- getCurrentTime
   ride <- buildRide mbMerchant booking req.bookingDetails req.previousRideEndPos now
+
+  whenJust req.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
+    -- handle error flow properly
+    void $ SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.riderId ride booking customerPaymentId paymentMethodId driverAccountId email
+
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
   let category = case booking.specialLocationTag of
         Just _ -> "specialLocation"
@@ -233,10 +251,10 @@ rideAssignedReqHandler req = do
   incrementRideCreatedRequestCount booking.merchantId.getId booking.merchantOperatingCityId.getId category
   let fareParams = fromMaybe [] req.fareParams
   fareBreakups <- traverse (buildFareBreakupV2 req.booking.id.getId DFareBreakup.BOOKING) fareParams
-  _ <- QFareBreakup.createMany fareBreakups
-  _ <- QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
-  _ <- QRide.createRide ride
-  _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
+  QFareBreakup.createMany fareBreakups
+  QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
+  QRide.createRide ride
+  QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
   unless isInitiatedByCronJob $ do
     Notify.notifyOnRideAssigned booking ride
@@ -260,6 +278,7 @@ rideAssignedReqHandler req = do
             DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
             DRB.InterCityDetails details -> Just details.toLocation
       let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
+      let onlinePayment = maybe False (.onlinePayment) mbMerchant
       return
         DRide.Ride
           { id = guid,
@@ -296,10 +315,11 @@ rideAssignedReqHandler req = do
             showDriversPreviousRideDropLoc = isJust previousRideEndPos,
             tollConfidence = Nothing,
             distanceUnit = booking.distanceUnit,
-            driverAccountId = Nothing,
+            driverAccountId = req.onlinePaymentParameters <&> (.driverAccountId),
             paymentDone = False,
             ..
           }
+
     notifyRideRelatedNotificationOnEvent booking ride now timeDiffEvent = do
       rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId timeDiffEvent
       forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now)
@@ -563,6 +583,7 @@ mkBookingCancellationReason booking mbRideId cancellationSource = do
 validateRideAssignedReq ::
   ( CacheFlow m r,
     EsqDBFlow m r,
+    EncFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
@@ -572,7 +593,20 @@ validateRideAssignedReq ::
   m ValidatedRideAssignedReq
 validateRideAssignedReq RideAssignedReq {..} = do
   booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
+  mbMerchant <- CQM.findById booking.merchantId
+  let onlinePayment = maybe False (.onlinePayment) mbMerchant
   unless (isAssignable booking) $ throwError (BookingInvalidStatus $ show booking.status)
+  onlinePaymentParameters <-
+    if onlinePayment
+      then do
+        person <- runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+        customerPaymentId <- person.customerPaymentId & fromMaybeM (CustomerPaymentIdNotFound booking.riderId.getId)
+        paymentMethodId <- booking.paymentMethodId & fromMaybeM (PaymentMethodIdNotFound booking.id.getId)
+        driverAccountId_ <- driverAccountId & fromMaybeM (DriverAccountIdNotFound booking.id.getId)
+        let merchantOperatingCityId = person.merchantOperatingCityId
+        email <- mapM decrypt person.email
+        return $ Just OnlinePaymentParameters {driverAccountId = driverAccountId_, ..}
+      else return Nothing
   return $ ValidatedRideAssignedReq {fareParams = Nothing, ..}
   where
     isAssignable booking = booking.status `elem` [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW]
