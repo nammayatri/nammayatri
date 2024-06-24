@@ -20,6 +20,7 @@ import PrestoDOM as PD
 import Prelude
 import Data.Array as DA
 import Data.Foldable (foldl)
+import Data.Number (pi, cos)
 import Data.Tuple (Tuple(..))
 import Data.Int (pow)
 import Data.Function.Uncurried (Fn3(..), runFn3)
@@ -98,6 +99,15 @@ pseudoRandomInt seed =
   let newSeed = (seed * 1103515245 + 12345) `mod` (2 `pow` 31)
       value = newSeed `mod` 100
   in Tuple newSeed value
+
+calculateNearbyLocation :: Number -> Number -> {nearByLat:: Number,nearByLon:: Number}
+calculateNearbyLocation lat lon =
+    let
+        distanceInDegrees = 50.0 / 111111.0
+        newLat = lat + distanceInDegrees
+        newLon = lon + distanceInDegrees / cos (lat * pi / 180.0)
+    in
+        {nearByLat: newLat, nearByLon: newLon}
 
 shuffleArray :: forall a. Int -> Array a -> Array a
 shuffleArray seed arr =
