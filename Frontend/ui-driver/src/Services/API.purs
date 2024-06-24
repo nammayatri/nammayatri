@@ -592,7 +592,7 @@ newtype RidesInfo = RidesInfo
       driverName :: String,
       driverSelectedFare :: Int,
       chargeableDistance :: Maybe Int,
-      actualRideDistance :: Maybe Int,
+      actualRideDistance :: Maybe Number,
       vehicleVariant :: String,
       estimatedBaseFare :: Int,
       vehicleColor :: String,
