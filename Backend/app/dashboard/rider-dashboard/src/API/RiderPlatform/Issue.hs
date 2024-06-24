@@ -59,7 +59,6 @@ type API =
            :<|> CreateIssueOptionAPI
            :<|> UpdateIssueOptionAPI
            :<|> UpsertIssueMessageAPI
-           :<|> IssueMessageMediaFileUploadAPI
        )
 
 type IssueCategoryListAPI =
@@ -114,10 +113,6 @@ type UpsertIssueMessageAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'ISSUE 'UPSERT_ISSUE_MESSAGE
     :> Common.UpsertIssueMessageAPI
 
-type IssueMessageMediaFileUploadAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'ISSUE 'UPLOAD_ISSUE_MESSAGE_MEDIA_FILES
-    :> Common.IssueMessageMediaFileUploadAPI
-
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   issueCategoryList merchantId city
@@ -133,7 +128,6 @@ handler merchantId city =
     :<|> createIssueOption merchantId city
     :<|> updateIssueOption merchantId city
     :<|> upsertIssueMessage merchantId city
-    :<|> uploadIssueMessageMediaFiles merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -226,17 +220,11 @@ updateIssueOption merchantShortId opCity apiTokenInfo issueOptionId req = withFl
   transaction <- buildTransaction Common.UpdateIssueOptionEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.issuesV2.updateIssueOption) issueOptionId req
 
-upsertIssueMessage :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id IssueMessage) -> Common.UpsertIssueMessageReq -> FlowHandler APISuccess
-upsertIssueMessage merchantShortId opCity apiTokenInfo mbIssueMessageId req = withFlowHandlerAPI' $ do
+upsertIssueMessage :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertIssueMessageReq -> FlowHandler APISuccess
+upsertIssueMessage merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.UpsertIssueMessageEndpoint apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.issuesV2.upsertIssueMessage) mbIssueMessageId req
-
-uploadIssueMessageMediaFiles :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.IssueMessageMediaFileUploadListReq -> FlowHandler APISuccess
-uploadIssueMessageMediaFiles merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.UploadIssueMessageMediaFilesEndpoint apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (addMultipartBoundary . (.issuesV2.uploadIssueMessageMediaFiles)) req
+  T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (addMultipartBoundary . (.issuesV2.upsertIssueMessage)) req
   where
     addMultipartBoundary clientFn reqBody = clientFn ("xxxxxxx", reqBody)
 

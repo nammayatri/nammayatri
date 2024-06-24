@@ -22,6 +22,7 @@ import IssueManagement.Domain.Types.Issue.IssueMessage
 import IssueManagement.Domain.Types.Issue.IssueOption
 import IssueManagement.Domain.Types.Issue.IssueTranslation
 import IssueManagement.Storage.BeamFlow
+import qualified IssueManagement.Storage.CachedQueries.MediaFile as CQueriesMF
 import qualified IssueManagement.Storage.Queries.Issue.IssueMessage as Queries
 import Kernel.External.Types (Language)
 import Kernel.Prelude
@@ -35,23 +36,50 @@ findById issueMessageId identifier =
     Just a -> pure a
     Nothing -> cacheIssueMessageById issueMessageId identifier /=<< Queries.findById issueMessageId
 
-findByIdAndLanguage :: BeamFlow m r => Id IssueMessage -> Language -> Identifier -> m (Maybe (IssueMessage, DetailedTranslation))
+findByIdAndLanguage :: BeamFlow m r => Id IssueMessage -> Language -> Identifier -> m (Maybe (IssueMessage, DetailedTranslation, [Text]))
 findByIdAndLanguage issueMessageId language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueMessageByIdAndLanguage issueMessageId language identifier) >>= \case
     Just a -> pure a
-    Nothing -> cacheIssueMessageByIdAndLanguage issueMessageId language identifier /=<< Queries.findByIdAndLanguage issueMessageId language
+    Nothing -> do
+      result <-
+        maybe (return []) (appendMediaFiles identifier . (: []))
+          =<< Queries.findByIdAndLanguage issueMessageId language
+      cacheIssueMessageByIdAndLanguage issueMessageId language identifier /=<< pure (listToMaybe result)
 
-findAllByCategoryIdAndLanguage :: BeamFlow m r => Id IssueCategory -> Language -> Identifier -> m [(IssueMessage, DetailedTranslation)]
-findAllByCategoryIdAndLanguage issueCategoryId language identifier =
+findAllActiveByCategoryIdAndLanguage :: BeamFlow m r => Id IssueCategory -> Language -> Identifier -> m [(IssueMessage, DetailedTranslation, [Text])]
+findAllActiveByCategoryIdAndLanguage issueCategoryId language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueMessageByLanguageAndCategory issueCategoryId language identifier) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllIssueMessageByCategoryIdAndLanguage issueCategoryId language identifier /=<< Queries.findAllByCategoryIdAndLanguage issueCategoryId language
+    Nothing ->
+      cacheAllIssueMessageByCategoryIdAndLanguage issueCategoryId language identifier
+        /=<< ( appendMediaFiles identifier
+                 =<< Queries.findAllActiveByCategoryIdAndLanguage issueCategoryId language
+             )
 
-findAllByOptionIdAndLanguage :: BeamFlow m r => Id IssueOption -> Language -> Identifier -> m [(IssueMessage, DetailedTranslation)]
-findAllByOptionIdAndLanguage issueOptionId language identifier =
+findAllActiveByOptionIdAndLanguage :: BeamFlow m r => Id IssueOption -> Language -> Identifier -> m [(IssueMessage, DetailedTranslation, [Text])]
+findAllActiveByOptionIdAndLanguage issueOptionId language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueMessageByLanguageAndOption issueOptionId language identifier) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllIssueMessageByOptionIdAndLanguage issueOptionId language identifier /=<< Queries.findAllByOptionIdAndLanguage issueOptionId language
+    Nothing ->
+      cacheAllIssueMessageByOptionIdAndLanguage issueOptionId language identifier
+        /=<< ( appendMediaFiles identifier
+                 =<< Queries.findAllActiveByOptionIdAndLanguage issueOptionId language
+             )
+
+appendMediaFiles :: BeamFlow m r => Identifier -> [(IssueMessage, DetailedTranslation)] -> m [(IssueMessage, DetailedTranslation, [Text])]
+appendMediaFiles identifier =
+  mapM
+    ( \(issueMessage, translation) -> do
+        mediaFileUrls <-
+          catMaybes
+            <$> mapM
+              ( \fileId -> do
+                  mbMediaFile <- CQueriesMF.findById fileId identifier
+                  return $ mbMediaFile <&> (.url)
+              )
+              issueMessage.mediaFiles
+        return (issueMessage, translation, mediaFileUrls)
+    )
 
 -- --------- Caching logic for issue message by id -------------------
 
@@ -76,7 +104,7 @@ clearAllIssueMessageByIdAndLanguageCache issueMessageId identifier =
 clearIssueMessageByIdAndLanguageCache :: CacheFlow m r => Id IssueMessage -> Language -> Identifier -> m ()
 clearIssueMessageByIdAndLanguageCache issueMessageId language identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueMessageByIdAndLanguage issueMessageId language identifier
 
-cacheIssueMessageByIdAndLanguage :: CacheFlow m r => Id IssueMessage -> Language -> Identifier -> Maybe (IssueMessage, DetailedTranslation) -> m ()
+cacheIssueMessageByIdAndLanguage :: CacheFlow m r => Id IssueMessage -> Language -> Identifier -> Maybe (IssueMessage, DetailedTranslation, [Text]) -> m ()
 cacheIssueMessageByIdAndLanguage issueMessageId language identifier issueMessageTranslation = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueMessageByIdAndLanguage issueMessageId language identifier) issueMessageTranslation expTime
@@ -94,7 +122,7 @@ clearAllIssueMessageByCategoryIdAndLanguageCache issueCategoryId identifier =
 clearIssueMessageByCategoryIdAndLanguageCache :: CacheFlow m r => Id IssueCategory -> Language -> Identifier -> m ()
 clearIssueMessageByCategoryIdAndLanguageCache issueCategoryId language identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueMessageByLanguageAndCategory issueCategoryId language identifier
 
-cacheAllIssueMessageByCategoryIdAndLanguage :: CacheFlow m r => Id IssueCategory -> Language -> Identifier -> [(IssueMessage, DetailedTranslation)] -> m ()
+cacheAllIssueMessageByCategoryIdAndLanguage :: CacheFlow m r => Id IssueCategory -> Language -> Identifier -> [(IssueMessage, DetailedTranslation, [Text])] -> m ()
 cacheAllIssueMessageByCategoryIdAndLanguage issueCategoryId language identifier issueMessageTranslation = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueMessageByLanguageAndCategory issueCategoryId language identifier) issueMessageTranslation expTime
@@ -112,7 +140,7 @@ clearAllIssueMessageByOptionIdAndLanguageCache issueOptionId identifier =
 clearIssueMessageByOptionIdAndLanguageCache :: CacheFlow m r => Id IssueOption -> Language -> Identifier -> m ()
 clearIssueMessageByOptionIdAndLanguageCache issueOptionId language identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueMessageByLanguageAndOption issueOptionId language identifier
 
-cacheAllIssueMessageByOptionIdAndLanguage :: CacheFlow m r => Id IssueOption -> Language -> Identifier -> [(IssueMessage, DetailedTranslation)] -> m ()
+cacheAllIssueMessageByOptionIdAndLanguage :: CacheFlow m r => Id IssueOption -> Language -> Identifier -> [(IssueMessage, DetailedTranslation, [Text])] -> m ()
 cacheAllIssueMessageByOptionIdAndLanguage issueOptionId language identifier issueMessageTranslation = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueMessageByLanguageAndOption issueOptionId language identifier) issueMessageTranslation expTime

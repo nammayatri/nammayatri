@@ -127,8 +127,7 @@ data IssueAPIs = IssueAPIs
     updateIssueCategory :: Id IssueCategory -> Issue.UpdateIssueCategoryReq -> Euler.EulerClient APISuccess,
     createIssueOption :: Id IssueCategory -> Id IssueMessage -> Issue.CreateIssueOptionReq -> Euler.EulerClient APISuccess,
     updateIssueOption :: Id IssueOption -> Issue.UpdateIssueOptionReq -> Euler.EulerClient APISuccess,
-    upsertIssueMessage :: Maybe (Id IssueMessage) -> Issue.UpsertIssueMessageReq -> Euler.EulerClient APISuccess,
-    uploadIssueMessageMediaFiles :: (LBS.ByteString, Issue.IssueMessageMediaFileUploadListReq) -> Euler.EulerClient APISuccess
+    upsertIssueMessage :: (LBS.ByteString, Issue.UpsertIssueMessageReq) -> Euler.EulerClient APISuccess
   }
 
 data TicketAPIs = TicketAPIs
@@ -217,8 +216,7 @@ mkAppBackendAPIs merchantId city token = do
       :<|> updateIssueCategory
       :<|> createIssueOption
       :<|> updateIssueOption
-      :<|> upsertIssueMessage
-      :<|> uploadIssueMessageMediaFiles = issueV2Client
+      :<|> upsertIssueMessage = issueV2Client
 
     verifyBookingDetails
       :<|> getServices
