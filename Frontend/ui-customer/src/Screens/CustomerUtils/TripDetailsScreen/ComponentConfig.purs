@@ -114,7 +114,7 @@ sourceToDestinationConfig state = let
       , color = Color.greyDavy
       , ellipsize = false
       }
-    , showDestination = false
+    , showDestination = state.data.destination /= ""
     }
   in sourceToDestinationConfig'
 
