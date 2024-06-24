@@ -806,16 +806,15 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1717334952,
-        "narHash": "sha256-vWbOiNWN0dCWvX2W+xR39kheML2rwborbO8mxvIuRRo=",
+        "lastModified": 1719241407,
+        "narHash": "sha256-U9mScUidGIR78ObBo7SQrCSq48CaTEmmE2YRNFIycMA=",
         "owner": "nammayatri",
         "repo": "euler-hs",
-        "rev": "7d25a5c4686ca5486bab5a6789b1cdfbdb4312cf",
+        "rev": "3baeca280bd3e2ecec9b6138f85bce79ff5de939",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "backend/hedis-library-upgrade",
         "repo": "euler-hs",
         "type": "github"
       }
@@ -4139,11 +4138,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1719222589,
-        "narHash": "sha256-q71M2F5v4bah7qKFtGDIKrTKnV7Jb65UYPICkzitaIE=",
+        "lastModified": 1719241662,
+        "narHash": "sha256-w0fcEdaxO90SPWtXYYmzSB9hukRVHX6YkXaqJrmDIX0=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "b8fe154c7a8a7236b8d12a11ff20d8f7d5fedeff",
+        "rev": "dd8e260c16d05930a5d4bb6d4cfdc78daa6c802c",
         "type": "github"
       },
       "original": {
