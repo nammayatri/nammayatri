@@ -114,7 +114,7 @@ view push state =
           , clickable true
           ][ otpAndWaitView push state 
             , endOTPView push state
-            , if state.props.currentStage == RideStarted || state.props.stageBeforeChatScreen == RideStarted then trackRideView push state else dummyView push
+            -- , if state.props.currentStage == RideStarted || state.props.stageBeforeChatScreen == RideStarted then trackRideView push state else dummyView push -- TODO: may use in future: Ashish Singh
             ]
         , if enableShareRide then shareRideButton push state else if enableSupport then contactSupport push state else dummyView push -- TEMP FIX UNTIL THE NEW DESIGN IS DONE
     ]

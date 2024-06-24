@@ -3074,7 +3074,6 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                             destLat = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideStarted then (maybe dstLat (\loc -> loc.lat) state.props.stopLoc) else dstLat 
                             destLon = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideStarted then (maybe dstLon (\loc -> loc.lng) state.props.stopLoc) else dstLon
                         {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon destLat destLon (Just routes)
-                        -- void $ pure $ removeAllPolylines ""
                         if (srcLat /= 0.0 && srcLon /= 0.0 && destLat /= 0.0 && destLon /= 0.0) then do 
                           _ <- pure $ removeAllPolylines ""
                           let srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker }
@@ -3086,13 +3085,18 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                               normalRoute = mkRouteConfig  normalRoutePoints srcMarkerConfig destMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT mapRouteConfig
                               rentalRouteConfig = mkRouteConfig rentalRoutePoints srcRentalMarkerConfig destRentalMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "DOT" true JB.RENTAL mapRouteConfig{isAnimation = false}
                           liftFlow $ drawRoute [normalRoute,rentalRouteConfig] (getNewIDWithTag "CustomerHomeScreen")
-                          else pure unit
+                        else pure unit
                         _ <- doAff do liftEffect $ push $ updateState (fromMaybe 1 routeDuration) $ fromMaybe 1 routeDistance
                         let duration' = if isJust route then duration else getDuration state.data.config.driverLocationPolling.retryExpFactor expCounter
                             expCounter' = if isJust route then expCounter else expCounter + 1
                         void $ delay $ Milliseconds duration'
                         driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = route, speed = (fromMaybe 0 routeDistance) / (fromMaybe 1 routeDuration), routeCacheForAdvancedBooking = Nothing, previousRideDrop = false } } routeState expCounter'
                       _, _, _ -> do
+                        if (state.data.fareProductType == FPT.RENTAL && not hasCurrentLocAndPrevDropLoc && srcLat /= 0.0 && srcLon /= 0.0) then do
+                          void $ pure $ removeAllPolylines ""
+                          void $ doAff $ liftEffect $ JB.showMarker defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker } srcLat srcLon 160 0.5 0.5 (getNewIDWithTag "CustomerHomeScreen")
+                          void $ doAff $ liftEffect $ animateCamera srcLat srcLon zoomLevel "ZOOM"
+                        else pure unit
                         void $ delay $ Milliseconds $ getDuration state.data.config.driverLocationPolling.retryExpFactor expCounter
                         driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing, routeCacheForAdvancedBooking = Nothing, previousRideDrop = false } } routeState (expCounter + 1)
                   _ , _-> do
