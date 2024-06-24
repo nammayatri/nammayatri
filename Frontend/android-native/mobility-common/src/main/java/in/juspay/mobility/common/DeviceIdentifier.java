@@ -38,7 +38,7 @@ public class DeviceIdentifier {
 
     private String getFallbackUUID(Context context) {
         try {
-            SharedPreferences sharedPreferences = context.getSharedPreferences(TAG, Context.MODE_PRIVATE);
+            SharedPreferences sharedPreferences = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String uuid = sharedPreferences.getString(context.getString(R.string.preference_file_key), null);
             if(!isValid(uuid)) {
                 uuid = UUID.randomUUID().toString();

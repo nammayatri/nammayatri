@@ -139,6 +139,7 @@ public class LocationUpdateService extends Service {
     private long lastCallTime = 0;
     private String currentZoneGeoHash = null;
     private boolean isSpecialpickup = false;
+    private String driverId = "empty";
 
     enum LocationSource {
         CurrentLocation,
@@ -168,10 +169,6 @@ public class LocationUpdateService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        updateConfigVariables();
-        initialiseJSONObjects();
-        context = getApplicationContext();
-        isLocationUpdating = false;
         try{
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 this.startForeground(notificationServiceId, createNotification());
@@ -183,6 +180,10 @@ public class LocationUpdateService extends Service {
             FirebaseCrashlytics.getInstance().recordException(exception);
             Log.e(LOG_TAG, "Error in onCreate -> ", e);
         }
+        updateConfigVariables();
+        initialiseJSONObjects();
+        context = getApplicationContext();
+        isLocationUpdating = false;
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         fusedLocClientForDistanceCal = LocationServices.getFusedLocationProviderClient(this);
         executorLocUpdate = Executors.newSingleThreadExecutor();
@@ -239,6 +240,8 @@ public class LocationUpdateService extends Service {
             FirebaseCrashlytics.getInstance().recordException(exception);
             Log.e(LOG_TAG, "Error in onStartCommand -> ",e);
         }
+        SharedPreferences sharedPrefs = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        if(sharedPrefs != null) driverId = sharedPrefs.getString("DRIVER_ID", "null");
 
         if (intent != null) {
             String startDistanceCalStr = intent.hasExtra("TRIP_STATUS") ? intent.getStringExtra("TRIP_STATUS") : null;
@@ -647,6 +650,8 @@ public class LocationUpdateService extends Service {
             return true;
         } else {
             // It's been less than 2 seconds since the last call
+            Exception exception = new Exception("canCallAPI false for ID : " + driverId + " $ ExecutorStatus : " + executorStatus + " $ timeSinceLastCall : " + timeSinceLastCall);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             return false;
         }
     }
@@ -810,6 +815,8 @@ public class LocationUpdateService extends Service {
                                 updateStorage(LOCATION_PAYLOAD, new JSONArray().toString());
                             System.out.println("LOCATION_UPDATE: ERROR API respReader :- " + apiResponse.getResponseBody());
                             Log.d(LOG_TAG, "in error " + apiResponse.getResponseBody());
+                            Exception exception = new Exception("API Error in callDriverCurrentLocationAPI for ID : " + driverId + " $ Resp Code : " + respCode + " $ Error : " + apiResponse.getResponseBody());
+                            FirebaseCrashlytics.getInstance().recordException(exception);
                         } else {
                             Log.d(LOG_TAG, "in 200 " + apiResponse.getResponseBody());
                             System.out.println("LOCATION_UPDATE: SUCCESS API respReader :- " + apiResponse.getResponseBody());
@@ -849,6 +856,8 @@ public class LocationUpdateService extends Service {
                 executorBusy = 0;
             }
         } catch (Exception e) {
+            Exception exception = new Exception("Exception in callDriverCurrentLocationAPI for ID : " + driverId + " $ Error : " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             e.printStackTrace();
         }
     }
@@ -982,6 +991,9 @@ public class LocationUpdateService extends Service {
                     checkNearByPickupZone(lastLocation);
                     prevLat = lastLatitudeValue;
                     prevLon = lastLongitudeValue;
+                } else {
+                    Exception exception = new Exception("Null Location in getLocationCallback for ID : " + driverId);
+                    FirebaseCrashlytics.getInstance().recordException(exception);
                 }
             }
         };
@@ -1049,6 +1061,8 @@ public class LocationUpdateService extends Service {
                                     } else {
                                         System.out.println("LOCATION_UPDATE: CURRENT LOCATION IS NULL");
                                         callDriverCurrentLocationAPI(location, sdf.format(new Date()), "timer_task_null_location", LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
+                                        Exception exception = new Exception("Null Location in fusedLocationProviderClient$getCurrentLocation for ID : " + driverId);
+                                        FirebaseCrashlytics.getInstance().recordException(exception);
                                     }
                                 })
                                 .addOnFailureListener(Throwable::printStackTrace);
@@ -1067,6 +1081,9 @@ public class LocationUpdateService extends Service {
                                         String thisLocationTimeStamp = sdf.format(locTime);
                                         callDriverCurrentLocationAPI(location, thisLocationTimeStamp, "COMING FROM TIMER", LocationSource.LastLocation.toString(), TriggerFunction.TimerTask.toString());
                                         checkNearByPickupZone(location);
+                                    } else {
+                                        Exception exception = new Exception("Null Location in fusedLocationProviderClient$getLastLocation for ID : " + driverId);
+                                        FirebaseCrashlytics.getInstance().recordException(exception);
                                     }
                                 })
                                 .addOnFailureListener(Throwable::printStackTrace);

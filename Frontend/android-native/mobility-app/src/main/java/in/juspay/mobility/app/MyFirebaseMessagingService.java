@@ -238,7 +238,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             if (merchantType.equals("DRIVER")) {
                                 if (title!=null && title.equals("You were inactive")) FirebaseAnalytics.getInstance(this).logEvent("notification_trigger_service_inactive", new Bundle());
                                 FirebaseAnalytics.getInstance(this).logEvent("notification_trigger_service", new Bundle());
-                                RideRequestUtils.restartLocationService(this, title);
+                                RideRequestUtils.restartLocationService(this);
                             }
                             break;
 
