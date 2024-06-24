@@ -689,6 +689,7 @@ data Stage = HomeScreen
            | ChangeToRideStarted
            | ConfirmingQuotes
            | RetryFindingQuote
+           | GoToConfirmLocation
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -848,7 +849,8 @@ type DisabilityData = {
 
 type HomeScreenStateProps =
   {
-    currentStage :: Stage
+    doUpdatePickupLocation :: Boolean
+  , currentStage :: Stage
   , stageBeforeChatScreen :: Stage
   , showCallPopUp :: Boolean
   , rideRequestFlow :: Boolean

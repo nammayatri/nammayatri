@@ -773,6 +773,7 @@ data ScreenOutput = LogoutUser
                   | ConfirmRentalRideSO HomeScreenState
                   | StayInHomeScreenSO HomeScreenState
                   | SelectEstimateAndQuotes HomeScreenState
+                  | ExitToConfirmingLocationStage HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -944,8 +945,12 @@ data Action = NoAction
             | ShowEndOTP
             | RentalInfoAction PopUpModal.Action
             | IntercitySpecialZone PopUpModal.Action
+            | GoToConfirmingLocationStage 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+
+eval GoToConfirmingLocationStage state = exit $ ExitToConfirmingLocationStage state
+
 eval (IntercitySpecialZone PopUpModal.DismissPopup) state = continue state
 
 eval (IntercitySpecialZone PopUpModal.OnButton1Click) state = updateAndExit state { props { showIntercityUnserviceablePopUp = false, showNormalRideNotSchedulablePopUp = false}} $ StayInHomeScreenSO state { props { showIntercityUnserviceablePopUp = false, showNormalRideNotSchedulablePopUp = false}}
@@ -1417,6 +1422,12 @@ eval BackPressed state = do
                       _ <- pure $ removeAllPolylines ""
                       _ <- pure $ updateLocalStage SearchLocationModel
                       continue state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = []}}
+    -- GoToConfirmLocation -> do
+    --                   _ <- pure $ performHapticFeedback unit
+    --                   _ <- pure $ exitLocateOnMap ""
+    --                   _ <- pure $ removeAllPolylines ""
+    --                   _ <- pure $ updateLocalStage SearchLocationModel
+    --                   continue state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = []}}
                       -- _ <- pure $ updateLocalStage HomeScreen
                       -- let newState = state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = HomeScreen, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = []}}
                       -- updateAndExit newState $ Go_To_Search_Location_Flow newState true
@@ -1538,16 +1549,22 @@ eval OpenSearchLocation state = do
 eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = continueWithCmd state [ do pure $ OpenSearchLocation ]
 
 eval (UpdatePickupLocation  key lat lon) state =
-  case key of
-    "LatLon" -> do
-      exit $ UpdatePickupName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
-    _ -> do
-      let focusedIndex = findIndex (\item -> item.place == key) state.data.nearByPickUpPoints
-      case focusedIndex of
-        Just index -> do
-          _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
-          exit $ UpdatePickupName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
-        Nothing -> continue state
+  let _ = spy "UpdatePickupLocation key" key
+      _ = spy "UpdatePickupLocation lat" lat
+      _ = spy "UpdatePickupLocation lon" lon
+      _ = spy "UpdatePickupLocation state" state
+  in
+    case key of
+      "LatLon" -> do
+        exit $ UpdatePickupName state{props{defaultPickUpPoint = "", doUpdatePickupLocation = false}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+      _ -> do
+        let focusedIndex = findIndex (\item -> item.place == key) state.data.nearByPickUpPoints
+            _ = spy "UpdatePickupLocation focusedIndex" focusedIndex
+        case focusedIndex of
+          Just index -> do
+            _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
+            exit $ UpdatePickupName state{props{defaultPickUpPoint = key, doUpdatePickupLocation = false}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+          Nothing -> continue state {props{doUpdatePickupLocation = false}}
         
 eval (LocateOnMapCallBack key lat lon) state = case key of
   "LatLon" -> do
@@ -2972,6 +2989,7 @@ updateCurrentLocation state lat lng = exit $ (CheckLocServiceability state (from
 
 locationSelected :: LocationListItemState -> Boolean -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 locationSelected item addToRecents state = do
+  let _ = spy "locationSelected state" state
   _ <- pure $ hideKeyboardOnNavigation true
   let favClick = if item.postfixImageUrl == "ny_ic_fav_red,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_fav_red.png" then "true" else "false"
   if state.props.isSource == Just true then do
@@ -2979,7 +2997,8 @@ locationSelected item addToRecents state = do
                                                                                                               {key : "Favourite", value : unsafeToForeign favClick}]
     let newState = state {data{ source = item.title, sourceAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, sourceSelectedOnMap = (item.tag /= "") }}
     pure $ setText (getNewIDWithTag "SourceEditText") item.title
-    updateAndExit state $ LocationSelected item addToRecents newState
+    let _ = spy "locationSelected newState" newState
+    updateAndExit newState $ LocationSelected item addToRecents newState
     else do
       let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_user_destination_select" $ [{key : "Destination", value : unsafeToForeign item.title},
                                                                                                                     {key : "Favourite", value : unsafeToForeign favClick}]

@@ -94,6 +94,7 @@ import Constants (defaultDensity)
 import Mobility.Prelude
 import MerchantConfig.Types
 import Common.Types.App as CT
+import Data.Array as DA
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -541,6 +542,7 @@ getScreenFromStage stage = case stage of
   ChangeToRideAccepted -> "change_to_ride_accepted"
   ChangeToRideStarted -> "change_to_ride_started"
   ConfirmingQuotes -> "confirming_quotes"
+  GoToConfirmLocation -> "go_to_confirm_location"
 
 getGlobalPayload :: String -> Maybe GlobalPayload
 getGlobalPayload key = do
@@ -585,9 +587,18 @@ triggerRideStatusEvent status amount bookingId screen = do
 
 fetchDefaultPickupPoint :: Array Location -> Number -> Number -> String
 fetchDefaultPickupPoint locations lati longi =
-  case filter (\loc -> abs(loc.lat - lati) <= 0.0001 && abs(loc.lng - longi) <= 0.0001) locations of
-    [foundLocation] -> foundLocation.place
-    _ -> ""
+  -- let distance loc = abs(loc.lat - lati) + abs(loc.lng - longi)
+  --     sortedLocations = DA.sortBy (comparing distance) locations
+  -- in DA.first
+  let _ = spy "lati" lati
+      _ = spy "longi" longi
+      _ = spy "locations" locations
+  in case ((filter (\loc -> abs(getDistanceBwCordinates lati longi loc.lat loc.lng) * 1000.0 <= 1.0) locations) !! 0) of
+      Just loc -> loc.place
+      Nothing -> ""
+    -- case filter (\loc -> abs(loc.lat - lati) <= 0.0001 && abs(loc.lng - longi) <= 0.0001) locations of
+    --   [foundLocation] -> foundLocation.place
+    --   _ -> ""
 
 getVehicleVariantImage :: String -> String
 getVehicleVariantImage variant =

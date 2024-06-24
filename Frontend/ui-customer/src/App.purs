@@ -233,6 +233,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | CONFIRM_RENTAL_RIDE
                         | STAY_IN_HOME_SCREEN
                         | SELECT_ESTIMATE_AND_QUOTES HomeScreenState
+                        | EXIT_TO_CONFIRMING_LOCATION_STAGE HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
