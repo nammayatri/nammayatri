@@ -570,6 +570,9 @@ castDVehicleVariant = \case
   DVeh.AUTO_RICKSHAW -> Common.AUTO_RICKSHAW
   DVeh.TAXI -> Common.TAXI
   DVeh.TAXI_PLUS -> Common.TAXI_PLUS
+  DVeh.PREMIUM_SEDAN -> Common.PREMIUM_SEDAN
+  DVeh.BLACK -> Common.BLACK
+  DVeh.BLACK_XL -> Common.BLACK_XL
   DVeh.BIKE -> Common.BIKE
   DVeh.AMBULANCE_TAXI -> Common.AMBULANCE_TAXI
   DVeh.AMBULANCE_TAXI_OXY -> Common.AMBULANCE_TAXI_OXY
@@ -638,6 +641,9 @@ castVehicleVariant = \case
   Common.AUTO_RICKSHAW -> DVeh.AUTO_RICKSHAW
   Common.TAXI -> DVeh.TAXI
   Common.TAXI_PLUS -> DVeh.TAXI_PLUS
+  Common.PREMIUM_SEDAN -> DVeh.PREMIUM_SEDAN
+  Common.BLACK -> DVeh.BLACK
+  Common.BLACK_XL -> DVeh.BLACK_XL
   Common.BIKE -> DVeh.BIKE
   Common.AMBULANCE_TAXI -> DVeh.AMBULANCE_TAXI
   Common.AMBULANCE_TAXI_OXY -> DVeh.AMBULANCE_TAXI_OXY

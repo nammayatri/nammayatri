@@ -31,6 +31,9 @@ data ServiceTierType
   | SEDAN
   | TAXI
   | TAXI_PLUS
+  | PREMIUM_SEDAN
+  | BLACK
+  | BLACK_XL
   | BIKE
   | AMBULANCE_TAXI
   | AMBULANCE_TAXI_OXY

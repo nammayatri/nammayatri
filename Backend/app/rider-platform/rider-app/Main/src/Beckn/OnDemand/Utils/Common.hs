@@ -190,6 +190,9 @@ castVehicleVariant = \case
   VehVar.AUTO_RICKSHAW -> (show Enums.AUTO_RICKSHAW, "AUTO_RICKSHAW")
   VehVar.TAXI -> (show Enums.CAB, "TAXI")
   VehVar.TAXI_PLUS -> (show Enums.CAB, "TAXI_PLUS")
+  VehVar.PREMIUM_SEDAN -> (show Enums.CAB, "PREMIUM_SEDAN")
+  VehVar.BLACK -> (show Enums.CAB, "BLACK")
+  VehVar.BLACK_XL -> (show Enums.CAB, "BLACK_XL")
   VehVar.BIKE -> (show Enums.MOTORCYCLE, "BIKE")
   VehVar.AMBULANCE_TAXI -> (show Enums.AMBULANCE, "AMBULANCE_TAXI")
   VehVar.AMBULANCE_TAXI_OXY -> (show Enums.AMBULANCE, "AMBULANCE_TAXI_OXY")
@@ -206,6 +209,9 @@ parseVehicleVariant mbCategory mbVariant =
     (Just "AUTO_RICKSHAW", _) -> Just VehVar.AUTO_RICKSHAW
     (Just "CAB", Just "TAXI") -> Just VehVar.TAXI
     (Just "CAB", Just "TAXI_PLUS") -> Just VehVar.TAXI_PLUS
+    (Just "CAB", Just "BLACK") -> Just VehVar.BLACK
+    (Just "CAB", Just "BLACK_XL") -> Just VehVar.BLACK_XL
+    (Just "CAB", Just "PREMIUM_SEDAN") -> Just VehVar.PREMIUM_SEDAN
     (Just "MOTORCYCLE", Just "BIKE") -> Just VehVar.BIKE
     (Just "AMBULANCE", Just "AMBULANCE_TAXI") -> Just VehVar.AMBULANCE_TAXI
     (Just "AMBULANCE", Just "AMBULANCE_TAXI_OXY") -> Just VehVar.AMBULANCE_TAXI_OXY
@@ -338,6 +344,9 @@ mapVariantToVehicle variant = do
     VehVar.TAXI -> CAB
     VehVar.SUV -> CAB
     VehVar.TAXI_PLUS -> CAB
+    VehVar.PREMIUM_SEDAN -> CAB
+    VehVar.BLACK -> CAB
+    VehVar.BLACK_XL -> CAB
     VehVar.BIKE -> MOTORCYCLE
     VehVar.AUTO_RICKSHAW -> AUTO_RICKSHAW
     VehVar.AMBULANCE_TAXI -> AMBULANCE
