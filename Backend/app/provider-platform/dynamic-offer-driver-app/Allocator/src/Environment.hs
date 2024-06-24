@@ -22,6 +22,7 @@ module Environment
   )
 where
 
+import AWS.S3
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Data.Map.Strict as MS
@@ -100,7 +101,9 @@ data HandlerEnv = HandlerEnv
     kafkaProducerForART :: Maybe KafkaProducerTools,
     singleBatchProcessingTempDelay :: NominalDiffTime,
     ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig,
-    cacConfig :: CacConfig
+    cacConfig :: CacConfig,
+    modelNamesHashMap :: HMS.HashMap Text Text,
+    s3Env :: S3Env Flow
   }
   deriving (Generic)
 
@@ -132,7 +135,8 @@ buildHandlerEnv HandlerCfg {..} = do
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- registerCoreMetricsContainer
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
-  return HandlerEnv {..}
+  let s3Env = buildS3Env s3Config
+  return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()
 releaseHandlerEnv HandlerEnv {..} = do
