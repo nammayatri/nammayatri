@@ -24,9 +24,12 @@ updateByPrimaryKey IssueOption {..} =
     [ Set BeamIO.option option,
       Set BeamIO.issueCategoryId (getId <$> issueCategoryId),
       Set BeamIO.issueMessageId issueMessageId,
+      Set BeamIO.merchantOperatingCityId (getId merchantOperatingCityId),
       Set BeamIO.priority priority,
       Set BeamIO.label label,
       Set BeamIO.isActive isActive,
+      Set BeamIO.restrictedVariants restrictedVariants,
+      Set BeamIO.showOnlyWhenUserBlocked showOnlyWhenUserBlocked,
       Set BeamIO.createdAt createdAt,
       Set BeamIO.updatedAt updatedAt
     ]
@@ -76,6 +79,13 @@ findByIdAndLanguage issueOptionId language = do
 findById :: BeamFlow m r => Id IssueOption -> m (Maybe IssueOption)
 findById (Id issueOptionId) = findOneWithKV [Is BeamIO.id $ Eq issueOptionId]
 
+updatePriority :: BeamFlow m r => Id IssueOption -> Int -> m ()
+updatePriority issueOptionId priority =
+  updateWithKV
+    [ Set BeamIO.priority priority
+    ]
+    [Is BeamIO.id $ Eq (getId issueOptionId)]
+
 instance FromTType' BeamIO.IssueOption IssueOption where
   fromTType' BeamIO.IssueOptionT {..} = do
     pure $
@@ -84,6 +94,7 @@ instance FromTType' BeamIO.IssueOption IssueOption where
           { id = Id id,
             issueCategoryId = Id <$> issueCategoryId,
             merchantId = Id merchantId,
+            merchantOperatingCityId = Id merchantOperatingCityId,
             ..
           }
 
@@ -92,10 +103,12 @@ instance ToTType' BeamIO.IssueOption IssueOption where
     BeamIO.IssueOptionT
       { BeamIO.id = getId id,
         BeamIO.issueCategoryId = getId <$> issueCategoryId,
+        BeamIO.merchantOperatingCityId = getId merchantOperatingCityId,
         BeamIO.option = option,
         BeamIO.priority = priority,
         BeamIO.issueMessageId = issueMessageId,
         BeamIO.restrictedVariants = restrictedVariants,
+        BeamIO.showOnlyWhenUserBlocked = showOnlyWhenUserBlocked,
         BeamIO.label = label,
         BeamIO.merchantId = getId merchantId,
         BeamIO.isActive = isActive,

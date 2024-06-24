@@ -12,12 +12,15 @@ import Kernel.Utils.Common
 data IssueCategory = IssueCategory
   { id :: Id IssueCategory,
     category :: Text,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
     logoUrl :: Text,
     priority :: Int,
     merchantId :: Id Merchant,
     categoryType :: CategoryType,
     isActive :: Bool,
+    isRideRequired :: Bool,
     maxAllowedRideAge :: Maybe Seconds,
+    label :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

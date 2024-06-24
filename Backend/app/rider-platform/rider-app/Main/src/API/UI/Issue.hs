@@ -1,12 +1,14 @@
 module API.UI.Issue where
 
 import qualified Dashboard.RiderPlatform.Ride as DRR
+import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as DRPR
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.Dashboard.Ride as DRide
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Environment
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (elem, id)
 import IssueManagement.API.UI.Issue as IA
 import IssueManagement.Common.UI.Issue
 import qualified IssueManagement.Common.UI.Issue as Common
@@ -22,6 +24,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -63,6 +66,7 @@ customerIssueHandle =
     { findPersonById = castPersonById,
       findRideById = castRideById,
       findMOCityById = castMOCityById,
+      findMOCityByMerchantShortIdAndCity = castMOCityByMerchantShortIdAndCity,
       getRideInfo = castRideInfo,
       createTicket = castCreateTicket,
       updateTicket = castUpdateTicket,
@@ -84,7 +88,8 @@ castPersonById personId = do
           lastName = person.lastName,
           middleName = person.middleName,
           mobileNumber = person.mobileNumber,
-          merchantOperatingCityId = cast person.merchantOperatingCityId
+          merchantOperatingCityId = cast person.merchantOperatingCityId,
+          blocked = Just person.blocked
         }
 
 castRideById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Ride -> Id Common.Merchant -> m (Maybe Common.Ride)
@@ -101,13 +106,19 @@ castMOCityById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Com
 castMOCityById moCityId = do
   moCity <- CQMOC.findById (cast moCityId)
   return $ fmap castMOCity moCity
-  where
-    castMOCity moCity =
-      Common.MerchantOperatingCity
-        { id = cast moCity.id,
-          merchantId = cast moCity.merchantId,
-          city = moCity.city
-        }
+
+castMOCityByMerchantShortIdAndCity :: (CacheFlow m r, EsqDBFlow m r) => ShortId Common.Merchant -> Context.City -> m (Maybe Common.MerchantOperatingCity)
+castMOCityByMerchantShortIdAndCity (ShortId merchantShortId) opCity = do
+  merchantOpCity <- CQMOC.findByMerchantShortIdAndCity (ShortId merchantShortId) opCity
+  return $ fmap castMOCity merchantOpCity
+
+castMOCity :: DMOC.MerchantOperatingCity -> Common.MerchantOperatingCity
+castMOCity moCity =
+  Common.MerchantOperatingCity
+    { id = cast moCity.id,
+      city = moCity.city,
+      merchantId = cast moCity.merchantId
+    }
 
 castRideInfo :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Id Common.Ride -> Flow Common.RideInfoRes
 castRideInfo merchantId _ rideId = do
@@ -156,7 +167,6 @@ castRideInfo merchantId _ rideId = do
     transformFareBreakup DRR.FareBreakup {..} = do
       Common.FareBreakup
         { entityType = mkEntityType entityType,
-          id = cast id,
           ..
         }
 
@@ -165,22 +175,34 @@ castRideInfo merchantId _ rideId = do
       DRR.BOOKING_UPDATE_REQUEST -> Common.BOOKING_UPDATE_REQUEST
       DRR.BOOKING -> Common.BOOKING
       DRR.RIDE -> Common.RIDE
+      DRR.INITIAL_BOOKING -> Common.INITIAL_BOOKING
 
     castVehicleVariant :: DRR.Variant -> Common.Variant
     castVehicleVariant = \case
       DRR.SEDAN -> Common.SEDAN
       DRR.SUV -> Common.SUV
+      DRR.SUV_PLUS -> Common.SUV_PLUS
       DRR.HATCHBACK -> Common.HATCHBACK
       DRR.AUTO_RICKSHAW -> Common.AUTO_RICKSHAW
       DRR.TAXI -> Common.TAXI
       DRR.TAXI_PLUS -> Common.TAXI_PLUS
+      DRR.PREMIUM_SEDAN -> Common.PREMIUM_SEDAN
+      DRR.BLACK -> Common.BLACK
+      DRR.BLACK_XL -> Common.BLACK_XL
       DRR.BIKE -> Common.BIKE
+      DRR.AMBULANCE_TAXI -> Common.AMBULANCE_TAXI
+      DRR.AMBULANCE_TAXI_OXY -> Common.AMBULANCE_TAXI_OXY
+      DRR.AMBULANCE_AC -> Common.AMBULANCE_AC
+      DRR.AMBULANCE_AC_OXY -> Common.AMBULANCE_AC_OXY
+      DRR.AMBULANCE_VENTILATOR -> Common.AMBULANCE_VENTILATOR
 
     makeRideInfoCacheKey :: Text
     makeRideInfoCacheKey = "CachedQueries:RideInfo:RideId-" <> show rideId.getId
 
     cacheRideInfo :: CacheFlow m r => DRR.RideInfoRes -> m ()
-    cacheRideInfo rideInfoRes = Redis.setExp makeRideInfoCacheKey rideInfoRes 259200
+    cacheRideInfo rideInfoRes = do
+      let shouldCacheRideInfo = elem (rideInfoRes.rideStatus) [DRPR.COMPLETED, DRPR.CANCELLED]
+      bool (return ()) (Redis.setExp makeRideInfoCacheKey rideInfoRes 259200) shouldCacheRideInfo
 
 castCreateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> m TIT.CreateTicketResp
 castCreateTicket merchantId merchantOperatingCityId = TT.createTicket (cast merchantId) (cast merchantOperatingCityId)
@@ -227,7 +249,9 @@ issueMediaUpload :: (Id SP.Person, Id DM.Merchant) -> Common.IssueMediaUploadReq
 issueMediaUpload (personId, merchantId) req = withFlowHandlerAPI $ Common.issueMediaUpload (cast personId, cast merchantId) customerIssueHandle req
 
 issueInfo :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> Maybe Language -> FlowHandler Common.IssueInfoRes
-issueInfo (personId, merchantId) issueReportId language = withFlowHandlerAPI $ Common.issueInfo issueReportId (cast personId, cast merchantId) language customerIssueHandle CUSTOMER
+issueInfo (personId, merchantId) issueReportId language = withFlowHandlerAPI $ do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  Common.issueInfo issueReportId (cast personId, cast merchantId, cast person.merchantOperatingCityId) language customerIssueHandle CUSTOMER
 
 updateIssueOption :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> Common.IssueUpdateReq -> FlowHandler APISuccess
 updateIssueOption (personId, merchantId) issueReportId req = withFlowHandlerAPI $ Common.updateIssueOption issueReportId (cast personId, cast merchantId) req CUSTOMER
@@ -236,7 +260,9 @@ deleteIssue :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> FlowHa
 deleteIssue (personId, merchantId) issueReportId = withFlowHandlerAPI $ Common.deleteIssue issueReportId (cast personId, cast merchantId) CUSTOMER
 
 getIssueCategory :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> FlowHandler Common.IssueCategoryListRes
-getIssueCategory (personId, merchantId) language = withFlowHandlerAPI $ Common.getIssueCategory (cast personId, cast merchantId) language customerIssueHandle CUSTOMER
+getIssueCategory (personId, merchantId) language = withFlowHandlerAPI $ do
+  personCityInfo <- CQPerson.findCityInfoById personId >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
+  Common.getIssueCategory (cast personId, cast merchantId, cast personCityInfo.merchantOperatingCityId) language customerIssueHandle CUSTOMER
 
 getIssueOption :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueCategory -> Maybe (Id Domain.IssueOption) -> Maybe (Id Domain.IssueReport) -> Maybe (Id Common.Ride) -> Maybe Language -> FlowHandler Common.IssueOptionListRes
 getIssueOption (personId, merchantId) issueCategoryId issueOptionId issueReportId mbRideId language = withFlowHandlerAPI $ do

@@ -8,7 +8,9 @@ module IssueManagement.Common.Dashboard.Issue
 where
 
 import Data.Aeson
+import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as DTE
 import Data.Time
 import IssueManagement.Common
 import IssueManagement.Domain.Types.Issue.IssueCategory
@@ -19,7 +21,7 @@ import IssueManagement.Domain.Types.MediaFile (MediaFile)
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.ServantMultipart
-import Kernel.Storage.Esqueleto hiding (count)
+import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.CacheFlow as Reexport
 import Kernel.Types.Common
@@ -37,8 +39,7 @@ data IssueEndpoint
   | CreateIssueOptionEndpoint
   | UpdateIssueOptionEndpoint
   | UpsertIssueMessageEndpoint
-  | UploadIssueMessageMediaFilesEndpoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "IssueEndpoint"
 
@@ -271,10 +272,12 @@ data CreateIssueCategoryReq = CreateIssueCategoryReq
     logoUrl :: Text,
     priority :: Int,
     categoryType :: CategoryType,
+    isRideRequired :: Bool,
     maxAllowedRideAge :: Maybe Seconds,
     isActive :: Maybe Bool,
     translations :: [Translation],
-    messages :: [CreateIssueMessageReq]
+    messages :: [CreateIssueMessageReq],
+    label :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -290,7 +293,8 @@ data CreateIssueMessageReq = CreateIssueMessageReq
     actionTranslations :: [Translation],
     options :: [CreateIssueOptionReq],
     referenceOptionId :: Maybe (Id IssueOption),
-    referenceCategoryId :: Maybe (Id IssueCategory)
+    referenceCategoryId :: Maybe (Id IssueCategory),
+    isActive :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -302,7 +306,8 @@ data CreateIssueOptionReq = CreateIssueOptionReq
     isActive :: Maybe Bool,
     translations :: [Translation],
     messages :: [CreateIssueMessageReq],
-    restrictedVariants :: Maybe [Variant]
+    restrictedVariants :: Maybe [Variant],
+    showOnlyWhenUserBlocked :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -324,10 +329,11 @@ data UpdateIssueCategoryReq = UpdateIssueCategoryReq
   { category :: Maybe Text,
     logoUrl :: Maybe Text,
     priority :: Maybe Int,
-    categoryType :: Maybe CategoryType, -- DONT ALLOW THIS CHANGE
+    isRideRequired :: Maybe Bool,
     maxAllowedRideAge :: Maybe Seconds,
     isActive :: Maybe Bool,
-    translations :: [Translation]
+    translations :: [Translation],
+    label :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -336,7 +342,7 @@ data Translation = Translation
   { language :: Language,
     translation :: Text
   }
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Eq, Show, Generic, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets UpdateIssueCategoryReq where
@@ -370,11 +376,12 @@ data UpdateIssueOptionReq = UpdateIssueOptionReq
   { issueCategoryId :: Maybe (Id IssueCategory),
     option :: Maybe Text,
     priority :: Maybe Int,
-    issueMessageId :: Maybe Text,
+    issueMessageId :: Maybe (Id IssueMessage),
     label :: Maybe Text,
     isActive :: Maybe Bool,
     translations :: [Translation],
-    restrictedVariants :: Maybe [Variant]
+    restrictedVariants :: Maybe [Variant],
+    showOnlyWhenUserBlocked :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -388,12 +395,12 @@ instance HideSecrets UpdateIssueOptionReq where
 type UpsertIssueMessageAPI =
   "message"
     :> "upsert"
-    :> QueryParam "issueMessageId" (Id IssueMessage)
-    :> ReqBody '[JSON] UpsertIssueMessageReq
+    :> MultipartForm Tmp UpsertIssueMessageReq
     :> Post '[JSON] APISuccess
 
 data UpsertIssueMessageReq = UpsertIssueMessageReq
-  { message :: Maybe Text,
+  { issueMessageId :: Maybe (Id IssueMessage),
+    message :: Maybe Text,
     messageTitle :: Maybe Text,
     messageAction :: Maybe Text,
     categoryId :: Maybe (Id IssueCategory),
@@ -404,27 +411,10 @@ data UpsertIssueMessageReq = UpsertIssueMessageReq
     titleTranslations :: Maybe [Translation],
     actionTranslations :: Maybe [Translation],
     referenceOptionId :: Maybe (Id IssueOption),
-    referenceCategoryId :: Maybe (Id IssueCategory)
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance HideSecrets UpsertIssueMessageReq where
-  hideSecrets = identity
-
------------------------------------------------------------
--- Upload IssueMessageMediaFiles API ------------------------------------
-
-type IssueMessageMediaFileUploadAPI =
-  "message"
-    :> "media"
-    :> MultipartForm Tmp IssueMessageMediaFileUploadListReq
-    :> Post '[JSON] APISuccess
-
-data IssueMessageMediaFileUploadListReq = IssueMessageMediaFileUploadListReq
-  { issueMessageId :: Id IssueMessage,
+    referenceCategoryId :: Maybe (Id IssueCategory),
+    isActive :: Maybe Bool,
     deleteExistingFiles :: Maybe Bool,
-    mediaFiles :: [IssueMessageMediaFileUploadReq]
+    mediaFiles :: Maybe [IssueMessageMediaFileUploadReq]
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -436,32 +426,73 @@ data IssueMessageMediaFileUploadReq = IssueMessageMediaFileUploadReq
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-instance FromMultipart Tmp IssueMessageMediaFileUploadListReq where
+instance FromMultipart Tmp UpsertIssueMessageReq where
   fromMultipart form = do
     mediaFiles <- mapM extractFile (files form)
-    issueMessageIdText <- lookupInput "issueMessageId" form
-    deleteExistingFiles <- parseMaybeInput "deleteExistingFiles"
-    return $ IssueMessageMediaFileUploadListReq (Id issueMessageIdText) deleteExistingFiles mediaFiles
+    UpsertIssueMessageReq
+      <$> parseMaybeField "issueMessageId"
+      <*> parseMaybeField "message"
+      <*> parseMaybeField "messageTitle"
+      <*> parseMaybeField "messageAction"
+      <*> parseMaybeField "categoryId"
+      <*> parseMaybeField "optionId"
+      <*> parseMaybeInput "priority"
+      <*> parseMaybeField "label"
+      <*> parseMaybeJsonInput "messageTranslations"
+      <*> parseMaybeJsonInput "titleTranslations"
+      <*> parseMaybeJsonInput "actionTranslations"
+      <*> parseMaybeField "referenceOptionId"
+      <*> parseMaybeField "referenceCategoryId"
+      <*> parseMaybeInput "isActive"
+      <*> parseMaybeInput "deleteExistingFiles"
+      <*> pure (Just mediaFiles)
     where
-      extractFile f =
-        pure (IssueMessageMediaFileUploadReq (fdPayload f) (fdFileCType f))
+      extractFile f = pure $ IssueMessageMediaFileUploadReq (fdPayload f) (fdFileCType f)
 
       parseMaybeInput :: Read b => Text -> Either String (Maybe b)
       parseMaybeInput fieldName = case lookupInput fieldName form of
-        Right res -> Right $ readMaybe (T.unpack res)
+        Right val -> Right $ readMaybe (T.unpack val)
         Left _ -> Right Nothing
 
-instance ToMultipart Tmp IssueMessageMediaFileUploadListReq where
-  toMultipart (IssueMessageMediaFileUploadListReq issueMessageId deleteExistingFiles mediaFiles) =
-    MultipartData inputs files
+      parseMaybeField :: FromJSON b => Text -> Either String (Maybe b)
+      parseMaybeField fieldName = case lookupInput fieldName form of
+        Right val -> Right . decode $ encode val
+        Left _ -> Right Nothing
+
+      parseMaybeJsonInput :: FromJSON a => Text -> Either String (Maybe a)
+      parseMaybeJsonInput fieldName = case lookupInput fieldName form of
+        Right val -> case eitherDecodeStrict (DTE.encodeUtf8 val) of
+          Right parsedVal -> Right (Just parsedVal)
+          Left err -> Left $ "JSON decoding error for field " ++ T.unpack fieldName ++ ": " ++ err
+        Left _ -> Right Nothing
+
+instance ToMultipart Tmp UpsertIssueMessageReq where
+  toMultipart req = MultipartData inputs files
     where
       inputs =
-        [ Input "issueMessageId" (getId issueMessageId)
-        ]
-          ++ maybe [] (\res -> [Input "deleteExistingFiles" (show res)]) deleteExistingFiles
-      files = map mkFileData mediaFiles
+        catMaybes
+          [ fmap (Input "issueMessageId") (getId <$> req.issueMessageId),
+            fmap (Input "message") req.message,
+            fmap (Input "messageTitle") req.messageTitle,
+            fmap (Input "messageAction") req.messageAction,
+            fmap (Input "categoryId") (getId <$> req.categoryId),
+            fmap (Input "optionId") (getId <$> req.optionId),
+            fmap (Input "priority" . T.pack . show) req.priority,
+            fmap (Input "label") req.label,
+            fmap (Input "messageTranslations" . encodeJson) req.messageTranslations,
+            fmap (Input "titleTranslations" . encodeJson) req.titleTranslations,
+            fmap (Input "actionTranslations" . encodeJson) req.actionTranslations,
+            fmap (Input "referenceOptionId") (getId <$> req.referenceOptionId),
+            fmap (Input "referenceCategoryId") (getId <$> req.referenceCategoryId),
+            fmap (Input "isActive" . T.pack . show) req.isActive,
+            fmap (Input "deleteExistingFiles" . T.pack . show) req.deleteExistingFiles
+          ]
+      files = maybe [] (map mkFileData) req.mediaFiles
       mkFileData (IssueMessageMediaFileUploadReq filePath contType) =
         FileData "file" (T.pack filePath) contType filePath
 
-instance HideSecrets IssueMessageMediaFileUploadListReq where
+      encodeJson :: ToJSON a => a -> Text
+      encodeJson = DTE.decodeUtf8 . BL.toStrict . encode
+
+instance HideSecrets UpsertIssueMessageReq where
   hideSecrets = identity

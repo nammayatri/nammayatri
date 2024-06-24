@@ -38,7 +38,6 @@ import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Booking as DTB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import Domain.Types.CancellationReason
-import Domain.Types.Estimate
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.Location (Location (..))
 import Domain.Types.LocationAddress
@@ -67,7 +66,6 @@ import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
-import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
@@ -407,25 +405,11 @@ rideInfo merchantId reqRideId = do
         computedPrice = ride.totalFare <&> (.amount),
         rideCreatedAt = ride.createdAt
       }
-transformEstimate :: CH.EstimateBreakup -> Common.EstimateBreakup
-transformEstimate estimate =
-  Common.EstimateBreakup
-    { Common.price =
-        Common.EstimateBreakupPrice
-          { Common.value =
-              PriceAPIEntity
-                { amount = CH.priceValue estimate,
-                  currency = CH.priceCurrency estimate
-                }
-          },
-      Common.title = CH.title estimate
-    }
 
 transformFareBreakup :: DFareBreakup.FareBreakup -> Common.FareBreakup
 transformFareBreakup DFareBreakup.FareBreakup {..} = do
   Common.FareBreakup
     { entityType = mkEntityType entityType,
-      id = cast id,
       ..
     }
 
@@ -434,6 +418,8 @@ mkEntityType = \case
   DFareBreakup.BOOKING_UPDATE_REQUEST -> Common.BOOKING_UPDATE_REQUEST
   DFareBreakup.BOOKING -> Common.BOOKING
   DFareBreakup.RIDE -> Common.RIDE
+  DFareBreakup.INITIAL_BOOKING -> Common.INITIAL_BOOKING
+
 mkFareProductType :: DTB.BookingDetails -> Common.FareProductType
 mkFareProductType bookingDetails = case bookingDetails of
   DTB.OneWayDetails _ -> Common.ONE_WAY

@@ -57,7 +57,8 @@ data PersonE e = Person
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     mobileNumber :: Maybe (EncryptedHashedField e Text),
-    merchantOperatingCityId :: Id MerchantOperatingCity
+    merchantOperatingCityId :: Id MerchantOperatingCity,
+    blocked :: Maybe Bool
   }
   deriving (Generic)
 
@@ -139,19 +140,18 @@ data RideInfoRes = RideInfoRes
 data IssueStatus = OPEN | PENDING_INTERNAL | PENDING_EXTERNAL | RESOLVED | CLOSED | REOPENED | NOT_APPLICABLE
   deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON, ToParamSchema)
 
-data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE
+data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | PREMIUM_SEDAN | BLACK | BLACK_XL | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data FareBreakup = FareBreakup
   { amount :: Price,
     description :: Text,
     entityId :: Text,
-    entityType :: FareBreakupEntityType,
-    id :: Id FareBreakup
+    entityType :: FareBreakupEntityType
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-data FareBreakupEntityType = BOOKING_UPDATE_REQUEST | BOOKING | RIDE
+data FareBreakupEntityType = BOOKING_UPDATE_REQUEST | BOOKING | RIDE | INITIAL_BOOKING
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
 
 $(mkHttpInstancesForEnum ''Variant)

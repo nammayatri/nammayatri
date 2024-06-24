@@ -171,6 +171,7 @@ data IssueCategoryRes = IssueCategoryRes
     category :: Text,
     logoUrl :: Text,
     categoryType :: CategoryType,
+    isRideRequired :: Bool,
     maxAllowedRideAge :: Maybe Seconds
   }
   deriving (Generic, Show, ToJSON, ToSchema)
@@ -203,6 +204,8 @@ data Message = Message
     messageTitle :: Maybe Text,
     messageAction :: Maybe Text,
     mediaFileUrls :: [Text],
+    referenceCategoryId :: Maybe (Id IssueCategory),
+    referenceOptionId :: Maybe (Id IssueOption),
     label :: Text
   }
   deriving (Generic, Show, ToJSON, ToSchema, Eq, FromJSON)
