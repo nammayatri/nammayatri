@@ -151,6 +151,7 @@ screen initialState =
             else do
               pure unit
             when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ flowRunner defaultGlobalState $ computeListItem push
+            let _ = spy "UpdatePickupLocation InitialStage" initialState.props.currentStage
             case initialState.props.currentStage of
               SearchLocationModel -> case initialState.props.isSearchLocation of
                 LocateOnMap ->
@@ -273,10 +274,18 @@ screen initialState =
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               ChatWithDriver -> if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction else pure unit
               ConfirmingLocation -> do
+                let _ = spy "UpdatePickupLocation ComingHere" initialState
                 _ <- pure $ enableMyLocation true
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                _ <- storeCallBackLocateOnMap push UpdatePickupLocation
+                void $ storeCallBackLocateOnMap push UpdatePickupLocation
+                when (initialState.props.doUpdatePickupLocation == true) $ void $ push $ UpdatePickupLocation initialState.props.defaultPickUpPoint (show initialState.props.sourceLat) $ show initialState.props.sourceLong 
                 pure unit
+              GoToConfirmLocation -> do
+                void $ pure $ enableMyLocation true
+                void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+                void $ storeCallBackLocateOnMap push UpdatePickupLocation
+                when (initialState.props.doUpdatePickupLocation == true) $ void $ push $ UpdatePickupLocation initialState.props.defaultPickUpPoint (show initialState.props.sourceLat) $ show initialState.props.sourceLong 
+                void $ push $ GoToConfirmingLocationStage
               TryAgain -> do
                 estimatesPolling <- runEffectFn1 getValueFromIdMap "EstimatePolling"
                 _ <- launchAff $ flowRunner defaultGlobalState $ getEstimate EstimatesTryAgain CheckFlowStatusAction 10 1000.0 push initialState estimatesPolling.id

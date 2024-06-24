@@ -148,6 +148,7 @@ initData = {
     },
     props: {
       rideRequestFlow : false
+    , doUpdatePickupLocation : false
     , maxDateBooking : 5
     , nightSafetyFlow : false
     , isHomescreenExpanded : false
