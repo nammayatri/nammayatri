@@ -3649,7 +3649,7 @@ getPlaceName lat long location getApiResponse = do
         if getApiResponse then do
           (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat long $ EHC.getMapsLanguageFormat $ getLanguageLocale languageKey)
           liftFlowBT $ logEvent logField_ "ny_geocode_ll_address_fallback"
-          pure $ Just $ (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
+          pure $ locationName !! 0
         else do
           pure Nothing
   where

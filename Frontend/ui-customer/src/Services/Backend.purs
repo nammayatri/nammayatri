@@ -33,6 +33,7 @@ import Resources.Constants as Constants
 import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Commons (liftFlow, os, convertUTCtoISC, isPreviousVersion, isInvalidUrl, getNewIDWithTag)
 import Engineering.Helpers.Utils as EHU
+import Engineering.Helpers.Commons as EHC
 import Foreign.Generic (encode)
 import Foreign.Object (empty)
 import Helpers.Utils (decodeError, getTime)
@@ -63,6 +64,7 @@ import Debug
 import Effect.Uncurried (runEffectFn10)
 import Data.Function.Uncurried (runFn2)
 import Engineering.Helpers.BackTrack (liftFlowBT)
+import Mobility.Prelude as MP
 import SessionCache
 import LocalStorage.Cache (removeValueFromCache)
 import Helpers.API (callApiBT)
@@ -414,7 +416,16 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMo
         fallbackAndFetchAgain :: Number -> Number -> LocationAddress
         fallbackAndFetchAgain lat long = 
             let addressFetched = runFn2 JB.getLocationNameV2 lat long
-            in LocationAddress $ Constants.encodeAddress addressFetched [] Nothing lat long
+            in 
+                if addressFetched /= "NO_LOCATION_FOUND" then
+                    LocationAddress $ Constants.encodeAddress addressFetched [] Nothing lat long
+                else do
+                    let calNearbyLocation = MP.calculateNearbyLocation lat long
+                        nearbyAddressFetched = runFn2 JB.getLocationNameV2 lat long
+                    if nearbyAddressFetched /= "NO_LOCATION_FOUND" then
+                        LocationAddress $ Constants.encodeAddress nearbyAddressFetched [] Nothing lat long
+                    else
+                        LocationAddress $ Constants.encodeAddress (getValueToLocalStore CUSTOMER_LOCATION) [] Nothing lat long
 
         isNonEmpty :: Maybe String -> Boolean
         isNonEmpty = maybe false (\s -> DS.null s)
