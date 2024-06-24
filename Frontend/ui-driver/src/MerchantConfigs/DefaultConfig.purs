@@ -652,7 +652,6 @@ config =
   , enableYatriCoins : false
   , enableAutoReferral : true
   , enableSpecialPickup : EHC.jBridgeMethodExists "locateOnMapV2"
-  , enableIntercity : false
   }
   , showCorporateAddress : false
   , engilshInNative: "English"
