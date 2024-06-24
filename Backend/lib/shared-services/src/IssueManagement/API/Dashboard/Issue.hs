@@ -19,7 +19,6 @@ type DashboardIssueAPI =
            :<|> Common.CreateIssueOptionAPI
            :<|> Common.UpdateIssueOptionAPI
            :<|> Common.UpsertIssueMessageAPI
-           :<|> Common.IssueMessageMediaFileUploadAPI
        )
 
 type DashboardIssueAPIV2 =
@@ -37,5 +36,4 @@ type DashboardIssueAPIV2 =
            :<|> Common.CreateIssueOptionAPI
            :<|> Common.UpdateIssueOptionAPI
            :<|> Common.UpsertIssueMessageAPI
-           :<|> Common.IssueMessageMediaFileUploadAPI
        )

@@ -176,7 +176,7 @@ data FareBreakup = FareBreakup
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-data FareBreakupEntityType = BOOKING_UPDATE_REQUEST | BOOKING | RIDE
+data FareBreakupEntityType = BOOKING_UPDATE_REQUEST | BOOKING | RIDE | INITIAL_BOOKING
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data Location = Location

@@ -15,6 +15,7 @@
 
 module Domain.Action.Dashboard.IssueList where
 
+import qualified API.Dashboard.Issue as ADI
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Issue as DI
 import qualified Domain.Types.Merchant as DM
@@ -112,5 +113,5 @@ ticketStatusCallBack _ req = do
   mbTicket <- QIssue.findByTicketId req.ticketId
   case mbTicket of
     Just _ -> QIssue.updateIssueStatus req.ticketId =<< DCommon.transformKaptureStatus req
-    Nothing -> void $ DCommon.ticketStatusCallBack req Common.CUSTOMER
+    Nothing -> void $ DCommon.ticketStatusCallBack req ADI.dashboardIssueHandle Common.CUSTOMER
   return Success

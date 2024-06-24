@@ -20,12 +20,14 @@ module IssueManagement.Storage.Beam.Issue.IssueMessage where
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import GHC.Generics (Generic)
+import qualified IssueManagement.Domain.Types.Issue.IssueMessage as DIM
 import IssueManagement.Tools.UtilsTH hiding (Generic, label)
 
 data IssueMessageT f = IssueMessageT
   { id :: B.C f Text,
     categoryId :: B.C f (Maybe Text),
     optionId :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f Text,
     message :: B.C f Text,
     priority :: B.C f Int,
     label :: B.C f (Maybe Text),
@@ -35,6 +37,8 @@ data IssueMessageT f = IssueMessageT
     mediaFiles :: B.C f [Text],
     messageTitle :: B.C f (Maybe Text),
     messageAction :: B.C f (Maybe Text),
+    messageType :: B.C f DIM.IssueMessageType,
+    isActive :: B.C f Bool,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
