@@ -32,7 +32,6 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
         Domain.Types.SearchRequest.SearchRequest
           { autoAssignEnabled = autoAssignEnabled,
             autoAssignEnabledV2 = autoAssignEnabledV2,
-            availablePaymentMethods = Kernel.Types.Id.Id <$> availablePaymentMethods,
             backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
             clientBundleVersion = clientBundleVersion',
@@ -58,7 +57,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             riderId = Kernel.Types.Id.Id riderId,
             riderPreferredOption = fromMaybe Domain.Types.SearchRequest.OneWay riderPreferredOption,
             roundTrip = roundTrip,
-            selectedPaymentMethodId = Kernel.Types.Id.Id <$> selectedPaymentMethodId,
+            selectedPaymentMethodId = selectedPaymentMethodId,
             startTime = startTime,
             toLocation = toLocation',
             validTill = validTill
@@ -69,7 +68,6 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
     Beam.SearchRequestT
       { Beam.autoAssignEnabled = autoAssignEnabled,
         Beam.autoAssignEnabledV2 = autoAssignEnabledV2,
-        Beam.availablePaymentMethods = Kernel.Types.Id.getId <$> availablePaymentMethods,
         Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = Kernel.Utils.Version.versionToText <$> backendConfigVersion,
         Beam.clientBundleVersion = Kernel.Utils.Version.versionToText <$> clientBundleVersion,
@@ -100,7 +98,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.riderPreferredOption = Just riderPreferredOption,
         Beam.roundTrip = roundTrip,
-        Beam.selectedPaymentMethodId = Kernel.Types.Id.getId <$> selectedPaymentMethodId,
+        Beam.selectedPaymentMethodId = selectedPaymentMethodId,
         Beam.startTime = startTime,
         Beam.toLocationId = Kernel.Types.Id.getId <$> (toLocation <&> (.id)),
         Beam.validTill = validTill

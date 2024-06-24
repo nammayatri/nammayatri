@@ -4,6 +4,7 @@ imports:
   PaymentMethodId: Kernel.External.Payment.Interface.Types
   APISuccess: Kernel.Types.APISuccess
   Ride: Domain.Types.Ride
+  PriceAPIEntity: Kernel.Types.Common
 
 module: RidePayment
 types:
@@ -18,6 +19,9 @@ types:
   PaymentMethodsResponse:
     recordType: NewType
     list: CustomerCardListResp
+  AddTipRequest:
+    recordType: NewType
+    amount: PriceAPIEntity
 apis:
   - GET:
       endpoint: /payment/methods
@@ -51,5 +55,7 @@ apis:
       endpoint: /payment/{rideId}/addTip
       params:
         rideId: Id Ride
+      request:
+        type: AddTipRequest
       response:
         type: APISuccess

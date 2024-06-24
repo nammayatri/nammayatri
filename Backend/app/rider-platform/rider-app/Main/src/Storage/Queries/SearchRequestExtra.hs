@@ -1,12 +1,11 @@
 module Storage.Queries.SearchRequestExtra where
 
 import qualified Domain.Types.LocationMapping as DLM
-import Domain.Types.MerchantPaymentMethod (MerchantPaymentMethod)
-import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.Person (Person)
 import Domain.Types.SearchRequest
 import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
+import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -49,13 +48,13 @@ findAllByPerson (Id personId) = findAllWithKV [Se.Is BeamSR.riderId $ Se.Eq pers
 findLatestSearchRequest :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe SearchRequest)
 findLatestSearchRequest (Id riderId) = findAllWithOptionsKV [Se.Is BeamSR.riderId $ Se.Eq riderId] (Se.Desc BeamSR.createdAt) (Just 1) Nothing <&> listToMaybe
 
-updateCustomerExtraFeeAndPaymentMethod :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Price -> Maybe (Id DMPM.MerchantPaymentMethod) -> m ()
+updateCustomerExtraFeeAndPaymentMethod :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Price -> Maybe Payment.PaymentMethodId -> m ()
 updateCustomerExtraFeeAndPaymentMethod (Id searchReqId) customerExtraFee paymentMethodId =
   updateOneWithKV
     [ Se.Set BeamSR.customerExtraFee $ customerExtraFee <&> (.amountInt),
       Se.Set BeamSR.customerExtraFeeAmount $ customerExtraFee <&> (.amount),
       Se.Set BeamSR.currency $ customerExtraFee <&> (.currency),
-      Se.Set BeamSR.selectedPaymentMethodId (getId <$> paymentMethodId)
+      Se.Set BeamSR.selectedPaymentMethodId paymentMethodId
     ]
     [Se.Is BeamSR.id (Se.Eq searchReqId)]
 
@@ -66,10 +65,3 @@ updateAutoAssign (Id searchRequestId) autoAssignedEnabled autoAssignedEnabledV2 
       Se.Set BeamSR.autoAssignEnabledV2 $ Just autoAssignedEnabledV2
     ]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]
-
-updatePaymentMethods :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> [Id MerchantPaymentMethod] -> m ()
-updatePaymentMethods (Id searchReqId) availablePaymentMethods =
-  updateOneWithKV
-    [ Se.Set BeamSR.availablePaymentMethods (getId <$> availablePaymentMethods)
-    ]
-    [Se.Is BeamSR.id (Se.Eq searchReqId)]

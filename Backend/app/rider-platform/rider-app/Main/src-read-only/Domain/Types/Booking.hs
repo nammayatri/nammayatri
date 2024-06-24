@@ -14,11 +14,11 @@ import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.MerchantPaymentMethod
 import qualified Domain.Types.Person
 import qualified Domain.Types.Quote
 import qualified Domain.Types.TripTerms
 import qualified Domain.Types.VehicleServiceTier
+import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -40,6 +40,7 @@ data Booking = Booking
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     estimateId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate),
+    estimatedApplicationFee :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedFare :: Kernel.Types.Common.Price,
@@ -52,7 +53,7 @@ data Booking = Booking
     isScheduled :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    paymentMethodId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod),
+    paymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
     paymentStatus :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.PaymentStatus,
     paymentUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     primaryExophone :: Kernel.Prelude.Text,

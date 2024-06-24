@@ -81,3 +81,13 @@ ALTER TABLE atlas_app.booking ADD COLUMN estimate_id character varying(36) ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN is_air_conditioned boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ALTER COLUMN payment_method_id TYPE text;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN estimated_application_fee numeric(30,2) ;

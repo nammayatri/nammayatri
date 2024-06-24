@@ -11,6 +11,7 @@ import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.FarePolicy.FareProductType
 import qualified Domain.Types.VehicleServiceTier
 import Kernel.External.Encryption
+import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -38,6 +39,7 @@ data BookingT f = BookingT
     discount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     estimateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    estimatedApplicationFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     distanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     estimatedDistanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
@@ -52,7 +54,7 @@ data BookingT f = BookingT
     isScheduled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    paymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    paymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
     paymentStatus :: B.C f (Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.PaymentStatus),
     paymentUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     primaryExophone :: B.C f Kernel.Prelude.Text,

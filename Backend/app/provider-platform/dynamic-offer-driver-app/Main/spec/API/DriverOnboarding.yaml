@@ -13,7 +13,6 @@ imports:
   Money: Kernel.Types.Common
   Driver: Domain.Types.Person
   TripCategory: Domain.Types.Common
-  Image: Domain.Types.Image
   VerifiedBy: Domain.Types.DriverPanCard
   SelfieFetchStatus: Domain.Types.Image
   BaseUrl: Servant.Client.Core

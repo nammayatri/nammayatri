@@ -9,9 +9,9 @@ import qualified Domain.Types.Client
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.MerchantPaymentMethod
 import qualified Domain.Types.Person
 import qualified Kernel.External.Maps
+import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -22,7 +22,6 @@ import qualified Tools.Beam.UtilsTH
 data SearchRequest = SearchRequest
   { autoAssignEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     autoAssignEnabledV2 :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    availablePaymentMethods :: [Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod],
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
@@ -48,7 +47,7 @@ data SearchRequest = SearchRequest
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     riderPreferredOption :: Domain.Types.SearchRequest.RiderPreferredOption,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    selectedPaymentMethodId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod),
+    selectedPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
     startTime :: Kernel.Prelude.UTCTime,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     validTill :: Kernel.Prelude.UTCTime

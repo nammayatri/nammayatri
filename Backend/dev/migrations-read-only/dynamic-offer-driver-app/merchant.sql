@@ -28,3 +28,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN unique_key_id character v
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN verified boolean NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN online_payment boolean NOT NULL default false;

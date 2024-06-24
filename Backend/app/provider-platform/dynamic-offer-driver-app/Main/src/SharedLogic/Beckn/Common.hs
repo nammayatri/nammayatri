@@ -25,6 +25,7 @@ import Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
 import Domain.Types.Vehicle as SVeh
 import Kernel.External.Maps.Types as Maps
+import Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 
 data BookingDetails = BookingDetails
@@ -46,6 +47,7 @@ data DRideAssignedReq = DRideAssignedReq
     image :: Maybe Text,
     isDriverBirthDay :: Bool,
     isFreeRide :: Bool,
+    driverAccountId :: Maybe Payment.AccountId,
     estimateId :: Maybe Text
   }
 

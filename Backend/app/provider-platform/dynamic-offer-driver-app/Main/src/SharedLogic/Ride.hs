@@ -64,14 +64,15 @@ import qualified Tools.Notifications as Notify
 import Utils.Common.Cac.KeyNameConstants
 
 initializeRide ::
-  Id Merchant ->
+  Merchant ->
   DPerson.Person ->
   DBooking.Booking ->
   Maybe Text ->
   Maybe Bool ->
   Maybe (Id DC.Client) ->
   Flow (DRide.Ride, SRD.RideDetails, DVeh.Vehicle)
-initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates mbClientId = do
+initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId = do
+  let merchantId = merchant.id
   otpCode <-
     case mbOtpCode of
       Just otp -> pure otp
@@ -88,7 +89,7 @@ initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates
   previousRideInprogress <- QRide.getInProgressByDriverId driver.id
   now <- getCurrentTime
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
-  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle
+  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment
   rideDetails <- buildRideDetails ride driver vehicle
 
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
@@ -162,8 +163,9 @@ buildRide ::
   Maybe DRide.Ride ->
   UTCTime ->
   DVeh.Vehicle ->
+  Bool ->
   Flow DRide.Ride
-buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previousRide now vehicle = do
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previousRide now vehicle onlinePayment = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   deploymentVersion <- asks (.version)
@@ -233,7 +235,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         tripCategory = booking.tripCategory,
         vehicleServiceTierName = Just booking.vehicleServiceTierName,
-        vehicleVariant = Just $ vehicle.variant
+        vehicleVariant = Just $ vehicle.variant,
+        onlinePayment = onlinePayment
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

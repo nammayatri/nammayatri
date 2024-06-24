@@ -25,10 +25,10 @@ import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as Quote
 import Environment
+import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude hiding (init)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -46,7 +46,7 @@ type API =
     :> "quotes"
     :> Capture "quoteId" (Id Quote.Quote)
     :> "confirm"
-    :> QueryParam "paymentMethodId" (Id DMPM.MerchantPaymentMethod)
+    :> QueryParam "paymentMethodId" Payment.PaymentMethodId
     :> Post '[JSON] ConfirmRes
 
 data ConfirmRes = ConfirmRes
@@ -65,7 +65,7 @@ handler =
 confirm ::
   (Id SP.Person, Id Merchant.Merchant) ->
   Id Quote.Quote ->
-  Maybe (Id DMPM.MerchantPaymentMethod) ->
+  Maybe Payment.PaymentMethodId ->
   FlowHandler ConfirmRes
 confirm (personId, _) quoteId mbPaymentMethodId =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do

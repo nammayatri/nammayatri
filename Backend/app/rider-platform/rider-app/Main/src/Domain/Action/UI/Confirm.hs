@@ -21,9 +21,9 @@ where
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
-import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
+import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Tools.Metrics.CoreMetrics
@@ -53,7 +53,7 @@ confirm ::
   ) =>
   Id DP.Person ->
   Id DQuote.Quote ->
-  Maybe (Id DMPM.MerchantPaymentMethod) ->
+  Maybe Payment.PaymentMethodId ->
   m SConfirm.DConfirmRes
 confirm personId quoteId paymentMethodId = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)

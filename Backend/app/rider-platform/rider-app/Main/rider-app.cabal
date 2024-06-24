@@ -249,6 +249,7 @@ library
       SharedLogic.MerchantConfig
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
+      SharedLogic.Payment
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PublicTransport

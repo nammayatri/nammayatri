@@ -23,10 +23,12 @@ module Lib.Payment.Domain.Action
     createExecutionService,
     buildSDKPayload,
     refundService,
+    createPaymentIntentService,
   )
 where
 
 import qualified Data.Text as T
+import qualified Data.Time as Time
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
@@ -82,6 +84,144 @@ data PaymentStatusResp
         notificationId :: Text
       }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+-- create payment intent --------------------------------------------
+
+createPaymentIntentService ::
+  ( EncFlow m r,
+    BeamFlow m r
+  ) =>
+  Id Merchant ->
+  Id Person ->
+  Id Ride ->
+  Text ->
+  Payment.CreatePaymentIntentReq ->
+  (Payment.CreatePaymentIntentReq -> m Payment.CreatePaymentIntentResp) ->
+  (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) ->
+  m Payment.CreatePaymentIntentResp
+createPaymentIntentService merchantId personId rideId rideShortIdText createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall = do
+  let rideShortId = ShortId rideShortIdText
+  mbExistingOrder <- QOrder.findById (cast rideId)
+  case mbExistingOrder of
+    Nothing -> do
+      createPaymentIntentResp <- createPaymentIntentCall createPaymentIntentReq -- api call
+      paymentOrder <- buildPaymentOrder_ createPaymentIntentResp rideShortId
+      transaction <- buildTransaction paymentOrder createPaymentIntentResp
+      QOrder.create paymentOrder
+      QTransaction.create transaction
+      return createPaymentIntentResp
+    Just existingOrder -> do
+      transactions <- QTransaction.findAllByOrderId existingOrder.id
+      let mbInProgressTransaction = find (isInProgress . (.status)) transactions
+      case mbInProgressTransaction of
+        Nothing -> do
+          -- if previous all payment intents are already charged or cancelled, then create a new payment intent
+          createPaymentIntentResp <- createPaymentIntentCall createPaymentIntentReq -- api call
+          let newOrderAmount = existingOrder.amount + createPaymentIntentReq.amount
+          transaction <- buildTransaction existingOrder createPaymentIntentResp
+          QOrder.updateAmountAndStatus existingOrder.id newOrderAmount createPaymentIntentResp.paymentIntentId
+          QTransaction.create transaction
+          return createPaymentIntentResp
+        Just transaction -> do
+          paymentIntentId <- transaction.txnId & fromMaybeM (InternalError "Transaction doesn't have txnId") -- should never happen
+          mbClientSecret <- mapM decrypt existingOrder.clientAuthToken
+          clientSecret <- mbClientSecret & fromMaybeM (InternalError "Client secret not found") -- should never happen
+          let paymentIntentStatus = Payment.caseToPaymentIntentStatus transaction.status
+          if createPaymentIntentReq.amount > transaction.amount
+            then do
+              updatePaymentIntentAmountCall paymentIntentId createPaymentIntentReq.amount createPaymentIntentReq.applicationFeeAmount
+              -- check if status will be updated in this
+              return $ Payment.CreatePaymentIntentResp paymentIntentId clientSecret paymentIntentStatus
+            else return $ Payment.CreatePaymentIntentResp paymentIntentId clientSecret paymentIntentStatus
+  where
+    isInProgress = (`elem` [Payment.NEW, Payment.PENDING_VBV, Payment.STARTED, Payment.AUTHORIZING])
+
+    buildPaymentOrder_ ::
+      ( EncFlow m r,
+        BeamFlow m r
+      ) =>
+      Payment.CreatePaymentIntentResp ->
+      ShortId DOrder.PaymentOrder ->
+      m DOrder.PaymentOrder
+    buildPaymentOrder_ createPaymentIntentResp rideShortId = do
+      now <- getCurrentTime
+      clientAuthToken <- encrypt createPaymentIntentResp.clientSecret
+      let clientAuthTokenExpiry = Time.UTCTime (Time.fromGregorian 2099 1 1) 0 -- setting infinite expiry for now
+      pure
+        DOrder.PaymentOrder
+          { id = cast rideId,
+            shortId = rideShortId,
+            paymentServiceOrderId = createPaymentIntentResp.paymentIntentId,
+            requestId = Nothing,
+            service = Nothing,
+            clientId = Nothing,
+            description = Nothing,
+            returnUrl = Nothing,
+            action = Nothing,
+            personId,
+            merchantId,
+            paymentMerchantId = Nothing,
+            amount = createPaymentIntentReq.amount,
+            currency = createPaymentIntentReq.currency,
+            status = Payment.castToTransactionStatus createPaymentIntentResp.status,
+            paymentLinks = Payment.PaymentLinks Nothing Nothing Nothing Nothing,
+            clientAuthToken = Just clientAuthToken,
+            clientAuthTokenExpiry = Just clientAuthTokenExpiry,
+            getUpiDeepLinksOption = Nothing,
+            environment = Nothing,
+            createMandate = Nothing,
+            mandateMaxAmount = Nothing,
+            mandateStartDate = Nothing,
+            mandateEndDate = Nothing,
+            serviceProvider = Payment.Stripe, -- fix it later
+            bankErrorCode = Nothing,
+            bankErrorMessage = Nothing,
+            isRetried = False,
+            isRetargeted = False,
+            retargetLink = Nothing,
+            createdAt = now,
+            updatedAt = now
+          }
+
+    buildTransaction ::
+      ( EncFlow m r,
+        BeamFlow m r
+      ) =>
+      DOrder.PaymentOrder ->
+      Payment.CreatePaymentIntentResp ->
+      m DTransaction.PaymentTransaction
+    buildTransaction order resp = do
+      uuid <- generateGUID
+      now <- getCurrentTime
+      pure
+        DTransaction.PaymentTransaction
+          { id = uuid,
+            txnUUID = Nothing,
+            txnId = Just resp.paymentIntentId,
+            paymentMethodType = Nothing, -- fix it later
+            paymentMethod = Nothing, -- fix it later
+            respMessage = Nothing,
+            respCode = Nothing,
+            gatewayReferenceId = Nothing,
+            orderId = order.id,
+            merchantId = order.merchantId,
+            amount = createPaymentIntentReq.amount,
+            currency = createPaymentIntentReq.currency,
+            dateCreated = Nothing,
+            statusId = 0, -- not used for stripe
+            status = Payment.castToTransactionStatus resp.status,
+            juspayResponse = Nothing,
+            mandateStatus = Nothing,
+            mandateStartDate = Nothing,
+            mandateEndDate = Nothing,
+            mandateId = Nothing,
+            bankErrorMessage = Nothing,
+            bankErrorCode = Nothing,
+            mandateFrequency = Nothing,
+            mandateMaxAmount = Nothing,
+            createdAt = now,
+            updatedAt = now
+          }
 
 -- create order -----------------------------------------------------
 

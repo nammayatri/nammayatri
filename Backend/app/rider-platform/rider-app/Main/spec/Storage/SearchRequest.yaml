@@ -17,6 +17,7 @@ imports:
   HighPrecDistance: Kernel.Types.Common
   Device: Kernel.Types.Version
   DeviceType: Kernel.Types.Version
+  PaymentMethodId: Kernel.External.Payment.Interface.Types
 
 SearchRequest:
   tableName: search_request
@@ -45,8 +46,7 @@ SearchRequest:
     customerExtraFee: Maybe Price
     autoAssignEnabled: Maybe Bool
     autoAssignEnabledV2: Maybe Bool
-    availablePaymentMethods: "[Id MerchantPaymentMethod]"
-    selectedPaymentMethodId: Maybe (Id MerchantPaymentMethod)
+    selectedPaymentMethodId: Maybe PaymentMethodId
     riderPreferredOption: RiderPreferredOption
     createdAt: UTCTime
     clientBundleVersion: Maybe Version
@@ -78,7 +78,6 @@ SearchRequest:
     distance: numeric(30,2)
     language: character varying(255)
     maxDistance: double precision
-    availablePaymentMethods: character(36) []
     disabilityTag: character(255)
     currency: character varying(255)
     fromLocationId: character varying(36)

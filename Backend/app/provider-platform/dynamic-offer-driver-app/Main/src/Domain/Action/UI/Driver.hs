@@ -1029,7 +1029,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
               DTC.CrossCity DTC.OneWayOnDemandDynamicOffer _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
               DTC.InterCity DTC.OneWayOnDemandDynamicOffer _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
-              _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchantId clientId
+              _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId
           QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource sReqFD.id
           return pullList
         Reject -> do
@@ -1165,8 +1165,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
       return driverFCMPulledList
 
-acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> Id DM.Merchant -> Maybe (Id DC.Client) -> Flow [SearchRequestForDriver]
-acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue merchantId clientId = do
+acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe (Id DC.Client) -> Flow [SearchRequestForDriver]
+acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue merchant clientId = do
   whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer rental fare")
   quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
   booking <- QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)
@@ -1177,10 +1177,10 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   CS.markBookingAssignmentInprogress booking.id -- this is to handle booking assignment and user cancellation at same time
   unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
   whenJust mbSearchTry $ \searchTry -> QST.updateStatus DST.COMPLETED searchTry.id
-  (ride, _, vehicle) <- initializeRide merchantId driver booking Nothing Nothing clientId
+  (ride, _, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId
   driverFCMPulledList <-
     case mbSearchTry of
-      Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchantId driver.id searchTry.id $ mkPrice (Just quote.currency) quote.estimatedFare
+      Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id $ mkPrice (Just quote.currency) quote.estimatedFare
       Nothing -> pure []
   void $ sendRideAssignedUpdateToBAP booking ride driver vehicle
   CS.markBookingAssignmentCompleted booking.id
@@ -1956,10 +1956,11 @@ acceptScheduledBooking ::
   Id DRB.Booking ->
   Flow APISuccess
 acceptScheduledBooking (personId, merchantId, _) clientId bookingId = do
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   booking <- runInReplica $ QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   driver <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id
   unless (isNothing activeRide) $ throwError (RideInvalidStatus "Cannot accept booking during active ride.")
   mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
-  void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchantId clientId -- handle driver blocked
+  void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId -- handle driver blocked
   pure Success

@@ -75,6 +75,7 @@ Merchant:
     geofencingConfig: GeofencingConfig
     info: Maybe Text
     registryUrl: BaseUrl
+    onlinePayment: Bool
 
   sqlType:
     destinationRestriction: text[]
@@ -99,7 +100,7 @@ Merchant:
     minimumDriverRatesCount: "5"
     registryUrl: "'http://localhost:8020'"
     uniqueKeyId: "'FIXME'"
-
+    onlinePayment: "false"
 
   excludedFields:
     - merchantId

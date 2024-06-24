@@ -60,7 +60,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.Merchant as QMerch
-import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Estimate as QEstimate
@@ -226,7 +225,6 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   Metrics.finishSearchMetrics merchant.name transactionId
   now <- getCurrentTime
 
-  let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   mkBppDetails >>= CQBppDetails.createIfNotPresent
 
   isValueAddNP <- CQVAN.isValueAddNP providerInfo.providerId
@@ -239,16 +237,13 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       deploymentVersion <- asks (.version)
       estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo)
       quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo)
-      merchantPaymentMethods <- CQMPM.findAllByMerchantOperatingCityId merchantOperatingCityId
-      let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
       forM_ estimates $ \est -> do
         triggerEstimateEvent EstimateEventData {estimate = est, personId = searchRequest.riderId, merchantId = searchRequest.merchantId}
       let lockKey = DQ.estimateBuildLockKey searchRequest.id.getId
       Redis.withLockRedis lockKey 5 $ do
-        _ <- QEstimate.createMany estimates
-        _ <- QQuote.createMany quotes
-        _ <- QPFS.updateStatus searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = searchRequest.id, validTill = searchRequest.validTill}
-        _ <- QSearchReq.updatePaymentMethods searchRequest.id (paymentMethods <&> (.id))
+        QEstimate.createMany estimates
+        QQuote.createMany quotes
+        QPFS.updateStatus searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = searchRequest.id, validTill = searchRequest.validTill}
         QPFS.clearCache searchRequest.riderId
   where
     {- Author: Hemant Mangla
@@ -481,12 +476,3 @@ mkEstimatePrice ::
   BreakupPriceInfo ->
   m DEstimate.EstimateBreakupPrice
 mkEstimatePrice BreakupPriceInfo {value} = pure DEstimate.EstimateBreakupPrice {value}
-
-intersectPaymentMethods :: [DMPM.PaymentMethodInfo] -> [DMPM.MerchantPaymentMethod] -> [DMPM.MerchantPaymentMethod]
-intersectPaymentMethods providerPaymentMethods = filter (\mpm -> any (compareMerchantPaymentMethod mpm) providerPaymentMethods)
-
-compareMerchantPaymentMethod :: DMPM.MerchantPaymentMethod -> DMPM.PaymentMethodInfo -> Bool
-compareMerchantPaymentMethod DMPM.MerchantPaymentMethod {..} providerPaymentMethod =
-  paymentType == providerPaymentMethod.paymentType
-    && paymentInstrument == providerPaymentMethod.paymentInstrument
-    && collectedBy == providerPaymentMethod.collectedBy

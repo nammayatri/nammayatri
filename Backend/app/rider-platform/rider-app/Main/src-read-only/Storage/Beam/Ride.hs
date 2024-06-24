@@ -52,6 +52,7 @@ data RideT f = RideT
     isFreeRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    onlinePayment :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     otp :: B.C f Kernel.Prelude.Text,
     paymentDone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     rideEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

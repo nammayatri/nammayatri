@@ -71,6 +71,7 @@ Merchant:
     arrivedPickupThreshold: Distance
     arrivingPickupThreshold: Distance
     driverOnTheWayNotifyExpiry: Seconds
+    onlinePayment: Bool
 
   excludedFields:
     - merchantId
@@ -196,7 +197,7 @@ Merchant:
     geoHashPrecisionValue: "9"
     fakeOtpEmails: "'{}'"
     city: "'Kochi'"
-
+    onlinePayment: "false"
 
   constraints:
     shortId: SecondaryKey

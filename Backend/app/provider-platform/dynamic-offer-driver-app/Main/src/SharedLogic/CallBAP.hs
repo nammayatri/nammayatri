@@ -107,6 +107,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.ValueAddNP as CValueAddNP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.IdfyVerification as QIV
@@ -316,6 +317,12 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
   let image = join (eitherToMaybe resp)
   isDriverBirthDay <- maybe (return False) (checkIsDriverBirthDay mbTransporterConfig) driverInfo.driverDob
   isFreeRide <- maybe (return False) (checkIfRideBySpecialDriver ride.driverId) mbTransporterConfig
+  driverAccountId <-
+    if ride.onlinePayment && isValueAddNP
+      then do
+        mDriverBankAccount <- runInReplica $ QDBA.findByPrimaryKey ride.driverId
+        return $ (.accountId) <$> mDriverBankAccount
+      else pure Nothing
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq ACL.DRideAssignedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
   rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq

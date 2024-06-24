@@ -235,7 +235,7 @@ tfOrder (DStatus.BookingReallocationBuildReq DBookingReallocationBuildReq {booki
   let Common.BookingDetails {driver, driverStats, vehicle, booking, ride, isValueAddNP} = bookingDetails
   let image = Nothing
   let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
-  fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False Nothing isValueAddNP Nothing
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False Nothing Nothing isValueAddNP Nothing
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,

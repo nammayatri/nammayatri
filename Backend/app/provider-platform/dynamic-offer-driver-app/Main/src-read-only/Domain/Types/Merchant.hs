@@ -31,6 +31,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     name :: Kernel.Prelude.Text,
+    onlinePayment :: Kernel.Prelude.Bool,
     registryUrl :: Kernel.Prelude.BaseUrl,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
     state :: Kernel.Types.Beckn.Context.IndianState,

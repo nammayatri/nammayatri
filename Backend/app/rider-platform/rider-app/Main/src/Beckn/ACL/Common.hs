@@ -27,6 +27,7 @@ import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Kernel.External.Maps.Types as Maps
+import qualified Kernel.External.Payment.Interface as EPayment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
@@ -159,6 +160,7 @@ parseRideAssignedEvent order msgId txnId = do
         _ -> False
   let isDriverBirthDay = castToBool $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_DRIVER_BIRTHDAY tagGroups
       isFreeRide = castToBool $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_FREE_RIDE tagGroups
+      (driverAccountId :: Maybe EPayment.AccountId) = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ACCOUNT_ID tagGroups
       previousRideEndPos = getLocationFromTagV2 tagGroupsFullfillment Tag.FORWARD_BATCHING_REQUEST_INFO Tag.PREVIOUS_RIDE_DROP_LOCATION_LAT Tag.PREVIOUS_RIDE_DROP_LOCATION_LON
   bookingDetails <- parseBookingDetails order msgId
   return
@@ -167,6 +169,7 @@ parseRideAssignedEvent order msgId txnId = do
         transactionId = txnId,
         isDriverBirthDay,
         isFreeRide,
+        driverAccountId,
         previousRideEndPos
       }
 

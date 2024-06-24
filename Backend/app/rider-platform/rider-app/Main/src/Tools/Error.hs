@@ -507,6 +507,37 @@ instance IsHTTPError BecknConfigError where
 
 instance IsAPIError BecknConfigError
 
+data PaymentError
+  = PaymentMethodRequired
+  | CustomerPaymentIdNotFound Text
+  | PaymentMethodIdNotFound Text
+  | DriverAccountIdNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''PaymentError
+
+instance IsBaseError PaymentError where
+  toMessage = \case
+    PaymentMethodRequired -> Just $ "Payment method is required to book a ride"
+    CustomerPaymentIdNotFound cusomterId -> Just $ "Customer payment id with id \"" <> show cusomterId <> "\" not found."
+    PaymentMethodIdNotFound bookingId -> Just $ "Payment method for booking with id \"" <> show bookingId <> "\" not found."
+    DriverAccountIdNotFound bookingId -> Just $ "Driver account for booking with id \"" <> show bookingId <> "\" not found."
+
+instance IsHTTPError PaymentError where
+  toErrorCode = \case
+    PaymentMethodRequired -> "PAYMENT_METHOD_REQUIRED"
+    CustomerPaymentIdNotFound _ -> "CUSTOMER_PAYMENT_ID_NOT_FOUND"
+    PaymentMethodIdNotFound _ -> "PAYMENT_METHOD_ID_NOT_FOUND"
+    DriverAccountIdNotFound _ -> "DRIVER_ACCOUNT_ID_NOT_FOUND"
+
+  toHttpCode = \case
+    PaymentMethodRequired -> E400
+    CustomerPaymentIdNotFound _ -> E500
+    PaymentMethodIdNotFound _ -> E500
+    DriverAccountIdNotFound _ -> E500
+
+instance IsAPIError PaymentError
+
 ------------------ CAC ---------------------
 -- This is for temporary implementation of the CAC auth API. This will be depcricated once we have SSO for CAC.
 data CacAuthError = CacAuthError | CacInvalidToken
