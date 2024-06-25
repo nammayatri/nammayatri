@@ -354,6 +354,8 @@ window["onEvent'"] = function (_event, args) {
     purescript.onBundleUpdatedEvent(JSON.parse(args))();
   } else if ((_event == "onKeyboardOpen" || _event == "onKeyboardClose") && window.keyBoardCallback) {
     window.keyBoardCallback(_event);
+  } else if (_event == "onLocationFetch") {
+    window["current_location"] = JSON.parse(args);
   } else {
     purescript.onEvent(_event)();
   }
@@ -384,6 +386,7 @@ if (typeof window.JOS != "undefined") {
   window.JOS.addEventListener("onMerchantEvent")();
   window.JOS.addEventListener("onActivityResult")();
   console.error("Calling action DUI_READY");
+  window.JBridge.emptyCallbackQueue()
   JOS.emitEvent("java")("onEvent")(JSON.stringify({ action: "DUI_READY", service : JOS.self }))()();
 } else {
   console.error("JOS not present")

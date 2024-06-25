@@ -49,12 +49,12 @@ type PickupInstructions =
   
 newtype FamousDestination = FamousDestination {
   name :: String,
-  subTitle :: String,
+  address :: String,
   imageUrl :: String,
   lat :: Number,
   lon :: Number,
   description :: String,
-  langName :: String
+  nameBasedOnLanguage :: String
 }
 
 derive instance genericFamousDestination :: Generic FamousDestination _

@@ -12,6 +12,10 @@ export const getFromWindowString = getFromWindow;
 
 export const getAnyFromWindow = getFromWindow;
 
+export const removeFromWindow = function (key) {
+  delete window[key];
+}
+
 export const setInWindow = function (key,value) {
   window[key] = value;
   return value;
