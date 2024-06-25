@@ -33,6 +33,8 @@ foreign import stringifyJSON :: forall a. Fn1 a String
 
 foreign import toastWithLog :: String -> Unit
 
+foreign import removeFromWindow :: String -> Unit
+
 decodeForeignAny :: forall a. Decode a => Foreign -> a -> a
 decodeForeignAny object defaultObject = maybe (defaultObject) identity $ decodeForeignAnyImpl object
 

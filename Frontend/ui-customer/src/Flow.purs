@@ -766,12 +766,14 @@ homeScreenFlow = do
 
     diffInSeconds = (INT.toNumber $ fromMaybe 0 $ head $ filter (\item -> item >= 0) $ sort $ map (\date -> EHC.compareUTCDate date.rideStartTime currTime) bookingTimeList)
 
-    famousDestinations = fetchFamousDestinations FunctionCall
+    famousDestinations = if null currentState.homeScreen.data.famousDestinations 
+                          then fetchFamousDestinations FunctionCall 
+                          else currentState.homeScreen.data.famousDestinations
   modifyScreenState
     $ HomeScreenStateType
         ( \homeScreen ->
             homeScreen
-              { props { scheduledRidePollingDelay = diffInSeconds, hasTakenRide = (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE"), isReferred = (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") }
+              { props { scheduledRidePollingDelay = diffInSeconds, hasTakenRide = (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE"), isReferred = (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE"), city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION }
               , data { currentCityConfig = currentCityConfig, famousDestinations = famousDestinations }
               }
         )
@@ -2644,7 +2646,8 @@ rideSearchFlow flowType = do
   else do
     let
       updatedLocationList = updateLocListWithDistance finalState.data.destinationSuggestions finalState.props.sourceLat finalState.props.sourceLong true finalState.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
-    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { locationList = updatedLocationList }, props { isSource = Just false, isRideServiceable = true, isSrcServiceable = true, isDestServiceable = true, currentStage = SearchLocationModel } })
+      focusOnSource = finalState.props.sourceLat == 0.0 || finalState.props.sourceLong == 0.0 
+    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { locationList = updatedLocationList }, props { isSource = Just focusOnSource, isRideServiceable = true, isSrcServiceable = true, isDestServiceable = true, currentStage = SearchLocationModel } })
     homeScreenFlow
 
 getfeedbackReq :: HomeScreenState -> FeedbackReq
@@ -2877,6 +2880,7 @@ selectLanguageScreenFlow = do
       modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> SelectLanguageScreenData.initData)
       modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { data { categories = [] } })
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = [] }, props { needIssueListApiCall = true } })
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { famousDestinations = [] }})
       homeScreenFlow
     GO_TO_HOME_SCREEN -> homeScreenFlow
 
@@ -3854,6 +3858,7 @@ updateUserInfoToState state =
                 , destinationSuggestions = state.data.destinationSuggestions
                 , tripSuggestions = state.data.tripSuggestions
                 , followers = state.data.followers
+                , famousDestinations = state.data.famousDestinations
                 }
               , props
                 { isBanner = state.props.isBanner

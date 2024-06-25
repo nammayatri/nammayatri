@@ -478,7 +478,7 @@ getFamousCityDestination (FamousDestination destnData)  =
     , postfixImageUrl : destnData.imageUrl
     , postfixImageVisibility : false
     , title : destnData.name
-    , subTitle : destnData.subTitle
+    , subTitle : destnData.address
     , placeId : Nothing
     , lat : Just destnData.lat
     , lon : Just destnData.lon
@@ -486,7 +486,7 @@ getFamousCityDestination (FamousDestination destnData)  =
     , tag : ""
     , tagType : Nothing
     , cardType : Nothing
-    , address : destnData.langName
+    , address : destnData.nameBasedOnLanguage
     , tagName : ""
     , isEditEnabled : true
     , savedLocation : ""
