@@ -90,8 +90,8 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData isValueAdd
   let searchRequestValidTill = addUTCTime 30 now
       fromLocation = mkDummySearchReqFromLocation now fromLocData
       toLocation = Just $ mkDummySearchReqToLocation now toLocData
-      newFromLocation = mkDummyFromLocation now fromLocData
-      newToLocation = Just $ mkDummyToLocation now toLocData
+      -- newFromLocation = mkDummyFromLocation now fromLocData
+      -- newToLocation = Just $ mkDummyToLocation now toLocData
       mkDummyPrice (amountInt :: Int) = PriceAPIEntity (toHighPrecMoney amountInt) INR
    in USRD.SearchRequestForDriverAPIEntity
         { searchRequestId = Id fromLocData.dummyId,
@@ -127,8 +127,8 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData isValueAdd
           disabilityTag = Nothing,
           goHomeRequestId = Nothing,
           isTranslated = False,
-          customerCancellationDues = 0,
-          customerCancellationDuesWithCurrency = mkDummyPrice 0,
+          -- customerCancellationDues = 0,
+          -- customerCancellationDuesWithCurrency = mkDummyPrice 0,
           tripCategory = DTC.OneWay DTC.OneWayOnDemandDynamicOffer,
           duration = Just (Seconds 300),
           pickupZone = False, -- TODO: make it dynamic ?
@@ -168,27 +168,27 @@ mkDummySearchReqToLocation now toLocData =
           ..
         }
 
-mkDummyFromLocation :: UTCTime -> DLoc.DummyLocationInfo -> DLoc.Location
-mkDummyFromLocation now fromLocData =
-  DLoc.Location
-    { id = Id fromLocData.dummyId,
-      address = mkDummyFromAddress fromLocData,
-      lat = fromLocData.lat,
-      lon = fromLocData.lon,
-      createdAt = now,
-      updatedAt = now
-    }
+-- mkDummyFromLocation :: UTCTime -> DLoc.DummyLocationInfo -> DLoc.Location
+-- mkDummyFromLocation now fromLocData =
+--   DLoc.Location
+--     { id = Id fromLocData.dummyId,
+--       address = mkDummyFromAddress fromLocData,
+--       lat = fromLocData.lat,
+--       lon = fromLocData.lon,
+--       createdAt = now,
+--       updatedAt = now
+--     }
 
-mkDummyToLocation :: UTCTime -> DLoc.DummyLocationInfo -> DLoc.Location
-mkDummyToLocation now toLocData =
-  DLoc.Location
-    { id = Id toLocData.dummyId,
-      address = mkDummyToAddress toLocData,
-      lat = toLocData.lat,
-      lon = toLocData.lon,
-      createdAt = now,
-      updatedAt = now
-    }
+-- mkDummyToLocation :: UTCTime -> DLoc.DummyLocationInfo -> DLoc.Location
+-- mkDummyToLocation now toLocData =
+--   DLoc.Location
+--     { id = Id toLocData.dummyId,
+--       address = mkDummyToAddress toLocData,
+--       lat = toLocData.lat,
+--       lon = toLocData.lon,
+--       createdAt = now,
+--       updatedAt = now
+--     }
 
 mkDummyFromAddress :: DLoc.DummyLocationInfo -> DLoc.LocationAddress
 mkDummyFromAddress DLoc.DummyLocationInfo {..} = DLoc.LocationAddress {..}

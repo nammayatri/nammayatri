@@ -58,8 +58,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     customerExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     fromLocation :: DSSL.SearchReqLocation,
     toLocation :: Maybe DSSL.SearchReqLocation,
-    newFromLocation :: DLoc.Location,
-    newToLocation :: Maybe DLoc.Location, -- we need to show all requests or last one ?
+    -- newFromLocation :: DLoc.Location, -- in the upcoming ui release, it will be expecting both of these fields
+    -- newToLocation :: Maybe DLoc.Location, -- we need to show all requests or last one ?
     distance :: Maybe Meters,
     distanceWithUnit :: Maybe Distance,
     duration :: Maybe Seconds,
@@ -83,8 +83,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     vehicleServiceTier :: Maybe Text,
     airConditioned :: Maybe Bool,
     isTranslated :: Bool,
-    customerCancellationDues :: HighPrecMoney,
-    customerCancellationDuesWithCurrency :: PriceAPIEntity,
+    -- customerCancellationDues :: HighPrecMoney,   -- not used in the ui therefore removing both of these fields
+    -- customerCancellationDuesWithCurrency :: PriceAPIEntity,
     isValueAddNP :: Bool,
     driverPickUpCharges :: Maybe Money,
     driverPickUpChargesWithCurrency :: Maybe PriceAPIEntity,
@@ -117,8 +117,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           customerExtraFeeWithCurrency = flip PriceAPIEntity searchTry.currency <$> searchTry.customerExtraFee,
           fromLocation = convertDomainType searchRequest.fromLocation,
           toLocation = convertDomainType <$> searchRequest.toLocation,
-          newFromLocation = searchRequest.fromLocation,
-          newToLocation = searchRequest.toLocation,
+          -- newFromLocation = searchRequest.fromLocation,
+          -- newToLocation = searchRequest.toLocation,
           distance = searchRequest.estimatedDistance,
           distanceWithUnit = convertMetersToDistance searchRequest.distanceUnit <$> searchRequest.estimatedDistance,
           driverLatLong =
@@ -137,8 +137,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           disabilityTag = searchRequest.disabilityTag,
           keepHiddenForSeconds = keepHiddenForSeconds,
           goHomeRequestId = nearbyReq.goHomeRequestId,
-          customerCancellationDues = nearbyReq.customerCancellationDues,
-          customerCancellationDuesWithCurrency = PriceAPIEntity nearbyReq.customerCancellationDues nearbyReq.currency,
+          -- customerCancellationDues = nearbyReq.customerCancellationDues,
+          -- customerCancellationDuesWithCurrency = PriceAPIEntity nearbyReq.customerCancellationDues nearbyReq.currency,
           tripCategory = searchTry.tripCategory,
           duration = searchRequest.estimatedDuration,
           pickupZone = nearbyReq.pickupZone,
