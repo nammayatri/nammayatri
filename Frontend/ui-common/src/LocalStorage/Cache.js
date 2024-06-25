@@ -1,6 +1,4 @@
-let cacheMap = {};
-
-window.cacheMap = cacheMap;
+let cacheMap = window.cacheMap || {};
 
 export const getFromCache = function (key, nothing, just) {
   if (typeof cacheMap[key] !== "undefined") {
