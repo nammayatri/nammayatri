@@ -32,6 +32,7 @@ import qualified Domain.Types.NotificationSoundsConfig as NSC
 import Domain.Types.Person as Person
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RegistrationToken as RegToken
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.RiderConfig as DRC
 import Domain.Types.SearchRequest as SearchRequest
@@ -387,13 +388,17 @@ notifyOnBookingCancelled ::
   SRB.Booking ->
   SBCR.CancellationSource ->
   DBppDetails.BppDetails ->
+  Maybe DRide.Ride ->
   m ()
-notifyOnBookingCancelled booking cancellationSource bppDetails = do
+notifyOnBookingCancelled booking cancellationSource bppDetails mbRide = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
   tag <- getDisabilityTag person.hasDisability person.id
   notificationSoundFromConfig <- case cancellationSource of
-    SBCR.ByDriver -> SQNSC.findByNotificationType Notification.CANCELLED_PRODUCT_DRIVER merchantOperatingCityId
+    SBCR.ByDriver -> do
+      case mbRide of
+        Nothing -> SQNSC.findByNotificationType Notification.CANCELLED_PRODUCT merchantOperatingCityId
+        Just _ -> SQNSC.findByNotificationType Notification.CANCELLED_PRODUCT_DRIVER merchantOperatingCityId
     SBCR.ByUser -> SQNSC.findByNotificationType Notification.CANCELLED_PRODUCT_USER merchantOperatingCityId
     _ -> SQNSC.findByNotificationType Notification.CANCELLED_PRODUCT merchantOperatingCityId
   notificationSound <- getNotificationSound tag notificationSoundFromConfig

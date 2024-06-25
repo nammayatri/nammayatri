@@ -1925,6 +1925,9 @@ listScheduledBookings ::
   Maybe DTC.TripCategory ->
   m ScheduledBookingRes
 listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory = do
+  case (mbFromDay, mbToDay) of
+    (Just from, Just to) -> when (from > to) $ throwError $ InvalidRequest "From date should be less than to date"
+    _ -> pure ()
   transporterConfig <- SCTC.findByMerchantOpCityId cityId Nothing >>= fromMaybeM (TransporterConfigNotFound cityId.getId)
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
   driverInfo <- runInReplica $ QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
