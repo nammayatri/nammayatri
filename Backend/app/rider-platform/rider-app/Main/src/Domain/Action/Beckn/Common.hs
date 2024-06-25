@@ -564,7 +564,7 @@ bookingCancelledReqHandler ValidatedBookingCancelledReq {..} = do
   -- notify customer
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
 
-  Notify.notifyOnBookingCancelled booking cancellationSource bppDetails
+  Notify.notifyOnBookingCancelled booking cancellationSource bppDetails mbRide
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>

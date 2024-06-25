@@ -35,7 +35,7 @@ import qualified EulerHS.Prelude hiding (null)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Notification.FCM.Flow as FCM
 import Kernel.External.Notification.FCM.Types as FCM
-import Kernel.External.Types (ServiceFlow)
+import Kernel.External.Types (Language (..), ServiceFlow)
 import Kernel.Prelude hiding (unwords)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -43,6 +43,7 @@ import qualified Kernel.Types.Version as Version
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Storage.Cac.TransporterConfig
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.Queries.Person as QPerson
@@ -869,6 +870,8 @@ notifyOnRideStarted ride = do
       isAirConditioned = fromMaybe False ride.isAirConditioned
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
+  merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
+  let offerAdjective = if merchantOperatingCity.language == KANNADA then "sakkath" else "great"
       title =
         T.pack
           ( if isAirConditioned
@@ -878,8 +881,8 @@ notifyOnRideStarted ride = do
       body =
         T.pack
           ( if isAirConditioned
-              then "Please turn on AC, offer sakkath service and have a safe ride!"
-              else "Offer sakkath service and have a safe ride!"
+              then "Please turn on AC, offer " <> offerAdjective <> " service and have a safe ride!"
+              else "Offer " <> offerAdjective <> " service and have a safe ride!"
           )
   notifyDriver merchantOperatingCityId FCM.TRIP_STARTED title body person person.deviceToken
 

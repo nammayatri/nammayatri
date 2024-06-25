@@ -240,7 +240,9 @@ getOffers searchRequest = do
       logDebug $ "quotes are :-" <> show quoteList
       bppDetailList <- forM ((.providerId) <$> quoteList) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.id.getId
-      let quotes = OnDemandCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
+      let quotes = case searchRequest.riderPreferredOption of
+            SSR.Rental -> OnRentalCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
+            _ -> OnDemandCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
       metroOffers <- map Metro <$> Metro.getMetroOffers searchRequest.id
       publicTransportOffers <- map PublicTransport <$> PublicTransport.getPublicTransportOffers searchRequest.id
       return . sortBy (compare `on` creationTime) $ quotes <> metroOffers <> publicTransportOffers

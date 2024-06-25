@@ -70,7 +70,7 @@ cancelBooking booking = do
   _ <- QRideB.updateStatus booking.id DRB.CANCELLED
   _ <- QBCR.upsert bookingCancellationReason
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:- " <> booking.providerId <> "and domain:- " <> show Context.MOBILITY)
-  Notify.notifyOnBookingCancelled booking DBCR.ByApplication bppDetails
+  Notify.notifyOnBookingCancelled booking DBCR.ByApplication bppDetails Nothing
   where
     buildBookingCancellationReason = do
       now <- getCurrentTime
