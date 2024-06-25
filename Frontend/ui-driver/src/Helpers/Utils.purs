@@ -110,6 +110,7 @@ import Common.RemoteConfig.Utils (forwardBatchConfigData)
 import Common.RemoteConfig.Types (ForwardBatchConfigData(..))
 import DecodeUtil (getAnyFromWindow)
 import Data.Foldable (foldl)
+import Debug (spy)
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -607,18 +608,18 @@ getVehicleVariantImage variant =
   let url = getAssetLink FunctionCall
       commonUrl = getCommonAssetLink FunctionCall
   in case getMerchant FunctionCall of
-        YATRISATHI -> case variant of
+        YATRISATHI -> case spy "varient is" variant of
                         "TAXI"      -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"
                         "SUV"       -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
                         "SUV_TIER"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
                         "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
                         "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
                         "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
-                        "AMBULANCE_TAXI" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_AC" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        "AMBULANCE_TAXI" -> "ny_ic_ambulance_noac_nooxy," <> commonUrl <> "ny_ic_ambulance_noac_nooxy.png"
+                        "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_noac_oxy," <> commonUrl <> "ny_ic_ambulance_noac_oxy.png"
+                        "AMBULANCE_AC" -> "ny_ic_ambulance_ac_nooxy," <> commonUrl <> "ny_ic_ambulance_ac_nooxy.png"
+                        "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_ac_oxy," <> commonUrl <> "ny_ic_ambulance_ac_oxy.png"
+                        "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_ventilaor," <> commonUrl <> "ny_ic_ambulance_ventilaor.png"
                         _           -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
         NAMMAYATRI -> case variant of
                         "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
@@ -640,11 +641,11 @@ getVehicleVariantImage variant =
                             "Chennai"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
                             _           -> fetchImage FF_ASSET "ic_vehicle_front"
                         "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
-                        "AMBULANCE_TAXI" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_AC" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        "AMBULANCE_TAXI" -> "ny_ic_ambulance_noac_nooxy," <> commonUrl <> "ny_ic_ambulance_noac_nooxy.png"
+                        "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_noac_oxy," <> commonUrl <> "ny_ic_ambulance_noac_oxy.png"
+                        "AMBULANCE_AC" -> "ny_ic_ambulance_ac_nooxy," <> commonUrl <> "ny_ic_ambulance_ac_nooxy.png"
+                        "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_ac_oxy," <> commonUrl <> "ny_ic_ambulance_ac_oxy.png"
+                        "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_ventilaor," <> commonUrl <> "ny_ic_ambulance_ventilaor.png"
                         _           -> fetchImage FF_ASSET "ic_vehicle_front"
         _          -> case variant of
                         "SEDAN"     -> "ny_ic_sedan_car_side," <> url <> "ny_ic_sedan_car_side.png"
@@ -658,11 +659,11 @@ getVehicleVariantImage variant =
                         "RENTALS"   -> "ic_rentals," <> url <> "ic_rentals.png"
                         "INTERCITY" -> "ic_intercity," <> url <> "ic_intercity.png"
                         "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
-                        "AMBULANCE_TAXI" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_AC" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        "AMBULANCE_TAXI" -> "ny_ic_ambulance_noac_nooxy," <> commonUrl <> "ny_ic_ambulance_noac_nooxy.png"
+                        "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_noac_oxy," <> commonUrl <> "ny_ic_ambulance_noac_oxy.png"
+                        "AMBULANCE_AC" -> "ny_ic_ambulance_ac_nooxy," <> commonUrl <> "ny_ic_ambulance_ac_nooxy.png"
+                        "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_ac_oxy," <> commonUrl <> "ny_ic_ambulance_ac_oxy.png"
+                        "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_ventilaor," <> commonUrl <> "ny_ic_ambulance_ventilaor.png"
                         _           -> "ic_sedan_ac," <> url <> "ic_sedan_ac.png"
 
 getVariantRideType :: String -> String
@@ -1030,6 +1031,11 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.RENTALS -> "RENTALS"
   SA.INTERCITY -> "INTERCITY"
   SA.BIKE_TIER -> "BIKE"
+  SA.AMBULANCE_TAXI_TIER -> "AMBULANCE_TAXI"
+  SA.AMBULANCE_TAXI_OXY_TIER -> "AMBULANCE_TAXI_OXY"
+  SA.AMBULANCE_AC_TIER -> "AMBULANCE_AC"
+  SA.AMBULANCE_AC_OXY_TIER -> "AMBULANCE_AC_OXY"
+  SA.AMBULANCE_VENTILATOR_TIER -> "AMBULANCE_VENTILATOR"
 
 filterVariantForPlanListCall :: String -> String
 filterVariantForPlanListCall variant = 

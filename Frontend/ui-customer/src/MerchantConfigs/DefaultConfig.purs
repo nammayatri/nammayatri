@@ -436,6 +436,8 @@ config =
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = false
+            , enableAmbulance = false
+            , enableInstant = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
@@ -478,6 +480,8 @@ config =
               }
             , enableRentals = true 
             , enableIntercity = true
+            , enableAmbulance = true
+            , enableInstant = false
             , enableCabs = true
             , estimateAndQuoteConfig {
               showInfoIcon = true
@@ -513,7 +517,8 @@ config =
   },
   banners : {
     homeScreenSafety : false,
-    homeScreenCabLaunch : true
+    homeScreenCabLaunch : true,
+    homeScreenAmbulance : false
   }
   , tipDisplayDuration : 30
   , tipsEnabled : true
@@ -562,7 +567,9 @@ defaultCityConfig =
     appLogoLight : "",
     enableAcViews : false,
     enableRentals : true,
-    enableIntercity : false, 
+    enableIntercity : false,
+    enableAmbulance : false,
+    enableInstant : false,
     waitingChargeConfig : {
       auto : {
         freeMinutes : 3.0

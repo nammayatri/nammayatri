@@ -43,6 +43,7 @@ data BannerType = AutoPay
   | CabLaunch
   | RentalsAndIntercity
   | AdvancedRide
+  | Ambulance
 
 type CarouselConfig a = {
     item :: ListItem
