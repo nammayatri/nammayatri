@@ -295,5 +295,6 @@ makeRideAPIEntity Ride {..} =
           chargeableRideDistance = distanceToHighPrecMeters <$> chargeableDistance,
           chargeableRideDistanceWithUnit = chargeableDistance,
           vehicleColor = vehicleColor',
+          allowedEditLocationAttempts = fromMaybe 0 allowedEditLocationAttempts,
           ..
         }
