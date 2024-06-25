@@ -77,6 +77,7 @@ window.version["app"] = __VERSION__;
 console.warn("Hello World MASTER ONE");
 let previousDateObject = new Date();
 const refreshThreshold = 30;
+const homeScreenRT = 300;
 const JBridge = window.JBridge;
 const JOS = window.JOS;
 const Android = window.Android;
@@ -168,11 +169,12 @@ function shouldRefresh() {
   const diff = Math.abs(previousDateObject - currentDate) / 1000;
   const token = (window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN"));
   const currentState = (window.JBridge.getKeysInSharedPref("LOCAL_STAGE"));
-  return ((diff > refreshThreshold) && 
+  const refreshTh = (currentState == "RideStarted" || currentState == "RideAccepted") ? refreshThreshold : homeScreenRT;
+  return ((diff > refreshTh) && 
       (token != "__failed") && 
       (token != "(null)") &&
-      checkInternet() &&
-      ((currentState == "RideStarted") || currentState == "RideAccepted"))
+      checkInternet()
+    )
 }
 
 window.onMerchantEvent = function (_event, globalPayload) {
