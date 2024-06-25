@@ -46,7 +46,7 @@ type API =
     :> ( Common.ShareRideInfoAPI
            :<|> Common.ShareRideInfoByShortIdAPI
            :<|> RideListAPI
-           :<|> TripRouteAPI
+           :<|> Common.TripRouteAPI
            :<|> RideInfoAPI
            :<|> MultipleRideCancelAPI
            :<|> MultipleRideSyncAPI
@@ -56,10 +56,6 @@ type API =
 type RideListAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'RIDE_LIST
     :> Common.RideListAPI
-
-type TripRouteAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'TRIP_ROUTE
-    :> Common.TripRouteAPI
 
 type RideInfoAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'RIDE_INFO_CUSTOMER
@@ -146,12 +142,11 @@ rideList merchantShortId opCity _ mbLimit mbOffset mbBookingStatus mbShortRideId
 tripRoute ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
   Id Common.Ride ->
   Double ->
   Double ->
   FlowHandler Maps.GetRoutesResp
-tripRoute merchantShortId opCity _ rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI' $ do
+tripRoute merchantShortId opCity rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
   Client.callRiderAppOperations checkedMerchantId opCity (.rides.tripRoute) rideId pickupLocationLat pickupLocationLon
 
