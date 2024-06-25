@@ -37,6 +37,9 @@ data FareParameters = FareParameters
     customerCancellationDues :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
     congestionCharge :: Maybe HighPrecMoney,
+    insuranceCharge :: Maybe HighPrecMoney,
+    cardChargeOnFare :: Maybe HighPrecMoney,
+    fixedCardCharge :: Maybe HighPrecMoney,
     currency :: Currency,
     updatedAt :: UTCTime
   }
@@ -48,6 +51,7 @@ data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | Slab
 data FParamsProgressiveDetails = FParamsProgressiveDetails
   { deadKmFare :: HighPrecMoney,
     extraKmFare :: Maybe HighPrecMoney,
+    rideDurationFare :: Maybe HighPrecMoney,
     currency :: Currency
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)

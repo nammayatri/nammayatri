@@ -17,13 +17,15 @@ module Storage.Cac.FarePolicy.FarePolicyProgressiveDetails where
 
 import Data.List.NonEmpty
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection as Domain
 import Kernel.Beam.Functions
-import Kernel.Prelude
+import Kernel.Prelude as KP
 import Kernel.Types.App
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as CQueriesFPPDP
+import qualified Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection as CQueriesFPPDPM
 import Storage.Queries.FarePolicy.FarePolicyProgressiveDetails (fromTTypeFarePolicyProgressiveDetails)
 import Utils.Common.CacUtils
 
@@ -37,4 +39,5 @@ getFPProgressiveDetailsFromCAC context tenant id toss = do
 instance FromCacType (BeamFPPD.FarePolicyProgressiveDetails, [(CacContext, Value)], String, Id DFP.FarePolicy, Int) DFP.FullFarePolicyProgressiveDetails where
   fromCacType (farePolicyProgressiveDetails, context, tenant, id, toss) = do
     fullFPPDP <- CQueriesFPPDP.findFarePolicyProgressiveDetailsPerExtraKmRateSectionFromCAC context tenant id toss
-    pure $ fromTTypeFarePolicyProgressiveDetails farePolicyProgressiveDetails <$> nonEmpty fullFPPDP
+    fullFPPDPM <- KP.map Domain.makeFPProgressiveDetailsPerMinRateSection <$> CQueriesFPPDPM.findFarePolicyProgressiveDetailsPerMinRateSectionFromCAC context tenant id toss
+    pure $ fromTTypeFarePolicyProgressiveDetails farePolicyProgressiveDetails fullFPPDPM <$> nonEmpty fullFPPDP

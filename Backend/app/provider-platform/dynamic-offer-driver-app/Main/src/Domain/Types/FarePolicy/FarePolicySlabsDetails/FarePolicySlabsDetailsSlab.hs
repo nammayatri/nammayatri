@@ -16,8 +16,7 @@
 module Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab where
 
 import Data.Aeson as DA
-import Domain.Types.Common
-import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
+import Domain.Types.Common as DTC
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
@@ -26,9 +25,9 @@ data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   { startDistance :: Meters,
     distanceUnit :: DistanceUnit,
     baseFare :: HighPrecMoney,
-    waitingChargeInfo :: Maybe Domain.WaitingChargeInfo,
+    waitingChargeInfo :: Maybe DTC.WaitingChargeInfo,
     platformFeeInfo :: Maybe PlatformFeeInfo,
-    nightShiftCharge :: Maybe Domain.NightShiftCharge,
+    nightShiftCharge :: Maybe DTC.NightShiftCharge,
     currency :: Currency
   }
   deriving (Generic, Show, Eq)

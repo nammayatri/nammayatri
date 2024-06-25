@@ -1,0 +1,30 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+
+FullFarePolicyProgressiveDetailsPerMinRateSection:
+  tableName: fare_policy_progressive_details_per_min_rate_section
+  derives: "Generic,Show,Eq,ToJSON,FromJSON"
+  fields:
+    farePolicyId: Text
+    rideDurationInMin: Int
+    perMinRate: HighPrecMoney
+    currency: Currency
+
+  default:
+    currency: "'INR'"
+
+  constraints:
+    farePolicyId: PrimaryKey
+    rideDurationInMin: PrimaryKey
+
+  excludedFields:
+    - merchantOperatingCityId
+    - merchantId
+
+  queries:
+    findAllByFarePolicyId:
+      kvFunction: findAllWithKV
+      where: farePolicyId
