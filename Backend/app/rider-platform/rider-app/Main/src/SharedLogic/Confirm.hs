@@ -113,18 +113,18 @@ confirm ::
 confirm DConfirmReq {..} = do
   now <- getCurrentTime
   when (quote.validTill < now) $ throwError (InvalidRequest $ "Quote expired " <> show quote.id) -- init validation check
-  (fulfillmentId, mbEstimateId) <-
+  fulfillmentId <-
     case quote.quoteDetails of
-      DQuote.OneWayDetails _ -> pure (Nothing, Nothing)
-      DQuote.RentalDetails rentalDetails -> return $ (Just rentalDetails.id.getId, Nothing)
+      DQuote.OneWayDetails _ -> pure Nothing
+      DQuote.RentalDetails rentalDetails -> return $ Just rentalDetails.id.getId
       DQuote.DriverOfferDetails driverOffer -> do
         estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
         when (UEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
         when (driverOffer.validTill < now) $
           throwError $ QuoteExpired quote.id.getId
-        pure (Just driverOffer.bppQuoteId, Just estimate.id)
-      DQuote.OneWaySpecialZoneDetails details -> pure (Just details.quoteId, Nothing)
-      DQuote.InterCityDetails details -> pure (Just details.id.getId, Nothing)
+        pure (Just driverOffer.bppQuoteId)
+      DQuote.OneWaySpecialZoneDetails details -> pure (Just details.quoteId)
+      DQuote.InterCityDetails details -> pure (Just details.id.getId)
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
   merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when merchant.onlinePayment $ do
@@ -148,7 +148,7 @@ confirm DConfirmReq {..} = do
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
-  booking <- buildBooking searchRequest mbEstimateId fulfillmentId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled
+  booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   riderPhone <-
@@ -203,7 +203,6 @@ buildBooking ::
     HasFlowEnv m r '["version" ::: DeploymentVersion]
   ) =>
   DSReq.SearchRequest ->
-  Maybe (Id DEstimate.Estimate) ->
   Maybe Text ->
   DQuote.Quote ->
   DL.Location ->
@@ -214,7 +213,7 @@ buildBooking ::
   Maybe Payment.PaymentMethodId ->
   Bool ->
   m DRB.Booking
-buildBooking searchRequest mbEstimateId mbFulfillmentId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled = do
+buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   deploymentVersion <- asks (.version)
@@ -232,7 +231,6 @@ buildBooking searchRequest mbEstimateId mbFulfillmentId quote fromLoc mbToLoc ex
         providerId = quote.providerId,
         primaryExophone = exophone.primaryPhone,
         providerUrl = quote.providerUrl,
-        estimateId = mbEstimateId,
         bppEstimateId = quote.itemId,
         startTime = searchRequest.startTime,
         returnTime = searchRequest.returnTime,

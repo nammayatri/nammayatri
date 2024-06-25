@@ -91,3 +91,11 @@ ALTER TABLE atlas_app.booking ALTER COLUMN payment_method_id TYPE text;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN estimated_application_fee numeric(30,2) ;
+
+
+------- SQL updates -------
+
+
+--- Drop columns section begins. Please be careful while running ---
+ALTER TABLE atlas_app.booking DROP COLUMN estimate_id;
+--- Drop columns section ends ---

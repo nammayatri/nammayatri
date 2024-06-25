@@ -33,6 +33,7 @@ import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Data.Coerce (coerce)
 import qualified Data.List as DL
 import qualified Data.Text as T
+import qualified Domain.Action.UI.EstimateBP as EstimateBP
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Booking as DTB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
@@ -62,10 +63,10 @@ import Storage.CachedQueries.Merchant (findByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.Sos as CQSos
-import qualified Storage.Clickhouse.EstimateBreakup as CH
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 
 data BookingCancelledReq = BookingCancelledReq
@@ -324,9 +325,15 @@ rideInfo merchantId reqRideId = do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let estimatedDuration :: Maybe Seconds = (booking.estimatedDuration)
-  estBreakup <- case booking.estimateId of
-    Just estimateId -> Just <$> CH.findAllByEstimateIdT estimateId
-    Nothing -> pure Nothing
+  estBreakup <- case booking.quoteId of
+    Just quoteId -> do
+      quote <- B.runInReplica $ QQuote.findById quoteId
+      case quote of
+        Just q -> do
+          estimateBreakup <- EstimateBP.getEstimateBreakupFromQuote q
+          return $ Just estimateBreakup
+        Nothing -> return Nothing
+    Nothing -> return Nothing
   unless (merchantId == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
   person <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
   mbBCReason <-
@@ -387,22 +394,8 @@ rideInfo merchantId reqRideId = do
         rideScheduledAt = booking.startTime,
         fareProductType = mkFareProductType booking.bookingDetails,
         endOtp = ride.endOtp,
-        estimateFareBP = map transformEstimate <$> estBreakup
+        estimateFareBP = map EstimateBP.transformEstimate' <$> estBreakup
       }
-
-transformEstimate :: CH.EstimateBreakup -> Common.EstimateBreakup
-transformEstimate estimate =
-  Common.EstimateBreakup
-    { Common.price =
-        Common.EstimateBreakupPrice
-          { Common.value =
-              PriceAPIEntity
-                { amount = CH.priceValue estimate,
-                  currency = CH.priceCurrency estimate
-                }
-          },
-      Common.title = CH.title estimate
-    }
 
 mkFareProductType :: DTB.BookingDetails -> Common.FareProductType
 mkFareProductType bookingDetails = case bookingDetails of
