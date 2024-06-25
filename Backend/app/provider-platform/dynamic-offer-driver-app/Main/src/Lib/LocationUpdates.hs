@@ -188,19 +188,16 @@ checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafet
       logWarning $ "Ride route info not found for rideId: " <> getId rideId
       return False
 
-updateTollRouteDeviation :: Id DMOC.MerchantOperatingCity -> Id Person -> Maybe Ride -> [LatLong] -> Flow Bool
+updateTollRouteDeviation :: Id DMOC.MerchantOperatingCity -> Id Person -> Maybe Ride -> [LatLong] -> Flow (Bool, Bool)
 updateTollRouteDeviation _ _ Nothing _ = do
   logInfo "No ride found to check deviation"
-  return False
+  return (False, False)
 updateTollRouteDeviation merchantOpCityId driverId (Just ride) batchWaypoints = do
-  let driverDeviatedToTollRoute = maybe False (== True) ride.driverDeviatedToTollRoute
-  if driverDeviatedToTollRoute
-    then return driverDeviatedToTollRoute
-    else do
-      isTollRouteDeviation <- isJust <$> TollsDetector.getTollInfoOnRoute merchantOpCityId (Just driverId) batchWaypoints
-      when isTollRouteDeviation $ do
-        QRide.updateDriverDeviatedToTollRoute ride.id isTollRouteDeviation
-      return isTollRouteDeviation
+  let driverDeviatedToTollRoute = fromMaybe False ride.driverDeviatedToTollRoute
+  isTollPresentOnCurrentRoute <- isJust <$> TollsDetector.getTollInfoOnRoute merchantOpCityId (Just driverId) batchWaypoints
+  when (isTollPresentOnCurrentRoute && not driverDeviatedToTollRoute) $ do
+    QRide.updateDriverDeviatedToTollRoute ride.id isTollPresentOnCurrentRoute
+  return (driverDeviatedToTollRoute, isTollPresentOnCurrentRoute)
 
 getTravelledDistanceAndTollInfo :: Id DMOC.MerchantOperatingCity -> Maybe Ride -> Meters -> Maybe (HighPrecMoney, [Text], Bool) -> Flow (Meters, Maybe (HighPrecMoney, [Text], Bool))
 getTravelledDistanceAndTollInfo _ Nothing _ estimatedTollInfo = do
@@ -244,8 +241,8 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
       ( \driverId batchWaypoints -> do
           ride <- QRide.getActiveByDriverId driverId
           routeDeviation <- updateDeviation transportConfig enableNightSafety ride batchWaypoints
-          tollRouteDeviation <- updateTollRouteDeviation merchantOpCityId driverId ride batchWaypoints
-          return (routeDeviation, tollRouteDeviation)
+          (tollRouteDeviation, isTollPresentOnCurrentRoute) <- updateTollRouteDeviation merchantOpCityId driverId ride batchWaypoints
+          return (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute)
       )
       (TollsDetector.getTollInfoOnRoute merchantOpCityId)
       ( \driverId estimatedDistance estimatedTollInfo -> do
