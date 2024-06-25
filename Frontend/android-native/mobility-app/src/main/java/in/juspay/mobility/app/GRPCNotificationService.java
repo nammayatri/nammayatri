@@ -11,6 +11,8 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 
 
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -34,6 +36,7 @@ import io.grpc.stub.StreamObserver;
 interface NotificationListener {
     void onError(Throwable t);
     void onMessage(NotificationPayload notification);
+    void onComplete ();
 }
 
 public class GRPCNotificationService extends Service implements NotificationListener {
@@ -135,19 +138,40 @@ public class GRPCNotificationService extends Service implements NotificationList
     }
 
     @Override
-    public void onError(Throwable t) {
+    public void onComplete() {
         Log.e("GRPC", "[Retrying]");
+        closeChannel();
+        initialize();
+    }
+
+    @Override
+    public void onError(Throwable t) {
+        Log.e("GRPC", "[RetryAttempt]");
         if(t instanceof StatusRuntimeException){
             StatusRuntimeException statusRuntimeException = (StatusRuntimeException) t;
             if((statusRuntimeException.getStatus().getCode() == Status.Code.INTERNAL) &&
-                    (statusRuntimeException.getStatus().getDescription() != null ? statusRuntimeException.getStatus().getDescription().contains("Rst Stream") : false)){
-                Log.i("GRPC", "Reached here in onError");
+                    (statusRuntimeException.getStatus().getDescription() != null &&
+                            containsAny(statusRuntimeException.getStatus().getDescription(), new String[]{"Rst Stream", "TIMEOUT", "RETRY"}))){
+                Log.e("GRPC", "[Retrying]");
                 closeChannel();
                 initialize();
                 return;
             }
         }
+        FirebaseCrashlytics.getInstance().recordException(new Throwable("GRPC OnError" , t));
         stopSelf();
+    }
+
+    private boolean containsAny(String description, String[] substrings) {
+        if (description == null) {
+            return false;
+        }
+        for (String substring : substrings) {
+            if (description.contains(substring)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -232,7 +256,7 @@ class GRPCNotificationResponseObserver implements StreamObserver<NotificationPay
     @Override
     public void onCompleted() {
         Log.e("GRPC", "[Completed]");
-        notificationListener.onError(null);
+        notificationListener.onComplete();
     }
 }
 
