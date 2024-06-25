@@ -65,7 +65,7 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     isDistanceCalculationFailed :: Id person -> m Bool,
     updateDistance :: Id person -> HighPrecMeters -> Int -> Int -> Maybe Int -> m (),
     updateTollChargesAndNames :: Id person -> HighPrecMoney -> [Text] -> m (),
-    updateRouteDeviation :: Id person -> [LatLong] -> m (Bool, Bool),
+    updateRouteDeviation :: Id person -> [LatLong] -> m (Bool, Bool, Bool),
     getTravelledDistanceAndTollInfo :: Id person -> Meters -> Maybe (HighPrecMoney, [Text], Bool) -> m (Meters, Maybe (HighPrecMoney, [Text], Bool)),
     getRecomputeIfPickupDropNotOutsideOfThreshold :: Bool,
     sendTollCrossedNotificationToDriver :: Id person -> m (),
@@ -159,8 +159,8 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
           _ -> waypoints
   let currentLastTwoPoints = takeLastTwo (toList waypoints)
   Redis.setExp (lastTwoOnRidePointsRedisKey driverId) currentLastTwoPoints 21600 -- 6 hours
-  (routeDeviation, tollRouteDeviation) <- updateRouteDeviation driverId (toList modifiedWaypoints)
-  when tollRouteDeviation $
+  (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute) <- updateRouteDeviation driverId (toList modifiedWaypoints)
+  when isTollPresentOnCurrentRoute $
     fork "Toll Crossed OnUpdate" $ do
       sendTollCrossedNotificationToDriver driverId
       sendTollCrossedUpdateToBAP driverId
@@ -260,7 +260,7 @@ mkRideInterpolationHandler ::
   Bool ->
   (Id person -> HighPrecMeters -> Int -> Int -> Maybe Int -> m ()) ->
   (Id person -> HighPrecMoney -> [Text] -> m ()) ->
-  (Id person -> [LatLong] -> m (Bool, Bool)) ->
+  (Id person -> [LatLong] -> m (Bool, Bool, Bool)) ->
   (Maybe (Id person) -> RoutePoints -> m (Maybe (HighPrecMoney, [Text], Bool))) ->
   (Id person -> Meters -> Maybe (HighPrecMoney, [Text], Bool) -> m (Meters, Maybe (HighPrecMoney, [Text], Bool))) ->
   Bool ->
