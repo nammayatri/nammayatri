@@ -27,6 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.LocationUpdates
 import qualified Lib.LocationUpdates as LocUpd
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 import qualified Tools.Maps as TM
@@ -44,6 +45,7 @@ bulkLocUpdate req = do
       rideId = req.rideId
       loc = req.loc
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  transportConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchantId <- fromMaybeM (InternalError "Ride does not have a merchantId") $ ride.merchantId
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId ride.merchantOperatingCityId False
@@ -52,5 +54,5 @@ bulkLocUpdate req = do
       then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
       else pure Nothing
   let isTollApplicableForServiceTier = DC.isTollApplicable booking.vehicleServiceTier
-  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rectificationServiceConfig isTollApplicableForServiceTier rideId driverId loc
+  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rectificationServiceConfig isTollApplicableForServiceTier transportConfig.enableTollCrossedNotifications rideId driverId loc
   pure Success

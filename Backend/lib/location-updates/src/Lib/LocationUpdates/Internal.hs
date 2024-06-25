@@ -101,15 +101,16 @@ processWaypoints ::
   Bool ->
   Maybe MapsServiceConfig ->
   Bool ->
+  Bool ->
   NonEmpty LatLong ->
   m ()
-processWaypoints ih@RideInterpolationHandler {..} driverId ending estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable waypoints = do
+processWaypoints ih@RideInterpolationHandler {..} driverId ending estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications waypoints = do
   calculationFailed <- isDistanceCalculationFailed driverId
   if calculationFailed
     then logWarning "Failed to calculate actual distance for this ride, ignoring"
     else wrapDistanceCalculation driverId $ do
       addPoints driverId waypoints
-      recalcDistanceBatches ih ending driverId estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable waypoints
+      recalcDistanceBatches ih ending driverId estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications waypoints
 
 lastTwoOnRidePointsRedisKey :: Id person -> Text
 lastTwoOnRidePointsRedisKey driverId = "Driver-Location-Last-Two-OnRide-Points:DriverId-" <> driverId.getId
@@ -149,9 +150,10 @@ recalcDistanceBatches ::
   Bool ->
   Maybe MapsServiceConfig ->
   Bool ->
+  Bool ->
   NonEmpty LatLong ->
   m ()
-recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable waypoints = do
+recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications waypoints = do
   prevBatchTwoEndPoints :: Maybe [LatLong] <- Redis.safeGet $ lastTwoOnRidePointsRedisKey driverId
   let modifiedWaypoints =
         case prevBatchTwoEndPoints of
@@ -160,7 +162,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
   let currentLastTwoPoints = takeLastTwo (toList waypoints)
   Redis.setExp (lastTwoOnRidePointsRedisKey driverId) currentLastTwoPoints 21600 -- 6 hours
   (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute) <- updateRouteDeviation driverId (toList modifiedWaypoints)
-  when isTollPresentOnCurrentRoute $
+  when (enableTollCrossedNotifications && isTollPresentOnCurrentRoute) $
     fork "Toll Crossed OnUpdate" $ do
       sendTollCrossedNotificationToDriver driverId
       sendTollCrossedUpdateToBAP driverId
