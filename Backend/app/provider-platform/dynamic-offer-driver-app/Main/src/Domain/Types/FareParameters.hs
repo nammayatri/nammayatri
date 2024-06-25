@@ -37,6 +37,9 @@ data FareParameters = FareParameters
     customerCancellationDues :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
     congestionCharge :: Maybe HighPrecMoney,
+    insuranceCharge :: Maybe HighPrecMoney,
+    cardChargeOnFare :: Maybe HighPrecMoney,
+    fixedCardCharge :: Maybe HighPrecMoney,
     currency :: Currency,
     updatedAt :: UTCTime
   }

@@ -132,6 +132,9 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 customerCancellationDues = customerCancellationDues,
                 congestionCharge = mkAmountWithDefault congestionChargeAmount <$> congestionCharge,
                 tollCharges = tollCharges,
+                insuranceCharge,
+                cardChargeOnFare,
+                fixedCardCharge,
                 updatedAt = fromMaybe now updatedAt
               }
       Nothing -> return Nothing
@@ -163,6 +166,9 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.tollCharges = tollCharges,
         BeamFP.congestionCharge = roundToIntegral <$> congestionCharge,
         BeamFP.congestionChargeAmount = congestionCharge,
+        BeamFP.insuranceCharge = insuranceCharge,
+        BeamFP.cardChargeOnFare = cardChargeOnFare,
+        BeamFP.fixedCardCharge = fixedCardCharge,
         BeamFP.currency = Just currency,
         BeamFP.updatedAt = Just updatedAt
       }

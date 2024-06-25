@@ -167,6 +167,15 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
       nightShiftEndCaption = show Tags.NIGHT_SHIFT_END_TIME
       nightShiftEndItem = mkBreakupItem nightShiftEndCaption . (mkValue . show) <$> nightShiftEnd
 
+      insuranceChargeCaption = mkInsuranceChargeCaption farePolicy.distanceUnit
+      insuranceChargeItem = mkBreakupItem insuranceChargeCaption . (mkValue . highPrecMoneyToText) <$> farePolicy.perDistanceUnitInsuranceCharge
+
+      cardChargePercentageCaption = show Tags.CARD_CHARGE_PERCENTAGE
+      cardChargePercentageItem = mkBreakupItem cardChargePercentageCaption . (mkValue . show . toPercentage) <$> farePolicy.cardChargeMultiplier
+
+      fixedCardChargeCaption = show Tags.FIXED_CARD_CHARGE
+      fixedCardChargeItem = mkBreakupItem fixedCardChargeCaption . (mkValue . highPrecMoneyToText) <$> farePolicy.fixedCardCharge
+
       additionalDetailsBreakups = processAdditionalDetails farePolicy.farePolicyDetails
   catMaybes
     [ tollChargesItem,
@@ -179,12 +188,23 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
       nightShiftEndItem,
       nightShiftStartInSecondsItem,
       nightShiftEndInSecondsItem,
-      congestionChargePercentageItem
+      congestionChargePercentageItem,
+      insuranceChargeItem,
+      cardChargePercentageItem,
+      fixedCardChargeItem
     ]
     <> additionalDetailsBreakups
     <> driverExtraFeeBoundsMinFeeItems
     <> driverExtraFeeBoundsMaxFeeItems
   where
+    mkInsuranceChargeCaption = \case
+      Meter -> show Tags.INSURANCE_CHARGE_PER_METER
+      Mile -> show Tags.INSURANCE_CHARGE_PER_MILE
+      Kilometer -> show Tags.INSURANCE_CHARGE_PER_KM
+      Yard -> show Tags.INSURANCE_CHARGE_PER_YARD
+
+    toPercentage x = (x - 1) * 100
+
     processAdditionalDetails = \case
       FarePolicyD.ProgressiveDetails det -> mkAdditionalProgressiveBreakups det
       FarePolicyD.SlabsDetails det -> mkAdditionalSlabBreakups $ FarePolicyD.findFPSlabsDetailsSlabByDistance (fromMaybe 0 mbDistance) det.slabs
@@ -261,7 +281,6 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
           perExtraKmStepFareItems = mkPerExtraKmStepFareItem [] (toList perExtraKmFareSections) det.baseDistance.getMeters
 
           perMinRateSections = List.sortBy (comparing (.rideDurationInMin)) det.perMinRateSections
-
           perMinStepFareItems = mkPerMinStepFareItem [] perMinRateSections
 
           baseDistanceCaption = show Tags.BASE_DISTANCE

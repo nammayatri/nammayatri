@@ -1221,6 +1221,11 @@ upsertFarePolicy merchantShortId opCity req = do
               return $ FarePolicy.ProgressiveNightShiftCharge nightShiftCharge
         return (freeWatingTime, waitingCharges, nightCharges)
 
+      -- TODO: Add support for insurance charge and card charges in csv file
+      let perDistanceUnitInsuranceCharge = Nothing
+          cardChargeMultiplier = Nothing
+          fixedCardCharge = Nothing
+
       farePolicyDetails <-
         case farePolicyType of
           FarePolicy.Progressive -> do
@@ -1237,7 +1242,6 @@ upsertFarePolicy merchantShortId opCity req = do
             perExtraKmRate :: HighPrecMoney <- readCSVField idx row.perExtraKmRate "Per Extra Km Rate"
             let perExtraKmRateSections = NE.fromList [FarePolicy.FPProgressiveDetailsPerExtraKmRateSection {startDistance, distanceUnit, perExtraKmRate}]
             -- TODO: Add support for per min rate sections in csv file
-            -- NOTE: Don't update fare_policy for any city via csv if have per min rate sections
             let perMinRateSections = []
             return $ FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {nightShiftCharge = Just nightCharges, ..}
           _ -> throwError $ InvalidRequest "Fare Policy Type not supported"
