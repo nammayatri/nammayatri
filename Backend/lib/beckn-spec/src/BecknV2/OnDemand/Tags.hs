@@ -105,15 +105,15 @@ instance Show EXTRA_PER_KM_STEP_FARE where
   show (EXTRA_PER_KM_STEP_FARE startDist (Just endDist)) = "EXTRA_PER_KM_STEP_FARE_" <> show startDist <> "_" <> show endDist
   show (EXTRA_PER_KM_STEP_FARE startDist Nothing) = "EXTRA_PER_KM_STEP_FARE_" <> show startDist <> "_Above"
 
-data PER_MIN_STEP_FARE = PER_MIN_STEP_FARE
+data PER_MINUTE_STEP_FARE = PER_MINUTE_STEP_FARE
   { startDurationThreshold :: Int,
     endDurationThreshold :: Maybe Int
   }
   deriving (Eq, Generic, ToJSON, FromJSON)
 
-instance Show PER_MIN_STEP_FARE where
-  show (PER_MIN_STEP_FARE startDur (Just endDur)) = "PER_MIN_STEP_FARE_" <> show startDur <> "_" <> show endDur
-  show (PER_MIN_STEP_FARE startDur Nothing) = "PER_MIN_STEP_FARE_" <> show startDur <> "_Above"
+instance Show PER_MINUTE_STEP_FARE where
+  show (PER_MINUTE_STEP_FARE startDur (Just endDur)) = "PER_MINUTE_STEP_FARE_" <> show startDur <> "_" <> show endDur
+  show (PER_MINUTE_STEP_FARE startDur Nothing) = "PER_MINUTE_STEP_FARE_" <> show startDur <> "_Above"
 
 data DRIVER_EXTRA_FEE_BOUNDS_STEP_MIN_FEE = DRIVER_EXTRA_FEE_BOUNDS_STEP_MIN_FEE
   { startDistanceThreshold :: Int,
@@ -206,6 +206,12 @@ data BecknTag
   | PLANNED_PER_KM_CHARGE_ROUND_TRIP
   | PER_DAY_MAX_HOUR_ALLOWANCE
   | SETTLEMENT_DETAILS
+  | INSURANCE_CHARGE_PER_METER
+  | INSURANCE_CHARGE_PER_MILE
+  | INSURANCE_CHARGE_PER_KM
+  | INSURANCE_CHARGE_PER_YARD
+  | CARD_CHARGE_PERCENTAGE
+  | FIXED_CARD_CHARGE
   | -- Info tags
     SPECIAL_LOCATION_TAG
   | SPECIAL_LOCATION_NAME

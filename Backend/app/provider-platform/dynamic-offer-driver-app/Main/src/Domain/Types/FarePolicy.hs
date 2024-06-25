@@ -45,6 +45,8 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     tollCharges :: Maybe HighPrecMoney,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
+    perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
+    cardCharge :: Maybe CardCharge,
     farePolicyDetails :: FarePolicyDetailsD s,
     description :: Maybe Text,
     createdAt :: UTCTime,
@@ -92,6 +94,12 @@ instance FromJSON (FarePolicyDetailsD 'DTC.Safe)
 
 instance ToJSON (FarePolicyDetailsD 'DTC.Safe)
 
+data CardCharge = CardCharge
+  { perDistanceUnitMultiplier :: Maybe Double,
+    fixed :: Maybe HighPrecMoney
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
 data CongestionChargeMultiplier
   = BaseFareAndExtraDistanceFare Centesimal
   | ExtraDistanceFare Centesimal
@@ -122,6 +130,8 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     tollCharges :: Maybe HighPrecMoney,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
+    perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
+    cardCharge :: Maybe CardCharge,
     farePolicyDetails :: FarePolicyDetailsD s,
     description :: Maybe Text,
     createdAt :: UTCTime,

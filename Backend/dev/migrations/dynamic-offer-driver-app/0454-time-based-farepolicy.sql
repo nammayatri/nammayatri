@@ -1,3 +1,17 @@
+-- ADD COLUMN: fare_policy table
+ALTER TABLE
+    atlas_driver_offer_bpp.fare_policy
+ADD COLUMN per_distance_unit_insurance_charge double precision NOT NULL DEFAULT 0.0,
+ADD COLUMN card_charge_per_distance_unit_multiplier double precision NOT NULL DEFAULT 0,
+ADD COLUMN fixed_card_charge double precision NOT NULL DEFAULT 0.0;
+
+-- ADD COLUMN: fare_parameters table
+ALTER TABLE
+    atlas_driver_offer_bpp.fare_parameters
+ADD COLUMN insurance_charge double precision,
+ADD COLUMN card_charge_on_fare double precision,
+ADD COLUMN fixed_card_charge double precision;
+
 -- ADD COLUMN: ride_duration_fare column.
 ALTER TABLE atlas_driver_offer_bpp.fare_parameters_progressive_details ADD COLUMN ride_duration_fare double precision;
 
@@ -27,4 +41,17 @@ SELECT
     now()
 FROM OneWayOnDemandFP CROSS JOIN PerMinRateSections
 ON CONFLICT DO NOTHING;
+
+WITH OneWayOnDemandFP AS (
+    -- Adds insurance & card charge for `OneWayOnDemandDynamicOffer` trips, accross Vehicle Variants
+    SELECT fare_policy_id as fp_id FROM atlas_driver_offer_bpp.fare_product
+    WHERE trip_category = 'OneWay_OneWayOnDemandDynamicOffer'
+    and merchant_operating_city_id = 'favorit0-0000-0000-0000-00000000city'
+)
+UPDATE atlas_driver_offer_bpp.fare_policy
+SET
+    per_distance_unit_insurance_charge = 0.005,
+    card_charge_per_distance_unit_multiplier = 1.1,
+    fixed_card_charge = 5.0
+WHERE id IN (SELECT fp_id FROM OneWayOnDemandFP);
 ------------------------------------------------------------------* END *-------------------------------------------------------------------------
