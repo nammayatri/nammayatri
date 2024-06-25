@@ -33,20 +33,20 @@ import ConfigProvider (getAppConfig)
 
 getBannerConfigs :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
 getBannerConfigs state action =
-  -- (if state.props.city == ST.Chennai || state.props.city == ST.Kochi
-  -- then [metroBannerConfig state action]
-  -- else [])
-  -- <> (if state.data.config.banners.homeScreenCabLaunch && state.props.city == ST.Bangalore then [cabLaunchBannerConfig state action] else [])
-  -- <> (if state.data.config.feature.enableAdditionalServices || (cityConfig state).enableRentals
-  -- then [checkoutRentalBannerConfig state action] 
-  -- else [])
-  -- <> 
-  -- (if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
-  --   then [disabilityBannerConfig state action] 
-  --   else [])
-  -- <> (if  state.data.config.banners.homeScreenSafety && state.props.sosBannerType == Just ST.SETUP_BANNER && state.data.config.feature.enableSafetyFlow then [sosSetupBannerConfig state action] else [])
-  -- <> 
-  (getRemoteBannerConfigs state.props.city)
+  (if state.props.city == ST.Chennai || state.props.city == ST.Kochi
+  then [metroBannerConfig state action]
+  else [])
+  <> (if state.data.config.banners.homeScreenCabLaunch && state.props.city == ST.Bangalore then [cabLaunchBannerConfig state action] else [])
+  <> (if state.data.config.feature.enableAdditionalServices || (cityConfig state).enableRentals
+  then [checkoutRentalBannerConfig state action] 
+  else [])
+  <> 
+  (if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
+    then [disabilityBannerConfig state action] 
+    else [])
+  <> (if  state.data.config.banners.homeScreenSafety && state.props.sosBannerType == Just ST.SETUP_BANNER && state.data.config.feature.enableSafetyFlow then [sosSetupBannerConfig state action] else [])
+  <> (getRemoteBannerConfigs state.props.city)
+  <> (if state.data.config.banners.homeScreenAmbulance then [checkoutAmbulanceBannerConfig state action] else [])
   where
     getRemoteBannerConfigs :: City -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
     getRemoteBannerConfigs city = do
@@ -207,6 +207,29 @@ checkoutRentalBannerConfig state action =
       , padding = Padding 0 2 5 5
       , imagePadding = PaddingVertical 0 0
       , type = BannerCarousel.RentalsAndIntercity
+      }
+  in config'
+
+checkoutAmbulanceBannerConfig :: forall action. ST.HomeScreenState -> action -> BannerCarousel.Config action
+checkoutAmbulanceBannerConfig state action =
+  let
+    config = BannerCarousel.config action
+    appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+    config' = config
+      {
+        backgroundColor = "#EBEFFC"
+      , title = "Now, book an ambulance for medical services!"
+      , titleColor = "#272791"
+      , actionText = "Book Now"
+      , actionTextBackgroundColour = "#272791"
+      , actionTextColor = Color.white900
+      , imageUrl = fetchImage FF_ASSET "ny_ic_ambulance_banner"
+      , actionArrowIconVisibility = false
+      , actionBottomArrowIconVisibility = true
+      , margin = MarginTop 0
+      , imageHeight = V 96
+      , imageWidth = V 80
+      , type = BannerCarousel.Ambulance
       }
   in config'
 

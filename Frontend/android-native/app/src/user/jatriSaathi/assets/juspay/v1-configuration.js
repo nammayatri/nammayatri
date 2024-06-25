@@ -283,6 +283,9 @@ window.getMerchantConfig = function () {
   , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
   , "internationalNumberEnabled" : true
   , "callOptions" : ["ANONYMOUS"]
+  , "banners" : {
+    "homeScreenAmbulance" : true
+  }
   , "showNearByDrivers" : true
   , "features" : {
     "enableAutoReadOtp" : true ,

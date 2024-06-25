@@ -178,6 +178,7 @@
       "ny_ic_alert_hexagon_red" : true,
       "ny_ic_alert_triangle_white" : true,
       "ny_ic_ambulance" : true,
+      "ny_ic_ambulance_banner" : true,
       "ny_ic_animal_1" : true,
       "ny_ic_anonymous_call" : true,
       "ny_ic_app_related_issue" : true,

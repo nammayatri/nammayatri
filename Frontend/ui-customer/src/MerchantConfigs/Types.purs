@@ -410,6 +410,8 @@ type CityConfig = {
   geoCodeConfig :: GeoCodeConfig,
   enableRentals :: Boolean,
   enableIntercity :: Boolean,
+  enableAmbulance :: Boolean,
+  enableInstant :: Boolean,
   enableCabs :: Boolean,
   iopConfig :: InteroperabilityConfig,
   estimateAndQuoteConfig :: EstimateConfig,
@@ -443,7 +445,8 @@ type DriverLocationPollingConfig = {
 
 type Banners = {
   homeScreenSafety :: Boolean,
-  homeScreenCabLaunch :: Boolean
+  homeScreenCabLaunch :: Boolean,
+  homeScreenAmbulance :: Boolean
 }
 
 type Safety = {

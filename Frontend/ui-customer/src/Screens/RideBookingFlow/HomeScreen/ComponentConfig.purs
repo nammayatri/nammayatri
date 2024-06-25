@@ -93,6 +93,7 @@ import Screens.Types as ST
 import Services.API as API
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
+import Debug(spy)
 
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
@@ -2029,12 +2030,13 @@ locationTagBarConfig state =
             , id: item.id
             }
         )
-        ( [ { image: "ny_ic_instant", text: (getString INSTANT), id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE }
-          , { image: "ny_ic_rental", text: (getString RENTALS_), id: "RENTALS", background: Color.moonCreme, showBanner: GONE }
-          ]
-            <> if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else []
-        )
-  in
+        ( 
+          (if state.data.currentCityConfig.enableInstant then [ { image: "ny_ic_instant", text: (getString INSTANT), id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE }] else [])
+          <> ([{ image: "ny_ic_rental", text: (getString RENTALS_), id: "RENTALS", background: Color.moonCreme, showBanner: GONE }])
+          <>(if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else [])
+          <> (if state.data.currentCityConfig.enableAmbulance then [ { image: "ny_ic_ambulance", text: ("Ambulance"), id: "AMBULANCE", background: Color.blue600', showBanner: GONE }] else [])
+       )
+   in
     { tagList: locTagList }
 
 safetyAlertConfig :: ST.HomeScreenState -> PopUpModal.Config

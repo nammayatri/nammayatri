@@ -25,19 +25,20 @@ import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getPastDays)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((<>), (/=), ($))
+import Prelude ((<>), (/=), ($), (==))
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Resource.Constants (tripDatesCount)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Storage (getValueToLocalStore, KeyStore(..))
+import Debug(spy)
 
 errorModalConfig :: ST.RideHistoryScreenState -> ErrorModal.Config 
 errorModalConfig state = let 
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = if (getValueToLocalStore VEHICLE_VARIANT /= "AUTO_RICKSHAW") then fetchImage FF_COMMON_ASSET "ny_ic_no_past_rides" else fetchImage FF_ASSET "ny_ic_no_past_rides_auto"
+        imageUrl = if (getValueToLocalStore VEHICLE_VARIANT == "AUTO_RICKSHAW") then  fetchImage FF_ASSET "ny_ic_no_past_rides_auto" else if (spy "category" getValueToLocalStore VEHICLE_CATEGORY == "AMBULANCE") then fetchImage FF_ASSET "ny_ic_no_rides_history_ambulance" else fetchImage FF_COMMON_ASSET "ny_ic_no_past_rides"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 61)
