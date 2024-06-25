@@ -238,7 +238,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                     currency = INR
                   }
               perMinuteRate = getPerMinuteRate fareParams
-      return $
+          return $
             Just $
               API.Types.UI.DriverOnboardingV2.RateCardResp
                 { serviceTierType,

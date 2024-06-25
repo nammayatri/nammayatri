@@ -44,13 +44,13 @@ delete farePolicyId = do
 instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyProgressiveDetails where
   fromTType' farePolicyProgressiveDetails = do
     fullFPPDP <- QueriesFPPDP.findAll' (KTI.Id farePolicyProgressiveDetails.farePolicyId)
-    fullMinFP <- QueriesFPMin.findAll (KTI.Id farePolicyProgressiveDetails.farePolicyId)
+    fullMinFP <- NE.nonEmpty <$> QueriesFPMin.findAll (KTI.Id farePolicyProgressiveDetails.farePolicyId)
     fPPDP <- fromMaybeM (InternalError "FromLocation not found") (NE.nonEmpty fullFPPDP)
     pure . Just $ fromTTypeFarePolicyProgressiveDetails farePolicyProgressiveDetails fullMinFP fPPDP
 
 fromTTypeFarePolicyProgressiveDetails ::
   BeamFPPD.FarePolicyProgressiveDetails ->
-  [Domain.FPProgressiveDetailsPerMinRateSection] ->
+  Maybe (NonEmpty Domain.FPProgressiveDetailsPerMinRateSection) ->
   NonEmpty BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection ->
   Domain.FullFarePolicyProgressiveDetails
 fromTTypeFarePolicyProgressiveDetails BeamFPPD.FarePolicyProgressiveDetailsT {..} fullMinFP fPPDP =

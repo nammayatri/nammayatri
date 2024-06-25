@@ -46,6 +46,9 @@ data FareParametersT f = FareParametersT
     tollCharges :: B.C f (Maybe HighPrecMoney),
     congestionCharge :: B.C f (Maybe Money),
     congestionChargeAmount :: B.C f (Maybe HighPrecMoney),
+    insuranceCharge :: B.C f (Maybe HighPrecMoney),
+    cardChargeOnFare :: B.C f (Maybe HighPrecMoney),
+    fixedCardCharge :: B.C f (Maybe HighPrecMoney),
     currency :: B.C f (Maybe Currency),
     updatedAt :: B.C f (Maybe UTCTime)
   }

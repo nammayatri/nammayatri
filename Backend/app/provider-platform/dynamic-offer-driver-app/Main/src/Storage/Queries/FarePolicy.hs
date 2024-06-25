@@ -119,6 +119,9 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
         BeamFP.govtCharges = govtCharges,
         BeamFP.perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,
         BeamFP.congestionCharge = congestionChargeMultiplier,
+        BeamFP.perDistanceUnitInsuranceCharge = perDistanceUnitInsuranceCharge,
+        BeamFP.cardChargePerDistanceUnitMultiplier = cardCharge >>= (.perDistanceUnitMultiplier),
+        BeamFP.fixedCardCharge = cardCharge >>= (.fixed),
         BeamFP.farePolicyType = getFarePolicyType $ FarePolicy {..},
         BeamFP.description = description,
         BeamFP.createdAt = createdAt,
@@ -204,6 +207,13 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
               farePolicyDetails,
               perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,
               congestionChargeMultiplier = congestionCharge,
+              perDistanceUnitInsuranceCharge = perDistanceUnitInsuranceCharge,
+              cardCharge =
+                Just $
+                  CardCharge
+                    { perDistanceUnitMultiplier = cardChargePerDistanceUnitMultiplier,
+                      fixed = fixedCardCharge
+                    },
               description = description,
               createdAt = createdAt,
               updatedAt = updatedAt
