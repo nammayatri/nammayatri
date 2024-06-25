@@ -415,7 +415,9 @@ type MyRideScreenProps = {
   apiFailure :: Boolean,
   fromNavBar :: Boolean,
   optionsVisibility :: Boolean,
-  fromBanner :: Boolean
+  fromBanner :: Boolean,
+  refreshLoader :: Boolean,
+  scrollEnable :: Boolean
 }
 -- ################################################ IndividualRideCardState ##################################################
 
