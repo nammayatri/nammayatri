@@ -428,7 +428,7 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMo
                         LocationAddress $ Constants.encodeAddress (getValueToLocalStore CUSTOMER_LOCATION) [] Nothing lat long
 
         isNonEmpty :: Maybe String -> Boolean
-        isNonEmpty = maybe false (\s -> DS.null s)
+        isNonEmpty = maybe false (\s -> not $ DS.null s)
 
 ------------------------------------------------------------------------ GetQuotes Function -------------------------------------------------------------------------------------------
 getQuotes searchId = do
