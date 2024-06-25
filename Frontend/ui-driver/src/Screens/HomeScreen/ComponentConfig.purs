@@ -135,7 +135,7 @@ rideActionModalConfig state =
     isOdometerReadingsRequired = state.props.isOdometerReadingsRequired,
     serviceTierAndAC = state.data.activeRide.serviceTier,
     capacity = state.data.activeRide.capacity,
-    acRide = state.data.activeRide.acRide,
+    acRide = if (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.AutoCategory then Nothing else state.data.activeRide.acRide,
     isAdvanced = (state.props.bookingStage == ADVANCED),
     bookingFromOtherPlatform = state.data.activeRide.bookingFromOtherPlatform,
     bapName = state.data.activeRide.bapName,
