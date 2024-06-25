@@ -101,21 +101,15 @@ getFareBreakupList fareBreakup maxTip =
   nightShiftStart = EHC.parseSecondsOfDayToUTC $ (DI.round nightShiftStartSeconds.amount)
 
   nightShiftEndSeconds = fetchSpecificFare fareBreakup "NIGHT_SHIFT_END_TIME_IN_SECONDS"
-  nightShiftEnd = EHC.parseSecondsOfDayToUTC $ (DI.round nightShiftEndSeconds.amount + 86400)
-  nightShiftEnd_ = EHC.parseSecondsOfDayToUTC $ (DI.round nightShiftEndSeconds.amount) -- For after midnight case
+  nightShiftEnd = EHC.parseSecondsOfDayToUTC $ (DI.round nightShiftEndSeconds.amount) 
 
   midNightUtc = EHC.getMidnightUTC unit
 
   nightShiftRate = fetchSpecificFare fareBreakup "NIGHT_SHIFT_CHARGE_PERCENTAGE"
 
-  isNightShift = (JB.withinTimeRange nightShiftStart nightShiftEnd (EHC.getCurrentUTC ""))
-                 || (JB.withinTimeRange midNightUtc nightShiftEnd_ (EHC.getCurrentUTC ""))
-
-  nightCharges =
-    if isNightShift then
-      JB.withinTimeRange nightShiftStart nightShiftEnd (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "HH:mm:ss")
-    else
-      false
+  isNightShift = if (nightShiftEndSeconds.amount > nightShiftStartSeconds.amount) 
+                    then JB.withinTimeRange nightShiftStart nightShiftEnd (EHC.getCurrentUTC "")
+                    else EHC.compareUTCDate nightShiftEnd (EHC.getCurrentUTC "") >= 0  || EHC.compareUTCDate (EHC.getCurrentUTC "") nightShiftStart >= 0
 
   -- Pickup charges
   pickupCharges = priceToBeDisplayed $ fetchSpecificFare fareBreakup "DEAD_KILOMETER_FARE"

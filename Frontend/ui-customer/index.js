@@ -393,7 +393,8 @@ if (typeof window.JOS != "undefined") {
   window.JOS.addEventListener("onMerchantEvent")();
   window.JOS.addEventListener("onActivityResult")();
   console.error("Calling action DUI_READY");
-  window.JBridge.emptyCallbackQueue()
+  if (window.JBridge.emptyCallbackQueue)
+    window.JBridge.emptyCallbackQueue()
   JOS.emitEvent("java")("onEvent")(JSON.stringify({ action: "DUI_READY", service : JOS.self }))()();
 } else {
   console.error("JOS not present")
