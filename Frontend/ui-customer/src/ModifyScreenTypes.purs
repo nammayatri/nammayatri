@@ -78,6 +78,7 @@ updateRepeatRideDetails state = do
     , sourceAddress = state.sourceAddress
     , savedLocations = homeScreen.data.savedLocations
     , destinationAddress = state.destinationAddress 
+    , famousDestinations = homeScreen.data.famousDestinations
     , settingSideBar {
         gender = globalState.homeScreen.data.settingSideBar.gender 
       , email = globalState.homeScreen.data.settingSideBar.email

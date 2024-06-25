@@ -1837,7 +1837,7 @@ eval BackPressed state = do
                           else if state.props.showScheduledRideExistsPopUp then continue state { props { showScheduledRideExistsPopUp = false }}
                           else do
                               pure $ terminateApp state.props.currentStage true
-                              continue state
+                              continue state{props{showShimmer = false}}
 
 eval GoBackToSearchLocationModal state = do
   void $ pure $ updateLocalStage SearchLocationModel
@@ -2397,7 +2397,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
 
 eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)) state = do
   void $ pure $ performHapticFeedback unit
-  continueWithCmd state{props{showShimmer = true}}
+  continueWithCmd state
     [ do
         _ <- pure $ hideKeyboardOnNavigation true
         pure $ BackPressed

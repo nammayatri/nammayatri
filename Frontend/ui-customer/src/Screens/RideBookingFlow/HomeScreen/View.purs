@@ -92,7 +92,7 @@ import Data.String as DS
 import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..))
 import Debug (spy)
-import DecodeUtil (getAnyFromWindow)
+import DecodeUtil (getAnyFromWindow, removeFromWindow)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
@@ -273,6 +273,11 @@ screen initialState =
                   void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   void $ launchAff $ flowRunner defaultGlobalState $ confirmRide (getValueToLocalStore TRACKING_ID) GetRideConfirmation CheckFlowStatusAction GoToHomeScreen pollingCount 3000.0 push initialState
               HomeScreen -> do
+                let currLocation = runFn3 getAnyFromWindow "current_location" Nothing Just
+                    _ = removeFromWindow "current_location"
+                case currLocation of
+                  Just loc -> push $ UpdateCurrentLocation loc.lat loc.lon
+                  Nothing -> pure unit
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
                 let suggestionsMap = getSuggestionsMapFromLocal FunctionCall
                 if (getValueToLocalStore UPDATE_REPEAT_TRIPS == "true" && Map.isEmpty suggestionsMap) then do
@@ -405,17 +410,9 @@ screen initialState =
         eval action state
   }
 
-getDelayForLocateOnMap :: Int
-getDelayForLocateOnMap = 1000
-
-enableCurrentLocation :: Boolean
-enableCurrentLocation = true
-
-disableCurrentLocation :: Boolean
-disableCurrentLocation = false
 
 isCurrentLocationEnabled :: Boolean
-isCurrentLocationEnabled = if (isLocalStageOn HomeScreen) then enableCurrentLocation else disableCurrentLocation
+isCurrentLocationEnabled = isLocalStageOn HomeScreen
 
 view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -3370,9 +3367,7 @@ getInfoCardPeekHeight state = if state.data.infoCardPeekHeight == 0 then (getDef
 ----------------------------------------- UPDATED HOME SCREEN -------------------------------------------
 
 homeScreenViewV2 :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-homeScreenViewV2 push state = let 
-    cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
-    in
+homeScreenViewV2 push state =
     relativeLayout
       [ height $ V (screenHeight unit)
       , width $ V (screenWidth unit)
@@ -3402,44 +3397,54 @@ homeScreenViewV2 push state = let
                       [ width $ V (screenWidth unit)
                       , height WRAP_CONTENT
                       , orientation VERTICAL
-                      ] [ linearLayout
+                      ] [ relativeLayout
                           [ width MATCH_PARENT
                           , height WRAP_CONTENT
                           , orientation VERTICAL
-                          , id $ getNewIDWithTag "homescreenContent"
                           , gravity $ CENTER_HORIZONTAL
-                          ]$ -- [ savedLocationsView state push ] <>
-                          ((if state.props.showShimmer then
-                              [PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
+                          ][ locationUnserviceableView push state
+                           , homeScreenContent push state 
+                           , PrestoAnim.animationSet [ Anim.triggerOnAnimationEnd true] $
                                 linearLayout
                                 [ height WRAP_CONTENT
                                 , width MATCH_PARENT 
                                 , onAnimationEnd push (const MapReadyAction)
-                                ][shimmerView state]]
-                            else if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
-                              [locationUnserviceableView push state]
-                            else 
-                              []
-                              <> (case state.data.followers of
-                                        Nothing -> []
-                                        Just followers -> if (showFollowerBar followers state) && state.props.currentStage == HomeScreen 
-                                                            then [followView push followers] 
-                                                            else [])
-                              <> [ if isHomeScreenView state then mapView' push state "CustomerHomeScreenMap" else emptyLayout state
-                                , if isHomeScreenView state then contentView state else emptyLayout state
-                              -- <> if isHomeScreenView state then [mapView push state "CustomerHomeScreenMap"] else []
-                                , if state.data.config.feature.enableAdditionalServices || cityConfig.enableRentals then additionalServicesView push state else linearLayout[visibility GONE][]
-                                , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][]
-                                , suggestionsView push state
-                                , exploreCitySection push state
-                                ])
-                              )
-                          , footerView push state
+                                ][shimmerView state]
                       ]
                   ]
               ]
           ]
         ]  
+      ]
+
+homeScreenContent :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+homeScreenContent push state =  let 
+  cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
+  in
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , visibility $ boolToVisibility $ state.props.isSrcServiceable && not state.props.showShimmer
+    ][ linearLayout
+       [ width MATCH_PARENT
+       , height WRAP_CONTENT
+       , orientation VERTICAL
+       , id $ getNewIDWithTag "homescreenContent"
+      ][ case state.data.followers of
+            Nothing -> emptyTextView state
+            Just followers -> if showFollowerBar followers state 
+                                then followView push followers
+                                else emptyTextView state
+          , mapView' push state "CustomerHomeScreenMap" 
+          , contentView state
+          , if state.data.config.feature.enableAdditionalServices || cityConfig.enableRentals then additionalServicesView push state else linearLayout[visibility GONE][]
+          , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][]
+          , suggestionsView push state
+          , exploreCitySection push state
+      ]
+    , footerView push state
+    ]
   where 
     contentView state = 
       linearLayout
@@ -3461,7 +3466,7 @@ homeScreenViewV2 push state = let
           (\item -> bannersCarousal item state push) 
           state.data.bannerData.bannerItem)
       ]
-      
+    
     followView :: forall w. (Action -> Effect Unit) -> Array Followers -> PrestoDOM (Effect Unit) w
     followView push followers = 
       linearLayout
@@ -3803,21 +3808,18 @@ mapView' push state idTag =
   let mapDimensions = getMapDimensions state
       bottomPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize extraBottomPadding else 0
       -- banners = getBannerConfigs state BannerCarousel
-      isVisible = if isHomeScreenView state then (not state.props.showShimmer)
-                      else (not (state.props.currentStage == SearchLocationModel && state.props.isSearchLocation == SearchLocation ))
     
   in
   PrestoAnim.animationSet[scaleYAnimWithDelay 5000] $
   Keyed.relativeLayout
-    [ height if (isHomeScreenView state && state.props.showShimmer) then V 0 else mapDimensions.height
+    [ height mapDimensions.height
     , width mapDimensions.width 
-    -- , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
-    , margin $ if isHomeScreenView state then MarginTop 16 else MarginTop 0
-    , visibility $ boolToInvisibility isVisible
+    , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
+    , margin $ if isHomeScreenView state then MarginLeft 16 else MarginTop 0
     , padding $ PaddingBottom $ bottomPadding
     ]$[ Tuple ("MapView" <> idTag) $ linearLayout
           ([ height mapDimensions.height
-          , width $ mapDimensions.width 
+          , width mapDimensions.width 
           , accessibility DISABLE_DESCENDANT
           , id (getNewIDWithTag idTag)
           , visibility if state.props.isSrcServiceable then VISIBLE else GONE
@@ -3998,44 +4000,40 @@ shimmerView state =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , background Color.transparent
-    , visibility $ boolToVisibility $ state.props.showShimmer
+    , background Color.white900
+    , visibility $ boolToVisibility state.props.showShimmer
     ] 
-    [ shimmerHelper 120
-    , shimmerHelper 115
-    , shimmerFrameLayout
-        [ width MATCH_PARENT
-        , height $ V 115
-        , margin $ Margin 16 16 16 10
-        ]
-        [ linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          ]
-          ( map
-              ( \_ ->
-                  linearLayout
-                  [ height $ V 130
-                  , background Color.greyDark
-                  , margin $ MarginRight 12
-                  , width $ V 160
-                  , stroke $ "1," <> Color.grey900
-                  ][]
-              )
-              (1 Arr... 3)
+    [ shimmerHelper 120 MATCH_PARENT false $ Margin 16 16 16 10
+    , shimmerHelper 115 MATCH_PARENT false $ Margin 16 16 16 10
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      ]
+      [ shimmerHelper 70 WRAP_CONTENT true $ Margin 16 16 16 10
+      , shimmerHelper 70 WRAP_CONTENT true $ Margin 0 16 16 10
+      ]
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ Margin 16 16 16 10
+      ]
+      ( map
+          ( \_ ->
+              shimmerHelper 130 (V 160) false $ MarginRight 12
           )
-        ]
+          (1 Arr... 3)
+      )
     ]
 
-shimmerHelper :: forall w. Int -> PrestoDOM (Effect Unit) w
-shimmerHelper ht = 
+shimmerHelper :: forall w. Int -> Length -> Boolean -> Margin -> PrestoDOM (Effect Unit) w
+shimmerHelper ht width' useWeight margin' =
   shimmerFrameLayout
-    [ width MATCH_PARENT
-    , height $ V ht
+    ([ height $ V ht
     , cornerRadius 8.0
-    , margin $ Margin 16 16 16 10
+    , margin margin'
     , background Color.greyDark
-    ][]
+    ] <> if useWeight then [weight 1.0] else [width width'])
+    []
   
 
 movingRightArrowView :: forall w. String -> PrestoDOM (Effect Unit) w
@@ -4333,6 +4331,7 @@ locationUnserviceableView push state =
   , clickable true
   , orientation VERTICAL
   , gravity CENTER
+  , visibility $ boolToVisibility $ not state.props.isSrcServiceable
   ][
     relativeLayout[
       height WRAP_CONTENT
@@ -4797,14 +4796,12 @@ exploreCitySection push state =
       , horizontalScrollView
           [ height WRAP_CONTENT
           , width MATCH_PARENT
-          , gravity CENTER
           , scrollBarX false
           ][ linearLayout
               [ height WRAP_CONTENT
               , width MATCH_PARENT
               , margin $ MarginTop 16
               , orientation HORIZONTAL
-              , gravity CENTER
               ][ exploreCityCardView push state]
           ]
       ]
@@ -4817,7 +4814,6 @@ exploreCityCardView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation HORIZONTAL
-    , gravity CENTER
     ](mapWithIndex ( \index item -> exploreCityCard push state index item) state.data.famousDestinations)
 
 exploreCityCard :: forall w . (Action -> Effect Unit) -> HomeScreenState -> Int -> LocationListItemState -> PrestoDOM (Effect Unit) w
@@ -4837,7 +4833,7 @@ exploreCityCard push state index locationItem =
         , accessibility DISABLE
         ]
       , textView $
-          [ text $ locationItem.address
+          [ text locationItem.address
           , color Color.black800
           , margin $ MarginTop 8
           , accessibility DISABLE
